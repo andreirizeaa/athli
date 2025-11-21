@@ -132,7 +132,7 @@ export const HeroHeader = () => {
                   )}
                   {isScrolled && (
                     <Button size="sm" onClick={handleAuthClick}>
-                      <span>Get Started</span>
+                      <span>Grow Today</span>
                     </Button>
                   )}
                   <DropdownMenu>

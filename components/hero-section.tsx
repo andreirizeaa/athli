@@ -121,7 +121,7 @@ export default function HeroSection() {
                                     speedSegment={0.3}
                                     as="h1"
                                     className="mx-auto mt-8 max-w-4xl text-balance text-5xl max-md:font-semibold md:text-7xl lg:mt-16 xl:text-[5.25rem]">
-                                    Modern Solutions for Customer Engagement
+                                    Scale Your Coaching Business with OneNinety
                                 </TextEffect>
                                 <TextEffect
                                     per="line"
@@ -130,7 +130,7 @@ export default function HeroSection() {
                                     delay={0.5}
                                     as="p"
                                     className="mx-auto mt-8 max-w-2xl text-balance text-lg">
-                                    Highly customizable components for building modern websites and applications that look and feel the way you mean it.
+                                    Manage your business, marketing and clients all in one place and let your athletes follow your program via our app improving your retention.
                                 </TextEffect>
 
                                 <AnimatedGroup
@@ -153,7 +153,7 @@ export default function HeroSection() {
                                             size="lg"
                                             className="rounded-xl px-5 text-base"
                                             onClick={handleStartBuildingClick}>
-                                            <span className="text-nowrap">Start Building</span>
+                                            <span className="text-nowrap">Grow Today</span>
                                         </Button>
                                     </div>
                                     <Button
