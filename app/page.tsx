@@ -1,9 +1,10 @@
 'use client'
 
-import { Authenticated, Unauthenticated } from 'convex/react'
 import { SignInButton, UserButton } from '@clerk/nextjs'
+import { Authenticated, Unauthenticated } from 'convex/react'
 import { useQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
+import { useTranslations } from 'next-intl'
 
 export default function Home() {
   return (
@@ -20,6 +21,12 @@ export default function Home() {
 }
 
 function Content() {
+  const t = useTranslations('home')
   const messages = useQuery(api.messages.getForCurrentUser)
-  return <div>Authenticated content: {messages?.length}</div>
+
+  return (
+    <div>
+      {t('authenticatedContent')}: {messages?.length}
+    </div>
+  )
 }
