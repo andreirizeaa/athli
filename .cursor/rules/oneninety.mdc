@@ -1,0 +1,160 @@
+---
+alwaysApply: true
+---
+
+You are a Senior Front-End Developer and an Expert in, NEXTJS + TYPESCRIPT + TAILWIND + SHADCN + CLERK + CONVEX
+
+--------------------------------------------------------
+1. PROJECT STRUCTURE RULES
+--------------------------------------------------------
+- Use the Next.js App Router (app/ directory).
+- Each route gets its own folder with page.tsx, layout.tsx (if needed), loading.tsx, error.tsx.
+- Reusable components go in components/.
+- Shared logic goes in hooks/.
+- Helpers/validators go in lib/.
+- Convex queries/mutations + schema in convex/ directory.
+- Always use TypeScript.
+
+--------------------------------------------------------
+2. NAMING & CODE STYLE RULES
+--------------------------------------------------------
+- camelCase for everything except PascalCase for React components.
+- All file names are kebab-case.tsx.
+- No abbreviated variable names.
+- All functions defined with const: const handleClick = () => {}.
+- No "function handleClick()" syntax.
+- Very descriptive names, early returns, DRY, KISS.
+
+--------------------------------------------------------
+3. REACT COMPONENT RULES
+--------------------------------------------------------
+- Add "use client" only when needed.
+- Components must be fully typed and accessible.
+- Use shadcn/ui for all UI pieces (Button, Input, Card, Dialog, Sheet, Form).
+- Components must be self-contained and small.
+
+--------------------------------------------------------
+4. TAILWINDCSS RULES
+--------------------------------------------------------
+- Tailwind only, no CSS files.
+- Avoid inline styles unless absolutely necessary.
+- Use class: patterns with cn() for conditional classes.
+- Use standardized spacing (usually 4-scale).
+- Prefer flex, grid, gap-x, gap-y for layout structure.
+
+--------------------------------------------------------
+5. ACCESSIBILITY RULES
+--------------------------------------------------------
+Every interactive element must include:
+- tabIndex={0}
+- role="button" (if not a native button)
+- aria-label="..."
+- onKeyDown={handleKeyDown}
+- Must support both Enter and Space keys.
+
+Pattern:
+<div
+  role="button"
+  tabIndex={0}
+  aria-label="Open menu"
+  onClick={handleOpenMenu}
+  onKeyDown={handleKeyDown}
+  className="cursor-pointer"
+></div>
+
+--------------------------------------------------------
+6. EVENT HANDLER RULES
+--------------------------------------------------------
+- All event handlers must begin with "handle".
+- All events must be typed explicitly.
+- Separate UI-event functions from business logic functions.
+
+--------------------------------------------------------
+7. STATE MANAGEMENT RULES
+--------------------------------------------------------
+- Allowed: useState, useEffect, useMemo, useCallback.
+- Zustand optional for UI/global state.
+- Convex for all server-side state.
+- Avoid Redux and React Context unless absolutely required.
+
+--------------------------------------------------------
+8. CONVEX RULES
+--------------------------------------------------------
+- Reads must use Convex queries.
+- Writes must use Convex mutations.
+- All mutations require input validation and early returns.
+- Prevent duplicate insertions.
+- Use descriptive names.
+- Convex schema lives in convex/schema.ts.
+- Keep "npx convex dev" running to generate types.
+
+--------------------------------------------------------
+9. AUTH RULES (CLERK)
+--------------------------------------------------------
+- Use useUser(), useAuth(), and currentUser().
+- Never expose user IDs from server to client directly.
+- Use Clerk middleware to protect authenticated routes.
+
+--------------------------------------------------------
+10. ERROR HANDLING RULES
+--------------------------------------------------------
+- Only use try/catch where needed.
+- Errors shown to users should use shadcn toast or error.tsx routes.
+- Convex must return safe error objects instead of throwing.
+
+--------------------------------------------------------
+11. FORM RULES
+--------------------------------------------------------
+- Use react-hook-form with zod schemas.
+- Use shadcn Form components.
+- Validate on client + server.
+- Avoid manually managing form fields; always use react-hook-form.
+
+--------------------------------------------------------
+12. API RULES
+--------------------------------------------------------
+- All server logic done via server actions or Convex.
+- No direct client fetches unless endpoint is public.
+- Avoid traditional API routes unless necessary.
+
+--------------------------------------------------------
+13. ANIMATION RULES
+--------------------------------------------------------
+- Use Framer Motion only.
+- Always specify initial, animate, and exit props.
+
+--------------------------------------------------------
+14. MOBILE-FRIENDLY DESIGN RULES
+--------------------------------------------------------
+- Mobile-first design approach.
+- Base layout must be optimized for small screens first.
+- Use responsive Tailwind classes consistently (sm:, md:, lg:, xl:).
+- Avoid fixed widths; use max-w, w-full, flex-grow, responsive grid patterns.
+- Touch-friendly UI:
+  - Larger hit targets (min height 44px).
+  - Adequate spacing between interactive elements.
+- Avoid hover-only interactions; ensure tap equivalents exist.
+- Navigation must collapse to mobile UI (drawer, sheet, or menu button).
+
+--------------------------------------------------------
+15. LIGHT / DARK MODE RULES (THEME PROVIDER)
+--------------------------------------------------------
+- Use the shadcn ThemeProvider.
+- No custom theme implementations; use system + light + dark modes from provider.
+- All colors must use Tailwind’s CSS variables (bg-background, text-foreground, etc.).
+- Do not hardcode colors.
+- Component styling must automatically adapt to the theme.
+- Provide a simple toggle using the existing shadcn theme system (useTheme).
+- Must support:
+  - System mode
+  - Persistent user preference
+- UI must not flash during theme change (use class-based theming).
+
+--------------------------------------------------------
+16. GENERAL ENGINEERING RULES
+--------------------------------------------------------
+- No unused imports or variables.
+- No console logs in production.
+- No TODO comments.
+- Always sort imports.
+- Code must be complete, readable, DRY, and use early returns.
