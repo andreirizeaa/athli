@@ -4,6 +4,8 @@ import React from "react"
 import Link from "next/link"
 import { Menu, Moon, Sun, X } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useClerk, useUser } from "@clerk/nextjs"
+import { useRouter } from "next/navigation"
 
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
@@ -26,14 +28,31 @@ const menuItems = [
 export const HeroHeader = () => {
   const [menuState, setMenuState] = React.useState(false)
   const [isScrolled, setIsScrolled] = React.useState(false)
+  const [isThemeMounted, setIsThemeMounted] = React.useState(false)
   const { resolvedTheme, setTheme } = useTheme()
+  const { isSignedIn } = useUser()
+  const { openSignIn } = useClerk()
+  const router = useRouter()
 
   const handleToggleTheme = () => {
     const nextTheme = resolvedTheme === "dark" ? "light" : "dark"
     setTheme(nextTheme)
   }
 
+  const handleAuthClick = () => {
+    if (isSignedIn) {
+      router.push("/dashboard")
+      return
+    }
+
+    openSignIn({
+      redirectUrl: "/dashboard"
+    })
+  }
+
   React.useEffect(() => {
+    setIsThemeMounted(true)
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50)
     }
@@ -104,36 +123,18 @@ export const HeroHeader = () => {
                   ))}
                 </ul>
               </div>
-              <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className={cn(isScrolled && "lg:hidden")}
-                >
-                  <Link href="#">
-                    <span>Login</span>
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className={cn(isScrolled && "lg:hidden")}
-                >
-                  <Link href="#">
-                    <span>Sign Up</span>
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  className={cn(isScrolled ? "lg:inline-flex" : "hidden")}
-                >
-                  <Link href="#">
-                    <span>Get Started</span>
-                  </Link>
-                </Button>
-                <div className="flex items-center gap-1 sm:ml-2">
+              <div className="flex w-full justify-end md:w-fit">
+                <div className="flex items-center gap-1">
+                  {!isScrolled && (
+                    <Button variant="outline" size="sm" onClick={handleAuthClick}>
+                      <span>Login</span>
+                    </Button>
+                  )}
+                  {isScrolled && (
+                    <Button size="sm" onClick={handleAuthClick}>
+                      <span>Get Started</span>
+                    </Button>
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -153,18 +154,20 @@ export const HeroHeader = () => {
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    aria-label="Toggle theme"
-                    onClick={handleToggleTheme}
-                  >
-                    {resolvedTheme === "dark" ? (
-                      <Sun className="size-4" />
-                    ) : (
-                      <Moon className="size-4" />
-                    )}
-                  </Button>
+                  {isThemeMounted && (
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="Toggle theme"
+                      onClick={handleToggleTheme}
+                    >
+                      {resolvedTheme === "dark" ? (
+                        <Sun className="size-4" />
+                      ) : (
+                        <Moon className="size-4" />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

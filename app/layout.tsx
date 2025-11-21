@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { ClerkProvider } from '@clerk/nextjs'
-import ConvexClientProvider from '@/components/ConvexClientProvider'
-import { ThemeProvider } from '@/components/theme-provider'
-import { IntlProvider } from '@/components/intl-provider'
+import { shadcn } from '@clerk/themes'
+import { ThemeProvider } from '@/lib/theme-provider'
+import { IntlProvider } from '@/lib/intl-provider'
+import SupabaseProvider from '@/lib/supabase-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -35,10 +36,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ClerkProvider>
-            <ConvexClientProvider>
+          <ClerkProvider
+            appearance={{
+              theme: shadcn
+            }}
+          >
+            <SupabaseProvider>
               <IntlProvider>{children}</IntlProvider>
-            </ConvexClientProvider>
+            </SupabaseProvider>
           </ClerkProvider>
         </ThemeProvider>
       </body>
