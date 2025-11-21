@@ -6,6 +6,28 @@ export const enMessages = {
   home: {
     authenticatedContent: 'Authenticated content',
   },
+  sidebar: {
+    group: {
+      general: 'General',
+    },
+    links: {
+      dashboard: 'Dashboard',
+      marketing: 'Marketing',
+      messaging: 'Messaging',
+      workouts: 'Workouts',
+      athletes: 'Athletes',
+      calendar: 'Calendar',
+    },
+    theme: {
+      lightMode: 'Light mode',
+      darkMode: 'Dark mode',
+      toggleAria: 'Toggle theme',
+    },
+    language: {
+      label: 'English',
+      aria: 'Change language (current: English)',
+    },
+  },
 } as const
 
 export type EnMessages = typeof enMessages
