@@ -1,3 +1,4 @@
+'use client'
 import React from 'react'
 import Link from 'next/link'
 import { ArrowRight, ChevronRight } from 'lucide-react'
@@ -6,6 +7,8 @@ import Image from 'next/image'
 import { TextEffect } from '@/components/ui/text-effect'
 import { AnimatedGroup } from '@/components/ui/animated-group'
 import { HeroHeader } from './header'
+import { useClerk, useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
 
 const transitionVariants = {
     item: {
@@ -18,16 +21,26 @@ const transitionVariants = {
             opacity: 1,
             filter: 'blur(0px)',
             y: 0,
-            transition: {
-                type: 'spring',
-                bounce: 0.3,
-                duration: 1.5,
-            },
         },
     },
 }
 
 export default function HeroSection() {
+    const { isSignedIn } = useUser()
+    const { openSignIn } = useClerk()
+    const router = useRouter()
+
+    const handleStartBuildingClick = () => {
+        if (isSignedIn) {
+            router.push('/dashboard')
+            return
+        }
+
+        openSignIn({
+            redirectUrl: '/dashboard',
+        })
+    }
+
     return (
         <>
             <HeroHeader />
@@ -137,12 +150,10 @@ export default function HeroSection() {
                                         key={1}
                                         className="bg-foreground/10 rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5">
                                         <Button
-                                            asChild
                                             size="lg"
-                                            className="rounded-xl px-5 text-base">
-                                            <Link href="#link">
-                                                <span className="text-nowrap">Start Building</span>
-                                            </Link>
+                                            className="rounded-xl px-5 text-base"
+                                            onClick={handleStartBuildingClick}>
+                                            <span className="text-nowrap">Start Building</span>
                                         </Button>
                                     </div>
                                     <Button
