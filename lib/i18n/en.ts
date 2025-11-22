@@ -27,6 +27,9 @@ export const enMessages = {
       label: 'English',
       aria: 'Change language (current: English)',
     },
+    settings: {
+      label: 'Settings',
+    },
   },
 } as const
 
