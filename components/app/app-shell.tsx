@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 import { useClerk, useUser } from "@clerk/nextjs"
 import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Bell,
   Check,
@@ -19,6 +19,7 @@ import {
   LogOut,
   Megaphone,
   MessageCircle,
+  HelpCircle,
   Moon,
   MoreVertical,
   Search,
@@ -71,11 +72,11 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { availableLanguages } from "@/lib/intl-provider"
 
-type DashboardShellProps = {
+type AppShellProps = {
   children: ReactNode
 }
 
-export const DashboardShell = ({ children }: DashboardShellProps) => {
+export const AppShell = ({ children }: AppShellProps) => {
   const t = useTranslations()
   const { user } = useUser()
   const { openUserProfile, signOut } = useClerk()
@@ -106,10 +107,10 @@ export const DashboardShell = ({ children }: DashboardShellProps) => {
       window.history.replaceState(null, "", `/${desiredHash}`)
     }
   }, [pathname])
-
+  
   return (
     <SidebarProvider>
-      <DashboardShellContent
+      <AppShellContent
         t={t}
         user={user}
         openUserProfile={openUserProfile}
@@ -123,12 +124,12 @@ export const DashboardShell = ({ children }: DashboardShellProps) => {
         pathname={pathname}
       >
         {children}
-      </DashboardShellContent>
+      </AppShellContent>
     </SidebarProvider>
   )
 }
 
-const DashboardShellContent = ({
+const AppShellContent = ({
   children,
   t,
   user,
@@ -163,6 +164,7 @@ const DashboardShellContent = ({
   const searchInputRef = React.useRef<HTMLInputElement>(null)
   const searchContainerRef = React.useRef<HTMLDivElement>(null)
   const [activePath, setActivePath] = React.useState(pathname)
+  const router = useRouter()
 
   React.useEffect(() => {
     setIsClient(true)
@@ -177,6 +179,14 @@ const DashboardShellContent = ({
 
     const hashPath = window.location.hash.slice(1)
 
+    // If hash is exactly /app, redirect to /app/home
+    if (hashPath === "/app") {
+      window.history.replaceState(null, "", "/#/app/home")
+      router.replace("/app/home")
+      setActivePath("/app/home")
+      return
+    }
+
     const routeFromHash = hashPathToRoutePath(hashPath)
 
     if (routeFromHash) {
@@ -185,7 +195,7 @@ const DashboardShellContent = ({
     }
 
     setActivePath(pathname)
-  }, [pathname])
+  }, [pathname, router])
 
   const displayName =
     user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress || "User"
@@ -243,7 +253,7 @@ const DashboardShellContent = ({
 
   const generalNavItems = [
     {
-      href: "/app",
+      href: "/app/dashboard",
       labelKey: "sidebar.links.dashboard",
       icon: LayoutDashboard,
     },
@@ -281,8 +291,7 @@ const DashboardShellContent = ({
   ] as const
 
   const pageTitleMap: Record<string, string> = {
-    "/app": t("sidebar.links.dashboard"),
-    "/app/home": "Home",
+    "/app/dashboard": t("sidebar.links.dashboard"),
     "/app/marketing": t("sidebar.links.marketing"),
     "/app/messaging": t("sidebar.links.messaging"),
     "/app/workouts": t("sidebar.links.workouts"),
@@ -292,6 +301,23 @@ const DashboardShellContent = ({
   }
 
   const getPageTitle = () => {
+    // Special handling for home page with time-based greeting
+    if (activePath === "/app/home") {
+      const hour = new Date().getHours()
+      const firstName = user?.firstName || "there"
+      
+      let greeting: string
+      if (hour < 12) {
+        greeting = t("greetings.goodMorning")
+      } else if (hour < 18) {
+        greeting = t("greetings.goodAfternoon")
+      } else {
+        greeting = t("greetings.goodEvening")
+      }
+      
+      return `${greeting}, ${firstName}`
+    }
+    
     return pageTitleMap[activePath] || "Dashboard"
   }
 
@@ -557,13 +583,9 @@ const DashboardShellContent = ({
           </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="flex-1 overflow-auto">
         <div className="flex flex-col gap-2 p-2 border-b">
           <div className="flex items-center justify-between gap-2 px-2 py-0.5">
-            <span className="text-base font-semibold">{pageTitle}</span>
-            <div className="flex items-center justify-center px-2">
-              <div className="h-6 border-l" />
-            </div>
             <div className="flex items-center gap-2 flex-1" ref={searchContainerRef}>
               <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
                 <PopoverTrigger asChild>
@@ -577,7 +599,7 @@ const DashboardShellContent = ({
                       onChange={handleSearchChange}
                       onFocus={handleSearchFocus}
                       onBlur={handleSearchBlur}
-                      className="pl-8 pr-20 h-8"
+                      className="pl-8 pr-20 h-10"
                     />
                     <div className="absolute right-2 flex items-center gap-1 pointer-events-none">
                       <Kbd className="h-5 px-1.5">
@@ -612,7 +634,7 @@ const DashboardShellContent = ({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    size="icon-sm"
+                    size="icon"
                     aria-label={`Select language (current: ${availableLanguages.find((lang) => lang.code === currentLanguage)?.label || "English"})`}
                   >
                     <span className="text-lg leading-none">
@@ -648,7 +670,7 @@ const DashboardShellContent = ({
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      size="icon-sm"
+                      size="icon"
                       aria-label={t("sidebar.theme.toggleAria")}
                     >
                       {currentTheme === "dark" ? (
@@ -699,12 +721,27 @@ const DashboardShellContent = ({
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Help"
+                onClick={() => {}}
+              >
+                <HelpCircle className="size-4" />
+              </Button>
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-auto p-4">{children}</div>
+        <div className="w-full px-4 py-4">
+          <h1 className="text-base font-semibold">{pageTitle}</h1>
+        </div>
+        <div className="p-4">
+          {children}
+        </div>
       </SidebarInset>
     </>
   )
 }
+
+
 

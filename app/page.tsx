@@ -26,6 +26,12 @@ export default function Home() {
 
     const hashPath = window.location.hash.slice(1)
 
+    // If hash is exactly /app, redirect to /app/home
+    if (hashPath === "/app") {
+      router.replace("/app/home")
+      return
+    }
+
     const routePath = hashPathToRoutePath(hashPath)
 
     if (routePath) {

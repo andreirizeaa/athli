@@ -32,12 +32,12 @@ export default function HeroSection() {
 
     const handleStartBuildingClick = () => {
         if (isSignedIn) {
-            router.push('/app')
+            router.push('/app/home')
             return
         }
 
         openSignIn({
-            redirectUrl: '/app',
+            redirectUrl: '/app/home',
         })
     }
 

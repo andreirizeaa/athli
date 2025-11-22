@@ -40,12 +40,12 @@ export const HeroHeader = () => {
 
   const handleAuthClick = () => {
     if (isSignedIn) {
-      router.push("/app")
+      router.push("/app/home")
       return
     }
 
     openSignIn({
-      redirectUrl: "/app",
+      redirectUrl: "/app/home",
     })
   }
 

@@ -31,6 +31,11 @@ export const enMessages = {
       label: 'Settings',
     },
   },
+  greetings: {
+    goodMorning: 'Good morning',
+    goodAfternoon: 'Good afternoon',
+    goodEvening: 'Good evening',
+  },
 } as const
 
 export type EnMessages = typeof enMessages
