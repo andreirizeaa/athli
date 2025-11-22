@@ -13,7 +13,7 @@ export const enMessages = {
     links: {
       dashboard: 'Dashboard',
       marketing: 'Marketing',
-      messaging: 'Messaging',
+      messaging: 'Messages',
       workouts: 'Workouts',
       athletes: 'Athletes',
       calendar: 'Calendar',
@@ -27,6 +27,14 @@ export const enMessages = {
       label: 'English',
       aria: 'Change language (current: English)',
     },
+    settings: {
+      label: 'Settings',
+    },
+  },
+  greetings: {
+    goodMorning: 'Good morning',
+    goodAfternoon: 'Good afternoon',
+    goodEvening: 'Good evening',
   },
 } as const
 
