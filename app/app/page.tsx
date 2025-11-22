@@ -1,9 +1,7 @@
+import { redirect } from "next/navigation"
+
 const DashboardPage = () => {
-  return (
-    <div className="flex h-full items-start justify-start">
-      {/* Title is now in the header above */}
-    </div>
-  )
+  redirect("/app/home")
 }
 
 export default DashboardPage

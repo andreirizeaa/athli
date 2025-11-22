@@ -10,7 +10,7 @@ export const routePathToHashPath = (pathname: string): string | null => {
   const rest = pathname.slice(APP_ROUTE_PREFIX.length) // "" | "/home" | "/calendar"
 
   if (rest === "" || rest === "/") {
-    return `${APP_HASH_PREFIX}/dashboard`
+    return `${APP_HASH_PREFIX}/home`
   }
 
   return `${APP_HASH_PREFIX}${rest}`
@@ -25,11 +25,7 @@ export const hashPathToRoutePath = (hashPath: string): string | null => {
   const rest = hashPath.slice(APP_HASH_PREFIX.length) // "" | "/home" | "/dashboard"
 
   if (rest === "" || rest === "/") {
-    return APP_ROUTE_PREFIX
-  }
-
-  if (rest === "/dashboard") {
-    return APP_ROUTE_PREFIX
+    return `${APP_ROUTE_PREFIX}/home`
   }
 
   return `${APP_ROUTE_PREFIX}${rest}`
