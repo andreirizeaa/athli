@@ -22,10 +22,17 @@ export const hashPathToRoutePath = (hashPath: string): string | null => {
     return null
   }
 
-  const rest = hashPath.slice(APP_HASH_PREFIX.length) // "" | "/home" | "/dashboard"
+  const rest = hashPath.slice(APP_HASH_PREFIX.length) // "" | "/home" | "/dashboard" | "/messaging/1"
 
   if (rest === "" || rest === "/") {
     return `${APP_ROUTE_PREFIX}/home`
+  }
+
+  // Collapse any messaging sub-paths (e.g. /app/messaging/1) back to the base
+  // Next.js route, since we handle the contact selection via the hash and
+  // client-side state on the messaging page.
+  if (rest === "/messaging" || rest.startsWith("/messaging/")) {
+    return `${APP_ROUTE_PREFIX}/messaging`
   }
 
   return `${APP_ROUTE_PREFIX}${rest}`

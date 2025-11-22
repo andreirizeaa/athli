@@ -32,6 +32,25 @@ export default function Home() {
       return
     }
 
+    // Support deep links like /#/app/messaging/1 where the final segment is
+    // the contact ID. We navigate to the base /app/messaging route and let the
+    // messaging page read the contact ID from sessionStorage or the hash.
+    if (hashPath.startsWith("/app/messaging/")) {
+      const segments = hashPath.split("/")
+      const contactId = segments[3] || null
+
+      if (contactId) {
+        try {
+          window.sessionStorage.setItem("messagingSelectedContactId", contactId)
+        } catch {
+          // Ignore storage errors so navigation still succeeds
+        }
+      }
+
+      router.replace("/app/messaging")
+      return
+    }
+
     const routePath = hashPathToRoutePath(hashPath)
 
     if (routePath) {

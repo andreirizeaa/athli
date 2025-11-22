@@ -72,6 +72,277 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { availableLanguages } from "@/lib/intl-provider"
 
+export type Contact = {
+  id: string
+  name: string
+  avatar?: string
+  lastMessage: string
+  timestamp: string
+  unreadCount?: number
+  isOnline?: boolean
+}
+
+export type Message = {
+  id: string
+  text: string
+  timestamp: string
+  isSent: boolean
+}
+
+export type Athlete = {
+  id: string
+  name: string
+  avatar?: string
+  lastActivity: string
+  last7DaysTraining: string
+  last30DaysTraining: string
+  category: "online" | "in-person"
+  connected: boolean | "invitation-sent"
+  email: string
+  phone: string
+  country: string
+  age: number
+  clientFor: number // in days
+}
+
+export const mockAthletes: Athlete[] = [
+  {
+    id: "1",
+    name: "John Smith",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
+    lastActivity: "2 hours ago",
+    last7DaysTraining: "5/7",
+    last30DaysTraining: "22/30",
+    category: "in-person",
+    connected: true,
+    email: "john.smith@example.com",
+    phone: "+1 (555) 123-4567",
+    country: "United States",
+    age: 32,
+    clientFor: 450,
+  },
+  {
+    id: "2",
+    name: "Sarah Johnson",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
+    lastActivity: "1 day ago",
+    last7DaysTraining: "6/7",
+    last30DaysTraining: "28/30",
+    category: "online",
+    connected: true,
+    email: "sarah.johnson@example.com",
+    phone: "+1 (555) 234-5678",
+    country: "Canada",
+    age: 28,
+    clientFor: 180,
+  },
+  {
+    id: "3",
+    name: "Mike Wilson",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike",
+    lastActivity: "30 minutes ago",
+    last7DaysTraining: "4/7",
+    last30DaysTraining: "18/30",
+    category: "in-person",
+    connected: true,
+    email: "mike.wilson@example.com",
+    phone: "+44 20 7946 0958",
+    country: "United Kingdom",
+    age: 35,
+    clientFor: 730,
+  },
+  {
+    id: "4",
+    name: "Emily Davis",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily",
+    lastActivity: "3 days ago",
+    last7DaysTraining: "3/7",
+    last30DaysTraining: "15/30",
+    category: "online",
+    connected: false,
+    email: "emily.davis@example.com",
+    phone: "+1 (555) 345-6789",
+    country: "United States",
+    age: 29,
+    clientFor: 90,
+  },
+  {
+    id: "5",
+    name: "David Brown",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
+    lastActivity: "5 hours ago",
+    last7DaysTraining: "7/7",
+    last30DaysTraining: "30/30",
+    category: "in-person",
+    connected: true,
+    email: "david.brown@example.com",
+    phone: "+61 2 9374 4000",
+    country: "Australia",
+    age: 41,
+    clientFor: 1095,
+  },
+  {
+    id: "6",
+    name: "Lisa Anderson",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa",
+    lastActivity: "1 week ago",
+    last7DaysTraining: "2/7",
+    last30DaysTraining: "10/30",
+    category: "online",
+    connected: false,
+    email: "lisa.anderson@example.com",
+    phone: "+1 (555) 456-7890",
+    country: "United States",
+    age: 26,
+    clientFor: 60,
+  },
+  {
+    id: "7",
+    name: "Chris Martinez",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Chris",
+    lastActivity: "12 hours ago",
+    last7DaysTraining: "6/7",
+    last30DaysTraining: "25/30",
+    category: "in-person",
+    connected: true,
+    email: "chris.martinez@example.com",
+    phone: "+34 91 123 4567",
+    country: "Spain",
+    age: 38,
+    clientFor: 365,
+  },
+  {
+    id: "8",
+    name: "Jessica Taylor",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica",
+    lastActivity: "2 days ago",
+    last7DaysTraining: "5/7",
+    last30DaysTraining: "20/30",
+    category: "online",
+    connected: true,
+    email: "jessica.taylor@example.com",
+    phone: "+1 (555) 567-8901",
+    country: "Canada",
+    age: 31,
+    clientFor: 240,
+  },
+]
+
+export const mockContacts: Contact[] = [
+  {
+    id: '1',
+    name: 'John Smith',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+    lastMessage: 'Hey, how are you doing?',
+    timestamp: '2:30 PM',
+    unreadCount: 2,
+    isOnline: true,
+  },
+  {
+    id: '2',
+    name: 'Sarah Johnson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+    lastMessage: 'Thanks for the workout plan!',
+    timestamp: '1:15 PM',
+    isOnline: false,
+  },
+  {
+    id: '3',
+    name: 'Mike Wilson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+    lastMessage: 'Can we schedule a session?',
+    timestamp: '12:45 PM',
+    unreadCount: 1,
+    isOnline: true,
+  },
+  {
+    id: '4',
+    name: 'Emily Davis',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
+    lastMessage: 'The nutrition plan looks great',
+    timestamp: 'Yesterday',
+    isOnline: false,
+  },
+  {
+    id: '5',
+    name: 'David Brown',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
+    lastMessage: 'See you at the gym tomorrow',
+    timestamp: 'Yesterday',
+    isOnline: true,
+  },
+  {
+    id: '6',
+    name: 'Lisa Anderson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
+    lastMessage: 'Perfect, thanks!',
+    timestamp: '2 days ago',
+    isOnline: false,
+  },
+]
+
+export const mockMessages: Record<string, Message[]> = {
+  '1': [
+    {
+      id: 'm1',
+      text: 'Hey, how are you doing?',
+      timestamp: '2:30 PM',
+      isSent: false,
+    },
+    {
+      id: 'm2',
+      text: 'I\'m doing great, thanks for asking! How about you?',
+      timestamp: '2:32 PM',
+      isSent: true,
+    },
+    {
+      id: 'm3',
+      text: 'Pretty good! Just finished my workout.',
+      timestamp: '2:33 PM',
+      isSent: false,
+    },
+  ],
+  '2': [
+    {
+      id: 'm4',
+      text: 'Thanks for the workout plan!',
+      timestamp: '1:15 PM',
+      isSent: false,
+    },
+    {
+      id: 'm5',
+      text: 'You\'re welcome! Let me know if you have any questions.',
+      timestamp: '1:16 PM',
+      isSent: true,
+    },
+  ],
+}
+
+const isFuzzyMatch = (text: string, query: string) => {
+  const normalizedText = text.toLowerCase()
+  const normalizedQuery = query.toLowerCase().trim()
+
+  if (!normalizedQuery) {
+    return false
+  }
+
+  if (normalizedText.includes(normalizedQuery)) {
+    return true
+  }
+
+  let textIndex = 0
+  let queryIndex = 0
+
+  while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
+    if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
+      queryIndex += 1
+    }
+    textIndex += 1
+  }
+
+  return queryIndex === normalizedQuery.length
+}
+
 type AppShellProps = {
   children: ReactNode
 }
@@ -95,9 +366,21 @@ export const AppShell = ({ children }: AppShellProps) => {
       return
     }
 
-    const hashPath = routePathToHashPath(pathname)
+    const currentHashPath = window.location.hash.slice(1)
+
+    let hashPath = routePathToHashPath(pathname)
+
     if (!hashPath) {
       return
+    }
+
+    // Preserve deep messaging hashes like /app/messaging/1 so that the
+    // messaging page can select the correct contact from the hash.
+    if (
+      pathname.startsWith("/app/messaging") &&
+      currentHashPath.match(/^\/app\/messaging\/.+$/)
+    ) {
+      hashPath = currentHashPath
     }
 
     const desiredHash = `#${hashPath}`
@@ -109,7 +392,7 @@ export const AppShell = ({ children }: AppShellProps) => {
   }, [pathname])
   
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh">
       <AppShellContent
         t={t}
         user={user}
@@ -162,7 +445,6 @@ const AppShellContent = ({
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isClient, setIsClient] = React.useState(false)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
-  const searchContainerRef = React.useRef<HTMLDivElement>(null)
   const [activePath, setActivePath] = React.useState(pathname)
   const router = useRouter()
 
@@ -234,21 +516,114 @@ const AppShellContent = ({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [])
 
-  const handleSearchFocus = () => {
-    setIsSearchOpen(true)
-  }
-
-  const handleSearchBlur = (e: React.FocusEvent) => {
-    // Don't close if clicking inside the popover
-    if (searchContainerRef.current?.contains(e.relatedTarget as Node)) {
-      return
-    }
-    setIsSearchOpen(false)
-  }
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
-    setIsSearchOpen(true)
+  }
+
+  const messageSearchResults = React.useMemo(
+    () =>
+      mockContacts.reduce<Array<{ contact: Contact }>>(
+        (results, contact) => {
+          const query = searchQuery.trim()
+
+          if (!query) {
+            return results
+          }
+
+          const contactMessages = mockMessages[contact.id] ?? []
+          const hasMatchInContact =
+            isFuzzyMatch(contact.name, query) || isFuzzyMatch(contact.lastMessage, query)
+
+          const matchingMessage = contactMessages.find((message) =>
+            isFuzzyMatch(message.text, query),
+          )
+
+          if (!hasMatchInContact && !matchingMessage) {
+            return results
+          }
+
+          results.push({
+            contact,
+          })
+
+          return results
+        },
+        [],
+      ),
+    [searchQuery],
+  )
+
+  const athleteSearchResults = React.useMemo(
+    () =>
+      mockAthletes.reduce<Array<{ athlete: Athlete }>>(
+        (results, athlete) => {
+          const query = searchQuery.trim()
+
+          if (!query) {
+            return results
+          }
+
+          const hasMatchInAthlete =
+            isFuzzyMatch(athlete.name, query) ||
+            isFuzzyMatch(athlete.email, query) ||
+            isFuzzyMatch(athlete.phone, query) ||
+            isFuzzyMatch(athlete.country, query) ||
+            isFuzzyMatch(athlete.category, query)
+
+          if (!hasMatchInAthlete) {
+            return results
+          }
+
+          results.push({
+            athlete,
+          })
+
+          return results
+        },
+        [],
+      ),
+    [searchQuery],
+  )
+
+  const handleSearchResultClick = (contactId: string) => {
+    if (typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem("messagingSelectedContactId", contactId)
+      } catch {
+      }
+    }
+
+    router.push("/app/messaging")
+
+    if (typeof window !== "undefined") {
+      const newHash = `#/app/messaging/${contactId}`
+
+      window.setTimeout(() => {
+        if (window.location.hash !== newHash) {
+          window.location.hash = newHash
+        }
+      }, 0)
+    }
+
+    setIsSearchOpen(false)
+    setSearchQuery("")
+  }
+
+  const handleAthleteSearchResultClick = (athleteId: string) => {
+    router.push(`/app/athletes/${athleteId}`)
+
+    if (typeof window !== "undefined") {
+      const newHash = `#/app/athletes/${athleteId}`
+
+      window.setTimeout(() => {
+        if (window.location.hash !== newHash) {
+          window.location.hash = newHash
+        }
+      }, 0)
+    }
+
+    setIsSearchOpen(false)
+    setSearchQuery("")
   }
 
   const generalNavItems = [
@@ -277,9 +652,9 @@ const AppShellContent = ({
     },
   ] as const
 
-  const clientsNavItems = [
+  const athletesNavItems = [
     {
-      href: "/app/clients",
+      href: "/app/athletes",
       labelKey: "sidebar.links.athletes",
       icon: Users,
     },
@@ -289,39 +664,6 @@ const AppShellContent = ({
       icon: MessageCircle,
     },
   ] as const
-
-  const pageTitleMap: Record<string, string> = {
-    "/app/dashboard": t("sidebar.links.dashboard"),
-    "/app/marketing": t("sidebar.links.marketing"),
-    "/app/messaging": t("sidebar.links.messaging"),
-    "/app/workouts": t("sidebar.links.workouts"),
-    "/app/clients": t("sidebar.links.athletes"),
-    "/app/calendar": t("sidebar.links.calendar"),
-    "/app/settings": t("sidebar.settings.label") || "Settings",
-  }
-
-  const getPageTitle = () => {
-    // Special handling for home page with time-based greeting
-    if (activePath === "/app/home") {
-      const hour = new Date().getHours()
-      const firstName = user?.firstName || "there"
-      
-      let greeting: string
-      if (hour < 12) {
-        greeting = t("greetings.goodMorning")
-      } else if (hour < 18) {
-        greeting = t("greetings.goodAfternoon")
-      } else {
-        greeting = t("greetings.goodEvening")
-      }
-      
-      return `${greeting}, ${firstName}`
-    }
-    
-    return pageTitleMap[activePath] || "Dashboard"
-  }
-
-  const pageTitle = getPageTitle()
 
   return (
     <>
@@ -449,13 +791,15 @@ const AppShellContent = ({
           )}
           <SidebarGroup className={cn("pb-1", !isCollapsed && "pt-0 pb-0")}>
             <SidebarGroupLabel className={cn("text-xs uppercase", isCollapsed && "text-[10px] opacity-100 -mt-0", !isCollapsed && "pt-1 pb-1 mt-1.5")}>
-              CLIENTS
+              ATHLETES
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                {clientsNavItems.map((item) => {
+                {athletesNavItems.map((item) => {
                   const Icon = item.icon
-                  const isActive = activePath === item.href
+                  const isActive = item.href === "/app/athletes"
+                    ? activePath === item.href || activePath.startsWith(`${item.href}/`)
+                    : activePath === item.href
                   const label = t(item.labelKey)
 
                   return (
@@ -583,10 +927,10 @@ const AppShellContent = ({
           </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="flex-1 overflow-auto">
-        <div className="flex flex-col gap-2 p-2 border-b">
+      <SidebarInset className="flex-1 overflow-hidden flex flex-col">
+        <div className="flex flex-col gap-2 p-2 border-b flex-shrink-0">
           <div className="flex items-center justify-between gap-2 px-2 py-0.5">
-            <div className="flex items-center gap-2 flex-1" ref={searchContainerRef}>
+            <div className="flex items-center gap-2 flex-1">
               <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
                 <PopoverTrigger asChild>
                   <div className="relative flex items-center flex-1">
@@ -597,8 +941,6 @@ const AppShellContent = ({
                       placeholder="Search across OneNinety..."
                       value={searchQuery}
                       onChange={handleSearchChange}
-                      onFocus={handleSearchFocus}
-                      onBlur={handleSearchBlur}
                       className="pl-8 pr-20 h-10"
                     />
                     <div className="absolute right-2 flex items-center gap-1 pointer-events-none">
@@ -616,12 +958,103 @@ const AppShellContent = ({
                   onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                   <div className="flex flex-col">
-                    <div className="flex flex-col items-center justify-center py-16 px-4 min-h-[400px]">
-                      <Search className="h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-sm text-muted-foreground">
-                        Search for leads, clients or workouts
-                      </p>
-                    </div>
+                    {!searchQuery.trim() && (
+                      <div className="flex flex-col items-center justify-center py-16 px-4 min-h-[400px]">
+                        <Search className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-sm text-muted-foreground">
+                          Search for leads, clients or workouts
+                        </p>
+                      </div>
+                    )}
+                    {searchQuery.trim() && messageSearchResults.length === 0 && athleteSearchResults.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
+                        <p className="text-sm text-muted-foreground">
+                          No results found for <span className="font-medium">"{searchQuery}"</span>.
+                        </p>
+                      </div>
+                    )}
+                    {searchQuery.trim() && (messageSearchResults.length > 0 || athleteSearchResults.length > 0) && (
+                      <div className="py-2">
+                        {messageSearchResults.length > 0 && (
+                          <>
+                            <div className="px-3 pb-1 pt-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Messages
+                              </p>
+                            </div>
+                            <div className="max-h-[360px] overflow-y-auto">
+                              {messageSearchResults.map((result) => (
+                                <button
+                                  key={result.contact.id}
+                                  type="button"
+                                  onClick={() => handleSearchResultClick(result.contact.id)}
+                                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                  aria-label={`Open conversation with ${result.contact.name}`}
+                                >
+                                  <Avatar className="h-8 w-8 rounded-md">
+                                    <AvatarImage src={result.contact.avatar} alt={result.contact.name} />
+                                    <AvatarFallback>
+                                      {result.contact.name
+                                        .split(" ")
+                                        .map((part) => part.charAt(0).toUpperCase())
+                                        .slice(0, 2)
+                                        .join("")}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex min-w-0 flex-1 flex-col">
+                                    <span className="truncate text-sm font-medium">
+                                      {result.contact.name}
+                                    </span>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                        {athleteSearchResults.length > 0 && (
+                          <>
+                            {messageSearchResults.length > 0 && (
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
+                            <div className="px-3 pb-1 pt-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Athletes
+                              </p>
+                            </div>
+                            <div className="max-h-[360px] overflow-y-auto">
+                              {athleteSearchResults.map((result) => {
+                                const initials = result.athlete.name
+                                  .split(" ")
+                                  .map((part) => part.charAt(0).toUpperCase())
+                                  .slice(0, 2)
+                                  .join("")
+                                return (
+                                  <button
+                                    key={result.athlete.id}
+                                    type="button"
+                                    onClick={() => handleAthleteSearchResultClick(result.athlete.id)}
+                                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    aria-label={`Open profile for ${result.athlete.name}`}
+                                  >
+                                    <Avatar className="h-8 w-8 rounded-md">
+                                      <AvatarImage src={result.athlete.avatar} alt={result.athlete.name} />
+                                      <AvatarFallback>{initials}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex min-w-0 flex-1 flex-col">
+                                      <span className="truncate text-sm font-medium">
+                                        {result.athlete.name}
+                                      </span>
+                                    </div>
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </PopoverContent>
               </Popover>
@@ -732,10 +1165,7 @@ const AppShellContent = ({
             </div>
           </div>
         </div>
-        <div className="w-full px-4 py-4">
-          <h1 className="text-base font-semibold">{pageTitle}</h1>
-        </div>
-        <div className="p-4">
+        <div className="flex-1 overflow-auto min-h-0">
           {children}
         </div>
       </SidebarInset>

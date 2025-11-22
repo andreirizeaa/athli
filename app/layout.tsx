@@ -6,6 +6,7 @@ import { shadcn } from '@clerk/themes'
 import { ThemeProvider } from '@/lib/theme-provider'
 import { IntlProvider } from '@/lib/intl-provider'
 import SupabaseProvider from '@/lib/supabase-provider'
+import { Toaster } from '@/components/ui/sonner'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -28,8 +29,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning className="h-full">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -45,6 +46,7 @@ export default function RootLayout({
               <IntlProvider>{children}</IntlProvider>
             </SupabaseProvider>
           </ClerkProvider>
+          <Toaster position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>
