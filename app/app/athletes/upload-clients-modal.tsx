@@ -1,0 +1,347 @@
+"use client"
+
+import { useState, useRef } from "react"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Spinner } from "@/components/ui/spinner"
+import { parseCSV, type ClientData } from "@/lib/csv-parser"
+import { cn } from "@/lib/utils"
+import { X, Upload, Check } from "lucide-react"
+
+interface UploadClientsModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export const UploadClientsModal = ({ open, onOpenChange }: UploadClientsModalProps) => {
+  const [uploadStep, setUploadStep] = useState<number>(1)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isValidatingCSV, setIsValidatingCSV] = useState<boolean>(false)
+  const [csvError, setCsvError] = useState<string | null>(null)
+  const [parsedClients, setParsedClients] = useState<ClientData[]>([])
+
+  const handleOpenChange = (isOpen: boolean) => {
+    onOpenChange(isOpen)
+    if (!isOpen) {
+      setUploadStep(1)
+      setSelectedFile(null)
+      setIsValidatingCSV(false)
+      setCsvError(null)
+      setParsedClients([])
+    }
+  }
+
+  const handleRemoveClient = (index: number) => {
+    setParsedClients((prev) => {
+      const updated = prev.filter((_, i) => i !== index)
+      if (updated.length === 0) {
+        handleOpenChange(false)
+      }
+      return updated
+    })
+  }
+
+  const handleCancel = () => {
+    handleOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="w-full max-w-[600px] sm:max-w-[600px] flex flex-col" showCloseButton={false}>
+        <DialogHeader className="flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-left">Upload Clients</DialogTitle>
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
+          </div>
+        </DialogHeader>
+        <div className="flex-1 overflow-hidden mt-4 flex flex-col">
+          {/* Progress Steps */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex items-center justify-center size-8 rounded-full border-2 transition-colors",
+                  uploadStep >= 1
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-muted"
+                )}
+              >
+                <span className="text-sm font-medium">1</span>
+              </div>
+              {uploadStep > 1 && (
+                <div className="h-0.5 w-8 bg-primary" />
+              )}
+              {uploadStep <= 1 && (
+                <div className="h-0.5 w-8 bg-muted" />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex items-center justify-center size-8 rounded-full border-2 transition-colors",
+                  uploadStep >= 2
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-muted"
+                )}
+              >
+                <span className="text-sm font-medium">2</span>
+              </div>
+              {uploadStep > 2 && (
+                <div className="h-0.5 w-8 bg-primary" />
+              )}
+              {uploadStep <= 2 && (
+                <div className="h-0.5 w-8 bg-muted" />
+              )}
+            </div>
+            <div
+              className={cn(
+                "flex items-center justify-center size-8 rounded-full border-2 transition-colors",
+                uploadStep >= 3
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-muted"
+              )}
+            >
+              <span className="text-sm font-medium">3</span>
+            </div>
+          </div>
+
+          {/* Step 1: Upload CSV */}
+          {uploadStep === 1 && (
+            <div className="flex flex-col items-center gap-6">
+              <div className="flex flex-col items-center gap-2">
+                <h3 className="text-lg font-semibold">Upload CSV</h3>
+                {csvError && (
+                  <p className="text-sm text-destructive text-center">{csvError}</p>
+                )}
+              </div>
+              <div className="w-full max-w-md">
+                <div className="border-2 border-dashed border-muted rounded-lg p-8 flex flex-col items-center justify-center gap-4 hover:border-primary transition-colors cursor-pointer">
+                  {selectedFile ? (
+                    <>
+                      <Check className="size-10 text-green-500" />
+                      <div className="text-center">
+                        <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(selectedFile.size / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setSelectedFile(null)
+                          setCsvError(null)
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = ""
+                          }
+                        }}
+                      >
+                        Change File
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="size-10 text-muted-foreground" />
+                      <div className="text-center">
+                        <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
+                        <p className="text-xs text-muted-foreground">CSV file only</p>
+                      </div>
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        className="hidden"
+                        id="csv-upload"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            setSelectedFile(file)
+                            setCsvError(null)
+                            console.log("File selected:", file.name)
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="cursor-pointer"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Select File
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-center text-muted-foreground">
+                Please download this{" "}
+                <a
+                  href="/clients.csv"
+                  download="clients.csv"
+                  className="underline text-foreground hover:text-primary transition-colors font-semibold text-base"
+                >
+                  CSV Template
+                </a>
+                , add your client info and then upload.
+              </p>
+            </div>
+          )}
+
+          {/* Step 2: Review Info */}
+          {uploadStep === 2 && (
+            <div className="flex flex-col gap-6">
+              <h3 className="text-lg font-semibold text-center">
+                Review {parsedClients.length} new {parsedClients.length === 1 ? "client" : "clients"}
+              </h3>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead>First Name</TableHead>
+                      <TableHead>Last Name</TableHead>
+                      <TableHead className="w-[200px]">Email</TableHead>
+                      <TableHead>Category</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parsedClients.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          No clients found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      parsedClients.map((client, index) => (
+                        <TableRow key={`${client.email}-${index}`}>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemoveClient(index)}
+                              aria-label={`Remove ${client.firstName} ${client.lastName}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                          <TableCell>{client.firstName}</TableCell>
+                          <TableCell>{client.lastName}</TableCell>
+                          <TableCell className="w-[200px]">{client.email}</TableCell>
+                          <TableCell>{client.category}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: All Done */}
+          {uploadStep === 3 && (
+            <div className="flex flex-col items-center gap-6">
+              <h3 className="text-lg font-semibold text-center">All Done</h3>
+              <Button
+                type="button"
+                onClick={handleCancel}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+
+          {/* Buttons */}
+          {uploadStep !== 3 && (
+            <div className="flex items-center justify-end gap-3 pt-4 mt-8 border-t">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+              {uploadStep === 1 && (
+                <Button
+                  type="button"
+                  disabled={!selectedFile || isValidatingCSV}
+                  onClick={async () => {
+                    if (selectedFile) {
+                      setIsValidatingCSV(true)
+                      setCsvError(null)
+
+                      try {
+                        const result = await parseCSV(selectedFile)
+                        
+                        if (!result.isValid) {
+                          setCsvError(result.error || "Invalid CSV file")
+                          setIsValidatingCSV(false)
+                          return
+                        }
+
+                        // CSV is valid, store parsed clients and proceed to step 2
+                        if (result.clients) {
+                          setParsedClients(result.clients)
+                        }
+                        setUploadStep(2)
+                        setIsValidatingCSV(false)
+                      } catch (error) {
+                        setCsvError("Error processing CSV file")
+                        setIsValidatingCSV(false)
+                      }
+                    }
+                  }}
+                >
+                  {isValidatingCSV ? (
+                    <>
+                      <Spinner className="mr-2" />
+                      Validating...
+                    </>
+                  ) : (
+                    "Continue"
+                  )}
+                </Button>
+              )}
+              {uploadStep === 2 && (
+                <Button
+                  type="button"
+                  onClick={() => setUploadStep(3)}
+                >
+                  Continue
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+

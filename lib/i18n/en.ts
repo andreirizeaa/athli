@@ -13,7 +13,7 @@ export const enMessages = {
     links: {
       dashboard: 'Dashboard',
       marketing: 'Marketing',
-      messaging: 'Messaging',
+      messaging: 'Messages',
       workouts: 'Workouts',
       athletes: 'Athletes',
       calendar: 'Calendar',
