@@ -9,8 +9,8 @@ const DashboardPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 py-4">
-        {/* Dashboard content */}
+      <div className="w-full flex-1 overflow-auto px-4 py-4 flex items-center justify-center">
+        <h2 className="text-2xl font-semibold text-muted-foreground">Coming Soon</h2>
       </div>
     </div>
   )
