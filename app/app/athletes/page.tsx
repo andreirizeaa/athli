@@ -93,8 +93,10 @@ const AthletesPage = () => {
   const [columnOrder, setColumnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
   const [sortColumn, setSortColumn] = useState<ColumnId | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
+  const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false)
   const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map())
   const copyTimeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const inviteLinkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleToggleAthlete = (athleteId: string) => {
     setSelectedAthletes((prev) => {
@@ -477,6 +479,9 @@ const AthletesPage = () => {
       timeoutRefs.current.clear()
       copyTimeoutRefs.current.forEach((timeout) => clearTimeout(timeout))
       copyTimeoutRefs.current.clear()
+      if (inviteLinkCopyTimeoutRef.current) {
+        clearTimeout(inviteLinkCopyTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -484,6 +489,47 @@ const AthletesPage = () => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault()
       handleToggleReveal(athleteId, fieldType)
+    }
+  }
+
+  const handleCopyInviteLink = async () => {
+    const inviteLink = "google.com"
+    try {
+      await navigator.clipboard.writeText(inviteLink)
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea")
+      textArea.value = inviteLink
+      textArea.style.position = "fixed"
+      textArea.style.opacity = "0"
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        document.execCommand("copy")
+      } catch (fallbackErr) {
+        // Ignore copy errors
+      }
+      document.body.removeChild(textArea)
+    }
+
+    setIsInviteLinkCopied(true)
+
+    // Clear existing timeout if any
+    if (inviteLinkCopyTimeoutRef.current) {
+      clearTimeout(inviteLinkCopyTimeoutRef.current)
+    }
+
+    // Set timeout to hide checkmark after 2 seconds
+    inviteLinkCopyTimeoutRef.current = setTimeout(() => {
+      setIsInviteLinkCopied(false)
+      inviteLinkCopyTimeoutRef.current = null
+    }, 2000)
+  }
+
+  const handleInviteLinkKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      handleCopyInviteLink()
     }
   }
 
@@ -599,6 +645,21 @@ const AthletesPage = () => {
           </div>
           <DropdownMenu>
             <ButtonGroup>
+              <Button
+                variant="secondary"
+                onClick={handleCopyInviteLink}
+                onKeyDown={handleInviteLinkKeyDown}
+                className="gap-2"
+                aria-label="Copy invite link"
+              >
+                {isInviteLinkCopied ? (
+                  <Check className="size-4" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
+                <span>Your invite link</span>
+              </Button>
+              <ButtonGroupSeparator />
               <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100">
                 <UserPlus className="size-4" />
                 <span>Add Client</span>
