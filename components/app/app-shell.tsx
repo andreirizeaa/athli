@@ -41,14 +41,12 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
 import {
@@ -610,10 +608,10 @@ const AppShellContent = ({
   }
 
   const handleAthleteSearchResultClick = (athleteId: string) => {
-    router.push(`/app/athletes/${athleteId}`)
+    router.push(`/app/athletes/${athleteId}/overview`)
 
     if (typeof window !== "undefined") {
-      const newHash = `#/app/athletes/${athleteId}`
+      const newHash = `#/app/athletes/${athleteId}/overview`
 
       window.setTimeout(() => {
         if (window.location.hash !== newHash) {
@@ -694,8 +692,8 @@ const AppShellContent = ({
           </div>
         )}
         </SidebarHeader>
-        <SidebarContent className={cn("gap-2", !isCollapsed && "gap-0")}>
-          <SidebarGroup className={cn("pb-1", !isCollapsed && "pt-0 pb-0")}>
+        <SidebarContent className="gap-0">
+          <SidebarGroup className="pb-0">
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 <SidebarMenuItem>
@@ -714,15 +712,16 @@ const AppShellContent = ({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          {isCollapsed && (
-            <div className="flex justify-center my-0.5 px-2">
-              <div className="h-px w-8 bg-sidebar-border" />
+          <SidebarGroup className="pb-0">
+            <div className="flex h-6 items-center px-2">
+              {isCollapsed ? (
+                <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              ) : (
+                <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                  {t("sidebar.group.general")}
+                </span>
+              )}
             </div>
-          )}
-          <SidebarGroup className={cn("pb-1", !isCollapsed && "pt-0 pb-0")}>
-            <SidebarGroupLabel className={cn("text-xs uppercase", isCollapsed && "text-[10px] opacity-100 -mt-0", !isCollapsed && "pt-1 pb-1 mt-1.5")}>
-              {t("sidebar.group.general")}
-            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {generalNavItems.map((item) => {
@@ -749,15 +748,16 @@ const AppShellContent = ({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          {isCollapsed && (
-            <div className="flex justify-center my-0.5 px-2">
-              <div className="h-px w-8 bg-sidebar-border" />
+          <SidebarGroup className="pb-0">
+            <div className="flex h-6 items-center px-2">
+              {isCollapsed ? (
+                <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              ) : (
+                <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                  BUSINESS
+                </span>
+              )}
             </div>
-          )}
-          <SidebarGroup className={cn("pb-1", !isCollapsed && "pt-0 pb-0")}>
-            <SidebarGroupLabel className={cn("text-xs uppercase", isCollapsed && "text-[10px] opacity-100 -mt-0", !isCollapsed && "pt-1 pb-1 mt-1.5")}>
-              BUSINESS
-            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {businessNavItems.map((item) => {
@@ -784,15 +784,16 @@ const AppShellContent = ({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-          {isCollapsed && (
-            <div className="flex justify-center my-0.5 px-2">
-              <div className="h-px w-8 bg-sidebar-border" />
+          <SidebarGroup className="pb-0">
+            <div className="flex h-6 items-center px-2">
+              {isCollapsed ? (
+                <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              ) : (
+                <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                  ATHLETES
+                </span>
+              )}
             </div>
-          )}
-          <SidebarGroup className={cn("pb-1", !isCollapsed && "pt-0 pb-0")}>
-            <SidebarGroupLabel className={cn("text-xs uppercase", isCollapsed && "text-[10px] opacity-100 -mt-0", !isCollapsed && "pt-1 pb-1 mt-1.5")}>
-              ATHLETES
-            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {athletesNavItems.map((item) => {
@@ -836,13 +837,13 @@ const AppShellContent = ({
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              {isCollapsed ? (
-                <div className="flex justify-center w-full">
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                {isCollapsed ? (
                   <button
                     type="button"
-                    className="hover:bg-accent/60 flex h-9 w-9 items-center justify-center rounded-md"
+                    className="hover:bg-accent/60 flex h-11 w-full items-center justify-center rounded-md p-2"
                     aria-label="Open account menu"
                   >
                     <Avatar className="h-8 w-8 rounded-md">
@@ -850,33 +851,32 @@ const AppShellContent = ({
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                   </button>
-                </div>
-              ) : (
-              <button
-                type="button"
-                className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md px-2 text-left"
-                aria-label="Open account menu"
-              >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8 rounded-md">
-                    <AvatarImage src={user?.imageUrl} alt={displayName} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <span className="text-foreground truncate text-sm font-medium">
-                      {displayName}
-                    </span>
-                    {displayEmail && (
-                      <span className="text-muted-foreground truncate text-xs">
-                        {displayEmail}
+                ) : (
+                <button
+                  type="button"
+                  className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md p-2 text-left"
+                  aria-label="Open account menu"
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8 rounded-md">
+                      <AvatarImage src={user?.imageUrl} alt={displayName} />
+                      <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                      <span className="text-foreground truncate text-sm font-medium">
+                        {displayName}
                       </span>
-                    )}
+                      {displayEmail && (
+                        <span className="text-muted-foreground truncate text-xs">
+                          {displayEmail}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <MoreVertical className="h-4 w-4 text-muted-foreground" />
-              </button>
-              )}
-            </DropdownMenuTrigger>
+                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                </button>
+                )}
+              </DropdownMenuTrigger>
             <DropdownMenuContent
               side="right"
               align="center"
@@ -925,6 +925,7 @@ const AppShellContent = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </SidebarMenuItem>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex-1 overflow-hidden flex flex-col">

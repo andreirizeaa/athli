@@ -80,6 +80,23 @@ const COLUMN_ORDER: ColumnId[] = [
   "clientFor",
 ]
 
+const getColumnWidth = (colId: ColumnId, format: "class" | "pixel" = "class"): string => {
+  const widths: Record<ColumnId, { class: string; pixel: string }> = {
+    lastActivity: { class: "min-w-[165px]", pixel: "165px" },
+    last7DaysTraining: { class: "min-w-[160px]", pixel: "200px" },
+    last30DaysTraining: { class: "min-w-[170px]", pixel: "200px" },
+    category: { class: "min-w-[140px]", pixel: "140px" },
+    connected: { class: "min-w-[150px]", pixel: "150px" },
+    email: { class: "min-w-[200px]", pixel: "290px" },
+    phone: { class: "min-w-[160px]", pixel: "240px" },
+    country: { class: "min-w-[140px]", pixel: "150px" },
+    age: { class: "min-w-[110px]", pixel: "110px" },
+    clientFor: { class: "min-w-[150px]", pixel: "150px" },
+  }
+
+  return widths[colId]?.[format] || (format === "class" ? "min-w-[130px]" : "130px")
+}
+
 const AthletesPage = () => {
   const router = useRouter()
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set())
@@ -111,10 +128,10 @@ const AthletesPage = () => {
   }
 
   const handleNavigateToClientProfile = (athleteId: string) => {
-    router.push(`/app/athletes/${athleteId}`)
+    router.push(`/app/athletes/${athleteId}/overview`)
 
     if (typeof window !== "undefined") {
-      const newHash = `#/app/athletes/${athleteId}`
+      const newHash = `#/app/athletes/${athleteId}/overview`
       window.setTimeout(() => {
         if (window.location.hash !== newHash) {
           window.location.hash = newHash
@@ -340,6 +357,26 @@ const AthletesPage = () => {
     }
   }
 
+  const handleNavigateToTrainingCalendar = (athleteId: string) => {
+    router.push(`/app/athletes/${athleteId}/training-calendar`)
+
+    if (typeof window !== "undefined") {
+      const newHash = `#/app/athletes/${athleteId}/training-calendar`
+      window.setTimeout(() => {
+        if (window.location.hash !== newHash) {
+          window.location.hash = newHash
+        }
+      }, 0)
+    }
+  }
+
+  const handleTrainingCalendarIconKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, athleteId: string) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      handleNavigateToTrainingCalendar(athleteId)
+    }
+  }
+
   const handleMessageIconKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, athleteId: string) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault()
@@ -541,33 +578,6 @@ const AthletesPage = () => {
     const isAscending = isSorted && sortDirection === "asc"
     const isDescending = isSorted && sortDirection === "desc"
 
-    const getColumnWidth = (colId: ColumnId): string => {
-      switch (colId) {
-        case "lastActivity":
-          return "min-w-[165px]"
-        case "last7DaysTraining":
-          return "min-w-[160px]"
-        case "last30DaysTraining":
-          return "min-w-[170px]"
-        case "category":
-          return "min-w-[140px]"
-        case "connected":
-          return "min-w-[150px]"
-        case "email":
-          return "min-w-[200px]"
-        case "phone":
-          return "min-w-[160px]"
-        case "country":
-          return "min-w-[140px]"
-        case "age":
-          return "min-w-[110px]"
-        case "clientFor":
-          return "min-w-[150px]"
-        default:
-          return "min-w-[130px]"
-      }
-    }
-
     const headerContent = (
       <div className="flex items-center gap-2 cursor-pointer h-full w-full">
         {icon}
@@ -578,7 +588,7 @@ const AthletesPage = () => {
     )
 
     return (
-      <TableHead className={cn("!px-4 !py-0 h-10", getColumnWidth(columnId))}>
+      <TableHead className={cn("!px-4 !py-0 h-10", getColumnWidth(columnId, "class"))}>
         <DropdownMenu>
           {tooltip ? (
             <Tooltip>
@@ -713,6 +723,7 @@ const AthletesPage = () => {
                 <Button variant="outline" className="gap-2">
                   <Grid2x2 className="size-4" />
                   <span>Category: {categoryFilter ? categoryFilter === "online" ? "Online" : "In-person" : "All"}</span>
+                  <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -749,6 +760,7 @@ const AthletesPage = () => {
                       ? "Not Connected"
                       : "Invitation Sent"}
                   </span>
+                  <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -793,7 +805,7 @@ const AthletesPage = () => {
                         />
                       </div>
                     </TableHead>
-                    <TableHead className="px-4 w-[250px] h-10">
+                    <TableHead className="px-4 w-[300px] h-10">
                       <div className="flex items-center gap-2 h-full">
                         <User className="size-4" />
                         <span>Athlete</span>
@@ -854,17 +866,42 @@ const AthletesPage = () => {
                             <span className="font-medium truncate">{athlete.name}</span>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              aria-label={`Message ${athlete.name}`}
-                              onClick={() => handleNavigateToMessages(athlete.id)}
-                              onKeyDown={(e) => handleMessageIconKeyDown(e, athlete.id)}
-                              data-no-row-link="true"
-                              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                            >
-                              <MessageCircle className="size-4" />
-                            </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Message ${athlete.name}`}
+                                  onClick={() => handleNavigateToMessages(athlete.id)}
+                                  onKeyDown={(e) => handleMessageIconKeyDown(e, athlete.id)}
+                                  data-no-row-link="true"
+                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                >
+                                  <MessageCircle className="size-4" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Message the client</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Open training calendar for ${athlete.name}`}
+                                  onClick={() => handleNavigateToTrainingCalendar(athlete.id)}
+                                  onKeyDown={(e) => handleTrainingCalendarIconKeyDown(e, athlete.id)}
+                                  data-no-row-link="true"
+                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                >
+                                  <Dumbbell className="size-4" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>View clients training calendar</p>
+                              </TooltipContent>
+                            </Tooltip>
                             <div
                               role="button"
                               tabIndex={0}
@@ -904,33 +941,7 @@ const AthletesPage = () => {
               <Table className="table-fixed border-collapse">
                 <colgroup>
                   {columnOrder.map((columnId) => {
-                    const getColumnWidth = (colId: ColumnId): string => {
-                      switch (colId) {
-                        case "lastActivity":
-                          return "165px"
-                        case "last7DaysTraining":
-                          return "200px"
-                        case "last30DaysTraining":
-                          return "200px"
-                        case "category":
-                          return "140px"
-                        case "connected":
-                          return "150px"
-                        case "email":
-                          return "290px"
-                        case "phone":
-                          return "240px"
-                        case "country":
-                          return "150px"
-                        case "age":
-                          return "110px"
-                        case "clientFor":
-                          return "150px"
-                        default:
-                          return "130px"
-                      }
-                    }
-                    return <col key={columnId} style={{ width: getColumnWidth(columnId) }} />
+                    return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
                   })}
                 </colgroup>
                 <TableHeader className="sticky top-0 z-10 bg-background">
@@ -1021,7 +1032,7 @@ const AthletesPage = () => {
                         switch (columnId) {
                           case "lastActivity":
                             return (
-                              <TableCell key={columnId} className="!px-4 !py-2 h-[54px] min-w-[140px]">
+                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   <span className="text-sm">{athlete.lastActivity}</span>
                                 </div>
@@ -1029,7 +1040,7 @@ const AthletesPage = () => {
                             )
                           case "last7DaysTraining":
                             return (
-                              <TableCell key={columnId} className="!px-4 h-[54px] min-w-[160px]">
+                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   <span className="text-sm">{calculatePercentage(athlete.last7DaysTraining)}</span>
                                 </div>
@@ -1037,7 +1048,7 @@ const AthletesPage = () => {
                             )
                           case "last30DaysTraining":
                             return (
-                              <TableCell key={columnId} className="!px-4 h-[54px] min-w-[170px]">
+                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   <span className="text-sm">{calculatePercentage(athlete.last30DaysTraining)}</span>
                                 </div>
@@ -1045,7 +1056,7 @@ const AthletesPage = () => {
                             )
                           case "category":
                             return (
-                              <TableCell key={columnId} className="!px-4 h-[54px] min-w-[120px]">
+                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   <span className="text-sm capitalize">{athlete.category}</span>
                                 </div>
@@ -1053,7 +1064,7 @@ const AthletesPage = () => {
                             )
                           case "connected":
                             return (
-                              <TableCell key={columnId} className="!px-4 h-[54px] min-w-[120px]">
+                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   {athlete.connected === true ? (
                                     <CheckCircle2 className="size-4 text-green-500" />
@@ -1067,7 +1078,7 @@ const AthletesPage = () => {
                             )
                           case "email":
                             return (
-                              <TableCell key={columnId} className="!px-4 h-[54px] min-w-[200px]">
+                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center justify-between gap-2 h-full">
                                   <span className="text-sm flex-1 min-w-0 truncate">
                                     {isFieldRevealed(athlete.id, "email") ? athlete.email : censorEmail(athlete.email)}
@@ -1105,7 +1116,7 @@ const AthletesPage = () => {
                             )
                           case "phone":
                             return (
-                              <TableCell key={columnId} className="!px-4 h-[54px] min-w-[160px]">
+                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center justify-between gap-2 h-full">
                                   <span className="text-sm flex-1 min-w-0 truncate">
                                     {isFieldRevealed(athlete.id, "phone") ? athlete.phone : censorPhone(athlete.phone)}
@@ -1143,7 +1154,7 @@ const AthletesPage = () => {
                             )
                           case "country":
                             return (
-                              <TableCell key={columnId} className="!px-4 !py-2 h-[54px] min-w-[140px]">
+                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   <span className="text-sm">{athlete.country}</span>
                                 </div>
@@ -1151,7 +1162,7 @@ const AthletesPage = () => {
                             )
                           case "age":
                             return (
-                              <TableCell key={columnId} className="!px-4 !py-2 h-[54px] min-w-[100px]">
+                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   <span className="text-sm">{athlete.age}</span>
                                 </div>
@@ -1159,7 +1170,7 @@ const AthletesPage = () => {
                             )
                           case "clientFor":
                             return (
-                              <TableCell key={columnId} className="!px-4 !py-2 h-[54px] min-w-[140px]">
+                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
                                 <div className="flex items-center h-full">
                                   <span className="text-sm">{formatClientFor(athlete.clientFor)}</span>
                                 </div>
