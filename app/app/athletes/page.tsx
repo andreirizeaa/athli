@@ -794,21 +794,19 @@ const AthletesPage = () => {
           <div className="flex-shrink-0 border-r flex flex-col">
             <div className="flex-shrink-0">
               <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="px-4 h-10">
-                      <div className="flex items-center justify-center h-full">
+                <TableHeader className="bg-sidebar">
+                  <TableRow className="hover:bg-transparent h-10">
+                    <TableHead className="!px-4 !py-0 w-[250px] h-10">
+                      <div className="flex items-center gap-3 h-full w-full">
                         <Checkbox
                           checked={getSelectAllCheckedState()}
                           onCheckedChange={handleToggleAll}
                           aria-label="Select all athletes"
                         />
-                      </div>
-                    </TableHead>
-                    <TableHead className="px-4 w-[300px] h-10">
-                      <div className="flex items-center gap-2 h-full">
-                        <User className="size-4" />
-                        <span>Athlete</span>
+                        <div className="flex items-center gap-2">
+                          <User className="size-4" />
+                          <span>Athlete</span>
+                        </div>
                       </div>
                     </TableHead>
                   </TableRow>
@@ -843,29 +841,28 @@ const AthletesPage = () => {
                       aria-label={`Open profile for ${athlete.name}`}
                       onClick={(event) => handleAthleteRowClick(event, athlete.id)}
                       onKeyDown={(event) => handleAthleteRowKeyDown(event, athlete.id)}
-                      className={cn(isSelected && "bg-muted/50", "cursor-pointer")}
+                      className={cn(isSelected && "bg-muted/50", "cursor-pointer !h-[54px]")}
                     >
-                      <TableCell className="px-4 h-[54px]">
-                        <div
-                          className="flex items-center justify-center h-full"
-                          data-no-row-link="true"
-                        >
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => handleToggleAthlete(athlete.id)}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 h-[54px]">
-                        <div className="flex items-center justify-between gap-2 h-full">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Avatar className="h-8 w-8 flex-shrink-0">
-                              <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                              <AvatarFallback>{initials}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium truncate">{athlete.name}</span>
+                      <TableCell className="!px-4 !h-[54px] align-middle">
+                        <div className="flex items-center gap-3 h-full">
+                          <div
+                            className="flex items-center justify-center h-full"
+                            data-no-row-link="true"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleToggleAthlete(athlete.id)}
+                            />
                           </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <Avatar className="h-8 w-8 flex-shrink-0">
+                                <AvatarImage src={athlete.avatar} alt={athlete.name} />
+                                <AvatarFallback>{initials}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium truncate">{athlete.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div
@@ -875,7 +872,7 @@ const AthletesPage = () => {
                                   onClick={() => handleNavigateToMessages(athlete.id)}
                                   onKeyDown={(e) => handleMessageIconKeyDown(e, athlete.id)}
                                   data-no-row-link="true"
-                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
                                 >
                                   <MessageCircle className="size-4" />
                                 </div>
@@ -893,7 +890,7 @@ const AthletesPage = () => {
                                   onClick={() => handleNavigateToTrainingCalendar(athlete.id)}
                                   onKeyDown={(e) => handleTrainingCalendarIconKeyDown(e, athlete.id)}
                                   data-no-row-link="true"
-                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
                                 >
                                   <Dumbbell className="size-4" />
                                 </div>
@@ -909,7 +906,7 @@ const AthletesPage = () => {
                               onClick={() => handleCopy(athlete.name, athlete.id, "name")}
                               onKeyDown={(e) => handleCopyIconKeyDown(e, athlete.name, athlete.id, "name")}
                               data-no-row-link="true"
-                              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
                             >
                               {isFieldCopied(athlete.id, "name") ? (
                                 <Check className="size-4 text-green-500" />
@@ -917,6 +914,7 @@ const AthletesPage = () => {
                                 <Copy className="size-4" />
                               )}
                             </div>
+                          </div>
                           </div>
                         </div>
                       </TableCell>
@@ -944,7 +942,7 @@ const AthletesPage = () => {
                     return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
                   })}
                 </colgroup>
-                <TableHeader className="sticky top-0 z-10 bg-background">
+                <TableHeader className="sticky top-0 z-10 bg-sidebar">
                   <TableRow className="hover:bg-transparent">
                     {columnOrder.map((columnId) => {
                       switch (columnId) {
@@ -1026,46 +1024,61 @@ const AthletesPage = () => {
                       aria-label={`Open profile for ${athlete.name}`}
                       onClick={(event) => handleAthleteRowClick(event, athlete.id)}
                       onKeyDown={(event) => handleAthleteRowKeyDown(event, athlete.id)}
-                      className={cn(isSelected && "bg-muted/50", "cursor-pointer")}
+                      className={cn(isSelected && "bg-muted/50", "cursor-pointer !h-[54px]")}
                     >
                       {columnOrder.map((columnId) => {
                         switch (columnId) {
                           case "lastActivity":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   <span className="text-sm">{athlete.lastActivity}</span>
                                 </div>
                               </TableCell>
                             )
                           case "last7DaysTraining":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   <span className="text-sm">{calculatePercentage(athlete.last7DaysTraining)}</span>
                                 </div>
                               </TableCell>
                             )
                           case "last30DaysTraining":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   <span className="text-sm">{calculatePercentage(athlete.last30DaysTraining)}</span>
                                 </div>
                               </TableCell>
                             )
                           case "category":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   <span className="text-sm capitalize">{athlete.category}</span>
                                 </div>
                               </TableCell>
                             )
                           case "connected":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   {athlete.connected === true ? (
                                     <CheckCircle2 className="size-4 text-green-500" />
                                   ) : athlete.connected === false ? (
@@ -1078,8 +1091,11 @@ const AthletesPage = () => {
                             )
                           case "email":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center justify-between gap-2 h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center justify-between gap-2 w-full">
                                   <span className="text-sm flex-1 min-w-0 truncate">
                                     {isFieldRevealed(athlete.id, "email") ? athlete.email : censorEmail(athlete.email)}
                                   </span>
@@ -1116,8 +1132,11 @@ const AthletesPage = () => {
                             )
                           case "phone":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center justify-between gap-2 h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center justify-between gap-2 w-full">
                                   <span className="text-sm flex-1 min-w-0 truncate">
                                     {isFieldRevealed(athlete.id, "phone") ? athlete.phone : censorPhone(athlete.phone)}
                                   </span>
@@ -1154,24 +1173,33 @@ const AthletesPage = () => {
                             )
                           case "country":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   <span className="text-sm">{athlete.country}</span>
                                 </div>
                               </TableCell>
                             )
                           case "age":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   <span className="text-sm">{athlete.age}</span>
                                 </div>
                               </TableCell>
                             )
                           case "clientFor":
                             return (
-                              <TableCell key={columnId} className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}>
-                                <div className="flex items-center h-full">
+                              <TableCell
+                                key={columnId}
+                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
+                              >
+                                <div className="flex items-center w-full">
                                   <span className="text-sm">{formatClientFor(athlete.clientFor)}</span>
                                 </div>
                               </TableCell>
