@@ -1,4 +1,5 @@
 import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
 
 const CalendarPage = () => {
   return (
@@ -9,8 +10,14 @@ const CalendarPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 py-4">
-        {/* Calendar content */}
+      <div className="w-full flex-1 overflow-auto px-4 py-4 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <h2 className="text-2xl font-semibold">Connect your Calendar</h2>
+          <p className="text-sm text-muted-foreground text-center max-w-md">
+            You will be able to book sessions directly here and it will sync with your connected calendar.
+          </p>
+          <Button className="mt-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100">Connect</Button>
+        </div>
       </div>
     </div>
   )

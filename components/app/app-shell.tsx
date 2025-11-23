@@ -7,12 +7,11 @@ import { useTranslations } from "next-intl"
 import { useTheme } from "next-themes"
 import { usePathname, useRouter } from "next/navigation"
 import {
+  Archive,
   Bell,
   Check,
   CreditCard,
   ChevronsLeft,
-  ChevronsRight,
-  Dumbbell,
   Home,
   Laptop,
   LayoutDashboard,
@@ -22,6 +21,8 @@ import {
   HelpCircle,
   Moon,
   MoreVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Settings,
   Sun,
@@ -30,6 +31,7 @@ import {
   CalendarDays,
 } from "lucide-react"
 import Link from "next/link"
+import { LogoIcon } from "@/components/logo"
 import { hashPathToRoutePath, routePathToHashPath } from "@/lib/hash-routing"
 
 const useIsomorphicLayoutEffect =
@@ -67,6 +69,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Card } from "@/components/ui/card"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { availableLanguages } from "@/lib/intl-provider"
 
@@ -101,6 +110,28 @@ export type Athlete = {
   country: string
   age: number
   clientFor: number // in days
+}
+
+export type Workout = {
+  id: string
+  program: string
+  description: string
+  type: string
+  length: string
+  totalExercises: number
+  equipment: string
+  created: string // dd-mm-yy format
+}
+
+export type Program = {
+  id: string
+  program: string
+  description: string
+  type: string
+  length: string
+  totalExercises: number
+  equipment: string
+  created: string // dd-mm-yy format
 }
 
 export const mockAthletes: Athlete[] = [
@@ -279,6 +310,152 @@ export const mockContacts: Contact[] = [
   },
 ]
 
+export const mockWorkouts: Workout[] = [
+  {
+    id: "1",
+    program: "Strength Builder",
+    description: "A comprehensive strength training program designed to build muscle mass and increase overall strength. This program focuses on compound movements and progressive overload principles.",
+    type: "Strength",
+    length: "12 weeks",
+    equipment: "Barbell, Dumbbells, Bench",
+    totalExercises: 24,
+    created: "15-03-24",
+  },
+  {
+    id: "2",
+    program: "Cardio Blast",
+    description: "High-intensity cardio workout program perfect for improving cardiovascular health and burning calories. Includes interval training and endurance exercises.",
+    type: "Cardio",
+    length: "8 weeks",
+    totalExercises: 18,
+    equipment: "Treadmill, Bike, Rowing Machine",
+    created: "22-01-24",
+  },
+  {
+    id: "3",
+    program: "Flexibility Flow",
+    description: "A yoga and stretching focused program that enhances flexibility, mobility, and relaxation. Ideal for recovery days and improving range of motion.",
+    type: "Flexibility",
+    length: "6 weeks",
+    totalExercises: 15,
+    equipment: "Yoga Mat, Blocks, Straps",
+    created: "10-02-24",
+  },
+  {
+    id: "4",
+    program: "HIIT Power",
+    description: "High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest. Great for time-efficient workouts.",
+    type: "HIIT",
+    length: "4 weeks",
+    totalExercises: 12,
+    equipment: "Bodyweight, Kettlebells",
+    created: "05-04-24",
+  },
+  {
+    id: "5",
+    program: "Endurance Runner",
+    description: "Progressive running program designed to build endurance and improve running performance. Includes tempo runs, intervals, and long-distance training.",
+    type: "Endurance",
+    length: "16 weeks",
+    totalExercises: 20,
+    equipment: "Running Shoes, Track",
+    created: "18-12-23",
+  },
+  {
+    id: "6",
+    program: "Bodyweight Basics",
+    description: "No-equipment workout program using only bodyweight exercises. Perfect for home workouts and building functional strength.",
+    type: "Bodyweight",
+    length: "10 weeks",
+    totalExercises: 16,
+    equipment: "None",
+    created: "28-03-24",
+  },
+  {
+    id: "7",
+    program: "Powerlifting Prep",
+    description: "Specialized program for powerlifting competition preparation. Focuses on squat, bench press, and deadlift with periodization.",
+    type: "Powerlifting",
+    length: "20 weeks",
+    totalExercises: 8,
+    equipment: "Power Rack, Barbell, Plates",
+    created: "12-11-23",
+  },
+]
+
+export const mockPrograms: Program[] = [
+  {
+    id: "1",
+    program: "Strength Builder",
+    description: "A comprehensive strength training program designed to build muscle mass and increase overall strength. This program focuses on compound movements and progressive overload principles.",
+    type: "Strength",
+    length: "12 weeks",
+    equipment: "Barbell, Dumbbells, Bench",
+    totalExercises: 24,
+    created: "15-03-24",
+  },
+  {
+    id: "2",
+    program: "Cardio Blast",
+    description: "High-intensity cardio workout program perfect for improving cardiovascular health and burning calories. Includes interval training and endurance exercises.",
+    type: "Cardio",
+    length: "8 weeks",
+    totalExercises: 18,
+    equipment: "Treadmill, Bike, Rowing Machine",
+    created: "22-01-24",
+  },
+  {
+    id: "3",
+    program: "Flexibility Flow",
+    description: "A yoga and stretching focused program that enhances flexibility, mobility, and relaxation. Ideal for recovery days and improving range of motion.",
+    type: "Flexibility",
+    length: "6 weeks",
+    totalExercises: 15,
+    equipment: "Yoga Mat, Blocks, Straps",
+    created: "10-02-24",
+  },
+  {
+    id: "4",
+    program: "HIIT Power",
+    description: "High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest. Great for time-efficient workouts.",
+    type: "HIIT",
+    length: "4 weeks",
+    totalExercises: 12,
+    equipment: "Bodyweight, Kettlebells",
+    created: "05-04-24",
+  },
+  {
+    id: "5",
+    program: "Endurance Runner",
+    description: "Progressive running program designed to build endurance and improve running performance. Includes tempo runs, intervals, and long-distance training.",
+    type: "Endurance",
+    length: "16 weeks",
+    totalExercises: 20,
+    equipment: "Running Shoes, Track",
+    created: "18-12-23",
+  },
+  {
+    id: "6",
+    program: "Bodyweight Basics",
+    description: "No-equipment workout program using only bodyweight exercises. Perfect for home workouts and building functional strength.",
+    type: "Bodyweight",
+    length: "10 weeks",
+    totalExercises: 16,
+    equipment: "None",
+    created: "28-03-24",
+  },
+  {
+    id: "7",
+    program: "Powerlifting Prep",
+    description: "Specialized program for powerlifting competition preparation. Focuses on squat, bench press, and deadlift with periodization.",
+    type: "Powerlifting",
+    length: "20 weeks",
+    totalExercises: 8,
+    equipment: "Power Rack, Barbell, Plates",
+    created: "12-11-23",
+  },
+]
+
 export const mockMessages: Record<string, Message[]> = {
   '1': [
     {
@@ -390,7 +567,7 @@ export const AppShell = ({ children }: AppShellProps) => {
   }, [pathname])
   
   return (
-    <SidebarProvider className="h-svh">
+    <SidebarProvider defaultOpen={false} className="h-svh">
       <AppShellContent
         t={t}
         user={user}
@@ -437,9 +614,44 @@ const AppShellContent = ({
   setCurrentLanguage: (lang: string) => void
   pathname: string
 }) => {
-  const { state, toggleSidebar } = useSidebar()
-  const isCollapsed = state === "collapsed"
+  const { state, toggleSidebar, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar()
+  const isCollapsed = state === "collapsed" && !isHovered
   const [isSearchOpen, setIsSearchOpen] = React.useState(false)
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false)
+  const isPinnedOpen = state === "expanded" && !isHovered
+  const isHoverExpanded = state === "collapsed" && isHovered
+
+  // Keep sidebar open when profile dropdown is open, collapse when it closes
+  React.useEffect(() => {
+    if (isProfileDropdownOpen) {
+      setOpen(true)
+      setJustClosed(false)
+    } else {
+      // Collapse sidebar when profile dropdown closes
+      setIsHovered(false)
+      setJustClosed(true)
+      setOpen(false)
+      // Reset the justClosed flag after a short delay to allow hover to work again
+      setTimeout(() => {
+        setJustClosed(false)
+      }, 300)
+    }
+  }, [isProfileDropdownOpen, setOpen, setIsHovered, setJustClosed])
+
+  const handlePinMenu = () => {
+    setOpen(true)
+    setJustClosed(false)
+  }
+
+  const handleUnpinMenu = () => {
+    setIsHovered(false)
+    setJustClosed(true)
+    setOpen(false)
+    // Reset the justClosed flag after a short delay to allow hover to work again
+    setTimeout(() => {
+      setJustClosed(false)
+    }, 300)
+  }
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isClient, setIsClient] = React.useState(false)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
@@ -583,6 +795,68 @@ const AppShellContent = ({
     [searchQuery],
   )
 
+  const workoutSearchResults = React.useMemo(
+    () =>
+      mockWorkouts.reduce<Array<{ workout: Workout }>>(
+        (results, workout) => {
+          const query = searchQuery.trim()
+
+          if (!query) {
+            return results
+          }
+
+          const hasMatchInWorkout =
+            isFuzzyMatch(workout.program, query) ||
+            isFuzzyMatch(workout.description, query) ||
+            isFuzzyMatch(workout.type, query) ||
+            isFuzzyMatch(workout.equipment, query)
+
+          if (!hasMatchInWorkout) {
+            return results
+          }
+
+          results.push({
+            workout,
+          })
+
+          return results
+        },
+        [],
+      ),
+    [searchQuery],
+  )
+
+  const programSearchResults = React.useMemo(
+    () =>
+      mockPrograms.reduce<Array<{ program: Program }>>(
+        (results, program) => {
+          const query = searchQuery.trim()
+
+          if (!query) {
+            return results
+          }
+
+          const hasMatchInProgram =
+            isFuzzyMatch(program.program, query) ||
+            isFuzzyMatch(program.description, query) ||
+            isFuzzyMatch(program.type, query) ||
+            isFuzzyMatch(program.equipment, query)
+
+          if (!hasMatchInProgram) {
+            return results
+          }
+
+          results.push({
+            program,
+          })
+
+          return results
+        },
+        [],
+      ),
+    [searchQuery],
+  )
+
   const handleSearchResultClick = (contactId: string) => {
     if (typeof window !== "undefined") {
       try {
@@ -624,6 +898,40 @@ const AppShellContent = ({
     setSearchQuery("")
   }
 
+  const handleWorkoutSearchResultClick = (workoutId: string) => {
+    router.push(`/app/library/workouts/${workoutId}`)
+
+    if (typeof window !== "undefined") {
+      const newHash = `#/app/library/workouts/${workoutId}`
+
+      window.setTimeout(() => {
+        if (window.location.hash !== newHash) {
+          window.location.hash = newHash
+        }
+      }, 0)
+    }
+
+    setIsSearchOpen(false)
+    setSearchQuery("")
+  }
+
+  const handleProgramSearchResultClick = (programId: string) => {
+    router.push(`/app/library/programs/${programId}`)
+
+    if (typeof window !== "undefined") {
+      const newHash = `#/app/library/programs/${programId}`
+
+      window.setTimeout(() => {
+        if (window.location.hash !== newHash) {
+          window.location.hash = newHash
+        }
+      }, 0)
+    }
+
+    setIsSearchOpen(false)
+    setSearchQuery("")
+  }
+
   const generalNavItems = [
     {
       href: "/app/dashboard",
@@ -631,9 +939,9 @@ const AppShellContent = ({
       icon: LayoutDashboard,
     },
     {
-      href: "/app/workouts",
-      labelKey: "sidebar.links.workouts",
-      icon: Dumbbell,
+      href: "/app/library",
+      label: "Library",
+      icon: Archive,
     },
   ] as const
 
@@ -668,27 +976,40 @@ const AppShellContent = ({
       <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader>
         {isCollapsed ? (
-          <div className="flex items-center justify-center px-2 py-1">
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
-              aria-label="Expand sidebar"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </button>
+          <div className="flex items-center justify-center px-2 py-1 h-10">
+            <LogoIcon className="h-5 w-auto" />
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-2 px-2 py-1">
+          <div className="flex items-center justify-between gap-2 px-2 py-1 h-10">
             <span className="text-base font-semibold">OneNinety</span>
+            {isHoverExpanded ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
             <button
               type="button"
-              onClick={toggleSidebar}
+                      onClick={handlePinMenu}
               className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
-              aria-label="Collapse sidebar"
+                      aria-label="Keep menu open"
             >
-              <ChevronsLeft className="h-4 w-4" />
+                      <PanelLeftOpen className="h-4 w-4" />
             </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Keep menu open</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+            <button
+              type="button"
+                onClick={handleUnpinMenu}
+              className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
+                aria-label="Close sidebar"
+            >
+                <PanelLeftClose className="h-4 w-4" />
+            </button>
+            )}
           </div>
         )}
         </SidebarHeader>
@@ -700,7 +1021,6 @@ const AppShellContent = ({
                   <SidebarMenuButton
                     asChild
                     isActive={activePath === "/app/home"}
-                    tooltip="Home"
                     className={cn("text-xs", getActiveSidebarClasses(activePath === "/app/home"))}
                   >
                     <Link href="/app/home">
@@ -726,15 +1046,16 @@ const AppShellContent = ({
               <SidebarMenu className="gap-0.5">
                 {generalNavItems.map((item) => {
                   const Icon = item.icon
-                  const isActive = activePath === item.href
-                  const label = t(item.labelKey)
+                  const isActive = item.href === "/app/library"
+                    ? activePath === item.href || activePath.startsWith(`${item.href}/`)
+                    : activePath === item.href
+                  const label = "label" in item ? item.label : t(item.labelKey)
 
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        tooltip={label}
                         className={cn("text-xs", getActiveSidebarClasses(isActive))}
                       >
                         <Link href={item.href}>
@@ -770,7 +1091,6 @@ const AppShellContent = ({
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        tooltip={label}
                         className={cn("text-xs", getActiveSidebarClasses(isActive))}
                       >
                         <Link href={item.href}>
@@ -808,7 +1128,6 @@ const AppShellContent = ({
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        tooltip={label}
                         className={cn("text-xs", getActiveSidebarClasses(isActive))}
                       >
                         <Link href={item.href}>
@@ -828,7 +1147,6 @@ const AppShellContent = ({
             <SidebarMenuButton
               asChild
               isActive={activePath === "/app/settings"}
-              tooltip={t("sidebar.settings.label") || "Settings"}
               className={cn("text-xs", getActiveSidebarClasses(activePath === "/app/settings"))}
             >
               <Link href="/app/settings">
@@ -838,7 +1156,7 @@ const AppShellContent = ({
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <DropdownMenu>
+            <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 {isCollapsed ? (
                   <button
@@ -854,7 +1172,7 @@ const AppShellContent = ({
                 ) : (
                 <button
                   type="button"
-                  className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md p-2 text-left"
+                  className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md pl-0 pr-2 pt-2 pb-2 text-left"
                   aria-label="Open account menu"
                 >
                   <div className="flex items-center gap-2">
@@ -958,7 +1276,7 @@ const AppShellContent = ({
                   sideOffset={4}
                   onOpenAutoFocus={(e) => e.preventDefault()}
                 >
-                  <div className="flex flex-col">
+                  <div className="flex flex-col max-h-[80vh] overflow-y-auto">
                     {!searchQuery.trim() && (
                       <div className="flex flex-col items-center justify-center py-16 px-4 min-h-[400px]">
                         <Search className="h-12 w-12 text-muted-foreground mb-4" />
@@ -967,90 +1285,237 @@ const AppShellContent = ({
                         </p>
                       </div>
                     )}
-                    {searchQuery.trim() && messageSearchResults.length === 0 && athleteSearchResults.length === 0 && (
+                    {searchQuery.trim() && messageSearchResults.length === 0 && athleteSearchResults.length === 0 && workoutSearchResults.length === 0 && programSearchResults.length === 0 && (
                       <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
                         <p className="text-sm text-muted-foreground">
                           No results found for <span className="font-medium">"{searchQuery}"</span>.
                         </p>
                       </div>
                     )}
-                    {searchQuery.trim() && (messageSearchResults.length > 0 || athleteSearchResults.length > 0) && (
+                    {searchQuery.trim() && (messageSearchResults.length > 0 || athleteSearchResults.length > 0 || workoutSearchResults.length > 0 || programSearchResults.length > 0) && (
                       <div className="py-2">
-                        {messageSearchResults.length > 0 && (
+                        {athleteSearchResults.length > 0 && (
                           <>
                             <div className="px-3 pb-1 pt-2">
                               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Messages
+                                Athletes
                               </p>
                             </div>
-                            <div className="max-h-[360px] overflow-y-auto">
-                              {messageSearchResults.map((result) => (
-                                <button
-                                  key={result.contact.id}
-                                  type="button"
-                                  onClick={() => handleSearchResultClick(result.contact.id)}
-                                  className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                  aria-label={`Open conversation with ${result.contact.name}`}
-                                >
-                                  <Avatar className="h-8 w-8 rounded-md">
-                                    <AvatarImage src={result.contact.avatar} alt={result.contact.name} />
-                                    <AvatarFallback>
-                                      {result.contact.name
-                                        .split(" ")
-                                        .map((part) => part.charAt(0).toUpperCase())
-                                        .slice(0, 2)
-                                        .join("")}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex min-w-0 flex-1 flex-col">
-                                    <span className="truncate text-sm font-medium">
-                                      {result.contact.name}
-                                    </span>
-                                  </div>
-                                </button>
-                              ))}
+                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                              <div className={cn(
+                                "grid gap-2",
+                                athleteSearchResults.length === 1 ? "grid-cols-1" : athleteSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
+                              )}>
+                                {athleteSearchResults.map((result) => {
+                                  const initials = result.athlete.name
+                                    .split(" ")
+                                    .map((part) => part.charAt(0).toUpperCase())
+                                    .slice(0, 2)
+                                    .join("")
+                                  return (
+                                    <Card
+                                      key={result.athlete.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => handleAthleteSearchResultClick(result.athlete.id)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                          e.preventDefault()
+                                          handleAthleteSearchResultClick(result.athlete.id)
+                                        }
+                                      }}
+                                      className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                      aria-label={`Open profile for ${result.athlete.name}`}
+                                    >
+                                      <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <Avatar className="h-8 w-8 rounded-md">
+                                            <AvatarImage src={result.athlete.avatar} alt={result.athlete.name} />
+                                            <AvatarFallback>{initials}</AvatarFallback>
+                                          </Avatar>
+                                          <span className="text-sm font-medium truncate">
+                                            {result.athlete.name}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                          <span>{result.athlete.category}</span>
+                                          <span>•</span>
+                                          <span>{result.athlete.country}</span>
+                                        </div>
+                                      </div>
+                                    </Card>
+                                  )
+                                })}
+                              </div>
                             </div>
                           </>
                         )}
-                        {athleteSearchResults.length > 0 && (
+                        {workoutSearchResults.length > 0 && (
                           <>
-                            {messageSearchResults.length > 0 && (
+                            {(athleteSearchResults.length > 0) && (
                               <div className="px-3 pt-4 pb-1">
                                 <div className="h-px bg-border" />
                               </div>
                             )}
                             <div className="px-3 pb-1 pt-2">
                               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Athletes
+                                Workouts
                               </p>
                             </div>
-                            <div className="max-h-[360px] overflow-y-auto">
-                              {athleteSearchResults.map((result) => {
-                                const initials = result.athlete.name
-                                  .split(" ")
-                                  .map((part) => part.charAt(0).toUpperCase())
-                                  .slice(0, 2)
-                                  .join("")
-                                return (
-                                  <button
-                                    key={result.athlete.id}
-                                    type="button"
-                                    onClick={() => handleAthleteSearchResultClick(result.athlete.id)}
-                                    className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                    aria-label={`Open profile for ${result.athlete.name}`}
+                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                              <div className={cn(
+                                "grid gap-2",
+                                workoutSearchResults.length === 1 ? "grid-cols-1" : workoutSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
+                              )}>
+                                {workoutSearchResults.map((result) => (
+                                  <Card
+                                    key={result.workout.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => handleWorkoutSearchResultClick(result.workout.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault()
+                                        handleWorkoutSearchResultClick(result.workout.id)
+                                      }
+                                    }}
+                                    className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                    aria-label={`Open workout ${result.workout.program}`}
                                   >
-                                    <Avatar className="h-8 w-8 rounded-md">
-                                      <AvatarImage src={result.athlete.avatar} alt={result.athlete.name} />
-                                      <AvatarFallback>{initials}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex min-w-0 flex-1 flex-col">
-                                      <span className="truncate text-sm font-medium">
-                                        {result.athlete.name}
-                                      </span>
+                                    <div className="flex flex-col gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                          <Archive className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                        <span className="text-sm font-medium truncate">
+                                          {result.workout.program}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <span>{result.workout.type}</span>
+                                        <span>•</span>
+                                        <span>{result.workout.length}</span>
+                                        <span>•</span>
+                                        <span>{result.workout.totalExercises} exercises</span>
+                                      </div>
                                     </div>
-                                  </button>
-                                )
-                              })}
+                                  </Card>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {programSearchResults.length > 0 && (
+                          <>
+                            {(athleteSearchResults.length > 0 || workoutSearchResults.length > 0) && (
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
+                            <div className="px-3 pb-1 pt-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Programs
+                              </p>
+                            </div>
+                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                              <div className={cn(
+                                "grid gap-2",
+                                programSearchResults.length === 1 ? "grid-cols-1" : programSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
+                              )}>
+                                {programSearchResults.map((result) => (
+                                  <Card
+                                    key={result.program.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => handleProgramSearchResultClick(result.program.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault()
+                                        handleProgramSearchResultClick(result.program.id)
+                                      }
+                                    }}
+                                    className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                    aria-label={`Open program ${result.program.program}`}
+                                  >
+                                    <div className="flex flex-col gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                          <Archive className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                        <span className="text-sm font-medium truncate">
+                                          {result.program.program}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <span>{result.program.type}</span>
+                                        <span>•</span>
+                                        <span>{result.program.length}</span>
+                                        <span>•</span>
+                                        <span>{result.program.totalExercises} exercises</span>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {messageSearchResults.length > 0 && (
+                          <>
+                            {(athleteSearchResults.length > 0 || workoutSearchResults.length > 0 || programSearchResults.length > 0) && (
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
+                            <div className="px-3 pb-1 pt-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Messages
+                              </p>
+                            </div>
+                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                              <div className={cn(
+                                "grid gap-2",
+                                messageSearchResults.length === 1 ? "grid-cols-1" : messageSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
+                              )}>
+                                {messageSearchResults.map((result) => {
+                                  const initials = result.contact.name
+                                    .split(" ")
+                                    .map((part) => part.charAt(0).toUpperCase())
+                                    .slice(0, 2)
+                                    .join("")
+                                  return (
+                                    <Card
+                                      key={result.contact.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => handleSearchResultClick(result.contact.id)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                          e.preventDefault()
+                                          handleSearchResultClick(result.contact.id)
+                                        }
+                                      }}
+                                      className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                      aria-label={`Open conversation with ${result.contact.name}`}
+                                    >
+                                      <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <Avatar className="h-8 w-8 rounded-md">
+                                            <AvatarImage src={result.contact.avatar} alt={result.contact.name} />
+                                            <AvatarFallback>{initials}</AvatarFallback>
+                                          </Avatar>
+                                          <span className="text-sm font-medium truncate">
+                                            {result.contact.name}
+                                          </span>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground truncate">
+                                          {result.contact.lastMessage}
+                                        </div>
+                                      </div>
+                                    </Card>
+                                  )
+                                })}
+                              </div>
                             </div>
                           </>
                         )}
