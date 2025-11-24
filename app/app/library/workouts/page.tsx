@@ -29,8 +29,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
+import { SidePanel } from "@/components/app/side-panel"
+import { AssignAthletesList } from "@/components/app/assign-athletes-list"
 import { cn } from "@/lib/utils"
 import DescriptionModal from "./description-modal"
+import { BasicInformation } from "./new/basic-information"
 import {
   Search,
   X,
@@ -89,6 +92,16 @@ const WorkoutsPage = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false)
   const [selectedDescription, setSelectedDescription] = useState<{ description: string; programName: string } | null>(null)
+  const [isCreateWorkoutOpen, setIsCreateWorkoutOpen] = useState<boolean>(false)
+  const [newWorkoutName, setNewWorkoutName] = useState<string>("")
+  const [newWorkoutType, setNewWorkoutType] = useState<string>("")
+  const [newDifficulty, setNewDifficulty] = useState<string>("all levels")
+  const [newDescription, setNewDescription] = useState<string>("")
+  const [newNameError, setNewNameError] = useState<string | null>(null)
+  const [newTypeError, setNewTypeError] = useState<string | null>(null)
+  const [newDifficultyError, setNewDifficultyError] = useState<string | null>(null)
+  const [newSelectedBuilder, setNewSelectedBuilder] = useState<"standard" | "ai" | null>("ai")
+  const [isAssignWorkoutOpen, setIsAssignWorkoutOpen] = useState<boolean>(false)
 
   const handleToggleWorkout = (workoutId: string) => {
     setSelectedWorkouts((prev) => {
@@ -128,7 +141,60 @@ const WorkoutsPage = () => {
     }
   }
 
-  const handleNavigateToCreateWorkout = () => {
+  const handleOpenAssignWorkout = () => {
+    setIsAssignWorkoutOpen(true)
+  }
+
+  const resetCreateWorkoutState = () => {
+    setNewWorkoutName("")
+    setNewWorkoutType("")
+    setNewDifficulty("all levels")
+    setNewDescription("")
+    setNewNameError(null)
+    setNewTypeError(null)
+    setNewDifficultyError(null)
+    setNewSelectedBuilder("ai")
+  }
+
+  const handleOpenCreateWorkout = () => {
+    resetCreateWorkoutState()
+    setIsCreateWorkoutOpen(true)
+  }
+
+  const handleCloseCreateWorkout = () => {
+    setIsCreateWorkoutOpen(false)
+  }
+
+  const handleCreateWorkoutContinue = () => {
+    if (!newWorkoutName.trim()) {
+      setNewNameError("Workout name is required")
+      return
+    }
+    if (!newWorkoutType) {
+      setNewTypeError("Workout type is required")
+      return
+    }
+    if (!newDifficulty) {
+      setNewDifficultyError("Difficulty is required")
+      return
+    }
+    if (!newSelectedBuilder) {
+      return
+    }
+
+    const meta = {
+      title: newWorkoutName.trim(),
+      description: newDescription.trim(),
+      type: newWorkoutType.toLowerCase().replace(/\s+/g, "_"),
+      difficulty: newDifficulty.toLowerCase().replace(/\s+/g, "_"),
+    }
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("oneninety_new_workout_meta", JSON.stringify(meta))
+    }
+
+    setIsCreateWorkoutOpen(false)
+
     router.push("/app/library/workouts/new")
 
     if (typeof window !== "undefined") {
@@ -439,7 +505,7 @@ const WorkoutsPage = () => {
           <ButtonGroup>
             <Button
               variant="secondary"
-              onClick={handleNavigateToAthletes}
+              onClick={handleOpenAssignWorkout}
               className="gap-2"
               aria-label="Assign workout to athletes"
             >
@@ -448,7 +514,7 @@ const WorkoutsPage = () => {
             </Button>
             <ButtonGroupSeparator />
             <Button
-              onClick={handleNavigateToCreateWorkout}
+              onClick={handleOpenCreateWorkout}
               className="gap-2"
               aria-label="Create workout"
             >
@@ -814,6 +880,67 @@ const WorkoutsPage = () => {
           programName={selectedDescription.programName}
         />
       )}
+      <SidePanel
+        open={isCreateWorkoutOpen}
+        onOpenChange={(open) => {
+          setIsCreateWorkoutOpen(open)
+          if (!open) {
+            resetCreateWorkoutState()
+          }
+        }}
+        title="New workout"
+        footer={
+          <div className="flex w-full justify-start gap-2">
+            <Button
+              type="button"
+              onClick={handleCreateWorkoutContinue}
+              disabled={
+                !newWorkoutName.trim() ||
+                !newWorkoutType ||
+                !newDifficulty ||
+                !newSelectedBuilder
+              }
+              aria-label="Continue to builder"
+            >
+              Continue to builder
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCloseCreateWorkout}
+              aria-label="Cancel creating workout"
+            >
+              Cancel
+            </Button>
+          </div>
+        }
+      >
+        <BasicInformation
+          workoutName={newWorkoutName}
+          setWorkoutName={setNewWorkoutName}
+          workoutType={newWorkoutType}
+          setWorkoutType={setNewWorkoutType}
+          difficulty={newDifficulty}
+          setDifficulty={setNewDifficulty}
+          description={newDescription}
+          setDescription={setNewDescription}
+          nameError={newNameError}
+          setNameError={setNewNameError}
+          typeError={newTypeError}
+          setTypeError={setNewTypeError}
+          difficultyError={newDifficultyError}
+          setDifficultyError={setNewDifficultyError}
+          selectedBuilder={newSelectedBuilder}
+          setSelectedBuilder={setNewSelectedBuilder}
+        />
+      </SidePanel>
+      <SidePanel
+        open={isAssignWorkoutOpen}
+        onOpenChange={setIsAssignWorkoutOpen}
+        title="Assign workout"
+      >
+        <AssignAthletesList onAthleteSelected={() => setIsAssignWorkoutOpen(false)} />
+      </SidePanel>
     </div>
   )
 }

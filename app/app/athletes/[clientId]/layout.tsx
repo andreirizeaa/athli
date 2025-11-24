@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { MessageCircle, Trash2, Users, X } from "lucide-react"
+import { ChevronLeft, MessageCircle, Trash2, Users, X } from "lucide-react"
 import { mockAthletes } from "@/components/app/app-shell"
 
 type ClientProfileLayoutProps = {
@@ -81,6 +81,15 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         }
       }, 0)
     }
+  }
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back()
+      return
+    }
+
+    handleNavigateToAthletes()
   }
 
   const handleNavigateToMessages = (athleteId: string) => {
@@ -156,6 +165,15 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       <div className="w-full relative">
         <div className="px-4 flex items-center justify-between mb-2 mt-2">
           <div className="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={handleBack}
+              className="h-8 w-8"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
             <Avatar className="h-9 w-9">
               <AvatarImage src={athlete.avatar} alt={athlete.name} />
               <AvatarFallback>{initials}</AvatarFallback>

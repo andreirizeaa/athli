@@ -43,16 +43,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-type ExerciseCardProps = {
-  exercise: Exercise
-  onVideoClick: (exercise: Exercise) => void
-  onExerciseChange: (newExercise: Exercise) => void
-  onDelete: () => void
-  isLinkedToPrev?: boolean
-  isLinkedToNext?: boolean
-}
-
-type SetData = {
+export type SetData = {
   setNumber: number
   type: "warmUp" | "normal" | "failure" | "dropset"
   reps: string
@@ -60,6 +51,30 @@ type SetData = {
   rest: string
   distance?: string
   duration?: string
+}
+
+export type SetFieldValidation = {
+  reps?: boolean
+  weight?: boolean
+  distance?: boolean
+  duration?: boolean
+  rest?: boolean
+}
+
+type ExerciseWithSets = Exercise & {
+  sets?: SetData[]
+}
+
+type ExerciseCardProps = {
+  exercise: ExerciseWithSets
+  onVideoClick: (exercise: Exercise) => void
+  onExerciseChange: (newExercise: ExerciseWithSets) => void
+  onDelete: () => void
+  isLinkedToPrev?: boolean
+  isLinkedToNext?: boolean
+  sectionType?: "regular" | "amrap" | "timed"
+  validationErrors?: Record<number, SetFieldValidation>
+  onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void
 }
 
 type DropsetData = {
@@ -74,6 +89,9 @@ export const ExerciseCard = ({
   onDelete,
   isLinkedToPrev = false,
   isLinkedToNext = false,
+  sectionType = "regular",
+  validationErrors,
+  onClearValidationField,
 }: ExerciseCardProps) => {
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -82,11 +100,23 @@ export const ExerciseCard = ({
   const searchInputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isEmpty = !exercise.name || exercise.name === ""
-  const [sets, setSets] = useState<SetData[]>([
-    { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "2" },
-    { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "2" },
-    { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "2" },
-  ])
+  const isSingleSetOnly = sectionType === "amrap" || sectionType === "timed"
+  const [sets, setSets] = useState<SetData[]>(() => {
+    // If parent already has sets (e.g. from restored state), use them.
+    if (exercise.sets && exercise.sets.length > 0) {
+      return exercise.sets
+    }
+
+    if (isSingleSetOnly) {
+      return [{ setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" }]
+    }
+
+    return [
+      { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" },
+      { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "90" },
+      { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "90" },
+    ]
+  })
   const [dropsetPopoverOpen, setDropsetPopoverOpen] = useState<number | null>(null)
   const [dropsetData, setDropsetData] = useState<{
     setIndex: number
@@ -140,25 +170,58 @@ export const ExerciseCard = ({
   }, [dropsetPopoverOpen])
 
   const handleExerciseSelect = (selectedExercise: Exercise) => {
-    onExerciseChange(selectedExercise)
+    // When a new exercise is selected, reset the local sets and notify parent
     setIsSearchOpen(false)
     setIsSearchBarVisible(false)
     setSearchQuery("")
-    // Reset sets to default values when exercise changes based on exercise type
-    if (selectedExercise.exerciseType === "distance_duration") {
-      setSets([
-        { setNumber: 1, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
-        { setNumber: 2, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
-        { setNumber: 3, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
-      ])
+    // Reset sets to default values when exercise changes based on exercise type and section type
+    let nextSets: SetData[]
+
+    if (isSingleSetOnly) {
+      if (selectedExercise.exerciseType === "distance_duration") {
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+        ]
+      } else {
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" },
+        ]
+      }
     } else {
-      setSets([
-        { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "2" },
-        { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "2" },
-        { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "2" },
-      ])
+      if (selectedExercise.exerciseType === "distance_duration") {
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+          { setNumber: 2, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+          { setNumber: 3, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+        ]
+      } else {
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" },
+          { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "90" },
+          { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "90" },
+        ]
+      }
     }
+
+    setSets(nextSets)
+    onExerciseChange({
+      ...exercise,
+      ...selectedExercise,
+      sets: nextSets,
+    })
   }
+
+  // On first mount, if the parent has no sets yet, push our initial defaults up
+  useEffect(() => {
+    if (!exercise.sets || exercise.sets.length === 0) {
+      onExerciseChange({
+        ...exercise,
+        sets,
+      })
+    }
+    // We intentionally run this only once on mount to establish initial sets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (isEmpty) {
@@ -178,19 +241,56 @@ export const ExerciseCard = ({
   }
 
   const handleSetChange = (index: number, field: keyof SetData, value: string) => {
-    setSets((prev) => {
-      const updated = [...prev]
-      const currentSet = updated[index]
-      
-      // If changing to dropset, clear reps and weight defaults
-      if (field === "type" && value === "dropset") {
-        updated[index] = { ...currentSet, type: "dropset", reps: "", weight: "" }
+    // Build updated sets from current state (safe in event handler)
+    const updated = [...sets]
+    const currentSet = updated[index]
+
+    // If changing to dropset, clear reps and weight defaults
+    if (field === "type" && value === "dropset") {
+      updated[index] = { ...currentSet, type: "dropset", reps: "", weight: "" }
+    } else if (exercise.exerciseType === "distance_duration") {
+      // For distance_duration exercise type, clear the other field when one is set
+      if (field === "distance" && value) {
+        updated[index] = { ...currentSet, [field]: value, duration: "" }
+      } else if (field === "duration" && value) {
+        updated[index] = { ...currentSet, [field]: value, distance: "" }
       } else {
         updated[index] = { ...currentSet, [field]: value }
       }
-      
-      return updated
+    } else {
+      updated[index] = { ...currentSet, [field]: value }
+    }
+
+    setSets(updated)
+
+    // Notify parent about updated sets
+    onExerciseChange({
+      ...exercise,
+      sets: updated,
     })
+
+    // Clear validation for this field when the user enters a value
+    if (value && value.trim() !== "") {
+      if (exercise.exerciseType === "distance_duration") {
+        if (field === "distance" || field === "duration") {
+          // Distance/duration are mutually exclusive – clear both when either is set
+          if (validationErrors) {
+            onClearValidationField?.(index, "distance")
+            onClearValidationField?.(index, "duration")
+          }
+        } else if (field === "rest") {
+          onClearValidationField?.(index, "rest")
+        }
+      } else {
+        if (field === "reps") {
+          onClearValidationField?.(index, "reps")
+        } else if (field === "weight") {
+          onClearValidationField?.(index, "weight")
+        } else if (field === "rest") {
+          onClearValidationField?.(index, "rest")
+        }
+      }
+    }
   }
 
   const handleDropsetInputClick = (setIndex: number) => {
@@ -233,22 +333,56 @@ export const ExerciseCard = ({
   }
 
   const handleDropsetValueChange = (dropIndex: number, field: "reps" | "weight", value: string) => {
-    if (dropsetData) {
-      if (field === "reps") {
-        setDropsetData({
-          ...dropsetData,
-          repsDrops: dropsetData.repsDrops.map((drop, idx) =>
-            idx === dropIndex ? { ...drop, value } : drop
-          ),
-        })
-      } else {
-        setDropsetData({
-          ...dropsetData,
-          weightDrops: dropsetData.weightDrops.map((drop, idx) =>
-            idx === dropIndex ? { ...drop, value } : drop
-          ),
-        })
-      }
+    if (!dropsetData) return
+
+    const nextDropsetData = {
+      ...dropsetData,
+      repsDrops:
+        field === "reps"
+          ? dropsetData.repsDrops.map((drop, idx) =>
+              idx === dropIndex ? { ...drop, value } : drop
+            )
+          : dropsetData.repsDrops,
+      weightDrops:
+        field === "weight"
+          ? dropsetData.weightDrops.map((drop, idx) =>
+              idx === dropIndex ? { ...drop, value } : drop
+            )
+          : dropsetData.weightDrops,
+    }
+
+    setDropsetData(nextDropsetData)
+
+    // Live-update the parent set's reps/weight from dropset data
+    const formattedReps = nextDropsetData.repsDrops
+      .map((drop) => drop.value.trim())
+      .filter((val) => val !== "")
+      .join("-")
+
+    const formattedWeight = nextDropsetData.weightDrops
+      .map((drop) => drop.value.trim())
+      .filter((val) => val !== "")
+      .join("-")
+
+    const updated = [...sets]
+    updated[nextDropsetData.setIndex] = {
+      ...updated[nextDropsetData.setIndex],
+      reps: formattedReps,
+      weight: formattedWeight,
+    }
+
+    setSets(updated)
+
+    onExerciseChange({
+      ...exercise,
+      sets: updated,
+    })
+
+    if (formattedReps) {
+      onClearValidationField?.(nextDropsetData.setIndex, "reps")
+    }
+    if (formattedWeight) {
+      onClearValidationField?.(nextDropsetData.setIndex, "weight")
     }
   }
 
@@ -290,42 +424,7 @@ export const ExerciseCard = ({
     }
   }
 
-  const handleSaveDropset = () => {
-    if (dropsetData) {
-      const formattedReps = dropsetData.repsDrops
-        .map((drop) => drop.value.trim())
-        .filter((val) => val !== "")
-        .join("-")
-      
-      const formattedWeight = dropsetData.weightDrops
-        .map((drop) => drop.value.trim())
-        .filter((val) => val !== "")
-        .join("-")
-      
-      setSets((prev) => {
-        const updated = [...prev]
-        updated[dropsetData.setIndex] = {
-          ...updated[dropsetData.setIndex],
-          reps: formattedReps,
-          weight: formattedWeight,
-        }
-        return updated
-      })
-      
-      setDropsetPopoverOpen(null)
-      setDropsetData(null)
-    }
-  }
-
-  const isDropsetValid = () => {
-    if (!dropsetData) return false
-    // Check if all drops have both reps and weight filled
-    return dropsetData.repsDrops.every((drop, idx) => {
-      const repsValue = drop.value.trim()
-      const weightValue = dropsetData.weightDrops[idx]?.value.trim() || ""
-      return repsValue !== "" && weightValue !== ""
-    })
-  }
+  // Dropsets are now saved live as the user types; no explicit Save button needed
 
   const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, handler: (value: string) => void) => {
     const value = e.target.value
@@ -336,15 +435,17 @@ export const ExerciseCard = ({
   }
 
   const handleAddSet = () => {
+    if (isSingleSetOnly) return // Don't allow adding sets for AMRAP/Timed sections
+    
     if (exercise.exerciseType === "distance_duration") {
       setSets((prev) => [
         ...prev,
-        { setNumber: prev.length + 1, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
+        { setNumber: prev.length + 1, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
       ])
     } else {
       setSets((prev) => [
         ...prev,
-        { setNumber: prev.length + 1, type: "normal", reps: "12", weight: "", rest: "2" },
+        { setNumber: prev.length + 1, type: "normal", reps: "12", weight: "", rest: "90" },
       ])
     }
   }
@@ -601,7 +702,7 @@ export const ExerciseCard = ({
       {(exercise.exerciseType === "weight_reps" || exercise.exerciseType === "reps" || exercise.exerciseType === "distance_duration") && (
         <div className="w-full border rounded-lg overflow-hidden">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-sidebar">
               <TableRow className="h-8">
                 <TableHead className="text-center h-8 py-1 px-2">Set</TableHead>
                 <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
@@ -618,7 +719,7 @@ export const ExerciseCard = ({
                     )}
                   </>
                 )}
-                <TableHead className="text-center h-8 py-1 px-2">Rest (m)</TableHead>
+                <TableHead className="text-center h-8 py-1 px-2">Rest (s)</TableHead>
                 <TableHead className="w-[50px] h-8 py-1 px-2"></TableHead>
               </TableRow>
             </TableHeader>
@@ -655,8 +756,13 @@ export const ExerciseCard = ({
                             inputMode="numeric"
                             value={set.distance || ""}
                             onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "distance", value))}
-                            className="h-7 w-[75px] text-center"
+                            className={cn(
+                              "h-7 w-[75px] text-center",
+                              validationErrors?.[index]?.distance &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
                             placeholder="-"
+                            disabled={!!set.duration}
                           />
                         </div>
                       </TableCell>
@@ -667,8 +773,13 @@ export const ExerciseCard = ({
                             inputMode="numeric"
                             value={set.duration || ""}
                             onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "duration", value))}
-                            className="h-7 w-[75px] text-center"
+                            className={cn(
+                              "h-7 w-[75px] text-center",
+                              validationErrors?.[index]?.duration &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
                             placeholder="-"
+                            disabled={!!set.distance}
                           />
                         </div>
                       </TableCell>
@@ -683,7 +794,8 @@ export const ExerciseCard = ({
                               if (open) {
                                 handleDropsetInputClick(index)
                               } else {
-                                handleSaveDropset()
+                                setDropsetPopoverOpen(null)
+                                setDropsetData(null)
                               }
                             }}
                           >
@@ -692,7 +804,9 @@ export const ExerciseCard = ({
                                 type="button"
                                 className={cn(
                                   "h-7 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-sm flex items-center justify-center",
-                                  set.reps ? "w-auto min-w-[75px]" : "w-[75px]"
+                                  set.reps ? "w-auto min-w-[75px]" : "w-[75px]",
+                                  validationErrors?.[index]?.reps &&
+                                    "border-destructive focus-visible:ring-destructive"
                                 )}
                               >
                                 {set.reps || "-"}
@@ -768,14 +882,6 @@ export const ExerciseCard = ({
                                     </TableBody>
                                   </Table>
                                 </div>
-                              <Button
-                                type="button"
-                                onClick={handleSaveDropset}
-                                disabled={!isDropsetValid()}
-                                className="w-full gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                Save
-                              </Button>
                               </div>
                             </PopoverContent>
                           </Popover>
@@ -787,7 +893,9 @@ export const ExerciseCard = ({
                             type="button"
                             className={cn(
                               "h-7 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-sm flex items-center justify-center",
-                              set.weight ? "w-auto min-w-[75px]" : "w-[75px]"
+                              set.weight ? "w-auto min-w-[75px]" : "w-[75px]",
+                              validationErrors?.[index]?.weight &&
+                                "border-destructive focus-visible:ring-destructive"
                             )}
                             onClick={() => {
                               if (dropsetPopoverOpen !== index) {
@@ -800,6 +908,32 @@ export const ExerciseCard = ({
                         </div>
                       </TableCell>
                     </>
+                  ) : set.type === "failure" && (exercise.exerciseType === "reps" || exercise.exerciseType === "weight_reps") ? (
+                    <>
+                      <TableCell className="py-1 px-2">
+                        <div className="flex justify-center">
+                          <span className="text-xs text-muted-foreground">To failure</span>
+                        </div>
+                      </TableCell>
+                      {exercise.exerciseType === "weight_reps" && (
+                        <TableCell className="py-1 px-2">
+                          <div className="flex justify-center">
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={set.weight}
+                              onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "weight", value))}
+                              className={cn(
+                                "h-7 w-[75px] text-center",
+                                validationErrors?.[index]?.weight &&
+                                  "border-destructive focus-visible:ring-destructive"
+                              )}
+                              placeholder="-"
+                            />
+                          </div>
+                        </TableCell>
+                      )}
+                    </>
                   ) : (
                     <>
                       <TableCell className="py-1 px-2">
@@ -809,7 +943,11 @@ export const ExerciseCard = ({
                             inputMode="numeric"
                             value={set.reps}
                             onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "reps", value))}
-                            className="h-7 w-[75px] text-center"
+                            className={cn(
+                              "h-7 w-[75px] text-center",
+                              validationErrors?.[index]?.reps &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
                             placeholder="-"
                           />
                         </div>
@@ -822,7 +960,11 @@ export const ExerciseCard = ({
                               inputMode="numeric"
                               value={set.weight}
                               onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "weight", value))}
-                              className="h-7 w-[75px] text-center"
+                              className={cn(
+                                "h-7 w-[75px] text-center",
+                                validationErrors?.[index]?.weight &&
+                                  "border-destructive focus-visible:ring-destructive"
+                              )}
                               placeholder="-"
                             />
                           </div>
@@ -837,7 +979,11 @@ export const ExerciseCard = ({
                         inputMode="numeric"
                         value={set.rest}
                         onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "rest", value))}
-                        className="h-7 w-[75px] text-center"
+                        className={cn(
+                          "h-7 w-[75px] text-center",
+                          validationErrors?.[index]?.rest &&
+                            "border-destructive focus-visible:ring-destructive"
+                        )}
                         placeholder="1"
                       />
                     </div>
@@ -858,19 +1004,21 @@ export const ExerciseCard = ({
                   </TableCell>
                 </TableRow>
               ))}
-              <TableRow className="h-8">
-                <TableCell colSpan={exercise.exerciseType === "reps" ? 5 : 6} className="text-center py-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAddSet}
-                    className="mx-auto"
-                  >
-                    Add set
-                  </Button>
-                </TableCell>
-              </TableRow>
+              {!isSingleSetOnly && (
+                <TableRow className="h-8">
+                  <TableCell colSpan={exercise.exerciseType === "reps" ? 5 : 6} className="text-center py-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleAddSet}
+                      className="mx-auto"
+                    >
+                      Add set
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

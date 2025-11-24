@@ -18,6 +18,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +37,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
+import { SidePanel } from "@/components/app/side-panel"
+import { AssignAthletesList } from "@/components/app/assign-athletes-list"
 import { cn } from "@/lib/utils"
 import DescriptionModal from "./description-modal"
 import {
@@ -65,6 +75,27 @@ const COLUMN_ORDER: ColumnId[] = [
   "created",
 ]
 
+const PROGRAM_TYPES = [
+  "Weightlifting",
+  "Bodyweight",
+  "Cardio",
+  "HIIT",
+  "CrossFit",
+  "Running",
+  "Cycling",
+  "Swimming",
+  "Yoga",
+  "Pilates",
+  "Combination",
+] as const
+
+const PROGRAM_DIFFICULTY_LEVELS = [
+  "All levels",
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+] as const
+
 const getColumnWidth = (colId: ColumnId, format: "class" | "pixel" = "class"): string => {
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
     description: { class: "min-w-[250px]", pixel: "250px" },
@@ -89,6 +120,17 @@ const ProgramsPage = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false)
   const [selectedDescription, setSelectedDescription] = useState<{ description: string; programName: string } | null>(null)
+  const [isCreateProgramOpen, setIsCreateProgramOpen] = useState<boolean>(false)
+  const [newProgramName, setNewProgramName] = useState<string>("")
+  const [newProgramType, setNewProgramType] = useState<string>("")
+  const [newProgramDifficulty, setNewProgramDifficulty] = useState<string>("all levels")
+  const [newProgramWeeks, setNewProgramWeeks] = useState<string>("")
+  const [newProgramDescription, setNewProgramDescription] = useState<string>("")
+  const [newProgramError, setNewProgramError] = useState<string | null>(null)
+  const [newProgramTypeError, setNewProgramTypeError] = useState<string | null>(null)
+  const [newProgramDifficultyError, setNewProgramDifficultyError] = useState<string | null>(null)
+  const [newProgramBuilder, setNewProgramBuilder] = useState<"standard" | "ai" | null>("ai")
+  const [isAssignProgramOpen, setIsAssignProgramOpen] = useState<boolean>(false)
 
   const handleToggleProgram = (programId: string) => {
     setSelectedPrograms((prev) => {
@@ -128,7 +170,53 @@ const ProgramsPage = () => {
     }
   }
 
-  const handleNavigateToCreateProgram = () => {
+  const handleOpenAssignProgram = () => {
+    setIsAssignProgramOpen(true)
+  }
+
+  const resetCreateProgramState = () => {
+    setNewProgramName("")
+    setNewProgramType("")
+    setNewProgramDifficulty("all levels")
+    setNewProgramWeeks("")
+    setNewProgramDescription("")
+    setNewProgramError(null)
+    setNewProgramTypeError(null)
+    setNewProgramDifficultyError(null)
+    setNewProgramBuilder("ai")
+  }
+
+  const handleOpenCreateProgram = () => {
+    resetCreateProgramState()
+    setIsCreateProgramOpen(true)
+  }
+
+  const handleCloseCreateProgram = () => {
+    setIsCreateProgramOpen(false)
+  }
+
+  const handleCreateProgramContinue = () => {
+    if (!newProgramName.trim()) {
+      setNewProgramError("Program name is required")
+      return
+    }
+
+    if (!newProgramType) {
+      setNewProgramTypeError("Program type is required")
+      return
+    }
+
+    if (!newProgramDifficulty) {
+      setNewProgramDifficultyError("Difficulty is required")
+      return
+    }
+
+    if (!newProgramBuilder) {
+      return
+    }
+
+    setIsCreateProgramOpen(false)
+
     router.push("/app/library/programs/new")
 
     if (typeof window !== "undefined") {
@@ -439,7 +527,7 @@ const ProgramsPage = () => {
           <ButtonGroup>
             <Button
               variant="secondary"
-              onClick={handleNavigateToAthletes}
+              onClick={handleOpenAssignProgram}
               className="gap-2"
               aria-label="Assign program to athletes"
             >
@@ -448,7 +536,7 @@ const ProgramsPage = () => {
             </Button>
             <ButtonGroupSeparator />
             <Button
-              onClick={handleNavigateToCreateProgram}
+              onClick={handleOpenCreateProgram}
               className="gap-2"
               aria-label="Create program"
             >
@@ -814,6 +902,280 @@ const ProgramsPage = () => {
           programName={selectedDescription.programName}
         />
       )}
+      <SidePanel
+        open={isAssignProgramOpen}
+        onOpenChange={setIsAssignProgramOpen}
+        title="Assign program"
+      >
+        <AssignAthletesList onAthleteSelected={() => setIsAssignProgramOpen(false)} />
+      </SidePanel>
+      <SidePanel
+        open={isCreateProgramOpen}
+        onOpenChange={(open) => {
+          setIsCreateProgramOpen(open)
+          if (!open) {
+            resetCreateProgramState()
+          }
+        }}
+        title="New program"
+        footer={
+          <div className="flex w-full justify-start gap-2">
+            <Button
+              type="button"
+              onClick={handleCreateProgramContinue}
+              disabled={
+                !newProgramName.trim() ||
+                !newProgramType ||
+                !newProgramDifficulty ||
+                !newProgramBuilder
+              }
+              aria-label="Continue to builder"
+            >
+              Continue to builder
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCloseCreateProgram}
+              aria-label="Cancel creating program"
+            >
+              Cancel
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="program-name" className="text-sm font-medium">
+                Program Name <span className="text-destructive">*</span>
+              </label>
+              <Input
+                id="program-name"
+                type="text"
+                placeholder="Name..."
+                value={newProgramName}
+                onChange={(event) => {
+                  setNewProgramName(event.target.value)
+                  if (newProgramError) {
+                    setNewProgramError(null)
+                  }
+                }}
+                className="w-full"
+                aria-invalid={!!newProgramError}
+              />
+              {newProgramError && (
+                <p className="text-sm text-destructive">{newProgramError}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="program-type" className="text-sm font-medium">
+                Type <span className="text-destructive">*</span>
+              </label>
+              <Select
+                value={newProgramType}
+                onValueChange={(value) => {
+                  setNewProgramType(value)
+                  if (newProgramTypeError) {
+                    setNewProgramTypeError(null)
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="program-type"
+                  className={cn(
+                    "w-full",
+                    newProgramTypeError &&
+                      "border-destructive aria-invalid:border-destructive",
+                  )}
+                  aria-invalid={!!newProgramTypeError}
+                >
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROGRAM_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {newProgramTypeError && (
+                <p className="text-sm text-destructive">
+                  {newProgramTypeError}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="program-difficulty" className="text-sm font-medium">
+                Difficulty <span className="text-destructive">*</span>
+              </label>
+              <Select
+                value={newProgramDifficulty}
+                onValueChange={(value) => {
+                  setNewProgramDifficulty(value)
+                  if (newProgramDifficultyError) {
+                    setNewProgramDifficultyError(null)
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="program-difficulty"
+                  className={cn(
+                    "w-full",
+                    newProgramDifficultyError &&
+                      "border-destructive aria-invalid:border-destructive",
+                  )}
+                  aria-invalid={!!newProgramDifficultyError}
+                >
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROGRAM_DIFFICULTY_LEVELS.map((level) => (
+                    <SelectItem
+                      key={level}
+                      value={level.toLowerCase()}
+                    >
+                      {level}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {newProgramDifficultyError && (
+                <p className="text-sm text-destructive">
+                  {newProgramDifficultyError}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="program-weeks" className="text-sm font-medium">
+                Weeks
+              </label>
+              <Input
+                id="program-weeks"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                step={1}
+                placeholder="Number of weeks"
+                value={newProgramWeeks}
+                onChange={(event) => {
+                  const value = event.target.value.replace(/[^0-9]/g, "")
+                  setNewProgramWeeks(value)
+                }}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="program-description" className="text-sm font-medium">
+              Description{" "}
+              <span className="text-muted-foreground font-normal">
+                (Optional)
+              </span>
+            </label>
+            <Textarea
+              id="program-description"
+              value={newProgramDescription}
+              onChange={(event) =>
+                setNewProgramDescription(event.target.value)
+              }
+              placeholder="Add a description for your program..."
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">
+              Select how you wish to start <span className="text-destructive">*</span>
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setNewProgramBuilder("ai")}
+                className={cn(
+                  "relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left",
+                  newProgramBuilder === "ai"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "bg-background hover:bg-accent/30",
+                )}
+                aria-label="Use OneNinety AI to build program"
+              >
+                <p className="text-sm font-semibold mb-1">OneNinety AI</p>
+                <p
+                  className={cn(
+                    "text-xs",
+                    newProgramBuilder === "ai"
+                      ? "text-foreground/80"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  AI Program Builder
+                </p>
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    newProgramBuilder === "ai"
+                      ? "border-primary bg-primary/10"
+                      : "border-input bg-background",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-2.5 w-2.5 rounded-full",
+                      newProgramBuilder === "ai"
+                        ? "bg-primary"
+                        : "bg-transparent",
+                    )}
+                  />
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setNewProgramBuilder("standard")}
+                className={cn(
+                  "relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left",
+                  newProgramBuilder === "standard"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "bg-background hover:bg-accent/30",
+                )}
+                aria-label="Manually build program"
+              >
+                <p className="text-sm font-semibold mb-1">Standard Builder</p>
+                <p
+                  className={cn(
+                    "text-xs",
+                    newProgramBuilder === "standard"
+                      ? "text-foreground/80"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  Manually build your program
+                </p>
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    newProgramBuilder === "standard"
+                      ? "border-primary bg-primary/10"
+                      : "border-input bg-background",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-2.5 w-2.5 rounded-full",
+                      newProgramBuilder === "standard"
+                        ? "bg-primary"
+                        : "bg-transparent",
+                    )}
+                  />
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </SidePanel>
     </div>
   )
 }
