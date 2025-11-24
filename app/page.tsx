@@ -32,6 +32,21 @@ export default function Home() {
       return
     }
 
+    // Prevent direct deep links to create pages; send users to the list views instead.
+    if (hashPath === "/app/library/workouts/new") {
+      const targetHash = "/app/library/workouts"
+      router.replace("/app/library/workouts")
+      window.history.replaceState(null, "", `/#${targetHash}`)
+      return
+    }
+
+    if (hashPath === "/app/library/programs/new") {
+      const targetHash = "/app/library/programs"
+      router.replace("/app/library/programs")
+      window.history.replaceState(null, "", `/#${targetHash}`)
+      return
+    }
+
     // Support deep links like /#/app/messaging/1 where the final segment is
     // the contact ID. We navigate to the base /app/messaging route and let the
     // messaging page read the contact ID from sessionStorage or the hash.

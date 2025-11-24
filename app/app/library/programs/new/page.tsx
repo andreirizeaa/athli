@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
-import { X, Check } from "lucide-react"
+import { Check, ChevronLeft, X } from "lucide-react"
 
 const CreateProgramPage = () => {
   const router = useRouter()
@@ -31,9 +31,20 @@ const CreateProgramPage = () => {
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
         <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <h1 className="text-lg font-semibold">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={handleCancel}
+              className="h-8 w-8"
+              aria-label="Back to programs"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <h1 className="text-[22px] font-semibold truncate">
             Create a program
           </h1>
+          </div>
           <ButtonGroup>
             <Button
               variant="secondary"

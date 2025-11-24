@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import {
   DndContext,
   DragEndEvent,
@@ -26,6 +26,16 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { searchExercises, type Exercise } from "@/lib/exercise-search"
+import { toast } from "sonner"
+import type {
+  ExerciseGroupPayload,
+  RegularExercisePayload,
+  RoundExercisePayload,
+  SetPayload,
+  WorkoutProgramPayload,
+  WorkoutSectionPayload,
+} from "./workout-schema"
+import type { SetData } from "./components/exercise-card"
 import { ExerciseCard } from "./components/exercise-card"
 import {
   Dialog,
@@ -50,6 +60,8 @@ import {
 
 type ExerciseWithSuperset = Exercise & {
   supersetGroupId?: string | null
+  instanceId: string
+  sets?: SetData[]
 }
 
 type WorkoutSchema = {
@@ -59,7 +71,6 @@ type WorkoutSchema = {
     exercises?: ExerciseWithSuperset[]
     roundDurationSec?: number
     targetRounds?: number
-    roundExercises?: Array<unknown>
   }>
 }
 
@@ -75,12 +86,196 @@ type ActiveOverviewItem =
       length: number
     }
 
+type WorkoutMeta = {
+  title: string
+  description: string
+  type: string
+  difficulty: string
+}
+
+type StandardBuilderProps = {
+  meta: WorkoutMeta | null
+  onDirtyChange?: () => void
+  saveSignal?: number
+  onSaveSuccess?: (payload: WorkoutProgramPayload) => void
+}
+
+// Helper used only for payload building – groups consecutive exercises that share a superset id
+const groupExercisesBySupersetForPayload = (exercises: ExerciseWithSuperset[]) => {
+  const groups: Array<ExerciseWithSuperset[]> = []
+  let currentGroup: ExerciseWithSuperset[] = []
+  let currentGroupId: string | null = null
+
+  exercises.forEach((exercise) => {
+    if (exercise.supersetGroupId) {
+      if (exercise.supersetGroupId === currentGroupId) {
+        currentGroup.push(exercise)
+      } else {
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup)
+        }
+        currentGroup = [exercise]
+        currentGroupId = exercise.supersetGroupId
+      }
+    } else {
+      if (currentGroup.length > 0) {
+        groups.push(currentGroup)
+        currentGroup = []
+        currentGroupId = null
+      }
+      groups.push([exercise])
+    }
+  })
+
+  if (currentGroup.length > 0) {
+    groups.push(currentGroup)
+  }
+
+  return groups
+}
+
+const buildWorkoutPayload = (
+  workoutSchema: WorkoutSchema,
+  meta: WorkoutMeta | null
+): WorkoutProgramPayload | null => {
+  if (!meta) {
+    return null
+  }
+
+  const parseNumberOrNull = (value?: string): number | null => {
+    if (!value) return null
+    const n = Number(value)
+    return Number.isNaN(n) ? null : n
+  }
+
+  const parseStages = (value?: string): number[] | null => {
+    if (!value) return null
+    const parts = value
+      .split("-")
+      .map((part) => Number(part.trim()))
+      .filter((n) => !Number.isNaN(n))
+    return parts.length > 0 ? parts : null
+  }
+
+  const mapSetDataToPayload = (set: SetData): SetPayload => {
+    const isDropset = set.type === "dropset"
+
+    if (isDropset) {
+      const weightStages = parseStages(set.weight)
+      const repStages = parseStages(set.reps)
+
+      return {
+        setNumber: set.setNumber,
+        isDropset: true,
+        weight: null,
+        reps: null,
+        distance: parseNumberOrNull(set.distance),
+        durationSec: parseNumberOrNull(set.duration),
+        restSec: parseNumberOrNull(set.rest),
+        weightStages,
+        repStages,
+      }
+    }
+
+    return {
+      setNumber: set.setNumber,
+      isDropset: false,
+      weight: parseNumberOrNull(set.weight),
+      reps: parseNumberOrNull(set.reps),
+      distance: parseNumberOrNull(set.distance),
+      durationSec: parseNumberOrNull(set.duration),
+      restSec: parseNumberOrNull(set.rest),
+      weightStages: null,
+      repStages: null,
+    }
+  }
+
+  const sections: WorkoutSectionPayload[] = workoutSchema.sections.map((section) => {
+    if (section.type === "regular") {
+      const groups = groupExercisesBySupersetForPayload(section.exercises || [])
+
+      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
+        const mapped = group.map<RegularExercisePayload>((exercise) => ({
+          id: exercise.exerciseId,
+          name: exercise.name,
+          exerciseType: exercise.exerciseType,
+          sets: (exercise.sets || []).map(mapSetDataToPayload),
+        }))
+
+        const isSuperset = mapped.length > 1
+
+        return {
+          isSuperset,
+          exercises: mapped,
+        }
+      })
+
+      return {
+        id: section.id,
+        type: "regular",
+        exercises,
+      }
+    }
+
+    if (section.type === "amrap") {
+      const exercises: RoundExercisePayload[] = (section.exercises || []).map(
+        (exercise: any) => ({
+          id: exercise.exerciseId ?? exercise.id,
+          name: exercise.name,
+          exerciseType: exercise.exerciseType,
+          weight: exercise.weight ?? null,
+          reps: exercise.reps ?? null,
+          distance: exercise.distance ?? null,
+          durationSec: exercise.durationSec ?? null,
+          restSec: exercise.restSec ?? null,
+        })
+      )
+
+      return {
+        id: section.id,
+        type: "amrap",
+        durationSec: section.roundDurationSec || 0,
+        exercises,
+      }
+    }
+
+    const exercises: RoundExercisePayload[] = (section.exercises || []).map(
+      (exercise: any) => ({
+        id: exercise.exerciseId ?? exercise.id,
+        name: exercise.name,
+        exerciseType: exercise.exerciseType,
+        weight: exercise.weight ?? null,
+        reps: exercise.reps ?? null,
+        distance: exercise.distance ?? null,
+        durationSec: exercise.durationSec ?? null,
+        restSec: exercise.restSec ?? null,
+      })
+    )
+
+    return {
+      id: section.id,
+      type: "timed",
+      targetRounds: section.targetRounds || 0,
+      exercises,
+    }
+  })
+
+  return {
+    title: meta.title,
+    description: meta.description,
+    type: meta.type,
+    difficulty: meta.difficulty,
+    sections,
+  }
+}
+
 type OverviewSectionCardProps = {
   section: WorkoutSchema["sections"][number]
   children: React.ReactNode
+  onDelete: (sectionId: string) => void
 }
 
-const OverviewSectionCard = ({ section, children }: OverviewSectionCardProps) => {
+const OverviewSectionCard = ({ section, children, onDelete }: OverviewSectionCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `section-${section.id}`,
   })
@@ -99,11 +294,32 @@ const OverviewSectionCard = ({ section, children }: OverviewSectionCardProps) =>
         )}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b">
+          <div className="flex items-center gap-2">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {section.type}{" "}
             <span className="font-normal">
               ({section.exercises ? section.exercises.length : 0})
             </span>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(section.id)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onDelete(section.id)
+                }
+              }}
+              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              aria-label={`Delete ${section.type} section`}
+              data-no-row-link="true"
+            >
+              <Trash2 className="size-4" />
+            </button>
           </div>
           <button
             type="button"
@@ -123,18 +339,16 @@ const OverviewSectionCard = ({ section, children }: OverviewSectionCardProps) =>
 type OverviewExerciseRowProps = {
   sectionId: string
   exercise: ExerciseWithSuperset
-  isLinkedToPrev: boolean
-  isLinkedToNext: boolean
+  onDelete: (sectionId: string, exerciseId: string) => void
 }
 
 const OverviewExerciseRow = ({
   sectionId,
   exercise,
-  isLinkedToPrev,
-  isLinkedToNext,
+  onDelete,
 }: OverviewExerciseRowProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: `exercise-|${sectionId}|${exercise.exerciseId}`,
+    id: `exercise-|${sectionId}|${exercise.instanceId}`,
   })
 
   const style = {
@@ -148,8 +362,6 @@ const OverviewExerciseRow = ({
         {...listeners}
         className={cn(
           "flex items-center justify-between rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing",
-          isLinkedToPrev && "rounded-t-none border-t-0",
-          isLinkedToNext && "rounded-b-none border-b-0",
           isDragging && "opacity-80 shadow-sm"
         )}
       >
@@ -158,22 +370,143 @@ const OverviewExerciseRow = ({
           <span className="text-xs">
             {exercise.name || "Untitled exercise"}
           </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(sectionId, exercise.exerciseId)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                e.stopPropagation()
+                onDelete(sectionId, exercise.exerciseId)
+              }
+            }}
+            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            aria-label={`Delete ${exercise.name || "exercise"}`}
+            data-no-row-link="true"
+          >
+            <Trash2 className="size-3" />
+          </button>
         </div>
         <GripVertical className="size-3 text-muted-foreground" />
       </div>
-
-      {/* Superset visual link */}
-      {isLinkedToNext && (
-        <div className="flex items-center justify-end px-3">
-          <div className="flex-1 h-px bg-border mr-1" />
-          <Link2 className="size-3 text-muted-foreground" />
-        </div>
-      )}
     </div>
   )
 }
 
-export const StandardBuilder = () => {
+type OverviewSupersetRowProps = {
+  sectionId: string
+  exercises: ExerciseWithSuperset[]
+  onDelete: (sectionId: string, exerciseIds: string[]) => void
+}
+
+const OverviewSupersetRow = ({
+  sectionId,
+  exercises,
+  onDelete,
+}: OverviewSupersetRowProps) => {
+  // Use the first exercise's ID for the sortable ID (the drag handler already groups them)
+  const firstExerciseId = exercises[0]?.instanceId
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `exercise-|${sectionId}|${firstExerciseId}`,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  const exerciseNames = exercises.map((ex) => ex.name || "Untitled exercise").join(", ")
+
+  const handleDelete = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation()
+    const exerciseIds = exercises.map((ex) => ex.exerciseId)
+    onDelete(sectionId, exerciseIds)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      e.stopPropagation()
+      handleDelete(e)
+    }
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <div
+        className={cn(
+          "rounded-md border bg-background text-xs select-none",
+          isDragging && "opacity-80 shadow-sm"
+        )}
+      >
+        <div className="flex items-start justify-between px-3 py-2.5">
+          <div className="flex items-start gap-2 flex-1 min-w-0">
+            <div className="flex flex-col gap-1 flex-1 min-w-0">
+              {exercises.map((exercise, index) => (
+                <div key={exercise.instanceId} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                    <span className="text-xs">
+                      {exercise.name || "Untitled exercise"}
+                    </span>
+                  </div>
+                  {index < exercises.length - 1 && (
+                    <div className="flex items-center justify-center py-0.5">
+                      <Link2 className="size-3 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div
+            {...listeners}
+            className="flex items-center gap-1 cursor-grab active:cursor-grabbing"
+          >
+            <button
+              type="button"
+              onClick={handleDelete}
+              onKeyDown={handleKeyDown}
+              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+              aria-label={`Delete superset group: ${exerciseNames}`}
+              data-no-row-link="true"
+            >
+              <Trash2 className="size-3" />
+            </button>
+            <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type SetFieldValidation = {
+  reps?: boolean
+  weight?: boolean
+  distance?: boolean
+  duration?: boolean
+  rest?: boolean
+}
+
+type ValidationErrors = Record<string, Record<number, SetFieldValidation>>
+
+type SectionValidation = {
+  missingConfig?: boolean
+  emptyExercises?: boolean
+}
+
+type SectionValidationErrors = Record<string, SectionValidation>
+
+export const StandardBuilder = ({
+  meta,
+  onDirtyChange,
+  saveSignal,
+  onSaveSuccess,
+}: StandardBuilderProps) => {
   const [workoutSchema, setWorkoutSchema] = useState<WorkoutSchema>({
     sections: [
       {
@@ -183,9 +516,7 @@ export const StandardBuilder = () => {
       },
     ],
   })
-  const [builderMode, setBuilderMode] = useState<"exercise" | "section">(
-    "exercise"
-  )
+  const [builderMode, setBuilderMode] = useState<"exercise" | "section">("exercise")
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
@@ -195,36 +526,248 @@ export const StandardBuilder = () => {
     sectionId: string
     slotIndex: number
   } | null>(null)
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
+  const [sectionValidationErrors, setSectionValidationErrors] = useState<SectionValidationErrors>({})
+  const [hasAttemptedSave, setHasAttemptedSave] = useState(false)
+  const contentScrollRef = useRef<HTMLDivElement | null>(null)
+  const pendingScrollTopRef = useRef<number | null>(null)
   // DnD Kit state for overview panel
   const [activeOverviewItem, setActiveOverviewItem] = useState<ActiveOverviewItem | null>(null)
 
-  const exerciseResults = useMemo(() => {
-    return searchExercises(searchQuery)
-  }, [searchQuery])
+  const exerciseResults = useMemo(() => searchExercises(searchQuery), [searchQuery])
 
   const handleExerciseClick = (exercise: Exercise) => {
     setSelectedExercise(exercise)
     setIsVideoModalOpen(true)
   }
 
+  const recomputeExerciseValidation = (
+    exerciseInstanceId: string,
+    exerciseType: "weight_reps" | "reps" | "distance_duration",
+    sets: SetData[] | undefined
+  ) => {
+    // Do not show validation until the user has clicked Save at least once
+    if (!hasAttemptedSave) {
+      return
+    }
+
+    setValidationErrors((prev) => {
+      const next: ValidationErrors = { ...prev }
+      const exerciseErrors: Record<number, SetFieldValidation> = {}
+
+      if (sets && sets.length > 0) {
+        sets.forEach((set, index) => {
+          const setErrors: SetFieldValidation = {}
+
+          const hasRest = !!set.rest && set.rest.trim() !== ""
+          if (!hasRest) {
+            setErrors.rest = true
+          }
+
+          if (exerciseType === "distance_duration") {
+            const hasDistance = !!set.distance && set.distance.trim() !== ""
+            const hasDuration = !!set.duration && set.duration.trim() !== ""
+
+            if (!hasDistance && !hasDuration) {
+              setErrors.distance = true
+              setErrors.duration = true
+            }
+          } else {
+            // Reps are required only for normal/warmUp (not dropset or failure)
+            if (set.type !== "dropset" && set.type !== "failure") {
+              const hasReps = !!set.reps && set.reps.trim() !== ""
+              if (!hasReps) {
+                setErrors.reps = true
+              }
+            }
+
+            // Weight is required for all weight_reps sets except dropsets
+            if (exerciseType === "weight_reps" && set.type !== "dropset") {
+              const hasWeight = !!set.weight && set.weight.trim() !== ""
+              if (!hasWeight) {
+                setErrors.weight = true
+              }
+            }
+          }
+
+          if (Object.keys(setErrors).length > 0) {
+            exerciseErrors[index] = setErrors
+          }
+        })
+      }
+
+      if (Object.keys(exerciseErrors).length === 0) {
+        delete next[exerciseInstanceId]
+      } else {
+        next[exerciseInstanceId] = exerciseErrors
+      }
+
+      return next
+    })
+  }
+
+  const clearSetValidationField = (
+    exerciseInstanceId: string,
+    setIndex: number,
+    field: keyof SetFieldValidation
+  ) => {
+    setValidationErrors((prev) => {
+      const exerciseErrors = prev[exerciseInstanceId]
+      if (!exerciseErrors) return prev
+
+      const setErrors = exerciseErrors[setIndex]
+      if (!setErrors || !setErrors[field]) return prev
+
+      const nextSetErrors: SetFieldValidation = { ...setErrors }
+      delete nextSetErrors[field]
+
+      const nextExerciseErrors: Record<number, SetFieldValidation> = { ...exerciseErrors }
+      if (Object.keys(nextSetErrors).length === 0) {
+        delete nextExerciseErrors[setIndex]
+      } else {
+        nextExerciseErrors[setIndex] = nextSetErrors
+      }
+
+      const nextValidationErrors: ValidationErrors = { ...prev }
+      if (Object.keys(nextExerciseErrors).length === 0) {
+        delete nextValidationErrors[exerciseInstanceId]
+      } else {
+        nextValidationErrors[exerciseInstanceId] = nextExerciseErrors
+      }
+
+      return nextValidationErrors
+    })
+  }
+
   useEffect(() => {
-    console.log("Workout Schema:", JSON.stringify(workoutSchema, null, 2))
-  }, [workoutSchema])
+    if (!saveSignal || saveSignal === 0) {
+      return
+    }
+
+    setHasAttemptedSave(true)
+
+    const nextErrors: ValidationErrors = {}
+    const nextSectionErrors: SectionValidationErrors = {}
+
+    workoutSchema.sections.forEach((section) => {
+      const sectionErrors: SectionValidation = {}
+
+      if (section.type === "amrap") {
+        if (!section.roundDurationSec || section.roundDurationSec <= 0) {
+          sectionErrors.missingConfig = true
+        }
+      }
+
+      if (section.type === "timed") {
+        if (!section.targetRounds || section.targetRounds <= 0) {
+          sectionErrors.missingConfig = true
+        }
+      }
+
+      if (!section.exercises || section.exercises.length === 0) {
+        sectionErrors.emptyExercises = true
+      }
+
+      if (Object.keys(sectionErrors).length > 0) {
+        nextSectionErrors[section.id] = sectionErrors
+      }
+
+      section.exercises?.forEach((exercise) => {
+        const sets = exercise.sets || []
+
+        sets.forEach((set, index) => {
+          const setErrors: SetFieldValidation = {}
+
+          const hasRest = !!set.rest && set.rest.trim() !== ""
+          if (!hasRest) {
+            setErrors.rest = true
+          }
+
+          if (exercise.exerciseType === "distance_duration") {
+            const hasDistance = !!set.distance && set.distance.trim() !== ""
+            const hasDuration = !!set.duration && set.duration.trim() !== ""
+
+            if (!hasDistance && !hasDuration) {
+              setErrors.distance = true
+              setErrors.duration = true
+            }
+          } else {
+            // Reps required only for non-dropset, non-failure sets
+            if (set.type !== "dropset" && set.type !== "failure") {
+              const hasReps = !!set.reps && set.reps.trim() !== ""
+              if (!hasReps) {
+                setErrors.reps = true
+              }
+            }
+
+            // Weight required for all weight_reps sets except dropsets
+            if (exercise.exerciseType === "weight_reps" && set.type !== "dropset") {
+              const hasWeight = !!set.weight && set.weight.trim() !== ""
+              if (!hasWeight) {
+                setErrors.weight = true
+              }
+            }
+          }
+
+          if (Object.keys(setErrors).length > 0) {
+            if (!nextErrors[exercise.instanceId]) {
+              nextErrors[exercise.instanceId] = {}
+            }
+            nextErrors[exercise.instanceId][index] = setErrors
+          }
+        })
+      })
+    })
+
+    if (Object.keys(nextErrors).length > 0 || Object.keys(nextSectionErrors).length > 0) {
+      setValidationErrors(nextErrors)
+      setSectionValidationErrors(nextSectionErrors)
+      toast.error("Please fill out all fields")
+      return
+    }
+
+    setValidationErrors({})
+    setSectionValidationErrors({})
+
+    const payload = buildWorkoutPayload(workoutSchema, meta)
+    if (!payload) {
+      toast.error("Workout details are missing")
+      return
+    }
+
+    if (onSaveSuccess) {
+      onSaveSuccess(payload)
+    }
+  }, [saveSignal])
 
   const handleSectionSelect = (type: "regular" | "amrap" | "timed") => {
+    // Preserve current scroll position in the middle content column
+    if (contentScrollRef.current) {
+      pendingScrollTopRef.current = contentScrollRef.current.scrollTop
+    }
+
     const newSection = {
       id: `sec_${type}_${Date.now()}`,
       type,
-      ...(type === "regular" && { exercises: [] }),
-      ...(type === "amrap" && { roundExercises: [] }),
-      ...(type === "timed" && { roundExercises: [] }),
+      // All section types use `exercises` for the builder UI. For AMRAP/Timed,
+      // these will later be mapped to flat round exercises in the payload.
+      exercises: [] as ExerciseWithSuperset[],
     }
 
+    onDirtyChange?.()
     setWorkoutSchema((prev) => ({
       ...prev,
       sections: [...prev.sections, newSection],
     }))
   }
+
+  // After sections change (e.g. a new section is added), restore scroll position
+  useLayoutEffect(() => {
+    if (pendingScrollTopRef.current !== null && contentScrollRef.current) {
+      contentScrollRef.current.scrollTop = pendingScrollTopRef.current
+      pendingScrollTopRef.current = null
+    }
+  }, [workoutSchema.sections.length])
 
   const handleKeyDown = (
     e: React.KeyboardEvent,
@@ -237,10 +780,18 @@ export const StandardBuilder = () => {
   }
 
   const handleDeleteSection = (sectionId: string) => {
-    setWorkoutSchema((prev) => ({
+    onDirtyChange?.()
+    setWorkoutSchema((prev) => {
+      const updatedSections = prev.sections.filter((section) => section.id !== sectionId)
+      // If no sections remain, switch to section mode
+      if (updatedSections.length === 0) {
+        setBuilderMode("section")
+      }
+      return {
       ...prev,
-      sections: prev.sections.filter((section) => section.id !== sectionId),
-    }))
+        sections: updatedSections,
+      }
+    })
   }
 
   const handleDeleteKeyDown = (
@@ -251,6 +802,81 @@ export const StandardBuilder = () => {
       e.preventDefault()
       handleDeleteSection(sectionId)
     }
+  }
+
+  const handleDeleteExerciseFromOverview = (sectionId: string, exerciseId: string) => {
+    onDirtyChange?.()
+    setWorkoutSchema((prev) => ({
+      ...prev,
+      sections: prev.sections.map((section) => {
+        if (section.id === sectionId && section.exercises) {
+          return {
+            ...section,
+            exercises: section.exercises.filter(
+              (exercise) => exercise.exerciseId !== exerciseId
+            ),
+          }
+        }
+        return section
+      }),
+    }))
+  }
+
+  const handleDeleteSupersetFromOverview = (sectionId: string, exerciseIds: string[]) => {
+    onDirtyChange?.()
+    setWorkoutSchema((prev) => ({
+      ...prev,
+      sections: prev.sections.map((section) => {
+        if (section.id === sectionId && section.exercises) {
+          const exerciseIdSet = new Set(exerciseIds)
+          return {
+            ...section,
+            exercises: section.exercises.filter(
+              (exercise) => !exerciseIdSet.has(exercise.exerciseId)
+            ),
+          }
+        }
+        return section
+      }),
+    }))
+  }
+
+  // Helper function to group exercises by superset
+  const groupExercisesBySuperset = (exercises: ExerciseWithSuperset[]) => {
+    const groups: Array<ExerciseWithSuperset[]> = []
+    let currentGroup: ExerciseWithSuperset[] = []
+    let currentGroupId: string | null = null
+
+    exercises.forEach((exercise) => {
+      if (exercise.supersetGroupId) {
+        if (exercise.supersetGroupId === currentGroupId) {
+          // Continue current group
+          currentGroup.push(exercise)
+        } else {
+          // Start new group
+          if (currentGroup.length > 0) {
+            groups.push(currentGroup)
+          }
+          currentGroup = [exercise]
+          currentGroupId = exercise.supersetGroupId
+        }
+      } else {
+        // Not part of a superset
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup)
+          currentGroup = []
+          currentGroupId = null
+        }
+        groups.push([exercise])
+      }
+    })
+
+    // Add the last group if it exists
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup)
+    }
+
+    return groups
   }
 
   const getSectionDescription = (type: "regular" | "amrap" | "timed"): string => {
@@ -289,6 +915,7 @@ export const StandardBuilder = () => {
   const handleDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault()
     if (draggedExercise) {
+      onDirtyChange?.()
       setWorkoutSchema((prev) => ({
         ...prev,
         sections: prev.sections.map((section) => {
@@ -297,6 +924,7 @@ export const StandardBuilder = () => {
             const exerciseWithSuperset: ExerciseWithSuperset = {
               ...draggedExercise,
               supersetGroupId: null,
+              instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             }
             return {
               ...section,
@@ -306,6 +934,21 @@ export const StandardBuilder = () => {
           return section
         }),
       }))
+
+      // Clear empty-exercises validation for this section once an exercise is added
+      setSectionValidationErrors((prev) => {
+        const existing = prev[sectionId]
+        if (!existing || !existing.emptyExercises) return prev
+        const nextSection = { ...existing }
+        delete nextSection.emptyExercises
+        const next: SectionValidationErrors = { ...prev }
+        if (Object.keys(nextSection).length === 0) {
+          delete next[sectionId]
+        } else {
+          next[sectionId] = nextSection
+        }
+        return next
+      })
     }
     setDraggedExercise(null)
     setDragOverSectionId(null)
@@ -347,8 +990,10 @@ export const StandardBuilder = () => {
       variations: [],
       relatedExerciseIds: [],
       supersetGroupId: null,
+      instanceId: `empty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     }
 
+    onDirtyChange?.()
     setWorkoutSchema((prev) => ({
       ...prev,
       sections: prev.sections.map((section) => {
@@ -361,6 +1006,21 @@ export const StandardBuilder = () => {
         return section
       }),
     }))
+
+    // Clear empty-exercises validation when a manual exercise is added
+    setSectionValidationErrors((prev) => {
+      const existing = prev[sectionId]
+      if (!existing || !existing.emptyExercises) return prev
+      const nextSection = { ...existing }
+      delete nextSection.emptyExercises
+      const next: SectionValidationErrors = { ...prev }
+      if (Object.keys(nextSection).length === 0) {
+        delete next[sectionId]
+      } else {
+        next[sectionId] = nextSection
+      }
+      return next
+    })
   }
 
   const handleSlotDragOver = (
@@ -387,6 +1047,7 @@ export const StandardBuilder = () => {
     e.stopPropagation()
     if (!draggedExercise) return
 
+    onDirtyChange?.()
     setWorkoutSchema((prev) => ({
       ...prev,
       sections: prev.sections.map((section) => {
@@ -396,6 +1057,7 @@ export const StandardBuilder = () => {
         const exerciseWithSuperset: ExerciseWithSuperset = {
           ...draggedExercise,
           supersetGroupId: null,
+          instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         }
 
         const updatedExercises = [...exercises]
@@ -409,13 +1071,28 @@ export const StandardBuilder = () => {
       }),
     }))
 
+    // Clear empty-exercises validation when an exercise is dropped into a section
+    setSectionValidationErrors((prev) => {
+      const existing = prev[sectionId]
+      if (!existing || !existing.emptyExercises) return prev
+      const nextSection = { ...existing }
+      delete nextSection.emptyExercises
+      const next: SectionValidationErrors = { ...prev }
+      if (Object.keys(nextSection).length === 0) {
+        delete next[sectionId]
+      } else {
+        next[sectionId] = nextSection
+      }
+      return next
+    })
+
     setDraggedExercise(null)
     setDragOverSectionId(null)
     setDragOverSlot(null)
   }
 
   // DnD – overview handlers
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }))
 
   const handleOverviewDragStart = (event: DragStartEvent) => {
     const { active } = event
@@ -435,7 +1112,7 @@ export const StandardBuilder = () => {
       }
 
       const exercises = section.exercises
-      const centerIndex = exercises.findIndex((ex) => ex.exerciseId === exerciseId)
+      const centerIndex = exercises.findIndex((ex) => ex.instanceId === exerciseId)
       if (centerIndex === -1) {
         return
       }
@@ -496,6 +1173,7 @@ export const StandardBuilder = () => {
         return
       }
 
+      onDirtyChange?.()
       setWorkoutSchema((prev) => {
         const oldIndex = prev.sections.findIndex((s) => s.id === activeSectionId)
         const newIndex = prev.sections.findIndex((s) => s.id === overSectionId)
@@ -528,6 +1206,7 @@ export const StandardBuilder = () => {
       const sourceSectionId = activeOverviewItem.sectionId
       const { startIndex, length } = activeOverviewItem
 
+      onDirtyChange?.()
       setWorkoutSchema((prev) => {
         const sections = [...prev.sections]
         const sourceSectionIndex = sections.findIndex((s) => s.id === sourceSectionId)
@@ -630,6 +1309,7 @@ export const StandardBuilder = () => {
   }
 
   const handleSupersetLink = (sectionId: string, exerciseIndex: number) => {
+    onDirtyChange?.()
     setWorkoutSchema((prev) => ({
       ...prev,
       sections: prev.sections.map((section) => {
@@ -683,6 +1363,7 @@ export const StandardBuilder = () => {
   }
 
   const handleSupersetUnlink = (sectionId: string, exerciseIndex: number) => {
+    onDirtyChange?.()
     setWorkoutSchema((prev) => ({
       ...prev,
       sections: prev.sections.map((section) => {
@@ -762,13 +1443,13 @@ export const StandardBuilder = () => {
               <TabsTrigger
                 value="exercise"
                 disabled={workoutSchema.sections.length === 0}
-                className="flex-1 data-[state=active]:bg-neutral-800 data-[state=active]:text-white dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground"
+                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
                 Exercise
               </TabsTrigger>
               <TabsTrigger
                 value="section"
-                className="flex-1 data-[state=active]:bg-neutral-800 data-[state=active]:text-white dark:data-[state=active]:bg-primary dark:data-[state=active]:text-primary-foreground"
+                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
                 Section
               </TabsTrigger>
@@ -859,7 +1540,7 @@ export const StandardBuilder = () => {
             </div>
         ) : (
           <div className="mt-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
               {exerciseResults.slice(0, 40).map((exercise) => (
                 <Card
                   key={exercise.exerciseId}
@@ -868,11 +1549,12 @@ export const StandardBuilder = () => {
                   onDragEnd={handleDragEnd}
                   role="button"
                   tabIndex={0}
-                  className="cursor-grab active:cursor-grabbing transition-colors hover:bg-accent overflow-hidden"
+                  className="cursor-grab active:cursor-grabbing transition-colors hover:bg-accent overflow-hidden h-[75px] rounded-md shadow-none"
                   aria-label={`Select ${exercise.name} exercise`}
                 >
+                  <div className="flex items-center gap-2 py-2 px-3 h-full">
                   <div 
-                    className="relative w-full aspect-video cursor-pointer"
+                      className="relative w-16 h-16 flex-shrink-0 rounded cursor-pointer"
                     onClick={() => handleExerciseClick(exercise)}
                     role="button"
                     tabIndex={0}
@@ -888,10 +1570,10 @@ export const StandardBuilder = () => {
                       src={exercise.imageUrl}
                       alt={exercise.name}
                       fill
-                      className="object-cover"
+                        className="object-cover rounded"
                     />
                     <div 
-                      className="absolute top-2 left-2 cursor-pointer"
+                        className="absolute bottom-1 left-1 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleExerciseClick(exercise)
@@ -912,8 +1594,10 @@ export const StandardBuilder = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="px-3">
-                    <CardTitle className="text-sm font-medium">{exercise.name}</CardTitle>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-sm font-medium truncate">{exercise.name}</CardTitle>
+                    </div>
+                    <GripVertical className="size-4 text-muted-foreground flex-shrink-0" />
                   </div>
                 </Card>
               ))}
@@ -923,7 +1607,7 @@ export const StandardBuilder = () => {
         </div>
       </div>
       <Separator orientation="vertical" />
-      <div className="flex-[4] p-4 h-full overflow-y-auto">
+      <div ref={contentScrollRef} className="flex-[4] p-4 h-full overflow-y-auto">
         {workoutSchema.sections.length > 0 ? (
           <div className="flex flex-col gap-6 w-full">
             {workoutSchema.sections.map((section) => (
@@ -934,9 +1618,9 @@ export const StandardBuilder = () => {
                 <Card className="bg-card w-full flex flex-col relative min-h-[300px]">
                   <Button
                     type="button"
-                    variant="destructive"
+                    variant="ghost"
                     size="icon-sm"
-                    className="absolute -top-2 -right-2 rounded-full z-10 bg-[oklch(0.704_0.191_22.216)] dark:bg-[oklch(0.704_0.191_22.216)] hover:bg-[oklch(0.55_0.22_22.216)] dark:hover:bg-[oklch(0.55_0.22_22.216)]"
+                    className="absolute -top-2 -right-2 rounded-full z-10 bg-primary hover:bg-primary/90 text-primary-foreground hover:text-primary-foreground !hover:text-primary-foreground"
                     onClick={() => handleDeleteSection(section.id)}
                     onKeyDown={(e) => handleDeleteKeyDown(e, section.id)}
                     aria-label={`Delete ${section.type} section`}
@@ -944,29 +1628,95 @@ export const StandardBuilder = () => {
                     <Trash2 className="size-4" />
                   </Button>
                   <CardHeader>
-                    <CardTitle className="capitalize flex items-center gap-2">
-                      {section.type}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="size-4 text-foreground translate-y-[1px]" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {getSectionDescription(section.type)}
-                        </TooltipContent>
-                      </Tooltip>
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="capitalize flex items-center gap-2">
+                        {section.type}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="size-4 text-foreground translate-y-[1px]" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                            {getSectionDescription(section.type)}
+                            </TooltipContent>
+                          </Tooltip>
+                      </CardTitle>
+                      {(section.type === "amrap" || section.type === "timed") && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">
+                            {section.type === "amrap" ? "Time (s)" : "Rounds"}
+                          </span>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            value={
+                              section.type === "amrap"
+                                ? section.roundDurationSec?.toString() || ""
+                                : section.targetRounds?.toString() || ""
+                            }
+                            onChange={(e) => {
+                              const value = e.target.value
+                              onDirtyChange?.()
+                              setWorkoutSchema((prev) => ({
+                                ...prev,
+                                sections: prev.sections.map((sec) => {
+                                  if (sec.id === section.id) {
+                                    if (section.type === "amrap") {
+                                      return {
+                                        ...sec,
+                                        roundDurationSec: value
+                                          ? parseInt(value, 10)
+                                          : undefined,
+                                      }
+                                    }
+                                    return {
+                                      ...sec,
+                                      targetRounds: value ? parseInt(value, 10) : undefined,
+                                    }
+                                  }
+                                  return sec
+                                }),
+                              }))
+
+                              // Clear missing-config validation for this section as soon as a value is entered
+                              if (value && value.trim() !== "") {
+                                setSectionValidationErrors((prev) => {
+                                  const existing = prev[section.id]
+                                  if (!existing || !existing.missingConfig) return prev
+                                  const nextSection = { ...existing }
+                                  delete nextSection.missingConfig
+                                  const next: SectionValidationErrors = { ...prev }
+                                  if (Object.keys(nextSection).length === 0) {
+                                    delete next[section.id]
+                                  } else {
+                                    next[section.id] = nextSection
+                                  }
+                                  return next
+                                })
+                              }
+                            }}
+                            className={cn(
+                              "h-8 w-24 text-center",
+                              sectionValidationErrors[section.id]?.missingConfig &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
+                            placeholder="-"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent 
-                    className={cn(
-                      "flex-1 flex p-6",
-                      section.exercises && section.exercises.length > 0 
-                        ? "items-start justify-start pt-4" 
-                        : "items-center justify-center"
-                    )}
+                    className="flex-1 flex flex-col p-6"
                     onDragOver={(e) => handleDragOver(e, section.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleSectionDrop(e, section.id)}
                   >
+                    <div className={cn(
+                      "flex-1 w-full",
+                      section.exercises && section.exercises.length > 0 
+                        ? "flex flex-col gap-0" 
+                        : "flex items-center justify-center"
+                    )}>
                     {section.exercises && section.exercises.length > 0 ? (
                       <div className="w-full flex flex-col gap-0">
                         {/* Slot before the first exercise */}
@@ -1022,13 +1772,25 @@ export const StandardBuilder = () => {
                           )
 
                           return (
-                            <div key={exercise.exerciseId} className={wrapperClasses}>
+                            <div key={exercise.instanceId} className={wrapperClasses}>
                               <ExerciseCard
                                 exercise={exercise}
                                 isLinkedToPrev={isLinkedToPrev}
                                 isLinkedToNext={isLinkedToNext}
                                 onVideoClick={handleExerciseClick}
+                                sectionType={section.type}
+                                validationErrors={validationErrors[exercise.instanceId]}
+                                onClearValidationField={(setIndex, field) =>
+                                  clearSetValidationField(exercise.instanceId, setIndex, field)
+                                }
                                 onExerciseChange={(newExercise) => {
+                                  onDirtyChange?.()
+                                  const castExercise = newExercise as ExerciseWithSuperset
+                                  recomputeExerciseValidation(
+                                    exercise.instanceId,
+                                    castExercise.exerciseType,
+                                    castExercise.sets || []
+                                  )
                                   setWorkoutSchema((prev) => ({
                                     ...prev,
                                     sections: prev.sections.map((sec) => {
@@ -1037,7 +1799,7 @@ export const StandardBuilder = () => {
                                           ...sec.exercises,
                                         ]
                                         updatedExercises[exerciseIndex] = {
-                                          ...(newExercise as ExerciseWithSuperset),
+                                          ...castExercise,
                                           supersetGroupId: exercise.supersetGroupId,
                                         }
                                         return {
@@ -1050,6 +1812,7 @@ export const StandardBuilder = () => {
                                   }))
                                 }}
                                 onDelete={() => {
+                                  onDirtyChange?.()
                                   setWorkoutSchema((prev) => ({
                                     ...prev,
                                     sections: prev.sections.map((sec) => {
@@ -1146,7 +1909,9 @@ export const StandardBuilder = () => {
                           "flex items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors",
                           dragOverSectionId === section.id
                             ? "border-primary bg-primary/5"
-                            : "border-muted"
+                            : sectionValidationErrors[section.id]?.emptyExercises
+                              ? "border-destructive bg-destructive/5"
+                              : "border-muted"
                         )}
                       >
                         <p className="text-muted-foreground text-sm text-center">
@@ -1154,11 +1919,12 @@ export const StandardBuilder = () => {
                         </p>
                       </div>
                     )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             ))}
-            <div className="flex items-center justify-center py-2 mb-[100px]">
+            <div className="flex items-center justify-center py-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -1187,7 +1953,6 @@ export const StandardBuilder = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div className="h-[300px] flex-shrink-0" />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -1241,7 +2006,11 @@ export const StandardBuilder = () => {
               <div className="flex flex-col gap-3">
                 {workoutSchema.sections.length > 0 ? (
                   workoutSchema.sections.map((section) => (
-                    <OverviewSectionCard key={section.id} section={section}>
+                    <OverviewSectionCard
+                      key={section.id}
+                      section={section}
+                      onDelete={handleDeleteSection}
+                    >
                       <div className="p-2 flex flex-col gap-1">
                         {section.exercises && section.exercises.length > 0 ? (
                           <SortableContext
@@ -1250,45 +2019,31 @@ export const StandardBuilder = () => {
                             )}
                             strategy={verticalListSortingStrategy}
                           >
-                            {section.exercises.map((exercise, exerciseIndex) => {
-                            const nextExercise =
-                              section.exercises?.[exerciseIndex + 1]
-                            const prevExercise =
-                              exerciseIndex > 0
-                                ? section.exercises?.[exerciseIndex - 1]
-                                : null
-
-                              const isLinkedToNext =
-                                !!(
-                                  exercise.supersetGroupId &&
-                                  nextExercise?.supersetGroupId ===
-                                    exercise.supersetGroupId
+                            {groupExercisesBySuperset(section.exercises).map((exerciseGroup, groupIndex) => {
+                              // If it's a superset group (more than one exercise), render as superset row
+                              if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
+                                return (
+                                  <OverviewSupersetRow
+                                    key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
+                                    sectionId={section.id}
+                                    exercises={exerciseGroup}
+                                    onDelete={handleDeleteSupersetFromOverview}
+                                  />
                                 )
-                              const isLinkedToPrev =
-                                !!(
-                                  exercise.supersetGroupId &&
-                                  prevExercise?.supersetGroupId ===
-                                    exercise.supersetGroupId
-                                )
-
-                              return (
+                              }
+                              // Otherwise, render as individual exercise row
+                              return exerciseGroup.map((exercise, indexInGroup) => (
                                 <OverviewExerciseRow
-                                  key={exercise.exerciseId}
+                                  key={`${exercise.instanceId}-${indexInGroup}`}
                                   sectionId={section.id}
                                   exercise={exercise}
-                                  isLinkedToPrev={isLinkedToPrev}
-                                  isLinkedToNext={isLinkedToNext}
+                                  onDelete={handleDeleteExerciseFromOverview}
                                 />
-                              )
+                              ))
                             })}
                           </SortableContext>
                         ) : (
-                          <div
-                            className={cn(
-                              "text-xs text-muted-foreground px-1 py-2 border-2 border-dashed border-transparent rounded transition-all",
-                              "border-primary/30 bg-primary/5 text-muted-foreground"
-                            )}
-                          >
+                          <div className="text-xs text-muted-foreground px-1 py-2">
                             No exercises yet.
                           </div>
                         )}
