@@ -348,6 +348,8 @@ const ProgramsPage = () => {
       </div>
     )
 
+    const headerWidth = getColumnWidth(columnId, "pixel")
+
     return (
       <TableHead className={cn("!px-4 !py-0 h-10", getColumnWidth(columnId, "class"))}>
         <DropdownMenu>
@@ -358,8 +360,11 @@ const ProgramsPage = () => {
                   {headerContent}
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent className="max-w-[200px] !w-fit p-1 !text-left">
-                <p className="break-words w-full">{tooltip}</p>
+              <TooltipContent
+                className="whitespace-normal break-words text-left"
+                style={{ maxWidth: headerWidth }}
+              >
+                {tooltip}
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -425,8 +430,8 @@ const ProgramsPage = () => {
                     <HelpCircle className="size-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[250px]">
-                  <p>A program is a group of workouts and can span multiple weeks.</p>
+                <TooltipContent>
+                  A program is a group of workouts and can span multiple weeks.
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -444,7 +449,7 @@ const ProgramsPage = () => {
             <ButtonGroupSeparator />
             <Button
               onClick={handleNavigateToCreateProgram}
-              className="gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100"
+              className="gap-2"
               aria-label="Create program"
             >
               <Plus className="size-4" />
@@ -766,7 +771,10 @@ const ProgramsPage = () => {
                                       onKeyDown={(e) => e.stopPropagation()}
                                     >
                                       {equipmentList.map((equipment, index) => (
-                                        <DropdownMenuItem key={index} className="cursor-default text-primary pointer-events-none">
+                                        <DropdownMenuItem
+                                          key={index}
+                                          className="cursor-default pointer-events-none"
+                                        >
                                           {equipment}
                                         </DropdownMenuItem>
                                       ))}

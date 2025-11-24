@@ -144,22 +144,30 @@ export const AddClientModal = ({ open, onOpenChange }: AddClientModalProps) => {
                 <FormItem>
                   <FormLabel>Coaching Type</FormLabel>
                   <FormControl>
-                    <Tabs
-                      value={field.value}
-                      onValueChange={(value) => {
-                        field.onChange(value as "online" | "in-person")
-                      }}
-                      className="w-full"
-                    >
-                      <TabsList className="w-full">
-                        <TabsTrigger value="online" className="flex-1" aria-label="Online coaching">
-                          Online
-                        </TabsTrigger>
-                        <TabsTrigger value="in-person" className="flex-1" aria-label="In-person coaching">
-                          In-person
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
+                      <Tabs
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value as "online" | "in-person")
+                        }}
+                        className="w-full"
+                      >
+                        <TabsList className="w-full">
+                          <TabsTrigger
+                            value="online"
+                            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
+                            aria-label="Online coaching"
+                          >
+                            Online
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="in-person"
+                            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"
+                            aria-label="In-person coaching"
+                          >
+                            In-person
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

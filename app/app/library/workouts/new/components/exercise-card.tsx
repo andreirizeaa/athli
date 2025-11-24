@@ -772,7 +772,7 @@ export const ExerciseCard = ({
                                 type="button"
                                 onClick={handleSaveDropset}
                                 disabled={!isDropsetValid()}
-                                className="w-full gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 Save
                               </Button>

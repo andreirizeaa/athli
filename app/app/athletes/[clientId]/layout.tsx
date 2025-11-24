@@ -176,7 +176,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
             </Button>
             <Button
               onClick={handleNavigateToAthletes}
-              className="gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100"
+              className="gap-2"
               aria-label="View all clients"
             >
               <Users className="size-4" />

@@ -20,7 +20,7 @@ function Checkbox({
       checked={isIndeterminate ? false : checked}
       data-state={isIndeterminate ? "indeterminate" : isChecked ? "checked" : "unchecked"}
       className={cn(
-        "peer border border-input dark:bg-input/30 data-[state=checked]:!bg-neutral-800 data-[state=checked]:!text-white dark:data-[state=checked]:!bg-foreground dark:data-[state=checked]:!text-background data-[state=indeterminate]:!bg-neutral-800 data-[state=indeterminate]:!text-white dark:data-[state=indeterminate]:!bg-foreground dark:data-[state=indeterminate]:!text-background data-[state=checked]:!border-0 data-[state=indeterminate]:!border-0 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        "peer border border-input dark:bg-input/30 data-[state=checked]:!bg-primary data-[state=checked]:!text-primary-foreground data-[state=indeterminate]:!bg-primary data-[state=indeterminate]:!text-primary-foreground data-[state=checked]:!border-0 data-[state=indeterminate]:!border-0 focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
