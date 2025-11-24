@@ -23,12 +23,7 @@ import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { searchExercises, type Exercise } from "@/lib/exercise-search"
 import { ExerciseCard } from "./components/exercise-card"
@@ -951,16 +946,14 @@ export const StandardBuilder = () => {
                   <CardHeader>
                     <CardTitle className="capitalize flex items-center gap-2">
                       {section.type}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="size-4 text-foreground translate-y-[1px]" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{getSectionDescription(section.type)}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="size-4 text-foreground translate-y-[1px]" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {getSectionDescription(section.type)}
+                        </TooltipContent>
+                      </Tooltip>
                     </CardTitle>
                   </CardHeader>
                   <CardContent 

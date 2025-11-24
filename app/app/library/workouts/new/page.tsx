@@ -158,7 +158,7 @@ const CreateWorkoutPage = () => {
             <ButtonGroupSeparator />
             <Button
               onClick={handleSave}
-              className="gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100"
+              className="gap-2"
               aria-label="Save workout"
             >
               <Check className="size-4" />

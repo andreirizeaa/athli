@@ -587,6 +587,8 @@ const AthletesPage = () => {
       </div>
     )
 
+    const headerWidth = getColumnWidth(columnId, "pixel")
+
     return (
       <TableHead className={cn("!px-4 !py-0 h-10", getColumnWidth(columnId, "class"))}>
         <DropdownMenu>
@@ -597,8 +599,11 @@ const AthletesPage = () => {
                   {headerContent}
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent className="max-w-[200px] !w-fit p-1 !text-left">
-                <p className="break-words w-full">{tooltip}</p>
+              <TooltipContent
+                className="whitespace-normal break-words text-left"
+                style={{ maxWidth: headerWidth }}
+              >
+                {tooltip}
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -670,13 +675,19 @@ const AthletesPage = () => {
                 <span>Your invite link</span>
               </Button>
               <ButtonGroupSeparator />
-              <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100">
+              <Button
+                onClick={() => setIsAddAthleteOpen(true)}
+                className="gap-2"
+              >
                 <UserPlus className="size-4" />
                 <span>Add Client</span>
               </Button>
               <ButtonGroupSeparator />
               <DropdownMenuTrigger asChild>
-                <Button className="px-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100" aria-label="More options">
+                <Button
+                  className="px-2"
+                  aria-label="More options"
+                >
                   <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>

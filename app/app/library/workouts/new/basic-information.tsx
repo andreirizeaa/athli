@@ -147,45 +147,77 @@ export const BasicInformation = ({
                 type="button"
                 onClick={handleStandardBuilderClick}
                 className={cn(
-                  "h-24 rounded-lg border border-input p-4 flex flex-col items-center justify-center transition-colors text-left",
+                  "relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left",
                   selectedBuilder === "standard"
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-transparent dark:bg-input/30 hover:bg-accent"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "bg-background hover:bg-accent/30"
                 )}
                 aria-label="Manually build workout"
               >
                 <p className="text-sm font-semibold mb-1">Standard Builder</p>
                 <p className={cn(
                   "text-xs",
-                  selectedBuilder === "standard" ? "text-primary-foreground/80" : "text-muted-foreground"
+                  selectedBuilder === "standard" ? "text-foreground/80" : "text-muted-foreground"
                 )}>
                   Manually build your workout
                 </p>
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    selectedBuilder === "standard"
+                      ? "border-primary bg-primary/10"
+                      : "border-input bg-background"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-2.5 w-2.5 rounded-full",
+                      selectedBuilder === "standard" ? "bg-primary" : "bg-transparent"
+                    )}
+                  />
+                </div>
               </button>
               <button
                 type="button"
                 onClick={handleAIBuilderClick}
                 className={cn(
-                  "h-24 rounded-lg border border-input p-4 flex flex-col items-center justify-center transition-colors text-left",
+                  "relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left",
                   selectedBuilder === "ai"
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "bg-transparent dark:bg-input/30 hover:bg-accent"
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "bg-background hover:bg-accent/30"
                 )}
                 aria-label="Use OneNinety AI to build workout"
               >
                 <p className="text-sm font-semibold mb-1">OneNinety AI</p>
                 <p className={cn(
                   "text-xs",
-                  selectedBuilder === "ai" ? "text-primary-foreground/80" : "text-muted-foreground"
+                  selectedBuilder === "ai" ? "text-foreground/80" : "text-muted-foreground"
                 )}>
                   AI Workout Builder
                 </p>
+                <div
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    selectedBuilder === "ai"
+                      ? "border-primary bg-primary/10"
+                      : "border-input bg-background"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "h-2.5 w-2.5 rounded-full",
+                      selectedBuilder === "ai" ? "bg-primary" : "bg-transparent"
+                    )}
+                  />
+                </div>
               </button>
             </div>
           </div>
           <Button
             onClick={onContinue}
-            className="w-full bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100"
+            className="w-full"
             disabled={!workoutName.trim() || !workoutType || !selectedBuilder}
           >
             Continue

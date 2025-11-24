@@ -704,13 +704,7 @@ const AppShellContent = ({
 
   const getActiveSidebarClasses = (isActive: boolean) => {
     if (!isActive) return ""
-    // Default to light mode during SSR to prevent hydration mismatch
-    if (!isThemeMounted) {
-      return "data-[active=true]:!bg-neutral-800 data-[active=true]:!text-white [&_svg]:data-[active=true]:!text-white"
-    }
-    return isDark
-      ? "data-[active=true]:!bg-neutral-100 data-[active=true]:!text-gray-900 [&_svg]:data-[active=true]:!text-gray-900"
-      : "data-[active=true]:!bg-neutral-800 data-[active=true]:!text-white [&_svg]:data-[active=true]:!text-white"
+    return "data-[active=true]:!bg-primary/10 data-[active=true]:!text-primary [&_svg]:data-[active=true]:!text-primary"
   }
 
   React.useEffect(() => {
@@ -983,23 +977,21 @@ const AppShellContent = ({
           <div className="flex items-center justify-between gap-2 px-2 py-1 h-10">
             <span className="text-base font-semibold">OneNinety</span>
             {isHoverExpanded ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-            <button
-              type="button"
-                      onClick={handlePinMenu}
-              className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
-                      aria-label="Keep menu open"
-            >
-                      <PanelLeftOpen className="h-4 w-4" />
-            </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>Keep menu open</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handlePinMenu}
+                    className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
+                    aria-label="Keep menu open"
+                  >
+                    <PanelLeftOpen className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  Keep menu open
+                </TooltipContent>
+              </Tooltip>
             ) : (
             <button
               type="button"
@@ -1083,7 +1075,8 @@ const AppShellContent = ({
               <SidebarMenu className="gap-0.5">
                 {businessNavItems.map((item) => {
                   const Icon = item.icon
-                  const isActive = activePath === item.href
+                  const isActive =
+                    activePath === item.href || activePath.startsWith(`${item.href}/`)
                   const label = t(item.labelKey)
 
                   return (
