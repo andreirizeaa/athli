@@ -95,6 +95,46 @@ const getColumnWidth = (colId: ColumnId, format: "class" | "pixel" = "class"): s
   return widths[colId]?.[format] || (format === "class" ? "min-w-[130px]" : "130px")
 }
 
+const AthleteNameTooltip = ({ name }: { name: string }) => {
+  const [isTruncated, setIsTruncated] = useState(false)
+  const checkTruncationRef = useRef<(() => void) | null>(null)
+
+  const handleRef = (element: HTMLSpanElement | null) => {
+    if (element) {
+      const checkTruncation = () => {
+        setIsTruncated(element.scrollWidth > element.clientWidth)
+      }
+      checkTruncationRef.current = checkTruncation
+      checkTruncation()
+      window.addEventListener("resize", checkTruncation)
+    } else if (checkTruncationRef.current) {
+      window.removeEventListener("resize", checkTruncationRef.current)
+      checkTruncationRef.current = null
+    }
+  }
+
+  const nameSpan = (
+    <span ref={handleRef} className="font-medium truncate cursor-default">
+      {name}
+    </span>
+  )
+
+  if (isTruncated) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {nameSpan}
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{name}</p>
+        </TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return nameSpan
+}
+
 const AthletesPage = () => {
   const router = useRouter()
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set())
@@ -106,7 +146,7 @@ const AthletesPage = () => {
   const [isAddAthleteOpen, setIsAddAthleteOpen] = useState<boolean>(false)
   const [isUploadClientsOpen, setIsUploadClientsOpen] = useState<boolean>(false)
   const [columnOrder, setColumnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
-  const [sortColumn, setSortColumn] = useState<ColumnId | null>(null)
+  const [sortColumn, setSortColumn] = useState<ColumnId | "name" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
   const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false)
   const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map())
@@ -218,7 +258,7 @@ const AthletesPage = () => {
     return matchesSearch && matchesCategory && matchesConnected
   })
 
-  const handleSort = (columnId: ColumnId, direction: "asc" | "desc") => {
+  const handleSort = (columnId: ColumnId | "name", direction: "asc" | "desc") => {
     setSortColumn(columnId)
     setSortDirection(direction)
   }
@@ -245,6 +285,10 @@ const AthletesPage = () => {
     let bValue: string | number | boolean
 
     switch (sortColumn) {
+      case "name":
+        aValue = a.name
+        bValue = b.name
+        break
       case "lastActivity":
         aValue = a.lastActivity
         bValue = b.lastActivity
@@ -551,17 +595,17 @@ const AthletesPage = () => {
 
     const headerContent = (
       <div className="flex items-center gap-2 cursor-pointer h-full w-full">
-        {icon}
-        <span className="text-xs uppercase">{label}</span>
-        {isAscending && <ArrowUpNarrowWide className="size-3.5 text-muted-foreground" />}
-        {isDescending && <ArrowDownWideNarrow className="size-3.5 text-muted-foreground" />}
+        <div className="text-muted-foreground">{icon}</div>
+        <span className="text-xs uppercase text-muted-foreground">{label}</span>
+        {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+        {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
       </div>
     )
 
     const headerWidth = getColumnWidth(columnId, "pixel")
 
     return (
-      <TableHead className={cn("!px-4 !py-0 h-10", getColumnWidth(columnId, "class"))}>
+      <TableHead className={cn("!px-4 !py-0 h-10 border-b", getColumnWidth(columnId, "class"))}>
         <DropdownMenu>
           {tooltip ? (
             <Tooltip>
@@ -771,80 +815,186 @@ const AthletesPage = () => {
             </DropdownMenu>
           </div>
         </div>
-        <div className="flex flex-1 overflow-hidden">
-          {/* Fixed left section - Checkbox + Athlete */}
-          <div className="flex-shrink-0 border-r flex flex-col">
-            <div className="flex-shrink-0">
-              <Table>
-                <TableHeader className="bg-sidebar">
-                  <TableRow className="hover:bg-transparent h-10">
-                    <TableHead className="!px-4 !py-0 w-[250px] h-10">
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <Checkbox
-                          checked={getSelectAllCheckedState()}
-                          onCheckedChange={handleToggleAll}
-                          aria-label="Select all athletes"
-                        />
-                        <div className="flex items-center gap-2">
-                          <User className="size-3.5" />
-                          <span className="text-xs uppercase">Athlete</span>
+        <div className="flex-1 overflow-auto" style={{ paddingBottom: "16px" }}>
+          <style dangerouslySetInnerHTML={{ __html: `
+            tbody tr:hover td:first-child {
+              background-color: hsl(var(--muted)) !important;
+            }
+            tbody tr[style*="background-color"] td:first-child {
+              background-color: hsl(var(--muted)) !important;
+            }
+          ` }} />
+          <Table className="table-fixed border-separate border-spacing-0" style={{ tableLayout: "fixed", width: "100%" }}>
+            <colgroup>
+              <col style={{ width: "350px", minWidth: "350px", maxWidth: "350px" }} />
+              {columnOrder.map((columnId) => {
+                return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
+              })}
+            </colgroup>
+            <TableHeader className="sticky top-0 z-20">
+              <TableRow className="hover:bg-transparent h-10">
+                <TableHead className="!px-4 !py-0 h-10 sticky left-0 z-30 bg-background border-r border-b !w-[350px] !min-w-[350px] !max-w-[350px]" style={{ boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)", width: "350px", minWidth: "350px", maxWidth: "350px" }}>
+                  <div className="flex items-center gap-3 h-full w-full">
+                    <Checkbox
+                      checked={getSelectAllCheckedState()}
+                      onCheckedChange={handleToggleAll}
+                      aria-label="Select all athletes"
+                    />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
+                          <User className="size-3 text-muted-foreground" />
+                          <span className="text-xs uppercase text-muted-foreground">Athlete</span>
+                          {sortColumn === "name" && sortDirection === "asc" && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+                          {sortColumn === "name" && sortDirection === "desc" && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
                         </div>
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-            </div>
-            <div 
-              className="flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden" 
-              id="table-scroll-container"
-              onScroll={(e) => {
-                const rightScroll = document.querySelector(".right-table-scroll")
-                if (rightScroll && e.currentTarget) {
-                  rightScroll.scrollTop = e.currentTarget.scrollTop
-                }
-              }}
-            >
-              <Table>
-                <TableBody>
-                {sortedAndFilteredAthletes.map((athlete) => {
-                  const isSelected = selectedAthletes.has(athlete.id)
-                  const initials = athlete.name
-                    .split(" ")
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join("")
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onClick={() => handleSort("name", "asc")}
+                          className={cn(sortColumn === "name" && sortDirection === "asc" && "bg-accent")}
+                        >
+                          <ArrowUpNarrowWide className="size-4 mr-2" />
+                          <span className="flex-1">Sort ascending</span>
+                          {sortColumn === "name" && sortDirection === "asc" && <Check className="ml-2 size-4" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleSort("name", "desc")}
+                          className={cn(sortColumn === "name" && sortDirection === "desc" && "bg-accent")}
+                        >
+                          <ArrowDownWideNarrow className="size-4 mr-2" />
+                          <span className="flex-1">Sort descending</span>
+                          {sortColumn === "name" && sortDirection === "desc" && <Check className="ml-2 size-4" />}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </TableHead>
+                {columnOrder.map((columnId) => {
+                  switch (columnId) {
+                    case "lastActivity":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <ClockAlert className="size-3" />, "Last activity", "Time since last logged on to app")}
+                        </React.Fragment>
+                      )
+                    case "last7DaysTraining":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Dumbbell className="size-3" />, "L7D Training", "How much they trained in the last 7 days out of their total assigned schedule")}
+                        </React.Fragment>
+                      )
+                    case "last30DaysTraining":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Dumbbell className="size-3" />, "L30D Training", "How much they trained in the last 30 days out of their total assigned schedule")}
+                        </React.Fragment>
+                      )
+                    case "category":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Grid2x2 className="size-3" />, "Category", "Whether or not they are online or in person")}
+                        </React.Fragment>
+                      )
+                    case "connected":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <HeartPulse className="size-3" />, "Connected?", "The status of the user's app, i.e. if they have connected to the app")}
+                        </React.Fragment>
+                      )
+                    case "email":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Mail className="size-3" />, "Email")}
+                        </React.Fragment>
+                      )
+                    case "phone":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Phone className="size-3" />, "Phone")}
+                        </React.Fragment>
+                      )
+                    case "country":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Globe className="size-3" />, "Country")}
+                        </React.Fragment>
+                      )
+                    case "age":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <User className="size-3" />, "Age")}
+                        </React.Fragment>
+                      )
+                    case "clientFor":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <ClockAlert className="size-3" />, "Client For", "How long they have been a client")}
+                        </React.Fragment>
+                      )
+                    default:
+                      return null
+                  }
+                })}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedAndFilteredAthletes.map((athlete) => {
+                const isSelected = selectedAthletes.has(athlete.id)
+                const initials = athlete.name
+                  .split(" ")
+                  .map((part) => part.charAt(0).toUpperCase())
+                  .slice(0, 2)
+                  .join("")
 
-                  return (
-                    <TableRow
-                      key={athlete.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open profile for ${athlete.name}`}
-                      onClick={(event) => handleAthleteRowClick(event, athlete.id)}
-                      onKeyDown={(event) => handleAthleteRowKeyDown(event, athlete.id)}
-                      className={cn(isSelected && "bg-muted/50", "cursor-pointer !h-[54px]")}
+                const isLastRow = sortedAndFilteredAthletes.indexOf(athlete) === sortedAndFilteredAthletes.length - 1
+
+                return (
+                  <TableRow
+                    key={athlete.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open profile for ${athlete.name}`}
+                    onClick={(event) => handleAthleteRowClick(event, athlete.id)}
+                    onKeyDown={(event) => handleAthleteRowKeyDown(event, athlete.id)}
+                    className={cn(
+                      isSelected && "bg-muted/50",
+                      "cursor-pointer !h-[54px] group",
+                      "[&:hover_td]:bg-muted"
+                    )}
+                    style={isSelected ? { backgroundColor: "hsl(var(--muted) / 0.5)" } : undefined}
+                  >
+                    <TableCell 
+                      className={cn(
+                        "!px-4 !h-[54px] align-middle sticky left-0 z-10 border-r border-b !w-[350px] !min-w-[350px] !max-w-[350px]",
+                        isSelected ? "!bg-muted" : "group-hover:!bg-muted !bg-background"
+                      )}
+                      style={{
+                        boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)",
+                        width: "350px",
+                        minWidth: "350px",
+                        maxWidth: "350px",
+                      }}
                     >
-                      <TableCell className="!px-4 !h-[54px] align-middle">
-                        <div className="flex items-center gap-3 h-full">
-                          <div
-                            className="flex items-center justify-center h-full"
-                            data-no-row-link="true"
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => handleToggleAthlete(athlete.id)}
-                            />
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <div
+                          className="flex items-center justify-center h-full flex-shrink-0"
+                          data-no-row-link="true"
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleAthlete(athlete.id)}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-2 min-w-0 flex-1 w-full">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={athlete.avatar} alt={athlete.name} />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <AthleteNameTooltip name={athlete.name} />
                           </div>
-                          <div className="flex items-center justify-between gap-2 min-w-0 flex-1">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <Avatar className="h-8 w-8 flex-shrink-0">
-                                <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                                <AvatarFallback>{initials}</AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium truncate">{athlete.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-1 flex-shrink-0">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div
@@ -854,7 +1004,7 @@ const AthletesPage = () => {
                                   onClick={() => handleNavigateToMessages(athlete.id)}
                                   onKeyDown={(e) => handleMessageIconKeyDown(e, athlete.id)}
                                   data-no-row-link="true"
-                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
+                                  className="flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
                                 >
                                   <MessageCircle className="size-4" />
                                 </div>
@@ -872,7 +1022,7 @@ const AthletesPage = () => {
                                   onClick={() => handleNavigateToTrainingCalendar(athlete.id)}
                                   onKeyDown={(e) => handleTrainingCalendarIconKeyDown(e, athlete.id)}
                                   data-no-row-link="true"
-                                  className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
+                                  className="flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
                                 >
                                   <Dumbbell className="size-4" />
                                 </div>
@@ -881,341 +1031,278 @@ const AthletesPage = () => {
                                 <p>View clients training calendar</p>
                               </TooltipContent>
                             </Tooltip>
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              aria-label={`Copy ${athlete.name}`}
-                              onClick={() => handleCopy(athlete.name, athlete.id, "name")}
-                              onKeyDown={(e) => handleCopyIconKeyDown(e, athlete.name, athlete.id, "name")}
-                              data-no-row-link="true"
-                              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
-                            >
-                              {isFieldCopied(athlete.id, "name") ? (
-                                <Check className="size-4 text-green-500" />
-                              ) : (
-                                <Copy className="size-4" />
-                              )}
-                            </div>
-                          </div>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Copy ${athlete.name}`}
+                                  onClick={() => handleCopy(athlete.name, athlete.id, "name")}
+                                  onKeyDown={(e) => handleCopyIconKeyDown(e, athlete.name, athlete.id, "name")}
+                                  data-no-row-link="true"
+                                  className="flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
+                                >
+                                  {isFieldCopied(athlete.id, "name") ? (
+                                    <Check className="size-4 text-green-500" />
+                                  ) : (
+                                    <Copy className="size-4" />
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Copy athlete name</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-          </div>
-          {/* Scrollable right section - All other columns */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div 
-              className="flex-1 overflow-y-auto overflow-x-auto right-table-scroll"
-              onScroll={(e) => {
-                const leftScroll = document.getElementById("table-scroll-container")
-                if (leftScroll && e.currentTarget) {
-                  leftScroll.scrollTop = e.currentTarget.scrollTop
-                }
-              }}
-            >
-              <Table className="table-fixed border-collapse">
-                <colgroup>
-                  {columnOrder.map((columnId) => {
-                    return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
-                  })}
-                </colgroup>
-                <TableHeader className="sticky top-0 z-10 bg-sidebar">
-                  <TableRow className="hover:bg-transparent h-10">
+                      </div>
+                    </TableCell>
                     {columnOrder.map((columnId) => {
                       switch (columnId) {
                         case "lastActivity":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <ClockAlert className="size-3.5" />, "Last activity", "Time since last logged on to app")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full">
+                                <span className="text-sm">{athlete.lastActivity}</span>
+                              </div>
+                            </TableCell>
                           )
-                        case "last7DaysTraining":
+                        case "last7DaysTraining": {
+                          const [completed, total] = athlete.last7DaysTraining.split("/").map(Number)
+                          const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100)
+
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Dumbbell className="size-3.5" />, "L7D Training", "How much they trained in the last 7 days out of their total assigned schedule")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full gap-2">
+                                <Progress value={percentage} className="h-2 flex-1" />
+                                <span className="text-xs w-10 text-right">
+                                  {percentage}%
+                                </span>
+                              </div>
+                            </TableCell>
                           )
-                        case "last30DaysTraining":
+                        }
+                        case "last30DaysTraining": {
+                          const [completed, total] = athlete.last30DaysTraining.split("/").map(Number)
+                          const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100)
+
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Dumbbell className="size-3.5" />, "L30D Training", "How much they trained in the last 30 days out of their total assigned schedule")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full gap-2">
+                                <Progress value={percentage} className="h-2 flex-1" />
+                                <span className="text-xs w-10 text-right">
+                                  {percentage}%
+                                </span>
+                              </div>
+                            </TableCell>
                           )
+                        }
                         case "category":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Grid2x2 className="size-3.5" />, "Category", "Whether or not they are online or in person")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full">
+                                <span className="text-sm capitalize">{athlete.category}</span>
+                              </div>
+                            </TableCell>
                           )
-                        case "connected":
+                        case "connected": {
+                          let connectedLabel = ""
+
+                          if (athlete.connected === true) {
+                            connectedLabel = "Connected"
+                          } else if (athlete.connected === false) {
+                            connectedLabel = "Not connected"
+                          } else if (athlete.connected === "invitation-sent") {
+                            connectedLabel = "Invitation sent"
+                          }
+
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <HeartPulse className="size-3.5" />, "Connected?", "The status of the user's app, i.e. if they have connected to the app")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full">
+                                <span className="text-sm">{connectedLabel}</span>
+                              </div>
+                            </TableCell>
                           )
+                        }
                         case "email":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Mail className="size-3.5" />, "Email")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center justify-between gap-2 w-full">
+                                <span className="text-sm flex-1 min-w-0 truncate">
+                                  {isFieldRevealed(athlete.id, "email") ? athlete.email : censorEmail(athlete.email)}
+                                </span>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={isFieldRevealed(athlete.id, "email") ? `Hide email for ${athlete.name}` : `Reveal email for ${athlete.name}`}
+                                    onClick={() => handleToggleReveal(athlete.id, "email")}
+                                    onKeyDown={(e) => handleRevealIconKeyDown(e, athlete.id, "email")}
+                                    data-no-row-link="true"
+                                    className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                  >
+                                    {isFieldRevealed(athlete.id, "email") ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                  </div>
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`Copy email for ${athlete.name}`}
+                                    onClick={() => handleCopy(athlete.email, athlete.id, "email")}
+                                    onKeyDown={(e) => handleCopyIconKeyDown(e, athlete.email, athlete.id, "email")}
+                                    data-no-row-link="true"
+                                    className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                  >
+                                    {isFieldCopied(athlete.id, "email") ? (
+                                      <Check className="size-4 text-green-500" />
+                                    ) : (
+                                      <Copy className="size-4" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
                           )
                         case "phone":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Phone className="size-3.5" />, "Phone")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center justify-between gap-2 w-full">
+                                <span className="text-sm flex-1 min-w-0 truncate">
+                                  {isFieldRevealed(athlete.id, "phone") ? athlete.phone : censorPhone(athlete.phone)}
+                                </span>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={isFieldRevealed(athlete.id, "phone") ? `Hide phone for ${athlete.name}` : `Reveal phone for ${athlete.name}`}
+                                    onClick={() => handleToggleReveal(athlete.id, "phone")}
+                                    onKeyDown={(e) => handleRevealIconKeyDown(e, athlete.id, "phone")}
+                                    data-no-row-link="true"
+                                    className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                  >
+                                    {isFieldRevealed(athlete.id, "phone") ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                                  </div>
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`Copy phone for ${athlete.name}`}
+                                    onClick={() => handleCopy(athlete.phone, athlete.id, "phone")}
+                                    onKeyDown={(e) => handleCopyIconKeyDown(e, athlete.phone, athlete.id, "phone")}
+                                    data-no-row-link="true"
+                                    className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                  >
+                                    {isFieldCopied(athlete.id, "phone") ? (
+                                      <Check className="size-4 text-green-500" />
+                                    ) : (
+                                      <Copy className="size-4" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
                           )
                         case "country":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Globe className="size-3.5" />, "Country")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full">
+                                <span className="text-sm">{athlete.country}</span>
+                              </div>
+                            </TableCell>
                           )
                         case "age":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <User className="size-3.5" />, "Age")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full">
+                                <span className="text-sm">{athlete.age}</span>
+                              </div>
+                            </TableCell>
                           )
                         case "clientFor":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <ClockAlert className="size-3.5" />, "Client For", "How long they have been a client")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full">
+                                <span className="text-sm">{formatClientFor(athlete.clientFor)}</span>
+                              </div>
+                            </TableCell>
                           )
                         default:
                           return null
                       }
                     })}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                {sortedAndFilteredAthletes.map((athlete) => {
-                  const isSelected = selectedAthletes.has(athlete.id)
-
-                  return (
-                    <TableRow
-                      key={athlete.id}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open profile for ${athlete.name}`}
-                      onClick={(event) => handleAthleteRowClick(event, athlete.id)}
-                      onKeyDown={(event) => handleAthleteRowKeyDown(event, athlete.id)}
-                      className={cn(isSelected && "bg-muted/50", "cursor-pointer !h-[54px]")}
-                    >
-                      {columnOrder.map((columnId) => {
-                        switch (columnId) {
-                          case "lastActivity":
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm">{athlete.lastActivity}</span>
-                                </div>
-                              </TableCell>
-                            )
-                          case "last7DaysTraining": {
-                            const [completed, total] = athlete.last7DaysTraining.split("/").map(Number)
-                            const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100)
-
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full gap-2">
-                                  <Progress value={percentage} className="h-2 flex-1" />
-                                  <span className="text-xs w-10 text-right">
-                                    {percentage}%
-                                  </span>
-                                </div>
-                              </TableCell>
-                            )
-                          }
-                          case "last30DaysTraining": {
-                            const [completed, total] = athlete.last30DaysTraining.split("/").map(Number)
-                            const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100)
-
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full gap-2">
-                                  <Progress value={percentage} className="h-2 flex-1" />
-                                  <span className="text-xs w-10 text-right">
-                                    {percentage}%
-                                  </span>
-                                </div>
-                              </TableCell>
-                            )
-                          }
-                          case "category":
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm capitalize">{athlete.category}</span>
-                                </div>
-                              </TableCell>
-                            )
-                          case "connected": {
-                            let connectedLabel = ""
-
-                            if (athlete.connected === true) {
-                              connectedLabel = "Connected"
-                            } else if (athlete.connected === false) {
-                              connectedLabel = "Not connected"
-                            } else if (athlete.connected === "invitation-sent") {
-                              connectedLabel = "Invitation sent"
-                            }
-
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm">{connectedLabel}</span>
-                                </div>
-                              </TableCell>
-                            )
-                          }
-                          case "email":
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center justify-between gap-2 w-full">
-                                  <span className="text-sm flex-1 min-w-0 truncate">
-                                    {isFieldRevealed(athlete.id, "email") ? athlete.email : censorEmail(athlete.email)}
-                                  </span>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <div
-                                      role="button"
-                                      tabIndex={0}
-                                      aria-label={isFieldRevealed(athlete.id, "email") ? `Hide email for ${athlete.name}` : `Reveal email for ${athlete.name}`}
-                                      onClick={() => handleToggleReveal(athlete.id, "email")}
-                                      onKeyDown={(e) => handleRevealIconKeyDown(e, athlete.id, "email")}
-                                      data-no-row-link="true"
-                                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                                    >
-                                      {isFieldRevealed(athlete.id, "email") ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                                    </div>
-                                    <div
-                                      role="button"
-                                      tabIndex={0}
-                                      aria-label={`Copy email for ${athlete.name}`}
-                                      onClick={() => handleCopy(athlete.email, athlete.id, "email")}
-                                      onKeyDown={(e) => handleCopyIconKeyDown(e, athlete.email, athlete.id, "email")}
-                                      data-no-row-link="true"
-                                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                                    >
-                                      {isFieldCopied(athlete.id, "email") ? (
-                                        <Check className="size-4 text-green-500" />
-                                      ) : (
-                                        <Copy className="size-4" />
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </TableCell>
-                            )
-                          case "phone":
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center justify-between gap-2 w-full">
-                                  <span className="text-sm flex-1 min-w-0 truncate">
-                                    {isFieldRevealed(athlete.id, "phone") ? athlete.phone : censorPhone(athlete.phone)}
-                                  </span>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <div
-                                      role="button"
-                                      tabIndex={0}
-                                      aria-label={isFieldRevealed(athlete.id, "phone") ? `Hide phone for ${athlete.name}` : `Reveal phone for ${athlete.name}`}
-                                      onClick={() => handleToggleReveal(athlete.id, "phone")}
-                                      onKeyDown={(e) => handleRevealIconKeyDown(e, athlete.id, "phone")}
-                                      data-no-row-link="true"
-                                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                                    >
-                                      {isFieldRevealed(athlete.id, "phone") ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                                    </div>
-                                    <div
-                                      role="button"
-                                      tabIndex={0}
-                                      aria-label={`Copy phone for ${athlete.name}`}
-                                      onClick={() => handleCopy(athlete.phone, athlete.id, "phone")}
-                                      onKeyDown={(e) => handleCopyIconKeyDown(e, athlete.phone, athlete.id, "phone")}
-                                      data-no-row-link="true"
-                                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                                    >
-                                      {isFieldCopied(athlete.id, "phone") ? (
-                                        <Check className="size-4 text-green-500" />
-                                      ) : (
-                                        <Copy className="size-4" />
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </TableCell>
-                            )
-                          case "country":
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm">{athlete.country}</span>
-                                </div>
-                              </TableCell>
-                            )
-                          case "age":
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm">{athlete.age}</span>
-                                </div>
-                              </TableCell>
-                            )
-                          case "clientFor":
-                            return (
-                              <TableCell
-                                key={columnId}
-                                className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                              >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm">{formatClientFor(athlete.clientFor)}</span>
-                                </div>
-                              </TableCell>
-                            )
-                          default:
-                            return null
-                        }
-                      })}
-                    </TableRow>
-                  )
-                })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                )
+              })}
+            </TableBody>
+          </Table>
         </div>
       </div>
       <AddClientSidePanel open={isAddAthleteOpen} onOpenChange={setIsAddAthleteOpen} />
