@@ -30,10 +30,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
+import { Progress } from "@/components/ui/progress"
 import { mockAthletes } from "@/components/app/app-shell"
 import { cn } from "@/lib/utils"
-import { AddClientModal } from "./add-client-modal"
-import { UploadClientsModal } from "./upload-clients-modal"
+import { AddClientSidePanel } from "./add-client-side-panel"
+import { UploadClientsSidePanel } from "./upload-clients-side-panel"
 import {
   User,
   Users,
@@ -41,8 +42,6 @@ import {
   Dumbbell,
   Grid2x2,
   HeartPulse,
-  CheckCircle2,
-  XCircle,
   MessageCircle,
   Mail,
   Phone,
@@ -54,7 +53,6 @@ import {
   Search,
   UserPlus,
   X,
-  CircleEllipsis,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -587,6 +585,8 @@ const AthletesPage = () => {
       </div>
     )
 
+    const headerWidth = getColumnWidth(columnId, "pixel")
+
     return (
       <TableHead className={cn("!px-4 !py-0 h-10", getColumnWidth(columnId, "class"))}>
         <DropdownMenu>
@@ -597,8 +597,11 @@ const AthletesPage = () => {
                   {headerContent}
                 </DropdownMenuTrigger>
               </TooltipTrigger>
-              <TooltipContent className="max-w-[200px] !w-fit p-1 !text-left">
-                <p className="break-words w-full">{tooltip}</p>
+              <TooltipContent
+                className="whitespace-normal break-words text-left"
+                style={{ maxWidth: headerWidth }}
+              >
+                {tooltip}
               </TooltipContent>
             </Tooltip>
           ) : (
@@ -670,13 +673,19 @@ const AthletesPage = () => {
                 <span>Your invite link</span>
               </Button>
               <ButtonGroupSeparator />
-              <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100">
+              <Button
+                onClick={() => setIsAddAthleteOpen(true)}
+                className="gap-2"
+              >
                 <UserPlus className="size-4" />
                 <span>Add Client</span>
               </Button>
               <ButtonGroupSeparator />
               <DropdownMenuTrigger asChild>
-                <Button className="px-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100" aria-label="More options">
+                <Button
+                  className="px-2"
+                  aria-label="More options"
+                >
                   <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1039,28 +1048,42 @@ const AthletesPage = () => {
                                 </div>
                               </TableCell>
                             )
-                          case "last7DaysTraining":
+                          case "last7DaysTraining": {
+                            const [completed, total] = athlete.last7DaysTraining.split("/").map(Number)
+                            const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100)
+
                             return (
                               <TableCell
                                 key={columnId}
                                 className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
                               >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm">{calculatePercentage(athlete.last7DaysTraining)}</span>
+                                <div className="flex items-center w-full gap-2">
+                                  <Progress value={percentage} className="h-2 flex-1" />
+                                  <span className="text-xs w-10 text-right">
+                                    {percentage}%
+                                  </span>
                                 </div>
                               </TableCell>
                             )
-                          case "last30DaysTraining":
+                          }
+                          case "last30DaysTraining": {
+                            const [completed, total] = athlete.last30DaysTraining.split("/").map(Number)
+                            const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100)
+
                             return (
                               <TableCell
                                 key={columnId}
                                 className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
                               >
-                                <div className="flex items-center w-full">
-                                  <span className="text-sm">{calculatePercentage(athlete.last30DaysTraining)}</span>
+                                <div className="flex items-center w-full gap-2">
+                                  <Progress value={percentage} className="h-2 flex-1" />
+                                  <span className="text-xs w-10 text-right">
+                                    {percentage}%
+                                  </span>
                                 </div>
                               </TableCell>
                             )
+                          }
                           case "category":
                             return (
                               <TableCell
@@ -1072,23 +1095,28 @@ const AthletesPage = () => {
                                 </div>
                               </TableCell>
                             )
-                          case "connected":
+                          case "connected": {
+                            let connectedLabel = ""
+
+                            if (athlete.connected === true) {
+                              connectedLabel = "Connected"
+                            } else if (athlete.connected === false) {
+                              connectedLabel = "Not connected"
+                            } else if (athlete.connected === "invitation-sent") {
+                              connectedLabel = "Invitation sent"
+                            }
+
                             return (
                               <TableCell
                                 key={columnId}
                                 className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
                               >
                                 <div className="flex items-center w-full">
-                                  {athlete.connected === true ? (
-                                    <CheckCircle2 className="size-4 text-green-500" />
-                                  ) : athlete.connected === false ? (
-                                    <XCircle className="size-4 text-red-500" />
-                                  ) : athlete.connected === "invitation-sent" ? (
-                                    <CircleEllipsis className="size-4 text-muted-foreground" />
-                                  ) : null}
+                                  <span className="text-sm">{connectedLabel}</span>
                                 </div>
                               </TableCell>
                             )
+                          }
                           case "email":
                             return (
                               <TableCell
@@ -1217,8 +1245,8 @@ const AthletesPage = () => {
           </div>
         </div>
       </div>
-      <AddClientModal open={isAddAthleteOpen} onOpenChange={setIsAddAthleteOpen} />
-      <UploadClientsModal open={isUploadClientsOpen} onOpenChange={setIsUploadClientsOpen} />
+      <AddClientSidePanel open={isAddAthleteOpen} onOpenChange={setIsAddAthleteOpen} />
+      <UploadClientsSidePanel open={isUploadClientsOpen} onOpenChange={setIsUploadClientsOpen} />
     </div>
   )
 }

@@ -16,7 +16,7 @@ const CalendarPage = () => {
           <p className="text-sm text-muted-foreground text-center max-w-md">
             You will be able to book sessions directly here and it will sync with your connected calendar.
           </p>
-          <Button className="mt-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100">Connect</Button>
+          <Button className="mt-2">Connect</Button>
         </div>
       </div>
     </div>
