@@ -25,6 +25,7 @@ import {
   PanelLeftOpen,
   Search,
   Settings,
+  Sparkles,
   Sun,
   User,
   Users,
@@ -94,6 +95,29 @@ export type Message = {
   text: string
   timestamp: string
   isSent: boolean
+  replyTo?: {
+    id: string
+    text: string
+    isSent: boolean
+  }
+  pdf?: {
+    name: string
+    data: string // base64 encoded
+    type: string
+    size: number
+  }
+  images?: Array<{
+    name: string
+    data: string // base64 encoded
+    type: string
+    size: number
+  }>
+  video?: {
+    name: string
+    data: string // base64 encoded
+    type: string
+    size: number
+  }
 }
 
 export type Athlete = {
@@ -653,10 +677,10 @@ const AppShellContent = ({
 
   const getActiveSidebarClasses = (isActive: boolean) => {
     if (!isActive) return ""
-    // Light mode: darker black background (foreground/95), white text (background)
+    // Light mode: custom dark gray background (#3f3c39), white text (background)
     // Dark mode: white background (foreground), black text (background)
     // Override sidebar's default bg-primary/10 and text-primary with stronger specificity
-    return "data-[active=true]:!bg-foreground/95 dark:data-[active=true]:!bg-foreground data-[active=true]:!text-background [&_svg]:data-[active=true]:!text-background"
+    return "data-[active=true]:!bg-[#3f3c39] dark:data-[active=true]:!bg-foreground data-[active=true]:!text-background [&_svg]:data-[active=true]:!text-background"
   }
 
   React.useEffect(() => {
@@ -968,16 +992,17 @@ const AppShellContent = ({
                 <div className="mx-auto h-px w-8 bg-sidebar-border" />
               ) : (
                 <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  BUSINESS
+                  ATHLETES
                 </span>
               )}
             </div>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                {businessNavItems.map((item) => {
+                {athletesNavItems.map((item) => {
                   const Icon = item.icon
-                  const isActive =
-                    activePath === item.href || activePath.startsWith(`${item.href}/`)
+                  const isActive = item.href === "/athletes"
+                    ? activePath === item.href || activePath.startsWith(`${item.href}/`)
+                    : activePath === item.href
                   const label = t(item.labelKey)
 
                   return (
@@ -1004,17 +1029,16 @@ const AppShellContent = ({
                 <div className="mx-auto h-px w-8 bg-sidebar-border" />
               ) : (
                 <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  ATHLETES
+                  BUSINESS
                 </span>
               )}
             </div>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
-                {athletesNavItems.map((item) => {
+                {businessNavItems.map((item) => {
                   const Icon = item.icon
-                  const isActive = item.href === "/athletes"
-                    ? activePath === item.href || activePath.startsWith(`${item.href}/`)
-                    : activePath === item.href
+                  const isActive =
+                    activePath === item.href || activePath.startsWith(`${item.href}/`)
                   const label = t(item.labelKey)
 
                   return (
@@ -1424,6 +1448,25 @@ const AppShellContent = ({
                   </div>
                 </PopoverContent>
               </Popover>
+              <div className="flex items-center justify-center px-2">
+                <div className="h-6 border-l" />
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
+                    aria-label="AI Assistant"
+                  >
+                    <Sparkles className="size-4" />
+                    AI Assistant
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    Coming soon
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="flex items-center justify-center px-2">
               <div className="h-6 border-l" />

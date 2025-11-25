@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
+import { Separator } from "@/components/ui/separator"
 import { SidePanel } from "@/components/app/side-panel"
 import { AssignAthletesList } from "@/components/app/assign-athletes-list"
 import { cn } from "@/lib/utils"
@@ -193,6 +194,11 @@ const WorkoutsPage = () => {
         builder: newSelectedBuilder,
       }
 
+      try {
+        window.localStorage.setItem("oneninety_new_workout_meta", JSON.stringify(meta))
+      } catch {
+        // Ignore storage errors
+      }
 
       setIsCreateWorkoutOpen(false)
 
@@ -208,6 +214,12 @@ const WorkoutsPage = () => {
         type: newWorkoutType.toLowerCase().replace(/\s+/g, "_"),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, "_"),
         builder: newSelectedBuilder,
+      }
+
+      try {
+        window.localStorage.setItem("oneninety_new_workout_meta", JSON.stringify(meta))
+      } catch {
+        // Ignore storage errors
       }
 
       let generated: any = null
@@ -1048,6 +1060,7 @@ Focus on proper form and progressive overload.`
                 Drag and drop or select files to instantly convert it into OneNinety format or write the outline of your workout and let us translate it.
               </p>
             </div>
+            <Separator className="-mx-4 w-[calc(100%+2rem)]" />
             <div className="flex-1 overflow-auto">
               <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">

@@ -42,7 +42,7 @@ export const SidePanel = ({
         </div>
         <Separator />
         {children && (
-          <div className="flex-1 overflow-auto px-4 pb-4 pt-3">
+          <div className="flex-1 overflow-auto px-4 pb-4 pt-3 flex flex-col min-h-0">
             {children}
           </div>
         )}

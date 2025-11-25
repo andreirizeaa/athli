@@ -7,6 +7,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { PageTabs } from "@/components/page-tabs"
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -14,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { ChevronLeft, MessageCircle, Trash2, Users, X } from "lucide-react"
+import { ChevronRight, MessageCircle, Trash2, Users, X } from "lucide-react"
 import { mockAthletes } from "@/components/app/app-shell"
 
 type ClientProfileLayoutProps = {
@@ -137,17 +145,27 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   return (
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
+        <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
+          <Breadcrumb>
+            <BreadcrumbList className="text-xs gap-1">
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  onClick={handleNavigateToAthletes}
+                  className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                >
+                  Athletes
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="text-muted-foreground/60">
+                <ChevronRight className="h-2 w-2" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-semibold text-foreground px-0.5">{athlete.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={handleBack}
-              className="h-8 w-8"
-              aria-label="Go back"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
             <Avatar className="h-9 w-9">
               <AvatarImage src={athlete.avatar} alt={athlete.name} />
               <AvatarFallback>{initials}</AvatarFallback>
@@ -166,14 +184,6 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
               <MessageCircle className="size-4" />
               <span>Message</span>
             </Button>
-            <Button
-              onClick={handleNavigateToAthletes}
-              className="gap-2"
-              aria-label="View all clients"
-            >
-              <Users className="size-4" />
-              <span>All Clients</span>
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -191,6 +201,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
           </div>
         </div>
         <div className="px-4">

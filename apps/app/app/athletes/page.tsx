@@ -1194,9 +1194,18 @@ const AthletesPage = () => {
                               )}
                             >
                               <div className="flex items-center justify-between gap-2 w-full">
-                                <span className="text-sm flex-1 min-w-0 truncate">
+                                <a
+                                  href={`mailto:${athlete.email}`}
+                                  className="text-sm flex-1 min-w-0 truncate hover:underline text-blue-600 dark:text-blue-400"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.stopPropagation()
+                                    }
+                                  }}
+                                >
                                   {isFieldRevealed(athlete.id, "email") ? athlete.email : censorEmail(athlete.email)}
-                                </span>
+                                </a>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   <div
                                     role="button"

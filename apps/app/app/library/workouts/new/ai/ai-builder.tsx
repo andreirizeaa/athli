@@ -1,28 +1,10 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
-import {
-  DndContext,
-  DragEndEvent,
-  DragStartEvent,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core"
-import {
-  SortableContext,
-  arrayMove,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import Image from "next/image"
-import { Dumbbell, GripVertical, Info, Link2, Link2Off, NotebookPen, Play, Plus, Timer, Trash2, Search, X } from "lucide-react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Timer, Trash2 } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -40,13 +22,11 @@ import type {
 } from "../workout-schema"
 import type { SetData } from "../components/exercise-card"
 import { ExerciseCard } from "../components/exercise-card"
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { ExerciseSelectionPanel } from "../components/exercise-selection-panel"
+import { SectionSelectionPanel } from "../components/section-selection-panel"
+import { EquipmentPanel } from "../components/equipment-panel"
+import { OverviewPanel } from "../components/overview-panel"
+import { VideoModal } from "../components/video-modal"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -77,17 +57,6 @@ type WorkoutSchema = {
   }>
 }
 
-type ActiveOverviewItem =
-  | {
-      type: "section"
-      sectionId: string
-    }
-  | {
-      type: "exerciseGroup"
-      sectionId: string
-      startIndex: number
-      length: number
-    }
 
 type WorkoutMeta = {
   title: string
@@ -272,220 +241,6 @@ const buildWorkoutPayload = (
   }
 }
 
-type OverviewSectionCardProps = {
-  section: WorkoutSchema["sections"][number]
-  children: React.ReactNode
-  onDelete: (sectionId: string) => void
-}
-
-const OverviewSectionCard = ({ section, children, onDelete }: OverviewSectionCardProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: `section-${section.id}`,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <div
-        className={cn(
-          "border rounded-lg bg-card/80 shadow-sm mb-2 select-none",
-          isDragging && "opacity-80"
-        )}
-      >
-        <div className="flex items-center justify-between px-3 py-2 border-b">
-          <div className="flex items-center gap-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {section.type}{" "}
-            <span className="font-normal">
-              ({section.exercises ? section.exercises.length : 0})
-            </span>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete(section.id)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onDelete(section.id)
-                }
-              }}
-              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              aria-label={`Delete ${section.type} section`}
-              data-no-row-link="true"
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-          <button
-            type="button"
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 -mr-1 rounded select-none text-muted-foreground hover:text-foreground"
-            aria-label="Reorder section"
-          >
-            <GripVertical className="size-4" />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-type OverviewExerciseRowProps = {
-  sectionId: string
-  exercise: ExerciseWithSuperset
-  onDelete: (sectionId: string, exerciseId: string) => void
-}
-
-const OverviewExerciseRow = ({
-  sectionId,
-  exercise,
-  onDelete,
-}: OverviewExerciseRowProps) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: `exercise-|${sectionId}|${exercise.instanceId}`,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <div
-        {...listeners}
-        className={cn(
-          "flex items-center justify-between rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing",
-          isDragging && "opacity-80 shadow-sm"
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-          <span className="text-xs">
-            {exercise.name || "Untitled exercise"}
-          </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(sectionId, exercise.exerciseId)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                e.stopPropagation()
-                onDelete(sectionId, exercise.exerciseId)
-              }
-            }}
-            className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            aria-label={`Delete ${exercise.name || "exercise"}`}
-            data-no-row-link="true"
-          >
-            <Trash2 className="size-3" />
-          </button>
-        </div>
-        <GripVertical className="size-3 text-muted-foreground" />
-      </div>
-    </div>
-  )
-}
-
-type OverviewSupersetRowProps = {
-  sectionId: string
-  exercises: ExerciseWithSuperset[]
-  onDelete: (sectionId: string, exerciseIds: string[]) => void
-}
-
-const OverviewSupersetRow = ({
-  sectionId,
-  exercises,
-  onDelete,
-}: OverviewSupersetRowProps) => {
-  // Use the first exercise's ID for the sortable ID (the drag handler already groups them)
-  const firstExerciseId = exercises[0]?.instanceId
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: `exercise-|${sectionId}|${firstExerciseId}`,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  const exerciseNames = exercises.map((ex) => ex.name || "Untitled exercise").join(", ")
-
-  const handleDelete = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation()
-    const exerciseIds = exercises.map((ex) => ex.exerciseId)
-    onDelete(sectionId, exerciseIds)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault()
-      e.stopPropagation()
-      handleDelete(e)
-    }
-  }
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <div
-        className={cn(
-          "rounded-md border bg-background text-xs select-none",
-          isDragging && "opacity-80 shadow-sm"
-        )}
-      >
-        <div className="flex items-start justify-between px-3 py-2.5">
-          <div className="flex items-start gap-2 flex-1 min-w-0">
-            <div className="flex flex-col gap-1 flex-1 min-w-0">
-              {exercises.map((exercise, index) => (
-                <div key={exercise.instanceId} className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                    <span className="text-xs">
-                      {exercise.name || "Untitled exercise"}
-                    </span>
-                  </div>
-                  {index < exercises.length - 1 && (
-                    <div className="flex items-center justify-center py-0.5">
-                      <Link2 className="size-3 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div
-            {...listeners}
-            className="flex items-center gap-1 cursor-grab active:cursor-grabbing"
-          >
-            <button
-              type="button"
-              onClick={handleDelete}
-              onKeyDown={handleKeyDown}
-              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-              aria-label={`Delete superset group: ${exerciseNames}`}
-              data-no-row-link="true"
-            >
-              <Trash2 className="size-3" />
-            </button>
-            <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 type SetFieldValidation = {
   reps?: boolean
@@ -520,7 +275,6 @@ export const AiBuilder = ({
     ],
   })
   const [builderMode, setBuilderMode] = useState<"exercise" | "section">("exercise")
-  const [searchQuery, setSearchQuery] = useState<string>("")
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null)
@@ -535,10 +289,6 @@ export const AiBuilder = ({
   const [isLoadingAiWorkout, setIsLoadingAiWorkout] = useState(false)
   const contentScrollRef = useRef<HTMLDivElement | null>(null)
   const pendingScrollTopRef = useRef<number | null>(null)
-  // DnD Kit state for overview panel
-  const [activeOverviewItem, setActiveOverviewItem] = useState<ActiveOverviewItem | null>(null)
-
-  const exerciseResults = useMemo(() => searchExercises(searchQuery), [searchQuery])
 
   // Load AI generated workout on mount with gradual loading
   useEffect(() => {
@@ -772,19 +522,6 @@ export const AiBuilder = ({
     }
   }, [])
 
-  const uniqueEquipment = useMemo(() => {
-    const equipmentSet = new Set<string>()
-    workoutSchema.sections.forEach((section) => {
-      section.exercises?.forEach((exercise) => {
-        exercise.equipments?.forEach((equipment) => {
-          if (equipment && equipment.trim() !== "") {
-            equipmentSet.add(equipment)
-          }
-        })
-      })
-    })
-    return Array.from(equipmentSet).sort()
-  }, [workoutSchema])
 
   const handleExerciseClick = (exercise: Exercise) => {
     setSelectedExercise(exercise)
@@ -1043,15 +780,6 @@ export const AiBuilder = ({
     }
   }, [workoutSchema.sections.length])
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent,
-    type: "regular" | "amrap" | "timed"
-  ) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault()
-      handleSectionSelect(type)
-    }
-  }
 
   const handleDeleteSection = (sectionId: string) => {
     onDirtyChange?.()
@@ -1124,10 +852,8 @@ export const AiBuilder = ({
     exercises.forEach((exercise) => {
       if (exercise.supersetGroupId) {
         if (exercise.supersetGroupId === currentGroupId) {
-          // Continue current group
           currentGroup.push(exercise)
         } else {
-          // Start new group
           if (currentGroup.length > 0) {
             groups.push(currentGroup)
           }
@@ -1135,7 +861,6 @@ export const AiBuilder = ({
           currentGroupId = exercise.supersetGroupId
         }
       } else {
-        // Not part of a superset
         if (currentGroup.length > 0) {
           groups.push(currentGroup)
           currentGroup = []
@@ -1145,7 +870,6 @@ export const AiBuilder = ({
       }
     })
 
-    // Add the last group if it exists
     if (currentGroup.length > 0) {
       groups.push(currentGroup)
     }
@@ -1365,222 +1089,6 @@ export const AiBuilder = ({
     setDragOverSlot(null)
   }
 
-  // DnD – overview handlers
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }))
-
-  const handleOverviewDragStart = (event: DragStartEvent) => {
-    const { active } = event
-    const activeId = active.id as string
-
-    if (activeId.startsWith("section-")) {
-      const sectionId = activeId.replace("section-", "")
-      setActiveOverviewItem({ type: "section", sectionId })
-      return
-    }
-
-    if (activeId.startsWith("exercise-")) {
-      const [, sectionId, exerciseId] = activeId.split("|")
-      const section = workoutSchema.sections.find((s) => s.id === sectionId)
-      if (!section || !section.exercises) {
-        return
-      }
-
-      const exercises = section.exercises
-      const centerIndex = exercises.findIndex((ex) => ex.instanceId === exerciseId)
-      if (centerIndex === -1) {
-        return
-      }
-
-      const groupId = exercises[centerIndex].supersetGroupId
-      let startIndex = centerIndex
-      let endIndex = centerIndex
-
-      if (groupId) {
-        // Extend upwards to include entire contiguous superset chain
-        while (
-          startIndex > 0 &&
-          exercises[startIndex - 1].supersetGroupId === groupId
-        ) {
-          startIndex -= 1
-        }
-
-        // Extend downwards to include entire contiguous superset chain
-        while (
-          endIndex < exercises.length - 1 &&
-          exercises[endIndex + 1].supersetGroupId === groupId
-        ) {
-          endIndex += 1
-        }
-      }
-
-      setActiveOverviewItem({
-        type: "exerciseGroup",
-        sectionId,
-        startIndex,
-        length: endIndex - startIndex + 1,
-      })
-    }
-  }
-
-  const handleOverviewDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || !activeOverviewItem) {
-      setActiveOverviewItem(null)
-      return
-    }
-
-    const activeId = active.id as string
-    const overId = over.id as string
-
-    // Reorder sections
-    if (activeOverviewItem.type === "section") {
-      if (!overId.startsWith("section-")) {
-        setActiveOverviewItem(null)
-        return
-      }
-
-      const activeSectionId = activeOverviewItem.sectionId
-      const overSectionId = overId.replace("section-", "")
-
-      if (activeSectionId === overSectionId) {
-        setActiveOverviewItem(null)
-        return
-      }
-
-      onDirtyChange?.()
-      setWorkoutSchema((prev) => {
-        const oldIndex = prev.sections.findIndex((s) => s.id === activeSectionId)
-        const newIndex = prev.sections.findIndex((s) => s.id === overSectionId)
-        if (oldIndex === -1 || newIndex === -1) return prev
-
-        return {
-          ...prev,
-          sections: arrayMove(prev.sections, oldIndex, newIndex),
-        }
-      })
-
-      setActiveOverviewItem(null)
-      return
-    }
-
-    // Reorder / move exercise groups (including supersets)
-    if (activeOverviewItem.type === "exerciseGroup") {
-      // overId can be either a section container or another exercise
-      let targetSectionId = activeOverviewItem.sectionId
-      let targetExerciseId: string | null = null
-
-      if (overId.startsWith("section-")) {
-        targetSectionId = overId.replace("section-", "")
-      } else if (overId.startsWith("exercise-")) {
-        const [, sectionId, exerciseId] = overId.split("|")
-        targetSectionId = sectionId
-        targetExerciseId = exerciseId
-      }
-
-      const sourceSectionId = activeOverviewItem.sectionId
-      const { startIndex, length } = activeOverviewItem
-
-      onDirtyChange?.()
-      setWorkoutSchema((prev) => {
-        const sections = [...prev.sections]
-        const sourceSectionIndex = sections.findIndex((s) => s.id === sourceSectionId)
-        const targetSectionIndex = sections.findIndex((s) => s.id === targetSectionId)
-        if (sourceSectionIndex === -1 || targetSectionIndex === -1) return prev
-
-        const sourceSection = sections[sourceSectionIndex]
-        const targetSection = sections[targetSectionIndex]
-        if (!sourceSection.exercises) return prev
-
-        const sourceExercises = [...sourceSection.exercises]
-
-        // Guard: if group indices are out of bounds, do nothing
-        if (
-          startIndex < 0 ||
-          startIndex >= sourceExercises.length ||
-          startIndex + length > sourceExercises.length
-        ) {
-          return prev
-        }
-
-        const groupExercises = sourceExercises.slice(startIndex, startIndex + length)
-        const groupExerciseIds = new Set(groupExercises.map((ex) => ex.exerciseId))
-
-        // Remove the entire group from the source section
-        sourceExercises.splice(startIndex, length)
-
-        // If dropping on one of the group's own exercises, treat as no-op
-        if (targetExerciseId && groupExerciseIds.has(targetExerciseId)) {
-          sections[sourceSectionIndex] = {
-            ...sourceSection,
-            exercises: sourceExercises,
-          }
-
-          return {
-            ...prev,
-            sections,
-          }
-        }
-
-        // Determine insertion target exercises
-        let targetExercises = [...(targetSection.exercises || [])]
-        let toIndex = targetExercises.length
-
-        if (targetExerciseId) {
-          const existingIndex = targetExercises.findIndex(
-            (ex) => ex.exerciseId === targetExerciseId
-          )
-          if (existingIndex !== -1) {
-            toIndex = existingIndex
-          }
-        }
-
-        if (sourceSectionId === targetSectionId) {
-          // Reorder within same section
-          targetExercises = [...sourceExercises]
-
-          // Find updated insertion index after removal
-          if (targetExerciseId) {
-            const existingIndex = targetExercises.findIndex(
-              (ex) => ex.exerciseId === targetExerciseId
-            )
-            if (existingIndex !== -1) {
-              toIndex = existingIndex
-            } else {
-              toIndex = targetExercises.length
-            }
-          } else {
-            toIndex = targetExercises.length
-          }
-
-          targetExercises.splice(toIndex, 0, ...groupExercises)
-
-          sections[sourceSectionIndex] = {
-            ...sourceSection,
-            exercises: targetExercises,
-          }
-        } else {
-          // Move across sections
-          targetExercises.splice(toIndex, 0, ...groupExercises)
-
-          sections[sourceSectionIndex] = {
-            ...sourceSection,
-            exercises: sourceExercises,
-          }
-          sections[targetSectionIndex] = {
-            ...targetSection,
-            exercises: targetExercises,
-          }
-        }
-
-        return {
-          ...prev,
-          sections,
-        }
-      })
-    }
-
-    setActiveOverviewItem(null)
-  }
 
   const handleSupersetLink = (sectionId: string, exerciseIndex: number) => {
     onDirtyChange?.()
@@ -1728,153 +1236,15 @@ export const AiBuilder = ({
             </TabsList>
           </Tabs>
           {builderMode === "exercise" && (
-          <div className="mt-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-              <Input
-                type="text"
-                placeholder="Search for exercises.."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={cn("pl-9 w-full", searchQuery && "pr-9")}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X className="size-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-        {builderMode === "section" ? (
-          <div className="mt-4 flex flex-col gap-4">
-              <Card
-                role="button"
-                tabIndex={0}
-                onClick={() => handleSectionSelect("regular")}
-                onKeyDown={(e) => handleKeyDown(e, "regular")}
-                className="cursor-pointer transition-colors hover:bg-accent"
-                aria-label="Select Regular section type"
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Dumbbell className="size-4 text-foreground" />
-                    Regular
-                  </CardTitle>
-                  <CardDescription>
-                    Exercise for exercise. Follow the sets and reps specified.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              <Card
-                role="button"
-                tabIndex={0}
-                onClick={() => handleSectionSelect("amrap")}
-                onKeyDown={(e) => handleKeyDown(e, "amrap")}
-                className="cursor-pointer transition-colors hover:bg-accent"
-                aria-label="Select AMRAP section type"
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <NotebookPen className="size-4 text-foreground" />
-                    AMRAP
-                  </CardTitle>
-                  <CardDescription>
-                    Track the total amount of rounds completed in the allocated
-                    time.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              <Card
-                role="button"
-                tabIndex={0}
-                onClick={() => handleSectionSelect("timed")}
-                onKeyDown={(e) => handleKeyDown(e, "timed")}
-                className="cursor-pointer transition-colors hover:bg-accent"
-                aria-label="Select Timed section type"
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Timer className="size-4 text-foreground" />
-                    Timed
-                  </CardTitle>
-                  <CardDescription>
-                    Track total duration until completion of assigned rounds.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
-        ) : (
-          <div className="mt-4">
-            <div className="flex flex-col gap-2">
-              {exerciseResults.slice(0, 40).map((exercise) => (
-                <Card
-                  key={exercise.exerciseId}
-                  draggable
-                  onDragStart={() => handleDragStart(exercise)}
-                  onDragEnd={handleDragEnd}
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-grab active:cursor-grabbing transition-colors hover:bg-accent overflow-hidden h-[75px] rounded-md shadow-none"
-                  aria-label={`Select ${exercise.name} exercise`}
-                >
-                  <div className="flex items-center gap-2 py-2 px-3 h-full">
-                  <div 
-                      className="relative w-16 h-16 flex-shrink-0 rounded cursor-pointer"
-                    onClick={() => handleExerciseClick(exercise)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault()
-                        handleExerciseClick(exercise)
-                      }
-                    }}
-                    aria-label={`Play video for ${exercise.name}`}
-                  >
-                    <Image
-                      src={exercise.imageUrl}
-                      alt={exercise.name}
-                      fill
-                        className="object-cover rounded"
-                    />
-                    <div 
-                        className="absolute bottom-1 left-1 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleExerciseClick(exercise)
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          handleExerciseClick(exercise)
-                        }
-                      }}
-                      aria-label={`Play video for ${exercise.name}`}
-                    >
-                      <div className="bg-black/60 rounded-full p-1">
-                        <Play className="size-3 text-white fill-white" />
-                      </div>
-                    </div>
-                  </div>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-sm font-medium truncate">{exercise.name}</CardTitle>
-                    </div>
-                    <GripVertical className="size-4 text-muted-foreground flex-shrink-0" />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+            <ExerciseSelectionPanel
+              onExerciseClick={handleExerciseClick}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            />
+          )}
+          {builderMode === "section" && (
+            <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
+          )}
         </div>
       </div>
       <Separator orientation="vertical" />
@@ -2278,124 +1648,25 @@ export const AiBuilder = ({
       <Separator orientation="vertical" />
       <div className="flex-[1.5] bg-background h-full overflow-y-auto">
         <div className="p-4">
-          <h2 className="text-left mb-3">Equipment</h2>
-          <div className="min-h-[50px] mb-3">
-            <div className="flex flex-wrap gap-2">
-              {uniqueEquipment.length > 0 ? (
-                uniqueEquipment.map((equipment) => (
-                  <Badge key={equipment} variant="outline">
-                    {equipment}
-                  </Badge>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No equipment required</p>
-              )}
+          <EquipmentPanel sections={workoutSchema.sections} />
+          <OverviewPanel
+            sections={workoutSchema.sections}
+            onSectionsChange={(sections) => {
+              onDirtyChange?.()
+              setWorkoutSchema((prev) => ({ ...prev, sections }))
+            }}
+            onDeleteSection={handleDeleteSection}
+            onDeleteExercise={handleDeleteExerciseFromOverview}
+            onDeleteSuperset={handleDeleteSupersetFromOverview}
+            groupExercisesBySuperset={groupExercisesBySuperset}
+          />
             </div>
           </div>
-          <div className="mb-3 -mx-4 w-[calc(100%+2rem)]">
-            <Separator className="w-full" />
-          </div>
-          <h2 className="text-left mb-3">Overview</h2>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleOverviewDragStart}
-            onDragEnd={handleOverviewDragEnd}
-          >
-            <SortableContext
-              items={workoutSchema.sections.map((section) => `section-${section.id}`)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col gap-3">
-                {workoutSchema.sections.length > 0 ? (
-                  workoutSchema.sections.map((section) => (
-                    <OverviewSectionCard
-                      key={section.id}
-                      section={section}
-                      onDelete={handleDeleteSection}
-                    >
-                      <div className="p-2 flex flex-col gap-1">
-                        {section.exercises && section.exercises.length > 0 ? (
-                          <SortableContext
-                            items={section.exercises.map(
-                              (exercise) => `exercise-|${section.id}|${exercise.exerciseId}`
-                            )}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            {groupExercisesBySuperset(section.exercises).map((exerciseGroup, groupIndex) => {
-                              // If it's a superset group (more than one exercise), render as superset row
-                              if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
-                                return (
-                                  <OverviewSupersetRow
-                                    key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
-                                    sectionId={section.id}
-                                    exercises={exerciseGroup}
-                                    onDelete={handleDeleteSupersetFromOverview}
-                                  />
-                                )
-                              }
-                              // Otherwise, render as individual exercise row
-                              return exerciseGroup.map((exercise, indexInGroup) => (
-                                <OverviewExerciseRow
-                                  key={`${exercise.instanceId}-${indexInGroup}`}
-                                  sectionId={section.id}
-                                  exercise={exercise}
-                                  onDelete={handleDeleteExerciseFromOverview}
-                                />
-                              ))
-                            })}
-                          </SortableContext>
-                        ) : (
-                          <div className="text-xs text-muted-foreground px-1 py-2">
-                            No exercises yet.
-                          </div>
-                        )}
-                      </div>
-                    </OverviewSectionCard>
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Sections will appear here once created.
-                  </p>
-                )}
-              </div>
-            </SortableContext>
-          </DndContext>
-        </div>
-      </div>
-      <Dialog open={isVideoModalOpen} onOpenChange={setIsVideoModalOpen}>
-        <DialogContent className="w-full max-w-4xl flex flex-col" showCloseButton={false}>
-          <DialogHeader className="flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-left">
-                {selectedExercise?.name}
-              </DialogTitle>
-              <DialogClose asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
-            </div>
-          </DialogHeader>
-          {selectedExercise && (
-            <div className="mt-4 w-full aspect-video">
-              <video
-                src={selectedExercise.videoUrl}
-                controls
-                autoPlay
-                className="w-full h-full rounded-lg"
-              >
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <VideoModal
+        open={isVideoModalOpen}
+        onOpenChange={setIsVideoModalOpen}
+        exercise={selectedExercise}
+      />
     </div>
   )
 }
