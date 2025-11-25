@@ -1,21 +1,48 @@
 "use client"
 
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
+import { ChevronLeft } from "lucide-react"
 import { mockWorkouts } from "@/components/app/app-shell"
 
 const WorkoutDetailPage = () => {
+  const router = useRouter()
   const params = useParams()
   const workoutId = params.workoutId as string
   const workout = mockWorkouts.find((w) => w.id === workoutId)
 
+  const handleBackToWorkouts = () => {
+    router.push("/app/library/workouts")
+
+    if (typeof window !== "undefined") {
+      const newHash = "#/app/library/workouts"
+      window.setTimeout(() => {
+        if (window.location.hash !== newHash) {
+          window.location.hash = newHash
+        }
+      }, 0)
+    }
+  }
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
-        <div className="px-4">
-          <h1 className="text-lg font-semibold mb-2 mt-2">
+        <div className="px-4 flex items-center justify-between mb-2 mt-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={handleBackToWorkouts}
+              className="h-8 w-8"
+              aria-label="Back to workouts"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <h1 className="text-[22px] font-semibold truncate">
             {workout?.program || "Workout"}
           </h1>
+          </div>
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>

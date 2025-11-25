@@ -34,6 +34,8 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
   // Check if any segment matches a tab value (for routes like /library/workouts/new, segments would be ["workouts", "new"])
   const activeTab = segments.find((segment) => validTabValues.includes(segment)) || "workouts"
 
+  const shouldShowHeader = segments.length === 1 && validTabValues.includes(segments[0])
+
   const handleTabChange = (value: string) => {
     if (value === activeTab) {
       return
@@ -53,13 +55,14 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
 
   return (
     <div className="h-full w-full flex flex-col">
+      {shouldShowHeader && (
       <div className="w-full px-4">
         <div className="flex items-center justify-between mb-2 mt-2">
           <h1 className="text-[22px] font-semibold">Library</h1>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                className="gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100"
+                  className="gap-2"
                 aria-label="Open marketplace"
               >
                 <Store className="size-4" />
@@ -82,6 +85,7 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
           className="mt-1"
         />
       </div>
+      )}
       <div className="w-full flex-1 overflow-auto">
         {children}
       </div>

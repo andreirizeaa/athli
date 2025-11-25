@@ -43,16 +43,7 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
-type ExerciseCardProps = {
-  exercise: Exercise
-  onVideoClick: (exercise: Exercise) => void
-  onExerciseChange: (newExercise: Exercise) => void
-  onDelete: () => void
-  isLinkedToPrev?: boolean
-  isLinkedToNext?: boolean
-}
-
-type SetData = {
+export type SetData = {
   setNumber: number
   type: "warmUp" | "normal" | "failure" | "dropset"
   reps: string
@@ -60,6 +51,30 @@ type SetData = {
   rest: string
   distance?: string
   duration?: string
+}
+
+export type SetFieldValidation = {
+  reps?: boolean
+  weight?: boolean
+  distance?: boolean
+  duration?: boolean
+  rest?: boolean
+}
+
+type ExerciseWithSets = Exercise & {
+  sets?: SetData[]
+}
+
+type ExerciseCardProps = {
+  exercise: ExerciseWithSets
+  onVideoClick: (exercise: Exercise) => void
+  onExerciseChange: (newExercise: ExerciseWithSets) => void
+  onDelete: () => void
+  isLinkedToPrev?: boolean
+  isLinkedToNext?: boolean
+  sectionType?: "regular" | "amrap" | "timed"
+  validationErrors?: Record<number, SetFieldValidation>
+  onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void
 }
 
 type DropsetData = {
@@ -74,6 +89,9 @@ export const ExerciseCard = ({
   onDelete,
   isLinkedToPrev = false,
   isLinkedToNext = false,
+  sectionType = "regular",
+  validationErrors,
+  onClearValidationField,
 }: ExerciseCardProps) => {
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -82,11 +100,23 @@ export const ExerciseCard = ({
   const searchInputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isEmpty = !exercise.name || exercise.name === ""
-  const [sets, setSets] = useState<SetData[]>([
-    { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "2" },
-    { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "2" },
-    { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "2" },
-  ])
+  const isSingleSetOnly = sectionType === "amrap" || sectionType === "timed"
+  const [sets, setSets] = useState<SetData[]>(() => {
+    // If parent already has sets (e.g. from restored state), use them.
+    if (exercise.sets && exercise.sets.length > 0) {
+      return exercise.sets
+    }
+
+    if (isSingleSetOnly) {
+      return [{ setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" }]
+    }
+
+    return [
+      { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" },
+      { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "90" },
+      { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "90" },
+    ]
+  })
   const [dropsetPopoverOpen, setDropsetPopoverOpen] = useState<number | null>(null)
   const [dropsetData, setDropsetData] = useState<{
     setIndex: number
@@ -123,7 +153,8 @@ export const ExerciseCard = ({
         const target = event.target as Node
         const popoverElement = document.querySelector('[data-slot="popover-content"]')
         if (popoverElement && !popoverElement.contains(target) && containerRef.current && !containerRef.current.contains(target)) {
-          handleSaveDropset()
+          setDropsetPopoverOpen(null)
+          setDropsetData(null)
         }
       }
 
@@ -140,25 +171,58 @@ export const ExerciseCard = ({
   }, [dropsetPopoverOpen])
 
   const handleExerciseSelect = (selectedExercise: Exercise) => {
-    onExerciseChange(selectedExercise)
+    // When a new exercise is selected, reset the local sets and notify parent
     setIsSearchOpen(false)
     setIsSearchBarVisible(false)
     setSearchQuery("")
-    // Reset sets to default values when exercise changes based on exercise type
+    // Reset sets to default values when exercise changes based on exercise type and section type
+    let nextSets: SetData[]
+
+    if (isSingleSetOnly) {
     if (selectedExercise.exerciseType === "distance_duration") {
-      setSets([
-        { setNumber: 1, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
-        { setNumber: 2, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
-        { setNumber: 3, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
-      ])
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+        ]
     } else {
-      setSets([
-        { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "2" },
-        { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "2" },
-        { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "2" },
-      ])
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" },
+        ]
+      }
+    } else {
+      if (selectedExercise.exerciseType === "distance_duration") {
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+          { setNumber: 2, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+          { setNumber: 3, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
+        ]
+      } else {
+        nextSets = [
+          { setNumber: 1, type: "normal", reps: "12", weight: "", rest: "90" },
+          { setNumber: 2, type: "normal", reps: "12", weight: "", rest: "90" },
+          { setNumber: 3, type: "normal", reps: "12", weight: "", rest: "90" },
+        ]
+      }
     }
+
+    setSets(nextSets)
+    onExerciseChange({
+      ...exercise,
+      ...selectedExercise,
+      sets: nextSets,
+    })
   }
+
+  // On first mount, if the parent has no sets yet, push our initial defaults up
+  useEffect(() => {
+    if (!exercise.sets || exercise.sets.length === 0) {
+      onExerciseChange({
+        ...exercise,
+        sets,
+      })
+    }
+    // We intentionally run this only once on mount to establish initial sets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (isEmpty) {
@@ -178,19 +242,56 @@ export const ExerciseCard = ({
   }
 
   const handleSetChange = (index: number, field: keyof SetData, value: string) => {
-    setSets((prev) => {
-      const updated = [...prev]
+    // Build updated sets from current state (safe in event handler)
+    const updated = [...sets]
       const currentSet = updated[index]
       
       // If changing to dropset, clear reps and weight defaults
       if (field === "type" && value === "dropset") {
         updated[index] = { ...currentSet, type: "dropset", reps: "", weight: "" }
+    } else if (exercise.exerciseType === "distance_duration") {
+      // For distance_duration exercise type, clear the other field when one is set
+      if (field === "distance" && value) {
+        updated[index] = { ...currentSet, [field]: value, duration: "" }
+      } else if (field === "duration" && value) {
+        updated[index] = { ...currentSet, [field]: value, distance: "" }
+      } else {
+        updated[index] = { ...currentSet, [field]: value }
+      }
       } else {
         updated[index] = { ...currentSet, [field]: value }
       }
       
-      return updated
+    setSets(updated)
+
+    // Notify parent about updated sets
+    onExerciseChange({
+      ...exercise,
+      sets: updated,
     })
+
+    // Clear validation for this field when the user enters a value
+    if (value && value.trim() !== "") {
+      if (exercise.exerciseType === "distance_duration") {
+        if (field === "distance" || field === "duration") {
+          // Distance/duration are mutually exclusive – clear both when either is set
+          if (validationErrors) {
+            onClearValidationField?.(index, "distance")
+            onClearValidationField?.(index, "duration")
+          }
+        } else if (field === "rest") {
+          onClearValidationField?.(index, "rest")
+        }
+      } else {
+        if (field === "reps") {
+          onClearValidationField?.(index, "reps")
+        } else if (field === "weight") {
+          onClearValidationField?.(index, "weight")
+        } else if (field === "rest") {
+          onClearValidationField?.(index, "rest")
+        }
+      }
+    }
   }
 
   const handleDropsetInputClick = (setIndex: number) => {
@@ -233,22 +334,56 @@ export const ExerciseCard = ({
   }
 
   const handleDropsetValueChange = (dropIndex: number, field: "reps" | "weight", value: string) => {
-    if (dropsetData) {
-      if (field === "reps") {
-        setDropsetData({
+    if (!dropsetData) return
+
+    const nextDropsetData = {
           ...dropsetData,
-          repsDrops: dropsetData.repsDrops.map((drop, idx) =>
+      repsDrops:
+        field === "reps"
+          ? dropsetData.repsDrops.map((drop, idx) =>
             idx === dropIndex ? { ...drop, value } : drop
-          ),
-        })
-      } else {
-        setDropsetData({
-          ...dropsetData,
-          weightDrops: dropsetData.weightDrops.map((drop, idx) =>
+            )
+          : dropsetData.repsDrops,
+      weightDrops:
+        field === "weight"
+          ? dropsetData.weightDrops.map((drop, idx) =>
             idx === dropIndex ? { ...drop, value } : drop
-          ),
-        })
-      }
+            )
+          : dropsetData.weightDrops,
+    }
+
+    setDropsetData(nextDropsetData)
+
+    // Live-update the parent set's reps/weight from dropset data
+    const formattedReps = nextDropsetData.repsDrops
+      .map((drop) => drop.value.trim())
+      .filter((val) => val !== "")
+      .join("-")
+
+    const formattedWeight = nextDropsetData.weightDrops
+      .map((drop) => drop.value.trim())
+      .filter((val) => val !== "")
+      .join("-")
+
+    const updated = [...sets]
+    updated[nextDropsetData.setIndex] = {
+      ...updated[nextDropsetData.setIndex],
+      reps: formattedReps,
+      weight: formattedWeight,
+    }
+
+    setSets(updated)
+
+    onExerciseChange({
+      ...exercise,
+      sets: updated,
+    })
+
+    if (formattedReps) {
+      onClearValidationField?.(nextDropsetData.setIndex, "reps")
+    }
+    if (formattedWeight) {
+      onClearValidationField?.(nextDropsetData.setIndex, "weight")
     }
   }
 
@@ -290,42 +425,7 @@ export const ExerciseCard = ({
     }
   }
 
-  const handleSaveDropset = () => {
-    if (dropsetData) {
-      const formattedReps = dropsetData.repsDrops
-        .map((drop) => drop.value.trim())
-        .filter((val) => val !== "")
-        .join("-")
-      
-      const formattedWeight = dropsetData.weightDrops
-        .map((drop) => drop.value.trim())
-        .filter((val) => val !== "")
-        .join("-")
-      
-      setSets((prev) => {
-        const updated = [...prev]
-        updated[dropsetData.setIndex] = {
-          ...updated[dropsetData.setIndex],
-          reps: formattedReps,
-          weight: formattedWeight,
-        }
-        return updated
-      })
-      
-      setDropsetPopoverOpen(null)
-      setDropsetData(null)
-    }
-  }
-
-  const isDropsetValid = () => {
-    if (!dropsetData) return false
-    // Check if all drops have both reps and weight filled
-    return dropsetData.repsDrops.every((drop, idx) => {
-      const repsValue = drop.value.trim()
-      const weightValue = dropsetData.weightDrops[idx]?.value.trim() || ""
-      return repsValue !== "" && weightValue !== ""
-    })
-  }
+  // Dropsets are now saved live as the user types; no explicit Save button needed
 
   const handleNumericInput = (e: React.ChangeEvent<HTMLInputElement>, handler: (value: string) => void) => {
     const value = e.target.value
@@ -336,15 +436,17 @@ export const ExerciseCard = ({
   }
 
   const handleAddSet = () => {
+    if (isSingleSetOnly) return // Don't allow adding sets for AMRAP/Timed sections
+    
     if (exercise.exerciseType === "distance_duration") {
       setSets((prev) => [
         ...prev,
-        { setNumber: prev.length + 1, type: "normal", reps: "", weight: "", rest: "2", distance: "", duration: "" },
+        { setNumber: prev.length + 1, type: "normal", reps: "", weight: "", rest: "90", distance: "", duration: "" },
       ])
     } else {
       setSets((prev) => [
         ...prev,
-        { setNumber: prev.length + 1, type: "normal", reps: "12", weight: "", rest: "2" },
+        { setNumber: prev.length + 1, type: "normal", reps: "12", weight: "", rest: "90" },
       ])
     }
   }
@@ -368,34 +470,7 @@ export const ExerciseCard = ({
               : "rounded-lg"
       )}
     >
-      <div className="flex items-center gap-3">
-        {!isEmpty && (
-          <div
-            className="relative w-10 h-10 flex-shrink-0 rounded cursor-pointer"
-            onClick={() => onVideoClick(exercise)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                onVideoClick(exercise)
-              }
-            }}
-            aria-label={`Play video for ${exercise.name}`}
-          >
-            <Image
-              src={exercise.imageUrl}
-              alt={exercise.name}
-              fill
-              className="object-cover rounded"
-            />
-            <div className="absolute top-0.5 left-0.5">
-              <div className="bg-black/60 rounded-full p-0.5">
-                <Play className="size-2 text-white fill-white" />
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="flex items-center gap-2">
         <div className="flex-1 relative flex items-center gap-2">
           {isEmpty ? (
             <div className="relative flex-1 flex items-center gap-2">
@@ -406,7 +481,7 @@ export const ExerciseCard = ({
                 onChange={handleInputChange}
                 onFocus={handleInputFocus}
                 placeholder="Choose an exercise..."
-                className={cn("pr-8 text-base flex-1", searchQuery && "pr-8")}
+                className={cn("h-8 pr-7 text-[13px] flex-1", searchQuery && "pr-7")}
                 autoFocus
               />
               {searchQuery && (
@@ -416,7 +491,7 @@ export const ExerciseCard = ({
                     setSearchQuery("")
                     setIsSearchOpen(false)
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   aria-label="Clear search"
                 >
                   <X className="size-3" />
@@ -441,8 +516,8 @@ export const ExerciseCard = ({
                     >
                       <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden">
                         <Image
-                          src={result.imageUrl}
-                          alt={result.name}
+                          src={result.imageUrl || "/demo-img.png"}
+                          alt={result.name || "Exercise thumbnail"}
                           fill
                           className="object-cover"
                         />
@@ -460,8 +535,9 @@ export const ExerciseCard = ({
                   onClick={() => setIsInfoModalOpen(true)}
                   aria-label="View exercise info"
                   disabled={isEmpty}
+                  className="h-7 w-7"
                 >
-                  <Info className="size-4" />
+                  <Info className="size-3" />
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -470,8 +546,9 @@ export const ExerciseCard = ({
                       variant="outline"
                       size="icon"
                       aria-label="Delete exercise"
+                      className="h-7 w-7"
                     >
-                      <Trash2 className="size-4" />
+                      <Trash2 className="size-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -487,7 +564,7 @@ export const ExerciseCard = ({
             </div>
           ) : (
             <>
-              <span className="text-lg font-medium flex-1">{exercise.name}</span>
+              <span className="text-sm font-medium flex-1 truncate">{exercise.name}</span>
               {isSearchBarVisible && (
                 <div className="relative flex-1">
                   <Input
@@ -497,7 +574,7 @@ export const ExerciseCard = ({
                     onChange={handleInputChange}
                     onFocus={handleInputFocus}
                     placeholder="Search for exercise..."
-                    className={cn("pr-8 text-base", searchQuery && "pr-8")}
+                    className={cn("h-8 pr-7 text-[13px]", searchQuery && "pr-7")}
                     autoFocus
                   />
                   {searchQuery && (
@@ -561,8 +638,9 @@ export const ExerciseCard = ({
                     }
                   }}
                   aria-label="Change exercise"
+                  className="h-7 w-7"
                 >
-                  <RefreshCw className="size-4" />
+                  <RefreshCw className="size-3" />
                 </Button>
                 <Button
                   type="button"
@@ -570,8 +648,9 @@ export const ExerciseCard = ({
                   size="icon"
                   onClick={() => setIsInfoModalOpen(true)}
                   aria-label="View exercise info"
+                  className="h-7 w-7"
                 >
-                  <Info className="size-4" />
+                  <Info className="size-3" />
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -580,8 +659,9 @@ export const ExerciseCard = ({
                       variant="outline"
                       size="icon"
                       aria-label="Delete exercise"
+                      className="h-7 w-7"
                     >
-                      <Trash2 className="size-4" />
+                      <Trash2 className="size-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -600,8 +680,8 @@ export const ExerciseCard = ({
       </div>
       {(exercise.exerciseType === "weight_reps" || exercise.exerciseType === "reps" || exercise.exerciseType === "distance_duration") && (
         <div className="w-full border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
+          <Table className="text-[11px] leading-tight">
+            <TableHeader className="bg-sidebar">
               <TableRow className="h-8">
                 <TableHead className="text-center h-8 py-1 px-2">Set</TableHead>
                 <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
@@ -618,7 +698,7 @@ export const ExerciseCard = ({
                     )}
                   </>
                 )}
-                <TableHead className="text-center h-8 py-1 px-2">Rest (m)</TableHead>
+                <TableHead className="text-center h-8 py-1 px-2">Rest (s)</TableHead>
                 <TableHead className="w-[50px] h-8 py-1 px-2"></TableHead>
               </TableRow>
             </TableHeader>
@@ -632,7 +712,7 @@ export const ExerciseCard = ({
                         value={set.type}
                         onValueChange={(value) => handleSetChange(index, "type", value as SetData["type"])}
                       >
-                        <SelectTrigger className="h-7 w-[130px] py-0" size="sm">
+                        <SelectTrigger className="h-6 w-[120px] py-0 px-2 text-[11px] [&>span]:leading-tight" style={{ minHeight: '24px', height: '24px' }}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -655,8 +735,13 @@ export const ExerciseCard = ({
                             inputMode="numeric"
                             value={set.distance || ""}
                             onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "distance", value))}
-                            className="h-7 w-[75px] text-center"
+                            className={cn(
+                              "h-6 w-[70px] text-center text-[11px]",
+                              validationErrors?.[index]?.distance &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
                             placeholder="-"
+                            disabled={!!set.duration}
                           />
                         </div>
                       </TableCell>
@@ -667,8 +752,13 @@ export const ExerciseCard = ({
                             inputMode="numeric"
                             value={set.duration || ""}
                             onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "duration", value))}
-                            className="h-7 w-[75px] text-center"
+                            className={cn(
+                              "h-6 w-[70px] text-center text-[11px]",
+                              validationErrors?.[index]?.duration &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
                             placeholder="-"
+                            disabled={!!set.distance}
                           />
                         </div>
                       </TableCell>
@@ -683,7 +773,8 @@ export const ExerciseCard = ({
                               if (open) {
                                 handleDropsetInputClick(index)
                               } else {
-                                handleSaveDropset()
+                                setDropsetPopoverOpen(null)
+                                setDropsetData(null)
                               }
                             }}
                           >
@@ -691,8 +782,10 @@ export const ExerciseCard = ({
                               <button
                                 type="button"
                                 className={cn(
-                                  "h-7 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-sm flex items-center justify-center",
-                                  set.reps ? "w-auto min-w-[75px]" : "w-[75px]"
+                                  "h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center",
+                                  set.reps ? "w-auto min-w-[70px]" : "w-[70px]",
+                                  validationErrors?.[index]?.reps &&
+                                    "border-destructive focus-visible:ring-destructive"
                                 )}
                               >
                                 {set.reps || "-"}
@@ -701,7 +794,7 @@ export const ExerciseCard = ({
                             <PopoverContent className="w-auto p-0" align="start">
                               <div className="flex flex-col gap-3 p-4">
                                 <div className="border rounded-lg overflow-hidden">
-                                  <Table>
+                                  <Table className="text-[11px] leading-tight">
                                     <TableHeader>
                                       <TableRow className="h-8">
                                         <TableHead className="text-center h-8 py-1 px-2">Drop</TableHead>
@@ -721,7 +814,7 @@ export const ExerciseCard = ({
                                               inputMode="numeric"
                                               value={drop.value}
                                               onChange={(e) => handleNumericInput(e, (value) => handleDropsetValueChange(dropIndex, "reps", value))}
-                                              className="h-7 w-[75px] text-center"
+                                              className="h-6 w-[70px] text-center text-[11px]"
                                               placeholder="-"
                                             />
                                             </div>
@@ -733,7 +826,7 @@ export const ExerciseCard = ({
                                               inputMode="numeric"
                                               value={dropsetData.weightDrops[dropIndex]?.value || ""}
                                               onChange={(e) => handleNumericInput(e, (value) => handleDropsetValueChange(dropIndex, "weight", value))}
-                                              className="h-7 w-[75px] text-center"
+                                              className="h-6 w-[70px] text-center text-[11px]"
                                               placeholder="-"
                                             />
                                             </div>
@@ -743,7 +836,7 @@ export const ExerciseCard = ({
                                               type="button"
                                               variant="ghost"
                                               size="icon"
-                                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                              className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
                                               onClick={() => handleRemoveDrop(dropIndex)}
                                               aria-label={`Remove drop ${drop.dropNumber}`}
                                             >
@@ -759,7 +852,7 @@ export const ExerciseCard = ({
                                             variant="ghost"
                                             size="sm"
                                             onClick={handleAddDrop}
-                                            className="mx-auto"
+                                            className="mx-auto text-[11px] h-6"
                                           >
                                             Add drop
                                           </Button>
@@ -768,14 +861,6 @@ export const ExerciseCard = ({
                                     </TableBody>
                                   </Table>
                                 </div>
-                              <Button
-                                type="button"
-                                onClick={handleSaveDropset}
-                                disabled={!isDropsetValid()}
-                                className="w-full gap-2 bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-800 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                Save
-                              </Button>
                               </div>
                             </PopoverContent>
                           </Popover>
@@ -786,8 +871,10 @@ export const ExerciseCard = ({
                           <button
                             type="button"
                             className={cn(
-                              "h-7 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-sm flex items-center justify-center",
-                              set.weight ? "w-auto min-w-[75px]" : "w-[75px]"
+                              "h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center",
+                              set.weight ? "w-auto min-w-[70px]" : "w-[70px]",
+                              validationErrors?.[index]?.weight &&
+                                "border-destructive focus-visible:ring-destructive"
                             )}
                             onClick={() => {
                               if (dropsetPopoverOpen !== index) {
@@ -800,6 +887,32 @@ export const ExerciseCard = ({
                         </div>
                       </TableCell>
                     </>
+                  ) : set.type === "failure" && (exercise.exerciseType === "reps" || exercise.exerciseType === "weight_reps") ? (
+                    <>
+                      <TableCell className="py-1 px-2">
+                        <div className="flex justify-center">
+                          <span className="text-xs text-muted-foreground">To failure</span>
+                        </div>
+                      </TableCell>
+                      {exercise.exerciseType === "weight_reps" && (
+                        <TableCell className="py-1 px-2">
+                          <div className="flex justify-center">
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={set.weight}
+                              onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "weight", value))}
+                              className={cn(
+                                "h-6 w-[70px] text-center text-[11px]",
+                                validationErrors?.[index]?.weight &&
+                                  "border-destructive focus-visible:ring-destructive"
+                              )}
+                              placeholder="-"
+                            />
+                          </div>
+                        </TableCell>
+                      )}
+                    </>
                   ) : (
                     <>
                       <TableCell className="py-1 px-2">
@@ -809,7 +922,11 @@ export const ExerciseCard = ({
                             inputMode="numeric"
                             value={set.reps}
                             onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "reps", value))}
-                            className="h-7 w-[75px] text-center"
+                            className={cn(
+                              "h-6 w-[70px] text-center text-[11px]",
+                              validationErrors?.[index]?.reps &&
+                                "border-destructive focus-visible:ring-destructive"
+                            )}
                             placeholder="-"
                           />
                         </div>
@@ -822,7 +939,11 @@ export const ExerciseCard = ({
                               inputMode="numeric"
                               value={set.weight}
                               onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "weight", value))}
-                              className="h-7 w-[75px] text-center"
+                              className={cn(
+                                "h-6 w-[70px] text-center text-[11px]",
+                                validationErrors?.[index]?.weight &&
+                                  "border-destructive focus-visible:ring-destructive"
+                              )}
                               placeholder="-"
                             />
                           </div>
@@ -837,17 +958,21 @@ export const ExerciseCard = ({
                         inputMode="numeric"
                         value={set.rest}
                         onChange={(e) => handleNumericInput(e, (value) => handleSetChange(index, "rest", value))}
-                        className="h-7 w-[75px] text-center"
-                        placeholder="1"
-                      />
-                    </div>
-                  </TableCell>
+            className={cn(
+              "h-6 w-[70px] text-center text-[11px]",
+              validationErrors?.[index]?.rest &&
+                "border-destructive focus-visible:ring-destructive"
+            )}
+            placeholder="1"
+          />
+        </div>
+      </TableCell>
                   <TableCell className="py-1 px-2">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
                       onClick={() => {
                         setSets((prev) => prev.filter((_, i) => i !== index))
                       }}
@@ -858,19 +983,25 @@ export const ExerciseCard = ({
                   </TableCell>
                 </TableRow>
               ))}
-              <TableRow className="h-8">
-                <TableCell colSpan={exercise.exerciseType === "reps" ? 5 : 6} className="text-center py-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAddSet}
-                    className="mx-auto"
-                  >
-                    Add set
-                  </Button>
+              {!isSingleSetOnly && (
+              <TableRow 
+                className="h-8 cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={handleAddSet}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    handleAddSet()
+                  }
+                }}
+                aria-label="Add set"
+              >
+                <TableCell colSpan={exercise.exerciseType === "reps" ? 5 : 6} className="text-center py-1 text-[11px]">
+                  Add set
                 </TableCell>
               </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
