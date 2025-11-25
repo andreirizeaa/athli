@@ -794,37 +794,98 @@ const MessagingPage = () => {
       })
     }
 
-    // Create message with PDF, video, and images data
-    const createMessage = async () => {
+    // Create separate messages for each file
+    const createMessages = async () => {
       const pdfData = await getPdfData()
       const videoData = await getVideoData()
       const imagesData = await getImagesData()
       const messageText = messageInput.trim() || ''
 
-      const newMessage: Message = {
-        id: `m${Date.now()}`,
-        text: messageText,
-        timestamp: new Date().toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
-        isSent: true,
-        replyTo: replyingToMessage
-          ? {
-              id: replyingToMessage.id,
-              text: replyingToMessage.text,
-              isSent: replyingToMessage.isSent,
-            }
-          : undefined,
-        pdf: pdfData,
-        video: videoData,
-        images: imagesData && imagesData.length > 0 ? imagesData : undefined,
+      const replyToData = replyingToMessage
+        ? {
+            id: replyingToMessage.id,
+            text: replyingToMessage.text,
+            isSent: replyingToMessage.isSent,
+            pdf: replyingToMessage.pdf,
+            images: replyingToMessage.images,
+            video: replyingToMessage.video,
+          }
+        : undefined
+
+      const newMessages: Message[] = []
+      let baseTimestamp = Date.now()
+
+      // If there's text, send it as a separate message first
+      if (messageText) {
+        newMessages.push({
+          id: `m${baseTimestamp}`,
+          text: messageText,
+          timestamp: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
+          isSent: true,
+          replyTo: replyToData,
+        })
+        baseTimestamp += 1
       }
 
-      setMessages((prev) => ({
-        ...prev,
-        [selectedContactId]: [...(prev[selectedContactId] || []), newMessage],
-      }))
+      // Send each image as a separate message
+      if (imagesData && imagesData.length > 0) {
+        for (const image of imagesData) {
+          newMessages.push({
+            id: `m${baseTimestamp}`,
+            text: '',
+            timestamp: new Date().toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+            }),
+            isSent: true,
+            replyTo: replyToData,
+            images: [image],
+          })
+          baseTimestamp += 1
+        }
+      }
+
+      // Send PDF as a separate message
+      if (pdfData) {
+        newMessages.push({
+          id: `m${baseTimestamp}`,
+          text: '',
+          timestamp: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
+          isSent: true,
+          replyTo: replyToData,
+          pdf: pdfData,
+        })
+        baseTimestamp += 1
+      }
+
+      // Send video as a separate message
+      if (videoData) {
+        newMessages.push({
+          id: `m${baseTimestamp}`,
+          text: '',
+          timestamp: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
+          isSent: true,
+          replyTo: replyToData,
+          video: videoData,
+        })
+      }
+
+      // Add all messages at once
+      if (newMessages.length > 0) {
+        setMessages((prev) => ({
+          ...prev,
+          [selectedContactId]: [...(prev[selectedContactId] || []), ...newMessages],
+        }))
+      }
 
       setMessageInput('')
       setReplyingToMessage(null)
@@ -840,7 +901,7 @@ const MessagingPage = () => {
       }
     }
 
-    createMessage()
+    createMessages()
   }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1168,6 +1229,25 @@ const MessagingPage = () => {
     }
   }
 
+  const handleDownloadImage = (image: File) => {
+    // Create a blob URL from the file and trigger download
+    const url = URL.createObjectURL(image)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = image.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImagePreviewKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, image: File) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleDownloadImage(image)
+    }
+  }
+
   const handleDownloadMessagePdf = (pdf: Message['pdf']) => {
     if (!pdf || !pdf.data) return
 
@@ -1194,6 +1274,61 @@ const MessagingPage = () => {
       event.preventDefault()
       handleDownloadMessagePdf(pdf)
     }
+  }
+
+  const handleDeleteMessageImage = (messageId: string, imageIndex: number) => {
+    setMessages((prev) => {
+      const updated = { ...prev }
+      if (updated[selectedContactId!]) {
+        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
+          if (msg.id === messageId && msg.images) {
+            const updatedImages = msg.images.filter((_, i) => i !== imageIndex)
+            return {
+              ...msg,
+              images: updatedImages.length > 0 ? updatedImages : undefined,
+            }
+          }
+          return msg
+        })
+      }
+      return updated
+    })
+  }
+
+  const handleDeleteMessagePdf = (messageId: string) => {
+    setMessages((prev) => {
+      const updated = { ...prev }
+      if (updated[selectedContactId!]) {
+        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
+          if (msg.id === messageId) {
+            return {
+              ...msg,
+              pdf: undefined,
+            }
+          }
+          return msg
+        })
+      }
+      return updated
+    })
+  }
+
+  const handleDeleteMessageVideo = (messageId: string) => {
+    setMessages((prev) => {
+      const updated = { ...prev }
+      if (updated[selectedContactId!]) {
+        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
+          if (msg.id === messageId) {
+            return {
+              ...msg,
+              video: undefined,
+            }
+          }
+          return msg
+        })
+      }
+      return updated
+    })
   }
 
   const getInitials = (name: string) => {
@@ -1593,40 +1728,20 @@ const MessagingPage = () => {
                         {message.images && message.images.length > 0 && (
                           <div 
                             className={cn(
-                              'mb-2 max-w-[80%] px-2 bg-background/50 rounded-lg',
+                              'mb-2 max-w-[80%] px-2 bg-background/50 rounded-lg relative group',
                               message.isSent ? 'items-end' : 'items-start'
                             )}
                             style={{ borderRadius: '18px' }}
                           >
                             <div className="flex gap-2 overflow-x-auto">
-                              {message.images.map((image, index) => (
+                              {message.images.map((image, imageIndex) => (
                                 <div 
-                                  key={index} 
-                                  className="relative group flex-shrink-0 cursor-pointer"
-                                  onClick={() => {
-                                    // Download image
-                                    const byteString = atob(image.data.split(',')[1])
-                                    const ab = new ArrayBuffer(byteString.length)
-                                    const ia = new Uint8Array(ab)
-                                    for (let i = 0; i < byteString.length; i++) {
-                                      ia[i] = byteString.charCodeAt(i)
-                                    }
-                                    const blob = new Blob([ab], { type: image.type })
-                                    const url = URL.createObjectURL(blob)
-                                    const link = document.createElement('a')
-                                    link.href = url
-                                    link.download = image.name
-                                    document.body.appendChild(link)
-                                    link.click()
-                                    document.body.removeChild(link)
-                                    URL.revokeObjectURL(url)
-                                  }}
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label={`Download ${image.name}`}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault()
+                                  key={imageIndex} 
+                                  className="relative flex-shrink-0"
+                                >
+                                  <div
+                                    className="cursor-pointer"
+                                    onClick={() => {
                                       // Download image
                                       const byteString = atob(image.data.split(',')[1])
                                       const ab = new ArrayBuffer(byteString.length)
@@ -1643,20 +1758,113 @@ const MessagingPage = () => {
                                       link.click()
                                       document.body.removeChild(link)
                                       URL.revokeObjectURL(url)
-                                    }
-                                  }}
-                                >
-                                  <div className="bg-muted rounded-lg p-1.5 hover:bg-muted/80 transition-colors">
-                                    <div className="w-24 h-24 flex items-center justify-center overflow-hidden rounded-md">
-                                      <img
-                                        src={image.data}
-                                        alt={image.name}
-                                        className="w-full h-full object-cover"
-                                      />
+                                    }}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`Download ${image.name}`}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        // Download image
+                                        const byteString = atob(image.data.split(',')[1])
+                                        const ab = new ArrayBuffer(byteString.length)
+                                        const ia = new Uint8Array(ab)
+                                        for (let i = 0; i < byteString.length; i++) {
+                                          ia[i] = byteString.charCodeAt(i)
+                                        }
+                                        const blob = new Blob([ab], { type: image.type })
+                                        const url = URL.createObjectURL(blob)
+                                        const link = document.createElement('a')
+                                        link.href = url
+                                        link.download = image.name
+                                        document.body.appendChild(link)
+                                        link.click()
+                                        document.body.removeChild(link)
+                                        URL.revokeObjectURL(url)
+                                      }
+                                    }}
+                                  >
+                                    <div className="bg-muted rounded-lg p-1.5 hover:bg-muted/80 transition-colors">
+                                      <div className="w-24 h-24 flex items-center justify-center overflow-hidden rounded-md">
+                                        <img
+                                          src={image.data}
+                                          alt={image.name}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               ))}
+                            </div>
+                            <div className={cn(
+                              'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
+                              message.isSent ? 'right-full mr-2 flex-row-reverse' : 'left-full ml-2'
+                            )}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                      aria-label="Reply"
+                                      onClick={() => {
+                                        setReplyingToMessage(message)
+                                        setTextareaHeight(60)
+                                        setTimeout(() => {
+                                          textareaRef.current?.focus()
+                                        }, 100)
+                                      }}
+                                    >
+                                      <Reply className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Reply</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              {message.isSent && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                      aria-label="Delete images"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align={message.isSent ? "end" : "start"}>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setMessages((prev) => {
+                                          const updated = { ...prev }
+                                          if (updated[selectedContactId!]) {
+                                            updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
+                                              if (msg.id === message.id) {
+                                                return {
+                                                  ...msg,
+                                                  images: undefined,
+                                                }
+                                              }
+                                              return msg
+                                            })
+                                          }
+                                          return updated
+                                        })
+                                      }}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete all images
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1664,7 +1872,7 @@ const MessagingPage = () => {
                         {message.pdf && (
                           <div 
                             className={cn(
-                              'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border',
+                              'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border relative group',
                               message.isSent ? 'items-end' : 'items-start'
                             )}
                             style={{ borderRadius: '18px' }}
@@ -1687,13 +1895,68 @@ const MessagingPage = () => {
                                 <p className="text-xs text-muted-foreground">PDF</p>
                               </div>
                             </div>
+                            <div className={cn(
+                              'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
+                              message.isSent ? 'right-full mr-2 flex-row-reverse' : 'left-full ml-2'
+                            )}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                      aria-label="Reply"
+                                      onClick={() => {
+                                        setReplyingToMessage(message)
+                                        setTextareaHeight(60)
+                                        setTimeout(() => {
+                                          textareaRef.current?.focus()
+                                        }, 100)
+                                      }}
+                                    >
+                                      <Reply className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Reply</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              {message.isSent && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                      aria-label="Delete PDF"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align={message.isSent ? "end" : "start"}>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        handleDeleteMessagePdf(message.id)
+                                      }}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
                           </div>
                         )}
                         {/* Video Preview */}
                         {message.video && (
                           <div 
                             className={cn(
-                              'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border',
+                              'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border relative group',
                               message.isSent ? 'items-end' : 'items-start'
                             )}
                             style={{ borderRadius: '18px' }}
@@ -1715,6 +1978,61 @@ const MessagingPage = () => {
                                 </p>
                                 <p className="text-xs text-muted-foreground">MP4</p>
                               </div>
+                            </div>
+                            <div className={cn(
+                              'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
+                              message.isSent ? 'right-full mr-2 flex-row-reverse' : 'left-full ml-2'
+                            )}>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                      aria-label="Reply"
+                                      onClick={() => {
+                                        setReplyingToMessage(message)
+                                        setTextareaHeight(60)
+                                        setTimeout(() => {
+                                          textareaRef.current?.focus()
+                                        }, 100)
+                                      }}
+                                    >
+                                      <Reply className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Reply</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              {message.isSent && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                      aria-label="Delete video"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align={message.isSent ? "end" : "start"}>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        handleDeleteMessageVideo(message.id)
+                                      }}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1833,12 +2151,50 @@ const MessagingPage = () => {
                                   {message.replyTo.isSent ? 'Yourself' : selectedContact?.name || 'user'}
                                 </span>
                               </div>
-                              <p className={cn(
-                                "text-xs line-clamp-2 truncate",
-                                "text-foreground/80"
-                              )}>
-                                {message.replyTo.text}
-                              </p>
+                              {message.replyTo.images && message.replyTo.images.length > 0 && (
+                                <div className="flex gap-1 mb-1 overflow-x-auto">
+                                  {message.replyTo.images.slice(0, 3).map((image, index) => (
+                                    <div key={index} className="flex-shrink-0">
+                                      <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-md bg-muted">
+                                        <img
+                                          src={image.data}
+                                          alt={image.name}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {message.replyTo.images.length > 3 && (
+                                    <div className="w-10 h-10 flex items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
+                                      +{message.replyTo.images.length - 3}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {message.replyTo.pdf && (
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                                  <span className="text-xs text-foreground/80 truncate">
+                                    {message.replyTo.pdf.name}
+                                  </span>
+                                </div>
+                              )}
+                              {message.replyTo.video && (
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                                  <span className="text-xs text-foreground/80 truncate">
+                                    {message.replyTo.video.name}
+                                  </span>
+                                </div>
+                              )}
+                              {message.replyTo.text && (
+                                <p className={cn(
+                                  "text-xs line-clamp-2 truncate",
+                                  "text-foreground/80"
+                                )}>
+                                  {message.replyTo.text}
+                                </p>
+                              )}
                             </div>
                           )}
                           {message.text.trim() && (
@@ -1901,7 +2257,14 @@ const MessagingPage = () => {
                       <div className="flex gap-2 overflow-x-auto">
                         {attachedImages.map((image, index) => (
                           <div key={index} className="relative group flex-shrink-0">
-                            <div className="bg-muted rounded-lg p-1.5">
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Download ${image.name}`}
+                              onClick={() => handleDownloadImage(image)}
+                              onKeyDown={(e) => handleImagePreviewKeyDown(e, image)}
+                              className="bg-muted rounded-lg p-1.5 cursor-pointer hover:bg-muted/80 transition-colors"
+                            >
                               <div className="w-24 h-24 flex items-center justify-center overflow-hidden rounded-md">
                                 <img
                                   src={URL.createObjectURL(image)}
@@ -1914,9 +2277,19 @@ const MessagingPage = () => {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="absolute -top-1 -right-1 h-5 w-5 bg-background border border-border hover:bg-background rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => handleRemoveImage(index)}
+                              className="absolute -top-1 -right-1 h-5 w-5 bg-background border border-border hover:bg-destructive hover:text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRemoveImage(index)
+                              }}
                               aria-label={`Remove ${image.name}`}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleRemoveImage(index)
+                                }
+                              }}
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -2003,9 +2376,47 @@ const MessagingPage = () => {
                               {replyingToMessage.isSent ? 'Yourself' : selectedContact?.name || 'user'}
                             </span>
                           </div>
-                          <p className="text-sm text-foreground line-clamp-2 truncate">
-                            {replyingToMessage.text}
-                          </p>
+                          {replyingToMessage.images && replyingToMessage.images.length > 0 && (
+                            <div className="flex gap-1.5 mb-1.5 overflow-x-auto">
+                              {replyingToMessage.images.slice(0, 3).map((image, index) => (
+                                <div key={index} className="flex-shrink-0">
+                                  <div className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-md bg-muted">
+                                    <img
+                                      src={image.data}
+                                      alt={image.name}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                              {replyingToMessage.images.length > 3 && (
+                                <div className="w-12 h-12 flex items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
+                                  +{replyingToMessage.images.length - 3}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {replyingToMessage.pdf && (
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                              <span className="text-xs text-foreground truncate">
+                                {replyingToMessage.pdf.name}
+                              </span>
+                            </div>
+                          )}
+                          {replyingToMessage.video && (
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                              <span className="text-xs text-foreground truncate">
+                                {replyingToMessage.video.name}
+                              </span>
+                            </div>
+                          )}
+                          {replyingToMessage.text && (
+                            <p className="text-sm text-foreground line-clamp-2 truncate">
+                              {replyingToMessage.text}
+                            </p>
+                          )}
                         </div>
                         <Button
                           type="button"

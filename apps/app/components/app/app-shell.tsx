@@ -99,6 +99,24 @@ export type Message = {
     id: string
     text: string
     isSent: boolean
+    pdf?: {
+      name: string
+      data: string // base64 encoded
+      type: string
+      size: number
+    }
+    images?: Array<{
+      name: string
+      data: string // base64 encoded
+      type: string
+      size: number
+    }>
+    video?: {
+      name: string
+      data: string // base64 encoded
+      type: string
+      size: number
+    }
   }
   pdf?: {
     name: string
