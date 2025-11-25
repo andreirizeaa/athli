@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
@@ -40,6 +39,7 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import { SidePanel } from "@/components/app/side-panel"
 import { AssignAthletesList } from "@/components/app/assign-athletes-list"
 import { cn } from "@/lib/utils"
+import { exportToCSV } from "@/lib/csv-export"
 import DescriptionModal from "./description-modal"
 import {
   Search,
@@ -59,6 +59,7 @@ import {
   Hash,
   UserPlus,
   HelpCircle,
+  Download,
 } from "lucide-react"
 
 import type { Program } from "@/components/app/app-shell"
@@ -475,12 +476,9 @@ const ProgramsPage = () => {
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
         <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-lg font-semibold">Programs</h1>
+          <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <p className="text-xs text-muted-foreground">
-                ({filteredPrograms.length} {filteredPrograms.length === 1 ? "program" : "programs"})
-              </p>
+              <h1 className="text-lg font-semibold">Programs</h1>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -496,6 +494,9 @@ const ProgramsPage = () => {
                 </TooltipContent>
               </Tooltip>
             </div>
+            <p className="text-sm text-foreground">
+              {filteredPrograms.length} {filteredPrograms.length === 1 ? "program" : "programs"}
+            </p>
           </div>
           <ButtonGroup>
             <Button
@@ -518,7 +519,6 @@ const ProgramsPage = () => {
             </Button>
           </ButtonGroup>
         </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 flex flex-col overflow-hidden">
         <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0">
@@ -595,6 +595,26 @@ const ProgramsPage = () => {
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const csvData = filteredPrograms.map((program) => ({
+                  Program: program.program,
+                  Description: program.description,
+                  Type: program.type,
+                  Length: program.length,
+                  "Total Exercises": program.totalExercises,
+                  Equipment: program.equipment,
+                  Created: program.created,
+                }))
+                exportToCSV(csvData, "programs.csv")
+              }}
+              className="gap-2"
+              aria-label="Export programs to CSV"
+            >
+              <Download className="size-4" />
+              <span>Export</span>
+            </Button>
           </div>
         </div>
         <div className="flex-1 overflow-auto" style={{ paddingBottom: "16px" }}>

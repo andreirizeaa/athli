@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
@@ -33,6 +32,7 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import { Progress } from "@/components/ui/progress"
 import { mockAthletes } from "@/components/app/app-shell"
 import { cn } from "@/lib/utils"
+import { exportToCSV } from "@/lib/csv-export"
 import { AddClientSidePanel } from "./add-client-side-panel"
 import { UploadClientsSidePanel } from "./upload-clients-side-panel"
 import {
@@ -61,6 +61,7 @@ import {
   ChevronDown,
   ArrowUpNarrowWide,
   ArrowDownWideNarrow,
+  Download,
 } from "lucide-react"
 
 type ColumnId = "lastActivity" | "last7DaysTraining" | "last30DaysTraining" | "category" | "connected" | "email" | "phone" | "country" | "age" | "clientFor"
@@ -667,10 +668,10 @@ const AthletesPage = () => {
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
         <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-col">
             <h1 className="text-[22px] font-semibold">Athletes</h1>
-            <p className="text-xs text-muted-foreground">
-              ({filteredAthletes.length} {filteredAthletes.length === 1 ? "client" : "clients"})
+            <p className="text-sm text-foreground">
+              {filteredAthletes.length} {filteredAthletes.length === 1 ? "client" : "clients"}
             </p>
           </div>
           <DropdownMenu>
@@ -719,7 +720,6 @@ const AthletesPage = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 flex flex-col overflow-hidden">
         <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0">
@@ -813,6 +813,30 @@ const AthletesPage = () => {
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const csvData = filteredAthletes.map((athlete) => ({
+                  Name: athlete.name,
+                  Email: athlete.email,
+                  Phone: athlete.phone,
+                  Country: athlete.country,
+                  Category: athlete.category === "online" ? "Online" : "In-person",
+                  Connected: athlete.connected === true ? "Connected" : athlete.connected === false ? "Not Connected" : "Invitation Sent",
+                  "Last Activity": athlete.lastActivity,
+                  "Last 7 Days Training": athlete.last7DaysTraining,
+                  "Last 30 Days Training": athlete.last30DaysTraining,
+                  Age: athlete.age,
+                  "Client For": athlete.clientFor,
+                }))
+                exportToCSV(csvData, "athletes.csv")
+              }}
+              className="gap-2"
+              aria-label="Export athletes to CSV"
+            >
+              <Download className="size-4" />
+              <span>Export</span>
+            </Button>
           </div>
         </div>
         <div className="flex-1 overflow-auto" style={{ paddingBottom: "16px" }}>

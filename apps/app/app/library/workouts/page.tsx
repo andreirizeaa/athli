@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
@@ -34,6 +33,7 @@ import { SidePanel } from "@/components/app/side-panel"
 import { AssignAthletesList } from "@/components/app/assign-athletes-list"
 import { cn } from "@/lib/utils"
 import { generateWorkoutFromPrompt } from "@/lib/generate-exercise"
+import { exportToCSV } from "@/lib/csv-export"
 import DescriptionModal from "./description-modal"
 import { BasicInformation } from "./new/basic-information"
 import {
@@ -56,6 +56,7 @@ import {
   HelpCircle,
   Sparkles,
   BrainCog,
+  Download,
 } from "lucide-react"
 
 import type { Workout } from "@/components/app/app-shell"
@@ -549,12 +550,9 @@ Focus on proper form and progressive overload.`
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
         <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-lg font-semibold">Workouts</h1>
+          <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <p className="text-xs text-muted-foreground">
-                ({filteredWorkouts.length} {filteredWorkouts.length === 1 ? "workout" : "workouts"})
-              </p>
+              <h1 className="text-lg font-semibold">Workouts</h1>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -570,6 +568,9 @@ Focus on proper form and progressive overload.`
                 </TooltipContent>
               </Tooltip>
             </div>
+            <p className="text-sm text-foreground">
+              {filteredWorkouts.length} {filteredWorkouts.length === 1 ? "workout" : "workouts"}
+            </p>
           </div>
           <ButtonGroup>
             <Button
@@ -592,7 +593,6 @@ Focus on proper form and progressive overload.`
             </Button>
           </ButtonGroup>
         </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 flex flex-col overflow-hidden">
         <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0">
@@ -669,6 +669,26 @@ Focus on proper form and progressive overload.`
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                const csvData = filteredWorkouts.map((workout) => ({
+                  Program: workout.program,
+                  Description: workout.description,
+                  Type: workout.type,
+                  Length: workout.length,
+                  "Total Exercises": workout.totalExercises,
+                  Equipment: workout.equipment,
+                  Created: workout.created,
+                }))
+                exportToCSV(csvData, "workouts.csv")
+              }}
+              className="gap-2"
+              aria-label="Export workouts to CSV"
+            >
+              <Download className="size-4" />
+              <span>Export</span>
+            </Button>
           </div>
         </div>
         <div className="flex-1 overflow-auto" style={{ paddingBottom: "16px" }}>
