@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Mail, Search, User } from "lucide-react"
+import { Mail, Search, User, ArrowUpNarrowWide, ArrowDownWideNarrow, Check } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { mockAthletes } from "@/components/app/app-shell"
 import { cn } from "@/lib/utils"
 
@@ -21,30 +27,64 @@ type AssignAthletesListProps = {
   onAthleteSelected?: () => void
 }
 
+type SortColumn = "name" | "email" | null
+
 export const AssignAthletesList = ({
   onAthleteSelected,
 }: AssignAthletesListProps) => {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = React.useState<string>("")
+  const [sortColumn, setSortColumn] = React.useState<SortColumn>(null)
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc" | null>(null)
 
   const filteredAthletes = React.useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-    if (!query) {
-      return mockAthletes
+    let athletes = mockAthletes
+
+    if (query) {
+      athletes = mockAthletes.filter((athlete) => {
+        const name = athlete.name.toLowerCase()
+        const email = athlete.email.toLowerCase()
+        const country = athlete.country.toLowerCase()
+
+        return (
+          name.includes(query) ||
+          email.includes(query) ||
+          country.includes(query)
+        )
+      })
     }
 
-    return mockAthletes.filter((athlete) => {
-      const name = athlete.name.toLowerCase()
-      const email = athlete.email.toLowerCase()
-      const country = athlete.country.toLowerCase()
+    if (!sortColumn || !sortDirection) {
+      return athletes
+    }
 
-      return (
-        name.includes(query) ||
-        email.includes(query) ||
-        country.includes(query)
-      )
+    return [...athletes].sort((a, b) => {
+      let aValue: string
+      let bValue: string
+
+      if (sortColumn === "name") {
+        aValue = a.name.toLowerCase()
+        bValue = b.name.toLowerCase()
+      } else {
+        aValue = a.email.toLowerCase()
+        bValue = b.email.toLowerCase()
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1
+      }
+      return 0
     })
-  }, [searchQuery])
+  }, [searchQuery, sortColumn, sortDirection])
+
+  const handleSort = (column: SortColumn, direction: "asc" | "desc") => {
+    setSortColumn(column)
+    setSortDirection(direction)
+  }
 
   const handleNavigateToTrainingCalendar = (athleteId: string) => {
     router.push(`/athletes/${athleteId}/training-calendar`)
@@ -87,19 +127,75 @@ export const AssignAthletesList = ({
       </div>
       <div className="-mx-4">
         <Table>
-          <TableHeader className="bg-sidebar">
+          <TableHeader>
             <TableRow className="hover:bg-transparent h-10">
-              <TableHead className="!px-4 !py-0 h-10 w-[240px]">
-                <div className="flex h-full w-full items-center gap-2">
-                  <User className="size-4" />
-                  <span className="text-sm font-medium">Athlete</span>
-                </div>
+              <TableHead className="!px-4 !py-0 h-10 w-[240px] border-t border-b">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="flex h-full w-full items-center gap-2 cursor-pointer">
+                      <User className="size-3 text-muted-foreground" />
+                      <span className="text-xs uppercase text-muted-foreground">Athlete</span>
+                      {sortColumn === "name" && sortDirection === "asc" && (
+                        <ArrowUpNarrowWide className="size-3 text-muted-foreground" />
+                      )}
+                      {sortColumn === "name" && sortDirection === "desc" && (
+                        <ArrowDownWideNarrow className="size-3 text-muted-foreground" />
+                      )}
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      onClick={() => handleSort("name", "asc")}
+                      className={cn(sortColumn === "name" && sortDirection === "asc" && "bg-accent")}
+                    >
+                      <ArrowUpNarrowWide className="size-4 mr-2" />
+                      <span className="flex-1">Sort ascending</span>
+                      {sortColumn === "name" && sortDirection === "asc" && <Check className="ml-2 size-4" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSort("name", "desc")}
+                      className={cn(sortColumn === "name" && sortDirection === "desc" && "bg-accent")}
+                    >
+                      <ArrowDownWideNarrow className="size-4 mr-2" />
+                      <span className="flex-1">Sort descending</span>
+                      {sortColumn === "name" && sortDirection === "desc" && <Check className="ml-2 size-4" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableHead>
-              <TableHead className="!px-4 !py-0 h-10">
-                <div className="flex h-full w-full items-center gap-2">
-                  <Mail className="size-4" />
-                  <span className="text-sm font-medium">Email</span>
-                </div>
+              <TableHead className="!px-4 !py-0 h-10 border-t border-b">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <div className="flex h-full w-full items-center gap-2 cursor-pointer">
+                      <Mail className="size-3 text-muted-foreground" />
+                      <span className="text-xs uppercase text-muted-foreground">Email</span>
+                      {sortColumn === "email" && sortDirection === "asc" && (
+                        <ArrowUpNarrowWide className="size-3 text-muted-foreground" />
+                      )}
+                      {sortColumn === "email" && sortDirection === "desc" && (
+                        <ArrowDownWideNarrow className="size-3 text-muted-foreground" />
+                      )}
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem
+                      onClick={() => handleSort("email", "asc")}
+                      className={cn(sortColumn === "email" && sortDirection === "asc" && "bg-accent")}
+                    >
+                      <ArrowUpNarrowWide className="size-4 mr-2" />
+                      <span className="flex-1">Sort ascending</span>
+                      {sortColumn === "email" && sortDirection === "asc" && <Check className="ml-2 size-4" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSort("email", "desc")}
+                      className={cn(sortColumn === "email" && sortDirection === "desc" && "bg-accent")}
+                    >
+                      <ArrowDownWideNarrow className="size-4 mr-2" />
+                      <span className="flex-1">Sort descending</span>
+                      {sortColumn === "email" && sortDirection === "desc" && <Check className="ml-2 size-4" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableHead>
             </TableRow>
           </TableHeader>
