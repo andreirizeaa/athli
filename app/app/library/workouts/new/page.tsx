@@ -16,6 +16,7 @@ type WorkoutMeta = {
   description: string
   type: string
   difficulty: string
+  builder?: "standard" | "ai" | null
 }
 
 const CreateWorkoutPage = () => {
