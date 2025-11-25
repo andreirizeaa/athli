@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 22, "column": 0}, "map": {"version":3,"sources":["file:///Users/andreirizea/OneNinety/apps/app/app/marketing/page.tsx"],"sourcesContent":["import { redirect } from \"next/navigation\"\n\nconst MarketingPage = () => {\n  redirect(\"/marketing/landing\")\n}\n\nexport default MarketingPage\n\n"],"names":[],"mappings":";;;;AAAA;AAAA;;AAEA,MAAM,gBAAgB;IACpB,IAAA,iMAAQ,EAAC;AACX;uCAEe"}}]
+}

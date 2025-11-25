@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/andreirizea/OneNinety/apps/app/app/marketing/landing/page.tsx"],"sourcesContent":["\"use client\"\n\nconst MarketingLandingPage = () => {\n  return (\n    <div className=\"flex h-full w-full items-start justify-start\">\n      <p>Landing Page</p>\n    </div>\n  )\n}\n\nexport default MarketingLandingPage\n\n\n"],"names":[],"mappings":";;;;;AAAA;;AAEA,MAAM,uBAAuB;IAC3B,qBACE,6LAAC;QAAI,WAAU;kBACb,cAAA,6LAAC;sBAAE;;;;;;;;;;;AAGT;KANM;uCAQS"}}]
+}
