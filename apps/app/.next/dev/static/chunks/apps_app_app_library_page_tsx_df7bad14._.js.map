@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/andreirizea/OneNinety/apps/app/app/library/page.tsx"],"sourcesContent":["\"use client\"\n\nimport { useRouter } from \"next/navigation\"\nimport { useEffect } from \"react\"\n\nconst LibraryPage = () => {\n  const router = useRouter()\n\n  useEffect(() => {\n    router.replace(\"/library/workouts\")\n  }, [router])\n\n  return null\n}\n\nexport default LibraryPage\n\n"],"names":[],"mappings":";;;;AAEA;AACA;;AAHA;;;AAKA,MAAM,cAAc;;IAClB,MAAM,SAAS,IAAA,kJAAS;IAExB,IAAA,0KAAS;iCAAC;YACR,OAAO,OAAO,CAAC;QACjB;gCAAG;QAAC;KAAO;IAEX,OAAO;AACT;GARM;;QACW,kJAAS;;;KADpB;uCAUS"}}]
+}

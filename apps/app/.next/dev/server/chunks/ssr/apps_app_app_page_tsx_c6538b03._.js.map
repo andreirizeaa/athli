@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/andreirizea/OneNinety/apps/app/app/page.tsx"],"sourcesContent":["\"use client\";\n\nimport { useEffect } from \"react\";\nimport { useRouter } from \"next/navigation\";\n\nexport default function Home() {\n  const router = useRouter();\n\n  useEffect(() => {\n    router.replace(\"/app/home\");\n  }, [router]);\n\n  return null;\n}\n"],"names":[],"mappings":";;;;AAEA;AACA;AAHA;;;AAKe,SAAS;IACtB,MAAM,SAAS,IAAA,+IAAS;IAExB,IAAA,kNAAS,EAAC;QACR,OAAO,OAAO,CAAC;IACjB,GAAG;QAAC;KAAO;IAEX,OAAO;AACT"}}]
+}

@@ -1,0 +1,9 @@
+{
+  "/athletes/page": "app/athletes/page.js",
+  "/calendar/page": "app/calendar/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/library/page": "app/library/page.js",
+  "/library/workouts/page": "app/library/workouts/page.js",
+  "/marketing/landing/page": "app/marketing/landing/page.js",
+  "/marketing/page": "app/marketing/page.js"
+}
