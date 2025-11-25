@@ -24,13 +24,15 @@ import { mockAthletes } from "@/components/app/app-shell"
 import { cn } from "@/lib/utils"
 
 type AssignAthletesListProps = {
-  onAthleteSelected?: () => void
+  onAthleteSelected?: (athleteId?: string) => void
+  navigateOnSelect?: boolean
 }
 
 type SortColumn = "name" | "email" | null
 
 export const AssignAthletesList = ({
   onAthleteSelected,
+  navigateOnSelect = true,
 }: AssignAthletesListProps) => {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = React.useState<string>("")
@@ -43,16 +45,16 @@ export const AssignAthletesList = ({
 
     if (query) {
       athletes = mockAthletes.filter((athlete) => {
-        const name = athlete.name.toLowerCase()
-        const email = athlete.email.toLowerCase()
-        const country = athlete.country.toLowerCase()
+      const name = athlete.name.toLowerCase()
+      const email = athlete.email.toLowerCase()
+      const country = athlete.country.toLowerCase()
 
-        return (
-          name.includes(query) ||
-          email.includes(query) ||
-          country.includes(query)
-        )
-      })
+      return (
+        name.includes(query) ||
+        email.includes(query) ||
+        country.includes(query)
+      )
+    })
     }
 
     if (!sortColumn || !sortDirection) {
@@ -87,10 +89,12 @@ export const AssignAthletesList = ({
   }
 
   const handleNavigateToTrainingCalendar = (athleteId: string) => {
-    router.push(`/athletes/${athleteId}/training-calendar`)
+    if (navigateOnSelect) {
+      router.push(`/athletes/${athleteId}/training-calendar`)
+    }
 
     if (onAthleteSelected) {
-      onAthleteSelected()
+      onAthleteSelected(athleteId)
     }
   }
 
@@ -141,7 +145,7 @@ export const AssignAthletesList = ({
                       {sortColumn === "name" && sortDirection === "desc" && (
                         <ArrowDownWideNarrow className="size-3 text-muted-foreground" />
                       )}
-                    </div>
+                </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem
@@ -175,7 +179,7 @@ export const AssignAthletesList = ({
                       {sortColumn === "email" && sortDirection === "desc" && (
                         <ArrowDownWideNarrow className="size-3 text-muted-foreground" />
                       )}
-                    </div>
+                </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem
