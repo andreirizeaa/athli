@@ -80,66 +80,62 @@ export const BasicInformation = ({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="workout-name" className="text-sm font-medium">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="workout-name" className="text-sm font-medium">
             Workout Name <span className="text-destructive">*</span>
-              </label>
-              <Input
-                id="workout-name"
-                type="text"
-                placeholder="Name..."
-                value={workoutName}
-                onChange={(e) => {
-                  setWorkoutName(e.target.value)
-                  if (nameError) {
-                    setNameError(null)
-                  }
-                }}
+          </label>
+          <Input
+            id="workout-name"
+            type="text"
+            placeholder="Name..."
+            value={workoutName}
+            onChange={(e) => {
+              setWorkoutName(e.target.value)
+              if (nameError) {
+                setNameError(null)
+              }
+            }}
             className={cn(
               "w-full",
               nameError && "border-destructive aria-invalid:border-destructive"
             )}
-                aria-invalid={!!nameError}
-              />
-              {nameError && (
-                <p className="text-sm text-destructive">{nameError}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="workout-type" className="text-sm font-medium">
+            aria-invalid={!!nameError}
+          />
+          {nameError && <p className="text-sm text-destructive">{nameError}</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="workout-type" className="text-sm font-medium">
             Type <span className="text-destructive">*</span>
-              </label>
-              <Select
-                value={workoutType}
-                onValueChange={(value) => {
-                  setWorkoutType(value)
-                  if (typeError) {
-                    setTypeError(null)
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="workout-type"
+          </label>
+          <Select
+            value={workoutType}
+            onValueChange={(value) => {
+              setWorkoutType(value)
+              if (typeError) {
+                setTypeError(null)
+              }
+            }}
+          >
+            <SelectTrigger
+              id="workout-type"
               className={cn(
                 "w-full",
                 typeError && "border-destructive aria-invalid:border-destructive"
               )}
-                  aria-invalid={!!typeError}
-                >
-                  <SelectValue placeholder="Select..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORKOUT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {typeError && (
-                <p className="text-sm text-destructive">{typeError}</p>
-              )}
-            </div>
+              aria-invalid={!!typeError}
+            >
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {WORKOUT_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {typeError && <p className="text-sm text-destructive">{typeError}</p>}
+        </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-difficulty" className="text-sm font-medium">
             Difficulty <span className="text-destructive">*</span>
@@ -175,21 +171,22 @@ export const BasicInformation = ({
             <p className="text-sm text-destructive">{difficultyError}</p>
           )}
         </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="workout-description" className="text-sm font-medium">
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="workout-description" className="text-sm font-medium">
           Description{" "}
           <span className="text-muted-foreground font-normal">(Optional)</span>
-            </label>
-            <Textarea
-              id="workout-description"
-              placeholder="Add a description for your workout..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className="resize-none"
-            />
-          </div>
+        </label>
+        <Textarea
+          id="workout-description"
+          placeholder="Add a description for your workout..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={4}
+          className="resize-none"
+        />
+      </div>
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">
           Select how you wish to start <span className="text-destructive">*</span>
