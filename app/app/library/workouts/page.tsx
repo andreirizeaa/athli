@@ -216,10 +216,11 @@ const WorkoutsPage = () => {
 
       setIsCreateWorkoutOpen(false)
 
-      router.push("/app/library/workouts/new")
+      const targetPath = "/app/library/workouts/new/standard"
+      router.push(targetPath)
 
       if (typeof window !== "undefined") {
-        const newHash = "#/app/library/workouts/new"
+        const newHash = `#${targetPath}`
         window.setTimeout(() => {
           if (window.location.hash !== newHash) {
             window.location.hash = newHash
@@ -259,10 +260,11 @@ const WorkoutsPage = () => {
 
       setIsCreateWorkoutOpen(false)
 
-      router.push("/app/library/workouts/new")
+      const targetPath = "/app/library/workouts/new/ai"
+      router.push(targetPath)
 
       if (typeof window !== "undefined") {
-        const newHash = "#/app/library/workouts/new"
+        const newHash = `#${targetPath}`
         window.setTimeout(() => {
           if (window.location.hash !== newHash) {
             window.location.hash = newHash

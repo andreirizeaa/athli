@@ -37,9 +37,9 @@ import type {
   SetPayload,
   WorkoutProgramPayload,
   WorkoutSectionPayload,
-} from "./workout-schema"
-import type { SetData } from "./components/exercise-card"
-import { ExerciseCard } from "./components/exercise-card"
+} from "../workout-schema"
+import type { SetData } from "../components/exercise-card"
+import { ExerciseCard } from "../components/exercise-card"
 import {
   Dialog,
   DialogClose,
@@ -96,7 +96,7 @@ type WorkoutMeta = {
   difficulty: string
 }
 
-type StandardBuilderProps = {
+type AiBuilderProps = {
   meta: WorkoutMeta | null
   onDirtyChange?: () => void
   saveSignal?: number
@@ -504,12 +504,12 @@ type SectionValidation = {
 
 type SectionValidationErrors = Record<string, SectionValidation>
 
-export const StandardBuilder = ({
+export const AiBuilder = ({
   meta,
   onDirtyChange,
   saveSignal,
   onSaveSuccess,
-}: StandardBuilderProps) => {
+}: AiBuilderProps) => {
   const [workoutSchema, setWorkoutSchema] = useState<WorkoutSchema>({
     sections: [
       {
