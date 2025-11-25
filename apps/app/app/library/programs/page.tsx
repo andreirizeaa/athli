@@ -402,17 +402,17 @@ const ProgramsPage = () => {
 
     const headerContent = (
       <div className="flex items-center gap-2 cursor-pointer h-full w-full">
-        {icon}
-        <span>{label}</span>
-        {isAscending && <ArrowUpNarrowWide className="size-4 text-muted-foreground" />}
-        {isDescending && <ArrowDownWideNarrow className="size-4 text-muted-foreground" />}
+        <div className="text-muted-foreground">{icon}</div>
+        <span className="text-xs uppercase text-muted-foreground">{label}</span>
+        {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+        {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
       </div>
     )
 
     const headerWidth = getColumnWidth(columnId, "pixel")
 
     return (
-      <TableHead className={cn("!px-4 !py-0 h-10", getColumnWidth(columnId, "class"))}>
+      <TableHead className={cn("!px-4 !py-0 h-10 border-b", getColumnWidth(columnId, "class"))}>
         <DropdownMenu>
           {tooltip ? (
             <Tooltip>
@@ -597,274 +597,266 @@ const ProgramsPage = () => {
             </DropdownMenu>
           </div>
         </div>
-        <div className="flex flex-1 overflow-hidden">
-          {/* Fixed left section - Checkbox + Program */}
-          <div className="flex-shrink-0 border-r flex flex-col">
-            <div className="flex-shrink-0">
-              <Table>
-                <TableHeader className="bg-sidebar">
-                  <TableRow className="hover:bg-transparent h-10">
-                    <TableHead className="!px-4 !py-0 w-[320px] h-10">
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <Checkbox
-                          checked={getSelectAllCheckedState()}
-                          onCheckedChange={handleToggleAll}
-                          aria-label="Select all programs"
-                        />
-                        <div className="flex items-center gap-2">
-                        <FileText className="size-4" />
-                        <span>Program</span>
-                        </div>
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-            </div>
-            <div
-              className="flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-              id="table-scroll-container"
-              onScroll={(e) => {
-                const rightScroll = document.querySelector(".right-table-scroll")
-                if (rightScroll && e.currentTarget) {
-                  rightScroll.scrollTop = e.currentTarget.scrollTop
-                }
-              }}
-            >
-              <Table>
-                <TableBody>
-                  {sortedAndFilteredPrograms.map((program) => {
-                    const isSelected = selectedPrograms.has(program.id)
+        <div className="flex-1 overflow-auto" style={{ paddingBottom: "16px" }}>
+          <style dangerouslySetInnerHTML={{ __html: `
+            tbody tr:hover td:first-child {
+              background-color: hsl(var(--muted)) !important;
+            }
+            tbody tr[style*="background-color"] td:first-child {
+              background-color: hsl(var(--muted)) !important;
+            }
+          ` }} />
+          <Table className="table-fixed border-separate border-spacing-0">
+            <colgroup>
+              <col style={{ width: "320px" }} />
+              {columnOrder.map((columnId) => {
+                return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
+              })}
+            </colgroup>
+            <TableHeader className="sticky top-0 z-20">
+              <TableRow className="hover:bg-transparent h-10">
+                <TableHead className="!px-4 !py-0 h-10 sticky left-0 z-30 bg-background border-r border-b" style={{ boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)" }}>
+                  <div className="flex items-center gap-3 h-full w-full">
+                    <Checkbox
+                      checked={getSelectAllCheckedState()}
+                      onCheckedChange={handleToggleAll}
+                      aria-label="Select all programs"
+                    />
+                    <div className="flex items-center gap-2">
+                      <FileText className="size-3 text-muted-foreground" />
+                      <span className="text-xs uppercase text-muted-foreground">Program</span>
+                    </div>
+                  </div>
+                </TableHead>
+                {columnOrder.map((columnId) => {
+                  switch (columnId) {
+                    case "description":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <FileText className="size-3" />, "Description", "A brief overview of the program")}
+                        </React.Fragment>
+                      )
+                    case "type":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Tag className="size-3" />, "Type", "The category or style of the program")}
+                        </React.Fragment>
+                      )
+                    case "length":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Clock className="size-3" />, "Length", "The duration of the program")}
+                        </React.Fragment>
+                      )
+                    case "totalExercises":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Hash className="size-3" />, "Total Exercises", "The number of exercises in the program")}
+                        </React.Fragment>
+                      )
+                    case "equipment":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Wrench className="size-3" />, "Equipment", "The equipment required for this program")}
+                        </React.Fragment>
+                      )
+                    case "created":
+                      return (
+                        <React.Fragment key={columnId}>
+                          {renderColumnHeader(columnId, <Calendar className="size-3" />, "Created", "The date when the program was created")}
+                        </React.Fragment>
+                      )
+                    default:
+                      return null
+                  }
+                })}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedAndFilteredPrograms.map((program) => {
+                const isSelected = selectedPrograms.has(program.id)
+                const isLastRow = sortedAndFilteredPrograms.indexOf(program) === sortedAndFilteredPrograms.length - 1
 
-                    return (
-                      <TableRow
-                        key={program.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Open program ${program.program}`}
-                        onClick={(event) => handleProgramRowClick(event, program.id)}
-                        onKeyDown={(event) => handleProgramRowKeyDown(event, program.id)}
-                        className={cn(isSelected && "bg-muted/50", "cursor-pointer")}
-                      >
-                        <TableCell className="!px-4 !py-2 h-[54px]">
-                          <div className="flex items-center gap-3 h-full">
-                            <div
-                              className="flex items-center justify-center h-full"
-                              data-no-row-link="true"
-                            >
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => handleToggleProgram(program.id)}
-                              />
-                            </div>
-                            <span className="font-medium truncate">{program.program}</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-          {/* Scrollable right section - All other columns */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div
-              className="flex-1 overflow-y-auto overflow-x-auto right-table-scroll"
-              onScroll={(e) => {
-                const leftScroll = document.getElementById("table-scroll-container")
-                if (leftScroll && e.currentTarget) {
-                  leftScroll.scrollTop = e.currentTarget.scrollTop
-                }
-              }}
-            >
-              <Table className="table-fixed border-collapse">
-                <colgroup>
-                  {columnOrder.map((columnId) => {
-                    return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
-                  })}
-                </colgroup>
-                <TableHeader className="sticky top-0 z-10 bg-sidebar">
-                  <TableRow className="hover:bg-transparent">
+                return (
+                  <TableRow
+                    key={program.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open program ${program.program}`}
+                    onClick={(event) => handleProgramRowClick(event, program.id)}
+                    onKeyDown={(event) => handleProgramRowKeyDown(event, program.id)}
+                    className={cn(
+                      isSelected && "bg-muted/50",
+                      "cursor-pointer group",
+                      "[&:hover_td]:bg-muted"
+                    )}
+                    style={isSelected ? { backgroundColor: "hsl(var(--muted) / 0.5)" } : undefined}
+                  >
+                    <TableCell 
+                      className={cn(
+                        "!px-4 !py-2 h-[54px] sticky left-0 z-10 border-r border-b",
+                        isSelected ? "!bg-muted" : "group-hover:!bg-muted !bg-background"
+                      )}
+                      style={{
+                        boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)",
+                      }}
+                    >
+                      <div className="flex items-center gap-3 h-full">
+                        <div
+                          className="flex items-center justify-center h-full"
+                          data-no-row-link="true"
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleProgram(program.id)}
+                          />
+                        </div>
+                        <span className="font-medium truncate">{program.program}</span>
+                      </div>
+                    </TableCell>
                     {columnOrder.map((columnId) => {
                       switch (columnId) {
                         case "description":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <FileText className="size-4" />, "Description", "A brief overview of the program")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !py-2 h-[54px] overflow-hidden border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`View full description for ${program.program}`}
+                                onClick={(e) => handleDescriptionClick(e, program.description, program.program)}
+                                onKeyDown={(e) => handleDescriptionKeyDown(e, program.description, program.program)}
+                                data-no-row-link="true"
+                                className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
+                              >
+                                <span className="text-sm truncate block min-w-0 w-full">{program.description}</span>
+                              </div>
+                            </TableCell>
                           )
                         case "type":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Tag className="size-4" />, "Type", "The category or style of the program")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !py-2 h-[54px] border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center h-full">
+                                <span className="text-sm">{program.type}</span>
+                              </div>
+                            </TableCell>
                           )
                         case "length":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Clock className="size-4" />, "Length", "The duration of the program")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !py-2 h-[54px] border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center h-full">
+                                <span className="text-sm">{program.length}</span>
+                              </div>
+                            </TableCell>
                           )
                         case "totalExercises":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Hash className="size-4" />, "Total Exercises", "The number of exercises in the program")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !h-[54px] align-middle border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center w-full">
+                                <span className="text-sm">{program.totalExercises}</span>
+                              </div>
+                            </TableCell>
                           )
                         case "equipment":
+                          const equipmentList = program.equipment.split(", ").filter((item) => item.trim() !== "")
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Wrench className="size-4" />, "Equipment", "The equipment required for this program")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !py-2 h-[54px] overflow-hidden border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`View equipment for ${program.program}`}
+                                    data-no-row-link="true"
+                                    className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                      }
+                                    }}
+                                  >
+                                    <span className="text-sm truncate block min-w-0 w-full">{program.equipment}</span>
+                                  </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="start"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                >
+                                  {equipmentList.map((equipment, index) => (
+                                    <DropdownMenuItem
+                                      key={index}
+                                      className="cursor-default pointer-events-none"
+                                    >
+                                      {equipment}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
                           )
                         case "created":
                           return (
-                            <React.Fragment key={columnId}>
-                              {renderColumnHeader(columnId, <Calendar className="size-4" />, "Created", "The date when the program was created")}
-                            </React.Fragment>
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                "!px-4 !py-2 h-[54px] border-b",
+                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
+                                getColumnWidth(columnId, "class")
+                              )}
+                            >
+                              <div className="flex items-center h-full">
+                                <span className="text-sm">{formatDate(program.created)}</span>
+                              </div>
+                            </TableCell>
                           )
                         default:
                           return null
                       }
                     })}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedAndFilteredPrograms.map((program) => {
-                    const isSelected = selectedPrograms.has(program.id)
-
-                    return (
-                      <TableRow
-                        key={program.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Open program ${program.program}`}
-                        onClick={(event) => handleProgramRowClick(event, program.id)}
-                        onKeyDown={(event) => handleProgramRowKeyDown(event, program.id)}
-                        className={cn(isSelected && "bg-muted/50", "cursor-pointer")}
-                      >
-                        {columnOrder.map((columnId) => {
-                          switch (columnId) {
-                            case "description":
-                              return (
-                                <TableCell
-                                  key={columnId}
-                                  className={cn("!px-4 !py-2 h-[54px] overflow-hidden", getColumnWidth(columnId, "class"))}
-                                >
-                                  <div
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={`View full description for ${program.program}`}
-                                    onClick={(e) => handleDescriptionClick(e, program.description, program.program)}
-                                    onKeyDown={(e) => handleDescriptionKeyDown(e, program.description, program.program)}
-                                    data-no-row-link="true"
-                                    className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                                  >
-                                    <span className="text-sm truncate block min-w-0 w-full">{program.description}</span>
-                                  </div>
-                                </TableCell>
-                              )
-                            case "type":
-                              return (
-                                <TableCell
-                                  key={columnId}
-                                  className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}
-                                >
-                                  <div className="flex items-center h-full">
-                                    <span className="text-sm">{program.type}</span>
-                                  </div>
-                                </TableCell>
-                              )
-                            case "length":
-                              return (
-                                <TableCell
-                                  key={columnId}
-                                  className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}
-                                >
-                                  <div className="flex items-center h-full">
-                                    <span className="text-sm">{program.length}</span>
-                                  </div>
-                                </TableCell>
-                              )
-                            case "totalExercises":
-                              return (
-                                <TableCell
-                                  key={columnId}
-                                  className={cn("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class"))}
-                                >
-                                  <div className="flex items-center w-full">
-                                    <span className="text-sm">{program.totalExercises}</span>
-                                  </div>
-                                </TableCell>
-                              )
-                            case "equipment":
-                              const equipmentList = program.equipment.split(", ").filter((item) => item.trim() !== "")
-                              return (
-                                <TableCell
-                                  key={columnId}
-                                  className={cn("!px-4 !py-2 h-[54px] overflow-hidden", getColumnWidth(columnId, "class"))}
-                                >
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <div
-                                        role="button"
-                                        tabIndex={0}
-                                        aria-label={`View equipment for ${program.program}`}
-                                        data-no-row-link="true"
-                                        className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                          }
-                                        }}
-                                      >
-                                        <span className="text-sm truncate block min-w-0 w-full">{program.equipment}</span>
-                                      </div>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="start"
-                                      onClick={(e) => e.stopPropagation()}
-                                      onKeyDown={(e) => e.stopPropagation()}
-                                    >
-                                      {equipmentList.map((equipment, index) => (
-                                        <DropdownMenuItem
-                                          key={index}
-                                          className="cursor-default pointer-events-none"
-                                        >
-                                          {equipment}
-                                        </DropdownMenuItem>
-                                      ))}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              )
-                            case "created":
-                              return (
-                                <TableCell
-                                  key={columnId}
-                                  className={cn("!px-4 !py-2 h-[54px]", getColumnWidth(columnId, "class"))}
-                                >
-                                  <div className="flex items-center h-full">
-                                    <span className="text-sm">{formatDate(program.created)}</span>
-                                  </div>
-                                </TableCell>
-                              )
-                            default:
-                              return null
-                          }
-                        })}
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                )
+              })}
+            </TableBody>
+          </Table>
         </div>
       </div>
       {selectedDescription && (

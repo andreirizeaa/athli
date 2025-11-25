@@ -1917,7 +1917,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$re
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$up$2d$narrow$2d$wide$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowUpNarrowWide$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/arrow-up-narrow-wide.js [app-client] (ecmascript) <export default as ArrowUpNarrowWide>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$down$2d$wide$2d$narrow$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowDownWideNarrow$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/arrow-down-wide-narrow.js [app-client] (ecmascript) <export default as ArrowDownWideNarrow>");
 ;
-var _s = __turbopack_context__.k.signature();
+var _s = __turbopack_context__.k.signature(), _s1 = __turbopack_context__.k.signature();
 "use client";
 ;
 ;
@@ -1993,8 +1993,69 @@ const getColumnWidth = (colId, format = "class")=>{
     };
     return widths[colId]?.[format] || (format === "class" ? "min-w-[130px]" : "130px");
 };
-const AthletesPage = ()=>{
+const AthleteNameTooltip = ({ name })=>{
     _s();
+    const [isTruncated, setIsTruncated] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const checkTruncationRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const handleRef = (element)=>{
+        if (element) {
+            const checkTruncation = ()=>{
+                setIsTruncated(element.scrollWidth > element.clientWidth);
+            };
+            checkTruncationRef.current = checkTruncation;
+            checkTruncation();
+            window.addEventListener("resize", checkTruncation);
+        } else if (checkTruncationRef.current) {
+            window.removeEventListener("resize", checkTruncationRef.current);
+            checkTruncationRef.current = null;
+        }
+    };
+    const nameSpan = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+        ref: handleRef,
+        className: "font-medium truncate cursor-default",
+        children: name
+    }, void 0, false, {
+        fileName: "[project]/apps/app/app/athletes/page.tsx",
+        lineNumber: 117,
+        columnNumber: 5
+    }, ("TURBOPACK compile-time value", void 0));
+    if (isTruncated) {
+        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
+            children: [
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipTrigger"], {
+                    asChild: true,
+                    children: nameSpan
+                }, void 0, false, {
+                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                    lineNumber: 125,
+                    columnNumber: 9
+                }, ("TURBOPACK compile-time value", void 0)),
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
+                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                        children: name
+                    }, void 0, false, {
+                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                        lineNumber: 129,
+                        columnNumber: 11
+                    }, ("TURBOPACK compile-time value", void 0))
+                }, void 0, false, {
+                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                    lineNumber: 128,
+                    columnNumber: 9
+                }, ("TURBOPACK compile-time value", void 0))
+            ]
+        }, void 0, true, {
+            fileName: "[project]/apps/app/app/athletes/page.tsx",
+            lineNumber: 124,
+            columnNumber: 7
+        }, ("TURBOPACK compile-time value", void 0));
+    }
+    return nameSpan;
+};
+_s(AthleteNameTooltip, "H0u4yZWh5gFGRtiKIgeAW+t8r34=");
+_c = AthleteNameTooltip;
+const AthletesPage = ()=>{
+    _s1();
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"])();
     const [selectedAthletes, setSelectedAthletes] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(new Set());
     const [revealedFields, setRevealedFields] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(new Set());
@@ -2113,6 +2174,10 @@ const AthletesPage = ()=>{
         let aValue;
         let bValue;
         switch(sortColumn){
+            case "name":
+                aValue = a.name;
+                bValue = b.name;
+                break;
             case "lastActivity":
                 aValue = a.lastActivity;
                 bValue = b.lastActivity;
@@ -2392,38 +2457,45 @@ const AthletesPage = ()=>{
         const headerContent = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
             className: "flex items-center gap-2 cursor-pointer h-full w-full",
             children: [
-                icon,
+                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                    className: "text-muted-foreground",
+                    children: icon
+                }, void 0, false, {
+                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                    lineNumber: 598,
+                    columnNumber: 9
+                }, ("TURBOPACK compile-time value", void 0)),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                    className: "text-xs uppercase",
+                    className: "text-xs uppercase text-muted-foreground",
                     children: label
                 }, void 0, false, {
                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                    lineNumber: 555,
+                    lineNumber: 599,
                     columnNumber: 9
                 }, ("TURBOPACK compile-time value", void 0)),
                 isAscending && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$up$2d$narrow$2d$wide$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowUpNarrowWide$3e$__["ArrowUpNarrowWide"], {
-                    className: "size-3.5 text-muted-foreground"
+                    className: "size-3 text-muted-foreground"
                 }, void 0, false, {
                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                    lineNumber: 556,
+                    lineNumber: 600,
                     columnNumber: 25
                 }, ("TURBOPACK compile-time value", void 0)),
                 isDescending && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$down$2d$wide$2d$narrow$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowDownWideNarrow$3e$__["ArrowDownWideNarrow"], {
-                    className: "size-3.5 text-muted-foreground"
+                    className: "size-3 text-muted-foreground"
                 }, void 0, false, {
                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                    lineNumber: 557,
+                    lineNumber: 601,
                     columnNumber: 26
                 }, ("TURBOPACK compile-time value", void 0))
             ]
         }, void 0, true, {
             fileName: "[project]/apps/app/app/athletes/page.tsx",
-            lineNumber: 553,
+            lineNumber: 597,
             columnNumber: 7
         }, ("TURBOPACK compile-time value", void 0));
         const headerWidth = getColumnWidth(columnId, "pixel");
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
-            className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !py-0 h-10", getColumnWidth(columnId, "class")),
+            className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !py-0 h-10 border-b", getColumnWidth(columnId, "class")),
             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenu"], {
                 children: [
                     tooltip ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
@@ -2435,12 +2507,12 @@ const AthletesPage = ()=>{
                                     children: headerContent
                                 }, void 0, false, {
                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                    lineNumber: 569,
+                                    lineNumber: 613,
                                     columnNumber: 17
                                 }, ("TURBOPACK compile-time value", void 0))
                             }, void 0, false, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 568,
+                                lineNumber: 612,
                                 columnNumber: 15
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
@@ -2451,20 +2523,20 @@ const AthletesPage = ()=>{
                                 children: tooltip
                             }, void 0, false, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 573,
+                                lineNumber: 617,
                                 columnNumber: 15
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                        lineNumber: 567,
+                        lineNumber: 611,
                         columnNumber: 13
                     }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuTrigger"], {
                         asChild: true,
                         children: headerContent
                     }, void 0, false, {
                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                        lineNumber: 581,
+                        lineNumber: 625,
                         columnNumber: 13
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
@@ -2478,7 +2550,7 @@ const AthletesPage = ()=>{
                                         className: "size-4 mr-2"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 590,
+                                        lineNumber: 634,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2486,20 +2558,20 @@ const AthletesPage = ()=>{
                                         children: "Sort ascending"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 591,
+                                        lineNumber: 635,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     isAscending && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                         className: "ml-2 size-4"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 592,
+                                        lineNumber: 636,
                                         columnNumber: 31
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 586,
+                                lineNumber: 630,
                                 columnNumber: 13
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -2510,7 +2582,7 @@ const AthletesPage = ()=>{
                                         className: "size-4 mr-2"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 598,
+                                        lineNumber: 642,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2518,25 +2590,25 @@ const AthletesPage = ()=>{
                                         children: "Sort descending"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 599,
+                                        lineNumber: 643,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     isDescending && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                         className: "ml-2 size-4"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 600,
+                                        lineNumber: 644,
                                         columnNumber: 32
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 594,
+                                lineNumber: 638,
                                 columnNumber: 13
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuSeparator"], {}, void 0, false, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 602,
+                                lineNumber: 646,
                                 columnNumber: 13
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -2547,20 +2619,20 @@ const AthletesPage = ()=>{
                                         className: "size-4 mr-2"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 607,
+                                        lineNumber: 651,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Move left"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 608,
+                                        lineNumber: 652,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 603,
+                                lineNumber: 647,
                                 columnNumber: 13
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -2571,37 +2643,37 @@ const AthletesPage = ()=>{
                                         className: "size-4 mr-2"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 614,
+                                        lineNumber: 658,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: "Move right"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 615,
+                                        lineNumber: 659,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 610,
+                                lineNumber: 654,
                                 columnNumber: 13
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                        lineNumber: 585,
+                        lineNumber: 629,
                         columnNumber: 11
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                lineNumber: 565,
+                lineNumber: 609,
                 columnNumber: 9
             }, ("TURBOPACK compile-time value", void 0))
         }, void 0, false, {
             fileName: "[project]/apps/app/app/athletes/page.tsx",
-            lineNumber: 564,
+            lineNumber: 608,
             columnNumber: 7
         }, ("TURBOPACK compile-time value", void 0));
     };
@@ -2622,7 +2694,7 @@ const AthletesPage = ()=>{
                                         children: "Athletes"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 627,
+                                        lineNumber: 671,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2636,13 +2708,13 @@ const AthletesPage = ()=>{
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 628,
+                                        lineNumber: 672,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 626,
+                                lineNumber: 670,
                                 columnNumber: 11
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenu"], {
@@ -2660,31 +2732,31 @@ const AthletesPage = ()=>{
                                                         className: "size-4"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 642,
+                                                        lineNumber: 686,
                                                         columnNumber: 19
                                                     }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$copy$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Copy$3e$__["Copy"], {
                                                         className: "size-4"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 644,
+                                                        lineNumber: 688,
                                                         columnNumber: 19
                                                     }, ("TURBOPACK compile-time value", void 0)),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: "Your invite link"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 646,
+                                                        lineNumber: 690,
                                                         columnNumber: 17
                                                     }, ("TURBOPACK compile-time value", void 0))
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 634,
+                                                lineNumber: 678,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$button$2d$group$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ButtonGroupSeparator"], {}, void 0, false, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 648,
+                                                lineNumber: 692,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2695,25 +2767,25 @@ const AthletesPage = ()=>{
                                                         className: "size-4"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 653,
+                                                        lineNumber: 697,
                                                         columnNumber: 17
                                                     }, ("TURBOPACK compile-time value", void 0)),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: "Add Client"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 654,
+                                                        lineNumber: 698,
                                                         columnNumber: 17
                                                     }, ("TURBOPACK compile-time value", void 0))
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 649,
+                                                lineNumber: 693,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$button$2d$group$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["ButtonGroupSeparator"], {}, void 0, false, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 656,
+                                                lineNumber: 700,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuTrigger"], {
@@ -2725,23 +2797,23 @@ const AthletesPage = ()=>{
                                                         className: "size-4"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 662,
+                                                        lineNumber: 706,
                                                         columnNumber: 19
                                                     }, ("TURBOPACK compile-time value", void 0))
                                                 }, void 0, false, {
                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                    lineNumber: 658,
+                                                    lineNumber: 702,
                                                     columnNumber: 17
                                                 }, ("TURBOPACK compile-time value", void 0))
                                             }, void 0, false, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 657,
+                                                lineNumber: 701,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0))
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 633,
+                                        lineNumber: 677,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
@@ -2754,20 +2826,20 @@ const AthletesPage = ()=>{
                                                         className: "size-4 mr-2"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 668,
+                                                        lineNumber: 712,
                                                         columnNumber: 17
                                                     }, ("TURBOPACK compile-time value", void 0)),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: "Single client"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 669,
+                                                        lineNumber: 713,
                                                         columnNumber: 17
                                                     }, ("TURBOPACK compile-time value", void 0))
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 667,
+                                                lineNumber: 711,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -2777,51 +2849,51 @@ const AthletesPage = ()=>{
                                                         className: "size-4 mr-2"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 672,
+                                                        lineNumber: 716,
                                                         columnNumber: 17
                                                     }, ("TURBOPACK compile-time value", void 0)),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: "Upload clients"
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 673,
+                                                        lineNumber: 717,
                                                         columnNumber: 17
                                                     }, ("TURBOPACK compile-time value", void 0))
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 671,
+                                                lineNumber: 715,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0))
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 666,
+                                        lineNumber: 710,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 632,
+                                lineNumber: 676,
                                 columnNumber: 11
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                        lineNumber: 625,
+                        lineNumber: 669,
                         columnNumber: 9
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$separator$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Separator"], {
                         className: "absolute bottom-[-1px] left-0 right-0"
                     }, void 0, false, {
                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                        lineNumber: 678,
+                        lineNumber: 722,
                         columnNumber: 9
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                lineNumber: 624,
+                lineNumber: 668,
                 columnNumber: 7
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2837,7 +2909,7 @@ const AthletesPage = ()=>{
                                         className: "absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 683,
+                                        lineNumber: 727,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -2848,7 +2920,7 @@ const AthletesPage = ()=>{
                                         className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("pl-9 w-full", searchQuery && "pr-9")
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 684,
+                                        lineNumber: 728,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     searchQuery && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2860,18 +2932,18 @@ const AthletesPage = ()=>{
                                             className: "size-4"
                                         }, void 0, false, {
                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                            lineNumber: 698,
+                                            lineNumber: 742,
                                             columnNumber: 17
                                         }, ("TURBOPACK compile-time value", void 0))
                                     }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 692,
+                                        lineNumber: 736,
                                         columnNumber: 15
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 682,
+                                lineNumber: 726,
                                 columnNumber: 11
                             }, ("TURBOPACK compile-time value", void 0)),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2889,7 +2961,7 @@ const AthletesPage = ()=>{
                                                             className: "size-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 706,
+                                                            lineNumber: 750,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2899,25 +2971,25 @@ const AthletesPage = ()=>{
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 707,
+                                                            lineNumber: 751,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$down$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronDown$3e$__["ChevronDown"], {
                                                             className: "size-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 708,
+                                                            lineNumber: 752,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0))
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                    lineNumber: 705,
+                                                    lineNumber: 749,
                                                     columnNumber: 17
                                                 }, ("TURBOPACK compile-time value", void 0))
                                             }, void 0, false, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 704,
+                                                lineNumber: 748,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
@@ -2936,20 +3008,20 @@ const AthletesPage = ()=>{
                                                                     children: "All"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 717,
+                                                                    lineNumber: 761,
                                                                     columnNumber: 21
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 categoryFilter === null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                     className: "ml-2 size-4"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 718,
+                                                                    lineNumber: 762,
                                                                     columnNumber: 49
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 716,
+                                                            lineNumber: 760,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuRadioItem"], {
@@ -2961,20 +3033,20 @@ const AthletesPage = ()=>{
                                                                     children: "Online"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 721,
+                                                                    lineNumber: 765,
                                                                     columnNumber: 21
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 categoryFilter === "online" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                     className: "ml-2 size-4"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 722,
+                                                                    lineNumber: 766,
                                                                     columnNumber: 53
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 720,
+                                                            lineNumber: 764,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuRadioItem"], {
@@ -2986,37 +3058,37 @@ const AthletesPage = ()=>{
                                                                     children: "In-person"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 725,
+                                                                    lineNumber: 769,
                                                                     columnNumber: 21
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 categoryFilter === "in-person" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                     className: "ml-2 size-4"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 726,
+                                                                    lineNumber: 770,
                                                                     columnNumber: 56
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 724,
+                                                            lineNumber: 768,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0))
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                    lineNumber: 712,
+                                                    lineNumber: 756,
                                                     columnNumber: 17
                                                 }, ("TURBOPACK compile-time value", void 0))
                                             }, void 0, false, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 711,
+                                                lineNumber: 755,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0))
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 703,
+                                        lineNumber: 747,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0)),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenu"], {
@@ -3031,7 +3103,7 @@ const AthletesPage = ()=>{
                                                             className: "size-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 734,
+                                                            lineNumber: 778,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3042,25 +3114,25 @@ const AthletesPage = ()=>{
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 735,
+                                                            lineNumber: 779,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$chevron$2d$down$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ChevronDown$3e$__["ChevronDown"], {
                                                             className: "size-4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 745,
+                                                            lineNumber: 789,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0))
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                    lineNumber: 733,
+                                                    lineNumber: 777,
                                                     columnNumber: 17
                                                 }, ("TURBOPACK compile-time value", void 0))
                                             }, void 0, false, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 732,
+                                                lineNumber: 776,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0)),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
@@ -3079,20 +3151,20 @@ const AthletesPage = ()=>{
                                                                     children: "All"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 754,
+                                                                    lineNumber: 798,
                                                                     columnNumber: 21
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 connectedFilter === null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                     className: "ml-2 size-4"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 755,
+                                                                    lineNumber: 799,
                                                                     columnNumber: 50
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 753,
+                                                            lineNumber: 797,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuRadioItem"], {
@@ -3104,20 +3176,20 @@ const AthletesPage = ()=>{
                                                                     children: "Connected"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 758,
+                                                                    lineNumber: 802,
                                                                     columnNumber: 21
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 connectedFilter === "true" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                     className: "ml-2 size-4"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 759,
+                                                                    lineNumber: 803,
                                                                     columnNumber: 52
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 757,
+                                                            lineNumber: 801,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuRadioItem"], {
@@ -3129,20 +3201,20 @@ const AthletesPage = ()=>{
                                                                     children: "Not Connected"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 762,
+                                                                    lineNumber: 806,
                                                                     columnNumber: 21
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 connectedFilter === "false" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                     className: "ml-2 size-4"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 763,
+                                                                    lineNumber: 807,
                                                                     columnNumber: 53
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 761,
+                                                            lineNumber: 805,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0)),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuRadioItem"], {
@@ -3154,1037 +3226,1125 @@ const AthletesPage = ()=>{
                                                                     children: "Invitation Sent"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 766,
+                                                                    lineNumber: 810,
                                                                     columnNumber: 21
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 connectedFilter === "invitation-sent" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                     className: "ml-2 size-4"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 767,
+                                                                    lineNumber: 811,
                                                                     columnNumber: 63
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 765,
+                                                            lineNumber: 809,
                                                             columnNumber: 19
                                                         }, ("TURBOPACK compile-time value", void 0))
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                    lineNumber: 749,
+                                                    lineNumber: 793,
                                                     columnNumber: 17
                                                 }, ("TURBOPACK compile-time value", void 0))
                                             }, void 0, false, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 748,
+                                                lineNumber: 792,
                                                 columnNumber: 15
                                             }, ("TURBOPACK compile-time value", void 0))
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 731,
+                                        lineNumber: 775,
                                         columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 702,
+                                lineNumber: 746,
                                 columnNumber: 11
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                        lineNumber: 681,
+                        lineNumber: 725,
                         columnNumber: 9
                     }, ("TURBOPACK compile-time value", void 0)),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex flex-1 overflow-hidden",
+                        className: "flex-1 overflow-auto",
+                        style: {
+                            paddingBottom: "16px"
+                        },
                         children: [
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex-shrink-0 border-r flex flex-col",
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("style", {
+                                dangerouslySetInnerHTML: {
+                                    __html: `
+            tbody tr:hover td:first-child {
+              background-color: hsl(var(--muted)) !important;
+            }
+            tbody tr[style*="background-color"] td:first-child {
+              background-color: hsl(var(--muted)) !important;
+            }
+          `
+                                }
+                            }, void 0, false, {
+                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                lineNumber: 819,
+                                columnNumber: 11
+                            }, ("TURBOPACK compile-time value", void 0)),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Table"], {
+                                className: "table-fixed border-separate border-spacing-0",
+                                style: {
+                                    tableLayout: "fixed",
+                                    width: "100%"
+                                },
                                 children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        className: "flex-shrink-0",
-                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Table"], {
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHeader"], {
-                                                className: "bg-sidebar",
-                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
-                                                    className: "hover:bg-transparent h-10",
-                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
-                                                        className: "!px-4 !py-0 w-[250px] h-10",
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("colgroup", {
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("col", {
+                                                style: {
+                                                    width: "350px",
+                                                    minWidth: "350px",
+                                                    maxWidth: "350px"
+                                                }
+                                            }, void 0, false, {
+                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                lineNumber: 829,
+                                                columnNumber: 15
+                                            }, ("TURBOPACK compile-time value", void 0)),
+                                            columnOrder.map((columnId)=>{
+                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("col", {
+                                                    style: {
+                                                        width: getColumnWidth(columnId, "pixel")
+                                                    }
+                                                }, columnId, false, {
+                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                    lineNumber: 831,
+                                                    columnNumber: 24
+                                                }, ("TURBOPACK compile-time value", void 0));
+                                            })
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                        lineNumber: 828,
+                                        columnNumber: 13
+                                    }, ("TURBOPACK compile-time value", void 0)),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHeader"], {
+                                        className: "sticky top-0 z-20",
+                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
+                                            className: "hover:bg-transparent h-10",
+                                            children: [
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
+                                                    className: "!px-4 !py-0 h-10 sticky left-0 z-30 bg-background border-r border-b !w-[350px] !min-w-[350px] !max-w-[350px]",
+                                                    style: {
+                                                        boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)",
+                                                        width: "350px",
+                                                        minWidth: "350px",
+                                                        maxWidth: "350px"
+                                                    },
+                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                        className: "flex items-center gap-3 h-full w-full",
+                                                        children: [
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$checkbox$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Checkbox"], {
+                                                                checked: getSelectAllCheckedState(),
+                                                                onCheckedChange: handleToggleAll,
+                                                                "aria-label": "Select all athletes"
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 838,
+                                                                columnNumber: 21
+                                                            }, ("TURBOPACK compile-time value", void 0)),
+                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenu"], {
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuTrigger"], {
+                                                                        asChild: true,
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            className: "flex items-center gap-2 cursor-pointer h-full flex-1",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$user$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__User$3e$__["User"], {
+                                                                                    className: "size-3 text-muted-foreground"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 846,
+                                                                                    columnNumber: 27
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                    className: "text-xs uppercase text-muted-foreground",
+                                                                                    children: "Athlete"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 847,
+                                                                                    columnNumber: 27
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                sortColumn === "name" && sortDirection === "asc" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$up$2d$narrow$2d$wide$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowUpNarrowWide$3e$__["ArrowUpNarrowWide"], {
+                                                                                    className: "size-3 text-muted-foreground"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 848,
+                                                                                    columnNumber: 80
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                sortColumn === "name" && sortDirection === "desc" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$down$2d$wide$2d$narrow$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowDownWideNarrow$3e$__["ArrowDownWideNarrow"], {
+                                                                                    className: "size-3 text-muted-foreground"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 849,
+                                                                                    columnNumber: 81
+                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 845,
+                                                                            columnNumber: 25
+                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                        lineNumber: 844,
+                                                                        columnNumber: 23
+                                                                    }, ("TURBOPACK compile-time value", void 0)),
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
+                                                                        align: "start",
+                                                                        children: [
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
+                                                                                onClick: ()=>handleSort("name", "asc"),
+                                                                                className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])(sortColumn === "name" && sortDirection === "asc" && "bg-accent"),
+                                                                                children: [
+                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$up$2d$narrow$2d$wide$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowUpNarrowWide$3e$__["ArrowUpNarrowWide"], {
+                                                                                        className: "size-4 mr-2"
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 857,
+                                                                                        columnNumber: 27
+                                                                                    }, ("TURBOPACK compile-time value", void 0)),
+                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                        className: "flex-1",
+                                                                                        children: "Sort ascending"
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 858,
+                                                                                        columnNumber: 27
+                                                                                    }, ("TURBOPACK compile-time value", void 0)),
+                                                                                    sortColumn === "name" && sortDirection === "asc" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
+                                                                                        className: "ml-2 size-4"
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 859,
+                                                                                        columnNumber: 80
+                                                                                    }, ("TURBOPACK compile-time value", void 0))
+                                                                                ]
+                                                                            }, void 0, true, {
+                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                lineNumber: 853,
+                                                                                columnNumber: 25
+                                                                            }, ("TURBOPACK compile-time value", void 0)),
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
+                                                                                onClick: ()=>handleSort("name", "desc"),
+                                                                                className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])(sortColumn === "name" && sortDirection === "desc" && "bg-accent"),
+                                                                                children: [
+                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$arrow$2d$down$2d$wide$2d$narrow$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ArrowDownWideNarrow$3e$__["ArrowDownWideNarrow"], {
+                                                                                        className: "size-4 mr-2"
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 865,
+                                                                                        columnNumber: 27
+                                                                                    }, ("TURBOPACK compile-time value", void 0)),
+                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                        className: "flex-1",
+                                                                                        children: "Sort descending"
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 866,
+                                                                                        columnNumber: 27
+                                                                                    }, ("TURBOPACK compile-time value", void 0)),
+                                                                                    sortColumn === "name" && sortDirection === "desc" && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
+                                                                                        className: "ml-2 size-4"
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 867,
+                                                                                        columnNumber: 81
+                                                                                    }, ("TURBOPACK compile-time value", void 0))
+                                                                                ]
+                                                                            }, void 0, true, {
+                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                lineNumber: 861,
+                                                                                columnNumber: 25
+                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                        ]
+                                                                    }, void 0, true, {
+                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                        lineNumber: 852,
+                                                                        columnNumber: 23
+                                                                    }, ("TURBOPACK compile-time value", void 0))
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 843,
+                                                                columnNumber: 21
+                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                        ]
+                                                    }, void 0, true, {
+                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                        lineNumber: 837,
+                                                        columnNumber: 19
+                                                    }, ("TURBOPACK compile-time value", void 0))
+                                                }, void 0, false, {
+                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                    lineNumber: 836,
+                                                    columnNumber: 17
+                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                columnOrder.map((columnId)=>{
+                                                    switch(columnId){
+                                                        case "lastActivity":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$clock$2d$alert$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ClockAlert$3e$__["ClockAlert"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 878,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Last activity", "Time since last logged on to app")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 877,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "last7DaysTraining":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$dumbbell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Dumbbell$3e$__["Dumbbell"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 884,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "L7D Training", "How much they trained in the last 7 days out of their total assigned schedule")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 883,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "last30DaysTraining":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$dumbbell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Dumbbell$3e$__["Dumbbell"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 890,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "L30D Training", "How much they trained in the last 30 days out of their total assigned schedule")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 889,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "category":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$grid$2d$2x2$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Grid2x2$3e$__["Grid2x2"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 896,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Category", "Whether or not they are online or in person")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 895,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "connected":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$heart$2d$pulse$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__HeartPulse$3e$__["HeartPulse"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 902,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Connected?", "The status of the user's app, i.e. if they have connected to the app")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 901,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "email":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$mail$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Mail$3e$__["Mail"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 908,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Email")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 907,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "phone":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$phone$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Phone$3e$__["Phone"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 914,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Phone")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 913,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "country":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$globe$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Globe$3e$__["Globe"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 920,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Country")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 919,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "age":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$user$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__User$3e$__["User"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 926,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Age")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 925,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        case "clientFor":
+                                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
+                                                                children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$clock$2d$alert$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ClockAlert$3e$__["ClockAlert"], {
+                                                                    className: "size-3"
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 932,
+                                                                    columnNumber: 57
+                                                                }, ("TURBOPACK compile-time value", void 0)), "Client For", "How long they have been a client")
+                                                            }, columnId, false, {
+                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                lineNumber: 931,
+                                                                columnNumber: 25
+                                                            }, ("TURBOPACK compile-time value", void 0));
+                                                        default:
+                                                            return null;
+                                                    }
+                                                })
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                            lineNumber: 835,
+                                            columnNumber: 15
+                                        }, ("TURBOPACK compile-time value", void 0))
+                                    }, void 0, false, {
+                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                        lineNumber: 834,
+                                        columnNumber: 13
+                                    }, ("TURBOPACK compile-time value", void 0)),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
+                                        children: sortedAndFilteredAthletes.map((athlete)=>{
+                                            const isSelected = selectedAthletes.has(athlete.id);
+                                            const initials = athlete.name.split(" ").map((part)=>part.charAt(0).toUpperCase()).slice(0, 2).join("");
+                                            const isLastRow = sortedAndFilteredAthletes.indexOf(athlete) === sortedAndFilteredAthletes.length - 1;
+                                            return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
+                                                role: "button",
+                                                tabIndex: 0,
+                                                "aria-label": `Open profile for ${athlete.name}`,
+                                                onClick: (event)=>handleAthleteRowClick(event, athlete.id),
+                                                onKeyDown: (event)=>handleAthleteRowKeyDown(event, athlete.id),
+                                                className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])(isSelected && "bg-muted/50", "cursor-pointer !h-[54px] group", "[&:hover_td]:bg-muted"),
+                                                style: isSelected ? {
+                                                    backgroundColor: "hsl(var(--muted) / 0.5)"
+                                                } : undefined,
+                                                children: [
+                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle sticky left-0 z-10 border-r border-b !w-[350px] !min-w-[350px] !max-w-[350px]", isSelected ? "!bg-muted" : "group-hover:!bg-muted !bg-background"),
+                                                        style: {
+                                                            boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)",
+                                                            width: "350px",
+                                                            minWidth: "350px",
+                                                            maxWidth: "350px"
+                                                        },
                                                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                             className: "flex items-center gap-3 h-full w-full",
                                                             children: [
-                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$checkbox$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Checkbox"], {
-                                                                    checked: getSelectAllCheckedState(),
-                                                                    onCheckedChange: handleToggleAll,
-                                                                    "aria-label": "Select all athletes"
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                    className: "flex items-center justify-center h-full flex-shrink-0",
+                                                                    "data-no-row-link": "true",
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$checkbox$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Checkbox"], {
+                                                                        checked: isSelected,
+                                                                        onCheckedChange: ()=>handleToggleAthlete(athlete.id)
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                        lineNumber: 984,
+                                                                        columnNumber: 27
+                                                                    }, ("TURBOPACK compile-time value", void 0))
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 783,
+                                                                    lineNumber: 980,
                                                                     columnNumber: 25
                                                                 }, ("TURBOPACK compile-time value", void 0)),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                    className: "flex items-center gap-2",
+                                                                    className: "flex items-center justify-between gap-2 min-w-0 flex-1 w-full",
                                                                     children: [
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$user$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__User$3e$__["User"], {
-                                                                            className: "size-3.5"
-                                                                        }, void 0, false, {
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            className: "flex items-center gap-2 min-w-0 flex-1",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$avatar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Avatar"], {
+                                                                                    className: "h-8 w-8 flex-shrink-0",
+                                                                                    children: [
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$avatar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AvatarImage"], {
+                                                                                            src: athlete.avatar,
+                                                                                            alt: athlete.name
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 992,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0)),
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$avatar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AvatarFallback"], {
+                                                                                            children: initials
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 993,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 991,
+                                                                                    columnNumber: 29
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(AthleteNameTooltip, {
+                                                                                    name: athlete.name
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 995,
+                                                                                    columnNumber: 29
+                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                            ]
+                                                                        }, void 0, true, {
                                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 789,
+                                                                            lineNumber: 990,
                                                                             columnNumber: 27
                                                                         }, ("TURBOPACK compile-time value", void 0)),
-                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                            className: "text-xs uppercase",
-                                                                            children: "Athlete"
-                                                                        }, void 0, false, {
+                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            className: "flex items-center gap-1 flex-shrink-0",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
+                                                                                    children: [
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipTrigger"], {
+                                                                                            asChild: true,
+                                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                                role: "button",
+                                                                                                tabIndex: 0,
+                                                                                                "aria-label": `Message ${athlete.name}`,
+                                                                                                onClick: ()=>handleNavigateToMessages(athlete.id),
+                                                                                                onKeyDown: (e)=>handleMessageIconKeyDown(e, athlete.id),
+                                                                                                "data-no-row-link": "true",
+                                                                                                className: "flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7",
+                                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$message$2d$circle$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__MessageCircle$3e$__["MessageCircle"], {
+                                                                                                    className: "size-4"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                    lineNumber: 1009,
+                                                                                                    columnNumber: 35
+                                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                                            }, void 0, false, {
+                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                lineNumber: 1000,
+                                                                                                columnNumber: 33
+                                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 999,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0)),
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
+                                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                                                children: "Message the client"
+                                                                                            }, void 0, false, {
+                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                lineNumber: 1013,
+                                                                                                columnNumber: 33
+                                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1012,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 998,
+                                                                                    columnNumber: 29
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
+                                                                                    children: [
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipTrigger"], {
+                                                                                            asChild: true,
+                                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                                role: "button",
+                                                                                                tabIndex: 0,
+                                                                                                "aria-label": `Open training calendar for ${athlete.name}`,
+                                                                                                onClick: ()=>handleNavigateToTrainingCalendar(athlete.id),
+                                                                                                onKeyDown: (e)=>handleTrainingCalendarIconKeyDown(e, athlete.id),
+                                                                                                "data-no-row-link": "true",
+                                                                                                className: "flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7",
+                                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$dumbbell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Dumbbell$3e$__["Dumbbell"], {
+                                                                                                    className: "size-4"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                    lineNumber: 1027,
+                                                                                                    columnNumber: 35
+                                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                                            }, void 0, false, {
+                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                lineNumber: 1018,
+                                                                                                columnNumber: 33
+                                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1017,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0)),
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
+                                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                                                children: "View clients training calendar"
+                                                                                            }, void 0, false, {
+                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                lineNumber: 1031,
+                                                                                                columnNumber: 33
+                                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1030,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 1016,
+                                                                                    columnNumber: 29
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
+                                                                                    children: [
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipTrigger"], {
+                                                                                            asChild: true,
+                                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                                role: "button",
+                                                                                                tabIndex: 0,
+                                                                                                "aria-label": `Copy ${athlete.name}`,
+                                                                                                onClick: ()=>handleCopy(athlete.name, athlete.id, "name"),
+                                                                                                onKeyDown: (e)=>handleCopyIconKeyDown(e, athlete.name, athlete.id, "name"),
+                                                                                                "data-no-row-link": "true",
+                                                                                                className: "flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7",
+                                                                                                children: isFieldCopied(athlete.id, "name") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
+                                                                                                    className: "size-4 text-green-500"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                    lineNumber: 1046,
+                                                                                                    columnNumber: 37
+                                                                                                }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$copy$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Copy$3e$__["Copy"], {
+                                                                                                    className: "size-4"
+                                                                                                }, void 0, false, {
+                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                    lineNumber: 1048,
+                                                                                                    columnNumber: 37
+                                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                                            }, void 0, false, {
+                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                lineNumber: 1036,
+                                                                                                columnNumber: 33
+                                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1035,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0)),
+                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
+                                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                                                                                children: "Copy athlete name"
+                                                                                            }, void 0, false, {
+                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                                lineNumber: 1053,
+                                                                                                columnNumber: 33
+                                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1052,
+                                                                                            columnNumber: 31
+                                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 1034,
+                                                                                    columnNumber: 29
+                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                            ]
+                                                                        }, void 0, true, {
                                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 790,
+                                                                            lineNumber: 997,
                                                                             columnNumber: 27
                                                                         }, ("TURBOPACK compile-time value", void 0))
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 788,
+                                                                    lineNumber: 989,
                                                                     columnNumber: 25
                                                                 }, ("TURBOPACK compile-time value", void 0))
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 782,
+                                                            lineNumber: 979,
                                                             columnNumber: 23
                                                         }, ("TURBOPACK compile-time value", void 0))
                                                     }, void 0, false, {
                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 781,
+                                                        lineNumber: 967,
                                                         columnNumber: 21
-                                                    }, ("TURBOPACK compile-time value", void 0))
-                                                }, void 0, false, {
-                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                    lineNumber: 780,
-                                                    columnNumber: 19
-                                                }, ("TURBOPACK compile-time value", void 0))
-                                            }, void 0, false, {
-                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 779,
-                                                columnNumber: 17
-                                            }, ("TURBOPACK compile-time value", void 0))
-                                        }, void 0, false, {
-                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                            lineNumber: 778,
-                                            columnNumber: 15
-                                        }, ("TURBOPACK compile-time value", void 0))
-                                    }, void 0, false, {
-                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 777,
-                                        columnNumber: 13
-                                    }, ("TURBOPACK compile-time value", void 0)),
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                        className: "flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden",
-                                        id: "table-scroll-container",
-                                        onScroll: (e)=>{
-                                            const rightScroll = document.querySelector(".right-table-scroll");
-                                            if (rightScroll && e.currentTarget) {
-                                                rightScroll.scrollTop = e.currentTarget.scrollTop;
-                                            }
-                                        },
-                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Table"], {
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
-                                                children: sortedAndFilteredAthletes.map((athlete)=>{
-                                                    const isSelected = selectedAthletes.has(athlete.id);
-                                                    const initials = athlete.name.split(" ").map((part)=>part.charAt(0).toUpperCase()).slice(0, 2).join("");
-                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
-                                                        role: "button",
-                                                        tabIndex: 0,
-                                                        "aria-label": `Open profile for ${athlete.name}`,
-                                                        onClick: (event)=>handleAthleteRowClick(event, athlete.id),
-                                                        onKeyDown: (event)=>handleAthleteRowKeyDown(event, athlete.id),
-                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])(isSelected && "bg-muted/50", "cursor-pointer !h-[54px]"),
-                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                            className: "!px-4 !h-[54px] align-middle",
-                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                className: "flex items-center gap-3 h-full",
-                                                                children: [
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                        className: "flex items-center justify-center h-full",
-                                                                        "data-no-row-link": "true",
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$checkbox$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Checkbox"], {
-                                                                            checked: isSelected,
-                                                                            onCheckedChange: ()=>handleToggleAthlete(athlete.id)
+                                                    }, ("TURBOPACK compile-time value", void 0)),
+                                                    columnOrder.map((columnId)=>{
+                                                        switch(columnId){
+                                                            case "lastActivity":
+                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "flex items-center w-full",
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                            className: "text-sm",
+                                                                            children: athlete.lastActivity
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 834,
-                                                                            columnNumber: 29
+                                                                            lineNumber: 1073,
+                                                                            columnNumber: 33
                                                                         }, ("TURBOPACK compile-time value", void 0))
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 830,
-                                                                        columnNumber: 27
-                                                                    }, ("TURBOPACK compile-time value", void 0)),
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                        className: "flex items-center justify-between gap-2 min-w-0 flex-1",
-                                                                        children: [
-                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                className: "flex items-center gap-2 min-w-0 flex-1",
-                                                                                children: [
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$avatar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Avatar"], {
-                                                                                        className: "h-8 w-8 flex-shrink-0",
-                                                                                        children: [
-                                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$avatar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AvatarImage"], {
-                                                                                                src: athlete.avatar,
-                                                                                                alt: athlete.name
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 842,
-                                                                                                columnNumber: 33
-                                                                                            }, ("TURBOPACK compile-time value", void 0)),
-                                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$avatar$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AvatarFallback"], {
-                                                                                                children: initials
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 843,
-                                                                                                columnNumber: 33
-                                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                                        ]
-                                                                                    }, void 0, true, {
-                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 841,
-                                                                                        columnNumber: 31
-                                                                                    }, ("TURBOPACK compile-time value", void 0)),
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                        className: "font-medium truncate",
-                                                                                        children: athlete.name
-                                                                                    }, void 0, false, {
-                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 845,
-                                                                                        columnNumber: 31
-                                                                                    }, ("TURBOPACK compile-time value", void 0))
-                                                                                ]
-                                                                            }, void 0, true, {
+                                                                        lineNumber: 1072,
+                                                                        columnNumber: 31
+                                                                    }, ("TURBOPACK compile-time value", void 0))
+                                                                }, columnId, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 1064,
+                                                                    columnNumber: 29
+                                                                }, ("TURBOPACK compile-time value", void 0));
+                                                            case "last7DaysTraining":
+                                                                {
+                                                                    const [completed, total] = athlete.last7DaysTraining.split("/").map(Number);
+                                                                    const percentage = !total || total === 0 ? 0 : Math.round(completed / total * 100);
+                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            className: "flex items-center w-full gap-2",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$progress$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Progress"], {
+                                                                                    value: percentage,
+                                                                                    className: "h-2 flex-1"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 1091,
+                                                                                    columnNumber: 33
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                    className: "text-xs w-10 text-right",
+                                                                                    children: [
+                                                                                        percentage,
+                                                                                        "%"
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 1092,
+                                                                                    columnNumber: 33
+                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 1090,
+                                                                            columnNumber: 31
+                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                    }, columnId, false, {
+                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                        lineNumber: 1082,
+                                                                        columnNumber: 29
+                                                                    }, ("TURBOPACK compile-time value", void 0));
+                                                                }
+                                                            case "last30DaysTraining":
+                                                                {
+                                                                    const [completed, total] = athlete.last30DaysTraining.split("/").map(Number);
+                                                                    const percentage = !total || total === 0 ? 0 : Math.round(completed / total * 100);
+                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            className: "flex items-center w-full gap-2",
+                                                                            children: [
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$progress$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Progress"], {
+                                                                                    value: percentage,
+                                                                                    className: "h-2 flex-1"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 1113,
+                                                                                    columnNumber: 33
+                                                                                }, ("TURBOPACK compile-time value", void 0)),
+                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                    className: "text-xs w-10 text-right",
+                                                                                    children: [
+                                                                                        percentage,
+                                                                                        "%"
+                                                                                    ]
+                                                                                }, void 0, true, {
+                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                    lineNumber: 1114,
+                                                                                    columnNumber: 33
+                                                                                }, ("TURBOPACK compile-time value", void 0))
+                                                                            ]
+                                                                        }, void 0, true, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 1112,
+                                                                            columnNumber: 31
+                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                    }, columnId, false, {
+                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                        lineNumber: 1104,
+                                                                        columnNumber: 29
+                                                                    }, ("TURBOPACK compile-time value", void 0));
+                                                                }
+                                                            case "category":
+                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "flex items-center w-full",
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                            className: "text-sm capitalize",
+                                                                            children: athlete.category
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 1132,
+                                                                            columnNumber: 33
+                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                        lineNumber: 1131,
+                                                                        columnNumber: 31
+                                                                    }, ("TURBOPACK compile-time value", void 0))
+                                                                }, columnId, false, {
+                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                    lineNumber: 1123,
+                                                                    columnNumber: 29
+                                                                }, ("TURBOPACK compile-time value", void 0));
+                                                            case "connected":
+                                                                {
+                                                                    let connectedLabel = "";
+                                                                    if (athlete.connected === true) {
+                                                                        connectedLabel = "Connected";
+                                                                    } else if (athlete.connected === false) {
+                                                                        connectedLabel = "Not connected";
+                                                                    } else if (athlete.connected === "invitation-sent") {
+                                                                        connectedLabel = "Invitation sent";
+                                                                    }
+                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                            className: "flex items-center w-full",
+                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                className: "text-sm",
+                                                                                children: connectedLabel
+                                                                            }, void 0, false, {
                                                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 840,
-                                                                                columnNumber: 29
+                                                                                lineNumber: 1157,
+                                                                                columnNumber: 33
+                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 1156,
+                                                                            columnNumber: 31
+                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                    }, columnId, false, {
+                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                        lineNumber: 1148,
+                                                                        columnNumber: 29
+                                                                    }, ("TURBOPACK compile-time value", void 0));
+                                                                }
+                                                            case "email":
+                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "flex items-center justify-between gap-2 w-full",
+                                                                        children: [
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                className: "text-sm flex-1 min-w-0 truncate",
+                                                                                children: isFieldRevealed(athlete.id, "email") ? athlete.email : censorEmail(athlete.email)
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                lineNumber: 1173,
+                                                                                columnNumber: 33
                                                                             }, ("TURBOPACK compile-time value", void 0)),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                                 className: "flex items-center gap-1 flex-shrink-0",
                                                                                 children: [
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
-                                                                                        children: [
-                                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipTrigger"], {
-                                                                                                asChild: true,
-                                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                                    role: "button",
-                                                                                                    tabIndex: 0,
-                                                                                                    "aria-label": `Message ${athlete.name}`,
-                                                                                                    onClick: ()=>handleNavigateToMessages(athlete.id),
-                                                                                                    onKeyDown: (e)=>handleMessageIconKeyDown(e, athlete.id),
-                                                                                                    "data-no-row-link": "true",
-                                                                                                    className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7",
-                                                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$message$2d$circle$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__MessageCircle$3e$__["MessageCircle"], {
-                                                                                                        className: "size-4"
-                                                                                                    }, void 0, false, {
-                                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                        lineNumber: 859,
-                                                                                                        columnNumber: 35
-                                                                                                    }, ("TURBOPACK compile-time value", void 0))
-                                                                                                }, void 0, false, {
-                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                    lineNumber: 850,
-                                                                                                    columnNumber: 33
-                                                                                                }, ("TURBOPACK compile-time value", void 0))
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 849,
-                                                                                                columnNumber: 31
-                                                                                            }, ("TURBOPACK compile-time value", void 0)),
-                                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
-                                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                                    children: "Message the client"
-                                                                                                }, void 0, false, {
-                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                    lineNumber: 863,
-                                                                                                    columnNumber: 33
-                                                                                                }, ("TURBOPACK compile-time value", void 0))
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 862,
-                                                                                                columnNumber: 31
-                                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                                        ]
-                                                                                    }, void 0, true, {
+                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                        role: "button",
+                                                                                        tabIndex: 0,
+                                                                                        "aria-label": isFieldRevealed(athlete.id, "email") ? `Hide email for ${athlete.name}` : `Reveal email for ${athlete.name}`,
+                                                                                        onClick: ()=>handleToggleReveal(athlete.id, "email"),
+                                                                                        onKeyDown: (e)=>handleRevealIconKeyDown(e, athlete.id, "email"),
+                                                                                        "data-no-row-link": "true",
+                                                                                        className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
+                                                                                        children: isFieldRevealed(athlete.id, "email") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2d$off$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__EyeOff$3e$__["EyeOff"], {
+                                                                                            className: "size-4"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1186,
+                                                                                            columnNumber: 77
+                                                                                        }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Eye$3e$__["Eye"], {
+                                                                                            className: "size-4"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1186,
+                                                                                            columnNumber: 109
+                                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                                    }, void 0, false, {
                                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 848,
-                                                                                        columnNumber: 29
-                                                                                    }, ("TURBOPACK compile-time value", void 0)),
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
-                                                                                        children: [
-                                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipTrigger"], {
-                                                                                                asChild: true,
-                                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                                    role: "button",
-                                                                                                    tabIndex: 0,
-                                                                                                    "aria-label": `Open training calendar for ${athlete.name}`,
-                                                                                                    onClick: ()=>handleNavigateToTrainingCalendar(athlete.id),
-                                                                                                    onKeyDown: (e)=>handleTrainingCalendarIconKeyDown(e, athlete.id),
-                                                                                                    "data-no-row-link": "true",
-                                                                                                    className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7",
-                                                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$dumbbell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Dumbbell$3e$__["Dumbbell"], {
-                                                                                                        className: "size-4"
-                                                                                                    }, void 0, false, {
-                                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                        lineNumber: 877,
-                                                                                                        columnNumber: 35
-                                                                                                    }, ("TURBOPACK compile-time value", void 0))
-                                                                                                }, void 0, false, {
-                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                    lineNumber: 868,
-                                                                                                    columnNumber: 33
-                                                                                                }, ("TURBOPACK compile-time value", void 0))
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 867,
-                                                                                                columnNumber: 31
-                                                                                            }, ("TURBOPACK compile-time value", void 0)),
-                                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
-                                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                                    children: "View clients training calendar"
-                                                                                                }, void 0, false, {
-                                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                    lineNumber: 881,
-                                                                                                    columnNumber: 33
-                                                                                                }, ("TURBOPACK compile-time value", void 0))
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 880,
-                                                                                                columnNumber: 31
-                                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                                        ]
-                                                                                    }, void 0, true, {
-                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 866,
-                                                                                        columnNumber: 29
+                                                                                        lineNumber: 1177,
+                                                                                        columnNumber: 35
                                                                                     }, ("TURBOPACK compile-time value", void 0)),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                                                         role: "button",
                                                                                         tabIndex: 0,
-                                                                                        "aria-label": `Copy ${athlete.name}`,
-                                                                                        onClick: ()=>handleCopy(athlete.name, athlete.id, "name"),
-                                                                                        onKeyDown: (e)=>handleCopyIconKeyDown(e, athlete.name, athlete.id, "name"),
+                                                                                        "aria-label": `Copy email for ${athlete.name}`,
+                                                                                        onClick: ()=>handleCopy(athlete.email, athlete.id, "email"),
+                                                                                        onKeyDown: (e)=>handleCopyIconKeyDown(e, athlete.email, athlete.id, "email"),
                                                                                         "data-no-row-link": "true",
-                                                                                        className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7",
-                                                                                        children: isFieldCopied(athlete.id, "name") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
+                                                                                        className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
+                                                                                        children: isFieldCopied(athlete.id, "email") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
                                                                                             className: "size-4 text-green-500"
                                                                                         }, void 0, false, {
                                                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                            lineNumber: 894,
-                                                                                            columnNumber: 33
+                                                                                            lineNumber: 1198,
+                                                                                            columnNumber: 39
                                                                                         }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$copy$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Copy$3e$__["Copy"], {
                                                                                             className: "size-4"
                                                                                         }, void 0, false, {
                                                                                             fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                            lineNumber: 896,
-                                                                                            columnNumber: 33
+                                                                                            lineNumber: 1200,
+                                                                                            columnNumber: 39
                                                                                         }, ("TURBOPACK compile-time value", void 0))
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 884,
-                                                                                        columnNumber: 29
+                                                                                        lineNumber: 1188,
+                                                                                        columnNumber: 35
                                                                                     }, ("TURBOPACK compile-time value", void 0))
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 847,
-                                                                                columnNumber: 29
+                                                                                lineNumber: 1176,
+                                                                                columnNumber: 33
                                                                             }, ("TURBOPACK compile-time value", void 0))
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 839,
-                                                                        columnNumber: 27
+                                                                        lineNumber: 1172,
+                                                                        columnNumber: 31
                                                                     }, ("TURBOPACK compile-time value", void 0))
-                                                                ]
-                                                            }, void 0, true, {
-                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                lineNumber: 829,
-                                                                columnNumber: 25
-                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                        }, void 0, false, {
-                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                            lineNumber: 828,
-                                                            columnNumber: 23
-                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                    }, athlete.id, false, {
-                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 819,
-                                                        columnNumber: 21
-                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                })
-                                            }, void 0, false, {
-                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 809,
-                                                columnNumber: 17
-                                            }, ("TURBOPACK compile-time value", void 0))
-                                        }, void 0, false, {
-                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                            lineNumber: 808,
-                                            columnNumber: 15
-                                        }, ("TURBOPACK compile-time value", void 0))
-                                    }, void 0, false, {
-                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 798,
-                                        columnNumber: 13
-                                    }, ("TURBOPACK compile-time value", void 0))
-                                ]
-                            }, void 0, true, {
-                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 776,
-                                columnNumber: 11
-                            }, ("TURBOPACK compile-time value", void 0)),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "flex-1 flex flex-col overflow-hidden",
-                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "flex-1 overflow-y-auto overflow-x-auto right-table-scroll",
-                                    onScroll: (e)=>{
-                                        const leftScroll = document.getElementById("table-scroll-container");
-                                        if (leftScroll && e.currentTarget) {
-                                            leftScroll.scrollTop = e.currentTarget.scrollTop;
-                                        }
-                                    },
-                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Table"], {
-                                        className: "table-fixed border-collapse",
-                                        children: [
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("colgroup", {
-                                                children: columnOrder.map((columnId)=>{
-                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("col", {
-                                                        style: {
-                                                            width: getColumnWidth(columnId, "pixel")
-                                                        }
-                                                    }, columnId, false, {
-                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 924,
-                                                        columnNumber: 28
-                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                })
-                                            }, void 0, false, {
-                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 922,
-                                                columnNumber: 17
-                                            }, ("TURBOPACK compile-time value", void 0)),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHeader"], {
-                                                className: "sticky top-0 z-10 bg-sidebar",
-                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
-                                                    className: "hover:bg-transparent h-10",
-                                                    children: columnOrder.map((columnId)=>{
-                                                        switch(columnId){
-                                                            case "lastActivity":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$clock$2d$alert$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ClockAlert$3e$__["ClockAlert"], {
-                                                                        className: "size-3.5"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 934,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Last activity", "Time since last logged on to app")
                                                                 }, columnId, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 933,
-                                                                    columnNumber: 29
-                                                                }, ("TURBOPACK compile-time value", void 0));
-                                                            case "last7DaysTraining":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$dumbbell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Dumbbell$3e$__["Dumbbell"], {
-                                                                        className: "size-3.5"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 940,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "L7D Training", "How much they trained in the last 7 days out of their total assigned schedule")
-                                                                }, columnId, false, {
-                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 939,
-                                                                    columnNumber: 29
-                                                                }, ("TURBOPACK compile-time value", void 0));
-                                                            case "last30DaysTraining":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$dumbbell$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Dumbbell$3e$__["Dumbbell"], {
-                                                                        className: "size-3.5"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 946,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "L30D Training", "How much they trained in the last 30 days out of their total assigned schedule")
-                                                                }, columnId, false, {
-                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 945,
-                                                                    columnNumber: 29
-                                                                }, ("TURBOPACK compile-time value", void 0));
-                                                            case "category":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$grid$2d$2x2$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Grid2x2$3e$__["Grid2x2"], {
-                                                                        className: "size-3.5"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 952,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Category", "Whether or not they are online or in person")
-                                                                }, columnId, false, {
-                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 951,
-                                                                    columnNumber: 29
-                                                                }, ("TURBOPACK compile-time value", void 0));
-                                                            case "connected":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$heart$2d$pulse$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__HeartPulse$3e$__["HeartPulse"], {
-                                                                        className: "size-3.5"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 958,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Connected?", "The status of the user's app, i.e. if they have connected to the app")
-                                                                }, columnId, false, {
-                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 957,
-                                                                    columnNumber: 29
-                                                                }, ("TURBOPACK compile-time value", void 0));
-                                                            case "email":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$mail$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Mail$3e$__["Mail"], {
-                                                                        className: "size-3.5"
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 964,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Email")
-                                                                }, columnId, false, {
-                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 963,
+                                                                    lineNumber: 1164,
                                                                     columnNumber: 29
                                                                 }, ("TURBOPACK compile-time value", void 0));
                                                             case "phone":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$phone$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Phone$3e$__["Phone"], {
-                                                                        className: "size-3.5"
-                                                                    }, void 0, false, {
+                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "flex items-center justify-between gap-2 w-full",
+                                                                        children: [
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                                className: "text-sm flex-1 min-w-0 truncate",
+                                                                                children: isFieldRevealed(athlete.id, "phone") ? athlete.phone : censorPhone(athlete.phone)
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                lineNumber: 1218,
+                                                                                columnNumber: 33
+                                                                            }, ("TURBOPACK compile-time value", void 0)),
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                className: "flex items-center gap-1 flex-shrink-0",
+                                                                                children: [
+                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                        role: "button",
+                                                                                        tabIndex: 0,
+                                                                                        "aria-label": isFieldRevealed(athlete.id, "phone") ? `Hide phone for ${athlete.name}` : `Reveal phone for ${athlete.name}`,
+                                                                                        onClick: ()=>handleToggleReveal(athlete.id, "phone"),
+                                                                                        onKeyDown: (e)=>handleRevealIconKeyDown(e, athlete.id, "phone"),
+                                                                                        "data-no-row-link": "true",
+                                                                                        className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
+                                                                                        children: isFieldRevealed(athlete.id, "phone") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2d$off$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__EyeOff$3e$__["EyeOff"], {
+                                                                                            className: "size-4"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1231,
+                                                                                            columnNumber: 77
+                                                                                        }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Eye$3e$__["Eye"], {
+                                                                                            className: "size-4"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1231,
+                                                                                            columnNumber: 109
+                                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 1222,
+                                                                                        columnNumber: 35
+                                                                                    }, ("TURBOPACK compile-time value", void 0)),
+                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                        role: "button",
+                                                                                        tabIndex: 0,
+                                                                                        "aria-label": `Copy phone for ${athlete.name}`,
+                                                                                        onClick: ()=>handleCopy(athlete.phone, athlete.id, "phone"),
+                                                                                        onKeyDown: (e)=>handleCopyIconKeyDown(e, athlete.phone, athlete.id, "phone"),
+                                                                                        "data-no-row-link": "true",
+                                                                                        className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
+                                                                                        children: isFieldCopied(athlete.id, "phone") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
+                                                                                            className: "size-4 text-green-500"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1243,
+                                                                                            columnNumber: 39
+                                                                                        }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$copy$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Copy$3e$__["Copy"], {
+                                                                                            className: "size-4"
+                                                                                        }, void 0, false, {
+                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                            lineNumber: 1245,
+                                                                                            columnNumber: 39
+                                                                                        }, ("TURBOPACK compile-time value", void 0))
+                                                                                    }, void 0, false, {
+                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                        lineNumber: 1233,
+                                                                                        columnNumber: 35
+                                                                                    }, ("TURBOPACK compile-time value", void 0))
+                                                                                ]
+                                                                            }, void 0, true, {
+                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                                lineNumber: 1221,
+                                                                                columnNumber: 33
+                                                                            }, ("TURBOPACK compile-time value", void 0))
+                                                                        ]
+                                                                    }, void 0, true, {
                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 970,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Phone")
+                                                                        lineNumber: 1217,
+                                                                        columnNumber: 31
+                                                                    }, ("TURBOPACK compile-time value", void 0))
                                                                 }, columnId, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 969,
+                                                                    lineNumber: 1209,
                                                                     columnNumber: 29
                                                                 }, ("TURBOPACK compile-time value", void 0));
                                                             case "country":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$globe$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Globe$3e$__["Globe"], {
-                                                                        className: "size-3.5"
+                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "flex items-center w-full",
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                            className: "text-sm",
+                                                                            children: athlete.country
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 1263,
+                                                                            columnNumber: 33
+                                                                        }, ("TURBOPACK compile-time value", void 0))
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 976,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Country")
+                                                                        lineNumber: 1262,
+                                                                        columnNumber: 31
+                                                                    }, ("TURBOPACK compile-time value", void 0))
                                                                 }, columnId, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 975,
+                                                                    lineNumber: 1254,
                                                                     columnNumber: 29
                                                                 }, ("TURBOPACK compile-time value", void 0));
                                                             case "age":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$user$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__User$3e$__["User"], {
-                                                                        className: "size-3.5"
+                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "flex items-center w-full",
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                            className: "text-sm",
+                                                                            children: athlete.age
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 1278,
+                                                                            columnNumber: 33
+                                                                        }, ("TURBOPACK compile-time value", void 0))
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 982,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Age")
+                                                                        lineNumber: 1277,
+                                                                        columnNumber: 31
+                                                                    }, ("TURBOPACK compile-time value", void 0))
                                                                 }, columnId, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 981,
+                                                                    lineNumber: 1269,
                                                                     columnNumber: 29
                                                                 }, ("TURBOPACK compile-time value", void 0));
                                                             case "clientFor":
-                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].Fragment, {
-                                                                    children: renderColumnHeader(columnId, /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$clock$2d$alert$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__ClockAlert$3e$__["ClockAlert"], {
-                                                                        className: "size-3.5"
+                                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
+                                                                    className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle border-b", isSelected ? "!bg-muted" : "group-hover:!bg-muted", getColumnWidth(columnId, "class")),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "flex items-center w-full",
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                            className: "text-sm",
+                                                                            children: formatClientFor(athlete.clientFor)
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
+                                                                            lineNumber: 1293,
+                                                                            columnNumber: 33
+                                                                        }, ("TURBOPACK compile-time value", void 0))
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 988,
-                                                                        columnNumber: 61
-                                                                    }, ("TURBOPACK compile-time value", void 0)), "Client For", "How long they have been a client")
+                                                                        lineNumber: 1292,
+                                                                        columnNumber: 31
+                                                                    }, ("TURBOPACK compile-time value", void 0))
                                                                 }, columnId, false, {
                                                                     fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                    lineNumber: 987,
+                                                                    lineNumber: 1284,
                                                                     columnNumber: 29
                                                                 }, ("TURBOPACK compile-time value", void 0));
                                                             default:
                                                                 return null;
                                                         }
                                                     })
-                                                }, void 0, false, {
-                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                    lineNumber: 928,
-                                                    columnNumber: 19
-                                                }, ("TURBOPACK compile-time value", void 0))
-                                            }, void 0, false, {
+                                                ]
+                                            }, athlete.id, true, {
                                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 927,
-                                                columnNumber: 17
-                                            }, ("TURBOPACK compile-time value", void 0)),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
-                                                children: sortedAndFilteredAthletes.map((athlete)=>{
-                                                    const isSelected = selectedAthletes.has(athlete.id);
-                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
-                                                        role: "button",
-                                                        tabIndex: 0,
-                                                        "aria-label": `Open profile for ${athlete.name}`,
-                                                        onClick: (event)=>handleAthleteRowClick(event, athlete.id),
-                                                        onKeyDown: (event)=>handleAthleteRowKeyDown(event, athlete.id),
-                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])(isSelected && "bg-muted/50", "cursor-pointer !h-[54px]"),
-                                                        children: columnOrder.map((columnId)=>{
-                                                            switch(columnId){
-                                                                case "lastActivity":
-                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "flex items-center w-full",
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                className: "text-sm",
-                                                                                children: athlete.lastActivity
-                                                                            }, void 0, false, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1020,
-                                                                                columnNumber: 35
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1019,
-                                                                            columnNumber: 33
-                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                    }, columnId, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 1015,
-                                                                        columnNumber: 31
-                                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                                case "last7DaysTraining":
-                                                                    {
-                                                                        const [completed, total] = athlete.last7DaysTraining.split("/").map(Number);
-                                                                        const percentage = !total || total === 0 ? 0 : Math.round(completed / total * 100);
-                                                                        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                            className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                className: "flex items-center w-full gap-2",
-                                                                                children: [
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$progress$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Progress"], {
-                                                                                        value: percentage,
-                                                                                        className: "h-2 flex-1"
-                                                                                    }, void 0, false, {
-                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 1034,
-                                                                                        columnNumber: 35
-                                                                                    }, ("TURBOPACK compile-time value", void 0)),
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                        className: "text-xs w-10 text-right",
-                                                                                        children: [
-                                                                                            percentage,
-                                                                                            "%"
-                                                                                        ]
-                                                                                    }, void 0, true, {
-                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 1035,
-                                                                                        columnNumber: 35
-                                                                                    }, ("TURBOPACK compile-time value", void 0))
-                                                                                ]
-                                                                            }, void 0, true, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1033,
-                                                                                columnNumber: 33
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, columnId, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1029,
-                                                                            columnNumber: 31
-                                                                        }, ("TURBOPACK compile-time value", void 0));
-                                                                    }
-                                                                case "last30DaysTraining":
-                                                                    {
-                                                                        const [completed, total] = athlete.last30DaysTraining.split("/").map(Number);
-                                                                        const percentage = !total || total === 0 ? 0 : Math.round(completed / total * 100);
-                                                                        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                            className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                className: "flex items-center w-full gap-2",
-                                                                                children: [
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$progress$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Progress"], {
-                                                                                        value: percentage,
-                                                                                        className: "h-2 flex-1"
-                                                                                    }, void 0, false, {
-                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 1052,
-                                                                                        columnNumber: 35
-                                                                                    }, ("TURBOPACK compile-time value", void 0)),
-                                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                        className: "text-xs w-10 text-right",
-                                                                                        children: [
-                                                                                            percentage,
-                                                                                            "%"
-                                                                                        ]
-                                                                                    }, void 0, true, {
-                                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                        lineNumber: 1053,
-                                                                                        columnNumber: 35
-                                                                                    }, ("TURBOPACK compile-time value", void 0))
-                                                                                ]
-                                                                            }, void 0, true, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1051,
-                                                                                columnNumber: 33
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, columnId, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1047,
-                                                                            columnNumber: 31
-                                                                        }, ("TURBOPACK compile-time value", void 0));
-                                                                    }
-                                                                case "category":
-                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "flex items-center w-full",
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                className: "text-sm capitalize",
-                                                                                children: athlete.category
-                                                                            }, void 0, false, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1067,
-                                                                                columnNumber: 35
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1066,
-                                                                            columnNumber: 33
-                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                    }, columnId, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 1062,
-                                                                        columnNumber: 31
-                                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                                case "connected":
-                                                                    {
-                                                                        let connectedLabel = "";
-                                                                        if (athlete.connected === true) {
-                                                                            connectedLabel = "Connected";
-                                                                        } else if (athlete.connected === false) {
-                                                                            connectedLabel = "Not connected";
-                                                                        } else if (athlete.connected === "invitation-sent") {
-                                                                            connectedLabel = "Invitation sent";
-                                                                        }
-                                                                        return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                            className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                className: "flex items-center w-full",
-                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                    className: "text-sm",
-                                                                                    children: connectedLabel
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                    lineNumber: 1088,
-                                                                                    columnNumber: 35
-                                                                                }, ("TURBOPACK compile-time value", void 0))
-                                                                            }, void 0, false, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1087,
-                                                                                columnNumber: 33
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, columnId, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1083,
-                                                                            columnNumber: 31
-                                                                        }, ("TURBOPACK compile-time value", void 0));
-                                                                    }
-                                                                case "email":
-                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "flex items-center justify-between gap-2 w-full",
-                                                                            children: [
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                    className: "text-sm flex-1 min-w-0 truncate",
-                                                                                    children: isFieldRevealed(athlete.id, "email") ? athlete.email : censorEmail(athlete.email)
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                    lineNumber: 1100,
-                                                                                    columnNumber: 35
-                                                                                }, ("TURBOPACK compile-time value", void 0)),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                    className: "flex items-center gap-1 flex-shrink-0",
-                                                                                    children: [
-                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                            role: "button",
-                                                                                            tabIndex: 0,
-                                                                                            "aria-label": isFieldRevealed(athlete.id, "email") ? `Hide email for ${athlete.name}` : `Reveal email for ${athlete.name}`,
-                                                                                            onClick: ()=>handleToggleReveal(athlete.id, "email"),
-                                                                                            onKeyDown: (e)=>handleRevealIconKeyDown(e, athlete.id, "email"),
-                                                                                            "data-no-row-link": "true",
-                                                                                            className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
-                                                                                            children: isFieldRevealed(athlete.id, "email") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2d$off$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__EyeOff$3e$__["EyeOff"], {
-                                                                                                className: "size-4"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1113,
-                                                                                                columnNumber: 79
-                                                                                            }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Eye$3e$__["Eye"], {
-                                                                                                className: "size-4"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1113,
-                                                                                                columnNumber: 111
-                                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                                        }, void 0, false, {
-                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                            lineNumber: 1104,
-                                                                                            columnNumber: 37
-                                                                                        }, ("TURBOPACK compile-time value", void 0)),
-                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                            role: "button",
-                                                                                            tabIndex: 0,
-                                                                                            "aria-label": `Copy email for ${athlete.name}`,
-                                                                                            onClick: ()=>handleCopy(athlete.email, athlete.id, "email"),
-                                                                                            onKeyDown: (e)=>handleCopyIconKeyDown(e, athlete.email, athlete.id, "email"),
-                                                                                            "data-no-row-link": "true",
-                                                                                            className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
-                                                                                            children: isFieldCopied(athlete.id, "email") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
-                                                                                                className: "size-4 text-green-500"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1125,
-                                                                                                columnNumber: 41
-                                                                                            }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$copy$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Copy$3e$__["Copy"], {
-                                                                                                className: "size-4"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1127,
-                                                                                                columnNumber: 41
-                                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                                        }, void 0, false, {
-                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                            lineNumber: 1115,
-                                                                                            columnNumber: 37
-                                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                                    ]
-                                                                                }, void 0, true, {
-                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                    lineNumber: 1103,
-                                                                                    columnNumber: 35
-                                                                                }, ("TURBOPACK compile-time value", void 0))
-                                                                            ]
-                                                                        }, void 0, true, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1099,
-                                                                            columnNumber: 33
-                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                    }, columnId, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 1095,
-                                                                        columnNumber: 31
-                                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                                case "phone":
-                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "flex items-center justify-between gap-2 w-full",
-                                                                            children: [
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                    className: "text-sm flex-1 min-w-0 truncate",
-                                                                                    children: isFieldRevealed(athlete.id, "phone") ? athlete.phone : censorPhone(athlete.phone)
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                    lineNumber: 1141,
-                                                                                    columnNumber: 35
-                                                                                }, ("TURBOPACK compile-time value", void 0)),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                    className: "flex items-center gap-1 flex-shrink-0",
-                                                                                    children: [
-                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                            role: "button",
-                                                                                            tabIndex: 0,
-                                                                                            "aria-label": isFieldRevealed(athlete.id, "phone") ? `Hide phone for ${athlete.name}` : `Reveal phone for ${athlete.name}`,
-                                                                                            onClick: ()=>handleToggleReveal(athlete.id, "phone"),
-                                                                                            onKeyDown: (e)=>handleRevealIconKeyDown(e, athlete.id, "phone"),
-                                                                                            "data-no-row-link": "true",
-                                                                                            className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
-                                                                                            children: isFieldRevealed(athlete.id, "phone") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2d$off$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__EyeOff$3e$__["EyeOff"], {
-                                                                                                className: "size-4"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1154,
-                                                                                                columnNumber: 79
-                                                                                            }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$eye$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Eye$3e$__["Eye"], {
-                                                                                                className: "size-4"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1154,
-                                                                                                columnNumber: 111
-                                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                                        }, void 0, false, {
-                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                            lineNumber: 1145,
-                                                                                            columnNumber: 37
-                                                                                        }, ("TURBOPACK compile-time value", void 0)),
-                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                                            role: "button",
-                                                                                            tabIndex: 0,
-                                                                                            "aria-label": `Copy phone for ${athlete.name}`,
-                                                                                            onClick: ()=>handleCopy(athlete.phone, athlete.id, "phone"),
-                                                                                            onKeyDown: (e)=>handleCopyIconKeyDown(e, athlete.phone, athlete.id, "phone"),
-                                                                                            "data-no-row-link": "true",
-                                                                                            className: "flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
-                                                                                            children: isFieldCopied(athlete.id, "phone") ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$check$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Check$3e$__["Check"], {
-                                                                                                className: "size-4 text-green-500"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1166,
-                                                                                                columnNumber: 41
-                                                                                            }, ("TURBOPACK compile-time value", void 0)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$copy$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Copy$3e$__["Copy"], {
-                                                                                                className: "size-4"
-                                                                                            }, void 0, false, {
-                                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                                lineNumber: 1168,
-                                                                                                columnNumber: 41
-                                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                                        }, void 0, false, {
-                                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                            lineNumber: 1156,
-                                                                                            columnNumber: 37
-                                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                                    ]
-                                                                                }, void 0, true, {
-                                                                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                    lineNumber: 1144,
-                                                                                    columnNumber: 35
-                                                                                }, ("TURBOPACK compile-time value", void 0))
-                                                                            ]
-                                                                        }, void 0, true, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1140,
-                                                                            columnNumber: 33
-                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                    }, columnId, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 1136,
-                                                                        columnNumber: 31
-                                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                                case "country":
-                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "flex items-center w-full",
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                className: "text-sm",
-                                                                                children: athlete.country
-                                                                            }, void 0, false, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1182,
-                                                                                columnNumber: 35
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1181,
-                                                                            columnNumber: 33
-                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                    }, columnId, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 1177,
-                                                                        columnNumber: 31
-                                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                                case "age":
-                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "flex items-center w-full",
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                className: "text-sm",
-                                                                                children: athlete.age
-                                                                            }, void 0, false, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1193,
-                                                                                columnNumber: 35
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1192,
-                                                                            columnNumber: 33
-                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                    }, columnId, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 1188,
-                                                                        columnNumber: 31
-                                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                                case "clientFor":
-                                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("!px-4 !h-[54px] align-middle", getColumnWidth(columnId, "class")),
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "flex items-center w-full",
-                                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                className: "text-sm",
-                                                                                children: formatClientFor(athlete.clientFor)
-                                                                            }, void 0, false, {
-                                                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                                lineNumber: 1204,
-                                                                                columnNumber: 35
-                                                                            }, ("TURBOPACK compile-time value", void 0))
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                            lineNumber: 1203,
-                                                                            columnNumber: 33
-                                                                        }, ("TURBOPACK compile-time value", void 0))
-                                                                    }, columnId, false, {
-                                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                                        lineNumber: 1199,
-                                                                        columnNumber: 31
-                                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                                default:
-                                                                    return null;
-                                                            }
-                                                        })
-                                                    }, athlete.id, false, {
-                                                        fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                        lineNumber: 1002,
-                                                        columnNumber: 21
-                                                    }, ("TURBOPACK compile-time value", void 0));
-                                                })
-                                            }, void 0, false, {
-                                                fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                                lineNumber: 997,
-                                                columnNumber: 17
-                                            }, ("TURBOPACK compile-time value", void 0))
-                                        ]
-                                    }, void 0, true, {
+                                                lineNumber: 953,
+                                                columnNumber: 19
+                                            }, ("TURBOPACK compile-time value", void 0));
+                                        })
+                                    }, void 0, false, {
                                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                        lineNumber: 921,
-                                        columnNumber: 15
+                                        lineNumber: 941,
+                                        columnNumber: 13
                                     }, ("TURBOPACK compile-time value", void 0))
-                                }, void 0, false, {
-                                    fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                    lineNumber: 912,
-                                    columnNumber: 13
-                                }, ("TURBOPACK compile-time value", void 0))
-                            }, void 0, false, {
+                                ]
+                            }, void 0, true, {
                                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                                lineNumber: 911,
+                                lineNumber: 827,
                                 columnNumber: 11
                             }, ("TURBOPACK compile-time value", void 0))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/apps/app/app/athletes/page.tsx",
-                        lineNumber: 774,
+                        lineNumber: 818,
                         columnNumber: 9
                     }, ("TURBOPACK compile-time value", void 0))
                 ]
             }, void 0, true, {
                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                lineNumber: 680,
+                lineNumber: 724,
                 columnNumber: 7
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$app$2f$athletes$2f$add$2d$client$2d$side$2d$panel$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["AddClientSidePanel"], {
@@ -4192,7 +4352,7 @@ const AthletesPage = ()=>{
                 onOpenChange: setIsAddAthleteOpen
             }, void 0, false, {
                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                lineNumber: 1221,
+                lineNumber: 1308,
                 columnNumber: 7
             }, ("TURBOPACK compile-time value", void 0)),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$app$2f$app$2f$athletes$2f$upload$2d$clients$2d$side$2d$panel$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["UploadClientsSidePanel"], {
@@ -4200,25 +4360,26 @@ const AthletesPage = ()=>{
                 onOpenChange: setIsUploadClientsOpen
             }, void 0, false, {
                 fileName: "[project]/apps/app/app/athletes/page.tsx",
-                lineNumber: 1222,
+                lineNumber: 1309,
                 columnNumber: 7
             }, ("TURBOPACK compile-time value", void 0))
         ]
     }, void 0, true, {
         fileName: "[project]/apps/app/app/athletes/page.tsx",
-        lineNumber: 623,
+        lineNumber: 667,
         columnNumber: 5
     }, ("TURBOPACK compile-time value", void 0));
 };
-_s(AthletesPage, "9iJkggNpxla/UMAfSONh58kKrMY=", false, function() {
+_s1(AthletesPage, "9iJkggNpxla/UMAfSONh58kKrMY=", false, function() {
     return [
         __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"]
     ];
 });
-_c = AthletesPage;
+_c1 = AthletesPage;
 const __TURBOPACK__default__export__ = AthletesPage;
-var _c;
-__turbopack_context__.k.register(_c, "AthletesPage");
+var _c, _c1;
+__turbopack_context__.k.register(_c, "AthleteNameTooltip");
+__turbopack_context__.k.register(_c1, "AthletesPage");
 if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }

@@ -1,124 +1,360 @@
-[00:00:01.346] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-[00:00:01.452] Server  LOG      ✓ Ready in 1126ms
-[00:00:07.373] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:00:07.648] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:09.035] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:02:28.327] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:02:28.334] Server  LOG      ✓ Compiled in 173ms
-[00:02:28.748] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:02:29.091] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:02:31.036] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:02:50.726] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:02:50.734] Server  LOG      ✓ Compiled in 192ms
-[00:02:51.141] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:02:51.522] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:02:53.064] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:03:14.484] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:03:14.491] Server  LOG      ✓ Compiled in 150ms
-[00:03:14.865] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:03:15.052] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:17.036] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:03:53.853] Server  LOG      ✓ Compiled in 174ms
-[00:03:53.855] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:03:54.319] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:03:54.660] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:03:56.035] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:04:36.669] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:04:36.674] Server  LOG      ✓ Compiled in 86ms
-[00:04:37.131] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:04:37.347] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:04:39.128] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:05:08.439] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:05:08.456] Server  LOG      ✓ Compiled in 133ms
-[00:05:08.996] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:05:09.243] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:05:11.035] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:05:12.337] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:05:12.458] Server  LOG      ✓ Compiled in 55ms
-[00:05:12.585] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:05:12.775] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:05:14.040] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:07:45.446] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:07:45.461] Server  LOG      ✓ Compiled in 166ms
-[00:07:45.933] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:07:46.301] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:48.034] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:07:49.292] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:07:49.435] Server  LOG      ✓ Compiled in 51ms
-[00:07:49.581] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:07:49.825] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:07:51.035] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:08:06.350] Server  LOG      ✓ Compiled in 207ms
-[00:08:06.359] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:08:07.036] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:08:07.514] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:08:09.046] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:09:48.107] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:09:48.109] Server  LOG      ✓ Compiled in 403ms
-[00:09:48.924] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:09:49.834] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:09:51.042] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:10:29.586] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:10:29.608] Server  LOG      ✓ Compiled in 82ms
-[00:10:30.176] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:10:30.445] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:10:32.108] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:10:50.705] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:10:50.711] Server  LOG      ✓ Compiled in 165ms
-[00:10:51.742] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:10:52.180] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:10:52.540] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:11:47.461] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:11:47.464] Server  LOG      ✓ Compiled in 236ms
-[00:11:48.217] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:11:48.756] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:11:50.037] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:12:10.912] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:12:10.915] Server  LOG      ✓ Compiled in 123ms
-[00:12:11.547] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:12:11.880] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:14.174] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:12:20.544] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:12:20.560] Server  LOG      ✓ Compiled in 186ms
-[00:12:21.158] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:12:21.417] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:12:23.041] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:13:40.811] Server  LOG      ✓ Compiled in 64ms
-[00:14:45.662] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:14:45.666] Server  LOG      ✓ Compiled in 90ms
-[00:14:46.277] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:14:46.754] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:14:48.148] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:15:13.264] Server  LOG      ✓ Compiled in 241ms
-[00:15:13.271] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/ui/sidebar.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:15:14.355] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:15:15.076] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:15:16.460] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:15:44.265] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/components/app/app-shell.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:15:44.267] Server  LOG      ✓ Compiled in 221ms
-[00:15:45.658] Server  ERROR   Error: ENVIRONMENT_FALLBACK: There is no `timeZone` configured, this can lead to markup mismatches caused by environment differences. Consider adding a global default: https://next-intl.dev/docs/configuration#time-zone
-[00:15:46.332] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:15:48.073] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:16:03.510] Server  WARN     ⚠ Fast Refresh had to perform a full reload when ./apps/app/lib/intl-provider.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
-[00:16:03.511] Server  LOG      ✓ Compiled in 102ms
-[00:16:04.501] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:16:06.162] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
-[00:17:12.299] Server  LOG      ✓ Compiled in 143ms
-[00:17:22.486] Server  LOG      ✓ Compiled in 104ms
-[00:17:28.654] Server  LOG      ✓ Compiled in 110ms
-[00:17:32.351] Server  LOG      ✓ Compiled in 48ms
-[00:17:39.179] Server  LOG      ✓ Compiled in 146ms
-[00:17:43.192] Server  LOG      ✓ Compiled in 43ms
-[00:17:49.791] Server  LOG      ✓ Compiled in 120ms
-[00:17:55.920] Server  LOG      ✓ Compiled in 96ms
-[00:18:02.368] Server  LOG      ✓ Compiled in 136ms
-[00:18:17.242] Server  LOG      ✓ Compiled in 96ms
-[00:18:27.017] Server  LOG      ✓ Compiled in 119ms
-[00:18:30.687] Server  LOG      ✓ Compiled in 44ms
-[00:19:50.165] Server  LOG      ✓ Compiled in 128ms
-[00:21:01.668] Server  LOG      ✓ Compiled in 90ms
-[00:21:06.945] Server  LOG      ✓ Compiled in 115ms
-[00:21:21.046] Server  LOG      ✓ Compiled in 130ms
-[00:21:26.852] Server  LOG      ✓ Compiled in 102ms
-[00:21:32.901] Server  LOG      ✓ Compiled in 90ms
-[00:21:37.070] Server  LOG      ✓ Compiled in 211ms
+[00:00:01.163] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[00:00:01.269] Server  LOG      ✓ Ready in 1015ms
+[00:00:20.569] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:20.747] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:00:40.106] Server  LOG      ✓ Compiled in 62ms
+[00:01:15.567] Server  LOG      ✓ Compiled in 53ms
+[00:01:46.636] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:46.978] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:02:43.779] Server  LOG      ✓ Compiled in 62ms
+[00:02:55.429] Server  LOG      ✓ Compiled in 91ms
+[00:05:00.634] Server  LOG      ✓ Compiled in 56ms
+[00:05:01.220] Browser ERROR   uncaughtError: ReferenceError: hoveredAthleteId is not defined
+[00:05:14.459] Server  LOG      ✓ Compiled in 83ms
+[00:05:15.220] Browser ERROR   ./apps/app/app/athletes/page.tsx:990:33
+Parsing ecmascript source code failed
+  988 |                         </div>
+  989 |                       </div>
+> 990 |                     </TableCell>
+      |                                 ^
+> 991 |                     {columnOrder.map((columnId) => {
+      | ^^^^^^^^^^^^^^^^^^^^^
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+  994 |                           return (
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:05:21.675] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:05:21.714] Server  LOG      ✓ Compiled in 125ms
+[00:05:22.368] Server  ERROR    ⨯ Error: aborted
+[00:05:22.486] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:05:24.221] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:05:24.410] Server  LOG      ✓ Compiled in 38ms
+[00:05:25.220] Browser ERROR   ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:05:35.219] Browser ERROR   ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:05:44.095] Server  ERROR    ⨯ ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+
+[00:05:44.210] Browser ERROR   ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:05:44.670] Browser ERROR   ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:05:44.670] Browser ERROR   ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:05:44.792] Browser ERROR   uncaughtError: Error: ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+
+[00:05:44.988] Browser ERROR   ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:05:44.988] Browser ERROR   ./apps/app/app/athletes/page.tsx:989:29
+Parsing ecmascript source code failed
+  987 |                         </div>
+  988 |                       </div>
+> 989 |                       </div>
+      |                             ^
+> 990 |                     </TableCell>
+      | ^^^^^^^^^^^^^^^^^^^^^
+  991 |                     {columnOrder.map((columnId) => {
+  992 |                       switch (columnId) {
+  993 |                         case "lastActivity":
+
+Expected '</', got 'jsx text (
+                    )'
+
+Import traces:
+  Client Component Browser:
+    ./apps/app/app/athletes/page.tsx [Client Component Browser]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./apps/app/app/athletes/page.tsx [Client Component SSR]
+    ./apps/app/app/athletes/page.tsx [Server Component]
+[00:06:06.625] Server  LOG      ✓ Compiled in 57ms
+[00:06:07.242] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:06:09.220] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:06:18.922] Server  LOG      ✓ Compiled in 83ms
+[00:06:27.566] Server  LOG      ✓ Compiled in 57ms
+[00:08:45.593] Server  LOG      ✓ Compiled in 58ms
+[00:08:48.497] Server  LOG      ✓ Compiled in 105ms
+[00:09:58.220] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:09:58.382] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:11:00.001] Server  LOG      ✓ Compiled in 54ms
+[00:11:01.808] Server  LOG      ✓ Compiled in 41ms
+[00:11:07.720] Server  LOG      ✓ Compiled in 63ms
+[00:11:13.778] Server  LOG      ✓ Compiled in 212ms
+[00:11:14.522] Server  LOG      ✓ Compiled in 39ms
+[00:11:15.529] Server  LOG      ✓ Compiled in 37ms
+[00:12:02.412] Server  LOG      ✓ Compiled in 52ms
+[00:12:04.622] Server  LOG      ✓ Compiled in 35ms
+[00:12:06.463] Server  LOG      ✓ Compiled in 35ms
+[00:12:08.402] Server  LOG      ✓ Compiled in 53ms
+[00:12:10.128] Server  LOG      ✓ Compiled in 33ms
+[00:12:11.873] Server  LOG      ✓ Compiled in 36ms
+[00:12:13.816] Server  LOG      ✓ Compiled in 29ms
+[00:12:15.640] Server  LOG      ✓ Compiled in 30ms
+[00:13:19.209] Server  LOG      ✓ Compiled in 89ms
+[00:14:01.180] Server  LOG      ✓ Compiled in 62ms
+[00:14:02.441] Server  LOG      ✓ Compiled in 43ms
+[00:14:16.273] Server  LOG      ✓ Compiled in 48ms
+[00:14:17.355] Server  LOG      ✓ Compiled in 41ms
+[00:14:19.311] Server  LOG      ✓ Compiled in 36ms
+[00:14:20.380] Server  LOG      ✓ Compiled in 31ms
+[00:15:39.463] Server  LOG      ✓ Compiled in 363ms
+[00:15:47.841] Server  LOG      ✓ Compiled in 83ms
+[00:17:05.085] Server  LOG      ✓ Compiled in 89ms
+[00:17:08.347] Server  LOG      ✓ Compiled in 38ms
+[00:17:08.890] Server  LOG      ✓ Compiled in 31ms
+[00:17:16.070] Server  LOG      ✓ Compiled in 40ms
+[00:17:17.823] Server  LOG      ✓ Compiled in 46ms
+[00:17:19.595] Server  LOG      ✓ Compiled in 29ms
+[00:17:20.299] Server  LOG      ✓ Compiled in 28ms
+[00:17:20.929] Server  LOG      ✓ Compiled in 39ms
+[00:17:22.206] Server  LOG      ✓ Compiled in 87ms
+[00:17:24.651] Server  LOG      ✓ Compiled in 29ms
+[00:17:26.315] Server  LOG      ✓ Compiled in 38ms
+[00:17:27.929] Server  LOG      ✓ Compiled in 28ms
+[00:17:31.070] Server  LOG      ✓ Compiled in 46ms
+[00:17:31.768] Server  LOG      ✓ Compiled in 32ms
+[00:17:32.880] Server  LOG      ✓ Compiled in 34ms
+[00:17:34.390] Server  LOG      ✓ Compiled in 31ms
+[00:17:39.979] Server  LOG      ✓ Compiled in 51ms
+[00:17:42.446] Server  LOG      ✓ Compiled in 28ms
+[00:17:53.984] Server  LOG      ✓ Compiled in 152ms
+[00:17:56.927] Server  LOG      ✓ Compiled in 106ms
+[00:17:57.992] Server  LOG      ✓ Compiled in 38ms
+[00:18:00.668] Server  LOG      ✓ Compiled in 47ms
+[00:18:09.487] Server  LOG      ✓ Compiled in 41ms
+[00:18:10.268] Server  LOG      ✓ Compiled in 47ms
+[00:18:11.205] Server  LOG      ✓ Compiled in 32ms
+[00:18:13.195] Server  LOG      ✓ Compiled in 80ms
+[00:18:16.088] Server  LOG      ✓ Compiled in 32ms
+[00:18:16.874] Server  LOG      ✓ Compiled in 35ms
+[00:21:43.455] Server  LOG      ✓ Compiled in 39ms
+[00:21:57.310] Server  LOG      ✓ Compiled in 55ms
+[00:21:58.491] Server  LOG      ✓ Compiled in 34ms
+[00:21:59.557] Server  LOG      ✓ Compiled in 38ms
+[00:22:00.880] Server  LOG      ✓ Compiled in 44ms
+[00:22:01.962] Server  LOG      ✓ Compiled in 48ms
+[00:22:03.472] Server  LOG      ✓ Compiled in 32ms
+[00:22:55.570] Server  LOG      ✓ Compiled in 91ms
+[00:24:17.167] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:17.167] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:30.956] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:30.956] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:33.297] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:33.297] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:40.498] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:40.498] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:24:52.494] Server  LOG      ✓ Compiled in 140ms
+[00:24:58.505] Server  LOG      ✓ Compiled in 61ms
+[00:25:13.622] Server  LOG      ✓ Compiled in 63ms
+[00:25:36.109] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:25:36.248] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:25:50.056] Server  LOG      ✓ Compiled in 71ms
+[00:25:54.846] Server  LOG      ✓ Compiled in 88ms
+[00:25:57.279] Server  LOG      ✓ Compiled in 38ms
+[00:26:19.714] Server  LOG      ✓ Compiled in 92ms
+[00:26:23.562] Server  LOG      ✓ Compiled in 74ms
+[00:26:28.937] Server  LOG      ✓ Compiled in 47ms
+[00:27:17.428] Server  LOG      ✓ Compiled in 84ms
+[00:27:18.221] Browser ERROR   uncaughtError: ReferenceError: AthleteNameTooltip is not defined
+[00:27:31.561] Server  WARN     ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:27:31.578] Server  LOG      ✓ Compiled in 94ms
+[00:27:32.249] Server  ERROR   Error: aborted
+[00:27:32.249] Server  ERROR    ⨯ "uncaughtException:" Error: aborted
+[00:27:32.250] Server  ERROR    ⨯ "uncaughtException: " Error: aborted
+[00:27:32.387] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:27:34.221] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:27:50.227] Server  LOG      ✓ Compiled in 87ms
+[00:28:08.808] Server  LOG      ✓ Compiled in 48ms
+[00:28:22.611] Server  LOG      ✓ Compiled in 46ms
+[00:35:04.943] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:35:05.088] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:35:16.884] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:35:16.884] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:53:09.970] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:53:10.200] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
+[00:53:15.245] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:53:15.405] Browser WARN    Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview
