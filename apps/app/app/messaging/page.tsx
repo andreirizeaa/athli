@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { messageDraftStorage } from '@/lib/message-draft-storage'
+import { sendMessage } from '@/lib/message-service'
 import { mockContacts, mockMessages, mockAthletes, type Contact, type Message } from '@/components/app/app-shell'
 import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
@@ -817,7 +818,7 @@ const MessagingPage = () => {
 
       // If there's text, send it as a separate message first
       if (messageText) {
-        newMessages.push({
+        const textMessage = {
           id: `m${baseTimestamp}`,
           text: messageText,
           timestamp: new Date().toLocaleTimeString('en-US', {
@@ -826,14 +827,27 @@ const MessagingPage = () => {
           }),
           isSent: true,
           replyTo: replyToData,
-        })
+        }
+        newMessages.push(textMessage)
+        
+        // Call message service
+        if (selectedContactId) {
+          sendMessage({
+            contactId: selectedContactId,
+            text: messageText,
+            repliedTo: replyToData,
+          }).catch((error) => {
+            console.error('Failed to send text message:', error)
+          })
+        }
+        
         baseTimestamp += 1
       }
 
       // Send each image as a separate message
       if (imagesData && imagesData.length > 0) {
         for (const image of imagesData) {
-          newMessages.push({
+          const imageMessage = {
             id: `m${baseTimestamp}`,
             text: '',
             timestamp: new Date().toLocaleTimeString('en-US', {
@@ -843,14 +857,27 @@ const MessagingPage = () => {
             isSent: true,
             replyTo: replyToData,
             images: [image],
-          })
+          }
+          newMessages.push(imageMessage)
+          
+          // Call message service
+          if (selectedContactId) {
+            sendMessage({
+              contactId: selectedContactId,
+              images: [image],
+              repliedTo: replyToData,
+            }).catch((error) => {
+              console.error('Failed to send image message:', error)
+            })
+          }
+          
           baseTimestamp += 1
         }
       }
 
       // Send PDF as a separate message
       if (pdfData) {
-        newMessages.push({
+        const pdfMessage = {
           id: `m${baseTimestamp}`,
           text: '',
           timestamp: new Date().toLocaleTimeString('en-US', {
@@ -860,13 +887,26 @@ const MessagingPage = () => {
           isSent: true,
           replyTo: replyToData,
           pdf: pdfData,
-        })
+        }
+        newMessages.push(pdfMessage)
+        
+        // Call message service
+        if (selectedContactId) {
+          sendMessage({
+            contactId: selectedContactId,
+            pdf: pdfData,
+            repliedTo: replyToData,
+          }).catch((error) => {
+            console.error('Failed to send PDF message:', error)
+          })
+        }
+        
         baseTimestamp += 1
       }
 
       // Send video as a separate message
       if (videoData) {
-        newMessages.push({
+        const videoMessage = {
           id: `m${baseTimestamp}`,
           text: '',
           timestamp: new Date().toLocaleTimeString('en-US', {
@@ -876,7 +916,19 @@ const MessagingPage = () => {
           isSent: true,
           replyTo: replyToData,
           video: videoData,
-        })
+        }
+        newMessages.push(videoMessage)
+        
+        // Call message service
+        if (selectedContactId) {
+          sendMessage({
+            contactId: selectedContactId,
+            video: videoData,
+            repliedTo: replyToData,
+          }).catch((error) => {
+            console.error('Failed to send video message:', error)
+          })
+        }
       }
 
       // Add all messages at once
