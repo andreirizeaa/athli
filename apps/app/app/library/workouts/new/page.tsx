@@ -1,16 +1,16 @@
-"use client"
+'use client';
 
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const NewWorkoutRedirectPage = () => {
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
-    router.push("/library/workouts")
-  }, [router])
+    router.push('/library/workouts');
+  }, [router]);
 
-  return null
-}
+  return null;
+};
 
-export default NewWorkoutRedirectPage
+export default NewWorkoutRedirectPage;

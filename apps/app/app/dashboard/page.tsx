@@ -1,4 +1,4 @@
-import { Separator } from "@/components/ui/separator"
+import { Separator } from '@/components/ui/separator';
 
 const DashboardPage = () => {
   return (
@@ -13,8 +13,7 @@ const DashboardPage = () => {
         <h2 className="text-2xl font-semibold text-muted-foreground">Coming Soon</h2>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default DashboardPage
-
+export default DashboardPage;

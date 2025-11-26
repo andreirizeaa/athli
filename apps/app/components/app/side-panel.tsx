@@ -1,23 +1,20 @@
-"use client"
+'use client';
 
-import * as React from "react"
+import * as React from 'react';
 
-import {
-  Sheet,
-  SheetContent,
-} from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 type SidePanelProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  children?: React.ReactNode
-  footer?: React.ReactNode
-  side?: "left" | "right"
-  contentClassName?: string
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children?: React.ReactNode;
+  footer?: React.ReactNode;
+  side?: 'left' | 'right';
+  contentClassName?: string;
+};
 
 export const SidePanel = ({
   open,
@@ -25,7 +22,7 @@ export const SidePanel = ({
   title,
   children,
   footer,
-  side = "right",
+  side = 'right',
   contentClassName,
 }: SidePanelProps) => {
   return (
@@ -33,8 +30,8 @@ export const SidePanel = ({
       <SheetContent
         side={side}
         className={cn(
-          "w-full sm:w-[500px] sm:max-w-[500px] px-0 pb-0 flex flex-col",
-          contentClassName,
+          'w-full sm:w-[500px] sm:max-w-[500px] px-0 pb-0 flex flex-col',
+          contentClassName
         )}
       >
         <div className="px-4 pt-3">
@@ -42,18 +39,10 @@ export const SidePanel = ({
         </div>
         <Separator />
         {children && (
-          <div className="flex-1 overflow-hidden px-4 pt-3 flex flex-col min-h-0">
-            {children}
-          </div>
+          <div className="flex-1 overflow-hidden px-4 pt-3 flex flex-col min-h-0">{children}</div>
         )}
-        {footer && (
-          <div className="px-4 py-3">
-            {footer}
-          </div>
-        )}
+        {footer && <div className="px-4 py-3">{footer}</div>}
       </SheetContent>
     </Sheet>
-  )
-}
-
-
+  );
+};

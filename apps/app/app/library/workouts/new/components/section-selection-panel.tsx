@@ -1,29 +1,29 @@
-"use client"
+'use client';
 
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dumbbell, NotebookPen, Timer } from "lucide-react"
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dumbbell, NotebookPen, Timer } from 'lucide-react';
 
-type SectionType = "regular" | "amrap" | "timed"
+type SectionType = 'regular' | 'amrap' | 'timed';
 
 type SectionSelectionPanelProps = {
-  onSectionSelect: (type: SectionType) => void
-}
+  onSectionSelect: (type: SectionType) => void;
+};
 
 export const SectionSelectionPanel = ({ onSectionSelect }: SectionSelectionPanelProps) => {
   const handleKeyDown = (e: React.KeyboardEvent, type: SectionType) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault()
-      onSectionSelect(type)
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSectionSelect(type);
     }
-  }
+  };
 
   return (
     <div className="mt-4 flex flex-col gap-4">
       <Card
         role="button"
         tabIndex={0}
-        onClick={() => onSectionSelect("regular")}
-        onKeyDown={(e) => handleKeyDown(e, "regular")}
+        onClick={() => onSectionSelect('regular')}
+        onKeyDown={(e) => handleKeyDown(e, 'regular')}
         className="cursor-pointer transition-colors hover:bg-accent"
         aria-label="Select Regular section type"
       >
@@ -40,8 +40,8 @@ export const SectionSelectionPanel = ({ onSectionSelect }: SectionSelectionPanel
       <Card
         role="button"
         tabIndex={0}
-        onClick={() => onSectionSelect("amrap")}
-        onKeyDown={(e) => handleKeyDown(e, "amrap")}
+        onClick={() => onSectionSelect('amrap')}
+        onKeyDown={(e) => handleKeyDown(e, 'amrap')}
         className="cursor-pointer transition-colors hover:bg-accent"
         aria-label="Select AMRAP section type"
       >
@@ -58,8 +58,8 @@ export const SectionSelectionPanel = ({ onSectionSelect }: SectionSelectionPanel
       <Card
         role="button"
         tabIndex={0}
-        onClick={() => onSectionSelect("timed")}
-        onKeyDown={(e) => handleKeyDown(e, "timed")}
+        onClick={() => onSectionSelect('timed')}
+        onKeyDown={(e) => handleKeyDown(e, 'timed')}
         className="cursor-pointer transition-colors hover:bg-accent"
         aria-label="Select Timed section type"
       >
@@ -74,6 +74,5 @@ export const SectionSelectionPanel = ({ onSectionSelect }: SectionSelectionPanel
         </CardHeader>
       </Card>
     </div>
-  )
-}
-
+  );
+};

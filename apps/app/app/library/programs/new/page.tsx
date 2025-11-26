@@ -1,22 +1,22 @@
-"use client"
+'use client';
 
-import { useRouter } from "next/navigation"
-import { Separator } from "@/components/ui/separator"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
-import { Check, ChevronLeft, X } from "lucide-react"
+import { useRouter } from 'next/navigation';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
+import { Check, ChevronLeft, X } from 'lucide-react';
 
 const CreateProgramPage = () => {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleCancel = () => {
-    router.push("/library/programs")
-  }
+    router.push('/library/programs');
+  };
 
   const handleSave = () => {
     // TODO: Implement save functionality
-    console.log("Save program")
-  }
+    console.log('Save program');
+  };
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -32,9 +32,7 @@ const CreateProgramPage = () => {
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <h1 className="text-[22px] font-semibold truncate">
-            Create a program
-          </h1>
+            <h1 className="text-[22px] font-semibold truncate">Create a program</h1>
           </div>
           <ButtonGroup>
             <Button
@@ -47,11 +45,7 @@ const CreateProgramPage = () => {
               <span>Cancel</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button
-              onClick={handleSave}
-              className="gap-2"
-              aria-label="Save program"
-            >
+            <Button onClick={handleSave} className="gap-2" aria-label="Save program">
               <Check className="size-4" />
               <span>Save</span>
             </Button>
@@ -63,8 +57,7 @@ const CreateProgramPage = () => {
         {/* Create program form content */}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CreateProgramPage
-
+export default CreateProgramPage;

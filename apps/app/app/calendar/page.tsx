@@ -1,5 +1,5 @@
-import { Separator } from "@/components/ui/separator"
-import { Button } from "@/components/ui/button"
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 const CalendarPage = () => {
   return (
@@ -14,15 +14,14 @@ const CalendarPage = () => {
         <div className="flex flex-col items-center gap-4">
           <h2 className="text-2xl font-semibold">Connect your Calendar</h2>
           <p className="text-sm text-muted-foreground text-center max-w-md">
-            You will be able to book sessions directly here and it will sync with your connected calendar.
+            You will be able to book sessions directly here and it will sync with your connected
+            calendar.
           </p>
           <Button className="mt-2">Connect</Button>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CalendarPage
-
-
+export default CalendarPage;
