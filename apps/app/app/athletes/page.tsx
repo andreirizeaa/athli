@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils"
 import { exportToCSV } from "@/lib/csv-export"
 import { AddClientSidePanel } from "./add-client-side-panel"
 import { UploadClientsSidePanel } from "./upload-clients-side-panel"
+import { EditColumnsSidebar } from "@/components/app/edit-columns-sidebar"
 import {
   User,
   Users,
@@ -62,6 +63,7 @@ import {
   ArrowUpNarrowWide,
   ArrowDownWideNarrow,
   Download,
+  Settings,
 } from "lucide-react"
 
 type ColumnId = "lastActivity" | "last7DaysTraining" | "last30DaysTraining" | "category" | "connected" | "email" | "phone" | "country" | "age" | "clientFor"
@@ -77,6 +79,19 @@ const COLUMN_ORDER: ColumnId[] = [
   "country",
   "age",
   "clientFor",
+]
+
+const ATHLETE_COLUMN_DEFINITIONS = [
+  { id: "lastActivity", label: "Last activity", icon: <ClockAlert className="size-3" /> },
+  { id: "last7DaysTraining", label: "L7D Training", icon: <Dumbbell className="size-3" /> },
+  { id: "last30DaysTraining", label: "L30D Training", icon: <Dumbbell className="size-3" /> },
+  { id: "category", label: "Category", icon: <Grid2x2 className="size-3" /> },
+  { id: "connected", label: "Connected?", icon: <HeartPulse className="size-3" /> },
+  { id: "email", label: "Email", icon: <Mail className="size-3" /> },
+  { id: "phone", label: "Phone", icon: <Phone className="size-3" /> },
+  { id: "country", label: "Country", icon: <Globe className="size-3" /> },
+  { id: "age", label: "Age", icon: <User className="size-3" /> },
+  { id: "clientFor", label: "Client For", icon: <ClockAlert className="size-3" /> },
 ]
 
 const getColumnWidth = (colId: ColumnId, format: "class" | "pixel" = "class"): string => {
@@ -146,7 +161,9 @@ const AthletesPage = () => {
   const [connectedFilter, setConnectedFilter] = useState<string | null>(null)
   const [isAddAthleteOpen, setIsAddAthleteOpen] = useState<boolean>(false)
   const [isUploadClientsOpen, setIsUploadClientsOpen] = useState<boolean>(false)
+  const [isEditColumnsOpen, setIsEditColumnsOpen] = useState<boolean>(false)
   const [columnOrder, setColumnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER))
   const [sortColumn, setSortColumn] = useState<ColumnId | "name" | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
   const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false)
@@ -241,6 +258,30 @@ const AthletesPage = () => {
     return queryIndex === normalizedQuery.length
   }
 
+  useEffect(() => {
+    try {
+      const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
+      const athletesPrefs = preferences.athletes
+      if (athletesPrefs) {
+        if (athletesPrefs.visibleColumns && Array.isArray(athletesPrefs.visibleColumns)) {
+          setVisibleColumns(new Set(athletesPrefs.visibleColumns))
+        }
+        if (athletesPrefs.columnOrder && Array.isArray(athletesPrefs.columnOrder)) {
+          setColumnOrder(athletesPrefs.columnOrder)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load column preferences:", error)
+    }
+  }, [])
+
+  const handleColumnsChange = (newVisibleColumns: string[], newColumnOrder: string[]) => {
+    setVisibleColumns(new Set(newVisibleColumns))
+    setColumnOrder(newColumnOrder as ColumnId[])
+  }
+
+  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId))
+
   const filteredAthletes = mockAthletes.filter((athlete) => {
     const matchesSearch = !searchQuery.trim() ||
       isFuzzyMatch(athlete.name, searchQuery) ||
@@ -275,6 +316,18 @@ const AthletesPage = () => {
       }
 
       ;[newOrder[currentIndex], newOrder[newIndex]] = [newOrder[newIndex], newOrder[currentIndex]]
+      
+      try {
+        const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
+        preferences.athletes = {
+          visibleColumns: Array.from(visibleColumns),
+          columnOrder: newOrder,
+        }
+        localStorage.setItem("column_preferences", JSON.stringify(preferences))
+      } catch (error) {
+        console.error("Failed to save column preferences:", error)
+      }
+      
       return newOrder
     })
   }
@@ -815,6 +868,15 @@ const AthletesPage = () => {
             </DropdownMenu>
             <Button
               variant="ghost"
+              onClick={() => setIsEditColumnsOpen(true)}
+              className="gap-2"
+              aria-label="Edit columns"
+            >
+              <Settings className="size-4" />
+              <span>Edit columns</span>
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => {
                 const csvData = filteredAthletes.map((athlete) => ({
                   Name: athlete.name,
@@ -851,7 +913,7 @@ const AthletesPage = () => {
           <Table className="table-fixed border-separate border-spacing-0" style={{ tableLayout: "fixed", width: "100%" }}>
             <colgroup>
               <col style={{ width: "350px", minWidth: "350px", maxWidth: "350px" }} />
-              {columnOrder.map((columnId) => {
+              {filteredColumnOrder.map((columnId) => {
                 return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
               })}
             </colgroup>
@@ -894,7 +956,7 @@ const AthletesPage = () => {
                     </DropdownMenu>
                   </div>
                 </TableHead>
-                {columnOrder.map((columnId) => {
+                {filteredColumnOrder.map((columnId) => {
                   switch (columnId) {
                     case "lastActivity":
                       return (
@@ -1081,7 +1143,7 @@ const AthletesPage = () => {
                         </div>
                       </div>
                     </TableCell>
-                    {columnOrder.map((columnId) => {
+                    {filteredColumnOrder.map((columnId) => {
                       switch (columnId) {
                         case "lastActivity":
                           return (
@@ -1340,6 +1402,16 @@ const AthletesPage = () => {
       </div>
       <AddClientSidePanel open={isAddAthleteOpen} onOpenChange={setIsAddAthleteOpen} />
       <UploadClientsSidePanel open={isUploadClientsOpen} onOpenChange={setIsUploadClientsOpen} />
+      <EditColumnsSidebar
+        open={isEditColumnsOpen}
+        onOpenChange={setIsEditColumnsOpen}
+        gridKey="athletes"
+        columns={ATHLETE_COLUMN_DEFINITIONS}
+        visibleColumns={Array.from(visibleColumns)}
+        columnOrder={columnOrder}
+        pinnedColumns={[]}
+        onColumnsChange={handleColumnsChange}
+      />
     </div>
   )
 }

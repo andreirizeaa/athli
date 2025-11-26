@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -32,6 +32,7 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import { Separator } from "@/components/ui/separator"
 import { SidePanel } from "@/components/app/side-panel"
 import { AssignAthletesList } from "@/components/app/assign-athletes-list"
+import { EditColumnsSidebar } from "@/components/app/edit-columns-sidebar"
 import { cn } from "@/lib/utils"
 import { generateWorkoutFromPrompt } from "@/lib/generate-exercise"
 import { exportToCSV } from "@/lib/csv-export"
@@ -58,6 +59,7 @@ import {
   Sparkles,
   BrainCog,
   Download,
+  Settings,
 } from "lucide-react"
 
 import type { Workout } from "@/components/app/app-shell"
@@ -72,6 +74,15 @@ const COLUMN_ORDER: ColumnId[] = [
   "totalExercises",
   "equipment",
   "created",
+]
+
+const WORKOUT_COLUMN_DEFINITIONS = [
+  { id: "description", label: "Description", icon: <FileText className="size-3" /> },
+  { id: "type", label: "Type", icon: <Tag className="size-3" /> },
+  { id: "length", label: "Length", icon: <Clock className="size-3" /> },
+  { id: "totalExercises", label: "Total Exercises", icon: <Hash className="size-3" /> },
+  { id: "equipment", label: "Equipment", icon: <Wrench className="size-3" /> },
+  { id: "created", label: "Created", icon: <Calendar className="size-3" /> },
 ]
 
 const getColumnWidth = (colId: ColumnId, format: "class" | "pixel" = "class"): string => {
@@ -94,6 +105,8 @@ const WorkoutsPage = () => {
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [lengthFilter, setLengthFilter] = useState<string | null>(null)
   const [columnOrder, setColumnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER))
+  const [isEditColumnsOpen, setIsEditColumnsOpen] = useState<boolean>(false)
   const [sortColumn, setSortColumn] = useState<ColumnId | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false)
@@ -288,6 +301,30 @@ const WorkoutsPage = () => {
 Focus on proper form and progressive overload.`
     setAiPrompt(examplePrompt)
   }
+
+  useEffect(() => {
+    try {
+      const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
+      const workoutsPrefs = preferences.workouts
+      if (workoutsPrefs) {
+        if (workoutsPrefs.visibleColumns && Array.isArray(workoutsPrefs.visibleColumns)) {
+          setVisibleColumns(new Set(workoutsPrefs.visibleColumns))
+        }
+        if (workoutsPrefs.columnOrder && Array.isArray(workoutsPrefs.columnOrder)) {
+          setColumnOrder(workoutsPrefs.columnOrder)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load column preferences:", error)
+    }
+  }, [])
+
+  const handleColumnsChange = (newVisibleColumns: string[], newColumnOrder: string[]) => {
+    setVisibleColumns(new Set(newVisibleColumns))
+    setColumnOrder(newColumnOrder as ColumnId[])
+  }
+
+  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId))
 
   const handleWorkoutRowKeyDown = (
     event: React.KeyboardEvent<HTMLTableRowElement>,
@@ -683,6 +720,15 @@ Focus on proper form and progressive overload.`
             </DropdownMenu>
             <Button
               variant="ghost"
+              onClick={() => setIsEditColumnsOpen(true)}
+              className="gap-2"
+              aria-label="Edit columns"
+            >
+              <Settings className="size-4" />
+              <span>Edit columns</span>
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => {
                 const csvData = filteredWorkouts.map((workout) => ({
                   Program: workout.program,
@@ -715,7 +761,7 @@ Focus on proper form and progressive overload.`
           <Table className="table-fixed border-separate border-spacing-0">
             <colgroup>
               <col style={{ width: "320px" }} />
-              {columnOrder.map((columnId) => {
+              {filteredColumnOrder.map((columnId) => {
                 return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
               })}
             </colgroup>
@@ -734,7 +780,7 @@ Focus on proper form and progressive overload.`
                     </div>
                   </div>
                 </TableHead>
-                {columnOrder.map((columnId) => {
+                {filteredColumnOrder.map((columnId) => {
                   switch (columnId) {
                     case "description":
                       return (
@@ -820,7 +866,7 @@ Focus on proper form and progressive overload.`
                         <span className="font-medium truncate">{workout.program}</span>
                       </div>
                     </TableCell>
-                    {columnOrder.map((columnId) => {
+                    {filteredColumnOrder.map((columnId) => {
                       switch (columnId) {
                         case "description":
                           return (
@@ -973,6 +1019,16 @@ Focus on proper form and progressive overload.`
           programName={selectedDescription.programName}
         />
       )}
+      <EditColumnsSidebar
+        open={isEditColumnsOpen}
+        onOpenChange={setIsEditColumnsOpen}
+        gridKey="workouts"
+        columns={WORKOUT_COLUMN_DEFINITIONS}
+        visibleColumns={Array.from(visibleColumns)}
+        columnOrder={columnOrder}
+        pinnedColumns={[]}
+        onColumnsChange={handleColumnsChange}
+      />
       <SidePanel
         open={isCreateWorkoutOpen}
         onOpenChange={(open) => {

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import { SidePanel } from "@/components/app/side-panel"
 import { AssignAthletesList } from "@/components/app/assign-athletes-list"
+import { EditColumnsSidebar } from "@/components/app/edit-columns-sidebar"
 import { cn } from "@/lib/utils"
 import { exportToCSV } from "@/lib/csv-export"
 import DescriptionModal from "./description-modal"
@@ -60,6 +61,7 @@ import {
   UserPlus,
   HelpCircle,
   Download,
+  Settings,
 } from "lucide-react"
 
 import type { Program } from "@/components/app/app-shell"
@@ -74,6 +76,15 @@ const COLUMN_ORDER: ColumnId[] = [
   "totalExercises",
   "equipment",
   "created",
+]
+
+const PROGRAM_COLUMN_DEFINITIONS = [
+  { id: "description", label: "Description", icon: <FileText className="size-3" /> },
+  { id: "type", label: "Type", icon: <Tag className="size-3" /> },
+  { id: "length", label: "Length", icon: <Clock className="size-3" /> },
+  { id: "totalExercises", label: "Total Exercises", icon: <Hash className="size-3" /> },
+  { id: "equipment", label: "Equipment", icon: <Wrench className="size-3" /> },
+  { id: "created", label: "Created", icon: <Calendar className="size-3" /> },
 ]
 
 const PROGRAM_TYPES = [
@@ -117,6 +128,8 @@ const ProgramsPage = () => {
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [lengthFilter, setLengthFilter] = useState<string | null>(null)
   const [columnOrder, setColumnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER))
+  const [isEditColumnsOpen, setIsEditColumnsOpen] = useState<boolean>(false)
   const [sortColumn, setSortColumn] = useState<ColumnId | null>(null)
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false)
@@ -277,6 +290,30 @@ const ProgramsPage = () => {
 
     return queryIndex === normalizedQuery.length
   }
+
+  useEffect(() => {
+    try {
+      const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
+      const programsPrefs = preferences.programs
+      if (programsPrefs) {
+        if (programsPrefs.visibleColumns && Array.isArray(programsPrefs.visibleColumns)) {
+          setVisibleColumns(new Set(programsPrefs.visibleColumns))
+        }
+        if (programsPrefs.columnOrder && Array.isArray(programsPrefs.columnOrder)) {
+          setColumnOrder(programsPrefs.columnOrder)
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load column preferences:", error)
+    }
+  }, [])
+
+  const handleColumnsChange = (newVisibleColumns: string[], newColumnOrder: string[]) => {
+    setVisibleColumns(new Set(newVisibleColumns))
+    setColumnOrder(newColumnOrder as ColumnId[])
+  }
+
+  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId))
 
   const filteredPrograms = mockPrograms.filter((program) => {
     const matchesSearch = !searchQuery.trim() ||
@@ -597,6 +634,15 @@ const ProgramsPage = () => {
             </DropdownMenu>
             <Button
               variant="ghost"
+              onClick={() => setIsEditColumnsOpen(true)}
+              className="gap-2"
+              aria-label="Edit columns"
+            >
+              <Settings className="size-4" />
+              <span>Edit columns</span>
+            </Button>
+            <Button
+              variant="ghost"
               onClick={() => {
                 const csvData = filteredPrograms.map((program) => ({
                   Program: program.program,
@@ -629,7 +675,7 @@ const ProgramsPage = () => {
           <Table className="table-fixed border-separate border-spacing-0">
             <colgroup>
               <col style={{ width: "320px" }} />
-              {columnOrder.map((columnId) => {
+              {filteredColumnOrder.map((columnId) => {
                 return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
               })}
             </colgroup>
@@ -648,7 +694,7 @@ const ProgramsPage = () => {
                     </div>
                   </div>
                 </TableHead>
-                {columnOrder.map((columnId) => {
+                {filteredColumnOrder.map((columnId) => {
                   switch (columnId) {
                     case "description":
                       return (
@@ -734,7 +780,7 @@ const ProgramsPage = () => {
                         <span className="font-medium truncate">{program.program}</span>
                       </div>
                     </TableCell>
-                    {columnOrder.map((columnId) => {
+                    {filteredColumnOrder.map((columnId) => {
                       switch (columnId) {
                         case "description":
                           return (
@@ -885,6 +931,16 @@ const ProgramsPage = () => {
           onOpenChange={setDescriptionModalOpen}
           description={selectedDescription.description}
           programName={selectedDescription.programName}
+        />
+        <EditColumnsSidebar
+          open={isEditColumnsOpen}
+          onOpenChange={setIsEditColumnsOpen}
+          gridKey="programs"
+          columns={PROGRAM_COLUMN_DEFINITIONS}
+          visibleColumns={Array.from(visibleColumns)}
+          columnOrder={columnOrder}
+          pinnedColumns={[]}
+          onColumnsChange={handleColumnsChange}
         />
       )}
       <SidePanel
