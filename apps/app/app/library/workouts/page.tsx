@@ -4,14 +4,6 @@ import React, { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -32,10 +24,9 @@ import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import { Separator } from "@/components/ui/separator"
 import { SidePanel } from "@/components/app/side-panel"
 import { AssignAthletesList } from "@/components/app/assign-athletes-list"
-import { EditColumnsSidebar } from "@/components/app/edit-columns-sidebar"
+import { DataGrid, type ColumnDefinition, type FilterDefinition } from "@/components/app/data-grid"
 import { cn } from "@/lib/utils"
 import { generateWorkoutFromPrompt } from "@/lib/generate-exercise"
-import { exportToCSV } from "@/lib/csv-export"
 import DescriptionModal from "./description-modal"
 import { BasicInformation } from "./new/basic-information"
 import {
@@ -101,15 +92,12 @@ const getColumnWidth = (colId: ColumnId, format: "class" | "pixel" = "class"): s
 const WorkoutsPage = () => {
   const router = useRouter()
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set())
-  const [searchQuery, setSearchQuery] = useState<string>("")
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [lengthFilter, setLengthFilter] = useState<string | null>(null)
-  const [columnOrder, setColumnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
-  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER))
-  const [isEditColumnsOpen, setIsEditColumnsOpen] = useState<boolean>(false)
-  const [sortColumn, setSortColumn] = useState<ColumnId | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
+  const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
+  const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER))
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false)
+  const itemsPerPage = 25
   const [selectedDescription, setSelectedDescription] = useState<{ description: string; programName: string } | null>(null)
   const [isCreateWorkoutOpen, setIsCreateWorkoutOpen] = useState<boolean>(false)
   const [newWorkoutName, setNewWorkoutName] = useState<string>("")
@@ -302,28 +290,6 @@ Focus on proper form and progressive overload.`
     setAiPrompt(examplePrompt)
   }
 
-  useEffect(() => {
-    try {
-      const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
-      const workoutsPrefs = preferences.workouts
-      if (workoutsPrefs) {
-        if (workoutsPrefs.visibleColumns && Array.isArray(workoutsPrefs.visibleColumns)) {
-          setVisibleColumns(new Set(workoutsPrefs.visibleColumns))
-        }
-        if (workoutsPrefs.columnOrder && Array.isArray(workoutsPrefs.columnOrder)) {
-          setColumnOrder(workoutsPrefs.columnOrder)
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load column preferences:", error)
-    }
-  }, [])
-
-  const handleColumnsChange = (newVisibleColumns: string[], newColumnOrder: string[]) => {
-    setVisibleColumns(new Set(newVisibleColumns))
-    setColumnOrder(newColumnOrder as ColumnId[])
-  }
-
   const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId))
 
   const handleWorkoutRowKeyDown = (
@@ -376,138 +342,6 @@ Focus on proper form and progressive overload.`
     }
   }
 
-  const isFuzzyMatch = (text: string, query: string): boolean => {
-    const normalizedText = text.toLowerCase()
-    const normalizedQuery = query.toLowerCase().trim()
-
-    if (!normalizedQuery) {
-      return true
-    }
-
-    if (normalizedText.includes(normalizedQuery)) {
-      return true
-    }
-
-    let textIndex = 0
-    let queryIndex = 0
-
-    while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
-      if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
-        queryIndex += 1
-      }
-      textIndex += 1
-    }
-
-    return queryIndex === normalizedQuery.length
-  }
-
-  const filteredWorkouts = mockWorkouts.filter((workout) => {
-    const matchesSearch = !searchQuery.trim() ||
-      isFuzzyMatch(workout.program, searchQuery) ||
-      isFuzzyMatch(workout.description, searchQuery) ||
-      isFuzzyMatch(workout.type, searchQuery) ||
-      isFuzzyMatch(workout.equipment, searchQuery)
-
-    const matchesType = !typeFilter || workout.type === typeFilter
-
-    const matchesLength = !lengthFilter || workout.length === lengthFilter
-
-    return matchesSearch && matchesType && matchesLength
-  })
-
-  const handleSort = (columnId: ColumnId, direction: "asc" | "desc") => {
-    setSortColumn(columnId)
-    setSortDirection(direction)
-  }
-
-  const handleMoveColumn = (columnId: ColumnId, direction: "left" | "right") => {
-    setColumnOrder((prev) => {
-      const newOrder = [...prev]
-      const currentIndex = newOrder.indexOf(columnId)
-      const newIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1
-
-      if (newIndex < 0 || newIndex >= newOrder.length) {
-        return prev
-      }
-
-      ;[newOrder[currentIndex], newOrder[newIndex]] = [newOrder[newIndex], newOrder[currentIndex]]
-      return newOrder
-    })
-  }
-
-  const sortedAndFilteredWorkouts = [...filteredWorkouts].sort((a, b) => {
-    if (!sortColumn || !sortDirection) return 0
-
-    let aValue: string | number
-    let bValue: string | number
-
-    switch (sortColumn) {
-      case "description":
-        aValue = a.description
-        bValue = b.description
-        break
-      case "type":
-        aValue = a.type
-        bValue = b.type
-        break
-      case "length":
-        {
-          const aWeeks = parseInt(a.length.split(" ")[0])
-          const bWeeks = parseInt(b.length.split(" ")[0])
-          aValue = isNaN(aWeeks) ? 0 : aWeeks
-          bValue = isNaN(bWeeks) ? 0 : bWeeks
-        }
-        break
-      case "totalExercises":
-        aValue = a.totalExercises
-        bValue = b.totalExercises
-        break
-      case "equipment":
-        aValue = a.equipment
-        bValue = b.equipment
-        break
-      case "created":
-        {
-          const [aDay, aMonth, aYear] = a.created.split("-").map(Number)
-          const [bDay, bMonth, bYear] = b.created.split("-").map(Number)
-          const aDate = new Date(2000 + aYear, aMonth - 1, aDay).getTime()
-          const bDate = new Date(2000 + bYear, bMonth - 1, bDay).getTime()
-          aValue = aDate
-          bValue = bDate
-        }
-        break
-      default:
-        return 0
-    }
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return sortDirection === "asc"
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue)
-    }
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return sortDirection === "asc" ? aValue - bValue : bValue - aValue
-    }
-
-    return 0
-  })
-
-  const isAllSelected = sortedAndFilteredWorkouts.length > 0 && selectedWorkouts.size === sortedAndFilteredWorkouts.length
-  const isIndeterminate = selectedWorkouts.size > 0 && selectedWorkouts.size < sortedAndFilteredWorkouts.length
-
-  const getSelectAllCheckedState = (): boolean => {
-    return isAllSelected
-  }
-
-  const handleToggleAll = () => {
-    if (isAllSelected) {
-      setSelectedWorkouts(new Set())
-    } else {
-      setSelectedWorkouts(new Set(sortedAndFilteredWorkouts.map((workout) => workout.id)))
-    }
-  }
-
   const uniqueTypes = Array.from(new Set(mockWorkouts.map((w) => w.type))).sort()
   const uniqueLengths = Array.from(new Set(mockWorkouts.map((w) => w.length))).sort((a, b) => {
     const aWeeks = parseInt(a.split(" ")[0])
@@ -516,50 +350,258 @@ Focus on proper form and progressive overload.`
     return aWeeks - bWeeks
   })
 
-  const renderColumnHeader = (columnId: ColumnId, icon: React.ReactNode, label: string, tooltip?: string) => {
-    const currentIndex = columnOrder.indexOf(columnId)
-    const isFirst = currentIndex === 0
-    const isLast = currentIndex === columnOrder.length - 1
-    const isSorted = sortColumn === columnId
-    const isAscending = isSorted && sortDirection === "asc"
-    const isDescending = isSorted && sortDirection === "desc"
+  // Create column definitions for DataGrid
+  // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
+  const allColumns: ColumnDefinition<Workout>[] = [
+    {
+      id: "program",
+      label: "Workout",
+      icon: <FileText className="size-3" />,
+      getSortValue: (row) => row.program.toLowerCase(),
+      getSearchValue: (row) => row.program,
+    },
+    ...filteredColumnOrder.map((columnId): ColumnDefinition<Workout> => {
+    switch (columnId) {
+      case "description":
+        return {
+          id: "description",
+          label: "Description",
+          icon: <FileText className="size-3" />,
+          width: { class: getColumnWidth("description", "class"), pixel: getColumnWidth("description", "pixel") },
+          tooltip: "A brief overview of the workout program",
+          getSortValue: (row) => row.description.toLowerCase(),
+          getSearchValue: (row) => `${row.program} ${row.description} ${row.type} ${row.equipment}`,
+          renderCell: (row) => (
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={`View full description for ${row.program}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDescriptionClick(e, row.description, row.program)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleDescriptionClick(e, row.description, row.program)
+                }
+              }}
+              data-no-row-link="true"
+              className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
+            >
+              <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+            </div>
+          ),
+        }
+      case "type":
+        return {
+          id: "type",
+          label: "Type",
+          icon: <Tag className="size-3" />,
+          width: { class: getColumnWidth("type", "class"), pixel: getColumnWidth("type", "pixel") },
+          tooltip: "The category or style of the workout program",
+          getSortValue: (row) => row.type.toLowerCase(),
+          renderCell: (row) => (
+            <div className="flex items-center h-full">
+              <span className="text-sm">{row.type}</span>
+            </div>
+          ),
+        }
+      case "length":
+        return {
+          id: "length",
+          label: "Length",
+          icon: <Clock className="size-3" />,
+          width: { class: getColumnWidth("length", "class"), pixel: getColumnWidth("length", "pixel") },
+          tooltip: "The duration of the workout program",
+          getSortValue: (row) => {
+            const weeks = parseInt(row.length.split(" ")[0])
+            return isNaN(weeks) ? 0 : weeks
+          },
+          renderCell: (row) => (
+            <div className="flex items-center h-full">
+              <span className="text-sm">{row.length}</span>
+            </div>
+          ),
+        }
+      case "totalExercises":
+        return {
+          id: "totalExercises",
+          label: "Total Exercises",
+          icon: <Hash className="size-3" />,
+          width: { class: getColumnWidth("totalExercises", "class"), pixel: getColumnWidth("totalExercises", "pixel") },
+          tooltip: "The number of exercises in the workout program",
+          getSortValue: (row) => row.totalExercises,
+          renderCell: (row) => (
+            <div className="flex items-center w-full">
+              <span className="text-sm">{row.totalExercises}</span>
+            </div>
+          ),
+        }
+      case "equipment":
+        return {
+          id: "equipment",
+          label: "Equipment",
+          icon: <Wrench className="size-3" />,
+          width: { class: getColumnWidth("equipment", "class"), pixel: getColumnWidth("equipment", "pixel") },
+          tooltip: "The equipment required for this workout program",
+          getSortValue: (row) => row.equipment.toLowerCase(),
+          renderCell: (row) => {
+            const equipmentList = row.equipment.split(", ").filter((item) => item.trim() !== "")
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View equipment for ${row.program}`}
+                    data-no-row-link="true"
+                    className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }
+                    }}
+                  >
+                    <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  {equipmentList.map((equipment, index) => (
+                    <DropdownMenuItem
+                      key={index}
+                      className="cursor-default pointer-events-none"
+                    >
+                      {equipment}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          },
+        }
+      case "created":
+        return {
+          id: "created",
+          label: "Created",
+          icon: <Calendar className="size-3" />,
+          width: { class: getColumnWidth("created", "class"), pixel: getColumnWidth("created", "pixel") },
+          tooltip: "The date when the workout program was created",
+          getSortValue: (row) => {
+            const [day, month, year] = row.created.split("-").map(Number)
+            return new Date(2000 + year, month - 1, day).getTime()
+          },
+          renderCell: (row) => (
+            <div className="flex items-center h-full">
+              <span className="text-sm">{formatDate(row.created)}</span>
+            </div>
+          ),
+        }
+      default:
+        return {
+          id: columnId,
+          label: columnId,
+          getSortValue: () => "",
+          renderCell: () => null,
+        }
+    }
+  }),
+  ]
 
-    const headerContent = (
-      <div className="flex items-center gap-2 cursor-pointer h-full w-full">
-        <div className="text-muted-foreground">{icon}</div>
-        <span className="text-xs uppercase text-muted-foreground">{label}</span>
-        {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
-        {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+  const columns: ColumnDefinition<Workout>[] = allColumns
+
+  // Create filter definitions
+  const filters: FilterDefinition<Workout>[] = [
+    {
+      id: "type",
+      label: "Type",
+      icon: <Tag className="size-4" />,
+      options: [
+        { value: "all", label: "All" },
+        ...uniqueTypes.map((type) => ({ value: type, label: type })),
+      ],
+      getFilterValue: (row) => row.type,
+      defaultValue: typeFilter,
+    },
+    {
+      id: "length",
+      label: "Length",
+      icon: <Clock className="size-4" />,
+      options: [
+        { value: "all", label: "All" },
+        ...uniqueLengths.map((length) => ({ value: length, label: length })),
+      ],
+      getFilterValue: (row) => row.length,
+      defaultValue: lengthFilter,
+    },
+  ]
+
+  // Create first column renderer
+  const renderFirstColumn = (workout: Workout, isSelected: boolean) => {
+    return (
+      <div className="flex items-center gap-3 h-full">
+        <div
+          className="flex items-center justify-center h-full"
+          data-no-row-link="true"
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => handleToggleWorkout(workout.id)}
+          />
+        </div>
+        <span className="text-sm truncate">{workout.program}</span>
       </div>
     )
+  }
 
-    const headerWidth = getColumnWidth(columnId, "pixel")
-
+  // Create first column header with sorting
+  const renderFirstColumnHeader = ({
+    isSorted,
+    isAscending,
+    isDescending,
+    onSort,
+    isAllSelected,
+    onToggleAll,
+    enableRowSelection,
+  }: {
+    isSorted: boolean
+    isAscending: boolean
+    isDescending: boolean
+    onSort: (direction: "asc" | "desc") => void
+    isAllSelected: boolean
+    onToggleAll: () => void
+    enableRowSelection: boolean
+  }) => {
     return (
-      <TableHead className={cn("!px-4 !py-0 h-10 border-b", getColumnWidth(columnId, "class"))}>
+      <div className="flex items-center gap-3 h-full w-full">
+        {enableRowSelection && (
+          <Checkbox
+            checked={isAllSelected}
+            onCheckedChange={onToggleAll}
+            aria-label="Select all workouts"
+          />
+        )}
         <DropdownMenu>
-          {tooltip ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  {headerContent}
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent
-                className="whitespace-normal break-words text-left"
-                style={{ maxWidth: headerWidth }}
-              >
-                {tooltip}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <DropdownMenuTrigger asChild>
-              {headerContent}
-            </DropdownMenuTrigger>
-          )}
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
+              <FileText className="size-3 text-muted-foreground" />
+              <span className="text-xs uppercase text-muted-foreground">Workout</span>
+              {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+              {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+            </div>
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem
-              onClick={() => handleSort(columnId, "asc")}
+              onClick={() => onSort("asc")}
               className={cn(isAscending && "bg-accent")}
             >
               <ArrowUpNarrowWide className="size-4 mr-2" />
@@ -567,60 +609,67 @@ Focus on proper form and progressive overload.`
               {isAscending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => handleSort(columnId, "desc")}
+              onClick={() => onSort("desc")}
               className={cn(isDescending && "bg-accent")}
             >
               <ArrowDownWideNarrow className="size-4 mr-2" />
               <span className="flex-1">Sort descending</span>
               {isDescending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleMoveColumn(columnId, "left")}
-              disabled={isFirst}
-            >
-              <ChevronLeft className="size-4 mr-2" />
-              <span>Move left</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleMoveColumn(columnId, "right")}
-              disabled={isLast}
-            >
-              <ChevronRight className="size-4 mr-2" />
-              <span>Move right</span>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </TableHead>
+      </div>
     )
   }
 
+
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-lg font-semibold">Workouts</h1>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground transition-colors translate-y-[1px]"
-                    aria-label="What is a workout?"
-                  >
-                    <HelpCircle className="size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  A workout is a group of exercises and is for one day.
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <p className="text-sm text-foreground">
-              {filteredWorkouts.length} {filteredWorkouts.length === 1 ? "workout" : "workouts"}
-            </p>
-          </div>
+      <DataGrid
+        data={mockWorkouts}
+        columns={columns}
+        getRowId={(row) => row.id}
+        gridKey="workouts"
+        subtitle={(count) => `${count} ${count === 1 ? "workout" : "workouts"}`}
+        itemsPerPage={itemsPerPage}
+        enableSearch={true}
+        searchPlaceholder="Search..."
+        filters={filters}
+        enableEditColumns={true}
+        enableExport={true}
+        exportFileName="workouts.csv"
+        exportDataTransform={(row) => ({
+          Program: row.program,
+          Description: row.description,
+          Type: row.type,
+          Length: row.length,
+          "Total Exercises": row.totalExercises,
+          Equipment: row.equipment,
+          Created: row.created,
+        })}
+        enableRowSelection={true}
+        selectedRowIds={selectedWorkouts}
+        onSelectionChange={setSelectedWorkouts}
+        onRowClick={(row, event) => {
+          const targetElement = event.target as HTMLElement
+          if (targetElement.closest('[data-no-row-link="true"]')) {
+            return
+          }
+          handleNavigateToWorkout(row.id)
+        }}
+        onRowKeyDown={(row, event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            const targetElement = event.target as HTMLElement
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return
+            }
+            event.preventDefault()
+            handleNavigateToWorkout(row.id)
+          }
+        }}
+        defaultColumnOrder={COLUMN_ORDER}
+        defaultVisibleColumns={COLUMN_ORDER}
+        customActions={
           <ButtonGroup>
             <Button
               variant="secondary"
@@ -641,376 +690,16 @@ Focus on proper form and progressive overload.`
               <span>Create workout</span>
             </Button>
           </ButtonGroup>
-        </div>
-      </div>
-      <div className="w-full flex-1 flex flex-col overflow-hidden">
-        <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0">
-          <div className="relative w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn("pl-9 w-full", searchQuery && "pr-9")}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Clear search"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Tag className="size-4" />
-                  <span>Type: {typeFilter || "All"}</span>
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuRadioGroup
-                  value={typeFilter || "all"}
-                  onValueChange={(value) => setTypeFilter(value === "all" ? null : value)}
-                >
-                  <DropdownMenuRadioItem value="all" className={cn(typeFilter === null && "bg-accent")}>
-                    <span className="flex-1">All</span>
-                    {typeFilter === null && <Check className="ml-2 size-4" />}
-                  </DropdownMenuRadioItem>
-                  {uniqueTypes.map((type) => (
-                    <DropdownMenuRadioItem key={type} value={type} className={cn(typeFilter === type && "bg-accent")}>
-                      <span className="flex-1">{type}</span>
-                      {typeFilter === type && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Clock className="size-4" />
-                  <span>Length: {lengthFilter || "All"}</span>
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuRadioGroup
-                  value={lengthFilter || "all"}
-                  onValueChange={(value) => setLengthFilter(value === "all" ? null : value)}
-                >
-                  <DropdownMenuRadioItem value="all" className={cn(lengthFilter === null && "bg-accent")}>
-                    <span className="flex-1">All</span>
-                    {lengthFilter === null && <Check className="ml-2 size-4" />}
-                  </DropdownMenuRadioItem>
-                  {uniqueLengths.map((length) => (
-                    <DropdownMenuRadioItem key={length} value={length} className={cn(lengthFilter === length && "bg-accent")}>
-                      <span className="flex-1">{length}</span>
-                      {lengthFilter === length && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              variant="ghost"
-              onClick={() => setIsEditColumnsOpen(true)}
-              className="gap-2"
-              aria-label="Edit columns"
-            >
-              <Settings className="size-4" />
-              <span>Edit columns</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                const csvData = filteredWorkouts.map((workout) => ({
-                  Program: workout.program,
-                  Description: workout.description,
-                  Type: workout.type,
-                  Length: workout.length,
-                  "Total Exercises": workout.totalExercises,
-                  Equipment: workout.equipment,
-                  Created: workout.created,
-                }))
-                exportToCSV(csvData, "workouts.csv")
-              }}
-              className="gap-2"
-              aria-label="Export workouts to CSV"
-            >
-              <Download className="size-4" />
-              <span>Export</span>
-            </Button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-auto" style={{ paddingBottom: "16px" }}>
-          <style dangerouslySetInnerHTML={{ __html: `
-            tbody tr:hover td:first-child {
-              background-color: hsl(var(--muted)) !important;
-            }
-            tbody tr[style*="background-color"] td:first-child {
-              background-color: hsl(var(--muted)) !important;
-            }
-          ` }} />
-          <Table className="table-fixed border-separate border-spacing-0">
-            <colgroup>
-              <col style={{ width: "320px" }} />
-              {filteredColumnOrder.map((columnId) => {
-                return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
-              })}
-            </colgroup>
-            <TableHeader className="sticky top-0 z-20">
-              <TableRow className="hover:bg-transparent h-10">
-                <TableHead className="!px-4 !py-0 h-10 sticky left-0 z-30 bg-background border-r border-b" style={{ boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)" }}>
-                  <div className="flex items-center gap-3 h-full w-full">
-                    <Checkbox
-                      checked={getSelectAllCheckedState()}
-                      onCheckedChange={handleToggleAll}
-                      aria-label="Select all workouts"
-                    />
-                    <div className="flex items-center gap-2">
-                      <FileText className="size-3 text-muted-foreground" />
-                      <span className="text-xs uppercase text-muted-foreground">Workout</span>
-                    </div>
-                  </div>
-                </TableHead>
-                {filteredColumnOrder.map((columnId) => {
-                  switch (columnId) {
-                    case "description":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <FileText className="size-3" />, "Description", "A brief overview of the workout program")}
-                        </React.Fragment>
-                      )
-                    case "type":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Tag className="size-3" />, "Type", "The category or style of the workout program")}
-                        </React.Fragment>
-                      )
-                    case "length":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Clock className="size-3" />, "Length", "The duration of the workout program")}
-                        </React.Fragment>
-                      )
-                    case "totalExercises":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Hash className="size-3" />, "Total Exercises", "The number of exercises in the workout program")}
-                        </React.Fragment>
-                      )
-                    case "equipment":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Wrench className="size-3" />, "Equipment", "The equipment required for this workout program")}
-                        </React.Fragment>
-                      )
-                    case "created":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Calendar className="size-3" />, "Created", "The date when the workout program was created")}
-                        </React.Fragment>
-                      )
-                    default:
-                      return null
-                  }
-                })}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedAndFilteredWorkouts.map((workout) => {
-                const isSelected = selectedWorkouts.has(workout.id)
-                const isLastRow = sortedAndFilteredWorkouts.indexOf(workout) === sortedAndFilteredWorkouts.length - 1
-
-                return (
-                  <TableRow
-                    key={workout.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open workout ${workout.program}`}
-                    onClick={(event) => handleWorkoutRowClick(event, workout.id)}
-                    onKeyDown={(event) => handleWorkoutRowKeyDown(event, workout.id)}
-                    className={cn(
-                      isSelected && "bg-muted/50",
-                      "cursor-pointer group",
-                      "[&:hover_td]:bg-muted"
-                    )}
-                    style={isSelected ? { backgroundColor: "hsl(var(--muted) / 0.5)" } : undefined}
-                  >
-                    <TableCell 
-                      className={cn(
-                        "!px-4 !py-2 h-[54px] sticky left-0 z-10 border-r border-b",
-                        isSelected ? "!bg-muted" : "group-hover:!bg-muted !bg-background"
-                      )}
-                      style={{
-                        boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)",
-                      }}
-                    >
-                      <div className="flex items-center gap-3 h-full">
-                        <div
-                          className="flex items-center justify-center h-full"
-                          data-no-row-link="true"
-                        >
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => handleToggleWorkout(workout.id)}
-                          />
-                        </div>
-                        <span className="font-medium truncate">{workout.program}</span>
-                      </div>
-                    </TableCell>
-                    {filteredColumnOrder.map((columnId) => {
-                      switch (columnId) {
-                        case "description":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] overflow-hidden border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div
-                                role="button"
-                                tabIndex={0}
-                                aria-label={`View full description for ${workout.program}`}
-                                onClick={(e) => handleDescriptionClick(e, workout.description, workout.program)}
-                                onKeyDown={(e) => handleDescriptionKeyDown(e, workout.description, workout.program)}
-                                data-no-row-link="true"
-                                className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                              >
-                                <span className="text-sm truncate block min-w-0 w-full">{workout.description}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "type":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center h-full">
-                                <span className="text-sm">{workout.type}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "length":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center h-full">
-                                <span className="text-sm">{workout.length}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "totalExercises":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !h-[54px] align-middle border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center w-full">
-                                <span className="text-sm">{workout.totalExercises}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "equipment":
-                          const equipmentList = workout.equipment.split(", ").filter((item) => item.trim() !== "")
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] overflow-hidden border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <div
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={`View equipment for ${workout.program}`}
-                                    data-no-row-link="true"
-                                    className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                      }
-                                    }}
-                                  >
-                                    <span className="text-sm truncate block min-w-0 w-full">{workout.equipment}</span>
-                                  </div>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="start"
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => e.stopPropagation()}
-                                >
-                                  {equipmentList.map((equipment, index) => (
-                                    <DropdownMenuItem
-                                      key={index}
-                                      className="cursor-default pointer-events-none"
-                                    >
-                                      {equipment}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          )
-                        case "created":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center h-full">
-                                <span className="text-sm">{formatDate(workout.created)}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        default:
-                          return null
-                      }
-                    })}
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+        }
+        emptyMessage="No workouts found."
+        rowHeight="54px"
+        stickyFirstColumn={true}
+        firstColumnWidth="320px"
+        firstColumnId="program"
+        renderFirstColumn={renderFirstColumn}
+        renderFirstColumnHeader={renderFirstColumnHeader}
+        showPagination={true}
+      />
       {selectedDescription && (
         <DescriptionModal
           open={descriptionModalOpen}
@@ -1019,16 +708,6 @@ Focus on proper form and progressive overload.`
           programName={selectedDescription.programName}
         />
       )}
-      <EditColumnsSidebar
-        open={isEditColumnsOpen}
-        onOpenChange={setIsEditColumnsOpen}
-        gridKey="workouts"
-        columns={WORKOUT_COLUMN_DEFINITIONS}
-        visibleColumns={Array.from(visibleColumns)}
-        columnOrder={columnOrder}
-        pinnedColumns={[]}
-        onColumnsChange={handleColumnsChange}
-      />
       <SidePanel
         open={isCreateWorkoutOpen}
         onOpenChange={(open) => {

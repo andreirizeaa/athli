@@ -4,14 +4,6 @@ import React, { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -38,9 +30,8 @@ import { Button } from "@/components/ui/button"
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
 import { SidePanel } from "@/components/app/side-panel"
 import { AssignAthletesList } from "@/components/app/assign-athletes-list"
-import { EditColumnsSidebar } from "@/components/app/edit-columns-sidebar"
+import { DataGrid, type ColumnDefinition, type FilterDefinition } from "@/components/app/data-grid"
 import { cn } from "@/lib/utils"
-import { exportToCSV } from "@/lib/csv-export"
 import DescriptionModal from "./description-modal"
 import {
   Search,
@@ -124,15 +115,12 @@ const getColumnWidth = (colId: ColumnId, format: "class" | "pixel" = "class"): s
 const ProgramsPage = () => {
   const router = useRouter()
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set())
-  const [searchQuery, setSearchQuery] = useState<string>("")
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [lengthFilter, setLengthFilter] = useState<string | null>(null)
-  const [columnOrder, setColumnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
-  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER))
-  const [isEditColumnsOpen, setIsEditColumnsOpen] = useState<boolean>(false)
-  const [sortColumn, setSortColumn] = useState<ColumnId | null>(null)
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null)
+  const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER)
+  const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER))
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false)
+  const itemsPerPage = 25
   const [selectedDescription, setSelectedDescription] = useState<{ description: string; programName: string } | null>(null)
   const [isCreateProgramOpen, setIsCreateProgramOpen] = useState<boolean>(false)
   const [newProgramName, setNewProgramName] = useState<string>("")
@@ -291,136 +279,7 @@ const ProgramsPage = () => {
     return queryIndex === normalizedQuery.length
   }
 
-  useEffect(() => {
-    try {
-      const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
-      const programsPrefs = preferences.programs
-      if (programsPrefs) {
-        if (programsPrefs.visibleColumns && Array.isArray(programsPrefs.visibleColumns)) {
-          setVisibleColumns(new Set(programsPrefs.visibleColumns))
-        }
-        if (programsPrefs.columnOrder && Array.isArray(programsPrefs.columnOrder)) {
-          setColumnOrder(programsPrefs.columnOrder)
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load column preferences:", error)
-    }
-  }, [])
-
-  const handleColumnsChange = (newVisibleColumns: string[], newColumnOrder: string[]) => {
-    setVisibleColumns(new Set(newVisibleColumns))
-    setColumnOrder(newColumnOrder as ColumnId[])
-  }
-
   const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId))
-
-  const filteredPrograms = mockPrograms.filter((program) => {
-    const matchesSearch = !searchQuery.trim() ||
-      isFuzzyMatch(program.program, searchQuery) ||
-      isFuzzyMatch(program.description, searchQuery) ||
-      isFuzzyMatch(program.type, searchQuery) ||
-      isFuzzyMatch(program.equipment, searchQuery)
-
-    const matchesType = !typeFilter || program.type === typeFilter
-
-    const matchesLength = !lengthFilter || program.length === lengthFilter
-
-    return matchesSearch && matchesType && matchesLength
-  })
-
-  const handleSort = (columnId: ColumnId, direction: "asc" | "desc") => {
-    setSortColumn(columnId)
-    setSortDirection(direction)
-  }
-
-  const handleMoveColumn = (columnId: ColumnId, direction: "left" | "right") => {
-    setColumnOrder((prev) => {
-      const newOrder = [...prev]
-      const currentIndex = newOrder.indexOf(columnId)
-      const newIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1
-
-      if (newIndex < 0 || newIndex >= newOrder.length) {
-        return prev
-      }
-
-      ;[newOrder[currentIndex], newOrder[newIndex]] = [newOrder[newIndex], newOrder[currentIndex]]
-      return newOrder
-    })
-  }
-
-  const sortedAndFilteredPrograms = [...filteredPrograms].sort((a, b) => {
-    if (!sortColumn || !sortDirection) return 0
-
-    let aValue: string | number
-    let bValue: string | number
-
-    switch (sortColumn) {
-      case "description":
-        aValue = a.description
-        bValue = b.description
-        break
-      case "type":
-        aValue = a.type
-        bValue = b.type
-        break
-      case "length":
-        {
-          const aWeeks = parseInt(a.length.split(" ")[0])
-          const bWeeks = parseInt(b.length.split(" ")[0])
-          aValue = isNaN(aWeeks) ? 0 : aWeeks
-          bValue = isNaN(bWeeks) ? 0 : bWeeks
-        }
-        break
-      case "totalExercises":
-        aValue = a.totalExercises
-        bValue = b.totalExercises
-        break
-      case "equipment":
-        aValue = a.equipment
-        bValue = b.equipment
-        break
-      case "created":
-        {
-          const [aDay, aMonth, aYear] = a.created.split("-").map(Number)
-          const [bDay, bMonth, bYear] = b.created.split("-").map(Number)
-          const aDate = new Date(2000 + aYear, aMonth - 1, aDay).getTime()
-          const bDate = new Date(2000 + bYear, bMonth - 1, bDay).getTime()
-          aValue = aDate
-          bValue = bDate
-        }
-        break
-      default:
-        return 0
-    }
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return sortDirection === "asc"
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue)
-    }
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return sortDirection === "asc" ? aValue - bValue : bValue - aValue
-    }
-
-    return 0
-  })
-
-  const isAllSelected = sortedAndFilteredPrograms.length > 0 && selectedPrograms.size === sortedAndFilteredPrograms.length
-  const isIndeterminate = selectedPrograms.size > 0 && selectedPrograms.size < sortedAndFilteredPrograms.length
-
-  const getSelectAllCheckedState = (): boolean => {
-    return isAllSelected
-  }
-
-  const handleToggleAll = () => {
-    if (isAllSelected) {
-      setSelectedPrograms(new Set())
-    } else {
-      setSelectedPrograms(new Set(sortedAndFilteredPrograms.map((program) => program.id)))
-    }
-  }
 
   const uniqueTypes = Array.from(new Set(mockPrograms.map((w) => w.type))).sort()
   const uniqueLengths = Array.from(new Set(mockPrograms.map((w) => w.length))).sort((a, b) => {
@@ -430,50 +289,258 @@ const ProgramsPage = () => {
     return aWeeks - bWeeks
   })
 
-  const renderColumnHeader = (columnId: ColumnId, icon: React.ReactNode, label: string, tooltip?: string) => {
-    const currentIndex = columnOrder.indexOf(columnId)
-    const isFirst = currentIndex === 0
-    const isLast = currentIndex === columnOrder.length - 1
-    const isSorted = sortColumn === columnId
-    const isAscending = isSorted && sortDirection === "asc"
-    const isDescending = isSorted && sortDirection === "desc"
+  // Create column definitions for DataGrid
+  // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
+  const allColumns: ColumnDefinition<Program>[] = [
+    {
+      id: "program",
+      label: "Program",
+      icon: <FileText className="size-3" />,
+      getSortValue: (row) => row.program.toLowerCase(),
+      getSearchValue: (row) => row.program,
+    },
+    ...filteredColumnOrder.map((columnId): ColumnDefinition<Program> => {
+    switch (columnId) {
+      case "description":
+        return {
+          id: "description",
+          label: "Description",
+          icon: <FileText className="size-3" />,
+          width: { class: getColumnWidth("description", "class"), pixel: getColumnWidth("description", "pixel") },
+          tooltip: "A brief overview of the program",
+          getSortValue: (row) => row.description.toLowerCase(),
+          getSearchValue: (row) => `${row.program} ${row.description} ${row.type} ${row.equipment}`,
+          renderCell: (row) => (
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label={`View full description for ${row.program}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDescriptionClick(e, row.description, row.program)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleDescriptionClick(e, row.description, row.program)
+                }
+              }}
+              data-no-row-link="true"
+              className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
+            >
+              <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+            </div>
+          ),
+        }
+      case "type":
+        return {
+          id: "type",
+          label: "Type",
+          icon: <Tag className="size-3" />,
+          width: { class: getColumnWidth("type", "class"), pixel: getColumnWidth("type", "pixel") },
+          tooltip: "The category or style of the program",
+          getSortValue: (row) => row.type.toLowerCase(),
+          renderCell: (row) => (
+            <div className="flex items-center h-full">
+              <span className="text-sm">{row.type}</span>
+            </div>
+          ),
+        }
+      case "length":
+        return {
+          id: "length",
+          label: "Length",
+          icon: <Clock className="size-3" />,
+          width: { class: getColumnWidth("length", "class"), pixel: getColumnWidth("length", "pixel") },
+          tooltip: "The duration of the program",
+          getSortValue: (row) => {
+            const weeks = parseInt(row.length.split(" ")[0])
+            return isNaN(weeks) ? 0 : weeks
+          },
+          renderCell: (row) => (
+            <div className="flex items-center h-full">
+              <span className="text-sm">{row.length}</span>
+            </div>
+          ),
+        }
+      case "totalExercises":
+        return {
+          id: "totalExercises",
+          label: "Total Exercises",
+          icon: <Hash className="size-3" />,
+          width: { class: getColumnWidth("totalExercises", "class"), pixel: getColumnWidth("totalExercises", "pixel") },
+          tooltip: "The number of exercises in the program",
+          getSortValue: (row) => row.totalExercises,
+          renderCell: (row) => (
+            <div className="flex items-center w-full">
+              <span className="text-sm">{row.totalExercises}</span>
+            </div>
+          ),
+        }
+      case "equipment":
+        return {
+          id: "equipment",
+          label: "Equipment",
+          icon: <Wrench className="size-3" />,
+          width: { class: getColumnWidth("equipment", "class"), pixel: getColumnWidth("equipment", "pixel") },
+          tooltip: "The equipment required for this program",
+          getSortValue: (row) => row.equipment.toLowerCase(),
+          renderCell: (row) => {
+            const equipmentList = row.equipment.split(", ").filter((item) => item.trim() !== "")
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View equipment for ${row.program}`}
+                    data-no-row-link="true"
+                    className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }
+                    }}
+                  >
+                    <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  {equipmentList.map((equipment, index) => (
+                    <DropdownMenuItem
+                      key={index}
+                      className="cursor-default pointer-events-none"
+                    >
+                      {equipment}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          },
+        }
+      case "created":
+        return {
+          id: "created",
+          label: "Created",
+          icon: <Calendar className="size-3" />,
+          width: { class: getColumnWidth("created", "class"), pixel: getColumnWidth("created", "pixel") },
+          tooltip: "The date when the program was created",
+          getSortValue: (row) => {
+            const [day, month, year] = row.created.split("-").map(Number)
+            return new Date(2000 + year, month - 1, day).getTime()
+          },
+          renderCell: (row) => (
+            <div className="flex items-center h-full">
+              <span className="text-sm">{formatDate(row.created)}</span>
+            </div>
+          ),
+        }
+      default:
+        return {
+          id: columnId,
+          label: columnId,
+          getSortValue: () => "",
+          renderCell: () => null,
+        }
+    }
+  }),
+  ]
 
-    const headerContent = (
-      <div className="flex items-center gap-2 cursor-pointer h-full w-full">
-        <div className="text-muted-foreground">{icon}</div>
-        <span className="text-xs uppercase text-muted-foreground">{label}</span>
-        {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
-        {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+  const columns: ColumnDefinition<Program>[] = allColumns
+
+  // Create filter definitions
+  const filters: FilterDefinition<Program>[] = [
+    {
+      id: "type",
+      label: "Type",
+      icon: <Tag className="size-4" />,
+      options: [
+        { value: "all", label: "All" },
+        ...uniqueTypes.map((type) => ({ value: type, label: type })),
+      ],
+      getFilterValue: (row) => row.type,
+      defaultValue: typeFilter,
+    },
+    {
+      id: "length",
+      label: "Length",
+      icon: <Clock className="size-4" />,
+      options: [
+        { value: "all", label: "All" },
+        ...uniqueLengths.map((length) => ({ value: length, label: length })),
+      ],
+      getFilterValue: (row) => row.length,
+      defaultValue: lengthFilter,
+    },
+  ]
+
+  // Create first column renderer
+  const renderFirstColumn = (program: Program, isSelected: boolean) => {
+    return (
+      <div className="flex items-center gap-3 h-full">
+        <div
+          className="flex items-center justify-center h-full"
+          data-no-row-link="true"
+        >
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => handleToggleProgram(program.id)}
+          />
+        </div>
+        <span className="text-sm truncate">{program.program}</span>
       </div>
     )
+  }
 
-    const headerWidth = getColumnWidth(columnId, "pixel")
-
+  // Create first column header with sorting
+  const renderFirstColumnHeader = ({
+    isSorted,
+    isAscending,
+    isDescending,
+    onSort,
+    isAllSelected,
+    onToggleAll,
+    enableRowSelection,
+  }: {
+    isSorted: boolean
+    isAscending: boolean
+    isDescending: boolean
+    onSort: (direction: "asc" | "desc") => void
+    isAllSelected: boolean
+    onToggleAll: () => void
+    enableRowSelection: boolean
+  }) => {
     return (
-      <TableHead className={cn("!px-4 !py-0 h-10 border-b", getColumnWidth(columnId, "class"))}>
+      <div className="flex items-center gap-3 h-full w-full">
+        {enableRowSelection && (
+          <Checkbox
+            checked={isAllSelected}
+            onCheckedChange={onToggleAll}
+            aria-label="Select all programs"
+          />
+        )}
         <DropdownMenu>
-          {tooltip ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  {headerContent}
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent
-                className="whitespace-normal break-words text-left"
-                style={{ maxWidth: headerWidth }}
-              >
-                {tooltip}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <DropdownMenuTrigger asChild>
-              {headerContent}
-            </DropdownMenuTrigger>
-          )}
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
+              <FileText className="size-3 text-muted-foreground" />
+              <span className="text-xs uppercase text-muted-foreground">Program</span>
+              {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+              {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+            </div>
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem
-              onClick={() => handleSort(columnId, "asc")}
+              onClick={() => onSort("asc")}
               className={cn(isAscending && "bg-accent")}
             >
               <ArrowUpNarrowWide className="size-4 mr-2" />
@@ -481,60 +548,66 @@ const ProgramsPage = () => {
               {isAscending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => handleSort(columnId, "desc")}
+              onClick={() => onSort("desc")}
               className={cn(isDescending && "bg-accent")}
             >
               <ArrowDownWideNarrow className="size-4 mr-2" />
               <span className="flex-1">Sort descending</span>
               {isDescending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleMoveColumn(columnId, "left")}
-              disabled={isFirst}
-            >
-              <ChevronLeft className="size-4 mr-2" />
-              <span>Move left</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleMoveColumn(columnId, "right")}
-              disabled={isLast}
-            >
-              <ChevronRight className="size-4 mr-2" />
-              <span>Move right</span>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </TableHead>
+      </div>
     )
   }
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <h1 className="text-lg font-semibold">Programs</h1>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground transition-colors translate-y-[1px]"
-                    aria-label="What is a program?"
-                  >
-                    <HelpCircle className="size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  A program is a group of workouts and can span multiple weeks.
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <p className="text-sm text-foreground">
-              {filteredPrograms.length} {filteredPrograms.length === 1 ? "program" : "programs"}
-            </p>
-          </div>
+      <DataGrid
+        data={mockPrograms}
+        columns={columns}
+        getRowId={(row) => row.id}
+        gridKey="programs"
+        subtitle={(count) => `${count} ${count === 1 ? "program" : "programs"}`}
+        itemsPerPage={itemsPerPage}
+        enableSearch={true}
+        searchPlaceholder="Search..."
+        filters={filters}
+        enableEditColumns={true}
+        enableExport={true}
+        exportFileName="programs.csv"
+        exportDataTransform={(row) => ({
+          Program: row.program,
+          Description: row.description,
+          Type: row.type,
+          Length: row.length,
+          "Total Exercises": row.totalExercises,
+          Equipment: row.equipment,
+          Created: row.created,
+        })}
+        enableRowSelection={true}
+        selectedRowIds={selectedPrograms}
+        onSelectionChange={setSelectedPrograms}
+        onRowClick={(row, event) => {
+          const targetElement = event.target as HTMLElement
+          if (targetElement.closest('[data-no-row-link="true"]')) {
+            return
+          }
+          handleNavigateToProgram(row.id)
+        }}
+        onRowKeyDown={(row, event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            const targetElement = event.target as HTMLElement
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return
+            }
+            event.preventDefault()
+            handleNavigateToProgram(row.id)
+          }
+        }}
+        defaultColumnOrder={COLUMN_ORDER}
+        defaultVisibleColumns={COLUMN_ORDER}
+        customActions={
           <ButtonGroup>
             <Button
               variant="secondary"
@@ -555,392 +628,22 @@ const ProgramsPage = () => {
               <span>Create program</span>
             </Button>
           </ButtonGroup>
-        </div>
-      </div>
-      <div className="w-full flex-1 flex flex-col overflow-hidden">
-        <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0">
-          <div className="relative w-[250px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn("pl-9 w-full", searchQuery && "pr-9")}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Clear search"
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Tag className="size-4" />
-                  <span>Type: {typeFilter || "All"}</span>
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuRadioGroup
-                  value={typeFilter || "all"}
-                  onValueChange={(value) => setTypeFilter(value === "all" ? null : value)}
-                >
-                  <DropdownMenuRadioItem value="all" className={cn(typeFilter === null && "bg-accent")}>
-                    <span className="flex-1">All</span>
-                    {typeFilter === null && <Check className="ml-2 size-4" />}
-                  </DropdownMenuRadioItem>
-                  {uniqueTypes.map((type) => (
-                    <DropdownMenuRadioItem key={type} value={type} className={cn(typeFilter === type && "bg-accent")}>
-                      <span className="flex-1">{type}</span>
-                      {typeFilter === type && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Clock className="size-4" />
-                  <span>Length: {lengthFilter || "All"}</span>
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuRadioGroup
-                  value={lengthFilter || "all"}
-                  onValueChange={(value) => setLengthFilter(value === "all" ? null : value)}
-                >
-                  <DropdownMenuRadioItem value="all" className={cn(lengthFilter === null && "bg-accent")}>
-                    <span className="flex-1">All</span>
-                    {lengthFilter === null && <Check className="ml-2 size-4" />}
-                  </DropdownMenuRadioItem>
-                  {uniqueLengths.map((length) => (
-                    <DropdownMenuRadioItem key={length} value={length} className={cn(lengthFilter === length && "bg-accent")}>
-                      <span className="flex-1">{length}</span>
-                      {lengthFilter === length && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              variant="ghost"
-              onClick={() => setIsEditColumnsOpen(true)}
-              className="gap-2"
-              aria-label="Edit columns"
-            >
-              <Settings className="size-4" />
-              <span>Edit columns</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                const csvData = filteredPrograms.map((program) => ({
-                  Program: program.program,
-                  Description: program.description,
-                  Type: program.type,
-                  Length: program.length,
-                  "Total Exercises": program.totalExercises,
-                  Equipment: program.equipment,
-                  Created: program.created,
-                }))
-                exportToCSV(csvData, "programs.csv")
-              }}
-              className="gap-2"
-              aria-label="Export programs to CSV"
-            >
-              <Download className="size-4" />
-              <span>Export</span>
-            </Button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-auto" style={{ paddingBottom: "16px" }}>
-          <style dangerouslySetInnerHTML={{ __html: `
-            tbody tr:hover td:first-child {
-              background-color: hsl(var(--muted)) !important;
-            }
-            tbody tr[style*="background-color"] td:first-child {
-              background-color: hsl(var(--muted)) !important;
-            }
-          ` }} />
-          <Table className="table-fixed border-separate border-spacing-0">
-            <colgroup>
-              <col style={{ width: "320px" }} />
-              {filteredColumnOrder.map((columnId) => {
-                return <col key={columnId} style={{ width: getColumnWidth(columnId, "pixel") }} />
-              })}
-            </colgroup>
-            <TableHeader className="sticky top-0 z-20">
-              <TableRow className="hover:bg-transparent h-10">
-                <TableHead className="!px-4 !py-0 h-10 sticky left-0 z-30 bg-background border-r border-b" style={{ boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)" }}>
-                  <div className="flex items-center gap-3 h-full w-full">
-                    <Checkbox
-                      checked={getSelectAllCheckedState()}
-                      onCheckedChange={handleToggleAll}
-                      aria-label="Select all programs"
-                    />
-                    <div className="flex items-center gap-2">
-                      <FileText className="size-3 text-muted-foreground" />
-                      <span className="text-xs uppercase text-muted-foreground">Program</span>
-                    </div>
-                  </div>
-                </TableHead>
-                {filteredColumnOrder.map((columnId) => {
-                  switch (columnId) {
-                    case "description":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <FileText className="size-3" />, "Description", "A brief overview of the program")}
-                        </React.Fragment>
-                      )
-                    case "type":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Tag className="size-3" />, "Type", "The category or style of the program")}
-                        </React.Fragment>
-                      )
-                    case "length":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Clock className="size-3" />, "Length", "The duration of the program")}
-                        </React.Fragment>
-                      )
-                    case "totalExercises":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Hash className="size-3" />, "Total Exercises", "The number of exercises in the program")}
-                        </React.Fragment>
-                      )
-                    case "equipment":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Wrench className="size-3" />, "Equipment", "The equipment required for this program")}
-                        </React.Fragment>
-                      )
-                    case "created":
-                      return (
-                        <React.Fragment key={columnId}>
-                          {renderColumnHeader(columnId, <Calendar className="size-3" />, "Created", "The date when the program was created")}
-                        </React.Fragment>
-                      )
-                    default:
-                      return null
-                  }
-                })}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedAndFilteredPrograms.map((program) => {
-                const isSelected = selectedPrograms.has(program.id)
-                const isLastRow = sortedAndFilteredPrograms.indexOf(program) === sortedAndFilteredPrograms.length - 1
-
-                return (
-                  <TableRow
-                    key={program.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open program ${program.program}`}
-                    onClick={(event) => handleProgramRowClick(event, program.id)}
-                    onKeyDown={(event) => handleProgramRowKeyDown(event, program.id)}
-                    className={cn(
-                      isSelected && "bg-muted/50",
-                      "cursor-pointer group",
-                      "[&:hover_td]:bg-muted"
-                    )}
-                    style={isSelected ? { backgroundColor: "hsl(var(--muted) / 0.5)" } : undefined}
-                  >
-                    <TableCell 
-                      className={cn(
-                        "!px-4 !py-2 h-[54px] sticky left-0 z-10 border-r border-b",
-                        isSelected ? "!bg-muted" : "group-hover:!bg-muted !bg-background"
-                      )}
-                      style={{
-                        boxShadow: "2px 0 4px -2px rgba(0, 0, 0, 0.1)",
-                      }}
-                    >
-                      <div className="flex items-center gap-3 h-full">
-                        <div
-                          className="flex items-center justify-center h-full"
-                          data-no-row-link="true"
-                        >
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => handleToggleProgram(program.id)}
-                          />
-                        </div>
-                        <span className="font-medium truncate">{program.program}</span>
-                      </div>
-                    </TableCell>
-                    {filteredColumnOrder.map((columnId) => {
-                      switch (columnId) {
-                        case "description":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] overflow-hidden border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div
-                                role="button"
-                                tabIndex={0}
-                                aria-label={`View full description for ${program.program}`}
-                                onClick={(e) => handleDescriptionClick(e, program.description, program.program)}
-                                onKeyDown={(e) => handleDescriptionKeyDown(e, program.description, program.program)}
-                                data-no-row-link="true"
-                                className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                              >
-                                <span className="text-sm truncate block min-w-0 w-full">{program.description}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "type":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center h-full">
-                                <span className="text-sm">{program.type}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "length":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center h-full">
-                                <span className="text-sm">{program.length}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "totalExercises":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !h-[54px] align-middle border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center w-full">
-                                <span className="text-sm">{program.totalExercises}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        case "equipment":
-                          const equipmentList = program.equipment.split(", ").filter((item) => item.trim() !== "")
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] overflow-hidden border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <div
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={`View equipment for ${program.program}`}
-                                    data-no-row-link="true"
-                                    className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                      }
-                                    }}
-                                  >
-                                    <span className="text-sm truncate block min-w-0 w-full">{program.equipment}</span>
-                                  </div>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="start"
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => e.stopPropagation()}
-                                >
-                                  {equipmentList.map((equipment, index) => (
-                                    <DropdownMenuItem
-                                      key={index}
-                                      className="cursor-default pointer-events-none"
-                                    >
-                                      {equipment}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          )
-                        case "created":
-                          return (
-                            <TableCell
-                              key={columnId}
-                              className={cn(
-                                "!px-4 !py-2 h-[54px] border-b",
-                                isSelected ? "!bg-muted" : "group-hover:!bg-muted",
-                                getColumnWidth(columnId, "class")
-                              )}
-                            >
-                              <div className="flex items-center h-full">
-                                <span className="text-sm">{formatDate(program.created)}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        default:
-                          return null
-                      }
-                    })}
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+        }
+        emptyMessage="No programs found."
+        rowHeight="54px"
+        stickyFirstColumn={true}
+        firstColumnWidth="320px"
+        firstColumnId="program"
+        renderFirstColumn={renderFirstColumn}
+        renderFirstColumnHeader={renderFirstColumnHeader}
+        showPagination={true}
+      />
       {selectedDescription && (
         <DescriptionModal
           open={descriptionModalOpen}
           onOpenChange={setDescriptionModalOpen}
           description={selectedDescription.description}
           programName={selectedDescription.programName}
-        />
-        <EditColumnsSidebar
-          open={isEditColumnsOpen}
-          onOpenChange={setIsEditColumnsOpen}
-          gridKey="programs"
-          columns={PROGRAM_COLUMN_DEFINITIONS}
-          visibleColumns={Array.from(visibleColumns)}
-          columnOrder={columnOrder}
-          pinnedColumns={[]}
-          onColumnsChange={handleColumnsChange}
         />
       )}
       <SidePanel

@@ -12,14 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -47,6 +39,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
 import { SidePanel } from '@/components/app/side-panel'
 import { AssignAthletesList } from '@/components/app/assign-athletes-list'
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid'
 import {
   Tooltip,
   TooltipContent,
@@ -338,6 +331,16 @@ const MessagingPage = () => {
       (contact) =>
         contact.name.toLowerCase().includes(query) ||
         contact.lastMessage.toLowerCase().includes(query)
+    )
+  }, [searchQuery])
+
+  const filteredAthletes = React.useMemo(() => {
+    if (!searchQuery.trim()) return mockAthletes
+    const query = searchQuery.toLowerCase()
+    return mockAthletes.filter(
+      (athlete) =>
+        athlete.name.toLowerCase().includes(query) ||
+        athlete.email.toLowerCase().includes(query)
     )
   }, [searchQuery])
 
@@ -1518,8 +1521,8 @@ const MessagingPage = () => {
                     className="gap-2 h-9"
                     aria-label="Sort messages"
                   >
-                    <ChevronDown className="size-4" />
                     Sort: {sortFilter === 'all' ? 'All' : sortFilter === 'unread' ? 'Unread' : sortFilter === 'read' ? 'Read' : 'Oldest'}
+                    <ChevronDown className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -1559,126 +1562,86 @@ const MessagingPage = () => {
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
           {/* Left Column - Athletes Table */}
-          <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-            <div className="mt-[1px]">
-              <Table className="table-fixed border-separate border-spacing-0" style={{ tableLayout: "fixed", width: "100%" }}>
-                <colgroup>
-                  <col style={{ width: "100%" }} />
-                </colgroup>
-                <TableHeader className="sticky top-0 z-20">
-                  <TableRow className="hover:bg-transparent h-10">
-                    <TableHead className="!px-4 !py-0 h-10 border-b bg-background">
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
-                              <User className="size-3 text-muted-foreground" />
-                              <span className="text-xs uppercase text-muted-foreground">Athlete</span>
-                            </div>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            <DropdownMenuItem>
-                              <ArrowUpNarrowWide className="size-4 mr-2" />
-                              <span className="flex-1">Sort ascending</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <ArrowDownWideNarrow className="size-4 mr-2" />
-                              <span className="flex-1">Sort descending</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockAthletes
-                    .filter((athlete) => {
-                      if (!searchQuery.trim()) return true
-                      const query = searchQuery.toLowerCase()
-                      return athlete.name.toLowerCase().includes(query)
-                    })
-                    .map((athlete) => {
-                      const isSelected = selectedContactId === athlete.id
-                      const initials = athlete.name
-                        .split(" ")
-                        .map((part) => part.charAt(0).toUpperCase())
-                        .slice(0, 2)
-                        .join("")
-
-                      return (
-                        <TableRow
-                          key={athlete.id}
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`Open conversation with ${athlete.name}`}
-                          onClick={() => {
-                            // Find or create contact for this athlete
-                            let contact = mockContacts.find((c) => c.id === athlete.id)
-                            if (!contact) {
-                              // Create a contact from athlete data
-                              contact = {
-                                id: athlete.id,
-                                name: athlete.name,
-                                avatar: athlete.avatar,
-                                lastMessage: "",
-                                timestamp: "",
-                                unreadCount: 0,
-                                isOnline: false,
-                              }
-                            }
-                            router.push(`/messaging/${contact.id}`)
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault()
-                              let contact = mockContacts.find((c) => c.id === athlete.id)
-                              if (!contact) {
-                                contact = {
-                                  id: athlete.id,
-                                  name: athlete.name,
-                                  avatar: athlete.avatar,
-                                  lastMessage: "",
-                                  timestamp: "",
-                                  unreadCount: 0,
-                                  isOnline: false,
-                                }
-                              }
-                              router.push(`/messaging/${contact.id}`)
-                            }
-                          }}
-                          className={cn(
-                            isSelected && "bg-muted/50",
-                            "cursor-pointer !h-[54px] group",
-                            "[&:hover_td]:bg-muted"
-                          )}
-                          style={isSelected ? { backgroundColor: "hsl(var(--muted) / 0.5)" } : undefined}
-                        >
-                           <TableCell 
-                             className={cn(
-                               "!px-4 !h-[54px] align-middle !w-full border-b",
-                               isSelected ? "!bg-muted" : "group-hover:!bg-muted !bg-background"
-                             )}
-                           >
-                            <div className="flex items-center gap-3 h-full w-full">
-                              <Avatar className="h-8 w-8 flex-shrink-0">
-                                <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                                <AvatarFallback>{initials}</AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium text-sm truncate flex-1 min-w-0">{athlete.name}</span>
-                              {hasDraft(athlete.id) && (
-                                <span className="font-medium text-muted-foreground flex-shrink-0 border border-muted-foreground/30 rounded px-1.5 py-0.5" style={{ fontSize: '12px' }} aria-label="Draft message">
-                                  DRAFT
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                </TableBody>
-              </Table>
-            </div>
+          <div className="flex-[1.5] bg-background h-full overflow-hidden">
+            <DataGrid
+              data={filteredAthletes}
+              columns={[{
+                id: "name",
+                label: "Athlete",
+                icon: <User className="size-3" />,
+                width: { class: "w-full", pixel: "100%" },
+                getSortValue: (row) => row.name.toLowerCase(),
+                getSearchValue: (row) => row.name,
+                renderCell: (row, isSelected) => {
+                  const initials = row.name
+                    .split(" ")
+                    .map((part) => part.charAt(0).toUpperCase())
+                    .slice(0, 2)
+                    .join("")
+                  return (
+                    <div className="flex items-center gap-3 h-full w-full">
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarImage src={row.avatar} alt={row.name} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium text-sm truncate flex-1 min-w-0">{row.name}</span>
+                      {hasDraft(row.id) && (
+                        <span className="font-medium text-muted-foreground flex-shrink-0 border border-muted-foreground/30 rounded px-1.5 py-0.5" style={{ fontSize: '12px' }} aria-label="Draft message">
+                          DRAFT
+                        </span>
+                      )}
+                    </div>
+                  )
+                },
+              }]}
+              getRowId={(row) => row.id}
+              gridKey="messaging-contacts"
+              enableSearch={false}
+              enableEditColumns={false}
+              enableExport={false}
+              enableRowSelection={false}
+              selectedRowIds={selectedContactId ? new Set([selectedContactId]) : new Set()}
+              onRowClick={(row) => {
+                // Find or create contact for this athlete
+                let contact = mockContacts.find((c) => c.id === row.id)
+                if (!contact) {
+                  // Create a contact from athlete data
+                  contact = {
+                    id: row.id,
+                    name: row.name,
+                    avatar: row.avatar,
+                    lastMessage: "",
+                    timestamp: "",
+                    unreadCount: 0,
+                    isOnline: false,
+                  }
+                }
+                router.push(`/messaging/${contact.id}`)
+              }}
+              onRowKeyDown={(row, event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  let contact = mockContacts.find((c) => c.id === row.id)
+                  if (!contact) {
+                    contact = {
+                      id: row.id,
+                      name: row.name,
+                      avatar: row.avatar,
+                      lastMessage: "",
+                      timestamp: "",
+                      unreadCount: 0,
+                      isOnline: false,
+                    }
+                  }
+                  router.push(`/messaging/${contact.id}`)
+                }
+              }}
+              emptyMessage="No contacts found."
+              rowHeight="54px"
+              compactMode={true}
+              showPagination={true}
+              itemsPerPage={25}
+            />
           </div>
           <Separator orientation="vertical" />
           {/* Middle Column - Chat */}
@@ -1714,7 +1677,7 @@ const MessagingPage = () => {
           {selectedContact ? (
             <>
               {/* Message Header */}
-              <div className="flex items-center justify-between px-4 h-[40.8px] border-b border-border flex-shrink-0">
+              <div className="flex items-center justify-between px-4 h-[40px] border-b border-border flex-shrink-0">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm truncate mb-[1px]">{selectedContact.name}</h3>

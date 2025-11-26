@@ -15,7 +15,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { SidePanel } from "@/components/app/side-panel"
 import { parseCSV, type ClientData } from "@/lib/csv-parser"
 import { cn } from "@/lib/utils"
-import { Upload, Check } from "lucide-react"
+import { Trash2, Check, Upload } from "lucide-react"
 
 interface UploadClientsSidePanelProps {
   open: boolean
@@ -301,7 +301,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                             aria-label={`Remove ${client.firstName} ${client.lastName}`}
                           >
                             {/* Reuse Upload icon for consistency; delete icon not required */}
-                            <Upload className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
                         <TableCell>{client.firstName}</TableCell>

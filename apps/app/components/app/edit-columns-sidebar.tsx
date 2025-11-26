@@ -1,24 +1,15 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect, useCallback } from "react"
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core"
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Columns4, Search } from "lucide-react"
+import { GripVertical, Columns4 } from "lucide-react"
 import { SidePanel } from "./side-panel"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { cn } from "@/lib/utils"
+import { DataGrid, ColumnDefinition } from "./data-grid"
 
-type ColumnDefinition = {
+type ColumnDefinitionInput = {
   id: string
   label: string
   icon?: React.ReactNode
@@ -28,20 +19,29 @@ type EditColumnsSidebarProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   gridKey: string
-  columns: ColumnDefinition[]
+  columns: ColumnDefinitionInput[]
   visibleColumns: string[]
   columnOrder: string[]
   pinnedColumns?: string[]
   onColumnsChange: (visibleColumns: string[], columnOrder: string[]) => void
 }
 
-type SortableColumnRowProps = {
-  column: ColumnDefinition
+type ColumnRow = {
+  id: string
+  label: string
+  icon?: React.ReactNode
   isVisible: boolean
-  onToggle: (columnId: string) => void
 }
 
-const SortableColumnRow = ({ column, isVisible, onToggle }: SortableColumnRowProps) => {
+const SortableColumnCell = ({ 
+  row,
+  isVisible,
+  onToggle,
+}: {
+  row: ColumnRow
+  isVisible: boolean
+  onToggle: (columnId: string) => void
+}) => {
   const {
     attributes,
     listeners,
@@ -49,7 +49,7 @@ const SortableColumnRow = ({ column, isVisible, onToggle }: SortableColumnRowPro
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: column.id })
+  } = useSortable({ id: row.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -57,45 +57,42 @@ const SortableColumnRow = ({ column, isVisible, onToggle }: SortableColumnRowPro
     opacity: isDragging ? 0.5 : 1,
   }
 
+  const handleDragKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+    }
+  }
+
   const handleToggle = () => {
-    onToggle(column.id)
+    onToggle(row.id)
   }
 
   return (
-    <TableRow
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "cursor-default",
-        isDragging && "opacity-50"
-      )}
-    >
-      <TableCell className="!px-4 !py-2 !h-[54px] align-middle border-b w-[40px]">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing flex items-center justify-center"
-          role="button"
-          tabIndex={0}
-          aria-label={`Drag to reorder ${column.label}`}
-        >
-          <GripVertical className="size-4 text-muted-foreground" />
-        </div>
-      </TableCell>
-      <TableCell className="!px-4 !py-2 !h-[54px] align-middle border-b w-[40px]">
+    <div className="flex items-center w-full" style={style}>
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing flex items-center justify-center w-[24px]"
+        role="button"
+        tabIndex={0}
+        aria-label={`Drag to reorder ${row.label}`}
+        onKeyDown={handleDragKeyDown}
+      >
+        <GripVertical className="size-4 text-muted-foreground" />
+      </div>
+      <div className="flex items-center gap-3 pl-3">
         <Checkbox
           checked={isVisible}
           onCheckedChange={handleToggle}
-          aria-label={`Toggle ${column.label} column`}
+          aria-label={`Toggle ${row.label} column`}
         />
-      </TableCell>
-      <TableCell className="!px-4 !py-2 !h-[54px] align-middle border-b">
         <div className="flex items-center gap-2">
-          {column.icon && <span className="text-muted-foreground">{column.icon}</span>}
-          <span className="text-sm">{column.label}</span>
+          {row.icon && <span className="text-muted-foreground">{row.icon}</span>}
+          <span className="text-sm">{row.label}</span>
         </div>
-      </TableCell>
-    </TableRow>
+      </div>
+    </div>
   )
 }
 
@@ -109,7 +106,6 @@ export const EditColumnsSidebar = ({
   pinnedColumns = [],
   onColumnsChange,
 }: EditColumnsSidebarProps) => {
-  const [searchQuery, setSearchQuery] = useState<string>("")
   const [localVisibleColumns, setLocalVisibleColumns] = useState<Set<string>>(new Set(visibleColumns))
   const [localColumnOrder, setLocalColumnOrder] = useState<string[]>(columnOrder)
 
@@ -120,25 +116,16 @@ export const EditColumnsSidebar = ({
     })
   )
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       setLocalVisibleColumns(new Set(visibleColumns))
       setLocalColumnOrder([...columnOrder])
-      setSearchQuery("")
     }
   }, [open, visibleColumns, columnOrder])
 
   const filteredColumns = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    if (!query) {
-      return columns.filter((col) => !pinnedColumns.includes(col.id))
-    }
-    return columns.filter(
-      (col) =>
-        !pinnedColumns.includes(col.id) &&
-        col.label.toLowerCase().includes(query)
-    )
-  }, [columns, pinnedColumns, searchQuery])
+    return columns.filter((col) => !pinnedColumns.includes(col.id))
+  }, [columns, pinnedColumns])
 
   const sortedColumns = useMemo(() => {
     const visible = filteredColumns.filter((col) => localVisibleColumns.has(col.id))
@@ -156,66 +143,23 @@ export const EditColumnsSidebar = ({
     return [...visibleSorted, ...hidden]
   }, [filteredColumns, localVisibleColumns, localColumnOrder])
 
-  const getDefaultOrder = (columnIds: string[]): string[] => {
+  const dataRows: ColumnRow[] = useMemo(() => {
+    return sortedColumns.map((col) => ({
+      id: col.id,
+      label: col.label,
+      icon: col.icon,
+      isVisible: localVisibleColumns.has(col.id),
+    }))
+  }, [sortedColumns, localVisibleColumns])
+
+  const getDefaultOrder = useCallback((columnIds: string[]): string[] => {
     const defaultOrder = columns.map((col) => col.id)
     const ordered = defaultOrder.filter((id) => columnIds.includes(id))
     const unordered = columnIds.filter((id) => !defaultOrder.includes(id))
     return [...ordered, ...unordered]
-  }
+  }, [columns])
 
-  const handleToggleColumn = (columnId: string) => {
-    const isCurrentlyVisible = localVisibleColumns.has(columnId)
-    const newVisibleColumns = isCurrentlyVisible
-      ? Array.from(localVisibleColumns).filter((id) => id !== columnId)
-      : [...Array.from(localVisibleColumns), columnId]
-
-    let newOrder: string[]
-    if (isCurrentlyVisible) {
-      newOrder = localColumnOrder.filter((id) => id !== columnId)
-    } else {
-      const defaultOrder = getDefaultOrder(newVisibleColumns)
-      newOrder = defaultOrder
-    }
-
-    setLocalVisibleColumns(new Set(newVisibleColumns))
-    setLocalColumnOrder(newOrder)
-    onColumnsChange(newVisibleColumns, newOrder)
-    saveToLocalStorage(newVisibleColumns, newOrder)
-  }
-
-  const handleToggleAll = (checked: boolean) => {
-    const allColumnIds = filteredColumns.map((col) => col.id)
-    const newVisibleColumns = checked ? allColumnIds : []
-    const newOrder = checked ? getDefaultOrder(allColumnIds) : []
-    
-    setLocalVisibleColumns(new Set(newVisibleColumns))
-    setLocalColumnOrder(newOrder)
-    onColumnsChange(newVisibleColumns, newOrder)
-    saveToLocalStorage(newVisibleColumns, newOrder)
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (!over || active.id === over.id) {
-      return
-    }
-
-    const oldIndex = sortedColumns.findIndex((col) => col.id === active.id)
-    const newIndex = sortedColumns.findIndex((col) => col.id === over.id)
-
-    if (oldIndex === -1 || newIndex === -1) {
-      return
-    }
-
-    const newSortedColumns = arrayMove(sortedColumns, oldIndex, newIndex)
-    const newOrder = newSortedColumns.map((col) => col.id)
-    setLocalColumnOrder(newOrder)
-    onColumnsChange(Array.from(localVisibleColumns), newOrder)
-    saveToLocalStorage(Array.from(localVisibleColumns), newOrder)
-  }
-
-  const saveToLocalStorage = (visible: string[], order: string[]) => {
+  const saveToLocalStorage = useCallback((visible: string[], order: string[]) => {
     try {
       const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
       preferences[gridKey] = {
@@ -226,10 +170,133 @@ export const EditColumnsSidebar = ({
     } catch (error) {
       console.error("Failed to save column preferences:", error)
     }
-  }
+  }, [gridKey])
+
+  const handleToggleColumn = useCallback((columnId: string) => {
+    setLocalVisibleColumns((prev) => {
+      const isCurrentlyVisible = prev.has(columnId)
+      const newVisibleColumns = isCurrentlyVisible
+        ? Array.from(prev).filter((id) => id !== columnId)
+        : [...Array.from(prev), columnId]
+
+      setLocalColumnOrder((prevOrder) => {
+        let newOrder: string[]
+        if (isCurrentlyVisible) {
+          newOrder = prevOrder.filter((id) => id !== columnId)
+        } else {
+          const defaultOrder = getDefaultOrder(newVisibleColumns)
+          newOrder = defaultOrder
+        }
+
+        onColumnsChange(newVisibleColumns, newOrder)
+        saveToLocalStorage(newVisibleColumns, newOrder)
+
+        return newOrder
+      })
+
+      return new Set(newVisibleColumns)
+    })
+  }, [getDefaultOrder, onColumnsChange, saveToLocalStorage])
+
+  const handleToggleAll = useCallback(() => {
+    const allColumnIds = filteredColumns.map((col) => col.id)
+    const allVisible = filteredColumns.length > 0 && filteredColumns.every((col) => localVisibleColumns.has(col.id))
+    const newVisibleColumns = allVisible ? [] : allColumnIds
+    const newOrder = allVisible ? [] : getDefaultOrder(allColumnIds)
+    
+    setLocalVisibleColumns(new Set(newVisibleColumns))
+    setLocalColumnOrder(newOrder)
+    onColumnsChange(newVisibleColumns, newOrder)
+    saveToLocalStorage(newVisibleColumns, newOrder)
+  }, [filteredColumns, localVisibleColumns, getDefaultOrder, onColumnsChange, saveToLocalStorage])
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    const oldIndex = dataRows.findIndex((row) => row.id === active.id)
+    const newIndex = dataRows.findIndex((row) => row.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return
+    }
+
+    const newSortedRows = arrayMove(dataRows, oldIndex, newIndex)
+    const newOrder = newSortedRows.map((row) => row.id)
+    setLocalColumnOrder(newOrder)
+    onColumnsChange(Array.from(localVisibleColumns), newOrder)
+    saveToLocalStorage(Array.from(localVisibleColumns), newOrder)
+  }, [dataRows, localVisibleColumns, onColumnsChange, saveToLocalStorage])
 
   const allVisible = filteredColumns.length > 0 && filteredColumns.every((col) => localVisibleColumns.has(col.id))
   const someVisible = filteredColumns.some((col) => localVisibleColumns.has(col.id))
+
+  const gridColumns: ColumnDefinition<ColumnRow>[] = useMemo(() => [
+    {
+      id: "column",
+      label: "Column",
+      icon: <Columns4 className="size-3" />,
+      width: { class: "w-full", pixel: "100%" },
+      renderHeader: () => (
+        <div className="flex items-center h-full w-full">
+          <div className="w-[24px]" />
+          <div className="flex items-center gap-3 pl-3">
+            <Checkbox
+              checked={allVisible}
+              onCheckedChange={handleToggleAll}
+              aria-label="Toggle all columns"
+            />
+            <div className="flex items-center gap-2">
+              <Columns4 className="size-3 text-muted-foreground" />
+              <span className="text-xs uppercase text-muted-foreground">Column</span>
+            </div>
+          </div>
+        </div>
+      ),
+      renderCell: (row: ColumnRow) => (
+        <SortableColumnCell
+          row={row}
+          isVisible={row.isVisible}
+          onToggle={handleToggleColumn}
+        />
+      ),
+      getSearchValue: (row: ColumnRow) => row.label,
+    },
+  ], [handleToggleColumn, allVisible, someVisible, handleToggleAll])
+
+  const gridData = useMemo(() => {
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={dataRows.map((row) => row.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <DataGrid
+            data={dataRows}
+            columns={gridColumns}
+            getRowId={(row) => row.id}
+            gridKey={`${gridKey}_edit_columns`}
+            enableSearch={true}
+            searchPlaceholder="Search columns..."
+            enableEditColumns={false}
+            enableExport={false}
+            showPagination={false}
+            compactMode={true}
+            emptyMessage="No columns found."
+            rowHeight="54px"
+            stickyFirstColumn={false}
+          />
+        </SortableContext>
+      </DndContext>
+    )
+  }, [dataRows, gridColumns, sensors, allVisible, someVisible, handleToggleAll, handleDragEnd, gridKey])
 
   return (
     <SidePanel
@@ -239,61 +306,19 @@ export const EditColumnsSidebar = ({
       side="right"
       contentClassName="w-full sm:w-[400px] sm:max-w-[400px]"
     >
-      <div className="flex flex-col h-full">
-        <div className="relative mb-4">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search columns..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            className="w-full pl-9"
-            aria-label="Search columns"
-          />
-        </div>
-        <div className="flex-1 overflow-auto -mx-4">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-background">
-              <TableRow className="hover:bg-transparent h-10">
-                <TableHead className="!px-4 !py-0 h-10 border-t border-b w-[40px]"></TableHead>
-                <TableHead className="!px-4 !py-0 h-10 border-t border-b w-[40px]">
-                  <Checkbox
-                    checked={allVisible ? true : someVisible ? "indeterminate" : false}
-                    onCheckedChange={handleToggleAll}
-                    aria-label="Toggle all columns"
-                  />
-                </TableHead>
-                <TableHead className="!px-4 !py-0 h-10 border-t border-b">
-                  <div className="flex items-center gap-2">
-                    <Columns4 className="size-3 text-muted-foreground" />
-                    <span className="text-xs uppercase text-muted-foreground">Column</span>
-                  </div>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={sortedColumns.map((col) => col.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {sortedColumns.map((column) => (
-                    <SortableColumnRow
-                      key={column.id}
-                      column={column}
-                      isVisible={localVisibleColumns.has(column.id)}
-                      onToggle={handleToggleColumn}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </TableBody>
-          </Table>
-        </div>
+      <div className="flex flex-col h-full edit-columns-grid-wrapper">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .edit-columns-grid-wrapper table th,
+          .edit-columns-grid-wrapper table td {
+            padding-left: 0 !important;
+            padding-right: 1rem !important;
+          }
+          .edit-columns-grid-wrapper [class*="overflow-auto"] {
+            margin-left: -1rem !important;
+            margin-right: -1rem !important;
+          }
+        ` }} />
+        {gridData}
       </div>
     </SidePanel>
   )

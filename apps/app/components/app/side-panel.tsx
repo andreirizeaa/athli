@@ -37,12 +37,12 @@ export const SidePanel = ({
           contentClassName,
         )}
       >
-        <div className="px-4 pt-3 pb-3">
+        <div className="px-4 pt-3">
           <h2 className="text-base font-semibold">{title}</h2>
         </div>
         <Separator />
         {children && (
-          <div className="flex-1 overflow-auto px-4 pb-4 pt-3 flex flex-col min-h-0">
+          <div className="flex-1 overflow-hidden px-4 pt-3 flex flex-col min-h-0">
             {children}
           </div>
         )}
