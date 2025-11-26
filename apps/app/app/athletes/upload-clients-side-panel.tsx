@@ -1,8 +1,8 @@
-"use client"
+'use client';
 
-import { useState, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -10,50 +10,50 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { Spinner } from "@/components/ui/spinner"
-import { SidePanel } from "@/components/app/side-panel"
-import { parseCSV, type ClientData } from "@/lib/csv-parser"
-import { cn } from "@/lib/utils"
-import { Trash2, Check, Upload } from "lucide-react"
+} from '@/components/ui/table';
+import { Spinner } from '@/components/ui/spinner';
+import { SidePanel } from '@/components/app/side-panel';
+import { parseCSV, type ClientData } from '@/lib/csv-parser';
+import { cn } from '@/lib/utils';
+import { Trash2, Check, Upload } from 'lucide-react';
 
 interface UploadClientsSidePanelProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSidePanelProps) => {
-  const [uploadStep, setUploadStep] = useState<number>(1)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [isValidatingCSV, setIsValidatingCSV] = useState<boolean>(false)
-  const [csvError, setCsvError] = useState<string | null>(null)
-  const [parsedClients, setParsedClients] = useState<ClientData[]>([])
+  const [uploadStep, setUploadStep] = useState<number>(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isValidatingCSV, setIsValidatingCSV] = useState<boolean>(false);
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [parsedClients, setParsedClients] = useState<ClientData[]>([]);
 
   const handleOpenChange = (isOpen: boolean) => {
-    onOpenChange(isOpen)
+    onOpenChange(isOpen);
     if (!isOpen) {
-      setUploadStep(1)
-      setSelectedFile(null)
-      setIsValidatingCSV(false)
-      setCsvError(null)
-      setParsedClients([])
+      setUploadStep(1);
+      setSelectedFile(null);
+      setIsValidatingCSV(false);
+      setCsvError(null);
+      setParsedClients([]);
     }
-  }
+  };
 
   const handleRemoveClient = (index: number) => {
     setParsedClients((prev) => {
-      const updated = prev.filter((_, i) => i !== index)
+      const updated = prev.filter((_, i) => i !== index);
       if (updated.length === 0) {
-        handleOpenChange(false)
+        handleOpenChange(false);
       }
-      return updated
-    })
-  }
+      return updated;
+    });
+  };
 
   const handleCancel = () => {
-    handleOpenChange(false)
-  }
+    handleOpenChange(false);
+  };
 
   return (
     <SidePanel
@@ -70,26 +70,26 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                 disabled={!selectedFile || isValidatingCSV}
                 onClick={async () => {
                   if (selectedFile) {
-                    setIsValidatingCSV(true)
-                    setCsvError(null)
+                    setIsValidatingCSV(true);
+                    setCsvError(null);
 
                     try {
-                      const result = await parseCSV(selectedFile)
+                      const result = await parseCSV(selectedFile);
 
                       if (!result.isValid) {
-                        setCsvError(result.error || "Invalid CSV file")
-                        setIsValidatingCSV(false)
-                        return
+                        setCsvError(result.error || 'Invalid CSV file');
+                        setIsValidatingCSV(false);
+                        return;
                       }
 
                       if (result.clients) {
-                        setParsedClients(result.clients)
+                        setParsedClients(result.clients);
                       }
-                      setUploadStep(2)
-                      setIsValidatingCSV(false)
+                      setUploadStep(2);
+                      setIsValidatingCSV(false);
                     } catch (error) {
-                      setCsvError("Error processing CSV file")
-                      setIsValidatingCSV(false)
+                      setCsvError('Error processing CSV file');
+                      setIsValidatingCSV(false);
                     }
                   }
                 }}
@@ -101,7 +101,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                     Validating...
                   </>
                 ) : (
-                  "Continue"
+                  'Continue'
                 )}
               </Button>
             )}
@@ -132,10 +132,10 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
           <div className="flex items-center gap-2">
             <div
               className={cn(
-                "flex items-center justify-center size-8 rounded-full border-2 transition-colors",
+                'flex items-center justify-center size-8 rounded-full border-2 transition-colors',
                 uploadStep >= 1
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-muted",
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-muted-foreground border-muted'
               )}
             >
               <span className="text-sm font-medium">1</span>
@@ -146,10 +146,10 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
           <div className="flex items-center gap-2">
             <div
               className={cn(
-                "flex items-center justify-center size-8 rounded-full border-2 transition-colors",
+                'flex items-center justify-center size-8 rounded-full border-2 transition-colors',
                 uploadStep >= 2
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-muted",
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-muted-foreground border-muted'
               )}
             >
               <span className="text-sm font-medium">2</span>
@@ -159,10 +159,10 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
           </div>
           <div
             className={cn(
-              "flex items-center justify-center size-8 rounded-full border-2 transition-colors",
+              'flex items-center justify-center size-8 rounded-full border-2 transition-colors',
               uploadStep >= 3
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground border-muted",
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-muted-foreground border-muted'
             )}
           >
             <span className="text-sm font-medium">3</span>
@@ -174,11 +174,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
           <div className="flex flex-col items-center gap-6">
             <div className="flex flex-col items-center gap-2">
               <h3 className="text-lg font-semibold">Upload CSV</h3>
-              {csvError && (
-                <p className="text-sm text-destructive text-center">
-                  {csvError}
-                </p>
-              )}
+              {csvError && <p className="text-sm text-destructive text-center">{csvError}</p>}
             </div>
             <div className="w-full max-w-md">
               <div className="border-2 border-dashed border-muted rounded-lg p-8 flex flex-col items-center justify-center gap-4 hover:border-primary transition-colors cursor-pointer">
@@ -186,9 +182,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                   <>
                     <Check className="size-10 text-green-500" />
                     <div className="text-center">
-                      <p className="text-sm font-medium mb-1">
-                        {selectedFile.name}
-                      </p>
+                      <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {(selectedFile.size / 1024).toFixed(2)} KB
                       </p>
@@ -198,10 +192,10 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                       variant="outline"
                       className="cursor-pointer"
                       onClick={() => {
-                        setSelectedFile(null)
-                        setCsvError(null)
+                        setSelectedFile(null);
+                        setCsvError(null);
                         if (fileInputRef.current) {
-                          fileInputRef.current.value = ""
+                          fileInputRef.current.value = '';
                         }
                       }}
                     >
@@ -212,12 +206,8 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                   <>
                     <Upload className="size-10 text-muted-foreground" />
                     <div className="text-center">
-                      <p className="text-sm font-medium mb-1">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        CSV file only
-                      </p>
+                      <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
+                      <p className="text-xs text-muted-foreground">CSV file only</p>
                     </div>
                     <Input
                       ref={fileInputRef}
@@ -226,11 +216,11 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                       className="hidden"
                       id="csv-upload"
                       onChange={(event) => {
-                        const file = event.target.files?.[0]
+                        const file = event.target.files?.[0];
                         if (file) {
-                          setSelectedFile(file)
-                          setCsvError(null)
-                          console.log("File selected:", file.name)
+                          setSelectedFile(file);
+                          setCsvError(null);
+                          console.log('File selected:', file.name);
                         }
                       }}
                     />
@@ -247,7 +237,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
               </div>
             </div>
             <p className="text-sm text-center text-muted-foreground">
-              Please download this{" "}
+              Please download this{' '}
               <a
                 href="/clients.csv"
                 download="clients.csv"
@@ -264,8 +254,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
         {uploadStep === 2 && (
           <div className="flex flex-col gap-6">
             <h3 className="text-lg font-semibold text-center">
-              Review {parsedClients.length} new{" "}
-              {parsedClients.length === 1 ? "client" : "clients"}
+              Review {parsedClients.length} new {parsedClients.length === 1 ? 'client' : 'clients'}
             </h3>
             <div className="border rounded-lg overflow-hidden">
               <Table>
@@ -281,10 +270,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                 <TableBody>
                   {parsedClients.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="text-center text-muted-foreground"
-                      >
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
                         No clients found
                       </TableCell>
                     </TableRow>
@@ -306,9 +292,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                         </TableCell>
                         <TableCell>{client.firstName}</TableCell>
                         <TableCell>{client.lastName}</TableCell>
-                        <TableCell className="w-[200px]">
-                          {client.email}
-                        </TableCell>
+                        <TableCell className="w-[200px]">{client.email}</TableCell>
                         <TableCell>{client.category}</TableCell>
                       </TableRow>
                     ))
@@ -328,9 +312,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
             </Button>
           </div>
         )}
-
       </div>
     </SidePanel>
-  )
-}
-
+  );
+};

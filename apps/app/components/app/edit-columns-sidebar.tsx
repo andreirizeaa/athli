@@ -1,71 +1,80 @@
-"use client"
+'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from "react"
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core"
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Columns4 } from "lucide-react"
-import { SidePanel } from "./side-panel"
-import { Checkbox } from "@/components/ui/checkbox"
-import { DataGrid, ColumnDefinition } from "./data-grid"
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, Columns4 } from 'lucide-react';
+import { SidePanel } from './side-panel';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DataGrid, ColumnDefinition } from './data-grid';
 
 type ColumnDefinitionInput = {
-  id: string
-  label: string
-  icon?: React.ReactNode
-}
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+};
 
 type EditColumnsSidebarProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  gridKey: string
-  columns: ColumnDefinitionInput[]
-  visibleColumns: string[]
-  columnOrder: string[]
-  pinnedColumns?: string[]
-  onColumnsChange: (visibleColumns: string[], columnOrder: string[]) => void
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  gridKey: string;
+  columns: ColumnDefinitionInput[];
+  visibleColumns: string[];
+  columnOrder: string[];
+  pinnedColumns?: string[];
+  onColumnsChange: (visibleColumns: string[], columnOrder: string[]) => void;
+};
 
 type ColumnRow = {
-  id: string
-  label: string
-  icon?: React.ReactNode
-  isVisible: boolean
-}
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  isVisible: boolean;
+};
 
-const SortableColumnCell = ({ 
+const SortableColumnCell = ({
   row,
   isVisible,
   onToggle,
 }: {
-  row: ColumnRow
-  isVisible: boolean
-  onToggle: (columnId: string) => void
+  row: ColumnRow;
+  isVisible: boolean;
+  onToggle: (columnId: string) => void;
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: row.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: row.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  }
+  };
 
   const handleDragKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault()
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
     }
-  }
+  };
 
   const handleToggle = () => {
-    onToggle(row.id)
-  }
+    onToggle(row.id);
+  };
 
   return (
     <div className="flex items-center w-full" style={style}>
@@ -93,8 +102,8 @@ const SortableColumnCell = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export const EditColumnsSidebar = ({
   open,
@@ -106,42 +115,44 @@ export const EditColumnsSidebar = ({
   pinnedColumns = [],
   onColumnsChange,
 }: EditColumnsSidebarProps) => {
-  const [localVisibleColumns, setLocalVisibleColumns] = useState<Set<string>>(new Set(visibleColumns))
-  const [localColumnOrder, setLocalColumnOrder] = useState<string[]>(columnOrder)
+  const [localVisibleColumns, setLocalVisibleColumns] = useState<Set<string>>(
+    new Set(visibleColumns)
+  );
+  const [localColumnOrder, setLocalColumnOrder] = useState<string[]>(columnOrder);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
-  )
+  );
 
   useEffect(() => {
     if (open) {
-      setLocalVisibleColumns(new Set(visibleColumns))
-      setLocalColumnOrder([...columnOrder])
+      setLocalVisibleColumns(new Set(visibleColumns));
+      setLocalColumnOrder([...columnOrder]);
     }
-  }, [open, visibleColumns, columnOrder])
+  }, [open, visibleColumns, columnOrder]);
 
   const filteredColumns = useMemo(() => {
-    return columns.filter((col) => !pinnedColumns.includes(col.id))
-  }, [columns, pinnedColumns])
+    return columns.filter((col) => !pinnedColumns.includes(col.id));
+  }, [columns, pinnedColumns]);
 
   const sortedColumns = useMemo(() => {
-    const visible = filteredColumns.filter((col) => localVisibleColumns.has(col.id))
-    const hidden = filteredColumns.filter((col) => !localVisibleColumns.has(col.id))
+    const visible = filteredColumns.filter((col) => localVisibleColumns.has(col.id));
+    const hidden = filteredColumns.filter((col) => !localVisibleColumns.has(col.id));
 
     const visibleSorted = visible.sort((a, b) => {
-      const aIndex = localColumnOrder.indexOf(a.id)
-      const bIndex = localColumnOrder.indexOf(b.id)
-      if (aIndex === -1 && bIndex === -1) return 0
-      if (aIndex === -1) return 1
-      if (bIndex === -1) return -1
-      return aIndex - bIndex
-    })
+      const aIndex = localColumnOrder.indexOf(a.id);
+      const bIndex = localColumnOrder.indexOf(b.id);
+      if (aIndex === -1 && bIndex === -1) return 0;
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
 
-    return [...visibleSorted, ...hidden]
-  }, [filteredColumns, localVisibleColumns, localColumnOrder])
+    return [...visibleSorted, ...hidden];
+  }, [filteredColumns, localVisibleColumns, localColumnOrder]);
 
   const dataRows: ColumnRow[] = useMemo(() => {
     return sortedColumns.map((col) => ({
@@ -149,131 +160,140 @@ export const EditColumnsSidebar = ({
       label: col.label,
       icon: col.icon,
       isVisible: localVisibleColumns.has(col.id),
-    }))
-  }, [sortedColumns, localVisibleColumns])
+    }));
+  }, [sortedColumns, localVisibleColumns]);
 
-  const getDefaultOrder = useCallback((columnIds: string[]): string[] => {
-    const defaultOrder = columns.map((col) => col.id)
-    const ordered = defaultOrder.filter((id) => columnIds.includes(id))
-    const unordered = columnIds.filter((id) => !defaultOrder.includes(id))
-    return [...ordered, ...unordered]
-  }, [columns])
+  const getDefaultOrder = useCallback(
+    (columnIds: string[]): string[] => {
+      const defaultOrder = columns.map((col) => col.id);
+      const ordered = defaultOrder.filter((id) => columnIds.includes(id));
+      const unordered = columnIds.filter((id) => !defaultOrder.includes(id));
+      return [...ordered, ...unordered];
+    },
+    [columns]
+  );
 
-  const saveToLocalStorage = useCallback((visible: string[], order: string[]) => {
-    try {
-      const preferences = JSON.parse(localStorage.getItem("column_preferences") || "{}")
-      preferences[gridKey] = {
-        visibleColumns: visible,
-        columnOrder: order,
+  const saveToLocalStorage = useCallback(
+    (visible: string[], order: string[]) => {
+      try {
+        const preferences = JSON.parse(localStorage.getItem('column_preferences') || '{}');
+        preferences[gridKey] = {
+          visibleColumns: visible,
+          columnOrder: order,
+        };
+        localStorage.setItem('column_preferences', JSON.stringify(preferences));
+      } catch (error) {
+        console.error('Failed to save column preferences:', error);
       }
-      localStorage.setItem("column_preferences", JSON.stringify(preferences))
-    } catch (error) {
-      console.error("Failed to save column preferences:", error)
-    }
-  }, [gridKey])
+    },
+    [gridKey]
+  );
 
-  const handleToggleColumn = useCallback((columnId: string) => {
-    setLocalVisibleColumns((prev) => {
-      const isCurrentlyVisible = prev.has(columnId)
-      const newVisibleColumns = isCurrentlyVisible
-        ? Array.from(prev).filter((id) => id !== columnId)
-        : [...Array.from(prev), columnId]
+  const handleToggleColumn = useCallback(
+    (columnId: string) => {
+      setLocalVisibleColumns((prev) => {
+        const isCurrentlyVisible = prev.has(columnId);
+        const newVisibleColumns = isCurrentlyVisible
+          ? Array.from(prev).filter((id) => id !== columnId)
+          : [...Array.from(prev), columnId];
 
-      setLocalColumnOrder((prevOrder) => {
-        let newOrder: string[]
-        if (isCurrentlyVisible) {
-          newOrder = prevOrder.filter((id) => id !== columnId)
-        } else {
-          const defaultOrder = getDefaultOrder(newVisibleColumns)
-          newOrder = defaultOrder
-        }
+        setLocalColumnOrder((prevOrder) => {
+          let newOrder: string[];
+          if (isCurrentlyVisible) {
+            newOrder = prevOrder.filter((id) => id !== columnId);
+          } else {
+            const defaultOrder = getDefaultOrder(newVisibleColumns);
+            newOrder = defaultOrder;
+          }
 
-        onColumnsChange(newVisibleColumns, newOrder)
-        saveToLocalStorage(newVisibleColumns, newOrder)
+          onColumnsChange(newVisibleColumns, newOrder);
+          saveToLocalStorage(newVisibleColumns, newOrder);
 
-        return newOrder
-      })
+          return newOrder;
+        });
 
-      return new Set(newVisibleColumns)
-    })
-  }, [getDefaultOrder, onColumnsChange, saveToLocalStorage])
+        return new Set(newVisibleColumns);
+      });
+    },
+    [getDefaultOrder, onColumnsChange, saveToLocalStorage]
+  );
 
   const handleToggleAll = useCallback(() => {
-    const allColumnIds = filteredColumns.map((col) => col.id)
-    const allVisible = filteredColumns.length > 0 && filteredColumns.every((col) => localVisibleColumns.has(col.id))
-    const newVisibleColumns = allVisible ? [] : allColumnIds
-    const newOrder = allVisible ? [] : getDefaultOrder(allColumnIds)
-    
-    setLocalVisibleColumns(new Set(newVisibleColumns))
-    setLocalColumnOrder(newOrder)
-    onColumnsChange(newVisibleColumns, newOrder)
-    saveToLocalStorage(newVisibleColumns, newOrder)
-  }, [filteredColumns, localVisibleColumns, getDefaultOrder, onColumnsChange, saveToLocalStorage])
+    const allColumnIds = filteredColumns.map((col) => col.id);
+    const allVisible =
+      filteredColumns.length > 0 && filteredColumns.every((col) => localVisibleColumns.has(col.id));
+    const newVisibleColumns = allVisible ? [] : allColumnIds;
+    const newOrder = allVisible ? [] : getDefaultOrder(allColumnIds);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event
+    setLocalVisibleColumns(new Set(newVisibleColumns));
+    setLocalColumnOrder(newOrder);
+    onColumnsChange(newVisibleColumns, newOrder);
+    saveToLocalStorage(newVisibleColumns, newOrder);
+  }, [filteredColumns, localVisibleColumns, getDefaultOrder, onColumnsChange, saveToLocalStorage]);
 
-    if (!over || active.id === over.id) {
-      return
-    }
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    const oldIndex = dataRows.findIndex((row) => row.id === active.id)
-    const newIndex = dataRows.findIndex((row) => row.id === over.id)
+      if (!over || active.id === over.id) {
+        return;
+      }
 
-    if (oldIndex === -1 || newIndex === -1) {
-      return
-    }
+      const oldIndex = dataRows.findIndex((row) => row.id === active.id);
+      const newIndex = dataRows.findIndex((row) => row.id === over.id);
 
-    const newSortedRows = arrayMove(dataRows, oldIndex, newIndex)
-    const newOrder = newSortedRows.map((row) => row.id)
-    setLocalColumnOrder(newOrder)
-    onColumnsChange(Array.from(localVisibleColumns), newOrder)
-    saveToLocalStorage(Array.from(localVisibleColumns), newOrder)
-  }, [dataRows, localVisibleColumns, onColumnsChange, saveToLocalStorage])
+      if (oldIndex === -1 || newIndex === -1) {
+        return;
+      }
 
-  const allVisible = filteredColumns.length > 0 && filteredColumns.every((col) => localVisibleColumns.has(col.id))
-  const someVisible = filteredColumns.some((col) => localVisibleColumns.has(col.id))
+      const newSortedRows = arrayMove(dataRows, oldIndex, newIndex);
+      const newOrder = newSortedRows.map((row) => row.id);
+      setLocalColumnOrder(newOrder);
+      onColumnsChange(Array.from(localVisibleColumns), newOrder);
+      saveToLocalStorage(Array.from(localVisibleColumns), newOrder);
+    },
+    [dataRows, localVisibleColumns, onColumnsChange, saveToLocalStorage]
+  );
 
-  const gridColumns: ColumnDefinition<ColumnRow>[] = useMemo(() => [
-    {
-      id: "column",
-      label: "Column",
-      icon: <Columns4 className="size-3" />,
-      width: { class: "w-full", pixel: "100%" },
-      renderHeader: () => (
-        <div className="flex items-center h-full w-full">
-          <div className="w-[24px]" />
-          <div className="flex items-center gap-3 pl-3">
-            <Checkbox
-              checked={allVisible}
-              onCheckedChange={handleToggleAll}
-              aria-label="Toggle all columns"
-            />
-            <div className="flex items-center gap-2">
-              <Columns4 className="size-3 text-muted-foreground" />
-              <span className="text-xs uppercase text-muted-foreground">Column</span>
+  const allVisible =
+    filteredColumns.length > 0 && filteredColumns.every((col) => localVisibleColumns.has(col.id));
+  const someVisible = filteredColumns.some((col) => localVisibleColumns.has(col.id));
+
+  const gridColumns: ColumnDefinition<ColumnRow>[] = useMemo(
+    () => [
+      {
+        id: 'column',
+        label: 'Column',
+        icon: <Columns4 className="size-3" />,
+        width: { class: 'w-full', pixel: '100%' },
+        renderHeader: () => (
+          <div className="flex items-center h-full w-full">
+            <div className="w-[24px]" />
+            <div className="flex items-center gap-3 pl-3">
+              <Checkbox
+                checked={allVisible}
+                onCheckedChange={handleToggleAll}
+                aria-label="Toggle all columns"
+              />
+              <div className="flex items-center gap-2">
+                <Columns4 className="size-3 text-muted-foreground" />
+                <span className="text-xs uppercase text-muted-foreground">Column</span>
+              </div>
             </div>
           </div>
-        </div>
-      ),
-      renderCell: (row: ColumnRow) => (
-        <SortableColumnCell
-          row={row}
-          isVisible={row.isVisible}
-          onToggle={handleToggleColumn}
-        />
-      ),
-      getSearchValue: (row: ColumnRow) => row.label,
-    },
-  ], [handleToggleColumn, allVisible, someVisible, handleToggleAll])
+        ),
+        renderCell: (row: ColumnRow) => (
+          <SortableColumnCell row={row} isVisible={row.isVisible} onToggle={handleToggleColumn} />
+        ),
+        getSearchValue: (row: ColumnRow) => row.label,
+      },
+    ],
+    [handleToggleColumn, allVisible, someVisible, handleToggleAll]
+  );
 
   const gridData = useMemo(() => {
     return (
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext
           items={dataRows.map((row) => row.id)}
           strategy={verticalListSortingStrategy}
@@ -295,8 +315,17 @@ export const EditColumnsSidebar = ({
           />
         </SortableContext>
       </DndContext>
-    )
-  }, [dataRows, gridColumns, sensors, allVisible, someVisible, handleToggleAll, handleDragEnd, gridKey])
+    );
+  }, [
+    dataRows,
+    gridColumns,
+    sensors,
+    allVisible,
+    someVisible,
+    handleToggleAll,
+    handleDragEnd,
+    gridKey,
+  ]);
 
   return (
     <SidePanel
@@ -307,7 +336,9 @@ export const EditColumnsSidebar = ({
       contentClassName="w-full sm:w-[400px] sm:max-w-[400px]"
     >
       <div className="flex flex-col h-full edit-columns-grid-wrapper">
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
           .edit-columns-grid-wrapper table th,
           .edit-columns-grid-wrapper table td {
             padding-left: 0 !important;
@@ -317,10 +348,11 @@ export const EditColumnsSidebar = ({
             margin-left: -1rem !important;
             margin-right: -1rem !important;
           }
-        ` }} />
+        `,
+          }}
+        />
         {gridData}
       </div>
     </SidePanel>
-  )
-}
-
+  );
+};

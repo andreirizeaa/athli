@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import MessagingPage from '../page'
+import MessagingPage from '../page';
 
 export default function MessagingContactPage() {
-  return <MessagingPage />
+  return <MessagingPage />;
 }

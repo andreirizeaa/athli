@@ -6,7 +6,13 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint:biome": "biome lint --write .",
+    "lint:biome:check": "biome lint .",
+    "check": "biome check --write .",
+    "check:no-write": "biome check ."
   },
   "dependencies": {
     "@clerk/nextjs": "^6.35.3",
@@ -69,6 +75,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

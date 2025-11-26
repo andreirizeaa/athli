@@ -1,10 +1,10 @@
-"use client"
+'use client';
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
@@ -12,64 +12,64 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { SidePanel } from "@/components/app/side-panel"
-import { cn } from "@/lib/utils"
+} from '@/components/ui/form';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { SidePanel } from '@/components/app/side-panel';
+import { cn } from '@/lib/utils';
 
 const addAthleteSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Please enter a valid email address"),
-  coachingType: z.union([z.literal("online"), z.literal("in-person")]),
-})
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Please enter a valid email address'),
+  coachingType: z.union([z.literal('online'), z.literal('in-person')]),
+});
 
-type AddAthleteFormValues = z.infer<typeof addAthleteSchema>
+type AddAthleteFormValues = z.infer<typeof addAthleteSchema>;
 
 interface AddClientSidePanelProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelProps) => {
   const form = useForm<AddAthleteFormValues>({
     resolver: zodResolver(addAthleteSchema),
-    mode: "onChange",
+    mode: 'onChange',
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: "",
-      coachingType: "online",
+      firstName: '',
+      lastName: '',
+      email: '',
+      coachingType: 'online',
     },
-  })
+  });
 
   const handleSubmitInvitation = async (values: AddAthleteFormValues) => {
     // Handle form submission here
-    console.log("Form values:", values)
-    onOpenChange(false)
-    form.reset()
-    toast.success("Invitation sent successfully", {
+    console.log('Form values:', values);
+    onOpenChange(false);
+    form.reset();
+    toast.success('Invitation sent successfully', {
       description: `An invitation has been sent to ${values.firstName} ${values.lastName} at ${values.email}`,
       style: {
-        background: "rgb(220 252 231)",
-        color: "rgb(20 83 45)",
-        border: "1px solid rgb(187 247 208)",
+        background: 'rgb(220 252 231)',
+        color: 'rgb(20 83 45)',
+        border: '1px solid rgb(187 247 208)',
       },
-    })
-  }
+    });
+  };
 
   const handleCancel = () => {
-    onOpenChange(false)
-    form.reset()
-  }
+    onOpenChange(false);
+    form.reset();
+  };
 
   const handleOpenChange = (isOpen: boolean) => {
-    onOpenChange(isOpen)
+    onOpenChange(isOpen);
     if (!isOpen) {
-      form.reset()
+      form.reset();
     }
-  }
+  };
 
   return (
     <SidePanel
@@ -100,8 +100,8 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
       <Form {...form}>
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            form.handleSubmit(handleSubmitInvitation)(e)
+            e.preventDefault();
+            form.handleSubmit(handleSubmitInvitation)(e);
           }}
           className="flex flex-col gap-6"
         >
@@ -162,7 +162,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
                   <Tabs
                     value={field.value}
                     onValueChange={(value) => {
-                      field.onChange(value as "online" | "in-person")
+                      field.onChange(value as 'online' | 'in-person');
                     }}
                     className="w-full"
                   >
@@ -191,6 +191,5 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
         </form>
       </Form>
     </SidePanel>
-  )
-}
-
+  );
+};

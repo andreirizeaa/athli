@@ -1,27 +1,27 @@
-"use client"
+'use client';
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 type TabItem = {
-  value: string
-  label: string
-}
+  value: string;
+  label: string;
+};
 
 type PageTabsProps = {
-  tabs: TabItem[]
-  value?: string
-  defaultValue?: string
-  onValueChange?: (value: string) => void
-  className?: string
-}
+  tabs: TabItem[];
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  className?: string;
+};
 
 const PageTabs = ({ tabs, value, defaultValue, onValueChange, className }: PageTabsProps) => {
-  const defaultTabValue = defaultValue || tabs[0]?.value
+  const defaultTabValue = defaultValue || tabs[0]?.value;
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn('relative', className)}>
       <Tabs value={value} defaultValue={defaultTabValue} onValueChange={onValueChange}>
         <div className="-mx-4 relative px-4">
           <div className="flex items-end pb-0">
@@ -41,9 +41,8 @@ const PageTabs = ({ tabs, value, defaultValue, onValueChange, className }: PageT
         </div>
       </Tabs>
     </div>
-  )
-}
+  );
+};
 
-export { PageTabs }
-export type { PageTabsProps, TabItem }
-
+export { PageTabs };
+export type { PageTabsProps, TabItem };
