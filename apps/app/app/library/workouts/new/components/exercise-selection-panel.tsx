@@ -1,33 +1,33 @@
-"use client"
+'use client';
 
-import { useMemo, useState } from "react"
-import Image from "next/image"
-import { GripVertical, Play, Search, X } from "lucide-react"
-import { Card, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
-import { searchExercises, type Exercise } from "@/lib/exercise-search"
+import { useMemo, useState } from 'react';
+import Image from 'next/image';
+import { GripVertical, Play, Search, X } from 'lucide-react';
+import { Card, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { searchExercises, type Exercise } from '@/lib/exercise-search';
 
 type ExerciseSelectionPanelProps = {
-  onExerciseClick?: (exercise: Exercise) => void
-  onDragStart?: (exercise: Exercise) => void
-  onDragEnd?: () => void
-}
+  onExerciseClick?: (exercise: Exercise) => void;
+  onDragStart?: (exercise: Exercise) => void;
+  onDragEnd?: () => void;
+};
 
 export const ExerciseSelectionPanel = ({
   onExerciseClick,
   onDragStart,
   onDragEnd,
 }: ExerciseSelectionPanelProps) => {
-  const [searchQuery, setSearchQuery] = useState<string>("")
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
-  const exerciseResults = useMemo(() => searchExercises(searchQuery), [searchQuery])
+  const exerciseResults = useMemo(() => searchExercises(searchQuery), [searchQuery]);
 
   const handleExerciseClick = (exercise: Exercise) => {
     if (onExerciseClick) {
-      onExerciseClick(exercise)
+      onExerciseClick(exercise);
     }
-  }
+  };
 
   return (
     <div className="mt-4">
@@ -38,12 +38,12 @@ export const ExerciseSelectionPanel = ({
           placeholder="Search for exercises.."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className={cn("pl-9 w-full", searchQuery && "pr-9")}
+          className={cn('pl-9 w-full', searchQuery && 'pr-9')}
         />
         {searchQuery && (
           <button
             type="button"
-            onClick={() => setSearchQuery("")}
+            onClick={() => setSearchQuery('')}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Clear search"
           >
@@ -70,9 +70,9 @@ export const ExerciseSelectionPanel = ({
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault()
-                    handleExerciseClick(exercise)
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleExerciseClick(exercise);
                   }
                 }}
                 aria-label={`Play video for ${exercise.name}`}
@@ -86,16 +86,16 @@ export const ExerciseSelectionPanel = ({
                 <div
                   className="absolute bottom-1 left-1 cursor-pointer"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    handleExerciseClick(exercise)
+                    e.stopPropagation();
+                    handleExerciseClick(exercise);
                   }}
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleExerciseClick(exercise)
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleExerciseClick(exercise);
                     }
                   }}
                   aria-label={`Play video for ${exercise.name}`}
@@ -114,6 +114,5 @@ export const ExerciseSelectionPanel = ({
         ))}
       </div>
     </div>
-  )
-}
-
+  );
+};

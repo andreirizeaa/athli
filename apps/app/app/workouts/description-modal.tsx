@@ -1,21 +1,21 @@
-"use client"
+'use client';
 
-import React from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type DescriptionModalProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  description: string
-  programName: string
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  description: string;
+  programName: string;
+};
 
-const DescriptionModal = ({ open, onOpenChange, description, programName }: DescriptionModalProps) => {
+const DescriptionModal = ({
+  open,
+  onOpenChange,
+  description,
+  programName,
+}: DescriptionModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -27,8 +27,7 @@ const DescriptionModal = ({ open, onOpenChange, description, programName }: Desc
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
+  );
+};
 
-export default DescriptionModal
-
+export default DescriptionModal;

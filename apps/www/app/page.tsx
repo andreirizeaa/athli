@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
-import HeroSection from "@/components/hero-section";
-import Features from "@/components/features-4";
-import Footer from "@/components/footer";
-import FAQsTwo from "@/components/faqs-2";
-import Pricing from "@/components/pricing";
-import { Spinner } from "@/components/ui/spinner";
+import { useEffect, useState } from 'react';
+import { useUser } from '@clerk/nextjs';
+import HeroSection from '@/components/hero-section';
+import Features from '@/components/features-4';
+import Footer from '@/components/footer';
+import FAQsTwo from '@/components/faqs-2';
+import Pricing from '@/components/pricing';
+import { Spinner } from '@/components/ui/spinner';
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useUser();
@@ -23,9 +23,9 @@ export default function Home() {
     if (isSignedIn) {
       setIsRedirecting(true);
       const appUrl =
-        process.env.NODE_ENV === "production"
-          ? "https://app.oneninety.com"
-          : "http://localhost:3001";
+        process.env.NODE_ENV === 'production'
+          ? 'https://app.oneninety.com'
+          : 'http://localhost:3001';
       // Use replace to avoid adding to history
       window.location.replace(appUrl);
     }

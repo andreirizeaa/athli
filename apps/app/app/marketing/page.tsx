@@ -1,8 +1,7 @@
-import { redirect } from "next/navigation"
+import { redirect } from 'next/navigation';
 
 const MarketingPage = () => {
-  redirect("/marketing/landing")
-}
+  redirect('/marketing/landing');
+};
 
-export default MarketingPage
-
+export default MarketingPage;

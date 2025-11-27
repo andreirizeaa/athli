@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import type { ReactNode } from 'react'
-import { NextIntlClientProvider } from 'next-intl'
-import { enMessages } from '@/lib/i18n/en'
+import type { ReactNode } from 'react';
+import { NextIntlClientProvider } from 'next-intl';
+import { enMessages } from '@/lib/i18n/en';
 
 type IntlProviderProps = {
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 export type Language = {
-  code: string
-  label: string
-  flag: string
-}
+  code: string;
+  label: string;
+  flag: string;
+};
 
 export const availableLanguages: Language[] = [
   {
@@ -20,14 +20,12 @@ export const availableLanguages: Language[] = [
     label: 'English',
     flag: '🇬🇧',
   },
-]
+];
 
 export const IntlProvider = ({ children }: IntlProviderProps) => {
   return (
     <NextIntlClientProvider locale="en" messages={enMessages} timeZone="UTC">
       {children}
     </NextIntlClientProvider>
-  )
-}
-
-
+  );
+};

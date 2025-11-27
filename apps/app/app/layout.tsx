@@ -1,43 +1,42 @@
-import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
-import './globals.css'
-import { ClerkProvider } from '@clerk/nextjs'
-import { shadcn } from '@clerk/themes'
-import { ThemeProvider } from '@/lib/theme-provider'
-import { IntlProvider } from '@/lib/intl-provider'
-import SupabaseProvider from '@/lib/supabase-provider'
-import { Toaster } from '@/components/ui/sonner'
-import { auth } from "@clerk/nextjs/server"
-import { redirect } from "next/navigation"
-import { AppShell } from "@/components/app/app-shell"
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import { ClerkProvider } from '@clerk/nextjs';
+import { shadcn } from '@clerk/themes';
+import { ThemeProvider } from '@/lib/theme-provider';
+import { IntlProvider } from '@/lib/intl-provider';
+import SupabaseProvider from '@/lib/supabase-provider';
+import { Toaster } from '@/components/ui/sonner';
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { AppShell } from '@/components/app/app-shell';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
-})
+});
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
-})
+});
 
 export const metadata: Metadata = {
   title: 'OneNinety - App',
   description: 'OneNinety application',
-}
+};
 
 export default async function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
-  const { userId } = await auth()
+  const { userId } = await auth();
 
   if (!userId) {
-    const wwwUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://oneninety.com'
-      : 'http://localhost:3000'
-    redirect(wwwUrl)
+    const wwwUrl =
+      process.env.NODE_ENV === 'production' ? 'https://oneninety.com' : 'http://localhost:3000';
+    redirect(wwwUrl);
   }
 
   return (
@@ -51,7 +50,7 @@ export default async function RootLayout({
         >
           <ClerkProvider
             appearance={{
-              theme: shadcn
+              theme: shadcn,
             }}
           >
             <SupabaseProvider>
@@ -64,5 +63,5 @@ export default async function RootLayout({
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }

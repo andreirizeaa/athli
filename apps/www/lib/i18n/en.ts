@@ -36,8 +36,6 @@ export const enMessages = {
     goodAfternoon: 'Good afternoon',
     goodEvening: 'Good evening',
   },
-} as const
+} as const;
 
-export type EnMessages = typeof enMessages
-
-
+export type EnMessages = typeof enMessages;
