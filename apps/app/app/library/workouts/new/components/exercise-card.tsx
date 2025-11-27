@@ -493,7 +493,7 @@ export const ExerciseCard = ({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex flex-col gap-3 p-3 bg-background border',
+        'relative flex flex-col gap-3 p-3 bg-background dark:bg-transparent border',
         // Shape logic:
         // - standalone: fully rounded
         // - top of superset: rounded top only

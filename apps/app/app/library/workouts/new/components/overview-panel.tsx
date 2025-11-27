@@ -17,7 +17,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Link2, Trash2 } from 'lucide-react';
+import { Target, GripVertical, Link2, Trash2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 type ExerciseWithSuperset = {
@@ -52,6 +53,7 @@ type OverviewPanelProps = {
   onDeleteExercise: (sectionId: string, exerciseId: string) => void;
   onDeleteSuperset: (sectionId: string, exerciseIds: string[]) => void;
   groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => Array<ExerciseWithSuperset[]>;
+  onExerciseClick?: (exerciseId: string) => void;
 };
 
 const OverviewSectionCard = ({
@@ -127,10 +129,12 @@ const OverviewExerciseRow = ({
   sectionId,
   exercise,
   onDelete,
+  onExerciseClick,
 }: {
   sectionId: string;
   exercise: ExerciseWithSuperset;
   onDelete: (sectionId: string, exerciseId: string) => void;
+  onExerciseClick?: (exerciseId: string) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `exercise-|${sectionId}|${exercise.instanceId}`,
@@ -146,13 +150,42 @@ const OverviewExerciseRow = ({
       <div
         {...listeners}
         className={cn(
-          'flex items-center justify-between rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing',
+          'flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing',
           isDragging && 'opacity-80 shadow-sm'
         )}
       >
-        <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-          <span className="text-xs">{exercise.name || 'Untitled exercise'}</span>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+          <span className="text-xs flex-1 min-w-0">{exercise.name || 'Untitled exercise'}</span>
+          {onExerciseClick && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onExerciseClick(exercise.exerciseId);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onExerciseClick(exercise.exerciseId);
+                    }
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                  aria-label="Focus exercise in view"
+                  data-no-row-link="true"
+                >
+                  <Target className="size-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Focus exercise in view</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           <button
             type="button"
             onClick={(e) => {
@@ -166,6 +199,7 @@ const OverviewExerciseRow = ({
                 onDelete(sectionId, exercise.exerciseId);
               }
             }}
+            onMouseDown={(e) => e.stopPropagation()}
             className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             aria-label={`Delete ${exercise.name || 'exercise'}`}
             data-no-row-link="true"
@@ -173,7 +207,9 @@ const OverviewExerciseRow = ({
             <Trash2 className="size-3" />
           </button>
         </div>
-        <GripVertical className="size-3 text-muted-foreground" />
+        <div className="flex-shrink-0">
+          <GripVertical className="size-3 text-muted-foreground" />
+        </div>
       </div>
     </div>
   );
@@ -183,10 +219,12 @@ const OverviewSupersetRow = ({
   sectionId,
   exercises,
   onDelete,
+  onExerciseClick,
 }: {
   sectionId: string;
   exercises: ExerciseWithSuperset[];
   onDelete: (sectionId: string, exerciseIds: string[]) => void;
+  onExerciseClick?: (exerciseId: string) => void;
 }) => {
   const firstExerciseId = exercises[0]?.instanceId;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -217,8 +255,9 @@ const OverviewSupersetRow = ({
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <div
+        {...listeners}
         className={cn(
-          'rounded-md border bg-background text-xs select-none',
+          'rounded-md border bg-background text-xs select-none cursor-grab active:cursor-grabbing',
           isDragging && 'opacity-80 shadow-sm'
         )}
       >
@@ -229,7 +268,7 @@ const OverviewSupersetRow = ({
                 <div key={exercise.instanceId} className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                    <span className="text-xs">{exercise.name || 'Untitled exercise'}</span>
+                    <span className="text-xs flex-1">{exercise.name || 'Untitled exercise'}</span>
                   </div>
                   {index < exercises.length - 1 && (
                     <div className="flex items-center justify-center py-0.5">
@@ -240,14 +279,42 @@ const OverviewSupersetRow = ({
               ))}
             </div>
           </div>
-          <div
-            {...listeners}
-            className="flex items-center gap-1 cursor-grab active:cursor-grabbing"
-          >
+          <div className="flex items-center gap-2">
+            {onExerciseClick && exercises.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Focus on the first exercise in the superset
+                      onExerciseClick(exercises[0].exerciseId);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onExerciseClick(exercises[0].exerciseId);
+                      }
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
+                    aria-label="Focus exercise in view"
+                    data-no-row-link="true"
+                  >
+                    <Target className="size-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Focus exercise in view</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             <button
               type="button"
               onClick={handleDelete}
               onKeyDown={handleKeyDown}
+              onMouseDown={(e) => e.stopPropagation()}
               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
               aria-label={`Delete superset group: ${exerciseNames}`}
               data-no-row-link="true"
@@ -269,6 +336,7 @@ export const OverviewPanel = ({
   onDeleteExercise,
   onDeleteSuperset,
   groupExercisesBySuperset,
+  onExerciseClick,
 }: OverviewPanelProps) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
   const [activeOverviewItem, setActiveOverviewItem] = React.useState<ActiveOverviewItem | null>(
@@ -501,6 +569,7 @@ export const OverviewPanel = ({
                                   sectionId={section.id}
                                   exercises={exerciseGroup}
                                   onDelete={onDeleteSuperset}
+                                  onExerciseClick={onExerciseClick}
                                 />
                               );
                             }
@@ -510,6 +579,7 @@ export const OverviewPanel = ({
                                 sectionId={section.id}
                                 exercise={exercise}
                                 onDelete={onDeleteExercise}
+                                onExerciseClick={onExerciseClick}
                               />
                             ));
                           }
