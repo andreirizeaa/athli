@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,9 +15,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { StandardBuilder } from './standard-builder';
-import type { WorkoutProgramPayload } from '../workout-schema';
-import { DiscardChangesDialog } from '../components/discard-changes-dialog';
+import { StandardBuilder } from '../../../new/standard/standard-builder';
+import type { WorkoutProgramPayload } from '../../../new/workout-schema';
+import { DiscardChangesDialog } from '../../../new/components/discard-changes-dialog';
+import { mockWorkouts } from '@/components/app/app-shell';
 
 type WorkoutMeta = {
   title: string;
@@ -27,8 +28,10 @@ type WorkoutMeta = {
   builder?: 'standard' | 'ai' | null;
 };
 
-const StandardWorkoutPage = () => {
+const EditStandardWorkoutPage = () => {
   const router = useRouter();
+  const params = useParams();
+  const workoutId = params.workoutId as string;
   const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
@@ -36,8 +39,8 @@ const StandardWorkoutPage = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
-    // Try to load meta from localStorage (if coming from create panel)
+
+    // Try to load meta from localStorage first (if coming from detail page)
     const raw = window.localStorage.getItem('oneninety_new_workout_meta');
     if (raw) {
       try {
@@ -47,22 +50,28 @@ const StandardWorkoutPage = () => {
         window.localStorage.removeItem('oneninety_workout_builder_access');
         return;
       } catch {
-        // If parsing fails, fall through to default values
+        // If parsing fails, fall through to load from workout data
       }
     }
 
-    // If no meta in localStorage, use default values for new workout
-    setWorkoutMeta({
-      title: 'New workout',
-      description: '',
-      type: 'Push',
-      difficulty: 'Intermediate',
-      builder: 'standard',
-    });
-  }, [router]);
+    // If no meta in localStorage, load from workout data
+    const workout = mockWorkouts.find((w) => w.id === workoutId);
+    if (workout) {
+      setWorkoutMeta({
+        title: workout.program || 'Workout',
+        description: workout.description || '',
+        type: workout.type || 'Push',
+        difficulty: 'Intermediate',
+        builder: 'standard',
+      });
+    } else {
+      // If workout not found, redirect back
+      router.push(`/library/workouts/${workoutId}`);
+    }
+  }, [router, workoutId]);
 
-  const navigateBackToWorkouts = () => {
-    router.push('/library/workouts');
+  const navigateBackToWorkout = () => {
+    router.push(`/library/workouts/${workoutId}`);
   };
 
   const handleCancel = () => {
@@ -71,13 +80,13 @@ const StandardWorkoutPage = () => {
       return;
     }
 
-    navigateBackToWorkouts();
+    navigateBackToWorkout();
   };
 
   const handleConfirmDiscard = () => {
     setIsDiscardDialogOpen(false);
     setHasUnsavedChanges(false);
-    navigateBackToWorkouts();
+    navigateBackToWorkout();
   };
 
   const handleSaveClick = () => {
@@ -95,7 +104,7 @@ const StandardWorkoutPage = () => {
     // eslint-disable-next-line no-console
     console.log(payload);
 
-    toast.success(`Push workout "${payload.title}" has been saved`, {
+    toast.success(`Workout "${payload.title}" has been updated`, {
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -104,7 +113,7 @@ const StandardWorkoutPage = () => {
     });
 
     setHasUnsavedChanges(false);
-    navigateBackToWorkouts();
+    navigateBackToWorkout();
   };
 
   if (!workoutMeta) {
@@ -120,7 +129,9 @@ const StandardWorkoutPage = () => {
     if (path === '/library') {
       router.push('/library');
     } else if (path === '/library/workouts') {
-      navigateBackToWorkouts();
+      router.push('/library/workouts');
+    } else if (path === `/library/workouts/${workoutId}`) {
+      navigateBackToWorkout();
     }
   };
 
@@ -154,20 +165,31 @@ const StandardWorkoutPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
+                  <BreadcrumbLink
+                    onClick={() => handleBreadcrumbClick(`/library/workouts/${workoutId}`)}
+                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                  >
+                    {workoutMeta?.title || 'Workout'}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    New workout
+                    Edit workout
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold truncate">New workout</h1>
+            <h1 className="text-[22px] font-semibold truncate">Edit workout</h1>
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button
               variant="secondary"
               onClick={handleCancel}
               className="gap-2"
-              aria-label="Cancel creating workout"
+              aria-label="Cancel editing workout"
             >
               <X className="size-4" />
               <span>Cancel</span>
@@ -198,4 +220,5 @@ const StandardWorkoutPage = () => {
   );
 };
 
-export default StandardWorkoutPage;
+export default EditStandardWorkoutPage;
+

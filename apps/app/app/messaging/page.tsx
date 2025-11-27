@@ -55,6 +55,7 @@ import {
 import { cn } from '@/lib/utils';
 import { messageDraftStorage } from '@/lib/message-draft-storage';
 import { sendMessage } from '@/lib/message-service';
+import { searchNotes } from '@/lib/notes-service';
 import {
   mockContacts,
   mockMessages,
@@ -150,6 +151,9 @@ const MessagingPage = () => {
   const [editingNoteBody, setEditingNoteBody] = React.useState('');
   const [hasNoteChanges, setHasNoteChanges] = React.useState(false);
   const [isDeleteNoteMenuOpen, setIsDeleteNoteMenuOpen] = React.useState(false);
+  const [isNoteSearchOpen, setIsNoteSearchOpen] = React.useState(false);
+  const [noteSearchQuery, setNoteSearchQuery] = React.useState('');
+  const [filteredNotes, setFilteredNotes] = React.useState<Note[]>(mockNotes);
 
   React.useEffect(() => {
     if (isCreateNoteOpen && noteTitleInputRef.current) {
@@ -167,6 +171,31 @@ const MessagingPage = () => {
     setHasNoteChanges(false);
     setIsViewNoteOpen(true);
   };
+
+  // Update filtered notes when notes or search query changes
+  React.useEffect(() => {
+    if (!isNoteSearchOpen || !noteSearchQuery.trim()) {
+      setFilteredNotes(notes);
+      return;
+    }
+
+    const performSearch = async () => {
+      if (selectedContactId) {
+        await searchNotes(selectedContactId, noteSearchQuery);
+      }
+      
+      // Client-side filtering
+      const query = noteSearchQuery.toLowerCase();
+      const filtered = notes.filter(
+        (note) =>
+          note.title.toLowerCase().includes(query) ||
+          note.body.toLowerCase().includes(query)
+      );
+      setFilteredNotes(filtered);
+    };
+
+    performSearch();
+  }, [notes, noteSearchQuery, isNoteSearchOpen, selectedContactId]);
 
   React.useEffect(() => {
     if (selectedNote) {
@@ -1741,6 +1770,7 @@ const MessagingPage = () => {
               enableExport={false}
               enableRowSelection={false}
               selectedRowIds={selectedContactId ? new Set([selectedContactId]) : new Set()}
+              disableLoadingOverlay={true}
               onRowClick={(row) => {
                 // Find or create contact for this athlete
                 let contact = mockContacts.find((c) => c.id === row.id);
@@ -1826,40 +1856,53 @@ const MessagingPage = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          router.push(`/athletes/${selectedContact.id}/training-calendar`)
-                        }
-                        className="gap-2 h-7 text-xs"
-                        aria-label="View training calendar"
-                      >
-                        <Dumbbell className="size-3" />
-                        Training
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => router.push(`/athletes/${selectedContact.id}/overview`)}
-                        className="gap-2 h-7 text-xs"
-                        aria-label="View profile"
-                      >
-                        <User className="size-3" />
-                        Profile
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          // Archive functionality - placeholder
-                        }}
-                        className="gap-2 h-7 text-xs"
-                        aria-label="Archive conversation"
-                      >
-                        <Archive className="size-3" />
-                        Archive
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/athletes/${selectedContact.id}/training-calendar`)
+                              }
+                              className="gap-2 h-7 text-xs"
+                              aria-label="View training calendar"
+                            >
+                              <Dumbbell className="size-3" />
+                              Training
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              View{' '}
+                              {selectedContact.name.split(' ')[0] || selectedContact.name}'s training
+                              calendar
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => router.push(`/athletes/${selectedContact.id}/overview`)}
+                              className="gap-2 h-7 text-xs"
+                              aria-label="View profile"
+                            >
+                              <User className="size-3" />
+                              Profile
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              View{' '}
+                              {selectedContact.name.split(' ')[0] || selectedContact.name}'s profile
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
 
@@ -2881,19 +2924,48 @@ const MessagingPage = () => {
                 </div>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold">Notes</h2>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setIsCreateNoteOpen(true)}
-                    className="gap-2 h-8 text-xs"
-                    aria-label="Create note"
-                  >
-                    <NotebookPen className="h-3 w-3" />
-                    Create note
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setIsNoteSearchOpen(!isNoteSearchOpen);
+                        if (isNoteSearchOpen) {
+                          setNoteSearchQuery('');
+                        }
+                      }}
+                      className="h-8 w-8"
+                      aria-label="Search notes"
+                    >
+                      <Search className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsCreateNoteOpen(true)}
+                      className="gap-2 h-8 text-xs"
+                      aria-label="Create note"
+                    >
+                      <NotebookPen className="h-3 w-3" />
+                      Create note
+                    </Button>
+                  </div>
                 </div>
+                {isNoteSearchOpen && (
+                  <div className="mb-4">
+                    <Input
+                      type="search"
+                      placeholder="Search notes..."
+                      value={noteSearchQuery}
+                      onChange={(e) => setNoteSearchQuery(e.target.value)}
+                      className="h-8 text-xs"
+                      autoFocus
+                      aria-label="Search notes"
+                    />
+                  </div>
+                )}
                 <div className="space-y-3">
-                  {notes.map((note) => (
+                  {filteredNotes.map((note) => (
                     <Card
                       key={note.id}
                       className={cn(

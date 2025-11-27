@@ -1,15 +1,18 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Timer, Trash2 } from 'lucide-react';
+import { ArrowUp, BrainCog, Dumbbell, FileText, Info, Link2, Link2Off, NotebookPen, Paperclip, Plus, Sparkles, Timer, Trash2, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { searchExercises, type Exercise } from '@/lib/exercise-search';
 import type { GeneratedWorkout } from '@/lib/generate-exercise';
+import { generateWorkoutFromPrompt, prompt } from '@/lib/generate-exercise';
 import { toast } from 'sonner';
 import type {
   ExerciseGroupPayload,
@@ -39,6 +42,18 @@ type ExerciseWithSuperset = Exercise & {
   supersetGroupId?: string | null;
   instanceId: string;
   sets?: SetData[];
+};
+
+type ChatMessage = {
+  id: string;
+  text: string;
+  isSent: boolean; // true for user, false for AI
+  pdfAttachment?: {
+    name: string;
+    data: string; // base64
+    type: string;
+    size: number;
+  } | null;
 };
 
 type WorkoutSchema = {
@@ -257,7 +272,20 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       },
     ],
   });
-  const [builderMode, setBuilderMode] = useState<'exercise' | 'section'>('exercise');
+  const [builderMode, setBuilderMode] = useState<'chat' | 'exercise' | 'section'>('chat');
+  const [chatPrompt, setChatPrompt] = useState<string>('');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [attachedPdf, setAttachedPdf] = useState<File | null>(null);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [dragCounter, setDragCounter] = useState(0);
+  const [textareaHeight, setTextareaHeight] = useState(36);
+  const [isMultiLine, setIsMultiLine] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const chatTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [singleLineCharLimit, setSingleLineCharLimit] = useState(50);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null);
@@ -274,6 +302,151 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   const [isLoadingAiWorkout, setIsLoadingAiWorkout] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
+  const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Calculate single-line character limit based on container width
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const calculateCharLimit = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      // Get the container width
+      const containerWidth = container.offsetWidth;
+      
+      // Account for container padding (px-3 = 12px on each side = 24px total)
+      // In single-line mode: plus button (32px) + gap (8px) + send button (32px) + gap (8px) = ~80px
+      // Add some buffer for spacing: ~100px total
+      const availableWidth = containerWidth - 24 - 100;
+      
+      // Estimate character width
+      // Use a conservative estimate of 7-8px per character for typical font
+      // Account for different screen sizes - smaller screens = smaller font = smaller char width
+      const isSmallScreen = containerWidth < 640; // sm breakpoint
+      const estimatedCharWidth = isSmallScreen ? 6.5 : 7.5;
+      const charLimit = Math.floor(availableWidth / estimatedCharWidth);
+      
+      // Set a minimum of 25 and maximum of 100 characters
+      // Smaller minimum for mobile devices
+      const minLimit = isSmallScreen ? 25 : 30;
+      setSingleLineCharLimit(Math.max(minLimit, Math.min(100, charLimit)));
+    };
+
+    // Initial calculation with a small delay to ensure DOM is ready
+    const timeoutId = setTimeout(calculateCharLimit, 100);
+
+    const resizeObserver = new ResizeObserver(() => {
+      // Debounce resize calculations
+      setTimeout(calculateCharLimit, 50);
+    });
+    
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    const handleResize = () => {
+      setTimeout(calculateCharLimit, 50);
+    };
+    
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  // Load initial chat messages from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const chatDataRaw = window.localStorage.getItem('oneninety_ai_workout_chat');
+    if (chatDataRaw) {
+      try {
+        const chatData = JSON.parse(chatDataRaw);
+        const initialMessages: ChatMessage[] = [];
+
+        // Add user's initial prompt as a message
+        if (chatData.prompt) {
+          initialMessages.push({
+            id: `msg_${Date.now()}_user`,
+            text: chatData.prompt,
+            isSent: true,
+            pdfAttachment: chatData.pdfAttachment || null,
+          });
+        }
+
+        setChatMessages(initialMessages);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }, []);
+
+  // Scroll to bottom when new messages are added
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // Dynamically adjust textarea height based on content and character limit
+  useEffect(() => {
+    const textarea = chatTextareaRef.current;
+    if (!textarea) return;
+
+    const wasFocused = document.activeElement === textarea;
+    const cursorPosition = textarea.selectionStart ?? textarea.value.length;
+
+    const charCount = chatPrompt.length;
+
+    // --- Decide mode (NO line measurements) ---
+
+    // Always multi-line if a PDF is attached
+    if (attachedPdf && !isMultiLine) {
+      setIsMultiLine(true);
+    }
+
+    // Open multi-line when text exceeds the single-line char limit
+    if (!attachedPdf && !isMultiLine && charCount > singleLineCharLimit) {
+      setIsMultiLine(true);
+    }
+
+    // Only close multi-line when message is cleared (and no PDF)
+    if (!attachedPdf && isMultiLine && charCount === 0) {
+      setIsMultiLine(false);
+    }
+
+    // --- Apply sizing based on mode ---
+
+    if (attachedPdf || isMultiLine) {
+      textarea.style.width = '100%';
+      textarea.style.height = 'auto';
+      const maxHeight = 120;
+      const minHeight = attachedPdf ? 60 : 36;
+      const scrollHeight = textarea.scrollHeight;
+      const newHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
+      textarea.style.height = `${newHeight}px`;
+      setTextareaHeight(newHeight);
+    } else {
+      const singleLineHeight = 36;
+      textarea.style.width = '';
+      textarea.style.height = `${singleLineHeight}px`;
+      setTextareaHeight(singleLineHeight);
+    }
+
+    // Restore focus and cursor position if it was focused
+    if (wasFocused) {
+      Promise.resolve().then(() => {
+        if (textarea && document.activeElement !== textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(cursorPosition, cursorPosition);
+        }
+      });
+    }
+  }, [chatPrompt, attachedPdf, singleLineCharLimit, isMultiLine]);
 
   // Load AI generated workout on mount with gradual loading
   useEffect(() => {
@@ -469,6 +642,16 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         }
       });
 
+      // Mark as dirty if there are multiple sections, non-regular sections, or any exercises
+      // (anything beyond a single blank regular section is a change)
+      const hasMultipleSections = sectionsWithStructure.length > 1;
+      const hasNonRegularSections = sectionsWithStructure.some((s) => s.type !== 'regular');
+      const hasExercises = exercisesToAdd.length > 0;
+
+      if (hasMultipleSections || hasNonRegularSections || hasExercises) {
+        onDirtyChange?.();
+      }
+
       // Calculate delay per exercise (5 seconds total / number of exercises)
       const totalDuration = 5000; // 5 seconds
       const delayPerExercise =
@@ -480,7 +663,8 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       // Add exercises gradually
       exercisesToAdd.forEach((item, index) => {
         setTimeout(() => {
-          setWorkoutSchema((prev) => ({
+          setWorkoutSchema((prev) => {
+            const updated = {
             ...prev,
             sections: prev.sections.map((sec) => {
               if (sec.id === item.sectionId) {
@@ -491,7 +675,13 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
               }
               return sec;
             }),
-          }));
+            };
+            // Mark as dirty when first exercise is added
+            if (index === 0) {
+              onDirtyChange?.();
+            }
+            return updated;
+          });
 
           // Hide loading overlay after last exercise is added
           if (index === exercisesToAdd.length - 1) {
@@ -510,9 +700,183 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     }
   }, []);
 
+  const handleSendMessage = async () => {
+    if (!chatPrompt.trim() && !attachedPdf) return;
+
+    setIsSendingMessage(true);
+
+    // Add user message
+    let pdfAttachment: ChatMessage['pdfAttachment'] = null;
+    if (attachedPdf) {
+      pdfAttachment = await new Promise<ChatMessage['pdfAttachment']>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = '';
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64 = btoa(binary);
+          resolve({
+            name: attachedPdf.name,
+            data: base64,
+            type: attachedPdf.type,
+            size: attachedPdf.size,
+          });
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(attachedPdf);
+      });
+    }
+
+    const userMessage: ChatMessage = {
+      id: `msg_${Date.now()}_user`,
+      text: chatPrompt.trim(),
+      isSent: true,
+      pdfAttachment,
+    };
+
+    setChatMessages((prev) => [...prev, userMessage]);
+    setChatPrompt('');
+    setAttachedPdf(null);
+    setTextareaHeight(36);
+    setIsMultiLine(false);
+
+    // Call prompt function with current workout schema state
+    try {
+      const workoutSchemaJson = JSON.stringify(workoutSchema);
+      await prompt(workoutSchemaJson);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send prompt with workout schema', error);
+    }
+
+    // Simulate AI response (replace with actual API call)
+    setTimeout(() => {
+      const aiMessage: ChatMessage = {
+        id: `msg_${Date.now()}_ai`,
+        text: 'I\'ve updated your workout based on your request. The changes have been applied to your workout.',
+        isSent: false,
+      };
+      setChatMessages((prev) => [...prev, aiMessage]);
+      setIsSendingMessage(false);
+    }, 1500);
+  };
+
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setAttachedPdf(file);
+    }
+  };
+
+  const handleRemovePdf = () => {
+    setAttachedPdf(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle drag and drop for PDF files in chat
+  const handleChatDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragCounter((prev) => prev + 1);
+    if (event.dataTransfer.types.includes('Files')) {
+      setIsDraggingOver(true);
+    }
+  };
+
+  const handleChatDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragCounter((prev) => {
+      const newCount = prev - 1;
+      if (newCount === 0) {
+        setIsDraggingOver(false);
+      }
+      return newCount;
+    });
+  };
+
+  const handleChatDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer.types.includes('Files')) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  };
+
+  const handleChatDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOver(false);
+    setDragCounter(0);
+
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length === 0) return;
+
+    // Only handle PDF files
+    const pdfFiles = files.filter(
+      (file) => file.type === 'application/pdf' || file.name.endsWith('.pdf')
+    );
+
+    if (pdfFiles.length > 0) {
+      const pdfFile = pdfFiles[0];
+      setAttachedPdf(pdfFile);
+    }
+  };
+
   const handleExerciseClick = (exercise: Exercise) => {
-    setSelectedExercise(exercise);
-    setIsVideoModalOpen(true);
+    // First, try to scroll to the exercise if it exists in the middle area
+    const exerciseRef = exerciseRefs.current.get(exercise.exerciseId);
+    if (exerciseRef && contentScrollRef.current) {
+      const scrollContainer = contentScrollRef.current;
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const exerciseRect = exerciseRef.getBoundingClientRect();
+      const scrollTop = scrollContainer.scrollTop;
+      const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+
+      // Scroll to center the exercise in the viewport
+      const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'smooth',
+      });
+    } else {
+      // If exercise not found in middle area, open video modal
+      setSelectedExercise(exercise);
+      setIsVideoModalOpen(true);
+    }
+  };
+
+  const handleExerciseClickById = (exerciseId: string) => {
+    // Find the exercise by ID from the search results
+    const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
+    if (exercise) {
+      handleExerciseClick(exercise);
+    } else {
+      // If exercise not found, try to scroll using just the ID
+      const exerciseRef = exerciseRefs.current.get(exerciseId);
+      if (exerciseRef && contentScrollRef.current) {
+        const scrollContainer = contentScrollRef.current;
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const exerciseRect = exerciseRef.getBoundingClientRect();
+        const scrollTop = scrollContainer.scrollTop;
+        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+
+        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+        scrollContainer.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: 'smooth',
+        });
+      }
+    }
   };
 
   const recomputeExerciseValidation = (
@@ -1185,44 +1549,370 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
 
   return (
     <div className="flex h-full">
-      <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-        <div className="p-4">
+      <div className="flex-[2] bg-background h-full overflow-hidden flex flex-col">
+        <div className="px-4 pt-4 flex-shrink-0">
           <Tabs
             value={builderMode}
             onValueChange={(value) => {
-              if (value) setBuilderMode(value as 'exercise' | 'section');
+              if (value) setBuilderMode(value as 'chat' | 'exercise' | 'section');
             }}
           >
             <TabsList className="w-full">
+              <TabsTrigger
+                value="chat"
+                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+              >
+                Chat
+              </TabsTrigger>
               <TabsTrigger
                 value="exercise"
                 disabled={workoutSchema.sections.length === 0}
                 className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
-                Exercise
+                Exercises
               </TabsTrigger>
               <TabsTrigger
                 value="section"
                 className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
-                Section
+                Sections
               </TabsTrigger>
             </TabsList>
           </Tabs>
+        </div>
+        {builderMode === 'chat' && (
+          <div
+            className="flex flex-col flex-1 min-h-0 overflow-hidden relative"
+            onDragEnter={handleChatDragEnter}
+            onDragOver={handleChatDragOver}
+            onDragLeave={handleChatDragLeave}
+            onDrop={handleChatDrop}
+          >
+            {/* Drag and Drop Overlay */}
+            {isDraggingOver && (
+              <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
+                <div className="text-center px-8">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-2 text-primary">
+                      <FileText className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold text-foreground">
+                        Drop your PDF here
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        PDF files will be added to the message composer
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+              {/* Chat Messages */}
+              <ScrollArea className="flex-1 min-h-0" ref={chatScrollRef}>
+                <div className="flex flex-col gap-3 px-4 pt-4 pb-4">
+                  {chatMessages.length === 0 ? (
+                    <div className="flex flex-col items-center gap-4 py-8">
+                      <div className="relative flex items-center justify-center py-8 px-8">
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 blur-sm opacity-30 -z-10"></div>
+                        <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white shadow-lg">
+                          <BrainCog className="h-10 w-10" />
+                        </div>
+                      </div>
+                      <h2 className="text-xl font-semibold text-center">OneNinety AI Builder</h2>
+                      <p className="text-sm text-foreground text-center max-w-md">
+                        Ask for an auto-made workout, explain what you want to be included in yours and write in whatever form you wish.
+                      </p>
+                    </div>
+                  ) : (
+                    chatMessages.map((message, index) => {
+                      const isLastInSequence =
+                        index === chatMessages.length - 1 ||
+                        chatMessages[index + 1]?.isSent !== message.isSent;
+
+                      return (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            'flex w-full flex-col',
+                            message.isSent ? 'items-end' : 'items-start'
+                          )}
+                        >
+                          {/* Message Text */}
+                          {message.text.trim() && (
+                            <div
+                              className={cn(
+                                'max-w-[80%] rounded-xl px-3 py-2',
+                                message.isSent
+                                  ? 'bg-primary/20 text-foreground'
+                                  : 'bg-muted text-foreground',
+                                isLastInSequence && message.isSent && 'rounded-br-sm',
+                                isLastInSequence && !message.isSent && 'rounded-bl-sm'
+                              )}
+                            >
+                              <p className="text-sm whitespace-pre-wrap break-words">
+                                {message.text}
+                              </p>
+                            </div>
+                          )}
+                          {/* PDF Attachment - Below message */}
+                          {message.pdfAttachment && (
+                            <div
+                              className={cn(
+                                'mt-2 max-w-[80%] px-3 py-2 bg-background/50 border',
+                                message.isSent ? 'items-end' : 'items-start',
+                                isLastInSequence && message.isSent
+                                  ? 'rounded-[18px] rounded-br-sm'
+                                  : isLastInSequence && !message.isSent
+                                    ? 'rounded-[18px] rounded-bl-sm'
+                                    : 'rounded-[18px]'
+                              )}
+                            >
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`View ${message.pdfAttachment.name}`}
+                                className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                              >
+                                <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                                  <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">
+                                    {message.pdfAttachment.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">PDF</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                  {isSendingMessage && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[80%] rounded-xl px-3 py-2 bg-muted text-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse" />
+                          <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse delay-75" />
+                          <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse delay-150" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              {/* Chat Input */}
+              <div className="px-4 pb-4 pt-4 flex-shrink-0">
+                <div
+                  ref={containerRef}
+                  className={cn(
+                    'relative flex bg-muted px-3 py-2 transition-all duration-700 ease-in-out',
+                    isMultiLine ? 'flex-col' : 'items-center'
+                  )}
+                  style={{ borderRadius: '28px' }}
+                >
+                  {/* PDF Preview */}
+                  {attachedPdf && (
+                    <div
+                      className="mb-2 px-3 py-2 bg-background/50"
+                      style={{ borderRadius: '18px' }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`View ${attachedPdf.name}`}
+                          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        >
+                          <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                            <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {attachedPdf.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">PDF</p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 flex-shrink-0"
+                          onClick={handleRemovePdf}
+                          aria-label="Remove PDF"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    aria-label="Attach PDF"
+                  />
+                  {!isMultiLine ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                            onClick={handleFileButtonClick}
+                            aria-label="Attach file"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Attach files</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : null}
+                  <Textarea
+                    ref={chatTextareaRef}
+                    placeholder="Type, dictate or upload a file..."
+                    value={chatPrompt}
+                    onChange={(e) => setChatPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    className={cn(
+                      'resize-none min-h-[36px] max-h-[120px] py-2 bg-muted dark:bg-muted border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-muted dark:focus-visible:bg-muted',
+                      isMultiLine ? 'w-full' : 'flex-1 min-w-0'
+                    )}
+                    aria-label="Type a message"
+                    rows={1}
+                  />
+                  {isMultiLine ? (
+                    <>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                onClick={handleFileButtonClick}
+                                aria-label="Attach file"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Attach files</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {chatPrompt.trim() || attachedPdf ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  onClick={handleSendMessage}
+                                  disabled={isSendingMessage || (!chatPrompt.trim() && !attachedPdf)}
+                                  className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                                  aria-label="Send message"
+                                >
+                                  <ArrowUp className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Send message</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  onClick={handleSendMessage}
+                                  className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                                  aria-label="Send message"
+                                >
+                                  <ArrowUp className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Send message</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    </>
+                  ) : chatPrompt.trim() || attachedPdf ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={handleSendMessage}
+                            disabled={isSendingMessage || (!chatPrompt.trim() && !attachedPdf)}
+                            className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                            aria-label="Send message"
+                          >
+                            <ArrowUp className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Send message</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            onClick={handleSendMessage}
+                            className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                            aria-label="Send message"
+                          >
+                            <ArrowUp className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Send message</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {builderMode === 'exercise' && (
-            <ExerciseSelectionPanel
-              onExerciseClick={handleExerciseClick}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            />
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <ExerciseSelectionPanel
+                onExerciseClick={handleExerciseClick}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              />
+            </div>
           )}
           {builderMode === 'section' && (
-            <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
+            </div>
           )}
-        </div>
       </div>
       <Separator orientation="vertical" />
-      <div className="relative flex-[4] h-full">
+      <div className="relative flex-[3.5] h-full">
         {isLoadingAiWorkout && (
           <div className="absolute inset-0 mt-[1px] bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
@@ -1231,12 +1921,19 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
             </div>
           </div>
         )}
-        <div ref={contentScrollRef} className="p-4 h-full overflow-y-auto">
+        <div
+          ref={contentScrollRef}
+          className="p-4 h-full overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted [&::-webkit-scrollbar-track]:bg-transparent"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'hsl(var(--muted)) transparent',
+          }}
+        >
           {workoutSchema.sections.length > 0 ? (
-            <div className="flex flex-col gap-1.5 w-full">
+            <div className="flex flex-col gap-4 w-full">
               {workoutSchema.sections.map((section) => (
                 <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
-                  <Card className="bg-card w-full flex flex-col relative">
+                  <Card className="bg-background w-full flex flex-col relative">
                     <CardHeader className="border-b p-0 pb-2">
                       <div className="flex items-center justify-between px-3 pt-1">
                         <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
@@ -1396,7 +2093,17 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                               );
 
                               return (
-                                <div key={exercise.instanceId} className={wrapperClasses}>
+                                <div
+                                  key={exercise.instanceId}
+                                  ref={(el) => {
+                                    if (el) {
+                                      exerciseRefs.current.set(exercise.exerciseId, el);
+                                    } else {
+                                      exerciseRefs.current.delete(exercise.exerciseId);
+                                    }
+                                  }}
+                                  className={wrapperClasses}
+                                >
                                   <ExerciseCard
                                     exercise={exercise}
                                     isLinkedToPrev={isLinkedToPrev}
@@ -1494,12 +2201,12 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                                               type="button"
                                               variant="outline"
                                               size="sm"
-                                              className="gap-2 bg-background z-10"
+                                              className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
                                               onClick={() =>
                                                 handleSupersetUnlink(section.id, exerciseIndex)
                                               }
                                             >
-                                              <Link2Off className="size-4" />
+                                              <Link2Off className="size-3" />
                                               Unlink
                                             </Button>
                                           </div>
@@ -1508,12 +2215,13 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                                             <Button
                                               type="button"
                                               variant="outline"
-                                              className="gap-2"
+                                              size="sm"
+                                              className="gap-1.5 text-xs h-7 px-2"
                                               onClick={() =>
                                                 handleSupersetLink(section.id, exerciseIndex)
                                               }
                                             >
-                                              <Link2 className="size-4" />
+                                              <Link2 className="size-3" />
                                               Superset
                                             </Button>
                                           </div>
@@ -1527,10 +2235,11 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                               <Button
                                 type="button"
                                 variant="outline"
+                                size="sm"
                                 onClick={() => handleAddExercise(section.id)}
-                                className="gap-2"
+                                className="gap-1.5 text-xs h-7 px-2"
                               >
-                                <Plus className="size-4" />
+                                <Plus className="size-3" />
                                 Add Exercise
                               </Button>
                             </div>
@@ -1564,10 +2273,11 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                     <Button
                       type="button"
                       variant="outline"
-                      className="gap-2"
+                      size="sm"
+                      className="gap-1.5 text-xs h-7 px-2"
                       aria-label="Add new section"
                     >
-                      <Plus className="size-4" />
+                      <Plus className="size-3" />
                       <span>Add section</span>
                     </Button>
                   </DropdownMenuTrigger>
@@ -1629,15 +2339,109 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         <div className="p-4">
           <EquipmentPanel sections={workoutSchema.sections} />
           <OverviewPanel
-            sections={workoutSchema.sections}
+            sections={workoutSchema.sections.map((section) => ({
+              id: section.id,
+              type: section.type,
+              exercises: section.exercises?.map((exercise) => ({
+                exerciseId: exercise.exerciseId,
+                instanceId: exercise.instanceId,
+                name: exercise.name,
+                supersetGroupId: exercise.supersetGroupId,
+              })),
+            }))}
             onSectionsChange={(sections) => {
               onDirtyChange?.();
-              setWorkoutSchema((prev) => ({ ...prev, sections }));
+              setWorkoutSchema((prev) => ({
+                ...prev,
+                sections: sections.map((section) => {
+                  const originalSection = prev.sections.find((s) => s.id === section.id);
+                  if (!originalSection) {
+                    return {
+                      id: section.id,
+                      type: section.type,
+                      exercises: section.exercises?.map((ex) => {
+                        const found = searchExercises('').find((e) => e.exerciseId === ex.exerciseId);
+                        return found
+                          ? {
+                              ...found,
+                              instanceId: ex.instanceId,
+                              supersetGroupId: ex.supersetGroupId,
+                              sets: [],
+                            }
+                          : {
+                              exerciseId: ex.exerciseId,
+                              name: ex.name,
+                              imageUrl: '',
+                              videoUrl: '',
+                              equipments: [],
+                              bodyParts: [],
+                              exerciseType: 'weight_reps',
+                              targetMuscles: [],
+                              secondaryMuscles: [],
+                              keywords: [],
+                              overview: '',
+                              instructions: [],
+                              exerciseTips: [],
+                              variations: [],
+                              relatedExerciseIds: [],
+                              instanceId: ex.instanceId,
+                              supersetGroupId: ex.supersetGroupId,
+                              sets: [],
+                            };
+                      }),
+                    };
+                  }
+                  return {
+                    ...originalSection,
+                    exercises: section.exercises?.map((ex) => {
+                      const originalExercise = originalSection.exercises?.find(
+                        (e) => e.instanceId === ex.instanceId
+                      );
+                      return originalExercise
+                        ? {
+                            ...originalExercise,
+                            supersetGroupId: ex.supersetGroupId,
+                          }
+                        : {
+                            ...searchExercises('').find((e) => e.exerciseId === ex.exerciseId) || {
+                              exerciseId: ex.exerciseId,
+                              name: ex.name,
+                              imageUrl: '',
+                              videoUrl: '',
+                              equipments: [],
+                              bodyParts: [],
+                              exerciseType: 'weight_reps',
+                              targetMuscles: [],
+                              secondaryMuscles: [],
+                              keywords: [],
+                              overview: '',
+                              instructions: [],
+                              exerciseTips: [],
+                              variations: [],
+                              relatedExerciseIds: [],
+                            },
+                            instanceId: ex.instanceId,
+                            supersetGroupId: ex.supersetGroupId,
+                            sets: [],
+                          };
+                    }),
+                  };
+                }),
+              }));
             }}
             onDeleteSection={handleDeleteSection}
             onDeleteExercise={handleDeleteExerciseFromOverview}
             onDeleteSuperset={handleDeleteSupersetFromOverview}
-            groupExercisesBySuperset={groupExercisesBySuperset}
+            groupExercisesBySuperset={(exercises) => {
+              const fullExercises = exercises.map((ex) => {
+                const section = workoutSchema.sections.find((s) =>
+                  s.exercises?.some((e) => e.instanceId === ex.instanceId)
+                );
+                return section?.exercises?.find((e) => e.instanceId === ex.instanceId);
+              }).filter((e): e is ExerciseWithSuperset => e !== undefined);
+              return groupExercisesBySuperset(fullExercises);
+            }}
+            onExerciseClick={handleExerciseClickById}
           />
         </div>
       </div>

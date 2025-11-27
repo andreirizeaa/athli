@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -21,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { generateWorkoutFromPrompt } from '@/lib/generate-exercise';
 import DescriptionModal from './description-modal';
@@ -47,6 +48,7 @@ import {
   BrainCog,
   Download,
   Settings,
+  Star,
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
@@ -90,6 +92,8 @@ const WorkoutsPage = () => {
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [lengthFilter, setLengthFilter] = useState<string | null>(null);
+  const [starredWorkouts, setStarredWorkouts] = useState<Set<string>>(new Set());
+  const [starFilter, setStarFilter] = useState<string | null>(null);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false);
@@ -110,8 +114,11 @@ const WorkoutsPage = () => {
   const [isAssignWorkoutOpen, setIsAssignWorkoutOpen] = useState<boolean>(false);
   const [isCreateWorkoutStep2, setIsCreateWorkoutStep2] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
-  const [selectedPdfFile, setSelectedPdfFile] = useState<File | null>(null);
-  const pdfFileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [isGeneratingStandard, setIsGeneratingStandard] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleToggleWorkout = (workoutId: string) => {
     setSelectedWorkouts((prev) => {
@@ -148,7 +155,10 @@ const WorkoutsPage = () => {
     setNewSelectedBuilder('ai');
     setIsCreateWorkoutStep2(false);
     setAiPrompt('');
-    setSelectedPdfFile(null);
+    setSelectedFile(null);
+    setIsDragging(false);
+    setIsGenerating(false);
+    setIsGeneratingStandard(false);
   };
 
   const handleOpenCreateWorkout = () => {
@@ -186,6 +196,8 @@ const WorkoutsPage = () => {
       }
 
       // If standard builder, proceed directly to builder
+      setIsGeneratingStandard(true);
+      
       const meta = {
         title: newWorkoutName.trim(),
         description: newDescription.trim(),
@@ -196,16 +208,26 @@ const WorkoutsPage = () => {
 
       try {
         window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify(meta));
+        // Set access flag for standard builder
+        window.localStorage.setItem('oneninety_workout_builder_access', 'standard');
       } catch {
         // Ignore storage errors
       }
 
-      setIsCreateWorkoutOpen(false);
-
-      const targetPath = '/library/workouts/new/standard';
-      router.push(targetPath);
+      // Wait 500ms before navigation
+      setTimeout(() => {
+        const targetPath = '/library/workouts/new/standard';
+        router.push(targetPath);
+        
+        // Keep sidebar open during navigation, close after a brief delay
+        setTimeout(() => {
+          setIsCreateWorkoutOpen(false);
+          setIsGeneratingStandard(false);
+        }, 300);
+      }, 500);
     } else {
       // Step 2: Generate AI workout and navigate to builder
+      setIsGenerating(true);
       const prompt = aiPrompt.trim();
 
       const meta = {
@@ -222,14 +244,55 @@ const WorkoutsPage = () => {
         // Ignore storage errors
       }
 
+      // Store prompt and attachments for chat
+      let pdfContent: string | null = null;
+      if (selectedFile) {
+        pdfContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            // Convert ArrayBuffer to base64 string
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(selectedFile);
+        });
+      }
+
+      const chatData = {
+        prompt,
+        pdfAttachment: pdfContent && selectedFile
+          ? {
+              name: selectedFile.name,
+              data: pdfContent,
+              type: selectedFile.type,
+              size: selectedFile.size,
+            }
+          : null,
+      };
+
+      try {
+        window.localStorage.setItem('oneninety_ai_workout_chat', JSON.stringify(chatData));
+      } catch {
+        // Ignore storage errors
+      }
+
       let generated: any = null;
       try {
-        generated = await generateWorkoutFromPrompt(prompt);
+        generated = await generateWorkoutFromPrompt(prompt, pdfContent);
         // eslint-disable-next-line no-console
         console.log('AI generated workout', generated);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Failed to generate workout from AI', error);
+        setIsGenerating(false);
+        return;
       }
 
       if (generated) {
@@ -246,10 +309,16 @@ const WorkoutsPage = () => {
         }
       }
 
-      setIsCreateWorkoutOpen(false);
+      try {
+        // Set access flag for AI builder
+        window.localStorage.setItem('oneninety_workout_builder_access', 'ai');
+      } catch {
+        // Ignore storage errors
+      }
 
       const targetPath = '/library/workouts/new/ai';
       router.push(targetPath);
+      setIsCreateWorkoutOpen(false);
     }
   };
 
@@ -257,21 +326,54 @@ const WorkoutsPage = () => {
     setIsCreateWorkoutStep2(false);
   };
 
-  const handlePdfButtonClick = () => {
-    pdfFileInputRef.current?.click();
+  const handleFileButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
-  const handlePdfFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type === 'application/pdf') {
-      setSelectedPdfFile(file);
+      setSelectedFile(file);
     }
   };
 
-  const handleRemovePdf = () => {
-    setSelectedPdfFile(null);
-    if (pdfFileInputRef.current) {
-      pdfFileInputRef.current.value = '';
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set isDragging to false if we're leaving the drop zone entirely
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const validFile = files.find((file) => file.type === 'application/pdf');
+
+    if (validFile) {
+      setSelectedFile(validFile);
     }
   };
 
@@ -404,11 +506,7 @@ Focus on proper form and progressive overload.`;
                   handleDescriptionClick(e, row.description, row.program);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDescriptionClick(e, row.description, row.program);
-                  }
+                  handleDescriptionKeyDown(e, row.description, row.program);
                 }}
                 data-no-row-link="true"
                 className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
@@ -560,34 +658,85 @@ Focus on proper form and progressive overload.`;
       id: 'type',
       label: 'Type',
       icon: <Tag className="size-4" />,
-      options: [
-        { value: 'all', label: 'All' },
-        ...uniqueTypes.map((type) => ({ value: type, label: type })),
-      ],
+      options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
       defaultValue: typeFilter,
+    },
+    {
+      id: 'show',
+      label: 'Show',
+      icon: <Star className="size-4" />,
+      options: [
+        { value: 'starred', label: 'Starred' },
+        { value: 'unstarred', label: 'Unstarred' },
+      ],
+      getFilterValue: (row) => (starredWorkouts.has(row.id) ? 'starred' : 'unstarred'),
+      defaultValue: starFilter,
     },
     {
       id: 'length',
       label: 'Length',
       icon: <Clock className="size-4" />,
-      options: [
-        { value: 'all', label: 'All' },
-        ...uniqueLengths.map((length) => ({ value: length, label: length })),
-      ],
+      options: uniqueLengths.map((length) => ({ value: length, label: length })),
       getFilterValue: (row) => row.length,
       defaultValue: lengthFilter,
     },
   ];
 
+  const handleToggleStar = (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    setStarredWorkouts((prev) => {
+      const next = new Set(prev);
+      if (next.has(workoutId)) {
+        next.delete(workoutId);
+      } else {
+        next.add(workoutId);
+      }
+      return next;
+    });
+  };
+
+  const handleStarKeyDown = (workoutId: string, e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleToggleStar(workoutId, e);
+    }
+  };
+
   // Create first column renderer
   const renderFirstColumn = (workout: Workout, isSelected: boolean) => {
+    const isStarred = starredWorkouts.has(workout.id);
     return (
-      <div className="flex items-center gap-3 h-full">
+      <div className="flex items-center gap-3 h-full w-full">
         <div className="flex items-center justify-center h-full" data-no-row-link="true">
           <Checkbox checked={isSelected} onCheckedChange={() => handleToggleWorkout(workout.id)} />
         </div>
-        <span className="text-sm truncate">{workout.program}</span>
+        <span className="text-sm truncate flex-1 min-w-0">{workout.program}</span>
+        <div className="flex items-center justify-end flex-shrink-0" data-no-row-link="true">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => handleToggleStar(workout.id, e)}
+                  onKeyDown={(e) => handleStarKeyDown(workout.id, e)}
+                  className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                  aria-label="Star this workout"
+                >
+                  {isStarred ? (
+                    <Star className="h-4 w-4 fill-primary text-primary" />
+                  ) : (
+                    <Star className="h-4 w-4" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Star this workout</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     );
   };
@@ -735,8 +884,8 @@ Focus on proper form and progressive overload.`;
       <SidePanel
         open={isCreateWorkoutOpen}
         onOpenChange={(open) => {
-          setIsCreateWorkoutOpen(open);
-          if (!open) {
+          if (!open && !isGenerating && !isGeneratingStandard) {
+            setIsCreateWorkoutOpen(open);
             resetCreateWorkoutState();
           }
         }}
@@ -747,20 +896,32 @@ Focus on proper form and progressive overload.`;
               type="button"
               onClick={handleCreateWorkoutContinue}
               disabled={
-                isCreateWorkoutStep2
-                  ? false
+                isGenerating ||
+                isGeneratingStandard ||
+                (isCreateWorkoutStep2
+                  ? !aiPrompt.trim()
                   : !newWorkoutName.trim() ||
                     !newWorkoutType ||
                     !newDifficulty ||
-                    !newSelectedBuilder
+                    !newSelectedBuilder)
               }
               aria-label={isCreateWorkoutStep2 ? 'Generate workout' : 'Continue'}
+              className={cn(
+                ((isCreateWorkoutStep2 && isGenerating) || (!isCreateWorkoutStep2 && isGeneratingStandard)) &&
+                  'min-w-[120px] justify-center'
+              )}
             >
               {isCreateWorkoutStep2 ? (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Generate
-                </>
+                isGenerating ? (
+                  <Spinner className="h-4 w-4" />
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate
+                  </>
+                )
+              ) : isGeneratingStandard ? (
+                <Spinner className="h-4 w-4" />
               ) : (
                 'Continue'
               )}
@@ -770,6 +931,7 @@ Focus on proper form and progressive overload.`;
                 type="button"
                 variant="secondary"
                 onClick={handleCreateWorkoutBack}
+                disabled={isGenerating || isGeneratingStandard}
                 aria-label="Back to workout details"
               >
                 Back
@@ -779,6 +941,7 @@ Focus on proper form and progressive overload.`;
               type="button"
               variant="secondary"
               onClick={handleCloseCreateWorkout}
+              disabled={isGenerating || isGeneratingStandard}
               aria-label="Cancel creating workout"
             >
               Cancel
@@ -806,7 +969,32 @@ Focus on proper form and progressive overload.`;
             setSelectedBuilder={setNewSelectedBuilder}
           />
         ) : (
-          <div className="flex flex-col h-full">
+          <div
+            className="flex flex-col h-full relative"
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {isDragging && (
+              <div
+                className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm border-2 border-dashed border-primary flex items-center justify-center pointer-events-auto"
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white">
+                    <FileText className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold">Drop your PDF here</p>
+                    <p className="text-sm text-muted-foreground">PDF files only</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex flex-col items-center gap-4 flex-shrink-0 pb-4">
               <div className="relative flex items-center justify-center py-8 px-8">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 blur-sm opacity-30 -z-10"></div>
@@ -816,18 +1004,21 @@ Focus on proper form and progressive overload.`;
               </div>
               <h2 className="text-xl font-semibold text-center">OneNinety AI Builder</h2>
               <p className="text-sm text-foreground text-center max-w-md">
-                Drag and drop or select files to instantly convert it into OneNinety format or write
-                the outline of your workout and let us translate it.
+                Drag and drop or select PDF files to instantly import into OneNinety.
               </p>
             </div>
-            <Separator className="-mx-4 w-[calc(100%+2rem)]" />
+            <div className="-mx-4 mb-2">
+              <Separator className="w-full" />
+            </div>
             <div className="flex-1 overflow-auto">
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-1">
                   <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white">
                     <Sparkles className="h-4 w-4" />
                   </div>
-                  <h3 className="text-sm font-semibold">Let&apos;s build a workout</h3>
+                  <h3 className="text-sm font-semibold">
+                    Let&apos;s build a workout <span className="text-destructive">*</span>
+                  </h3>
                 </div>
                 <div className="relative">
                   <Textarea
@@ -838,10 +1029,10 @@ Focus on proper form and progressive overload.`;
                     placeholder="Ask for an auto-made workout, explain what you want to be included in yours and write in whatever form you wish. Press Enter to add new lines."
                   />
                   <input
-                    ref={pdfFileInputRef}
+                    ref={fileInputRef}
                     type="file"
                     accept=".pdf"
-                    onChange={handlePdfFileChange}
+                    onChange={handleFileChange}
                     className="hidden"
                     aria-label="Select PDF file"
                   />
@@ -856,7 +1047,7 @@ Focus on proper form and progressive overload.`;
                     </button>
                     <button
                       type="button"
-                      onClick={handlePdfButtonClick}
+                      onClick={handleFileButtonClick}
                       className="h-7 px-3 rounded-md bg-orange-100 text-orange-700 text-xs font-medium flex items-center gap-1.5 hover:bg-orange-200 transition-colors dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/50"
                       aria-label="Select PDF file"
                     >
@@ -865,20 +1056,20 @@ Focus on proper form and progressive overload.`;
                     </button>
                   </div>
                 </div>
-                {selectedPdfFile && (
+                {selectedFile && (
                   <div className="flex items-center gap-3 p-3 rounded-lg border bg-background">
                     <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-100">
                       <FileText className="h-6 w-6 text-orange-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
-                        {selectedPdfFile.name}
+                        {selectedFile.name}
                       </p>
                       <p className="text-xs text-muted-foreground">PDF</p>
                     </div>
                     <button
                       type="button"
-                      onClick={handleRemovePdf}
+                      onClick={handleRemoveFile}
                       className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="Remove PDF file"
                     >
