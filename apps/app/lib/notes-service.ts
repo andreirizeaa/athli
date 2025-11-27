@@ -130,3 +130,35 @@ export const deleteNote = async (data: DeleteNoteData): Promise<void> => {
   // if (!response.ok) throw new Error('Failed to delete note')
 };
 
+/**
+ * Dummy notes service method to search notes
+ * This will be connected to the backend in the future
+ */
+export const searchNotes = async (
+  contactId: string,
+  query: string
+): Promise<Note[]> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+
+  console.log('Searching notes:', {
+    contactId,
+    query,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Dummy response - in the future, this will come from the backend
+  // For now, return empty array as the filtering will be done client-side
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/notes/search?contactId=${contactId}&query=${encodeURIComponent(query)}`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to search notes')
+  // return await response.json()
+
+  return [];
+};
+

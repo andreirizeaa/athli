@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { Exercise } from '@/lib/exercise-search';
+import { searchExercises, type Exercise } from '@/lib/exercise-search';
 import { toast } from 'sonner';
 import type {
   ExerciseGroupPayload,
@@ -277,10 +277,53 @@ export const StandardBuilder = ({
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
+  const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const handleExerciseClick = (exercise: Exercise) => {
-    setSelectedExercise(exercise);
-    setIsVideoModalOpen(true);
+    // First, try to scroll to the exercise if it exists in the middle area
+    const exerciseRef = exerciseRefs.current.get(exercise.exerciseId);
+    if (exerciseRef && contentScrollRef.current) {
+      const scrollContainer = contentScrollRef.current;
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const exerciseRect = exerciseRef.getBoundingClientRect();
+      const scrollTop = scrollContainer.scrollTop;
+      const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+
+      // Scroll to center the exercise in the viewport
+      const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+      scrollContainer.scrollTo({
+        top: Math.max(0, targetScroll),
+        behavior: 'smooth',
+      });
+    } else {
+      // If exercise not found in middle area, open video modal
+      setSelectedExercise(exercise);
+      setIsVideoModalOpen(true);
+    }
+  };
+
+  const handleExerciseClickById = (exerciseId: string) => {
+    // Find the exercise by ID from the search results
+    const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
+    if (exercise) {
+      handleExerciseClick(exercise);
+    } else {
+      // If exercise not found, try to scroll using just the ID
+      const exerciseRef = exerciseRefs.current.get(exerciseId);
+      if (exerciseRef && contentScrollRef.current) {
+        const scrollContainer = contentScrollRef.current;
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const exerciseRect = exerciseRef.getBoundingClientRect();
+        const scrollTop = scrollContainer.scrollTop;
+        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+
+        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+        scrollContainer.scrollTo({
+          top: Math.max(0, targetScroll),
+          behavior: 'smooth',
+        });
+      }
+    }
   };
 
   const recomputeExerciseValidation = (
@@ -967,13 +1010,13 @@ export const StandardBuilder = ({
                 disabled={workoutSchema.sections.length === 0}
                 className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
-                Exercise
+                Exercises
               </TabsTrigger>
               <TabsTrigger
                 value="section"
                 className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
               >
-                Section
+                Sections
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -993,10 +1036,10 @@ export const StandardBuilder = ({
       <div className="relative flex-[4] h-full">
         <div ref={contentScrollRef} className="p-4 h-full overflow-y-auto">
           {workoutSchema.sections.length > 0 ? (
-            <div className="flex flex-col gap-1.5 w-full">
+            <div className="flex flex-col gap-4 w-full">
               {workoutSchema.sections.map((section) => (
                 <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
-                  <Card className="bg-card w-full flex flex-col relative">
+                  <Card className="bg-background w-full flex flex-col relative">
                     <CardHeader className="border-b p-0 pb-2">
                       <div className="flex items-center justify-between px-3 pt-1">
                         <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
@@ -1156,7 +1199,17 @@ export const StandardBuilder = ({
                               );
 
                               return (
-                                <div key={exercise.instanceId} className={wrapperClasses}>
+                                <div
+                                  key={exercise.instanceId}
+                                  ref={(el) => {
+                                    if (el) {
+                                      exerciseRefs.current.set(exercise.exerciseId, el);
+                                    } else {
+                                      exerciseRefs.current.delete(exercise.exerciseId);
+                                    }
+                                  }}
+                                  className={wrapperClasses}
+                                >
                                   <ExerciseCard
                                     exercise={exercise}
                                     isLinkedToPrev={isLinkedToPrev}
@@ -1254,12 +1307,12 @@ export const StandardBuilder = ({
                                               type="button"
                                               variant="outline"
                                               size="sm"
-                                              className="gap-2 bg-background z-10"
+                                              className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
                                               onClick={() =>
                                                 handleSupersetUnlink(section.id, exerciseIndex)
                                               }
                                             >
-                                              <Link2Off className="size-4" />
+                                              <Link2Off className="size-3" />
                                               Unlink
                                             </Button>
                                           </div>
@@ -1268,12 +1321,13 @@ export const StandardBuilder = ({
                                             <Button
                                               type="button"
                                               variant="outline"
-                                              className="gap-2"
+                                              size="sm"
+                                              className="gap-1.5 text-xs h-7 px-2"
                                               onClick={() =>
                                                 handleSupersetLink(section.id, exerciseIndex)
                                               }
                                             >
-                                              <Link2 className="size-4" />
+                                              <Link2 className="size-3" />
                                               Superset
                                             </Button>
                                           </div>
@@ -1287,10 +1341,11 @@ export const StandardBuilder = ({
                               <Button
                                 type="button"
                                 variant="outline"
+                                size="sm"
                                 onClick={() => handleAddExercise(section.id)}
-                                className="gap-2"
+                                className="gap-1.5 text-xs h-7 px-2"
                               >
-                                <Plus className="size-4" />
+                                <Plus className="size-3" />
                                 Add Exercise
                               </Button>
                             </div>
@@ -1324,10 +1379,11 @@ export const StandardBuilder = ({
                     <Button
                       type="button"
                       variant="outline"
-                      className="gap-2"
+                      size="sm"
+                      className="gap-1.5 text-xs h-7 px-2"
                       aria-label="Add new section"
                     >
-                      <Plus className="size-4" />
+                      <Plus className="size-3" />
                       <span>Add section</span>
                     </Button>
                   </DropdownMenuTrigger>
@@ -1398,6 +1454,7 @@ export const StandardBuilder = ({
             onDeleteExercise={handleDeleteExerciseFromOverview}
             onDeleteSuperset={handleDeleteSupersetFromOverview}
             groupExercisesBySuperset={groupExercisesBySuperset}
+            onExerciseClick={handleExerciseClickById}
           />
         </div>
       </div>

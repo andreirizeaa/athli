@@ -8,7 +8,10 @@ export type GeneratedWorkout = {
 
 // Dummy AI generate service returning static mock data for now.
 // In the future this can call a real backend / AI endpoint.
-export const generateWorkoutFromPrompt = async (_prompt: string): Promise<GeneratedWorkout> => {
+export const generateWorkoutFromPrompt = async (
+  _prompt: string,
+  _pdfContent?: string | null
+): Promise<GeneratedWorkout> => {
   // Simulate latency
   await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -262,4 +265,16 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
   };
 
   return mock;
+};
+
+// Dummy function to handle chat prompts with current workout state
+// In the future this can call a real backend / AI endpoint.
+export const prompt = async (workoutSchemaJson: string): Promise<void> => {
+  // Simulate latency
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  
+  // eslint-disable-next-line no-console
+  console.log('Chat prompt called with workout schema:', workoutSchemaJson);
+  
+  // TODO: Implement actual API call to backend/AI service
 };
