@@ -2,11 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Check, ChevronLeft, X } from 'lucide-react';
+import { Check, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { AiBuilder } from './ai-builder';
 import type { WorkoutProgramPayload } from '../workout-schema';
 import { DiscardChangesDialog } from '../components/discard-changes-dialog';
@@ -28,19 +36,29 @@ const AiWorkoutPage = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    
+    // Try to load meta from localStorage (if coming from create panel)
     const raw = window.localStorage.getItem('oneninety_new_workout_meta');
-    if (!raw) {
-      // Redirect if no meta found
-      router.push('/library/workouts');
-      return;
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as WorkoutMeta;
+        setWorkoutMeta(parsed);
+        // Clear the access flag if it exists
+        window.localStorage.removeItem('oneninety_workout_builder_access');
+        return;
+      } catch {
+        // If parsing fails, fall through to default values
+      }
     }
-    try {
-      const parsed = JSON.parse(raw) as WorkoutMeta;
-      setWorkoutMeta(parsed);
-    } catch {
-      // Redirect on parse error
-      router.push('/library/workouts');
-    }
+
+    // If no meta in localStorage, use default values for new workout
+    setWorkoutMeta({
+      title: 'New workout',
+      description: '',
+      type: 'Push',
+      difficulty: 'Intermediate',
+      builder: 'ai',
+    });
   }, [router]);
 
   const navigateBackToWorkouts = () => {
@@ -93,20 +111,55 @@ const AiWorkoutPage = () => {
     return null;
   }
 
+  const handleBreadcrumbClick = (path: string) => {
+    if (hasUnsavedChanges) {
+      setIsDiscardDialogOpen(true);
+      return;
+    }
+
+    if (path === '/library') {
+      router.push('/library');
+    } else if (path === '/library/workouts') {
+      navigateBackToWorkouts();
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0 pr-4">
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={handleCancel}
-              className="h-8 w-8"
-              aria-label="Back to workouts"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
+        <div className="px-4 flex items-start justify-between gap-4 mb-2 mt-2">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <Breadcrumb>
+              <BreadcrumbList className="text-xs gap-1">
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    onClick={() => handleBreadcrumbClick('/library')}
+                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                  >
+                    Library
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    onClick={() => handleBreadcrumbClick('/library/workouts')}
+                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                  >
+                    Workouts
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
+                    New workout
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
             <h1 className="text-[22px] font-semibold truncate">New workout</h1>
           </div>
           <ButtonGroup className="flex-shrink-0">

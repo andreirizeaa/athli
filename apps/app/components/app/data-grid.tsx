@@ -751,13 +751,15 @@ export function DataGrid<T extends Record<string, any>>({
             <div className="flex items-center gap-2">
               {filters.map((filter) => {
                 const filterValue = filterValues[filter.id] || 'all';
+                const selectedOption = filter.options.find((opt) => opt.value === filterValues[filter.id]);
+                const displayValue = selectedOption ? selectedOption.label : 'All';
                 return (
                   <DropdownMenu key={filter.id}>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="gap-2">
                         {filter.icon}
                         <span>
-                          {filter.label}: {filterValues[filter.id] || 'All'}
+                          {filter.label}: {displayValue}
                         </span>
                         <ChevronDown className="size-4" />
                       </Button>
@@ -848,13 +850,15 @@ export function DataGrid<T extends Record<string, any>>({
           <div className="flex items-center gap-2 mb-4">
             {filters.map((filter) => {
               const filterValue = filterValues[filter.id] || 'all';
+              const selectedOption = filter.options.find((opt) => opt.value === filterValues[filter.id]);
+              const displayValue = selectedOption ? selectedOption.label : 'All';
               return (
                 <DropdownMenu key={filter.id}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="gap-2">
                       {filter.icon}
                       <span>
-                        {filter.label}: {filterValues[filter.id] || 'All'}
+                        {filter.label}: {displayValue}
                       </span>
                       <ChevronDown className="size-4" />
                     </Button>

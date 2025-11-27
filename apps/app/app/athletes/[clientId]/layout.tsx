@@ -170,7 +170,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={athlete.avatar} alt={athlete.name} />
@@ -178,35 +178,35 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
               </Avatar>
               <h1 className="text-[22px] font-semibold">{athlete.name}</h1>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => handleNavigateToMessages(clientId)}
-                variant="secondary"
-                className="gap-2"
-                aria-label="Open message with this client"
-              >
-                <MessageCircle className="size-4" />
-                <span>Message</span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="gap-2"
-                    aria-label="Delete client options"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsDeleteModalOpen(true)}>
-                    Continue
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
+        </div>
+        <div className="absolute top-2 right-4 flex items-center gap-2">
+          <Button
+            onClick={() => handleNavigateToMessages(clientId)}
+            variant="secondary"
+            className="gap-2"
+            aria-label="Open message with this client"
+          >
+            <MessageCircle className="size-4" />
+            <span>Message</span>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="gap-2"
+                aria-label="Delete client options"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setIsDeleteModalOpen(true)}>
+                Continue
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="px-4">
           <PageTabs
