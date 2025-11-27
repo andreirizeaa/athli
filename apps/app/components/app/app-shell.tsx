@@ -1546,12 +1546,18 @@ const AppShellContent = ({
     user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress || 'User';
   const displayEmail = user?.primaryEmailAddress?.emailAddress;
 
-  const initials =
-    displayName
-      .split(' ')
-      .map((part) => part.charAt(0).toUpperCase())
-      .slice(0, 2)
-      .join('') || 'U';
+  // Calculate initials only on client to avoid hydration mismatch
+  const [initials, setInitials] = React.useState('U');
+
+  React.useEffect(() => {
+    const calculatedInitials =
+      displayName
+        .split(' ')
+        .map((part) => part.charAt(0).toUpperCase())
+        .slice(0, 2)
+        .join('') || 'U';
+    setInitials(calculatedInitials);
+  }, [displayName]);
 
   const currentTheme = theme || 'system';
   const isDark = isThemeMounted && resolvedTheme === 'dark';

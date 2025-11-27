@@ -107,6 +107,7 @@ export type DataGridProps<T = any> = {
   compactMode?: boolean;
   showPagination?: boolean;
   tableWrapperClassName?: string;
+  disableLoadingOverlay?: boolean;
 };
 
 const isFuzzyMatch = (text: string, query: string): boolean => {
@@ -209,6 +210,7 @@ export function DataGrid<T extends Record<string, any>>({
   compactMode = false,
   showPagination = true,
   tableWrapperClassName,
+  disableLoadingOverlay = false,
 }: DataGridProps<T>) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -225,11 +227,14 @@ export function DataGrid<T extends Record<string, any>>({
   );
   const [internalSelectedRowIds, setInternalSelectedRowIds] = useState<Set<string>>(new Set());
   const [isPageLoading, setIsPageLoading] = useState<boolean>(false);
+  const [isInitializing, setIsInitializing] = useState<boolean>(enableEditColumns);
   const filtersInitializedRef = useRef(false);
   const previousFiltersRef = useRef<string>('');
   const tableBodyRef = useRef<HTMLTableSectionElement>(null);
   const pageDropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const scrollableContainerRef = useRef<HTMLDivElement>(null);
   const [pageDropdownWidth, setPageDropdownWidth] = useState<number | undefined>(undefined);
+  const [overlayHeight, setOverlayHeight] = useState<number | undefined>(undefined);
 
   const handlePageDropdownTriggerRef = (node: HTMLButtonElement | null) => {
     pageDropdownTriggerRef.current = node;
@@ -271,23 +276,41 @@ export function DataGrid<T extends Record<string, any>>({
 
   // Load column preferences from localStorage
   useEffect(() => {
-    if (!enableEditColumns) return;
+    if (!enableEditColumns) {
+      setIsInitializing(false);
+      return;
+    }
 
     try {
       const preferences = JSON.parse(localStorage.getItem('column_preferences') || '{}');
-      const gridPrefs = preferences[gridKey];
-      if (gridPrefs) {
-        if (gridPrefs.visibleColumns && Array.isArray(gridPrefs.visibleColumns)) {
-          setVisibleColumns(new Set(gridPrefs.visibleColumns));
-        }
-        if (gridPrefs.columnOrder && Array.isArray(gridPrefs.columnOrder)) {
-          setColumnOrder(gridPrefs.columnOrder);
-        }
+      const orderedVisibleColumns = preferences[gridKey];
+      
+      if (orderedVisibleColumns && Array.isArray(orderedVisibleColumns)) {
+        const allColumnIds = columns.map((col) => col.id);
+        const savedVisibleIds = new Set(orderedVisibleColumns);
+        
+        // Set visible columns from the saved list
+        setVisibleColumns(new Set(orderedVisibleColumns.filter((id) => allColumnIds.includes(id))));
+        
+        // Build full column order: saved visible columns first (in order), then hidden columns
+        const savedOrder = orderedVisibleColumns.filter((id) => allColumnIds.includes(id));
+        const allColumnsOrder = [...savedOrder];
+        
+        // Add any missing columns at the end (these are hidden)
+        allColumnIds.forEach((id) => {
+          if (!savedVisibleIds.has(id)) {
+            allColumnsOrder.push(id);
+          }
+        });
+        
+        setColumnOrder(allColumnsOrder);
       }
     } catch (error) {
       console.error('Failed to load column preferences:', error);
+    } finally {
+      setIsInitializing(false);
     }
-  }, [gridKey, enableEditColumns]);
+  }, [gridKey, enableEditColumns, columns]);
 
   // Filter data
   const filteredData = useMemo(() => {
@@ -378,12 +401,22 @@ export function DataGrid<T extends Record<string, any>>({
 
   // Show loading overlay when page changes
   useEffect(() => {
+    if (disableLoadingOverlay) {
+      return;
+    }
     setIsPageLoading(true);
     const timeoutId = setTimeout(() => {
       setIsPageLoading(false);
     }, 500);
     return () => clearTimeout(timeoutId);
-  }, [currentPage]);
+  }, [currentPage, disableLoadingOverlay]);
+
+  // Calculate overlay height when loading starts
+  useEffect(() => {
+    if (isPageLoading && scrollableContainerRef.current) {
+      setOverlayHeight(scrollableContainerRef.current.clientHeight);
+    }
+  }, [isPageLoading]);
 
   // Measure page dropdown button width when page changes or component mounts
   useEffect(() => {
@@ -408,11 +441,14 @@ export function DataGrid<T extends Record<string, any>>({
       if (pageDropdownTriggerRef.current) {
         setPageDropdownWidth(pageDropdownTriggerRef.current.offsetWidth);
       }
+      if (scrollableContainerRef.current && isPageLoading) {
+        setOverlayHeight(scrollableContainerRef.current.clientHeight);
+      }
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isPageLoading]);
 
   // Scroll selected row into view when selectedRowIds changes
   useEffect(() => {
@@ -452,10 +488,9 @@ export function DataGrid<T extends Record<string, any>>({
       if (enableEditColumns) {
         try {
           const preferences = JSON.parse(localStorage.getItem('column_preferences') || '{}');
-          preferences[gridKey] = {
-            visibleColumns: Array.from(visibleColumns),
-            columnOrder: newOrder,
-          };
+          // Save only the ordered visible columns
+          const orderedVisibleColumns = newOrder.filter((id) => visibleColumns.has(id));
+          preferences[gridKey] = orderedVisibleColumns;
           localStorage.setItem('column_preferences', JSON.stringify(preferences));
         } catch (error) {
           console.error('Failed to save column preferences:', error);
@@ -469,6 +504,19 @@ export function DataGrid<T extends Record<string, any>>({
   const handleColumnsChange = (newVisibleColumns: string[], newColumnOrder: string[]) => {
     setVisibleColumns(new Set(newVisibleColumns));
     setColumnOrder(newColumnOrder);
+    
+    // Save to localStorage
+    if (enableEditColumns) {
+      try {
+        const preferences = JSON.parse(localStorage.getItem('column_preferences') || '{}');
+        // Save only the ordered visible columns
+        const orderedVisibleColumns = newColumnOrder.filter((id) => newVisibleColumns.includes(id));
+        preferences[gridKey] = orderedVisibleColumns;
+        localStorage.setItem('column_preferences', JSON.stringify(preferences));
+      } catch (error) {
+        console.error('Failed to save column preferences:', error);
+      }
+    }
   };
 
   const handleToggleRow = (rowId: string) => {
@@ -641,6 +689,17 @@ export function DataGrid<T extends Record<string, any>>({
       </TableHead>
     );
   };
+
+  if (isInitializing && enableEditColumns) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Spinner className="size-8 text-primary" />
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -837,11 +896,23 @@ export function DataGrid<T extends Record<string, any>>({
           </div>
         )}
         <div
+          ref={scrollableContainerRef}
           className={cn('flex-1 overflow-auto relative', compactMode ? 'w-full' : '')}
           style={{ paddingBottom: showPagination ? (compactMode ? '36px' : rowHeight) : '0px' }}
+          onScroll={() => {
+            if (scrollableContainerRef.current && isPageLoading) {
+              setOverlayHeight(scrollableContainerRef.current.clientHeight);
+            }
+          }}
         >
-          {isPageLoading && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          {!disableLoadingOverlay && isPageLoading && (
+            <div
+              className="sticky top-0 left-0 right-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+              style={{
+                height: overlayHeight ? `${overlayHeight}px` : '100%',
+                minHeight: overlayHeight ? `${overlayHeight}px` : '100%',
+              }}
+            >
               <div className="flex flex-col items-center gap-2">
                 <Spinner className="size-8 text-primary" />
                 <span className="text-sm text-muted-foreground">Loading...</span>

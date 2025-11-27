@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -115,10 +115,38 @@ export const EditColumnsSidebar = ({
   pinnedColumns = [],
   onColumnsChange,
 }: EditColumnsSidebarProps) => {
+  // Helper to merge columnOrder with all available columns
+  const mergeColumnOrder = useCallback(
+    (order: string[]): string[] => {
+      // If no columns available, return empty array
+      if (!columns || columns.length === 0) {
+        return [];
+      }
+      const allColumnIds = columns.map((col) => col.id);
+      const orderSet = new Set(order);
+      // Start with columns in order, then add any missing columns
+      const merged = [...order.filter((id) => allColumnIds.includes(id))];
+      allColumnIds.forEach((id) => {
+        if (!orderSet.has(id)) {
+          merged.push(id);
+        }
+      });
+      return merged;
+    },
+    [columns]
+  );
+
   const [localVisibleColumns, setLocalVisibleColumns] = useState<Set<string>>(
     new Set(visibleColumns)
   );
-  const [localColumnOrder, setLocalColumnOrder] = useState<string[]>(columnOrder);
+  // Always initialize with all columns from the columns prop, merging with columnOrder for ordering
+  const [localColumnOrder, setLocalColumnOrder] = useState<string[]>(() => {
+    if (columns.length === 0) return [];
+    return mergeColumnOrder(columnOrder);
+  });
+  
+  // Track if we're initializing to avoid calling onColumnsChange during initialization
+  const isInitializingRef = useRef(true);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -129,32 +157,63 @@ export const EditColumnsSidebar = ({
 
   useEffect(() => {
     if (open) {
+      isInitializingRef.current = true;
       setLocalVisibleColumns(new Set(visibleColumns));
-      setLocalColumnOrder([...columnOrder]);
+      // Always ensure we have all columns in the order
+      const mergedOrder = mergeColumnOrder(columnOrder);
+      setLocalColumnOrder(mergedOrder);
+      // Mark initialization as complete after a brief delay to allow state updates to settle
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          isInitializingRef.current = false;
+        });
+      });
+    } else {
+      isInitializingRef.current = true;
     }
-  }, [open, visibleColumns, columnOrder]);
+  }, [open, visibleColumns, columnOrder, mergeColumnOrder]);
 
+  // Also update order when columns prop changes to ensure all columns are included
+  useEffect(() => {
+    if (open && columns.length > 0) {
+      setLocalColumnOrder((prevOrder) => mergeColumnOrder(prevOrder));
+    }
+  }, [open, columns, mergeColumnOrder]);
+
+  // Always use all columns from the hardcoded columns prop (column definitions)
+  // Exclude pinned columns as they can't be edited
   const filteredColumns = useMemo(() => {
     return columns.filter((col) => !pinnedColumns.includes(col.id));
   }, [columns, pinnedColumns]);
 
   const sortedColumns = useMemo(() => {
-    const visible = filteredColumns.filter((col) => localVisibleColumns.has(col.id));
-    const hidden = filteredColumns.filter((col) => !localVisibleColumns.has(col.id));
-
-    const visibleSorted = visible.sort((a, b) => {
-      const aIndex = localColumnOrder.indexOf(a.id);
-      const bIndex = localColumnOrder.indexOf(b.id);
+    // Always show ALL columns from the columns prop (hardcoded definitions)
+    // Ensure we have a valid order that includes all columns
+    const completeOrder = mergeColumnOrder(localColumnOrder);
+    
+    // Sort all columns by their order in completeOrder
+    const sorted = [...filteredColumns].sort((a, b) => {
+      const aIndex = completeOrder.indexOf(a.id);
+      const bIndex = completeOrder.indexOf(b.id);
       if (aIndex === -1 && bIndex === -1) return 0;
       if (aIndex === -1) return 1;
       if (bIndex === -1) return -1;
       return aIndex - bIndex;
     });
 
-    return [...visibleSorted, ...hidden];
-  }, [filteredColumns, localVisibleColumns, localColumnOrder]);
+    // Separate visible and hidden, but maintain order
+    // Visible columns first (in saved order), then hidden columns (in saved order)
+    const visible = sorted.filter((col) => localVisibleColumns.has(col.id));
+    const hidden = sorted.filter((col) => !localVisibleColumns.has(col.id));
+
+    // Return visible first, then hidden (both already sorted by saved order)
+    // This ensures ALL columns from the prop are always shown
+    return [...visible, ...hidden];
+  }, [filteredColumns, localVisibleColumns, localColumnOrder, mergeColumnOrder]);
 
   const dataRows: ColumnRow[] = useMemo(() => {
+    // sortedColumns always contains all columns from the columns prop
+    // Map them to rows with their visibility state
     return sortedColumns.map((col) => ({
       id: col.id,
       label: col.label,
@@ -163,24 +222,13 @@ export const EditColumnsSidebar = ({
     }));
   }, [sortedColumns, localVisibleColumns]);
 
-  const getDefaultOrder = useCallback(
-    (columnIds: string[]): string[] => {
-      const defaultOrder = columns.map((col) => col.id);
-      const ordered = defaultOrder.filter((id) => columnIds.includes(id));
-      const unordered = columnIds.filter((id) => !defaultOrder.includes(id));
-      return [...ordered, ...unordered];
-    },
-    [columns]
-  );
-
   const saveToLocalStorage = useCallback(
     (visible: string[], order: string[]) => {
       try {
         const preferences = JSON.parse(localStorage.getItem('column_preferences') || '{}');
-        preferences[gridKey] = {
-          visibleColumns: visible,
-          columnOrder: order,
-        };
+        // Save only the ordered visible columns
+        const orderedVisibleColumns = order.filter((id) => visible.includes(id));
+        preferences[gridKey] = orderedVisibleColumns;
         localStorage.setItem('column_preferences', JSON.stringify(preferences));
       } catch (error) {
         console.error('Failed to save column preferences:', error);
@@ -188,6 +236,42 @@ export const EditColumnsSidebar = ({
     },
     [gridKey]
   );
+
+  // Track previous values to detect actual changes (not initialization)
+  const prevVisibleColumnsRef = useRef<Set<string>>(new Set());
+  const prevColumnOrderRef = useRef<string[]>([]);
+
+  // Sync changes to parent component and localStorage (but not during initialization)
+  useEffect(() => {
+    if (!open || isInitializingRef.current) {
+      // Update refs even during initialization so we can detect changes later
+      prevVisibleColumnsRef.current = new Set(localVisibleColumns);
+      prevColumnOrderRef.current = [...localColumnOrder];
+      return;
+    }
+    
+    // Check if values actually changed
+    const visibleChanged = 
+      prevVisibleColumnsRef.current.size !== localVisibleColumns.size ||
+      Array.from(prevVisibleColumnsRef.current).some(id => !localVisibleColumns.has(id)) ||
+      Array.from(localVisibleColumns).some(id => !prevVisibleColumnsRef.current.has(id));
+    
+    const orderChanged = 
+      prevColumnOrderRef.current.length !== localColumnOrder.length ||
+      prevColumnOrderRef.current.some((id, index) => id !== localColumnOrder[index]);
+    
+    if (visibleChanged || orderChanged) {
+      const newVisibleColumns = Array.from(localVisibleColumns);
+      const newOrder = localColumnOrder;
+      
+      onColumnsChange(newVisibleColumns, newOrder);
+      saveToLocalStorage(newVisibleColumns, newOrder);
+      
+      // Update refs
+      prevVisibleColumnsRef.current = new Set(localVisibleColumns);
+      prevColumnOrderRef.current = [...localColumnOrder];
+    }
+  }, [localVisibleColumns, localColumnOrder, open, onColumnsChange, saveToLocalStorage]);
 
   const handleToggleColumn = useCallback(
     (columnId: string) => {
@@ -198,16 +282,14 @@ export const EditColumnsSidebar = ({
           : [...Array.from(prev), columnId];
 
         setLocalColumnOrder((prevOrder) => {
-          let newOrder: string[];
-          if (isCurrentlyVisible) {
-            newOrder = prevOrder.filter((id) => id !== columnId);
-          } else {
-            const defaultOrder = getDefaultOrder(newVisibleColumns);
-            newOrder = defaultOrder;
+          // Always keep all columns in the order, just update visibility
+          // If column was just made visible and not in order, add it at the end
+          let newOrder = [...prevOrder];
+          if (!isCurrentlyVisible && !newOrder.includes(columnId)) {
+            newOrder.push(columnId);
           }
-
-          onColumnsChange(newVisibleColumns, newOrder);
-          saveToLocalStorage(newVisibleColumns, newOrder);
+          // Ensure all columns are in the order
+          newOrder = mergeColumnOrder(newOrder);
 
           return newOrder;
         });
@@ -215,7 +297,7 @@ export const EditColumnsSidebar = ({
         return new Set(newVisibleColumns);
       });
     },
-    [getDefaultOrder, onColumnsChange, saveToLocalStorage]
+    [mergeColumnOrder]
   );
 
   const handleToggleAll = useCallback(() => {
@@ -223,13 +305,12 @@ export const EditColumnsSidebar = ({
     const allVisible =
       filteredColumns.length > 0 && filteredColumns.every((col) => localVisibleColumns.has(col.id));
     const newVisibleColumns = allVisible ? [] : allColumnIds;
-    const newOrder = allVisible ? [] : getDefaultOrder(allColumnIds);
+    // Reset to default start order (order from columns prop)
+    const defaultOrder = filteredColumns.map((col) => col.id);
 
     setLocalVisibleColumns(new Set(newVisibleColumns));
-    setLocalColumnOrder(newOrder);
-    onColumnsChange(newVisibleColumns, newOrder);
-    saveToLocalStorage(newVisibleColumns, newOrder);
-  }, [filteredColumns, localVisibleColumns, getDefaultOrder, onColumnsChange, saveToLocalStorage]);
+    setLocalColumnOrder(defaultOrder);
+  }, [filteredColumns, localVisibleColumns]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -248,11 +329,11 @@ export const EditColumnsSidebar = ({
 
       const newSortedRows = arrayMove(dataRows, oldIndex, newIndex);
       const newOrder = newSortedRows.map((row) => row.id);
-      setLocalColumnOrder(newOrder);
-      onColumnsChange(Array.from(localVisibleColumns), newOrder);
-      saveToLocalStorage(Array.from(localVisibleColumns), newOrder);
+      // Ensure all columns are in the order (in case any are missing)
+      const mergedOrder = mergeColumnOrder(newOrder);
+      setLocalColumnOrder(mergedOrder);
     },
-    [dataRows, localVisibleColumns, onColumnsChange, saveToLocalStorage]
+    [dataRows, mergeColumnOrder]
   );
 
   const allVisible =
@@ -312,6 +393,7 @@ export const EditColumnsSidebar = ({
             emptyMessage="No columns found."
             rowHeight="54px"
             stickyFirstColumn={false}
+            disableLoadingOverlay={true}
           />
         </SortableContext>
       </DndContext>
