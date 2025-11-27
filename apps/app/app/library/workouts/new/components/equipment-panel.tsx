@@ -1,33 +1,33 @@
-"use client"
+'use client';
 
-import { useMemo } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { useMemo } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 type ExerciseWithEquipment = {
-  equipments?: string[]
-}
+  equipments?: string[];
+};
 
 type EquipmentPanelProps = {
   sections: Array<{
-    exercises?: ExerciseWithEquipment[]
-  }>
-}
+    exercises?: ExerciseWithEquipment[];
+  }>;
+};
 
 export const EquipmentPanel = ({ sections }: EquipmentPanelProps) => {
   const uniqueEquipment = useMemo(() => {
-    const equipmentSet = new Set<string>()
+    const equipmentSet = new Set<string>();
     sections.forEach((section) => {
       section.exercises?.forEach((exercise) => {
         exercise.equipments?.forEach((equipment) => {
-          if (equipment && equipment.trim() !== "") {
-            equipmentSet.add(equipment)
+          if (equipment && equipment.trim() !== '') {
+            equipmentSet.add(equipment);
           }
-        })
-      })
-    })
-    return Array.from(equipmentSet).sort()
-  }, [sections])
+        });
+      });
+    });
+    return Array.from(equipmentSet).sort();
+  }, [sections]);
 
   return (
     <>
@@ -49,6 +49,5 @@ export const EquipmentPanel = ({ sections }: EquipmentPanelProps) => {
         <Separator className="w-full" />
       </div>
     </>
-  )
-}
-
+  );
+};

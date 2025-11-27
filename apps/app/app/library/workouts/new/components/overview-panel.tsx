@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import React from "react"
+import React from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -9,81 +9,81 @@ import {
   closestCenter,
   useSensor,
   useSensors,
-} from "@dnd-kit/core"
+} from '@dnd-kit/core';
 import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, Link2, Trash2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical, Link2, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type ExerciseWithSuperset = {
-  exerciseId: string
-  instanceId: string
-  name: string
-  supersetGroupId?: string | null
-}
+  exerciseId: string;
+  instanceId: string;
+  name: string;
+  supersetGroupId?: string | null;
+};
 
 type Section = {
-  id: string
-  type: "regular" | "amrap" | "timed"
-  exercises?: ExerciseWithSuperset[]
-}
+  id: string;
+  type: 'regular' | 'amrap' | 'timed';
+  exercises?: ExerciseWithSuperset[];
+};
 
 type ActiveOverviewItem =
   | {
-      type: "section"
-      sectionId: string
+      type: 'section';
+      sectionId: string;
     }
   | {
-      type: "exerciseGroup"
-      sectionId: string
-      startIndex: number
-      length: number
-    }
+      type: 'exerciseGroup';
+      sectionId: string;
+      startIndex: number;
+      length: number;
+    };
 
 type OverviewPanelProps = {
-  sections: Section[]
-  onSectionsChange: (sections: Section[]) => void
-  onDeleteSection: (sectionId: string) => void
-  onDeleteExercise: (sectionId: string, exerciseId: string) => void
-  onDeleteSuperset: (sectionId: string, exerciseIds: string[]) => void
-  groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => Array<ExerciseWithSuperset[]>
-}
+  sections: Section[];
+  onSectionsChange: (sections: Section[]) => void;
+  onDeleteSection: (sectionId: string) => void;
+  onDeleteExercise: (sectionId: string, exerciseId: string) => void;
+  onDeleteSuperset: (sectionId: string, exerciseIds: string[]) => void;
+  groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => Array<ExerciseWithSuperset[]>;
+};
 
 const OverviewSectionCard = ({
   section,
   children,
   onDelete,
 }: {
-  section: Section
-  children: React.ReactNode
-  onDelete: (sectionId: string) => void
+  section: Section;
+  children: React.ReactNode;
+  onDelete: (sectionId: string) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `section-${section.id}`,
-  })
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <div
         className={cn(
-          "border rounded-lg bg-card/80 shadow-sm mb-2 select-none",
-          isDragging && "opacity-80"
+          'border rounded-lg bg-card/80 shadow-sm mb-2 select-none',
+          isDragging && 'opacity-80'
         )}
       >
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <div className="flex items-center gap-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {section.type}{" "}
+              {section.type}{' '}
               <span className="font-normal">
                 ({section.exercises ? section.exercises.length : 0})
               </span>
@@ -91,14 +91,14 @@ const OverviewSectionCard = ({
             <button
               type="button"
               onClick={(e) => {
-                e.stopPropagation()
-                onDelete(section.id)
+                e.stopPropagation();
+                onDelete(section.id);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onDelete(section.id)
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDelete(section.id);
                 }
               }}
               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
@@ -120,54 +120,54 @@ const OverviewSectionCard = ({
         {children}
       </div>
     </div>
-  )
-}
+  );
+};
 
 const OverviewExerciseRow = ({
   sectionId,
   exercise,
   onDelete,
 }: {
-  sectionId: string
-  exercise: ExerciseWithSuperset
-  onDelete: (sectionId: string, exerciseId: string) => void
+  sectionId: string;
+  exercise: ExerciseWithSuperset;
+  onDelete: (sectionId: string, exerciseId: string) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `exercise-|${sectionId}|${exercise.instanceId}`,
-  })
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <div
         {...listeners}
         className={cn(
-          "flex items-center justify-between rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing",
-          isDragging && "opacity-80 shadow-sm"
+          'flex items-center justify-between rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing',
+          isDragging && 'opacity-80 shadow-sm'
         )}
       >
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-          <span className="text-xs">{exercise.name || "Untitled exercise"}</span>
+          <span className="text-xs">{exercise.name || 'Untitled exercise'}</span>
           <button
             type="button"
             onClick={(e) => {
-              e.stopPropagation()
-              onDelete(sectionId, exercise.exerciseId)
+              e.stopPropagation();
+              onDelete(sectionId, exercise.exerciseId);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                e.stopPropagation()
-                onDelete(sectionId, exercise.exerciseId)
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(sectionId, exercise.exerciseId);
               }
             }}
             className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            aria-label={`Delete ${exercise.name || "exercise"}`}
+            aria-label={`Delete ${exercise.name || 'exercise'}`}
             data-no-row-link="true"
           >
             <Trash2 className="size-3" />
@@ -176,50 +176,50 @@ const OverviewExerciseRow = ({
         <GripVertical className="size-3 text-muted-foreground" />
       </div>
     </div>
-  )
-}
+  );
+};
 
 const OverviewSupersetRow = ({
   sectionId,
   exercises,
   onDelete,
 }: {
-  sectionId: string
-  exercises: ExerciseWithSuperset[]
-  onDelete: (sectionId: string, exerciseIds: string[]) => void
+  sectionId: string;
+  exercises: ExerciseWithSuperset[];
+  onDelete: (sectionId: string, exerciseIds: string[]) => void;
 }) => {
-  const firstExerciseId = exercises[0]?.instanceId
+  const firstExerciseId = exercises[0]?.instanceId;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `exercise-|${sectionId}|${firstExerciseId}`,
-  })
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
-  const exerciseNames = exercises.map((ex) => ex.name || "Untitled exercise").join(", ")
+  const exerciseNames = exercises.map((ex) => ex.name || 'Untitled exercise').join(', ');
 
   const handleDelete = (e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation()
-    const exerciseIds = exercises.map((ex) => ex.exerciseId)
-    onDelete(sectionId, exerciseIds)
-  }
+    e.stopPropagation();
+    const exerciseIds = exercises.map((ex) => ex.exerciseId);
+    onDelete(sectionId, exerciseIds);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault()
-      e.stopPropagation()
-      handleDelete(e)
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleDelete(e);
     }
-  }
+  };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <div
         className={cn(
-          "rounded-md border bg-background text-xs select-none",
-          isDragging && "opacity-80 shadow-sm"
+          'rounded-md border bg-background text-xs select-none',
+          isDragging && 'opacity-80 shadow-sm'
         )}
       >
         <div className="flex items-start justify-between px-3 py-2.5">
@@ -229,7 +229,7 @@ const OverviewSupersetRow = ({
                 <div key={exercise.instanceId} className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                    <span className="text-xs">{exercise.name || "Untitled exercise"}</span>
+                    <span className="text-xs">{exercise.name || 'Untitled exercise'}</span>
                   </div>
                   {index < exercises.length - 1 && (
                     <div className="flex items-center justify-center py-0.5">
@@ -259,8 +259,8 @@ const OverviewSupersetRow = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export const OverviewPanel = ({
   sections,
@@ -270,207 +270,202 @@ export const OverviewPanel = ({
   onDeleteSuperset,
   groupExercisesBySuperset,
 }: OverviewPanelProps) => {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
   const [activeOverviewItem, setActiveOverviewItem] = React.useState<ActiveOverviewItem | null>(
     null
-  )
+  );
 
   const handleOverviewDragStart = (event: DragStartEvent) => {
-    const { active } = event
-    const activeId = active.id as string
+    const { active } = event;
+    const activeId = active.id as string;
 
-    if (activeId.startsWith("section-")) {
-      const sectionId = activeId.replace("section-", "")
-      setActiveOverviewItem({ type: "section", sectionId })
-      return
+    if (activeId.startsWith('section-')) {
+      const sectionId = activeId.replace('section-', '');
+      setActiveOverviewItem({ type: 'section', sectionId });
+      return;
     }
 
-    if (activeId.startsWith("exercise-")) {
-      const [, sectionId, exerciseId] = activeId.split("|")
-      const section = sections.find((s) => s.id === sectionId)
+    if (activeId.startsWith('exercise-')) {
+      const [, sectionId, exerciseId] = activeId.split('|');
+      const section = sections.find((s) => s.id === sectionId);
       if (!section || !section.exercises) {
-        return
+        return;
       }
 
-      const exercises = section.exercises
-      const centerIndex = exercises.findIndex((ex) => ex.instanceId === exerciseId)
+      const exercises = section.exercises;
+      const centerIndex = exercises.findIndex((ex) => ex.instanceId === exerciseId);
       if (centerIndex === -1) {
-        return
+        return;
       }
 
-      const groupId = exercises[centerIndex].supersetGroupId
-      let startIndex = centerIndex
-      let endIndex = centerIndex
+      const groupId = exercises[centerIndex].supersetGroupId;
+      let startIndex = centerIndex;
+      let endIndex = centerIndex;
 
       if (groupId) {
-        while (
-          startIndex > 0 &&
-          exercises[startIndex - 1].supersetGroupId === groupId
-        ) {
-          startIndex -= 1
+        while (startIndex > 0 && exercises[startIndex - 1].supersetGroupId === groupId) {
+          startIndex -= 1;
         }
 
         while (
           endIndex < exercises.length - 1 &&
           exercises[endIndex + 1].supersetGroupId === groupId
         ) {
-          endIndex += 1
+          endIndex += 1;
         }
       }
 
       setActiveOverviewItem({
-        type: "exerciseGroup",
+        type: 'exerciseGroup',
         sectionId,
         startIndex,
         length: endIndex - startIndex + 1,
-      })
+      });
     }
-  }
+  };
 
   const handleOverviewDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, over } = event;
     if (!over || !activeOverviewItem) {
-      setActiveOverviewItem(null)
-      return
+      setActiveOverviewItem(null);
+      return;
     }
 
-    const activeId = active.id as string
-    const overId = over.id as string
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
-    if (activeOverviewItem.type === "section") {
-      if (!overId.startsWith("section-")) {
-        setActiveOverviewItem(null)
-        return
+    if (activeOverviewItem.type === 'section') {
+      if (!overId.startsWith('section-')) {
+        setActiveOverviewItem(null);
+        return;
       }
 
-      const activeSectionId = activeOverviewItem.sectionId
-      const overSectionId = overId.replace("section-", "")
+      const activeSectionId = activeOverviewItem.sectionId;
+      const overSectionId = overId.replace('section-', '');
 
       if (activeSectionId === overSectionId) {
-        setActiveOverviewItem(null)
-        return
+        setActiveOverviewItem(null);
+        return;
       }
 
-      const oldIndex = sections.findIndex((s) => s.id === activeSectionId)
-      const newIndex = sections.findIndex((s) => s.id === overSectionId)
+      const oldIndex = sections.findIndex((s) => s.id === activeSectionId);
+      const newIndex = sections.findIndex((s) => s.id === overSectionId);
       if (oldIndex === -1 || newIndex === -1) {
-        setActiveOverviewItem(null)
-        return
+        setActiveOverviewItem(null);
+        return;
       }
 
-      onSectionsChange(arrayMove(sections, oldIndex, newIndex))
-      setActiveOverviewItem(null)
-      return
+      onSectionsChange(arrayMove(sections, oldIndex, newIndex));
+      setActiveOverviewItem(null);
+      return;
     }
 
-    if (activeOverviewItem.type === "exerciseGroup") {
-      let targetSectionId = activeOverviewItem.sectionId
-      let targetExerciseId: string | null = null
+    if (activeOverviewItem.type === 'exerciseGroup') {
+      let targetSectionId = activeOverviewItem.sectionId;
+      let targetExerciseId: string | null = null;
 
-      if (overId.startsWith("section-")) {
-        targetSectionId = overId.replace("section-", "")
-      } else if (overId.startsWith("exercise-")) {
-        const [, sectionId, exerciseId] = overId.split("|")
-        targetSectionId = sectionId
-        targetExerciseId = exerciseId
+      if (overId.startsWith('section-')) {
+        targetSectionId = overId.replace('section-', '');
+      } else if (overId.startsWith('exercise-')) {
+        const [, sectionId, exerciseId] = overId.split('|');
+        targetSectionId = sectionId;
+        targetExerciseId = exerciseId;
       }
 
-      const sourceSectionId = activeOverviewItem.sectionId
-      const { startIndex, length } = activeOverviewItem
+      const sourceSectionId = activeOverviewItem.sectionId;
+      const { startIndex, length } = activeOverviewItem;
 
-      const updatedSections = [...sections]
-      const sourceSectionIndex = updatedSections.findIndex((s) => s.id === sourceSectionId)
-      const targetSectionIndex = updatedSections.findIndex((s) => s.id === targetSectionId)
+      const updatedSections = [...sections];
+      const sourceSectionIndex = updatedSections.findIndex((s) => s.id === sourceSectionId);
+      const targetSectionIndex = updatedSections.findIndex((s) => s.id === targetSectionId);
       if (sourceSectionIndex === -1 || targetSectionIndex === -1) {
-        setActiveOverviewItem(null)
-        return
+        setActiveOverviewItem(null);
+        return;
       }
 
-      const sourceSection = updatedSections[sourceSectionIndex]
-      const targetSection = updatedSections[targetSectionIndex]
+      const sourceSection = updatedSections[sourceSectionIndex];
+      const targetSection = updatedSections[targetSectionIndex];
       if (!sourceSection.exercises) {
-        setActiveOverviewItem(null)
-        return
+        setActiveOverviewItem(null);
+        return;
       }
 
-      const sourceExercises = [...sourceSection.exercises]
+      const sourceExercises = [...sourceSection.exercises];
 
       if (
         startIndex < 0 ||
         startIndex >= sourceExercises.length ||
         startIndex + length > sourceExercises.length
       ) {
-        setActiveOverviewItem(null)
-        return
+        setActiveOverviewItem(null);
+        return;
       }
 
-      const groupExercises = sourceExercises.slice(startIndex, startIndex + length)
-      const groupExerciseIds = new Set(groupExercises.map((ex) => ex.exerciseId))
+      const groupExercises = sourceExercises.slice(startIndex, startIndex + length);
+      const groupExerciseIds = new Set(groupExercises.map((ex) => ex.exerciseId));
 
-      sourceExercises.splice(startIndex, length)
+      sourceExercises.splice(startIndex, length);
 
       if (targetExerciseId && groupExerciseIds.has(targetExerciseId)) {
         updatedSections[sourceSectionIndex] = {
           ...sourceSection,
           exercises: sourceExercises,
-        }
-        onSectionsChange(updatedSections)
-        setActiveOverviewItem(null)
-        return
+        };
+        onSectionsChange(updatedSections);
+        setActiveOverviewItem(null);
+        return;
       }
 
-      let targetExercises = [...(targetSection.exercises || [])]
-      let toIndex = targetExercises.length
+      let targetExercises = [...(targetSection.exercises || [])];
+      let toIndex = targetExercises.length;
 
       if (targetExerciseId) {
-        const existingIndex = targetExercises.findIndex(
-          (ex) => ex.exerciseId === targetExerciseId
-        )
+        const existingIndex = targetExercises.findIndex((ex) => ex.exerciseId === targetExerciseId);
         if (existingIndex !== -1) {
-          toIndex = existingIndex
+          toIndex = existingIndex;
         }
       }
 
       if (sourceSectionId === targetSectionId) {
-        targetExercises = [...sourceExercises]
+        targetExercises = [...sourceExercises];
 
         if (targetExerciseId) {
           const existingIndex = targetExercises.findIndex(
             (ex) => ex.exerciseId === targetExerciseId
-          )
+          );
           if (existingIndex !== -1) {
-            toIndex = existingIndex
+            toIndex = existingIndex;
           } else {
-            toIndex = targetExercises.length
+            toIndex = targetExercises.length;
           }
         } else {
-          toIndex = targetExercises.length
+          toIndex = targetExercises.length;
         }
 
-        targetExercises.splice(toIndex, 0, ...groupExercises)
+        targetExercises.splice(toIndex, 0, ...groupExercises);
 
         updatedSections[sourceSectionIndex] = {
           ...sourceSection,
           exercises: targetExercises,
-        }
+        };
       } else {
-        targetExercises.splice(toIndex, 0, ...groupExercises)
+        targetExercises.splice(toIndex, 0, ...groupExercises);
 
         updatedSections[sourceSectionIndex] = {
           ...sourceSection,
           exercises: sourceExercises,
-        }
+        };
         updatedSections[targetSectionIndex] = {
           ...targetSection,
           exercises: targetExercises,
-        }
+        };
       }
 
-      onSectionsChange(updatedSections)
+      onSectionsChange(updatedSections);
     }
 
-    setActiveOverviewItem(null)
-  }
+    setActiveOverviewItem(null);
+  };
 
   return (
     <>
@@ -488,11 +483,7 @@ export const OverviewPanel = ({
           <div className="flex flex-col gap-3">
             {sections.length > 0 ? (
               sections.map((section) => (
-                <OverviewSectionCard
-                  key={section.id}
-                  section={section}
-                  onDelete={onDeleteSection}
-                >
+                <OverviewSectionCard key={section.id} section={section} onDelete={onDeleteSection}>
                   <div className="p-2 flex flex-col gap-1">
                     {section.exercises && section.exercises.length > 0 ? (
                       <SortableContext
@@ -503,10 +494,7 @@ export const OverviewPanel = ({
                       >
                         {groupExercisesBySuperset(section.exercises).map(
                           (exerciseGroup, groupIndex) => {
-                            if (
-                              exerciseGroup.length > 1 &&
-                              exerciseGroup[0]?.supersetGroupId
-                            ) {
+                            if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
                               return (
                                 <OverviewSupersetRow
                                   key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
@@ -514,7 +502,7 @@ export const OverviewPanel = ({
                                   exercises={exerciseGroup}
                                   onDelete={onDeleteSuperset}
                                 />
-                              )
+                              );
                             }
                             return exerciseGroup.map((exercise, indexInGroup) => (
                               <OverviewExerciseRow
@@ -523,7 +511,7 @@ export const OverviewPanel = ({
                                 exercise={exercise}
                                 onDelete={onDeleteExercise}
                               />
-                            ))
+                            ));
                           }
                         )}
                       </SortableContext>
@@ -544,6 +532,5 @@ export const OverviewPanel = ({
         </SortableContext>
       </DndContext>
     </>
-  )
-}
-
+  );
+};

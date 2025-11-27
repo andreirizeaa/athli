@@ -1,4 +1,4 @@
-import { Separator } from "@/components/ui/separator"
+import { Separator } from '@/components/ui/separator';
 
 const SettingsPage = () => {
   return (
@@ -9,12 +9,9 @@ const SettingsPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 py-4">
-        {/* Settings content */}
-      </div>
+      <div className="w-full flex-1 overflow-auto px-4 py-4">{/* Settings content */}</div>
     </div>
-  )
-}
+  );
+};
 
-export default SettingsPage
-
+export default SettingsPage;

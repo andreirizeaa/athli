@@ -1,36 +1,36 @@
 export type GeneratedWorkout = {
-  title: string
-  description: string
-  type: string
-  difficulty: string
-  sections: any[]
-}
+  title: string;
+  description: string;
+  type: string;
+  difficulty: string;
+  sections: any[];
+};
 
 // Dummy AI generate service returning static mock data for now.
 // In the future this can call a real backend / AI endpoint.
 export const generateWorkoutFromPrompt = async (_prompt: string): Promise<GeneratedWorkout> => {
   // Simulate latency
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
   const mock: GeneratedWorkout = {
-    title: "Upper Body Strength & Conditioning",
+    title: 'Upper Body Strength & Conditioning',
     description:
-      "A mixed upper-body strength session with supersets, dropsets, and conditioning finishers.",
-    type: "weightlifting",
-    difficulty: "all_levels",
+      'A mixed upper-body strength session with supersets, dropsets, and conditioning finishers.',
+    type: 'weightlifting',
+    difficulty: 'all_levels',
     sections: [
       {
-        id: "sec_regular_1",
-        type: "regular",
+        id: 'sec_regular_1',
+        type: 'regular',
         exercises: [
           {
             isSuperset: false,
             exercises: [
               {
-                id: "ex_bench_press",
-                name: "Barbell Bench Press",
-                exerciseType: "weight_reps",
-                equipment: ["Barbell"],
+                id: 'ex_bench_press',
+                name: 'Barbell Bench Press',
+                exerciseType: 'weight_reps',
+                equipment: ['Barbell'],
                 sets: [
                   {
                     setNumber: 1,
@@ -69,10 +69,10 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
             isSuperset: true,
             exercises: [
               {
-                id: "ex_lat_pulldown",
-                name: "Lat Pulldown",
-                exerciseType: "weight_reps",
-                equipment: ["Cable Machine"],
+                id: 'ex_lat_pulldown',
+                name: 'Lat Pulldown',
+                exerciseType: 'weight_reps',
+                equipment: ['Cable Machine'],
                 sets: [
                   {
                     setNumber: 1,
@@ -104,9 +104,9 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
                 ],
               },
               {
-                id: "ex_pushups",
-                name: "Push Ups",
-                exerciseType: "reps",
+                id: 'ex_pushups',
+                name: 'Push Ups',
+                exerciseType: 'reps',
                 equipment: [],
                 sets: [
                   {
@@ -143,15 +143,15 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
         ],
       },
       {
-        id: "sec_amrap_1",
-        type: "amrap",
+        id: 'sec_amrap_1',
+        type: 'amrap',
         roundDurationSec: 600,
         exercises: [
           {
-            id: "ex_battle_ropes",
-            name: "Battle Ropes",
-            exerciseType: "distance_duration",
-            equipment: ["Battle Ropes"],
+            id: 'ex_battle_ropes',
+            name: 'Battle Ropes',
+            exerciseType: 'distance_duration',
+            equipment: ['Battle Ropes'],
             sets: [
               {
                 setNumber: 1,
@@ -165,10 +165,10 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
             ],
           },
           {
-            id: "ex_kettlebell_swing",
-            name: "Kettlebell Swing",
-            exerciseType: "weight_reps",
-            equipment: ["Kettlebell"],
+            id: 'ex_kettlebell_swing',
+            name: 'Kettlebell Swing',
+            exerciseType: 'weight_reps',
+            equipment: ['Kettlebell'],
             sets: [
               {
                 setNumber: 1,
@@ -182,10 +182,10 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
             ],
           },
           {
-            id: "ex_rower",
-            name: "Rower",
-            exerciseType: "distance_duration",
-            equipment: ["Rowing Machine"],
+            id: 'ex_rower',
+            name: 'Rower',
+            exerciseType: 'distance_duration',
+            equipment: ['Rowing Machine'],
             sets: [
               {
                 setNumber: 1,
@@ -201,15 +201,15 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
         ],
       },
       {
-        id: "sec_timed_1",
-        type: "timed",
+        id: 'sec_timed_1',
+        type: 'timed',
         targetRounds: 4,
         exercises: [
           {
-            id: "ex_deadlift",
-            name: "Deadlift",
-            exerciseType: "weight_reps",
-            equipment: ["Barbell"],
+            id: 'ex_deadlift',
+            name: 'Deadlift',
+            exerciseType: 'weight_reps',
+            equipment: ['Barbell'],
             sets: [
               {
                 setNumber: 1,
@@ -223,10 +223,10 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
             ],
           },
           {
-            id: "ex_bike_sprint",
-            name: "Bike Sprint",
-            exerciseType: "distance_duration",
-            equipment: ["Bike"],
+            id: 'ex_bike_sprint',
+            name: 'Bike Sprint',
+            exerciseType: 'distance_duration',
+            equipment: ['Bike'],
             sets: [
               {
                 setNumber: 1,
@@ -240,9 +240,9 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
             ],
           },
           {
-            id: "ex_situps",
-            name: "Sit Ups",
-            exerciseType: "reps",
+            id: 'ex_situps',
+            name: 'Sit Ups',
+            exerciseType: 'reps',
             equipment: [],
             sets: [
               {
@@ -259,7 +259,7 @@ export const generateWorkoutFromPrompt = async (_prompt: string): Promise<Genera
         ],
       },
     ],
-  }
+  };
 
-  return mock
-}
+  return mock;
+};

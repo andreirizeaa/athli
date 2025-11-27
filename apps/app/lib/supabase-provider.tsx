@@ -1,79 +1,78 @@
-'use client'
+'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
-import { useSession } from '@clerk/nextjs'
-import { SupabaseClient, createClient } from '@supabase/supabase-js'
+import { createContext, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useSession } from '@clerk/nextjs';
+import { SupabaseClient, createClient } from '@supabase/supabase-js';
 
 type SupabaseContextValue = {
-  supabase: SupabaseClient | null
-  isLoaded: boolean
-}
+  supabase: SupabaseClient | null;
+  isLoaded: boolean;
+};
 
-const SupabaseContext = createContext<SupabaseContextValue | undefined>(undefined)
+const SupabaseContext = createContext<SupabaseContextValue | undefined>(undefined);
 
 type SupabaseProviderProps = {
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 export default function SupabaseProvider({ children }: SupabaseProviderProps) {
-  const { isLoaded: isSessionLoaded, session } = useSession()
-  const [supabase, setSupabase] = useState<SupabaseClient | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
+  const { isLoaded: isSessionLoaded, session } = useSession();
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     if (!isSessionLoaded) {
-      return
+      return;
     }
 
     if (!session) {
-      setSupabase(null)
-      setIsLoaded(true)
-      return
+      setSupabase(null);
+      setIsLoaded(true);
+      return;
     }
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL in your .env file')
+      throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL in your .env file');
     }
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_KEY) {
-      throw new Error('Missing NEXT_PUBLIC_SUPABASE_KEY in your .env file')
+      throw new Error('Missing NEXT_PUBLIC_SUPABASE_KEY in your .env file');
     }
 
     const client = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_KEY,
       {
-        accessToken: () => session.getToken()
+        accessToken: () => session.getToken(),
       }
-    )
+    );
 
-    setSupabase(client)
-    setIsLoaded(true)
-  }, [isSessionLoaded, session])
+    setSupabase(client);
+    setIsLoaded(true);
+  }, [isSessionLoaded, session]);
 
   return (
     <SupabaseContext.Provider
       value={{
         supabase,
-        isLoaded
+        isLoaded,
       }}
     >
       {children}
     </SupabaseContext.Provider>
-  )
+  );
 }
 
 export const useSupabase = () => {
-  const context = useContext(SupabaseContext)
+  const context = useContext(SupabaseContext);
 
   if (context === undefined) {
-    throw new Error('useSupabase must be used within a SupabaseProvider')
+    throw new Error('useSupabase must be used within a SupabaseProvider');
   }
 
   return {
     supabase: context.supabase,
-    isLoaded: context.isLoaded
-  }
-}
-
+    isLoaded: context.isLoaded,
+  };
+};

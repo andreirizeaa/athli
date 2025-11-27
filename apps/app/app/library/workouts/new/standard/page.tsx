@@ -1,93 +1,96 @@
-"use client"
+'use client';
 
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Check, ChevronLeft, X } from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group"
-import { Separator } from "@/components/ui/separator"
-import { StandardBuilder } from "./standard-builder"
-import type { WorkoutProgramPayload } from "../workout-schema"
-import { DiscardChangesDialog } from "../components/discard-changes-dialog"
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Check, ChevronLeft, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
+import { Separator } from '@/components/ui/separator';
+import { StandardBuilder } from './standard-builder';
+import type { WorkoutProgramPayload } from '../workout-schema';
+import { DiscardChangesDialog } from '../components/discard-changes-dialog';
 
 type WorkoutMeta = {
-  title: string
-  description: string
-  type: string
-  difficulty: string
-  builder?: "standard" | "ai" | null
-}
+  title: string;
+  description: string;
+  type: string;
+  difficulty: string;
+  builder?: 'standard' | 'ai' | null;
+};
 
 const StandardWorkoutPage = () => {
-  const router = useRouter()
-  const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false)
-  const [saveSignal, setSaveSignal] = useState(0)
+  const router = useRouter();
+  const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  const [saveSignal, setSaveSignal] = useState(0);
 
   useEffect(() => {
-    if (typeof window === "undefined") return
-    const raw = window.localStorage.getItem("oneninety_new_workout_meta")
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem('oneninety_new_workout_meta');
     if (!raw) {
       // Redirect if no meta found
-      router.push("/library/workouts")
-      return
+      router.push('/library/workouts');
+      return;
     }
     try {
-      const parsed = JSON.parse(raw) as WorkoutMeta
-      setWorkoutMeta(parsed)
+      const parsed = JSON.parse(raw) as WorkoutMeta;
+      setWorkoutMeta(parsed);
     } catch {
       // Redirect on parse error
-      router.push("/library/workouts")
+      router.push('/library/workouts');
     }
-  }, [router])
+  }, [router]);
 
   const navigateBackToWorkouts = () => {
-    router.push("/library/workouts")
-  }
+    router.push('/library/workouts');
+  };
 
   const handleCancel = () => {
     if (hasUnsavedChanges) {
-      setIsDiscardDialogOpen(true)
-      return
+      setIsDiscardDialogOpen(true);
+      return;
     }
 
-    navigateBackToWorkouts()
-  }
+    navigateBackToWorkouts();
+  };
 
   const handleConfirmDiscard = () => {
-    setIsDiscardDialogOpen(false)
-    setHasUnsavedChanges(false)
-    navigateBackToWorkouts()
-  }
+    setIsDiscardDialogOpen(false);
+    setHasUnsavedChanges(false);
+    navigateBackToWorkouts();
+  };
 
   const handleSaveClick = () => {
     // Signal the builder to attempt a save; builder will handle validation and call onSaveSuccess
-    setSaveSignal((prev) => prev + 1)
-  }
+    setSaveSignal((prev) => prev + 1);
+  };
 
   const handleSaveSuccess = (payload: WorkoutProgramPayload) => {
     // Styled console.log with green background
     // eslint-disable-next-line no-console
-    console.log("%cWorkout payload", "background: #16a34a; color: white; padding: 4px 8px; border-radius: 4px;")
+    console.log(
+      '%cWorkout payload',
+      'background: #16a34a; color: white; padding: 4px 8px; border-radius: 4px;'
+    );
     // eslint-disable-next-line no-console
-    console.log(payload)
+    console.log(payload);
 
     toast.success(`Push workout "${payload.title}" has been saved`, {
       style: {
-        background: "rgb(220 252 231)",
-        color: "rgb(20 83 45)",
-        border: "1px solid rgb(187 247 208)",
+        background: 'rgb(220 252 231)',
+        color: 'rgb(20 83 45)',
+        border: '1px solid rgb(187 247 208)',
       },
-    })
+    });
 
-    setHasUnsavedChanges(false)
-    navigateBackToWorkouts()
-  }
+    setHasUnsavedChanges(false);
+    navigateBackToWorkouts();
+  };
 
   if (!workoutMeta) {
-    return null
+    return null;
   }
 
   return (
@@ -104,9 +107,7 @@ const StandardWorkoutPage = () => {
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <h1 className="text-[22px] font-semibold truncate">
-              New workout
-            </h1>
+            <h1 className="text-[22px] font-semibold truncate">New workout</h1>
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button
@@ -119,11 +120,7 @@ const StandardWorkoutPage = () => {
               <span>Cancel</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button
-              onClick={handleSaveClick}
-              className="gap-2"
-              aria-label="Save workout"
-            >
+            <Button onClick={handleSaveClick} className="gap-2" aria-label="Save workout">
               <Check className="size-4" />
               <span>Save</span>
             </Button>
@@ -145,8 +142,7 @@ const StandardWorkoutPage = () => {
         onConfirm={handleConfirmDiscard}
       />
     </div>
-  )
-}
+  );
+};
 
-export default StandardWorkoutPage
-
+export default StandardWorkoutPage;

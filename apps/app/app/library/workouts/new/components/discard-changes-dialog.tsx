@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import {
   AlertDialog,
@@ -9,13 +9,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from '@/components/ui/alert-dialog';
 
 type DiscardChangesDialogProps = {
-  open: boolean
-  onCancel: () => void
-  onConfirm: () => void
-}
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
 
 export const DiscardChangesDialog = ({ open, onCancel, onConfirm }: DiscardChangesDialogProps) => {
   return (
@@ -23,7 +23,7 @@ export const DiscardChangesDialog = ({ open, onCancel, onConfirm }: DiscardChang
       open={open}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          onCancel()
+          onCancel();
         }
       }}
     >
@@ -38,7 +38,5 @@ export const DiscardChangesDialog = ({ open, onCancel, onConfirm }: DiscardChang
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
-}
-
-
+  );
+};

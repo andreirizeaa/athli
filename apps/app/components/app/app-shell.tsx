@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import React from "react"
-import type { ReactNode } from "react"
-import { useClerk, useUser } from "@clerk/nextjs"
-import { useTranslations } from "next-intl"
-import { useTheme } from "next-themes"
-import { usePathname, useRouter } from "next/navigation"
+import React from 'react';
+import type { ReactNode } from 'react';
+import { useClerk, useUser } from '@clerk/nextjs';
+import { useTranslations } from 'next-intl';
+import { useTheme } from 'next-themes';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Archive,
   Bell,
@@ -30,13 +30,13 @@ import {
   User,
   Users,
   CalendarDays,
-} from "lucide-react"
-import Link from "next/link"
-import { LogoIcon } from "@/components/logo"
-import { Spinner } from "@/components/ui/spinner"
+} from 'lucide-react';
+import Link from 'next/link';
+import { LogoIcon } from '@/components/logo';
+import { Spinner } from '@/components/ui/spinner';
 
 const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect
+  typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
 import {
   Sidebar,
@@ -51,14 +51,10 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   useSidebar,
-} from "@/components/ui/sidebar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Kbd } from "@/components/ui/kbd"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from '@/components/ui/sidebar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Kbd } from '@/components/ui/kbd';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,237 +63,1087 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
-import { availableLanguages } from "@/lib/intl-provider"
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import { availableLanguages } from '@/lib/intl-provider';
 
 export type Contact = {
-  id: string
-  name: string
-  avatar?: string
-  lastMessage: string
-  timestamp: string
-  unreadCount?: number
-  isOnline?: boolean
-}
+  id: string;
+  name: string;
+  avatar?: string;
+  lastMessage: string;
+  timestamp: string;
+  unreadCount?: number;
+  isOnline?: boolean;
+};
 
 export type Message = {
-  id: string
-  text: string
-  timestamp: string
-  isSent: boolean
+  id: string;
+  text: string;
+  timestamp: string;
+  isSent: boolean;
   replyTo?: {
-    id: string
-    text: string
-    isSent: boolean
+    id: string;
+    text: string;
+    isSent: boolean;
     pdf?: {
-      name: string
-      data: string // base64 encoded
-      type: string
-      size: number
-    }
+      name: string;
+      data: string; // base64 encoded
+      type: string;
+      size: number;
+    };
     images?: Array<{
-      name: string
-      data: string // base64 encoded
-      type: string
-      size: number
-    }>
+      name: string;
+      data: string; // base64 encoded
+      type: string;
+      size: number;
+    }>;
     video?: {
-      name: string
-      data: string // base64 encoded
-      type: string
-      size: number
-    }
-  }
+      name: string;
+      data: string; // base64 encoded
+      type: string;
+      size: number;
+    };
+  };
   pdf?: {
-    name: string
-    data: string // base64 encoded
-    type: string
-    size: number
-  }
+    name: string;
+    data: string; // base64 encoded
+    type: string;
+    size: number;
+  };
   images?: Array<{
-    name: string
-    data: string // base64 encoded
-    type: string
-    size: number
-  }>
+    name: string;
+    data: string; // base64 encoded
+    type: string;
+    size: number;
+  }>;
   video?: {
-    name: string
-    data: string // base64 encoded
-    type: string
-    size: number
-  }
-}
+    name: string;
+    data: string; // base64 encoded
+    type: string;
+    size: number;
+  };
+};
 
 export type Athlete = {
-  id: string
-  name: string
-  avatar?: string
-  lastActivity: string
-  last7DaysTraining: string
-  last30DaysTraining: string
-  category: "online" | "in-person"
-  connected: boolean | "invitation-sent"
-  email: string
-  phone: string
-  country: string
-  age: number
-  clientFor: number // in days
-}
+  id: string;
+  name: string;
+  avatar?: string;
+  lastActivity: string;
+  last7DaysTraining: string;
+  last30DaysTraining: string;
+  category: 'online' | 'in-person';
+  connected: boolean | 'invitation-sent';
+  email: string;
+  phone: string;
+  country: string;
+  age: number;
+  clientFor: number; // in days
+};
 
 export type Workout = {
-  id: string
-  program: string
-  description: string
-  type: string
-  length: string
-  totalExercises: number
-  equipment: string
-  created: string // dd-mm-yy format
-}
+  id: string;
+  program: string;
+  description: string;
+  type: string;
+  length: string;
+  totalExercises: number;
+  equipment: string;
+  created: string; // dd-mm-yy format
+};
 
 export type Program = {
-  id: string
-  program: string
-  description: string
-  type: string
-  length: string
-  totalExercises: number
-  equipment: string
-  created: string // dd-mm-yy format
-}
+  id: string;
+  program: string;
+  description: string;
+  type: string;
+  length: string;
+  totalExercises: number;
+  equipment: string;
+  created: string; // dd-mm-yy format
+};
 
 export const mockAthletes: Athlete[] = [
   {
-    id: "1",
-    name: "John Smith",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
-    lastActivity: "2 hours ago",
-    last7DaysTraining: "5/7",
-    last30DaysTraining: "22/30",
-    category: "in-person",
+    id: '1',
+    name: 'John Smith',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+    lastActivity: '2 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '22/30',
+    category: 'in-person',
     connected: true,
-    email: "john.smith@example.com",
-    phone: "+1 (555) 123-4567",
-    country: "United States",
+    email: 'john.smith@example.com',
+    phone: '+1 (555) 123-4567',
+    country: 'United States',
     age: 32,
     clientFor: 450,
   },
   {
-    id: "2",
-    name: "Sarah Johnson",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-    lastActivity: "1 day ago",
-    last7DaysTraining: "6/7",
-    last30DaysTraining: "28/30",
-    category: "online",
+    id: '2',
+    name: 'Sarah Johnson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '28/30',
+    category: 'online',
     connected: true,
-    email: "sarah.johnson@example.com",
-    phone: "+1 (555) 234-5678",
-    country: "Canada",
+    email: 'sarah.johnson@example.com',
+    phone: '+1 (555) 234-5678',
+    country: 'Canada',
     age: 28,
     clientFor: 180,
   },
   {
-    id: "3",
-    name: "Mike Wilson",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike",
-    lastActivity: "30 minutes ago",
-    last7DaysTraining: "4/7",
-    last30DaysTraining: "18/30",
-    category: "in-person",
+    id: '3',
+    name: 'Mike Wilson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+    lastActivity: '30 minutes ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '18/30',
+    category: 'in-person',
     connected: true,
-    email: "mike.wilson@example.com",
-    phone: "+44 20 7946 0958",
-    country: "United Kingdom",
+    email: 'mike.wilson@example.com',
+    phone: '+44 20 7946 0958',
+    country: 'United Kingdom',
     age: 35,
     clientFor: 730,
   },
   {
-    id: "4",
-    name: "Emily Davis",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily",
-    lastActivity: "3 days ago",
-    last7DaysTraining: "3/7",
-    last30DaysTraining: "15/30",
-    category: "online",
+    id: '4',
+    name: 'Emily Davis',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
+    lastActivity: '3 days ago',
+    last7DaysTraining: '3/7',
+    last30DaysTraining: '15/30',
+    category: 'online',
     connected: false,
-    email: "emily.davis@example.com",
-    phone: "+1 (555) 345-6789",
-    country: "United States",
+    email: 'emily.davis@example.com',
+    phone: '+1 (555) 345-6789',
+    country: 'United States',
     age: 29,
     clientFor: 90,
   },
   {
-    id: "5",
-    name: "David Brown",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=David",
-    lastActivity: "5 hours ago",
-    last7DaysTraining: "7/7",
-    last30DaysTraining: "30/30",
-    category: "in-person",
+    id: '5',
+    name: 'David Brown',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
+    lastActivity: '5 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '30/30',
+    category: 'in-person',
     connected: true,
-    email: "david.brown@example.com",
-    phone: "+61 2 9374 4000",
-    country: "Australia",
+    email: 'david.brown@example.com',
+    phone: '+61 2 9374 4000',
+    country: 'Australia',
     age: 41,
     clientFor: 1095,
   },
   {
-    id: "6",
-    name: "Lisa Anderson",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa",
-    lastActivity: "1 week ago",
-    last7DaysTraining: "2/7",
-    last30DaysTraining: "10/30",
-    category: "online",
+    id: '6',
+    name: 'Lisa Anderson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
+    lastActivity: '1 week ago',
+    last7DaysTraining: '2/7',
+    last30DaysTraining: '10/30',
+    category: 'online',
     connected: false,
-    email: "lisa.anderson@example.com",
-    phone: "+1 (555) 456-7890",
-    country: "United States",
+    email: 'lisa.anderson@example.com',
+    phone: '+1 (555) 456-7890',
+    country: 'United States',
     age: 26,
     clientFor: 60,
   },
   {
-    id: "7",
-    name: "Chris Martinez",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Chris",
-    lastActivity: "12 hours ago",
-    last7DaysTraining: "6/7",
-    last30DaysTraining: "25/30",
-    category: "in-person",
+    id: '7',
+    name: 'Chris Martinez',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chris',
+    lastActivity: '12 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '25/30',
+    category: 'in-person',
     connected: true,
-    email: "chris.martinez@example.com",
-    phone: "+34 91 123 4567",
-    country: "Spain",
+    email: 'chris.martinez@example.com',
+    phone: '+34 91 123 4567',
+    country: 'Spain',
     age: 38,
     clientFor: 365,
   },
   {
-    id: "8",
-    name: "Jessica Taylor",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica",
-    lastActivity: "2 days ago",
-    last7DaysTraining: "5/7",
-    last30DaysTraining: "20/30",
-    category: "online",
+    id: '8',
+    name: 'Jessica Taylor',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica',
+    lastActivity: '2 days ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '20/30',
+    category: 'online',
     connected: true,
-    email: "jessica.taylor@example.com",
-    phone: "+1 (555) 567-8901",
-    country: "Canada",
+    email: 'jessica.taylor@example.com',
+    phone: '+1 (555) 567-8901',
+    country: 'Canada',
     age: 31,
     clientFor: 240,
   },
-]
+  {
+    id: '9',
+    name: 'Robert Lee',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Robert',
+    lastActivity: '4 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '26/30',
+    category: 'in-person',
+    connected: true,
+    email: 'robert.lee@example.com',
+    phone: '+1 (555) 678-9012',
+    country: 'United States',
+    age: 34,
+    clientFor: 520,
+  },
+  {
+    id: '10',
+    name: 'Amanda White',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amanda',
+    lastActivity: '6 hours ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '19/30',
+    category: 'online',
+    connected: true,
+    email: 'amanda.white@example.com',
+    phone: '+44 20 7946 0959',
+    country: 'United Kingdom',
+    age: 27,
+    clientFor: 150,
+  },
+  {
+    id: '11',
+    name: 'Michael Chen',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '29/30',
+    category: 'in-person',
+    connected: true,
+    email: 'michael.chen@example.com',
+    phone: '+86 10 1234 5678',
+    country: 'China',
+    age: 30,
+    clientFor: 380,
+  },
+  {
+    id: '12',
+    name: 'Sophie Martin',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie',
+    lastActivity: '3 days ago',
+    last7DaysTraining: '3/7',
+    last30DaysTraining: '14/30',
+    category: 'online',
+    connected: false,
+    email: 'sophie.martin@example.com',
+    phone: '+33 1 23 45 67 89',
+    country: 'France',
+    age: 25,
+    clientFor: 75,
+  },
+  {
+    id: '13',
+    name: 'James Thompson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=James',
+    lastActivity: '8 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '21/30',
+    category: 'in-person',
+    connected: true,
+    email: 'james.thompson@example.com',
+    phone: '+1 (555) 789-0123',
+    country: 'United States',
+    age: 39,
+    clientFor: 600,
+  },
+  {
+    id: '14',
+    name: 'Emma Garcia',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
+    lastActivity: '2 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '27/30',
+    category: 'online',
+    connected: true,
+    email: 'emma.garcia@example.com',
+    phone: '+34 91 234 5678',
+    country: 'Spain',
+    age: 28,
+    clientFor: 200,
+  },
+  {
+    id: '15',
+    name: 'Daniel Rodriguez',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Daniel',
+    lastActivity: '5 days ago',
+    last7DaysTraining: '2/7',
+    last30DaysTraining: '12/30',
+    category: 'in-person',
+    connected: 'invitation-sent',
+    email: 'daniel.rodriguez@example.com',
+    phone: '+1 (555) 890-1234',
+    country: 'United States',
+    age: 33,
+    clientFor: 30,
+  },
+  {
+    id: '16',
+    name: 'Olivia Williams',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Olivia',
+    lastActivity: '1 hour ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '30/30',
+    category: 'online',
+    connected: true,
+    email: 'olivia.williams@example.com',
+    phone: '+1 (555) 901-2345',
+    country: 'Canada',
+    age: 29,
+    clientFor: 420,
+  },
+  {
+    id: '17',
+    name: 'William Jones',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=William',
+    lastActivity: '12 hours ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '17/30',
+    category: 'in-person',
+    connected: true,
+    email: 'william.jones@example.com',
+    phone: '+44 20 7946 0960',
+    country: 'United Kingdom',
+    age: 36,
+    clientFor: 680,
+  },
+  {
+    id: '18',
+    name: 'Isabella Brown',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Isabella',
+    lastActivity: '4 days ago',
+    last7DaysTraining: '3/7',
+    last30DaysTraining: '13/30',
+    category: 'online',
+    connected: false,
+    email: 'isabella.brown@example.com',
+    phone: '+1 (555) 012-3456',
+    country: 'United States',
+    age: 24,
+    clientFor: 45,
+  },
+  {
+    id: '19',
+    name: 'Alexander Davis',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alexander',
+    lastActivity: '3 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '24/30',
+    category: 'in-person',
+    connected: true,
+    email: 'alexander.davis@example.com',
+    phone: '+61 2 9374 4001',
+    country: 'Australia',
+    age: 31,
+    clientFor: 290,
+  },
+  {
+    id: '20',
+    name: 'Mia Miller',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mia',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '20/30',
+    category: 'online',
+    connected: true,
+    email: 'mia.miller@example.com',
+    phone: '+1 (555) 123-4568',
+    country: 'United States',
+    age: 26,
+    clientFor: 180,
+  },
+  {
+    id: '21',
+    name: 'Benjamin Wilson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Benjamin',
+    lastActivity: '6 days ago',
+    last7DaysTraining: '1/7',
+    last30DaysTraining: '8/30',
+    category: 'in-person',
+    connected: 'invitation-sent',
+    email: 'benjamin.wilson@example.com',
+    phone: '+1 (555) 234-5679',
+    country: 'United States',
+    age: 37,
+    clientFor: 20,
+  },
+  {
+    id: '22',
+    name: 'Charlotte Moore',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlotte',
+    lastActivity: '7 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '25/30',
+    category: 'online',
+    connected: true,
+    email: 'charlotte.moore@example.com',
+    phone: '+44 20 7946 0961',
+    country: 'United Kingdom',
+    age: 30,
+    clientFor: 340,
+  },
+  {
+    id: '23',
+    name: 'Lucas Taylor',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas',
+    lastActivity: '2 days ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '18/30',
+    category: 'in-person',
+    connected: true,
+    email: 'lucas.taylor@example.com',
+    phone: '+1 (555) 345-6790',
+    country: 'Canada',
+    age: 32,
+    clientFor: 480,
+  },
+  {
+    id: '24',
+    name: 'Amelia Anderson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amelia',
+    lastActivity: '5 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '28/30',
+    category: 'online',
+    connected: true,
+    email: 'amelia.anderson@example.com',
+    phone: '+1 (555) 456-7891',
+    country: 'United States',
+    age: 27,
+    clientFor: 220,
+  },
+  {
+    id: '25',
+    name: 'Henry Thomas',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry',
+    lastActivity: '1 week ago',
+    last7DaysTraining: '2/7',
+    last30DaysTraining: '11/30',
+    category: 'in-person',
+    connected: false,
+    email: 'henry.thomas@example.com',
+    phone: '+34 91 345 6789',
+    country: 'Spain',
+    age: 40,
+    clientFor: 550,
+  },
+  {
+    id: '26',
+    name: 'Harper Jackson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Harper',
+    lastActivity: '4 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '22/30',
+    category: 'online',
+    connected: true,
+    email: 'harper.jackson@example.com',
+    phone: '+1 (555) 567-8902',
+    country: 'United States',
+    age: 25,
+    clientFor: 160,
+  },
+  {
+    id: '27',
+    name: 'Ethan White',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ethan',
+    lastActivity: '3 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '26/30',
+    category: 'in-person',
+    connected: true,
+    email: 'ethan.white@example.com',
+    phone: '+1 (555) 678-9013',
+    country: 'United States',
+    age: 28,
+    clientFor: 310,
+  },
+  {
+    id: '28',
+    name: 'Ava Harris',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ava',
+    lastActivity: '2 days ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '19/30',
+    category: 'online',
+    connected: true,
+    email: 'ava.harris@example.com',
+    phone: '+44 20 7946 0962',
+    country: 'United Kingdom',
+    age: 29,
+    clientFor: 270,
+  },
+  {
+    id: '29',
+    name: 'Mason Martin',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mason',
+    lastActivity: '8 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '30/30',
+    category: 'in-person',
+    connected: true,
+    email: 'mason.martin@example.com',
+    phone: '+1 (555) 789-0124',
+    country: 'United States',
+    age: 35,
+    clientFor: 650,
+  },
+  {
+    id: '30',
+    name: 'Ella Thompson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ella',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '3/7',
+    last30DaysTraining: '15/30',
+    category: 'online',
+    connected: false,
+    email: 'ella.thompson@example.com',
+    phone: '+1 (555) 890-1235',
+    country: 'Canada',
+    age: 23,
+    clientFor: 85,
+  },
+  {
+    id: '31',
+    name: 'Noah Garcia',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noah',
+    lastActivity: '5 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '21/30',
+    category: 'in-person',
+    connected: true,
+    email: 'noah.garcia@example.com',
+    phone: '+34 91 456 7890',
+    country: 'Spain',
+    age: 33,
+    clientFor: 410,
+  },
+  {
+    id: '32',
+    name: 'Grace Martinez',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace',
+    lastActivity: '6 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '27/30',
+    category: 'online',
+    connected: true,
+    email: 'grace.martinez@example.com',
+    phone: '+1 (555) 901-2346',
+    country: 'United States',
+    age: 26,
+    clientFor: 190,
+  },
+  {
+    id: '33',
+    name: 'Liam Robinson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam',
+    lastActivity: '4 days ago',
+    last7DaysTraining: '2/7',
+    last30DaysTraining: '12/30',
+    category: 'in-person',
+    connected: 'invitation-sent',
+    email: 'liam.robinson@example.com',
+    phone: '+1 (555) 012-3457',
+    country: 'United States',
+    age: 38,
+    clientFor: 25,
+  },
+  {
+    id: '34',
+    name: 'Chloe Clark',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chloe',
+    lastActivity: '3 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '29/30',
+    category: 'online',
+    connected: true,
+    email: 'chloe.clark@example.com',
+    phone: '+44 20 7946 0963',
+    country: 'United Kingdom',
+    age: 31,
+    clientFor: 360,
+  },
+  {
+    id: '35',
+    name: 'Jacob Rodriguez',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jacob',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '17/30',
+    category: 'in-person',
+    connected: true,
+    email: 'jacob.rodriguez@example.com',
+    phone: '+1 (555) 123-4569',
+    country: 'United States',
+    age: 29,
+    clientFor: 250,
+  },
+  {
+    id: '36',
+    name: 'Lily Lewis',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lily',
+    lastActivity: '7 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '23/30',
+    category: 'online',
+    connected: true,
+    email: 'lily.lewis@example.com',
+    phone: '+1 (555) 234-5680',
+    country: 'Canada',
+    age: 24,
+    clientFor: 140,
+  },
+  {
+    id: '37',
+    name: 'Logan Walker',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Logan',
+    lastActivity: '2 days ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '24/30',
+    category: 'in-person',
+    connected: true,
+    email: 'logan.walker@example.com',
+    phone: '+61 2 9374 4002',
+    country: 'Australia',
+    age: 36,
+    clientFor: 590,
+  },
+  {
+    id: '38',
+    name: 'Zoe Hall',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe',
+    lastActivity: '5 days ago',
+    last7DaysTraining: '1/7',
+    last30DaysTraining: '9/30',
+    category: 'online',
+    connected: false,
+    email: 'zoe.hall@example.com',
+    phone: '+1 (555) 345-6791',
+    country: 'United States',
+    age: 22,
+    clientFor: 50,
+  },
+  {
+    id: '39',
+    name: 'Carter Allen',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carter',
+    lastActivity: '4 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '28/30',
+    category: 'in-person',
+    connected: true,
+    email: 'carter.allen@example.com',
+    phone: '+1 (555) 456-7892',
+    country: 'United States',
+    age: 34,
+    clientFor: 470,
+  },
+  {
+    id: '40',
+    name: 'Nora Young',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nora',
+    lastActivity: '1 hour ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '26/30',
+    category: 'online',
+    connected: true,
+    email: 'nora.young@example.com',
+    phone: '+44 20 7946 0964',
+    country: 'United Kingdom',
+    age: 27,
+    clientFor: 210,
+  },
+  {
+    id: '41',
+    name: 'Owen King',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Owen',
+    lastActivity: '3 days ago',
+    last7DaysTraining: '3/7',
+    last30DaysTraining: '14/30',
+    category: 'in-person',
+    connected: false,
+    email: 'owen.king@example.com',
+    phone: '+1 (555) 567-8903',
+    country: 'United States',
+    age: 41,
+    clientFor: 720,
+  },
+  {
+    id: '42',
+    name: 'Scarlett Wright',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Scarlett',
+    lastActivity: '6 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '20/30',
+    category: 'online',
+    connected: true,
+    email: 'scarlett.wright@example.com',
+    phone: '+1 (555) 678-9014',
+    country: 'Canada',
+    age: 30,
+    clientFor: 330,
+  },
+  {
+    id: '43',
+    name: 'Wyatt Lopez',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wyatt',
+    lastActivity: '2 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '25/30',
+    category: 'in-person',
+    connected: true,
+    email: 'wyatt.lopez@example.com',
+    phone: '+34 91 567 8901',
+    country: 'Spain',
+    age: 32,
+    clientFor: 390,
+  },
+  {
+    id: '44',
+    name: 'Victoria Hill',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Victoria',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '18/30',
+    category: 'online',
+    connected: true,
+    email: 'victoria.hill@example.com',
+    phone: '+1 (555) 789-0125',
+    country: 'United States',
+    age: 28,
+    clientFor: 230,
+  },
+  {
+    id: '45',
+    name: 'Jack Scott',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack',
+    lastActivity: '8 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '30/30',
+    category: 'in-person',
+    connected: true,
+    email: 'jack.scott@example.com',
+    phone: '+1 (555) 890-1236',
+    country: 'United States',
+    age: 37,
+    clientFor: 610,
+  },
+  {
+    id: '46',
+    name: 'Aria Green',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aria',
+    lastActivity: '4 days ago',
+    last7DaysTraining: '2/7',
+    last30DaysTraining: '11/30',
+    category: 'online',
+    connected: 'invitation-sent',
+    email: 'aria.green@example.com',
+    phone: '+1 (555) 901-2347',
+    country: 'United States',
+    age: 25,
+    clientFor: 15,
+  },
+  {
+    id: '47',
+    name: 'Luke Adams',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luke',
+    lastActivity: '5 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '27/30',
+    category: 'in-person',
+    connected: true,
+    email: 'luke.adams@example.com',
+    phone: '+44 20 7946 0965',
+    country: 'United Kingdom',
+    age: 29,
+    clientFor: 280,
+  },
+  {
+    id: '48',
+    name: 'Layla Baker',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Layla',
+    lastActivity: '3 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '22/30',
+    category: 'online',
+    connected: true,
+    email: 'layla.baker@example.com',
+    phone: '+1 (555) 012-3458',
+    country: 'Canada',
+    age: 26,
+    clientFor: 170,
+  },
+  {
+    id: '49',
+    name: 'Ryan Nelson',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ryan',
+    lastActivity: '2 days ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '19/30',
+    category: 'in-person',
+    connected: true,
+    email: 'ryan.nelson@example.com',
+    phone: '+1 (555) 123-4570',
+    country: 'United States',
+    age: 35,
+    clientFor: 500,
+  },
+  {
+    id: '50',
+    name: 'Penelope Carter',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Penelope',
+    lastActivity: '1 week ago',
+    last7DaysTraining: '1/7',
+    last30DaysTraining: '7/30',
+    category: 'online',
+    connected: false,
+    email: 'penelope.carter@example.com',
+    phone: '+1 (555) 234-5681',
+    country: 'United States',
+    age: 23,
+    clientFor: 40,
+  },
+  {
+    id: '51',
+    name: 'Nathan Mitchell',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nathan',
+    lastActivity: '7 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '29/30',
+    category: 'in-person',
+    connected: true,
+    email: 'nathan.mitchell@example.com',
+    phone: '+61 2 9374 4003',
+    country: 'Australia',
+    age: 33,
+    clientFor: 430,
+  },
+  {
+    id: '52',
+    name: 'Hannah Perez',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Hannah',
+    lastActivity: '4 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '24/30',
+    category: 'online',
+    connected: true,
+    email: 'hannah.perez@example.com',
+    phone: '+1 (555) 345-6792',
+    country: 'United States',
+    age: 28,
+    clientFor: 260,
+  },
+  {
+    id: '53',
+    name: 'Isaac Roberts',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Isaac',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '3/7',
+    last30DaysTraining: '16/30',
+    category: 'in-person',
+    connected: true,
+    email: 'isaac.roberts@example.com',
+    phone: '+1 (555) 456-7893',
+    country: 'United States',
+    age: 39,
+    clientFor: 570,
+  },
+  {
+    id: '54',
+    name: 'Addison Turner',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Addison',
+    lastActivity: '5 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '21/30',
+    category: 'online',
+    connected: true,
+    email: 'addison.turner@example.com',
+    phone: '+44 20 7946 0966',
+    country: 'United Kingdom',
+    age: 31,
+    clientFor: 350,
+  },
+  {
+    id: '55',
+    name: 'Caleb Phillips',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Caleb',
+    lastActivity: '3 days ago',
+    last7DaysTraining: '2/7',
+    last30DaysTraining: '13/30',
+    category: 'in-person',
+    connected: 'invitation-sent',
+    email: 'caleb.phillips@example.com',
+    phone: '+1 (555) 567-8904',
+    country: 'United States',
+    age: 36,
+    clientFor: 10,
+  },
+  {
+    id: '56',
+    name: 'Aubrey Campbell',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aubrey',
+    lastActivity: '6 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '25/30',
+    category: 'online',
+    connected: true,
+    email: 'aubrey.campbell@example.com',
+    phone: '+1 (555) 678-9015',
+    country: 'Canada',
+    age: 27,
+    clientFor: 200,
+  },
+  {
+    id: '57',
+    name: 'Julian Parker',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Julian',
+    lastActivity: '2 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '28/30',
+    category: 'in-person',
+    connected: true,
+    email: 'julian.parker@example.com',
+    phone: '+34 91 678 9012',
+    country: 'Spain',
+    age: 34,
+    clientFor: 440,
+  },
+  {
+    id: '58',
+    name: 'Stella Evans',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Stella',
+    lastActivity: '1 day ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '17/30',
+    category: 'online',
+    connected: true,
+    email: 'stella.evans@example.com',
+    phone: '+1 (555) 789-0126',
+    country: 'United States',
+    age: 29,
+    clientFor: 240,
+  },
+  {
+    id: '59',
+    name: 'Levi Edwards',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Levi',
+    lastActivity: '4 days ago',
+    last7DaysTraining: '1/7',
+    last30DaysTraining: '10/30',
+    category: 'in-person',
+    connected: false,
+    email: 'levi.edwards@example.com',
+    phone: '+1 (555) 890-1237',
+    country: 'United States',
+    age: 42,
+    clientFor: 780,
+  },
+  {
+    id: '60',
+    name: 'Natalie Collins',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Natalie',
+    lastActivity: '5 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '26/30',
+    category: 'online',
+    connected: true,
+    email: 'natalie.collins@example.com',
+    phone: '+1 (555) 901-2348',
+    country: 'United States',
+    age: 25,
+    clientFor: 130,
+  },
+  {
+    id: '61',
+    name: 'Aaron Stewart',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aaron',
+    lastActivity: '3 hours ago',
+    last7DaysTraining: '5/7',
+    last30DaysTraining: '23/30',
+    category: 'in-person',
+    connected: true,
+    email: 'aaron.stewart@example.com',
+    phone: '+44 20 7946 0967',
+    country: 'United Kingdom',
+    age: 30,
+    clientFor: 320,
+  },
+  {
+    id: '62',
+    name: 'Lillian Sanchez',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lillian',
+    lastActivity: '2 days ago',
+    last7DaysTraining: '4/7',
+    last30DaysTraining: '20/30',
+    category: 'online',
+    connected: true,
+    email: 'lillian.sanchez@example.com',
+    phone: '+1 (555) 012-3459',
+    country: 'United States',
+    age: 28,
+    clientFor: 220,
+  },
+  {
+    id: '63',
+    name: 'Eli Morris',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eli',
+    lastActivity: '8 hours ago',
+    last7DaysTraining: '7/7',
+    last30DaysTraining: '30/30',
+    category: 'in-person',
+    connected: true,
+    email: 'eli.morris@example.com',
+    phone: '+1 (555) 123-4571',
+    country: 'United States',
+    age: 38,
+    clientFor: 620,
+  },
+  {
+    id: '64',
+    name: 'Aurora Rogers',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aurora',
+    lastActivity: '1 week ago',
+    last7DaysTraining: '2/7',
+    last30DaysTraining: '12/30',
+    category: 'online',
+    connected: false,
+    email: 'aurora.rogers@example.com',
+    phone: '+1 (555) 234-5682',
+    country: 'Canada',
+    age: 24,
+    clientFor: 70,
+  },
+  {
+    id: '65',
+    name: 'Grayson Reed',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grayson',
+    lastActivity: '6 hours ago',
+    last7DaysTraining: '6/7',
+    last30DaysTraining: '27/30',
+    category: 'in-person',
+    connected: true,
+    email: 'grayson.reed@example.com',
+    phone: '+61 2 9374 4004',
+    country: 'Australia',
+    age: 31,
+    clientFor: 370,
+  },
+];
 
 export const mockContacts: Contact[] = [
   {
@@ -350,153 +1196,167 @@ export const mockContacts: Contact[] = [
     timestamp: '2 days ago',
     isOnline: false,
   },
-]
+];
 
 export const mockWorkouts: Workout[] = [
   {
-    id: "1",
-    program: "Strength Builder",
-    description: "A comprehensive strength training program designed to build muscle mass and increase overall strength. This program focuses on compound movements and progressive overload principles.",
-    type: "Strength",
-    length: "12 weeks",
-    equipment: "Barbell, Dumbbells, Bench",
+    id: '1',
+    program: 'Strength Builder',
+    description:
+      'A comprehensive strength training program designed to build muscle mass and increase overall strength. This program focuses on compound movements and progressive overload principles.',
+    type: 'Strength',
+    length: '12 weeks',
+    equipment: 'Barbell, Dumbbells, Bench',
     totalExercises: 24,
-    created: "15-03-24",
+    created: '15-03-24',
   },
   {
-    id: "2",
-    program: "Cardio Blast",
-    description: "High-intensity cardio workout program perfect for improving cardiovascular health and burning calories. Includes interval training and endurance exercises.",
-    type: "Cardio",
-    length: "8 weeks",
+    id: '2',
+    program: 'Cardio Blast',
+    description:
+      'High-intensity cardio workout program perfect for improving cardiovascular health and burning calories. Includes interval training and endurance exercises.',
+    type: 'Cardio',
+    length: '8 weeks',
     totalExercises: 18,
-    equipment: "Treadmill, Bike, Rowing Machine",
-    created: "22-01-24",
+    equipment: 'Treadmill, Bike, Rowing Machine',
+    created: '22-01-24',
   },
   {
-    id: "3",
-    program: "Flexibility Flow",
-    description: "A yoga and stretching focused program that enhances flexibility, mobility, and relaxation. Ideal for recovery days and improving range of motion.",
-    type: "Flexibility",
-    length: "6 weeks",
+    id: '3',
+    program: 'Flexibility Flow',
+    description:
+      'A yoga and stretching focused program that enhances flexibility, mobility, and relaxation. Ideal for recovery days and improving range of motion.',
+    type: 'Flexibility',
+    length: '6 weeks',
     totalExercises: 15,
-    equipment: "Yoga Mat, Blocks, Straps",
-    created: "10-02-24",
+    equipment: 'Yoga Mat, Blocks, Straps',
+    created: '10-02-24',
   },
   {
-    id: "4",
-    program: "HIIT Power",
-    description: "High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest. Great for time-efficient workouts.",
-    type: "HIIT",
-    length: "4 weeks",
+    id: '4',
+    program: 'HIIT Power',
+    description:
+      'High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest. Great for time-efficient workouts.',
+    type: 'HIIT',
+    length: '4 weeks',
     totalExercises: 12,
-    equipment: "Bodyweight, Kettlebells",
-    created: "05-04-24",
+    equipment: 'Bodyweight, Kettlebells',
+    created: '05-04-24',
   },
   {
-    id: "5",
-    program: "Endurance Runner",
-    description: "Progressive running program designed to build endurance and improve running performance. Includes tempo runs, intervals, and long-distance training.",
-    type: "Endurance",
-    length: "16 weeks",
+    id: '5',
+    program: 'Endurance Runner',
+    description:
+      'Progressive running program designed to build endurance and improve running performance. Includes tempo runs, intervals, and long-distance training.',
+    type: 'Endurance',
+    length: '16 weeks',
     totalExercises: 20,
-    equipment: "Running Shoes, Track",
-    created: "18-12-23",
+    equipment: 'Running Shoes, Track',
+    created: '18-12-23',
   },
   {
-    id: "6",
-    program: "Bodyweight Basics",
-    description: "No-equipment workout program using only bodyweight exercises. Perfect for home workouts and building functional strength.",
-    type: "Bodyweight",
-    length: "10 weeks",
+    id: '6',
+    program: 'Bodyweight Basics',
+    description:
+      'No-equipment workout program using only bodyweight exercises. Perfect for home workouts and building functional strength.',
+    type: 'Bodyweight',
+    length: '10 weeks',
     totalExercises: 16,
-    equipment: "None",
-    created: "28-03-24",
+    equipment: 'None',
+    created: '28-03-24',
   },
   {
-    id: "7",
-    program: "Powerlifting Prep",
-    description: "Specialized program for powerlifting competition preparation. Focuses on squat, bench press, and deadlift with periodization.",
-    type: "Powerlifting",
-    length: "20 weeks",
+    id: '7',
+    program: 'Powerlifting Prep',
+    description:
+      'Specialized program for powerlifting competition preparation. Focuses on squat, bench press, and deadlift with periodization.',
+    type: 'Powerlifting',
+    length: '20 weeks',
     totalExercises: 8,
-    equipment: "Power Rack, Barbell, Plates",
-    created: "12-11-23",
+    equipment: 'Power Rack, Barbell, Plates',
+    created: '12-11-23',
   },
-]
+];
 
 export const mockPrograms: Program[] = [
   {
-    id: "1",
-    program: "Strength Builder",
-    description: "A comprehensive strength training program designed to build muscle mass and increase overall strength. This program focuses on compound movements and progressive overload principles.",
-    type: "Strength",
-    length: "12 weeks",
-    equipment: "Barbell, Dumbbells, Bench",
+    id: '1',
+    program: 'Strength Builder',
+    description:
+      'A comprehensive strength training program designed to build muscle mass and increase overall strength. This program focuses on compound movements and progressive overload principles.',
+    type: 'Strength',
+    length: '12 weeks',
+    equipment: 'Barbell, Dumbbells, Bench',
     totalExercises: 24,
-    created: "15-03-24",
+    created: '15-03-24',
   },
   {
-    id: "2",
-    program: "Cardio Blast",
-    description: "High-intensity cardio workout program perfect for improving cardiovascular health and burning calories. Includes interval training and endurance exercises.",
-    type: "Cardio",
-    length: "8 weeks",
+    id: '2',
+    program: 'Cardio Blast',
+    description:
+      'High-intensity cardio workout program perfect for improving cardiovascular health and burning calories. Includes interval training and endurance exercises.',
+    type: 'Cardio',
+    length: '8 weeks',
     totalExercises: 18,
-    equipment: "Treadmill, Bike, Rowing Machine",
-    created: "22-01-24",
+    equipment: 'Treadmill, Bike, Rowing Machine',
+    created: '22-01-24',
   },
   {
-    id: "3",
-    program: "Flexibility Flow",
-    description: "A yoga and stretching focused program that enhances flexibility, mobility, and relaxation. Ideal for recovery days and improving range of motion.",
-    type: "Flexibility",
-    length: "6 weeks",
+    id: '3',
+    program: 'Flexibility Flow',
+    description:
+      'A yoga and stretching focused program that enhances flexibility, mobility, and relaxation. Ideal for recovery days and improving range of motion.',
+    type: 'Flexibility',
+    length: '6 weeks',
     totalExercises: 15,
-    equipment: "Yoga Mat, Blocks, Straps",
-    created: "10-02-24",
+    equipment: 'Yoga Mat, Blocks, Straps',
+    created: '10-02-24',
   },
   {
-    id: "4",
-    program: "HIIT Power",
-    description: "High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest. Great for time-efficient workouts.",
-    type: "HIIT",
-    length: "4 weeks",
+    id: '4',
+    program: 'HIIT Power',
+    description:
+      'High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest. Great for time-efficient workouts.',
+    type: 'HIIT',
+    length: '4 weeks',
     totalExercises: 12,
-    equipment: "Bodyweight, Kettlebells",
-    created: "05-04-24",
+    equipment: 'Bodyweight, Kettlebells',
+    created: '05-04-24',
   },
   {
-    id: "5",
-    program: "Endurance Runner",
-    description: "Progressive running program designed to build endurance and improve running performance. Includes tempo runs, intervals, and long-distance training.",
-    type: "Endurance",
-    length: "16 weeks",
+    id: '5',
+    program: 'Endurance Runner',
+    description:
+      'Progressive running program designed to build endurance and improve running performance. Includes tempo runs, intervals, and long-distance training.',
+    type: 'Endurance',
+    length: '16 weeks',
     totalExercises: 20,
-    equipment: "Running Shoes, Track",
-    created: "18-12-23",
+    equipment: 'Running Shoes, Track',
+    created: '18-12-23',
   },
   {
-    id: "6",
-    program: "Bodyweight Basics",
-    description: "No-equipment workout program using only bodyweight exercises. Perfect for home workouts and building functional strength.",
-    type: "Bodyweight",
-    length: "10 weeks",
+    id: '6',
+    program: 'Bodyweight Basics',
+    description:
+      'No-equipment workout program using only bodyweight exercises. Perfect for home workouts and building functional strength.',
+    type: 'Bodyweight',
+    length: '10 weeks',
     totalExercises: 16,
-    equipment: "None",
-    created: "28-03-24",
+    equipment: 'None',
+    created: '28-03-24',
   },
   {
-    id: "7",
-    program: "Powerlifting Prep",
-    description: "Specialized program for powerlifting competition preparation. Focuses on squat, bench press, and deadlift with periodization.",
-    type: "Powerlifting",
-    length: "20 weeks",
+    id: '7',
+    program: 'Powerlifting Prep',
+    description:
+      'Specialized program for powerlifting competition preparation. Focuses on squat, bench press, and deadlift with periodization.',
+    type: 'Powerlifting',
+    length: '20 weeks',
     totalExercises: 8,
-    equipment: "Power Rack, Barbell, Plates",
-    created: "12-11-23",
+    equipment: 'Power Rack, Barbell, Plates',
+    created: '12-11-23',
   },
-]
+];
 
 export const mockMessages: Record<string, Message[]> = {
   '1': [
@@ -508,7 +1368,7 @@ export const mockMessages: Record<string, Message[]> = {
     },
     {
       id: 'm2',
-      text: 'I\'m doing great, thanks for asking! How about you?',
+      text: "I'm doing great, thanks for asking! How about you?",
       timestamp: '2:32 PM',
       isSent: true,
     },
@@ -528,56 +1388,55 @@ export const mockMessages: Record<string, Message[]> = {
     },
     {
       id: 'm5',
-      text: 'You\'re welcome! Let me know if you have any questions.',
+      text: "You're welcome! Let me know if you have any questions.",
       timestamp: '1:16 PM',
       isSent: true,
     },
   ],
-}
+};
 
 const isFuzzyMatch = (text: string, query: string) => {
-  const normalizedText = text.toLowerCase()
-  const normalizedQuery = query.toLowerCase().trim()
+  const normalizedText = text.toLowerCase();
+  const normalizedQuery = query.toLowerCase().trim();
 
   if (!normalizedQuery) {
-    return false
+    return false;
   }
 
   if (normalizedText.includes(normalizedQuery)) {
-    return true
+    return true;
   }
 
-  let textIndex = 0
-  let queryIndex = 0
+  let textIndex = 0;
+  let queryIndex = 0;
 
   while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
     if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
-      queryIndex += 1
+      queryIndex += 1;
     }
-    textIndex += 1
+    textIndex += 1;
   }
 
-  return queryIndex === normalizedQuery.length
-}
+  return queryIndex === normalizedQuery.length;
+};
 
 type AppShellProps = {
-  children: ReactNode
-}
+  children: ReactNode;
+};
 
 export const AppShell = ({ children }: AppShellProps) => {
-  const t = useTranslations()
-  const { user } = useUser()
-  const { openUserProfile, signOut } = useClerk()
-  const { resolvedTheme, setTheme, theme } = useTheme()
-  const [isThemeMounted, setIsThemeMounted] = React.useState(false)
-  const [currentLanguage, setCurrentLanguage] = React.useState("en")
-  const pathname = usePathname()
+  const t = useTranslations();
+  const { user } = useUser();
+  const { openUserProfile, signOut } = useClerk();
+  const { resolvedTheme, setTheme, theme } = useTheme();
+  const [isThemeMounted, setIsThemeMounted] = React.useState(false);
+  const [currentLanguage, setCurrentLanguage] = React.useState('en');
+  const pathname = usePathname();
 
   React.useEffect(() => {
-    setIsThemeMounted(true)
-  }, [])
+    setIsThemeMounted(true);
+  }, []);
 
-  
   return (
     <SidebarProvider defaultOpen={false} className="h-svh">
       <AppShellContent
@@ -596,8 +1455,8 @@ export const AppShell = ({ children }: AppShellProps) => {
         {children}
       </AppShellContent>
     </SidebarProvider>
-  )
-}
+  );
+};
 
 const AppShellContent = ({
   children,
@@ -613,340 +1472,336 @@ const AppShellContent = ({
   setCurrentLanguage,
   pathname,
 }: {
-  children: ReactNode
-  t: (key: string) => string
-  user: ReturnType<typeof useUser>["user"]
-  openUserProfile: () => void
-  signOut: (options: { redirectUrl: string }) => void
-  resolvedTheme: string | undefined
-  setTheme: (theme: string) => void
-  theme: string | undefined
-  isThemeMounted: boolean
-  currentLanguage: string
-  setCurrentLanguage: (lang: string) => void
-  pathname: string
+  children: ReactNode;
+  t: (key: string) => string;
+  user: ReturnType<typeof useUser>['user'];
+  openUserProfile: () => void;
+  signOut: (options: { redirectUrl: string }) => void;
+  resolvedTheme: string | undefined;
+  setTheme: (theme: string) => void;
+  theme: string | undefined;
+  isThemeMounted: boolean;
+  currentLanguage: string;
+  setCurrentLanguage: (lang: string) => void;
+  pathname: string;
 }) => {
-  const { state, toggleSidebar, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar()
-  const isCollapsed = state === "collapsed" && !isHovered
-  const [isSearchOpen, setIsSearchOpen] = React.useState(false)
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false)
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false)
-  const isPinnedOpen = state === "expanded" && !isHovered
-  const isHoverExpanded = state === "collapsed" && isHovered
+  const { state, toggleSidebar, isHovered, setOpen, setIsHovered, setJustClosed } = useSidebar();
+  const isCollapsed = state === 'collapsed' && !isHovered;
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
+  const isPinnedOpen = state === 'expanded' && !isHovered;
+  const isHoverExpanded = state === 'collapsed' && isHovered;
 
   // Keep sidebar open when profile dropdown is open, collapse when it closes
   React.useEffect(() => {
     if (isProfileDropdownOpen) {
-      setOpen(true)
-      setJustClosed(false)
+      setOpen(true);
+      setJustClosed(false);
     } else {
       // Collapse sidebar when profile dropdown closes
-      setIsHovered(false)
-      setJustClosed(true)
-      setOpen(false)
+      setIsHovered(false);
+      setJustClosed(true);
+      setOpen(false);
       // Reset the justClosed flag after a short delay to allow hover to work again
       setTimeout(() => {
-        setJustClosed(false)
-      }, 300)
+        setJustClosed(false);
+      }, 300);
     }
-  }, [isProfileDropdownOpen, setOpen, setIsHovered, setJustClosed])
+  }, [isProfileDropdownOpen, setOpen, setIsHovered, setJustClosed]);
 
   const handlePinMenu = () => {
-    setOpen(true)
-    setJustClosed(false)
-  }
+    setOpen(true);
+    setJustClosed(false);
+  };
 
   const handleUnpinMenu = () => {
-    setIsHovered(false)
-    setJustClosed(true)
-    setOpen(false)
+    setIsHovered(false);
+    setJustClosed(true);
+    setOpen(false);
     // Reset the justClosed flag after a short delay to allow hover to work again
     setTimeout(() => {
-      setJustClosed(false)
-    }, 300)
-  }
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [isClient, setIsClient] = React.useState(false)
-  const searchInputRef = React.useRef<HTMLInputElement>(null)
-  const [activePath, setActivePath] = React.useState(pathname)
-  const router = useRouter()
+      setJustClosed(false);
+    }, 300);
+  };
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [isClient, setIsClient] = React.useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  // Normalize pathname by removing trailing slashes (except for root)
+  const normalizedPathname = pathname && pathname !== '/' ? pathname.replace(/\/$/, '') : pathname;
+  const [activePath, setActivePath] = React.useState(normalizedPathname);
+  const router = useRouter();
 
   React.useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+  }, []);
 
-  // Use Next.js pathname directly
+  // Use Next.js pathname directly, normalized
   React.useEffect(() => {
-      setActivePath(pathname)
-  }, [pathname])
+    const normalized = pathname && pathname !== '/' ? pathname.replace(/\/$/, '') : pathname;
+    setActivePath(normalized);
+  }, [pathname]);
 
   const displayName =
-    user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress || "User"
-  const displayEmail = user?.primaryEmailAddress?.emailAddress
+    user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress || 'User';
+  const displayEmail = user?.primaryEmailAddress?.emailAddress;
 
-  const initials = displayName
-    .split(" ")
-    .map((part) => part.charAt(0).toUpperCase())
-    .slice(0, 2)
-    .join("") || "U"
+  // Calculate initials only on client to avoid hydration mismatch
+  const [initials, setInitials] = React.useState('U');
 
-  const currentTheme = theme || "system"
-  const isDark = isThemeMounted && resolvedTheme === "dark"
+  React.useEffect(() => {
+    const calculatedInitials =
+      displayName
+        .split(' ')
+        .map((part) => part.charAt(0).toUpperCase())
+        .slice(0, 2)
+        .join('') || 'U';
+    setInitials(calculatedInitials);
+  }, [displayName]);
+
+  const currentTheme = theme || 'system';
+  const isDark = isThemeMounted && resolvedTheme === 'dark';
 
   const getActiveSidebarClasses = (isActive: boolean) => {
-    if (!isActive) return ""
+    if (!isActive) return '';
     // Light mode: custom dark gray background (#3f3c39), white text (background)
     // Dark mode: white background (foreground), black text (background)
     // Override sidebar's default bg-primary/10 and text-primary with stronger specificity
-    return "data-[active=true]:!bg-[#3f3c39] dark:data-[active=true]:!bg-foreground data-[active=true]:!text-background [&_svg]:data-[active=true]:!text-background"
-  }
+    return 'data-[active=true]:!bg-[#3f3c39] dark:data-[active=true]:!bg-foreground data-[active=true]:!text-background [&_svg]:data-[active=true]:!text-background';
+  };
 
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
-        event.preventDefault()
-        searchInputRef.current?.focus()
-        setIsSearchOpen(true)
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        setIsSearchOpen(true);
       }
-    }
+    };
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value)
-  }
+    setSearchQuery(e.target.value);
+  };
 
   const messageSearchResults = React.useMemo(
     () =>
-      mockContacts.reduce<Array<{ contact: Contact }>>(
-        (results, contact) => {
-          const query = searchQuery.trim()
+      mockContacts.reduce<Array<{ contact: Contact }>>((results, contact) => {
+        const query = searchQuery.trim();
 
-          if (!query) {
-            return results
-          }
+        if (!query) {
+          return results;
+        }
 
-          const contactMessages = mockMessages[contact.id] ?? []
-          const hasMatchInContact =
-            isFuzzyMatch(contact.name, query) || isFuzzyMatch(contact.lastMessage, query)
+        const contactMessages = mockMessages[contact.id] ?? [];
+        const hasMatchInContact =
+          isFuzzyMatch(contact.name, query) || isFuzzyMatch(contact.lastMessage, query);
 
-          const matchingMessage = contactMessages.find((message) =>
-            isFuzzyMatch(message.text, query),
-          )
+        const matchingMessage = contactMessages.find((message) =>
+          isFuzzyMatch(message.text, query)
+        );
 
-          if (!hasMatchInContact && !matchingMessage) {
-            return results
-          }
+        if (!hasMatchInContact && !matchingMessage) {
+          return results;
+        }
 
-          results.push({
-            contact,
-          })
+        results.push({
+          contact,
+        });
 
-          return results
-        },
-        [],
-      ),
-    [searchQuery],
-  )
+        return results;
+      }, []),
+    [searchQuery]
+  );
 
   const athleteSearchResults = React.useMemo(
     () =>
-      mockAthletes.reduce<Array<{ athlete: Athlete }>>(
-        (results, athlete) => {
-          const query = searchQuery.trim()
+      mockAthletes.reduce<Array<{ athlete: Athlete }>>((results, athlete) => {
+        const query = searchQuery.trim();
 
-          if (!query) {
-            return results
-          }
+        if (!query) {
+          return results;
+        }
 
-          const hasMatchInAthlete =
-            isFuzzyMatch(athlete.name, query) ||
-            isFuzzyMatch(athlete.email, query) ||
-            isFuzzyMatch(athlete.phone, query) ||
-            isFuzzyMatch(athlete.country, query) ||
-            isFuzzyMatch(athlete.category, query)
+        const hasMatchInAthlete =
+          isFuzzyMatch(athlete.name, query) ||
+          isFuzzyMatch(athlete.email, query) ||
+          isFuzzyMatch(athlete.phone, query) ||
+          isFuzzyMatch(athlete.country, query) ||
+          isFuzzyMatch(athlete.category, query);
 
-          if (!hasMatchInAthlete) {
-            return results
-          }
+        if (!hasMatchInAthlete) {
+          return results;
+        }
 
-          results.push({
-            athlete,
-          })
+        results.push({
+          athlete,
+        });
 
-          return results
-        },
-        [],
-      ),
-    [searchQuery],
-  )
+        return results;
+      }, []),
+    [searchQuery]
+  );
 
   const workoutSearchResults = React.useMemo(
     () =>
-      mockWorkouts.reduce<Array<{ workout: Workout }>>(
-        (results, workout) => {
-          const query = searchQuery.trim()
+      mockWorkouts.reduce<Array<{ workout: Workout }>>((results, workout) => {
+        const query = searchQuery.trim();
 
-          if (!query) {
-            return results
-          }
+        if (!query) {
+          return results;
+        }
 
-          const hasMatchInWorkout =
-            isFuzzyMatch(workout.program, query) ||
-            isFuzzyMatch(workout.description, query) ||
-            isFuzzyMatch(workout.type, query) ||
-            isFuzzyMatch(workout.equipment, query)
+        const hasMatchInWorkout =
+          isFuzzyMatch(workout.program, query) ||
+          isFuzzyMatch(workout.description, query) ||
+          isFuzzyMatch(workout.type, query) ||
+          isFuzzyMatch(workout.equipment, query);
 
-          if (!hasMatchInWorkout) {
-            return results
-          }
+        if (!hasMatchInWorkout) {
+          return results;
+        }
 
-          results.push({
-            workout,
-          })
+        results.push({
+          workout,
+        });
 
-          return results
-        },
-        [],
-      ),
-    [searchQuery],
-  )
+        return results;
+      }, []),
+    [searchQuery]
+  );
 
   const programSearchResults = React.useMemo(
     () =>
-      mockPrograms.reduce<Array<{ program: Program }>>(
-        (results, program) => {
-          const query = searchQuery.trim()
+      mockPrograms.reduce<Array<{ program: Program }>>((results, program) => {
+        const query = searchQuery.trim();
 
-          if (!query) {
-            return results
-          }
+        if (!query) {
+          return results;
+        }
 
-          const hasMatchInProgram =
-            isFuzzyMatch(program.program, query) ||
-            isFuzzyMatch(program.description, query) ||
-            isFuzzyMatch(program.type, query) ||
-            isFuzzyMatch(program.equipment, query)
+        const hasMatchInProgram =
+          isFuzzyMatch(program.program, query) ||
+          isFuzzyMatch(program.description, query) ||
+          isFuzzyMatch(program.type, query) ||
+          isFuzzyMatch(program.equipment, query);
 
-          if (!hasMatchInProgram) {
-            return results
-          }
+        if (!hasMatchInProgram) {
+          return results;
+        }
 
-          results.push({
-            program,
-          })
+        results.push({
+          program,
+        });
 
-          return results
-        },
-        [],
-      ),
-    [searchQuery],
-  )
+        return results;
+      }, []),
+    [searchQuery]
+  );
 
   const handleSearchResultClick = (contactId: string) => {
-    router.push(`/messaging?contact=${contactId}`)
-    setIsSearchOpen(false)
-    setSearchQuery("")
-  }
+    router.push(`/messaging?contact=${contactId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
 
   const handleAthleteSearchResultClick = (athleteId: string) => {
-    router.push(`/athletes/${athleteId}/overview`)
-    setIsSearchOpen(false)
-    setSearchQuery("")
-  }
+    router.push(`/athletes/${athleteId}/overview`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
 
   const handleWorkoutSearchResultClick = (workoutId: string) => {
-    router.push(`/library/workouts/${workoutId}`)
-    setIsSearchOpen(false)
-    setSearchQuery("")
-  }
+    router.push(`/library/workouts/${workoutId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
 
   const handleProgramSearchResultClick = (programId: string) => {
-    router.push(`/library/programs/${programId}`)
-    setIsSearchOpen(false)
-    setSearchQuery("")
-  }
+    router.push(`/library/programs/${programId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
 
   const generalNavItems = [
     {
-      href: "/dashboard",
-      labelKey: "sidebar.links.dashboard",
+      href: '/dashboard',
+      labelKey: 'sidebar.links.dashboard',
       icon: LayoutDashboard,
     },
     {
-      href: "/library",
-      label: "Library",
+      href: '/library',
+      label: 'Library',
       icon: Archive,
     },
-  ] as const
+  ] as const;
 
   const businessNavItems = [
     {
-      href: "/marketing",
-      labelKey: "sidebar.links.marketing",
+      href: '/marketing',
+      labelKey: 'sidebar.links.marketing',
       icon: Megaphone,
     },
     {
-      href: "/calendar",
-      labelKey: "sidebar.links.calendar",
+      href: '/calendar',
+      labelKey: 'sidebar.links.calendar',
       icon: CalendarDays,
     },
-  ] as const
+  ] as const;
 
   const athletesNavItems = [
     {
-      href: "/athletes",
-      labelKey: "sidebar.links.athletes",
+      href: '/athletes',
+      labelKey: 'sidebar.links.athletes',
       icon: Users,
     },
     {
-      href: "/messaging",
-      labelKey: "sidebar.links.messaging",
+      href: '/messaging',
+      labelKey: 'sidebar.links.messaging',
       icon: MessageCircle,
     },
-  ] as const
+  ] as const;
 
   return (
     <>
       <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader>
-        {isCollapsed ? (
-          <div className="flex items-center justify-center px-2 py-1 h-10">
-            <LogoIcon className="h-5 w-auto" />
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-2 px-2 py-1 h-10">
-            <span className="text-base font-semibold">OneNinety</span>
-            {isHoverExpanded ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={handlePinMenu}
-                    className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
-                    aria-label="Keep menu open"
-                  >
-                    <PanelLeftOpen className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  Keep menu open
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-            <button
-              type="button"
-                onClick={handleUnpinMenu}
-              className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
-                aria-label="Close sidebar"
-            >
-                <PanelLeftClose className="h-4 w-4" />
-            </button>
-            )}
-          </div>
-        )}
+        <SidebarHeader>
+          {isCollapsed ? (
+            <div className="flex items-center justify-center px-2 py-1 h-10">
+              <LogoIcon className="h-5 w-auto" />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2 px-2 py-1 h-10">
+              <span className="text-base font-semibold">OneNinety</span>
+              {isHoverExpanded ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={handlePinMenu}
+                      className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
+                      aria-label="Keep menu open"
+                    >
+                      <PanelLeftOpen className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Keep menu open</TooltipContent>
+                </Tooltip>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleUnpinMenu}
+                  className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
+                  aria-label="Close sidebar"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          )}
         </SidebarHeader>
         <SidebarContent className="gap-0">
           <SidebarGroup className="pb-0">
@@ -955,8 +1810,8 @@ const AppShellContent = ({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={activePath === "/home"}
-                    className={cn("text-xs", getActiveSidebarClasses(activePath === "/home"))}
+                    isActive={activePath === '/home'}
+                    className={cn('text-xs', getActiveSidebarClasses(activePath === '/home'))}
                   >
                     <Link href="/home">
                       <Home className="shrink-0" />
@@ -973,25 +1828,30 @@ const AppShellContent = ({
                 <div className="mx-auto h-px w-8 bg-sidebar-border" />
               ) : (
                 <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  {t("sidebar.group.general")}
+                  {t('sidebar.group.general')}
                 </span>
               )}
             </div>
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {generalNavItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = item.href === "/library"
-                    ? activePath === item.href || activePath.startsWith(`${item.href}/`)
-                    : activePath === item.href
-                  const label = "label" in item ? item.label : t(item.labelKey)
+                  const Icon = item.icon;
+                  let isActive = false;
+                  if (item.href === '/library' || item.href === '/messaging') {
+                    // Check exact match or if path starts with the href followed by /
+                    // This handles /messaging and /messaging/[contactId]
+                    isActive = activePath === item.href || activePath.startsWith(`${item.href}/`);
+                  } else {
+                    isActive = activePath === item.href;
+                  }
+                  const label = 'label' in item ? item.label : t(item.labelKey);
 
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        className={cn("text-xs", getActiveSidebarClasses(isActive))}
+                        className={cn('text-xs', getActiveSidebarClasses(isActive))}
                       >
                         <Link href={item.href}>
                           <Icon className="shrink-0" />
@@ -999,7 +1859,7 @@ const AppShellContent = ({
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )
+                  );
                 })}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -1017,18 +1877,19 @@ const AppShellContent = ({
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {athletesNavItems.map((item) => {
-                  const Icon = item.icon
-                  const isActive = item.href === "/athletes"
-                    ? activePath === item.href || activePath.startsWith(`${item.href}/`)
-                    : activePath === item.href
-                  const label = t(item.labelKey)
+                  const Icon = item.icon;
+                  const isActive =
+                    item.href === '/athletes' || item.href === '/messaging'
+                      ? activePath === item.href || activePath.startsWith(`${item.href}/`)
+                      : activePath === item.href;
+                  const label = t(item.labelKey);
 
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        className={cn("text-xs", getActiveSidebarClasses(isActive))}
+                        className={cn('text-xs', getActiveSidebarClasses(isActive))}
                       >
                         <Link href={item.href}>
                           <Icon className="shrink-0" />
@@ -1036,7 +1897,7 @@ const AppShellContent = ({
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )
+                  );
                 })}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -1054,17 +1915,17 @@ const AppShellContent = ({
             <SidebarGroupContent>
               <SidebarMenu className="gap-0.5">
                 {businessNavItems.map((item) => {
-                  const Icon = item.icon
+                  const Icon = item.icon;
                   const isActive =
-                    activePath === item.href || activePath.startsWith(`${item.href}/`)
-                  const label = t(item.labelKey)
+                    activePath === item.href || activePath.startsWith(`${item.href}/`);
+                  const label = t(item.labelKey);
 
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        className={cn("text-xs", getActiveSidebarClasses(isActive))}
+                        className={cn('text-xs', getActiveSidebarClasses(isActive))}
                       >
                         <Link href={item.href}>
                           <Icon className="shrink-0" />
@@ -1072,7 +1933,7 @@ const AppShellContent = ({
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  )
+                  );
                 })}
               </SidebarMenu>
             </SidebarGroupContent>
@@ -1082,12 +1943,12 @@ const AppShellContent = ({
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={activePath === "/settings"}
-              className={cn("text-xs", getActiveSidebarClasses(activePath === "/settings"))}
+              isActive={activePath === '/settings'}
+              className={cn('text-xs', getActiveSidebarClasses(activePath === '/settings'))}
             >
               <Link href="/settings">
                 <Settings className="shrink-0" />
-                {!isCollapsed && <span>{t("sidebar.settings.label") || "Settings"}</span>}
+                {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -1106,85 +1967,84 @@ const AppShellContent = ({
                     </Avatar>
                   </button>
                 ) : (
-                <button
-                  type="button"
-                  className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md pl-0 pr-2 pt-2 pb-2 text-left"
-                  aria-label="Open account menu"
-                >
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8 rounded-md">
-                      <AvatarImage src={user?.imageUrl} alt={displayName} />
-                      <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                      <span className="text-foreground truncate text-sm font-medium">
-                        {displayName}
-                      </span>
-                      {displayEmail && (
-                        <span className="text-muted-foreground truncate text-xs">
-                          {displayEmail}
+                  <button
+                    type="button"
+                    className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md pl-0 pr-2 pt-2 pb-2 text-left"
+                    aria-label="Open account menu"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8 rounded-md">
+                        <AvatarImage src={user?.imageUrl} alt={displayName} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-1 flex-col overflow-hidden">
+                        <span className="text-foreground truncate text-sm font-medium">
+                          {displayName}
                         </span>
-                      )}
+                        {displayEmail && (
+                          <span className="text-muted-foreground truncate text-xs">
+                            {displayEmail}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                </button>
+                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                  </button>
                 )}
               </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="right"
-              align="center"
-              collisionPadding={{ bottom: 8 }}
-              className="w-64 rounded-2xl p-0"
-            >
-              <div className="flex items-center gap-3 px-3 py-3">
-                <Avatar className="h-10 w-10 rounded-md">
-                  <AvatarImage src={user?.imageUrl} alt={displayName} />
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <span className="text-foreground truncate text-sm font-medium">
-                    {displayName}
-                  </span>
-                  {displayEmail && (
-                    <span className="text-muted-foreground truncate text-xs">
-                      {displayEmail}
+              <DropdownMenuContent
+                side="right"
+                align="center"
+                collisionPadding={{ bottom: 8 }}
+                className="w-64 rounded-2xl p-0"
+              >
+                <div className="flex items-center gap-3 px-3 py-3">
+                  <Avatar className="h-10 w-10 rounded-md">
+                    <AvatarImage src={user?.imageUrl} alt={displayName} />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <span className="text-foreground truncate text-sm font-medium">
+                      {displayName}
                     </span>
-                  )}
+                    {displayEmail && (
+                      <span className="text-muted-foreground truncate text-xs">{displayEmail}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <DropdownMenuSeparator className="my-0" />
-              <DropdownMenuItem
-                className="cursor-pointer px-3 py-2"
-                onClick={() => openUserProfile()}
-              >
-                <User />
-                <span>Account</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer px-3 py-2"
-                onClick={() => openUserProfile()}
-              >
-                <CreditCard />
-                <span>Billing</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="my-0" />
-              <DropdownMenuItem
-                className="cursor-pointer px-3 py-2"
-                variant="destructive"
-                onClick={() => {
-                  setIsLoggingOut(true)
-                  const wwwUrl = process.env.NODE_ENV === 'production' 
-                    ? 'https://oneninety.com'
-                    : 'http://localhost:3000'
-                  signOut({ redirectUrl: wwwUrl })
-                }}
-              >
-                <LogOut />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator className="my-0" />
+                <DropdownMenuItem
+                  className="cursor-pointer px-3 py-2"
+                  onClick={() => openUserProfile()}
+                >
+                  <User />
+                  <span>Account</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer px-3 py-2"
+                  onClick={() => openUserProfile()}
+                >
+                  <CreditCard />
+                  <span>Billing</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="my-0" />
+                <DropdownMenuItem
+                  className="cursor-pointer px-3 py-2"
+                  variant="destructive"
+                  onClick={() => {
+                    setIsLoggingOut(true);
+                    const wwwUrl =
+                      process.env.NODE_ENV === 'production'
+                        ? 'https://oneninety.com'
+                        : 'http://localhost:3000';
+                    signOut({ redirectUrl: wwwUrl });
+                  }}
+                >
+                  <LogOut />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarFooter>
       </Sidebar>
@@ -1206,14 +2066,16 @@ const AppShellContent = ({
                     />
                     <div className="absolute right-2 flex items-center gap-1 pointer-events-none">
                       <Kbd className="h-5 px-1.5">
-                        {isClient && navigator.platform.toUpperCase().indexOf("MAC") >= 0 ? "⌘" : "Ctrl"}
+                        {isClient && navigator.platform.toUpperCase().indexOf('MAC') >= 0
+                          ? '⌘'
+                          : 'Ctrl'}
                       </Kbd>
                       <Kbd className="h-5 px-1.5">K</Kbd>
                     </div>
                   </div>
                 </PopoverTrigger>
-                <PopoverContent 
-                  className="w-[var(--radix-popover-trigger-width)] p-0" 
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0"
                   align="start"
                   sideOffset={4}
                   onOpenAutoFocus={(e) => e.preventDefault()}
@@ -1227,242 +2089,290 @@ const AppShellContent = ({
                         </p>
                       </div>
                     )}
-                    {searchQuery.trim() && messageSearchResults.length === 0 && athleteSearchResults.length === 0 && workoutSearchResults.length === 0 && programSearchResults.length === 0 && (
-                      <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
-                        <p className="text-sm text-muted-foreground">
-                          No results found for <span className="font-medium">"{searchQuery}"</span>.
-                        </p>
-                      </div>
-                    )}
-                    {searchQuery.trim() && (messageSearchResults.length > 0 || athleteSearchResults.length > 0 || workoutSearchResults.length > 0 || programSearchResults.length > 0) && (
-                      <div className="py-2">
-                        {athleteSearchResults.length > 0 && (
-                          <>
-                            <div className="px-3 pb-1 pt-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Athletes
-                              </p>
-                            </div>
-                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
-                              <div className={cn(
-                                "grid gap-2",
-                                athleteSearchResults.length === 1 ? "grid-cols-1" : athleteSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
-                              )}>
-                                {athleteSearchResults.map((result) => {
-                                  const initials = result.athlete.name
-                                    .split(" ")
-                                    .map((part) => part.charAt(0).toUpperCase())
-                                    .slice(0, 2)
-                                    .join("")
-                                  return (
+                    {searchQuery.trim() &&
+                      messageSearchResults.length === 0 &&
+                      athleteSearchResults.length === 0 &&
+                      workoutSearchResults.length === 0 &&
+                      programSearchResults.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
+                          <p className="text-sm text-muted-foreground">
+                            No results found for{' '}
+                            <span className="font-medium">"{searchQuery}"</span>.
+                          </p>
+                        </div>
+                      )}
+                    {searchQuery.trim() &&
+                      (messageSearchResults.length > 0 ||
+                        athleteSearchResults.length > 0 ||
+                        workoutSearchResults.length > 0 ||
+                        programSearchResults.length > 0) && (
+                        <div className="py-2">
+                          {athleteSearchResults.length > 0 && (
+                            <>
+                              <div className="px-3 pb-1 pt-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  Athletes
+                                </p>
+                              </div>
+                              <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                                <div
+                                  className={cn(
+                                    'grid gap-2',
+                                    athleteSearchResults.length === 1
+                                      ? 'grid-cols-1'
+                                      : athleteSearchResults.length === 2
+                                        ? 'grid-cols-2'
+                                        : 'grid-cols-2 sm:grid-cols-3'
+                                  )}
+                                >
+                                  {athleteSearchResults.map((result) => {
+                                    const initials = result.athlete.name
+                                      .split(' ')
+                                      .map((part) => part.charAt(0).toUpperCase())
+                                      .slice(0, 2)
+                                      .join('');
+                                    return (
+                                      <Card
+                                        key={result.athlete.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() =>
+                                          handleAthleteSearchResultClick(result.athlete.id)
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleAthleteSearchResultClick(result.athlete.id);
+                                          }
+                                        }}
+                                        className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                        aria-label={`Open profile for ${result.athlete.name}`}
+                                      >
+                                        <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-2">
+                                            <Avatar className="h-8 w-8 rounded-md">
+                                              <AvatarImage
+                                                src={result.athlete.avatar}
+                                                alt={result.athlete.name}
+                                              />
+                                              <AvatarFallback>{initials}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-sm font-medium truncate">
+                                              {result.athlete.name}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span>{result.athlete.category}</span>
+                                            <span>•</span>
+                                            <span>{result.athlete.country}</span>
+                                          </div>
+                                        </div>
+                                      </Card>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          {workoutSearchResults.length > 0 && (
+                            <>
+                              {athleteSearchResults.length > 0 && (
+                                <div className="px-3 pt-4 pb-1">
+                                  <div className="h-px bg-border" />
+                                </div>
+                              )}
+                              <div className="px-3 pb-1 pt-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  Workouts
+                                </p>
+                              </div>
+                              <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                                <div
+                                  className={cn(
+                                    'grid gap-2',
+                                    workoutSearchResults.length === 1
+                                      ? 'grid-cols-1'
+                                      : workoutSearchResults.length === 2
+                                        ? 'grid-cols-2'
+                                        : 'grid-cols-2 sm:grid-cols-3'
+                                  )}
+                                >
+                                  {workoutSearchResults.map((result) => (
                                     <Card
-                                      key={result.athlete.id}
+                                      key={result.workout.id}
                                       role="button"
                                       tabIndex={0}
-                                      onClick={() => handleAthleteSearchResultClick(result.athlete.id)}
+                                      onClick={() =>
+                                        handleWorkoutSearchResultClick(result.workout.id)
+                                      }
                                       onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                          e.preventDefault()
-                                          handleAthleteSearchResultClick(result.athlete.id)
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault();
+                                          handleWorkoutSearchResultClick(result.workout.id);
                                         }
                                       }}
                                       className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                      aria-label={`Open profile for ${result.athlete.name}`}
+                                      aria-label={`Open workout ${result.workout.program}`}
                                     >
                                       <div className="flex flex-col gap-2">
                                         <div className="flex items-center gap-2">
-                                          <Avatar className="h-8 w-8 rounded-md">
-                                            <AvatarImage src={result.athlete.avatar} alt={result.athlete.name} />
-                                            <AvatarFallback>{initials}</AvatarFallback>
-                                          </Avatar>
+                                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                            <Archive className="h-4 w-4 text-muted-foreground" />
+                                          </div>
                                           <span className="text-sm font-medium truncate">
-                                            {result.athlete.name}
+                                            {result.workout.program}
                                           </span>
                                         </div>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                          <span>{result.athlete.category}</span>
+                                          <span>{result.workout.type}</span>
                                           <span>•</span>
-                                          <span>{result.athlete.country}</span>
+                                          <span>{result.workout.length}</span>
+                                          <span>•</span>
+                                          <span>{result.workout.totalExercises} exercises</span>
                                         </div>
                                       </div>
                                     </Card>
-                                  )
-                                })}
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          </>
-                        )}
-                        {workoutSearchResults.length > 0 && (
-                          <>
-                            {(athleteSearchResults.length > 0) && (
-                              <div className="px-3 pt-4 pb-1">
-                                <div className="h-px bg-border" />
+                            </>
+                          )}
+                          {programSearchResults.length > 0 && (
+                            <>
+                              {(athleteSearchResults.length > 0 ||
+                                workoutSearchResults.length > 0) && (
+                                <div className="px-3 pt-4 pb-1">
+                                  <div className="h-px bg-border" />
+                                </div>
+                              )}
+                              <div className="px-3 pb-1 pt-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  Programs
+                                </p>
                               </div>
-                            )}
-                            <div className="px-3 pb-1 pt-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Workouts
-                              </p>
-                            </div>
-                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
-                              <div className={cn(
-                                "grid gap-2",
-                                workoutSearchResults.length === 1 ? "grid-cols-1" : workoutSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
-                              )}>
-                                {workoutSearchResults.map((result) => (
-                                  <Card
-                                    key={result.workout.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => handleWorkoutSearchResultClick(result.workout.id)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault()
-                                        handleWorkoutSearchResultClick(result.workout.id)
-                                      }
-                                    }}
-                                    className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                    aria-label={`Open workout ${result.workout.program}`}
-                                  >
-                                    <div className="flex flex-col gap-2">
-                                      <div className="flex items-center gap-2">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                                          <Archive className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                        <span className="text-sm font-medium truncate">
-                                          {result.workout.program}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>{result.workout.type}</span>
-                                        <span>•</span>
-                                        <span>{result.workout.length}</span>
-                                        <span>•</span>
-                                        <span>{result.workout.totalExercises} exercises</span>
-                                      </div>
-                                    </div>
-                                  </Card>
-                                ))}
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        {programSearchResults.length > 0 && (
-                          <>
-                            {(athleteSearchResults.length > 0 || workoutSearchResults.length > 0) && (
-                              <div className="px-3 pt-4 pb-1">
-                                <div className="h-px bg-border" />
-                              </div>
-                            )}
-                            <div className="px-3 pb-1 pt-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Programs
-                              </p>
-                            </div>
-                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
-                              <div className={cn(
-                                "grid gap-2",
-                                programSearchResults.length === 1 ? "grid-cols-1" : programSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
-                              )}>
-                                {programSearchResults.map((result) => (
-                                  <Card
-                                    key={result.program.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => handleProgramSearchResultClick(result.program.id)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault()
-                                        handleProgramSearchResultClick(result.program.id)
-                                      }
-                                    }}
-                                    className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                    aria-label={`Open program ${result.program.program}`}
-                                  >
-                                    <div className="flex flex-col gap-2">
-                                      <div className="flex items-center gap-2">
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                                          <Archive className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                        <span className="text-sm font-medium truncate">
-                                          {result.program.program}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>{result.program.type}</span>
-                                        <span>•</span>
-                                        <span>{result.program.length}</span>
-                                        <span>•</span>
-                                        <span>{result.program.totalExercises} exercises</span>
-                                      </div>
-                                    </div>
-                                  </Card>
-                                ))}
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        {messageSearchResults.length > 0 && (
-                          <>
-                            {(athleteSearchResults.length > 0 || workoutSearchResults.length > 0 || programSearchResults.length > 0) && (
-                              <div className="px-3 pt-4 pb-1">
-                                <div className="h-px bg-border" />
-                              </div>
-                            )}
-                            <div className="px-3 pb-1 pt-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Messages
-                              </p>
-                            </div>
-                            <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
-                              <div className={cn(
-                                "grid gap-2",
-                                messageSearchResults.length === 1 ? "grid-cols-1" : messageSearchResults.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
-                              )}>
-                                {messageSearchResults.map((result) => {
-                                  const initials = result.contact.name
-                                    .split(" ")
-                                    .map((part) => part.charAt(0).toUpperCase())
-                                    .slice(0, 2)
-                                    .join("")
-                                  return (
+                              <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                                <div
+                                  className={cn(
+                                    'grid gap-2',
+                                    programSearchResults.length === 1
+                                      ? 'grid-cols-1'
+                                      : programSearchResults.length === 2
+                                        ? 'grid-cols-2'
+                                        : 'grid-cols-2 sm:grid-cols-3'
+                                  )}
+                                >
+                                  {programSearchResults.map((result) => (
                                     <Card
-                                      key={result.contact.id}
+                                      key={result.program.id}
                                       role="button"
                                       tabIndex={0}
-                                      onClick={() => handleSearchResultClick(result.contact.id)}
+                                      onClick={() =>
+                                        handleProgramSearchResultClick(result.program.id)
+                                      }
                                       onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                          e.preventDefault()
-                                          handleSearchResultClick(result.contact.id)
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault();
+                                          handleProgramSearchResultClick(result.program.id);
                                         }
                                       }}
                                       className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                      aria-label={`Open conversation with ${result.contact.name}`}
+                                      aria-label={`Open program ${result.program.program}`}
                                     >
                                       <div className="flex flex-col gap-2">
                                         <div className="flex items-center gap-2">
-                                          <Avatar className="h-8 w-8 rounded-md">
-                                            <AvatarImage src={result.contact.avatar} alt={result.contact.name} />
-                                            <AvatarFallback>{initials}</AvatarFallback>
-                                          </Avatar>
+                                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                            <Archive className="h-4 w-4 text-muted-foreground" />
+                                          </div>
                                           <span className="text-sm font-medium truncate">
-                                            {result.contact.name}
+                                            {result.program.program}
                                           </span>
                                         </div>
-                                        <div className="text-xs text-muted-foreground truncate">
-                                          {result.contact.lastMessage}
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                          <span>{result.program.type}</span>
+                                          <span>•</span>
+                                          <span>{result.program.length}</span>
+                                          <span>•</span>
+                                          <span>{result.program.totalExercises} exercises</span>
                                         </div>
                                       </div>
                                     </Card>
-                                  )
-                                })}
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
+                            </>
+                          )}
+                          {messageSearchResults.length > 0 && (
+                            <>
+                              {(athleteSearchResults.length > 0 ||
+                                workoutSearchResults.length > 0 ||
+                                programSearchResults.length > 0) && (
+                                <div className="px-3 pt-4 pb-1">
+                                  <div className="h-px bg-border" />
+                                </div>
+                              )}
+                              <div className="px-3 pb-1 pt-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  Messages
+                                </p>
+                              </div>
+                              <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                                <div
+                                  className={cn(
+                                    'grid gap-2',
+                                    messageSearchResults.length === 1
+                                      ? 'grid-cols-1'
+                                      : messageSearchResults.length === 2
+                                        ? 'grid-cols-2'
+                                        : 'grid-cols-2 sm:grid-cols-3'
+                                  )}
+                                >
+                                  {messageSearchResults.map((result) => {
+                                    const initials = result.contact.name
+                                      .split(' ')
+                                      .map((part) => part.charAt(0).toUpperCase())
+                                      .slice(0, 2)
+                                      .join('');
+                                    return (
+                                      <Card
+                                        key={result.contact.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => handleSearchResultClick(result.contact.id)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleSearchResultClick(result.contact.id);
+                                          }
+                                        }}
+                                        className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                        aria-label={`Open conversation with ${result.contact.name}`}
+                                      >
+                                        <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-2">
+                                            <Avatar className="h-8 w-8 rounded-md">
+                                              <AvatarImage
+                                                src={result.contact.avatar}
+                                                alt={result.contact.name}
+                                              />
+                                              <AvatarFallback>{initials}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-sm font-medium truncate">
+                                              {result.contact.name}
+                                            </span>
+                                          </div>
+                                          <div className="text-xs text-muted-foreground truncate">
+                                            {result.contact.lastMessage}
+                                          </div>
+                                        </div>
+                                      </Card>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                   </div>
                 </PopoverContent>
               </Popover>
@@ -1480,9 +2390,7 @@ const AppShellContent = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    Coming soon
-                  </div>
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">Coming soon</div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1495,10 +2403,11 @@ const AppShellContent = ({
                   <Button
                     variant="outline"
                     size="icon"
-                    aria-label={`Select language (current: ${availableLanguages.find((lang) => lang.code === currentLanguage)?.label || "English"})`}
+                    aria-label={`Select language (current: ${availableLanguages.find((lang) => lang.code === currentLanguage)?.label || 'English'})`}
                   >
                     <span className="text-lg leading-none">
-                      {availableLanguages.find((lang) => lang.code === currentLanguage)?.flag || "🇬🇧"}
+                      {availableLanguages.find((lang) => lang.code === currentLanguage)?.flag ||
+                        '🇬🇧'}
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
@@ -1511,15 +2420,11 @@ const AppShellContent = ({
                       <DropdownMenuRadioItem
                         key={language.code}
                         value={language.code}
-                        className={cn(
-                          currentLanguage === language.code && "bg-accent"
-                        )}
+                        className={cn(currentLanguage === language.code && 'bg-accent')}
                       >
                         <span className="mr-2 text-lg leading-none">{language.flag}</span>
                         <span className="flex-1">{language.label}</span>
-                        {currentLanguage === language.code && (
-                          <Check className="ml-2 size-4" />
-                        )}
+                        {currentLanguage === language.code && <Check className="ml-2 size-4" />}
                       </DropdownMenuRadioItem>
                     ))}
                   </DropdownMenuRadioGroup>
@@ -1531,11 +2436,11 @@ const AppShellContent = ({
                     <Button
                       variant="outline"
                       size="icon"
-                      aria-label={t("sidebar.theme.toggleAria")}
+                      aria-label={t('sidebar.theme.toggleAria')}
                     >
-                      {currentTheme === "dark" ? (
+                      {currentTheme === 'dark' ? (
                         <Moon className="size-4" />
-                      ) : currentTheme === "light" ? (
+                      ) : currentTheme === 'light' ? (
                         <Sun className="size-4" />
                       ) : (
                         <Laptop className="size-4" />
@@ -1549,52 +2454,39 @@ const AppShellContent = ({
                     >
                       <DropdownMenuRadioItem
                         value="light"
-                        className={cn(currentTheme === "light" && "bg-accent")}
+                        className={cn(currentTheme === 'light' && 'bg-accent')}
                       >
                         <Sun className="mr-2 size-4" />
                         <span className="flex-1">Light</span>
-                        {currentTheme === "light" && (
-                          <Check className="ml-2 size-4" />
-                        )}
+                        {currentTheme === 'light' && <Check className="ml-2 size-4" />}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem
                         value="dark"
-                        className={cn(currentTheme === "dark" && "bg-accent")}
+                        className={cn(currentTheme === 'dark' && 'bg-accent')}
                       >
                         <Moon className="mr-2 size-4" />
                         <span className="flex-1">Dark</span>
-                        {currentTheme === "dark" && (
-                          <Check className="ml-2 size-4" />
-                        )}
+                        {currentTheme === 'dark' && <Check className="ml-2 size-4" />}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem
                         value="system"
-                        className={cn(currentTheme === "system" && "bg-accent")}
+                        className={cn(currentTheme === 'system' && 'bg-accent')}
                       >
                         <Laptop className="mr-2 size-4" />
                         <span className="flex-1">System</span>
-                        {currentTheme === "system" && (
-                          <Check className="ml-2 size-4" />
-                        )}
+                        {currentTheme === 'system' && <Check className="ml-2 size-4" />}
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Help"
-                onClick={() => {}}
-              >
+              <Button variant="outline" size="icon" aria-label="Help" onClick={() => {}}>
                 <HelpCircle className="size-4" />
               </Button>
             </div>
           </div>
         </div>
-        <div className="flex-1 overflow-auto min-h-0">
-          {children}
-        </div>
+        <div className="flex-1 overflow-auto min-h-0">{children}</div>
       </SidebarInset>
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -1605,8 +2497,5 @@ const AppShellContent = ({
         </div>
       )}
     </>
-  )
-}
-
-
-
+  );
+};
