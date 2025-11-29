@@ -1014,7 +1014,7 @@ const AthletesPage = () => {
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => (
-              <div className="flex items-center w-full">
+              <div className="flex items-center w-full pr-6">
                 <span className="text-sm">{formatClientFor(row.clientFor)}</span>
               </div>
             ),
@@ -1043,7 +1043,6 @@ const AthletesPage = () => {
       label: 'Category',
       icon: <Grid2x2 className="size-4" />,
       options: [
-        { value: 'all', label: 'All' },
         { value: 'online', label: 'Online' },
         { value: 'in-person', label: 'In-person' },
       ],
@@ -1055,7 +1054,6 @@ const AthletesPage = () => {
       label: 'Connected',
       icon: <HeartPulse className="size-4" />,
       options: [
-        { value: 'all', label: 'All' },
         { value: 'true', label: 'Connected' },
         { value: 'false', label: 'Not Connected' },
         { value: 'invitation-sent', label: 'Invitation Sent' },
@@ -1164,9 +1162,9 @@ const AthletesPage = () => {
                     }
                   }}
                   data-no-row-link="true"
-                  className="flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
+                  className="flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-primary transition-colors cursor-pointer h-7 max-h-7"
                 >
-                  <MessageCircle className="size-4" />
+                  <MessageCircle className="h-4 w-4" />
                 </div>
               </TooltipTrigger>
               <TooltipContent>
@@ -1191,9 +1189,9 @@ const AthletesPage = () => {
                     }
                   }}
                   data-no-row-link="true"
-                  className="flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer h-7 max-h-7"
+                  className="flex items-center justify-center rounded-md p-1.5 text-foreground hover:bg-accent hover:text-primary transition-colors cursor-pointer h-7 max-h-7"
                 >
-                  <Dumbbell className="size-4" />
+                  <Dumbbell className="h-4 w-4" />
                 </div>
               </TooltipTrigger>
               <TooltipContent>
