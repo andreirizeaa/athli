@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Calendar,
   ChevronLeft,
@@ -37,11 +38,25 @@ import {
 import { cn } from '@/lib/utils';
 import type { Program, Workout } from '@/components/app/app-shell';
 import { mockPrograms, mockWorkouts } from '@/components/app/app-shell';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { EquipmentPanel } from '@/app/library/workouts/new/components/equipment-panel';
+import { OverviewPanel } from '@/app/library/workouts/new/components/overview-panel';
+import { Info } from 'lucide-react';
+import { updateTrainingCalendar } from '@/lib/athlete-service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ClientTrainingCalendarPage = () => {
   const router = useRouter();
+  const params = useParams();
+  const clientId = useMemo(() => (params.clientId as string) || '', [params.clientId]);
   const [selectedWeek, setSelectedWeek] = useState<string>('1');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
   const [totalWeeks] = useState<number>(52); // Default to 52 weeks (1 year)
@@ -87,53 +102,133 @@ const ClientTrainingCalendarPage = () => {
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [programStartDate, setProgramStartDate] = useState<Date | null>(null);
 
-  type PreviewExercise = {
-    id: string;
+  type ExerciseWithSuperset = {
+    exerciseId: string;
+    instanceId: string;
     name: string;
-    sets: string;
+    exerciseType: 'weight_reps' | 'reps' | 'distance_duration';
+    equipments?: string[];
+    supersetGroupId?: string | null;
+    sets?: Array<{
+      setNumber: number;
+      type: 'warmUp' | 'normal' | 'failure' | 'dropset';
+      reps: string;
+      weight: string;
+      rest: string;
+      distance?: string;
+      duration?: string;
+    }>;
   };
 
-  type PreviewSection = {
+  type WorkoutSection = {
     id: string;
     type: 'regular' | 'amrap' | 'timed';
-    exercises: PreviewExercise[];
+    exercises?: ExerciseWithSuperset[];
+    roundDurationSec?: number;
+    targetRounds?: number;
   };
 
-  const buildMockPreviewSections = (workout: Workout): PreviewSection[] => {
+  const buildWorkoutSchema = (workout: Workout): WorkoutSection[] => {
     return [
       {
         id: 'sec-1',
         type: 'regular',
         exercises: [
           {
-            id: 'ex-1',
+            exerciseId: 'ex-1',
+            instanceId: 'ex-1-inst',
             name: `${workout.program} - Main lift`,
-            sets: '3 x 8–10',
+            exerciseType: 'weight_reps',
+            equipments: workout.equipment
+              ? workout.equipment.split(',').map((e) => e.trim()).filter((e) => e)
+              : [],
+            sets: [
+              { setNumber: 1, type: 'normal', reps: '8', weight: '100', rest: '90' },
+              { setNumber: 2, type: 'normal', reps: '8', weight: '100', rest: '90' },
+              { setNumber: 3, type: 'normal', reps: '8', weight: '100', rest: '90' },
+            ],
           },
           {
-            id: 'ex-2',
+            exerciseId: 'ex-2',
+            instanceId: 'ex-2-inst',
             name: 'Accessory 1',
-            sets: '3 x 10–12',
+            exerciseType: 'weight_reps',
+            equipments: workout.equipment
+              ? workout.equipment.split(',').map((e) => e.trim()).filter((e) => e)
+              : [],
+            sets: [
+              { setNumber: 1, type: 'normal', reps: '10', weight: '50', rest: '60' },
+              { setNumber: 2, type: 'normal', reps: '10', weight: '50', rest: '60' },
+              { setNumber: 3, type: 'normal', reps: '10', weight: '50', rest: '60' },
+            ],
           },
           {
-            id: 'ex-3',
+            exerciseId: 'ex-3',
+            instanceId: 'ex-3-inst',
             name: 'Accessory 2',
-            sets: '3 x 12–15',
+            exerciseType: 'weight_reps',
+            equipments: workout.equipment
+              ? workout.equipment.split(',').map((e) => e.trim()).filter((e) => e)
+              : [],
+            sets: [
+              { setNumber: 1, type: 'normal', reps: '12', weight: '30', rest: '45' },
+              { setNumber: 2, type: 'normal', reps: '12', weight: '30', rest: '45' },
+              { setNumber: 3, type: 'normal', reps: '12', weight: '30', rest: '45' },
+            ],
           },
         ],
       },
       {
         id: 'sec-2',
         type: 'timed',
+        targetRounds: 3,
         exercises: [
           {
-            id: 'ex-4',
+            exerciseId: 'ex-4',
+            instanceId: 'ex-4-inst',
             name: 'Finisher circuit',
-            sets: '10 min',
+            exerciseType: 'reps',
+            equipments: [],
+            sets: [{ setNumber: 1, type: 'normal', reps: '10', weight: '', rest: '60' }],
           },
         ],
       },
     ];
+  };
+
+  const groupExercisesBySuperset = (
+    exercises: ExerciseWithSuperset[]
+  ): Array<ExerciseWithSuperset[]> => {
+    const groups: Array<ExerciseWithSuperset[]> = [];
+    let currentGroup: ExerciseWithSuperset[] = [];
+    let currentGroupId: string | null = null;
+
+    exercises.forEach((exercise) => {
+      if (exercise.supersetGroupId) {
+        if (exercise.supersetGroupId === currentGroupId) {
+          currentGroup.push(exercise);
+        } else {
+          if (currentGroup.length > 0) {
+            groups.push(currentGroup);
+          }
+          currentGroup = [exercise];
+          currentGroupId = exercise.supersetGroupId;
+        }
+      } else {
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup);
+        }
+        currentGroup = [];
+        currentGroupId = null;
+        groups.push([exercise]);
+      }
+    });
+
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
+
+    return groups;
   };
 
   const handlePreviousWeek = () => {
@@ -188,6 +283,78 @@ const ClientTrainingCalendarPage = () => {
     keyDate.setHours(0, 0, 0, 0);
     return keyDate.toISOString().split('T')[0];
   };
+
+  const formatDateForSchema = (date: Date): string => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const getWeekStartDate = (date: Date): Date => {
+    const weekStart = new Date(date);
+    const day = weekStart.getDay();
+    const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+    return weekStart;
+  };
+
+  const buildTrainingCalendarSchema = (workouts: {
+    [dateKey: string]: Array<Workout & { id: string }>;
+  }): { [date: string]: Array<Workout & { id: string }> } => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+    
+    const oneYearFromNow = new Date(today);
+    oneYearFromNow.setFullYear(today.getFullYear() + 1);
+    
+    // Initialize schema with all days from -1 year to +1 year
+    const schema: { [date: string]: Array<Workout & { id: string }> } = {};
+    
+    const currentDate = new Date(oneYearAgo);
+    while (currentDate <= oneYearFromNow) {
+      const dateKey = formatDateForSchema(currentDate);
+      schema[dateKey] = [];
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // Populate workouts into their respective days
+    Object.keys(workouts).forEach((dateKey) => {
+      // dateKey is in YYYY-MM-DD format
+      const [year, month, day] = dateKey.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      date.setHours(0, 0, 0, 0);
+      
+      // Only include dates within the range
+      if (date >= oneYearAgo && date <= oneYearFromNow) {
+        const formattedDate = formatDateForSchema(date);
+        
+        if (schema[formattedDate]) {
+          // Add all workouts for this date
+          schema[formattedDate].push(...workouts[dateKey]);
+        }
+      }
+    });
+    
+    return schema;
+  };
+
+  // Log schema and update service whenever workoutsByDate changes
+  useEffect(() => {
+    const schema = buildTrainingCalendarSchema(workoutsByDate);
+    console.log('Training Calendar Schema:', schema);
+    
+    // Call the service to update the training calendar
+    if (clientId) {
+      updateTrainingCalendar(clientId, schema).catch((error) => {
+        console.error('Failed to update training calendar:', error);
+      });
+    }
+  }, [workoutsByDate, clientId]);
 
   // Format workout created date from dd-mm-yy format (used in mockWorkouts)
   const formatWorkoutCreatedDate = (dateStr: string): string => {
@@ -373,7 +540,7 @@ const ClientTrainingCalendarPage = () => {
             current.setDate(current.getDate() + daysInterval);
           }
         } else {
-          addToDate(selectedDateForWorkout);
+      addToDate(selectedDateForWorkout);
         }
       } else if (selectedScheduleOption === 'weekly' && weeklyDayInput) {
         const dayOfWeek = parseInt(weeklyDayInput, 10);
@@ -872,15 +1039,14 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
       >
-        <DialogContent className="max-w-4xl sm:max-w-4xl h-[600px] flex flex-col">
+        <DialogContent className="max-w-6xl sm:max-w-6xl h-[600px] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {selectedDateForWorkout ? `Add workout - ${formatDate(selectedDateForWorkout)}` : 'Add workout'}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-4 flex-1 min-h-0">
-            {!selectedWorkout ? (
-              <>
+          <div className="flex flex-1 min-h-0 gap-4">
+            <div className="flex-[2] flex flex-col gap-4 min-h-0">
                 <div className="relative w-full flex-shrink-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   <Input
@@ -899,10 +1065,16 @@ const ClientTrainingCalendarPage = () => {
                         .split(',')
                         .map((item) => item.trim())
                         .filter((item) => item !== '');
+                    const isSelected = selectedWorkout?.id === workout.id;
                       return (
                         <div
                           key={workout.id}
-                          className="p-3 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors"
+                        className={cn(
+                          'p-3 rounded-lg border cursor-pointer transition-colors',
+                          isSelected
+                            ? 'border-primary bg-primary/5 shadow-sm'
+                            : 'border-border hover:bg-accent',
+                        )}
                           role="button"
                           tabIndex={0}
                           aria-label={`Select workout ${workout.program}`}
@@ -948,43 +1120,11 @@ const ClientTrainingCalendarPage = () => {
                     </div>
                   )}
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
-                <Card className="p-4 border rounded-lg bg-background">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium">{selectedWorkout.program}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatWorkoutCreatedDate(selectedWorkout.created)}
-                      </span>
                     </div>
-                    {selectedWorkout.description && (
-                      <span className="text-xs text-muted-foreground line-clamp-2">
-                        {selectedWorkout.description}
-                      </span>
-                    )}
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="secondary" className="text-xs">
-                        Type: {selectedWorkout.type}
-                      </Badge>
-                      {selectedWorkout.equipment &&
-                        selectedWorkout.equipment
-                          .split(',')
-                          .filter((item) => item.trim() !== '').length > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {selectedWorkout.equipment
-                              .split(',')
-                              .map((item) => item.trim())
-                              .filter((item) => item !== '')
-                              .join(', ')}
-                          </Badge>
-                        )}
-                    </div>
-                  </div>
-                </Card>
-                <div className="flex flex-col gap-4">
+            <Separator orientation="vertical" />
+            <div className="flex-[1] flex flex-col gap-4 min-h-0">
                   <h3 className="text-sm font-medium">Add configurations</h3>
+              <div className={cn('flex flex-col gap-4 flex-1 overflow-y-auto', !selectedWorkout && 'opacity-50 pointer-events-none')}>
                   <Card
                     className={cn(
                       'p-4 border rounded-lg cursor-pointer transition-colors',
@@ -993,15 +1133,18 @@ const ClientTrainingCalendarPage = () => {
                         : 'bg-background hover:bg-accent/30',
                     )}
                     role="button"
-                    tabIndex={0}
+                  tabIndex={selectedWorkout ? 0 : -1}
                     aria-label="Add only for this day"
+                  aria-disabled={!selectedWorkout}
                     onKeyDown={(e) => {
+                    if (!selectedWorkout) return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         setSelectedScheduleOption('once');
                       }
                     }}
                     onClick={() => {
+                    if (!selectedWorkout) return;
                       setSelectedScheduleOption('once');
                     }}
                   >
@@ -1041,11 +1184,13 @@ const ClientTrainingCalendarPage = () => {
                           className="w-24"
                           value={everyDaysInput}
                           onChange={(e) => {
+                          if (!selectedWorkout) return;
                             setEveryDaysInput(e.target.value);
                             if (e.target.value) {
                               setSelectedScheduleOption('every');
                             }
                           }}
+                        disabled={!selectedWorkout}
                           aria-label="Number of days"
                         />
                         <span className="text-sm text-muted-foreground">days</span>
@@ -1056,17 +1201,21 @@ const ClientTrainingCalendarPage = () => {
                           selectedScheduleOption === 'every'
                             ? 'border-primary bg-primary/10'
                             : 'border-input bg-background',
+                        !selectedWorkout && 'cursor-not-allowed opacity-50',
                         )}
                         role="button"
-                        tabIndex={0}
+                      tabIndex={selectedWorkout ? 0 : -1}
                         aria-label="Select repeat every days option"
+                      aria-disabled={!selectedWorkout}
                         onKeyDown={(e) => {
+                        if (!selectedWorkout) return;
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             setSelectedScheduleOption('every');
                           }
                         }}
                         onClick={() => {
+                        if (!selectedWorkout) return;
                           setSelectedScheduleOption('every');
                         }}
                       >
@@ -1095,11 +1244,13 @@ const ClientTrainingCalendarPage = () => {
                           className="w-24"
                           value={weeklyDayInput}
                           onChange={(e) => {
+                          if (!selectedWorkout) return;
                             setWeeklyDayInput(e.target.value);
                             if (e.target.value) {
                               setSelectedScheduleOption('weekly');
                             }
                           }}
+                        disabled={!selectedWorkout}
                           aria-label="Day of week"
                         />
                       </div>
@@ -1109,17 +1260,21 @@ const ClientTrainingCalendarPage = () => {
                           selectedScheduleOption === 'weekly'
                             ? 'border-primary bg-primary/10'
                             : 'border-input bg-background',
+                        !selectedWorkout && 'cursor-not-allowed opacity-50',
                         )}
                         role="button"
-                        tabIndex={0}
+                      tabIndex={selectedWorkout ? 0 : -1}
                         aria-label="Select repeat weekly option"
+                      aria-disabled={!selectedWorkout}
                         onKeyDown={(e) => {
+                        if (!selectedWorkout) return;
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             setSelectedScheduleOption('weekly');
                           }
                         }}
                         onClick={() => {
+                        if (!selectedWorkout) return;
                           setSelectedScheduleOption('weekly');
                         }}
                       >
@@ -1131,10 +1286,8 @@ const ClientTrainingCalendarPage = () => {
                   </Card>
                 </div>
               </div>
-            )}
           </div>
-          {selectedWorkout && (
-            <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-4">
+          <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-2">
               <Button
                 type="button"
                 variant="secondary"
@@ -1143,28 +1296,15 @@ const ClientTrainingCalendarPage = () => {
               >
                 Cancel
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setSelectedWorkout(null);
-                  setSelectedScheduleOption('once');
-                  setEveryDaysInput('');
-                  setWeeklyDayInput('');
-                }}
-                aria-label="Select new workout"
-              >
-                Select new workout
-              </Button>
-              <Button
-                type="button"
-                onClick={handleAddWorkoutConfirm}
-                aria-label="Add workout"
-              >
-                Add
-              </Button>
-            </div>
-          )}
+            <Button
+              type="button"
+              onClick={handleAddWorkoutConfirm}
+              disabled={!selectedWorkout}
+              aria-label="Add workout"
+            >
+              Add
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       <Dialog
@@ -1186,143 +1326,253 @@ const ClientTrainingCalendarPage = () => {
               </span>
             </DialogTitle>
           </DialogHeader>
-          {selectedWorkoutDetails && (
-            <>
-              <div className="flex flex-1 min-h-0 gap-4 pt-2">
-                <div className="flex-[3] h-full overflow-y-auto">
-                  <div className="flex flex-col gap-3">
-                    <Card className="p-4 border rounded-lg bg-background">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className="text-sm font-medium truncate"
-                            title={selectedWorkoutDetails.workout.program}
-                          >
-                            {selectedWorkoutDetails.workout.program}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatWorkoutCreatedDate(selectedWorkoutDetails.workout.created)}
-                          </span>
-                        </div>
-                        {selectedWorkoutDetails.workout.description && (
-                          <span className="text-xs text-muted-foreground line-clamp-3">
-                            {selectedWorkoutDetails.workout.description}
-                          </span>
-                        )}
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant="secondary" className="text-xs">
-                            Type: {selectedWorkoutDetails.workout.type}
-                          </Badge>
-                          {selectedWorkoutDetails.workout.equipment &&
-                            selectedWorkoutDetails.workout.equipment
-                              .split(',')
-                              .filter((item) => item.trim() !== '').length > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {selectedWorkoutDetails.workout.equipment
-                                  .split(',')
-                                  .map((item) => item.trim())
-                                  .filter((item) => item !== '')
-                                  .join(', ')}
-                              </Badge>
-                            )}
-                        </div>
-                      </div>
-                    </Card>
-                    {buildMockPreviewSections(selectedWorkoutDetails.workout).map((section) => (
-                      <Card key={section.id} className="bg-background flex flex-col">
-                        <CardHeader className="px-3 py-2 border-b">
-                          <CardTitle className="uppercase tracking-wide text-[11px] font-medium flex items-center gap-2">
-                            {section.type}{' '}
-                            <span className="font-normal text-[10px]">
-                              ({section.exercises.length})
-                            </span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="px-3 py-2">
-                          <div className="flex flex-col gap-1">
-                            {section.exercises.map((exercise) => (
-                              <div
-                                key={exercise.id}
-                                className="flex items-center justify-between gap-2 rounded-md border bg-muted/60 px-2 py-1.5"
-                              >
-                                <div className="flex flex-col min-w-0">
-                                  <span
-                                    className="text-[11px] font-medium truncate"
-                                    title={exercise.name}
-                                  >
-                                    {exercise.name}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {exercise.sets}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-                <Separator orientation="vertical" className="h-full" />
-                <div className="flex-[1.5] h-full overflow-y-auto">
-                  <div className="flex flex-col gap-2">
-                    <h2 className="text-xs font-semibold uppercase tracking-wide">Overview</h2>
-                    <div className="flex flex-col gap-2">
-                      {buildMockPreviewSections(selectedWorkoutDetails.workout).map((section) => (
-                        <Card
-                          key={section.id}
-                          className="border rounded-lg bg-card/80 shadow-sm flex flex-col"
-                        >
-                          <CardHeader className="px-3 py-2 border-b">
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                              {section.type}{' '}
-                              <span className="font-normal">
-                                ({section.exercises.length})
-                              </span>
+          {selectedWorkoutDetails && (() => {
+            const workoutSchema = buildWorkoutSchema(selectedWorkoutDetails.workout);
+            return (
+              <>
+                <div className="flex flex-1 min-h-0 gap-4 pt-2">
+                  <div className="relative flex-[4] h-full">
+                    <div className="p-4 h-full overflow-y-auto">
+                      {workoutSchema.length > 0 ? (
+                        <div className="flex flex-col gap-4 w-full">
+                          {workoutSchema.map((section) => (
+                            <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
+                              <Card className="bg-background w-full flex flex-col relative">
+                                <CardHeader className="border-b p-0 pb-2">
+                                  <div className="flex items-center justify-between px-3 pt-1">
+                                    <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
+                                      {section.type}{' '}
+                                      <span className="font-normal text-xs">
+                                        ({section.exercises ? section.exercises.length : 0})
+                                      </span>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Info className="size-4 text-foreground translate-y-[1px]" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {section.type === 'regular'
+                                            ? 'Exercise for exercise. Follow the sets and reps specified.'
+                                            : section.type === 'amrap'
+                                              ? 'Track the total amount of rounds completed in the allocated time.'
+                                              : 'Track total duration until completion of assigned rounds.'}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </CardTitle>
+                                    <div className="flex items-center gap-2">
+                                      {(section.type === 'amrap' || section.type === 'timed') && (
+                                        <div className="flex items-center gap-2 text-xs">
+                                          <span className="font-medium">
+                                            {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
+                                          </span>
+                                          <span className="text-muted-foreground">
+                                            {section.type === 'amrap'
+                                              ? section.roundDurationSec || '—'
+                                              : section.targetRounds || '—'}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="flex-1 flex flex-col px-3 py-1.5">
+                                  <div className="flex-1 w-full flex flex-col gap-0">
+                                    {section.exercises && section.exercises.length > 0 ? (
+                                      <div className="w-full flex flex-col gap-0">
+                                        {section.exercises.map((exercise, exerciseIndex) => {
+                                          const nextExercise = section.exercises?.[exerciseIndex + 1];
+                                          const prevExercise =
+                                            exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
+                                          const isLinkedToNext = !!(
+                                            exercise.supersetGroupId &&
+                                            nextExercise?.supersetGroupId === exercise.supersetGroupId
+                                          );
+                                          const isLinkedToPrev = !!(
+                                            exercise.supersetGroupId &&
+                                            prevExercise?.supersetGroupId === exercise.supersetGroupId
+                                          );
+                                          return (
+                                            <div
+                                              key={exercise.instanceId}
+                                              className={cn(
+                                                'flex flex-col',
+                                                isLinkedToNext ? 'gap-0' : 'gap-2',
+                                                exerciseIndex === 0
+                                                  ? ''
+                                                  : isLinkedToPrev
+                                                    ? '-mt-px'
+                                                    : isLinkedToNext
+                                                      ? 'mt-0'
+                                                      : 'mt-1'
+                                              )}
+                                            >
+                                              <div
+                                                className={cn(
+                                                  'relative flex flex-col gap-3 p-3 bg-background dark:bg-transparent border',
+                                                  isLinkedToPrev && isLinkedToNext
+                                                    ? 'rounded-none border-y-0'
+                                                    : isLinkedToPrev
+                                                      ? 'rounded-b-lg rounded-t-none border-t-0'
+                                                      : isLinkedToNext
+                                                        ? 'rounded-t-lg rounded-b-none border-b-0'
+                                                        : 'rounded-lg'
+                                                )}
+                                              >
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-sm font-medium flex-1 truncate">
+                                                    {exercise.name}
+                                                  </span>
+                                                </div>
+                                                {(exercise.exerciseType === 'weight_reps' ||
+                                                  exercise.exerciseType === 'reps' ||
+                                                  exercise.exerciseType === 'distance_duration') &&
+                                                  exercise.sets &&
+                                                  exercise.sets.length > 0 && (
+                                                    <div className="w-full border rounded-lg overflow-hidden">
+                                                      <Table className="text-[11px] leading-tight">
+                                                        <TableHeader className="bg-sidebar">
+                                                          <TableRow className="h-8">
+                                                            <TableHead className="text-center h-8 py-1 px-2">
+                                                              Set
+                                                            </TableHead>
+                                                            <TableHead className="text-center h-8 py-1 px-2 w-[130px]">
+                                                              Type
+                                                            </TableHead>
+                                                            {exercise.exerciseType === 'distance_duration' ? (
+                                                              <>
+                                                                <TableHead className="text-center h-8 py-1 px-2">
+                                                                  Distance
+                                                                </TableHead>
+                                                                <TableHead className="text-center h-8 py-1 px-2">
+                                                                  Duration
+                                                                </TableHead>
+                                                              </>
+                                                            ) : (
+                                                              <>
+                                                                <TableHead className="text-center h-8 py-1 px-2">
+                                                                  Reps
+                                                                </TableHead>
+                                                                {exercise.exerciseType === 'weight_reps' && (
+                                                                  <TableHead className="text-center h-8 py-1 px-2">
+                                                                    Weight
+                                                                  </TableHead>
+                                                                )}
+                                                              </>
+                                                            )}
+                                                            <TableHead className="text-center h-8 py-1 px-2">
+                                                              Rest (s)
+                                                            </TableHead>
+                                                          </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                          {exercise.sets.map((set, index) => (
+                                                            <TableRow key={index} className="h-10">
+                                                              <TableCell className="font-medium text-center py-1 px-2">
+                                                                {index + 1}
+                                                              </TableCell>
+                                                              <TableCell className="py-1 px-2 w-[130px]">
+                                                                <div className="flex justify-center">
+                                                                  <span className="text-[11px] capitalize">
+                                                                    {set.type === 'warmUp'
+                                                                      ? 'Warm up'
+                                                                      : set.type === 'dropset'
+                                                                        ? 'Dropset'
+                                                                        : set.type}
+                                                                  </span>
+                                                                </div>
+                                                              </TableCell>
+                                                              {exercise.exerciseType === 'distance_duration' ? (
+                                                                <>
+                                                                  <TableCell className="py-1 px-2 text-center">
+                                                                    {set.distance || '—'}
+                                                                  </TableCell>
+                                                                  <TableCell className="py-1 px-2 text-center">
+                                                                    {set.duration || '—'}
+                                                                  </TableCell>
+                                                                </>
+                                                              ) : (
+                                                                <>
+                                                                  <TableCell className="py-1 px-2 text-center">
+                                                                    {set.reps || '—'}
+                                                                  </TableCell>
+                                                                  {exercise.exerciseType === 'weight_reps' && (
+                                                                    <TableCell className="py-1 px-2 text-center">
+                                                                      {set.weight || '—'}
+                                                                    </TableCell>
+                                                                  )}
+                                                                </>
+                                                              )}
+                                                              <TableCell className="py-1 px-2 text-center">
+                                                                {set.rest || '—'}
+                                                              </TableCell>
+                                                            </TableRow>
+                                                          ))}
+                                                        </TableBody>
+                                                      </Table>
+                                                    </div>
+                                                  )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center justify-center w-full my-4 py-3 border-2 border-dashed rounded-lg border-muted">
+                                        <p className="text-muted-foreground text-sm text-center">
+                                          No exercises
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
                             </div>
-                          </CardHeader>
-                          <CardContent className="p-2 flex flex-col gap-1">
-                            {section.exercises.map((exercise) => (
-                              <div
-                                key={exercise.id}
-                                className="flex items-center gap-2 rounded-md border bg-background px-2 py-1"
-                              >
-                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                                <span className="text-[11px] flex-1 min-w-0 truncate">
-                                  {exercise.name}
-                                </span>
-                              </div>
-                            ))}
-                          </CardContent>
-                        </Card>
-                      ))}
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full gap-4">
+                          <p className="text-muted-foreground text-center">No sections available.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Separator orientation="vertical" />
+                  <div className="flex-[1.5] bg-background h-full overflow-y-auto">
+                    <div className="p-4">
+                      <EquipmentPanel sections={workoutSchema} />
+                      <OverviewPanel
+                        sections={workoutSchema}
+                        onSectionsChange={() => {}}
+                        onDeleteSection={() => {}}
+                        onDeleteExercise={() => {}}
+                        onDeleteSuperset={() => {}}
+                        groupExercisesBySuperset={groupExercisesBySuperset}
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2 flex-shrink-0">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    const baseId = selectedWorkoutDetails.workout.id.split('-')[0];
-                    router.push(`/library/workouts/${baseId}/edit/standard`);
-                  }}
-                  aria-label="Edit workout"
-                >
-                  Edit workout
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleCloseWorkoutDetails}
-                  aria-label="Close workout details"
-                >
-                  Close
-                </Button>
-              </div>
-            </>
-          )}
+                <div className="flex items-center justify-end gap-2 pt-2 flex-shrink-0">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                      const baseId = selectedWorkoutDetails.workout.id.split('-')[0];
+                      router.push(`/library/workouts/${baseId}/edit/standard`);
+                    }}
+                    aria-label="Edit workout"
+                  >
+                    Edit workout
+              </Button>
+              <Button
+                type="button"
+                    onClick={handleCloseWorkoutDetails}
+                    aria-label="Close workout details"
+              >
+                    Close
+              </Button>
+            </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
       <Dialog
@@ -1446,6 +1696,11 @@ const ClientTrainingCalendarPage = () => {
                               today.setHours(0, 0, 0, 0);
                               const finalDate = normalized < today ? today : normalized;
                               setProgramStartDate(finalDate);
+                            }}
+                            disabled={(date) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              return date < today;
                             }}
                             defaultMonth={programStartDate ?? new Date()}
                             initialFocus
