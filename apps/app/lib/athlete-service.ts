@@ -105,3 +105,45 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
   return newAthletes;
 };
 
+export interface TrainingCalendarSchema {
+  [date: string]: Array<{
+    id: string;
+    program: string;
+    description: string;
+    type: string;
+    length: string;
+    totalExercises: number;
+    equipment: string;
+    created: string;
+  }>;
+}
+
+/**
+ * Service method to update the training calendar
+ * This will be connected to the backend in the future
+ */
+export const updateTrainingCalendar = async (
+  clientId: string,
+  schema: TrainingCalendarSchema
+): Promise<void> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+
+  console.log('Updating training calendar:', {
+    clientId,
+    schema,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${clientId}/training-calendar`, {
+  //   method: 'PUT',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(schema),
+  // })
+  // if (!response.ok) throw new Error('Failed to update training calendar')
+  // return await response.json()
+};
+
