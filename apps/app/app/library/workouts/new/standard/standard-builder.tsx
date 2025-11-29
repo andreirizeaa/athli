@@ -220,11 +220,25 @@ const buildWorkoutPayload = (
     };
   });
 
+  // Extract unique equipment from all exercises
+  const equipmentSet = new Set<string>();
+  workoutSchema.sections.forEach((section) => {
+    section.exercises?.forEach((exercise) => {
+      exercise.equipments?.forEach((equipment) => {
+        if (equipment && equipment.trim() !== '') {
+          equipmentSet.add(equipment);
+        }
+      });
+    });
+  });
+  const equipment = Array.from(equipmentSet).sort();
+
   return {
     title: meta.title,
     description: meta.description,
     type: meta.type,
     difficulty: meta.difficulty,
+    equipment,
     sections,
   };
 };

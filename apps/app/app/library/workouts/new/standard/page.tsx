@@ -37,6 +37,13 @@ const StandardWorkoutPage = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
+    // Check for access flag - if not present, redirect to workouts
+    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+    if (accessFlag !== 'standard') {
+      router.push('/library/workouts');
+      return;
+    }
+    
     // Try to load meta from localStorage (if coming from create panel)
     const raw = window.localStorage.getItem('oneninety_new_workout_meta');
     if (raw) {

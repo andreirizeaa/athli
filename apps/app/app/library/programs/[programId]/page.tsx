@@ -19,15 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { toast } from 'sonner';
-import { ChevronRight, ChevronDown, Edit, Trash2, X } from 'lucide-react';
+import { ChevronRight, Edit, Trash2, X } from 'lucide-react';
 import { mockPrograms } from '@/components/app/app-shell';
 
 const ProgramDetailPage = () => {
@@ -37,117 +30,9 @@ const ProgramDetailPage = () => {
   const program = mockPrograms.find((p) => p.id === programId);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  const createMockWorkoutSchema = () => {
-    return {
-      sections: [
-        {
-          id: `sec_regular_${Date.now()}`,
-          type: 'regular' as const,
-          exercises: [
-            {
-              exerciseId: 'K6NnTv0',
-              name: 'Bench Press',
-              imageUrl: '/demo-img.png',
-              equipments: ['Barbell'],
-              bodyParts: ['Chest'],
-              exerciseType: 'weight_reps',
-              targetMuscles: ['Pectoralis Major Clavicular Head'],
-              secondaryMuscles: ['Deltoid Anterior', 'Pectoralis Major Clavicular Head', 'Triceps Brachii'],
-              videoUrl: '/demo-video.mp4',
-              keywords: ['Chest workout with barbell', 'Barbell bench press exercise'],
-              overview: 'The Bench Press is a classic strength training exercise.',
-              instructions: ['Grip the barbell', 'Lower to chest', 'Push back up'],
-              exerciseTips: ['Keep your back flat', 'Control the weight'],
-              variations: [],
-              relatedExerciseIds: [],
-              instanceId: `inst_${Date.now()}_1`,
-              sets: [
-                {
-                  setNumber: 1,
-                  weight: 135,
-                  reps: 10,
-                  restSec: 60,
-                },
-                {
-                  setNumber: 2,
-                  weight: 135,
-                  reps: 10,
-                  restSec: 60,
-                },
-              ],
-            },
-            {
-              exerciseId: 'ex_2',
-              name: 'Squats',
-              imageUrl: '/demo-img.png',
-              equipments: ['Barbell'],
-              bodyParts: ['Legs'],
-              exerciseType: 'weight_reps',
-              targetMuscles: ['Quadriceps'],
-              secondaryMuscles: ['Glutes', 'Hamstrings'],
-              videoUrl: '/demo-video.mp4',
-              keywords: ['Leg workout', 'Squat exercise'],
-              overview: 'Squats are a fundamental lower body exercise.',
-              instructions: ['Stand with feet shoulder-width', 'Lower down', 'Push back up'],
-              exerciseTips: ['Keep knees aligned', 'Maintain proper form'],
-              variations: [],
-              relatedExerciseIds: [],
-              instanceId: `inst_${Date.now()}_2`,
-              sets: [
-                {
-                  setNumber: 1,
-                  weight: 185,
-                  reps: 12,
-                  restSec: 90,
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
-  };
-
-  const handleEditAi = () => {
+  const handleEdit = () => {
     if (!program) return;
-
-    const mockSchema = createMockWorkoutSchema();
-    const meta = {
-      title: program.program || 'Program',
-      description: program.description || '',
-      type: program.type || 'Push',
-      difficulty: 'Intermediate',
-      builder: 'ai' as const,
-    };
-
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify(meta));
-      window.localStorage.setItem('oneninety_workout_builder_access', 'edit-ai');
-      window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(mockSchema));
-    }
-
-    router.push(`/library/workouts/${programId}/edit/ai`);
-  };
-
-  const handleEditManual = () => {
-    if (!program) return;
-
-    const mockSchema = createMockWorkoutSchema();
-    const meta = {
-      title: program.program || 'Program',
-      description: program.description || '',
-      type: program.type || 'Push',
-      difficulty: 'Intermediate',
-      builder: 'standard' as const,
-    };
-
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify(meta));
-      window.localStorage.setItem('oneninety_workout_builder_access', 'edit-standard');
-      window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(mockSchema));
-    }
-
-    router.push(`/library/workouts/${programId}/edit/standard`);
+    router.push(`/library/programs/${programId}/edit`);
   };
 
   const handleDelete = () => {
@@ -173,11 +58,6 @@ const ProgramDetailPage = () => {
     }
   };
 
-  const handleEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-    }
-  };
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -217,35 +97,15 @@ const ProgramDetailPage = () => {
           <h1 className="text-[22px] font-semibold">{program?.program || 'Program'}</h1>
         </div>
         <div className="absolute top-2 right-4 flex items-center gap-2">
-          <DropdownMenu>
-            <ButtonGroup>
-              <Button
-                variant="secondary"
-                onClick={handleEditManual}
-                onKeyDown={handleEditKeyDown}
-                aria-label="Edit program"
-                tabIndex={0}
-                className="gap-2"
-              >
-                <Edit className="size-4" />
-                <span>Edit</span>
-              </Button>
-              <ButtonGroupSeparator />
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" className="px-2" aria-label="Edit options">
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-            </ButtonGroup>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEditAi}>
-                OneNinety AI
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleEditManual}>
-                Manual
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="secondary"
+            onClick={handleEdit}
+            aria-label="Edit program"
+            className="gap-2"
+          >
+            <Edit className="size-4" />
+            <span>Edit</span>
+          </Button>
           <Button
             variant="secondary"
             size="icon"
