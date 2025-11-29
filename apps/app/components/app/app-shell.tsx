@@ -1741,11 +1741,6 @@ const AppShellContent = ({
 
   const businessNavItems = [
     {
-      href: '/marketing',
-      labelKey: 'sidebar.links.marketing',
-      icon: Megaphone,
-    },
-    {
       href: '/calendar',
       labelKey: 'sidebar.links.calendar',
       icon: CalendarDays,
@@ -1837,52 +1832,13 @@ const AppShellContent = ({
                 {generalNavItems.map((item) => {
                   const Icon = item.icon;
                   let isActive = false;
-                  if (item.href === '/library' || item.href === '/messaging') {
+                  if (item.href === '/library') {
                     // Check exact match or if path starts with the href followed by /
-                    // This handles /messaging and /messaging/[contactId]
                     isActive = activePath === item.href || activePath.startsWith(`${item.href}/`);
                   } else {
                     isActive = activePath === item.href;
                   }
                   const label = 'label' in item ? item.label : t(item.labelKey);
-
-                  return (
-                    <SidebarMenuItem key={item.href}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        className={cn('text-xs', getActiveSidebarClasses(isActive))}
-                      >
-                        <Link href={item.href}>
-                          <Icon className="shrink-0" />
-                          {!isCollapsed && <span>{label}</span>}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          <SidebarGroup className="pb-0">
-            <div className="flex h-6 items-center px-2">
-              {isCollapsed ? (
-                <div className="mx-auto h-px w-8 bg-sidebar-border" />
-              ) : (
-                <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  ATHLETES
-                </span>
-              )}
-            </div>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
-                {athletesNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    item.href === '/athletes' || item.href === '/messaging'
-                      ? activePath === item.href || activePath.startsWith(`${item.href}/`)
-                      : activePath === item.href;
-                  const label = t(item.labelKey);
 
                   return (
                     <SidebarMenuItem key={item.href}>
@@ -1938,8 +1894,47 @@ const AppShellContent = ({
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+          <SidebarGroup className="pb-0">
+            <div className="flex h-6 items-center px-2">
+              {isCollapsed ? (
+                <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              ) : (
+                <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                  ATHLETES
+                </span>
+              )}
+            </div>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                {athletesNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const href = item.href;
+                  const isActive =
+                    (href === '/athletes' || href === '/messaging')
+                      ? activePath === href || activePath.startsWith(`${href}/`)
+                      : activePath === href;
+                  const label = t(item.labelKey);
+
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className={cn('text-xs', getActiveSidebarClasses(isActive))}
+                      >
+                        <Link href={item.href}>
+                          <Icon className="shrink-0" />
+                          {!isCollapsed && <span>{label}</span>}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="mt-auto px-2 pb-3 pt-2 space-y-1">
+        <SidebarFooter className="mt-auto px-2 pb-3">
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
@@ -1951,6 +1946,19 @@ const AppShellContent = ({
                 {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
               </Link>
             </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton className="text-xs bg-primary !text-primary-foreground hover:bg-primary/90 [&_svg]:!text-primary-foreground">
+                  <Users className="shrink-0" />
+                  {!isCollapsed && <span className="!text-primary-foreground">Add team members</span>}
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">Coming soon</div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>

@@ -35,27 +35,27 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
   const tabs = [
-    // {
-    //   value: 'overview',
-    //   label: 'Overview',
-    // },
-    // {
-    //   value: 'metrics',
-    //   label: 'Metrics',
-    // },
+    {
+      value: 'overview',
+      label: 'Overview',
+    },
+    {
+      value: 'metrics',
+      label: 'Metrics',
+    },
     {
       value: 'training-calendar',
       label: 'Training Calendar',
     },
-    // {
-    //   value: 'app-settings',
-    //   label: 'App Settings',
-    // },
+    {
+      value: 'app-settings',
+      label: 'App Settings',
+    },
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
   const lastSegment = segments[segments.length - 1];
-  const activeTab = lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'training-calendar';
+  const activeTab = lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview';
 
   const handleTabChange = (value: string) => {
     if (!clientId) {
