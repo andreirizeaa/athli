@@ -14,16 +14,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Archive, ChevronRight, MessageCircle, Users, X } from 'lucide-react';
 import { mockAthletes } from '@/components/app/app-shell';
+import { archiveUser } from '@/lib/athlete-service';
 
 type ClientProfileLayoutProps = {
   children: React.ReactNode;
@@ -37,34 +32,30 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
 
   const athlete = mockAthletes.find((item) => item.id === clientId);
 
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
   const tabs = [
-    {
-      value: 'overview',
-      label: 'Overview',
-    },
-    {
-      value: 'metrics',
-      label: 'Metrics',
-    },
-    {
-      value: 'workouts',
-      label: 'Workouts',
-    },
+    // {
+    //   value: 'overview',
+    //   label: 'Overview',
+    // },
+    // {
+    //   value: 'metrics',
+    //   label: 'Metrics',
+    // },
     {
       value: 'training-calendar',
       label: 'Training Calendar',
     },
-    {
-      value: 'app-settings',
-      label: 'App Settings',
-    },
+    // {
+    //   value: 'app-settings',
+    //   label: 'App Settings',
+    // },
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
   const lastSegment = segments[segments.length - 1];
-  const activeTab = lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview';
+  const activeTab = lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'training-calendar';
 
   const handleTabChange = (value: string) => {
     if (!clientId) {
@@ -95,19 +86,33 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
     router.push(`/messaging?contact=${athleteId}`);
   };
 
-  const handleDelete = () => {
-    setIsDeleteModalOpen(false);
-    toast.success('Client deleted successfully', {
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
+  const handleArchive = async () => {
+    if (!clientId) return;
+    
+    try {
+      await archiveUser(clientId);
+      setIsArchiveModalOpen(false);
+      toast.success('Client archived successfully', {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
+      handleNavigateToAthletes();
+    } catch (error) {
+      toast.error('Failed to archive client', {
+        style: {
+          background: 'rgb(254 242 242)',
+          color: 'rgb(153 27 27)',
+          border: '1px solid rgb(254 202 202)',
+        },
+      });
+    }
   };
 
-  const handleCancelDelete = () => {
-    setIsDeleteModalOpen(false);
+  const handleCancelArchive = () => {
+    setIsArchiveModalOpen(false);
   };
 
   if (!athlete) {
@@ -186,23 +191,15 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
             <MessageCircle className="size-4" />
             <span>Message</span>
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="gap-2"
-                aria-label="Archive client options"
-              >
-                <Archive className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsDeleteModalOpen(true)}>
-                {`Archive ${firstName}`}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="gap-2"
+            aria-label="Archive client"
+            onClick={() => setIsArchiveModalOpen(true)}
+          >
+            <Archive className="size-4" />
+          </Button>
         </div>
         <div className="px-4">
           <PageTabs
@@ -215,14 +212,14 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 overflow-auto bg-background">{children}</div>
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
         <DialogContent
           className="w-full max-w-[500px] sm:max-w-[500px] flex flex-col"
           showCloseButton={false}
         >
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-left">Delete</DialogTitle>
+              <DialogTitle className="text-left">Are you sure you want to archive {firstName}?</DialogTitle>
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Close">
                   <X className="h-4 w-4" />
@@ -230,13 +227,17 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
               </DialogClose>
             </div>
           </DialogHeader>
-          <div className="flex-1 mt-4">{/* Content will be added here later */}</div>
+          <div className="flex-1 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Archiving the user will remove their access to the app immediately. Archives can be restored which may incur charges depending on client limits.
+            </p>
+          </div>
           <div className="flex items-center justify-end gap-3 pt-4">
-            <Button type="button" onClick={handleCancelDelete}>
-              Cancel
+            <Button type="button" variant="secondary" onClick={handleCancelArchive}>
+              No
             </Button>
-            <Button type="button" variant="destructive" onClick={handleDelete}>
-              Delete
+            <Button type="button" onClick={handleArchive}>
+              Yes
             </Button>
           </div>
         </DialogContent>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,10 @@ import {
   Trash2,
   Undo,
   Redo,
+  CircleX,
+  CircleEllipsis,
+  CircleCheck,
+  Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Program, Workout } from '@/components/app/app-shell';
@@ -48,16 +52,21 @@ import {
 } from '@/components/ui/table';
 import { EquipmentPanel } from '@/app/library/workouts/new/components/equipment-panel';
 import { OverviewPanel } from '@/app/library/workouts/new/components/overview-panel';
-import { Info } from 'lucide-react';
-import { updateTrainingCalendar } from '@/lib/athlete-service';
+import {
+  updateTrainingCalendar,
+  getTrainingCalendar,
+  getTrainingCalendarCompletionLogs,
+  type TrainingCalendarCompletionLogs,
+} from '@/lib/athlete-service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ClientTrainingCalendarPage = () => {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const clientId = useMemo(() => (params.clientId as string) || '', [params.clientId]);
-  const [selectedWeek, setSelectedWeek] = useState<string>('1');
+  const [selectedWeek, setSelectedWeek] = useState<string>('2');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
   const [totalWeeks] = useState<number>(52); // Default to 52 weeks (1 year)
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
@@ -99,8 +108,33 @@ const ClientTrainingCalendarPage = () => {
 
   const [isAddProgramModalOpen, setIsAddProgramModalOpen] = useState<boolean>(false);
   const [programSearchQuery, setProgramSearchQuery] = useState<string>('');
+  const [preventAutoFocus, setPreventAutoFocus] = useState<boolean>(false);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [programStartDate, setProgramStartDate] = useState<Date | null>(null);
+
+  // Track workout and set completion status
+  // Format: { [workoutId]: 'not_started' | 'in_progress' | 'completed' }
+  const [workoutStatus, setWorkoutStatus] = useState<{
+    [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
+  }>({});
+  
+  // Track set completion status
+  // Format: { [workoutId]: { [exerciseInstanceId]: { [setNumber]: 'not_started' | 'completed' } } }
+  const [setStatus, setSetStatus] = useState<{
+    [workoutId: string]: {
+      [exerciseInstanceId: string]: {
+        [setNumber: number]: 'not_started' | 'completed';
+      };
+    };
+  }>({});
+
+  // Track section completion status (for AMRAP and timed sections)
+  // Format: { [workoutId]: { [sectionId]: 'not_started' | 'in_progress' | 'completed' } }
+  const [sectionStatus, setSectionStatus] = useState<{
+    [workoutId: string]: {
+      [sectionId: string]: 'not_started' | 'in_progress' | 'completed';
+    };
+  }>({});
 
   type ExerciseWithSuperset = {
     exerciseId: string;
@@ -343,6 +377,175 @@ const ClientTrainingCalendarPage = () => {
     return schema;
   };
 
+  // Load training calendar and completion logs on mount
+  useEffect(() => {
+    const loadTrainingData = async () => {
+      if (!clientId) return;
+
+      try {
+        // Load training calendar
+        const calendar = await getTrainingCalendar(clientId);
+        
+        // Convert calendar format from dd-mm-yyyy to YYYY-MM-DD
+        const convertedCalendar: {
+          [dateKey: string]: Array<Workout & { id: string }>;
+        } = {};
+        
+        Object.keys(calendar).forEach((dateKey) => {
+          // dateKey is in dd-mm-yyyy format
+          const [day, month, year] = dateKey.split('-').map(Number);
+          const date = new Date(year, month - 1, day);
+          const isoKey = getDateKey(date);
+          convertedCalendar[isoKey] = calendar[dateKey].map((workout) => ({
+            ...workout,
+            id: workout.id,
+          }));
+        });
+        
+        setWorkoutsByDate(convertedCalendar);
+
+        // Load completion logs
+        const completionLogs = await getTrainingCalendarCompletionLogs(clientId);
+        
+        // Convert completion logs to state format
+        const workoutStatusMap: {
+          [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
+        } = {};
+        
+        completionLogs.workouts.forEach((workout) => {
+          workoutStatusMap[workout.workoutId] = workout.status;
+        });
+        
+        setWorkoutStatus(workoutStatusMap);
+
+        const setStatusMap: {
+          [workoutId: string]: {
+            [exerciseInstanceId: string]: {
+              [setNumber: number]: 'not_started' | 'completed';
+            };
+          };
+        } = {};
+        
+        completionLogs.sets.forEach((set) => {
+          if (!setStatusMap[set.workoutId]) {
+            setStatusMap[set.workoutId] = {};
+          }
+          if (!setStatusMap[set.workoutId][set.exerciseInstanceId]) {
+            setStatusMap[set.workoutId][set.exerciseInstanceId] = {};
+          }
+          setStatusMap[set.workoutId][set.exerciseInstanceId][set.setNumber] = set.status;
+        });
+        
+        setSetStatus(setStatusMap);
+
+        // Load section completion status (for AMRAP and timed sections)
+        const sectionStatusMap: {
+          [workoutId: string]: {
+            [sectionId: string]: 'not_started' | 'in_progress' | 'completed';
+          };
+        } = {};
+        
+        completionLogs.sections?.forEach((section) => {
+          if (!sectionStatusMap[section.workoutId]) {
+            sectionStatusMap[section.workoutId] = {};
+          }
+          sectionStatusMap[section.workoutId][section.sectionId] = section.status;
+        });
+        
+        setSectionStatus(sectionStatusMap);
+      } catch (error) {
+        console.error('Failed to load training data:', error);
+      }
+    };
+
+    loadTrainingData();
+  }, [clientId]);
+
+  // Handle query params for auto-opening modals and preselecting workouts/programs
+  useEffect(() => {
+    const openModal = searchParams.get('openModal');
+    const workoutId = searchParams.get('workoutId');
+    const workoutName = searchParams.get('workoutName');
+    const programId = searchParams.get('programId');
+    const programName = searchParams.get('programName');
+    const modalType = searchParams.get('modalType');
+
+    if (openModal === 'true') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (workoutId && workoutName) {
+        // Open workout modal for today's date
+        setSelectedDateForWorkout(today);
+        
+        // Find and select the workout first
+        const workout = mockWorkouts.find((w) => w.id === workoutId);
+        if (workout) {
+          // Preselect the workout by searching for it (using name for search)
+          const decodedWorkoutName = decodeURIComponent(workoutName);
+          setWorkoutSearchQuery(decodedWorkoutName);
+          setSelectedWorkout(workout);
+        }
+        
+        // Prevent auto-focus when opened via query params
+        setPreventAutoFocus(true);
+        setIsAddWorkoutModalOpen(true);
+        
+        // Clean up URL params
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete('openModal');
+        newSearchParams.delete('workoutId');
+        newSearchParams.delete('workoutName');
+        router.replace(`/athletes/${clientId}/training-calendar?${newSearchParams.toString()}`, { scroll: false });
+      } else if (programId && programName) {
+        // Open program modal for today's date
+        setProgramStartDate(today);
+        
+        // Find and select the program first
+        const program = mockPrograms.find((p) => p.id === programId);
+        if (program) {
+          // Preselect the program by searching for it (using name for search)
+          const decodedProgramName = decodeURIComponent(programName);
+          setProgramSearchQuery(decodedProgramName);
+          setSelectedProgram(program);
+        }
+        
+        // Prevent auto-focus when opened via query params
+        setPreventAutoFocus(true);
+        setIsAddProgramModalOpen(true);
+        
+        // Clean up URL params
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete('openModal');
+        newSearchParams.delete('programId');
+        newSearchParams.delete('programName');
+        router.replace(`/athletes/${clientId}/training-calendar?${newSearchParams.toString()}`, { scroll: false });
+      } else if (modalType === 'workout') {
+        // Generic workout assign - open modal without preselection
+        setSelectedDateForWorkout(today);
+        setPreventAutoFocus(true);
+        setIsAddWorkoutModalOpen(true);
+        
+        // Clean up URL params
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete('openModal');
+        newSearchParams.delete('modalType');
+        router.replace(`/athletes/${clientId}/training-calendar?${newSearchParams.toString()}`, { scroll: false });
+      } else if (modalType === 'program') {
+        // Generic program assign - open modal without preselection
+        setProgramStartDate(today);
+        setPreventAutoFocus(true);
+        setIsAddProgramModalOpen(true);
+        
+        // Clean up URL params
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete('openModal');
+        newSearchParams.delete('modalType');
+        router.replace(`/athletes/${clientId}/training-calendar?${newSearchParams.toString()}`, { scroll: false });
+      }
+    }
+  }, [searchParams, clientId, router]);
+
   // Log schema and update service whenever workoutsByDate changes
   useEffect(() => {
     const schema = buildTrainingCalendarSchema(workoutsByDate);
@@ -441,6 +644,213 @@ const ClientTrainingCalendarPage = () => {
     const compareDate = new Date(date);
     compareDate.setHours(0, 0, 0, 0);
     return compareDate.getTime() === today.getTime();
+  };
+
+  // Get section status (for AMRAP and timed sections)
+  const getSectionStatus = (
+    workoutId: string,
+    sectionId: string
+  ): 'not_started' | 'in_progress' | 'completed' => {
+    return sectionStatus[workoutId]?.[sectionId] || 'not_started';
+  };
+
+  // Calculate workout status from set and section completion status
+  // Logic:
+  // - For regular sections: check set completion
+  // - For AMRAP/timed sections: check section completion
+  // - If ALL sections/sets are completed → 'completed'
+  // - If ALL sections/sets are not_started AND no explicit in_progress status → 'not_started'
+  // - Otherwise (some completed, some not, or workout was started) → 'in_progress'
+  const getWorkoutStatus = (
+    workoutId: string,
+    workoutSchema?: WorkoutSection[]
+  ): 'not_started' | 'in_progress' | 'completed' => {
+    // Get explicit workout status from API (handles case where user clicked start but hasn't completed sets)
+    const explicitStatus = workoutStatus[workoutId];
+    
+    if (!workoutSchema) {
+      // If no schema, use explicit status or check tracked sets
+      const workoutSets = setStatus[workoutId];
+      if (!workoutSets) {
+        return explicitStatus || 'not_started';
+      }
+      
+      // Fallback: use sets that have status tracked
+      const allSetStatuses: Array<'not_started' | 'completed'> = [];
+      Object.values(workoutSets).forEach((exerciseSets) => {
+        Object.values(exerciseSets).forEach((setStatusValue) => {
+          allSetStatuses.push(setStatusValue);
+        });
+      });
+      
+      if (allSetStatuses.length === 0) {
+        return explicitStatus || 'not_started';
+      }
+      
+      const allCompleted = allSetStatuses.every((status) => status === 'completed');
+      if (allCompleted) return 'completed';
+      
+      const allNotStarted = allSetStatuses.every((status) => status === 'not_started');
+      if (allNotStarted) {
+        return explicitStatus === 'in_progress' ? 'in_progress' : 'not_started';
+      }
+      
+      return 'in_progress';
+    }
+    
+    // Collect status for all sections
+    const sectionStatuses: Array<'not_started' | 'in_progress' | 'completed'> = [];
+    
+    workoutSchema.forEach((section) => {
+      if (section.type === 'amrap' || section.type === 'timed') {
+        // For AMRAP and timed sections, use section-level status
+        const status = getSectionStatus(workoutId, section.id);
+        sectionStatuses.push(status);
+      } else {
+        // For regular sections, check all sets
+        const setStatuses: Array<'not_started' | 'completed'> = [];
+        section.exercises?.forEach((exercise) => {
+          exercise.sets?.forEach((set) => {
+            const status = getSetStatus(workoutId, exercise.instanceId, set.setNumber);
+            setStatuses.push(status);
+          });
+        });
+        
+        // Convert set statuses to section status
+        if (setStatuses.length === 0) {
+          sectionStatuses.push('not_started');
+        } else {
+          const allCompleted = setStatuses.every((status) => status === 'completed');
+          const allNotStarted = setStatuses.every((status) => status === 'not_started');
+          
+          if (allCompleted) {
+            sectionStatuses.push('completed');
+          } else if (allNotStarted) {
+            sectionStatuses.push('not_started');
+          } else {
+            sectionStatuses.push('in_progress');
+          }
+        }
+      }
+    });
+    
+    if (sectionStatuses.length === 0) {
+      return explicitStatus || 'not_started';
+    }
+    
+    // Check if all sections are completed
+    const allCompleted = sectionStatuses.every((status) => status === 'completed');
+    if (allCompleted) {
+      return 'completed';
+    }
+    
+    // Check if all sections are not_started
+    const allNotStarted = sectionStatuses.every((status) => status === 'not_started');
+    if (allNotStarted) {
+      // If explicit status is 'in_progress', user started the workout but hasn't completed any sections
+      return explicitStatus === 'in_progress' ? 'in_progress' : 'not_started';
+    }
+    
+    // Mixed state: some completed, some not → in_progress
+    return 'in_progress';
+  };
+
+  // Get set status (defaults to 'not_started' if not set)
+  const getSetStatus = (
+    workoutId: string,
+    exerciseInstanceId: string,
+    setNumber: number
+  ): 'not_started' | 'completed' => {
+    return setStatus[workoutId]?.[exerciseInstanceId]?.[setNumber] || 'not_started';
+  };
+
+  // Render status icon for workout
+  const renderWorkoutStatusIcon = (status: 'not_started' | 'in_progress' | 'completed') => {
+    switch (status) {
+      case 'not_started':
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CircleX className="size-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Not started</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      case 'in_progress':
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CircleEllipsis className="size-4 text-yellow-500" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>In progress</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      case 'completed':
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CircleCheck className="size-4 text-green-500" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Completed</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      default:
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CircleX className="size-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Not started</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+    }
+  };
+
+  // Render status icon for set
+  const renderSetStatusIcon = (status: 'not_started' | 'completed') => {
+    switch (status) {
+      case 'not_started':
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CircleX className="size-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Not started</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      case 'completed':
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CircleCheck className="size-4 text-green-500" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Completed</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      default:
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <CircleX className="size-4 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Not started</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+    }
   };
 
   // Filter workouts based on search query (same as program builder)
@@ -946,48 +1356,56 @@ const ClientTrainingCalendarPage = () => {
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 min-h-0">
                           {workoutsForDate.length > 0 ? (
                             <div className="flex flex-col gap-2">
-                              {workoutsForDate.map((workout) => (
-                                <div
-                                  key={workout.id}
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label={`View details for workout ${workout.program}`}
-                                  onClick={() => handleOpenWorkoutDetails(dateKey, workout)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter' || event.key === ' ') {
-                                      event.preventDefault();
-                                      handleOpenWorkoutDetails(dateKey, workout);
-                                    }
-                                  }}
-                                  className="p-2 rounded-lg border border-border bg-background flex items-start justify-between gap-2 cursor-pointer"
-                                >
-                                  <div className="flex-1 min-w-0">
-                                    <span
-                                      className="text-[10px] font-medium block break-words line-clamp-2"
-                                      title={workout.program}
-                                    >
-                                      {workout.program}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground">
-                                      {workout.totalExercises}{' '}
-                                      {workout.totalExercises === 1 ? 'exercise' : 'exercises'}
-                                    </span>
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 flex-shrink-0"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      handleDeleteWorkout(dateKey, workout.id);
+                              {workoutsForDate.map((workout) => {
+                                const status = getWorkoutStatus(workout.id);
+                                return (
+                                  <div
+                                    key={workout.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`View details for workout ${workout.program}`}
+                                    onClick={() => handleOpenWorkoutDetails(dateKey, workout)}
+                                    onKeyDown={(event) => {
+                                      if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        handleOpenWorkoutDetails(dateKey, workout);
+                                      }
                                     }}
-                                    aria-label="Delete workout"
+                                    className="p-2 rounded-lg border border-border bg-background flex items-start justify-between gap-2 cursor-pointer"
                                   >
-                                    <Trash2 className="size-3 text-muted-foreground hover:text-destructive" />
-                                  </Button>
-                                </div>
-                              ))}
+                                    <div className="flex-1 min-w-0 flex items-start gap-2">
+                                      <div className="flex-shrink-0 mt-0.5">
+                                        {renderWorkoutStatusIcon(status)}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <span
+                                          className="text-[10px] font-medium block break-words line-clamp-2"
+                                          title={workout.program}
+                                        >
+                                          {workout.program}
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {workout.totalExercises}{' '}
+                                          {workout.totalExercises === 1 ? 'exercise' : 'exercises'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5 flex-shrink-0"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleDeleteWorkout(dateKey, workout.id);
+                                      }}
+                                      aria-label="Delete workout"
+                                    >
+                                      <Trash2 className="size-3 text-muted-foreground hover:text-destructive" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             !isDateInPast(date) && (
@@ -1034,12 +1452,21 @@ const ClientTrainingCalendarPage = () => {
         onOpenChange={(open) => {
           if (!open) {
             handleCloseAddWorkoutModal();
+            setPreventAutoFocus(false);
           } else {
             setIsAddWorkoutModalOpen(open);
           }
         }}
       >
-        <DialogContent className="max-w-6xl sm:max-w-6xl h-[600px] flex flex-col">
+        <DialogContent 
+          className="max-w-6xl sm:max-w-6xl h-[600px] flex flex-col"
+          onOpenAutoFocus={(e) => {
+            if (preventAutoFocus) {
+              e.preventDefault();
+              setPreventAutoFocus(false);
+            }
+          }}
+        >
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {selectedDateForWorkout ? `Add workout - ${formatDate(selectedDateForWorkout)}` : 'Add workout'}
@@ -1360,16 +1787,28 @@ const ClientTrainingCalendarPage = () => {
                                     </CardTitle>
                                     <div className="flex items-center gap-2">
                                       {(section.type === 'amrap' || section.type === 'timed') && (
-                                        <div className="flex items-center gap-2 text-xs">
-                                          <span className="font-medium">
-                                            {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
-                                          </span>
-                                          <span className="text-muted-foreground">
-                                            {section.type === 'amrap'
-                                              ? section.roundDurationSec || '—'
-                                              : section.targetRounds || '—'}
-                                          </span>
-                                        </div>
+                                        <>
+                                          <div className="flex items-center gap-2 text-xs">
+                                            <span className="font-medium">
+                                              {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
+                                            </span>
+                                            <span className="text-muted-foreground">
+                                              {section.type === 'amrap'
+                                                ? section.roundDurationSec || '—'
+                                                : section.targetRounds || '—'}
+                                            </span>
+                                          </div>
+                                          {selectedWorkoutDetails && (
+                                            <div className="flex items-center">
+                                              {renderWorkoutStatusIcon(
+                                                getSectionStatus(
+                                                  selectedWorkoutDetails.workout.id,
+                                                  section.id
+                                                )
+                                              )}
+                                            </div>
+                                          )}
+                                        </>
                                       )}
                                     </div>
                                   </div>
@@ -1461,51 +1900,75 @@ const ClientTrainingCalendarPage = () => {
                                                             <TableHead className="text-center h-8 py-1 px-2">
                                                               Rest (s)
                                                             </TableHead>
+                                                            {/* Only show status column for regular sections, not AMRAP/timed */}
+                                                            {section.type !== 'amrap' && section.type !== 'timed' && (
+                                                              <TableHead className="text-center h-8 py-1 px-2">
+                                                                Status
+                                                              </TableHead>
+                                                            )}
                                                           </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                          {exercise.sets.map((set, index) => (
-                                                            <TableRow key={index} className="h-10">
-                                                              <TableCell className="font-medium text-center py-1 px-2">
-                                                                {index + 1}
-                                                              </TableCell>
-                                                              <TableCell className="py-1 px-2 w-[130px]">
-                                                                <div className="flex justify-center">
-                                                                  <span className="text-[11px] capitalize">
-                                                                    {set.type === 'warmUp'
-                                                                      ? 'Warm up'
-                                                                      : set.type === 'dropset'
-                                                                        ? 'Dropset'
-                                                                        : set.type}
-                                                                  </span>
-                                                                </div>
-                                                              </TableCell>
-                                                              {exercise.exerciseType === 'distance_duration' ? (
-                                                                <>
-                                                                  <TableCell className="py-1 px-2 text-center">
-                                                                    {set.distance || '—'}
-                                                                  </TableCell>
-                                                                  <TableCell className="py-1 px-2 text-center">
-                                                                    {set.duration || '—'}
-                                                                  </TableCell>
-                                                                </>
-                                                              ) : (
-                                                                <>
-                                                                  <TableCell className="py-1 px-2 text-center">
-                                                                    {set.reps || '—'}
-                                                                  </TableCell>
-                                                                  {exercise.exerciseType === 'weight_reps' && (
+                                                          {exercise.sets.map((set, index) => {
+                                                            const isAmrapOrTimed = section.type === 'amrap' || section.type === 'timed';
+                                                            
+                                                            return (
+                                                              <TableRow key={index} className="h-10">
+                                                                <TableCell className="font-medium text-center py-1 px-2">
+                                                                  {index + 1}
+                                                                </TableCell>
+                                                                <TableCell className="py-1 px-2 w-[130px]">
+                                                                  <div className="flex justify-center">
+                                                                    <span className="text-[11px] capitalize">
+                                                                      {set.type === 'warmUp'
+                                                                        ? 'Warm up'
+                                                                        : set.type === 'dropset'
+                                                                          ? 'Dropset'
+                                                                          : set.type}
+                                                                    </span>
+                                                                  </div>
+                                                                </TableCell>
+                                                                {exercise.exerciseType === 'distance_duration' ? (
+                                                                  <>
                                                                     <TableCell className="py-1 px-2 text-center">
-                                                                      {set.weight || '—'}
+                                                                      {set.distance || '—'}
                                                                     </TableCell>
-                                                                  )}
-                                                                </>
-                                                              )}
-                                                              <TableCell className="py-1 px-2 text-center">
-                                                                {set.rest || '—'}
-                                                              </TableCell>
-                                                            </TableRow>
-                                                          ))}
+                                                                    <TableCell className="py-1 px-2 text-center">
+                                                                      {set.duration || '—'}
+                                                                    </TableCell>
+                                                                  </>
+                                                                ) : (
+                                                                  <>
+                                                                    <TableCell className="py-1 px-2 text-center">
+                                                                      {set.reps || '—'}
+                                                                    </TableCell>
+                                                                    {exercise.exerciseType === 'weight_reps' && (
+                                                                      <TableCell className="py-1 px-2 text-center">
+                                                                        {set.weight || '—'}
+                                                                      </TableCell>
+                                                                    )}
+                                                                  </>
+                                                                )}
+                                                                <TableCell className="py-1 px-2 text-center">
+                                                                  {set.rest || '—'}
+                                                                </TableCell>
+                                                                {/* Only show status cell for regular sections, not AMRAP/timed */}
+                                                                {!isAmrapOrTimed && (
+                                                                  <TableCell className="py-1 px-2 text-center">
+                                                                    <div className="flex justify-center">
+                                                                      {renderSetStatusIcon(
+                                                                        getSetStatus(
+                                                                          selectedWorkoutDetails.workout.id,
+                                                                          exercise.instanceId,
+                                                                          set.setNumber
+                                                                        )
+                                                                      )}
+                                                                    </div>
+                                                                  </TableCell>
+                                                                )}
+                                                              </TableRow>
+                                                            );
+                                                          })}
                                                         </TableBody>
                                                       </Table>
                                                     </div>
@@ -1580,12 +2043,21 @@ const ClientTrainingCalendarPage = () => {
         onOpenChange={(open) => {
           if (!open) {
             handleCloseAddProgramModal();
+            setPreventAutoFocus(false);
           } else {
             setIsAddProgramModalOpen(open);
           }
         }}
       >
-        <DialogContent className="max-w-4xl sm:max-w-4xl h-[600px] flex flex-col">
+        <DialogContent 
+          className="max-w-4xl sm:max-w-4xl h-[600px] flex flex-col"
+          onOpenAutoFocus={(e) => {
+            if (preventAutoFocus) {
+              e.preventDefault();
+              setPreventAutoFocus(false);
+            }
+          }}
+        >
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Add program</DialogTitle>
           </DialogHeader>
