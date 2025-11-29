@@ -27,6 +27,7 @@ import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import DescriptionModal from './description-modal';
 import {
@@ -125,8 +126,8 @@ const ProgramsPage = () => {
   const [newProgramError, setNewProgramError] = useState<string | null>(null);
   const [newProgramTypeError, setNewProgramTypeError] = useState<string | null>(null);
   const [newProgramDifficultyError, setNewProgramDifficultyError] = useState<string | null>(null);
-  const [newProgramBuilder, setNewProgramBuilder] = useState<'standard' | 'ai' | null>('ai');
   const [isAssignProgramOpen, setIsAssignProgramOpen] = useState<boolean>(false);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
 
   const handleToggleProgram = (programId: string) => {
     setSelectedPrograms((prev) => {
@@ -161,7 +162,7 @@ const ProgramsPage = () => {
     setNewProgramError(null);
     setNewProgramTypeError(null);
     setNewProgramDifficultyError(null);
-    setNewProgramBuilder('ai');
+    setIsNavigating(false);
   };
 
   const handleOpenCreateProgram = () => {
@@ -189,12 +190,31 @@ const ProgramsPage = () => {
       return;
     }
 
-    if (!newProgramBuilder) {
-      return;
+    setIsNavigating(true);
+
+    const meta = {
+      name: newProgramName.trim(),
+      type: newProgramType,
+      difficulty: newProgramDifficulty,
+      weeks: newProgramWeeks,
+      description: newProgramDescription.trim(),
+    };
+
+    // Set localStorage synchronously before navigation
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('oneninety_new_program_meta', JSON.stringify(meta));
+        // Set access flag for program builder
+        window.localStorage.setItem('oneninety_program_builder_access', 'true');
+      } catch {
+        // Ignore storage errors
+      }
     }
 
+    // Close side panel
     setIsCreateProgramOpen(false);
 
+    // Navigate immediately - localStorage is synchronous so it's already set
     router.push('/library/programs/new');
   };
 
@@ -676,8 +696,8 @@ const ProgramsPage = () => {
       <SidePanel
         open={isCreateProgramOpen}
         onOpenChange={(open) => {
-          setIsCreateProgramOpen(open);
-          if (!open) {
+          if (!open && !isNavigating) {
+            setIsCreateProgramOpen(open);
             resetCreateProgramState();
           }
         }}
@@ -688,14 +708,15 @@ const ProgramsPage = () => {
               type="button"
               onClick={handleCreateProgramContinue}
               disabled={
+                isNavigating ||
                 !newProgramName.trim() ||
                 !newProgramType ||
-                !newProgramDifficulty ||
-                !newProgramBuilder
+                !newProgramDifficulty
               }
-              aria-label="Continue to builder"
+              aria-label="Continue"
+              className={cn(isNavigating && 'min-w-[120px] justify-center')}
             >
-              Continue to builder
+              {isNavigating ? <Spinner className="h-4 w-4" /> : 'Continue'}
             </Button>
             <Button
               type="button"
@@ -833,89 +854,6 @@ const ProgramsPage = () => {
               rows={4}
               className="resize-none"
             />
-          </div>
-          <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium">
-              Select how you wish to start <span className="text-destructive">*</span>
-            </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setNewProgramBuilder('ai')}
-                className={cn(
-                  'relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left',
-                  newProgramBuilder === 'ai'
-                    ? 'border-primary bg-primary/5 shadow-sm'
-                    : 'bg-background hover:bg-accent/30'
-                )}
-                aria-label="Use OneNinety AI to build program"
-              >
-                <p className="text-sm font-semibold mb-1">OneNinety AI</p>
-                <p
-                  className={cn(
-                    'text-xs',
-                    newProgramBuilder === 'ai' ? 'text-foreground/80' : 'text-muted-foreground'
-                  )}
-                >
-                  AI Program Builder
-                </p>
-                <div
-                  aria-hidden="true"
-                  className={cn(
-                    'absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2',
-                    newProgramBuilder === 'ai'
-                      ? 'border-primary bg-primary/10'
-                      : 'border-input bg-background'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'h-2.5 w-2.5 rounded-full',
-                      newProgramBuilder === 'ai' ? 'bg-primary' : 'bg-transparent'
-                    )}
-                  />
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setNewProgramBuilder('standard')}
-                className={cn(
-                  'relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left',
-                  newProgramBuilder === 'standard'
-                    ? 'border-primary bg-primary/5 shadow-sm'
-                    : 'bg-background hover:bg-accent/30'
-                )}
-                aria-label="Manually build program"
-              >
-                <p className="text-sm font-semibold mb-1">Standard Builder</p>
-                <p
-                  className={cn(
-                    'text-xs',
-                    newProgramBuilder === 'standard'
-                      ? 'text-foreground/80'
-                      : 'text-muted-foreground'
-                  )}
-                >
-                  Manually build your program
-                </p>
-                <div
-                  aria-hidden="true"
-                  className={cn(
-                    'absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2',
-                    newProgramBuilder === 'standard'
-                      ? 'border-primary bg-primary/10'
-                      : 'border-input bg-background'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'h-2.5 w-2.5 rounded-full',
-                      newProgramBuilder === 'standard' ? 'bg-primary' : 'bg-transparent'
-                    )}
-                  />
-                </div>
-              </button>
-            </div>
           </div>
         </div>
       </SidePanel>
