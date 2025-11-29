@@ -73,5 +73,6 @@ export type WorkoutProgramPayload = {
   description: string;
   type: string;
   difficulty: string;
+  equipment: string[];
   sections: WorkoutSectionPayload[];
 };
