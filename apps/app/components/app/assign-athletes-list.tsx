@@ -11,6 +11,10 @@ import { cn } from '@/lib/utils';
 type AssignAthletesListProps = {
   onAthleteSelected?: (athleteId?: string) => void;
   navigateOnSelect?: boolean;
+  workoutId?: string;
+  workoutName?: string;
+  programId?: string;
+  programName?: string;
 };
 
 const getInitials = (name: string) => {
@@ -24,12 +28,27 @@ const getInitials = (name: string) => {
 export const AssignAthletesList = ({
   onAthleteSelected,
   navigateOnSelect = true,
+  workoutId,
+  workoutName,
+  programId,
+  programName,
 }: AssignAthletesListProps) => {
   const router = useRouter();
 
   const handleNavigateToTrainingCalendar = (athleteId: string) => {
     if (navigateOnSelect) {
-      router.push(`/athletes/${athleteId}/training-calendar`);
+      const params = new URLSearchParams();
+      params.set('openModal', 'true');
+      
+      if (workoutId && workoutName) {
+        params.set('workoutId', workoutId);
+        params.set('workoutName', workoutName);
+      } else if (programId && programName) {
+        params.set('programId', programId);
+        params.set('programName', programName);
+      }
+      
+      router.push(`/athletes/${athleteId}/training-calendar?${params.toString()}`);
     }
 
     if (onAthleteSelected) {

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -29,7 +29,6 @@ import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import DescriptionModal from './description-modal';
 import {
   Search,
   X,
@@ -50,6 +49,8 @@ import {
   HelpCircle,
   Download,
   Settings,
+  User,
+  Star,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
@@ -108,15 +109,11 @@ const ProgramsPage = () => {
   const router = useRouter();
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const [lengthFilter, setLengthFilter] = useState<string | null>(null);
+  const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
+  const [starFilter, setStarFilter] = useState<string | null>(null);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
-  const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false);
   const itemsPerPage = 25;
-  const [selectedDescription, setSelectedDescription] = useState<{
-    description: string;
-    programName: string;
-  } | null>(null);
   const [isCreateProgramOpen, setIsCreateProgramOpen] = useState<boolean>(false);
   const [newProgramName, setNewProgramName] = useState<string>('');
   const [newProgramType, setNewProgramType] = useState<string>('');
@@ -127,6 +124,8 @@ const ProgramsPage = () => {
   const [newProgramTypeError, setNewProgramTypeError] = useState<string | null>(null);
   const [newProgramDifficultyError, setNewProgramDifficultyError] = useState<string | null>(null);
   const [isAssignProgramOpen, setIsAssignProgramOpen] = useState<boolean>(false);
+  const [isAssignIndividualProgramOpen, setIsAssignIndividualProgramOpen] = useState<boolean>(false);
+  const [selectedProgramForAssignment, setSelectedProgramForAssignment] = useState<Program | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
 
   const handleToggleProgram = (programId: string) => {
@@ -151,6 +150,27 @@ const ProgramsPage = () => {
 
   const handleOpenAssignProgram = () => {
     setIsAssignProgramOpen(true);
+  };
+
+  const handleToggleStar = (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    setStarredPrograms((prev) => {
+      const next = new Set(prev);
+      if (next.has(programId)) {
+        next.delete(programId);
+      } else {
+        next.add(programId);
+      }
+      return next;
+    });
+  };
+
+  const handleStarKeyDown = (programId: string, e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleToggleStar(programId, e);
+    }
   };
 
   const resetCreateProgramState = () => {
@@ -265,28 +285,6 @@ const ProgramsPage = () => {
     return `${months[date.getMonth()]} ${date.getDate()}, 20${year}`;
   };
 
-  const handleDescriptionClick = (
-    event: React.MouseEvent,
-    description: string,
-    programName: string
-  ) => {
-    event.stopPropagation();
-    setSelectedDescription({ description, programName });
-    setDescriptionModalOpen(true);
-  };
-
-  const handleDescriptionKeyDown = (
-    event: React.KeyboardEvent,
-    description: string,
-    programName: string
-  ) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      event.stopPropagation();
-      setSelectedDescription({ description, programName });
-      setDescriptionModalOpen(true);
-    }
-  };
 
   const isFuzzyMatch = (text: string, query: string): boolean => {
     const normalizedText = text.toLowerCase();
@@ -349,26 +347,20 @@ const ProgramsPage = () => {
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
             renderCell: (row) => (
-              <div
-                role="button"
-                tabIndex={0}
-                aria-label={`View full description for ${row.program}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDescriptionClick(e, row.description, row.program);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDescriptionClick(e, row.description, row.program);
-                  }
-                }}
-                data-no-row-link="true"
-                className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-              >
-                <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="max-w-[250px] break-words"
+                  side="top"
+                  align="start"
+                >
+                  <p className="whitespace-pre-wrap">{row.description}</p>
+                </TooltipContent>
+              </Tooltip>
             ),
           };
         case 'type':
@@ -436,44 +428,22 @@ const ProgramsPage = () => {
             },
             tooltip: 'The equipment required for this program',
             getSortValue: (row) => row.equipment.toLowerCase(),
-            renderCell: (row) => {
-              const equipmentList = row.equipment.split(', ').filter((item) => item.trim() !== '');
-              return (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`View equipment for ${row.program}`}
-                      data-no-row-link="true"
-                      className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }
-                      }}
-                    >
-                      <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
-                    {equipmentList.map((equipment, index) => (
-                      <DropdownMenuItem key={index} className="cursor-default pointer-events-none">
-                        {equipment}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
-            },
+            renderCell: (row) => (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="max-w-[200px] break-words"
+                  side="top"
+                  align="start"
+                >
+                  <p>{row.equipment}</p>
+                </TooltipContent>
+              </Tooltip>
+            ),
           };
         case 'created':
           return {
@@ -490,7 +460,7 @@ const ProgramsPage = () => {
               return new Date(2000 + year, month - 1, day).getTime();
             },
             renderCell: (row) => (
-              <div className="flex items-center h-full">
+              <div className="flex items-center h-full w-full pr-6">
                 <span className="text-sm">{formatDate(row.created)}</span>
               </div>
             ),
@@ -514,34 +484,85 @@ const ProgramsPage = () => {
       id: 'type',
       label: 'Type',
       icon: <Tag className="size-4" />,
-      options: [
-        { value: 'all', label: 'All' },
-        ...uniqueTypes.map((type) => ({ value: type, label: type })),
-      ],
+      options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
       defaultValue: typeFilter,
     },
     {
-      id: 'length',
-      label: 'Length',
-      icon: <Clock className="size-4" />,
+      id: 'show',
+      label: 'Show',
+      icon: <Star className="size-4" />,
       options: [
-        { value: 'all', label: 'All' },
-        ...uniqueLengths.map((length) => ({ value: length, label: length })),
+        { value: 'starred', label: 'Starred' },
+        { value: 'unstarred', label: 'Unstarred' },
       ],
-      getFilterValue: (row) => row.length,
-      defaultValue: lengthFilter,
+      getFilterValue: (row) => (starredPrograms.has(row.id) ? 'starred' : 'unstarred'),
+      defaultValue: starFilter,
     },
   ];
 
   // Create first column renderer
   const renderFirstColumn = (program: Program, isSelected: boolean) => {
+    const isStarred = starredPrograms.has(program.id);
     return (
-      <div className="flex items-center gap-3 h-full">
+      <div className="flex items-center gap-3 h-full w-full">
         <div className="flex items-center justify-center h-full" data-no-row-link="true">
           <Checkbox checked={isSelected} onCheckedChange={() => handleToggleProgram(program.id)} />
         </div>
-        <span className="text-sm truncate">{program.program}</span>
+        <span className="text-sm truncate flex-1 min-w-0">{program.program}</span>
+        <div className="flex items-center justify-end flex-shrink-0 gap-1" data-no-row-link="true">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedProgramForAssignment(program);
+                    setIsAssignIndividualProgramOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedProgramForAssignment(program);
+                      setIsAssignIndividualProgramOpen(true);
+                    }
+                  }}
+                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
+                  aria-label="Assign this program to a client"
+                >
+                  <User className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Assign this program to a client</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => handleToggleStar(program.id, e)}
+                  onKeyDown={(e) => handleStarKeyDown(program.id, e)}
+                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
+                  aria-label="Star this program"
+                >
+                  {isStarred ? (
+                    <Star className="h-4 w-4 fill-primary text-primary" />
+                  ) : (
+                    <Star className="h-4 w-4" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Star this program</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     );
   };
@@ -678,20 +699,57 @@ const ProgramsPage = () => {
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
       />
-      {selectedDescription && (
-        <DescriptionModal
-          open={descriptionModalOpen}
-          onOpenChange={setDescriptionModalOpen}
-          description={selectedDescription.description}
-          programName={selectedDescription.programName}
-        />
-      )}
       <SidePanel
         open={isAssignProgramOpen}
         onOpenChange={setIsAssignProgramOpen}
         title="Assign program"
       >
-        <AssignAthletesList onAthleteSelected={() => setIsAssignProgramOpen(false)} />
+        <AssignAthletesList
+          onAthleteSelected={(athleteId) => {
+            setIsAssignProgramOpen(false);
+            if (athleteId) {
+              if (selectedPrograms.size > 0) {
+                // For bulk assign, navigate with preselected program
+                const firstProgramId = Array.from(selectedPrograms)[0];
+                const program = mockPrograms.find((p) => p.id === firstProgramId);
+                if (program) {
+                  router.push(
+                    `/athletes/${athleteId}/training-calendar?programId=${program.id}&programName=${encodeURIComponent(program.program)}&openModal=true`
+                  );
+                }
+              } else {
+                // Generic assign - just open the program modal without preselection
+                router.push(
+                  `/athletes/${athleteId}/training-calendar?openModal=true&modalType=program`
+                );
+              }
+            }
+          }}
+        />
+      </SidePanel>
+      <SidePanel
+        open={isAssignIndividualProgramOpen}
+        onOpenChange={(open) => {
+          setIsAssignIndividualProgramOpen(open);
+          if (!open) {
+            setSelectedProgramForAssignment(null);
+          }
+        }}
+        title={selectedProgramForAssignment ? `Assigning ${selectedProgramForAssignment.program}` : 'Assign program'}
+      >
+        {selectedProgramForAssignment && (
+          <AssignAthletesList
+            navigateOnSelect={false}
+            onAthleteSelected={(athleteId) => {
+              if (athleteId) {
+                setIsAssignIndividualProgramOpen(false);
+                router.push(
+                  `/athletes/${athleteId}/training-calendar?programId=${selectedProgramForAssignment.id}&programName=${encodeURIComponent(selectedProgramForAssignment.program)}&openModal=true`
+                );
+              }
+            }}
+          />
+        )}
       </SidePanel>
       <SidePanel
         open={isCreateProgramOpen}
