@@ -24,7 +24,6 @@ import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/compon
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { generateWorkoutFromPrompt } from '@/lib/generate-exercise';
-import DescriptionModal from './description-modal';
 import { BasicInformation } from './new/basic-information';
 import {
   Search,
@@ -49,17 +48,17 @@ import {
   Download,
   Settings,
   Star,
+  User,
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
 
-type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
+type ColumnId = 'description' | 'type' | 'totalExercises' | 'equipment' | 'created';
 
 const COLUMN_ORDER: ColumnId[] = [
   'description',
   'type',
-  'length',
   'totalExercises',
   'equipment',
   'created',
@@ -68,7 +67,6 @@ const COLUMN_ORDER: ColumnId[] = [
 const WORKOUT_COLUMN_DEFINITIONS = [
   { id: 'description', label: 'Description', icon: <FileText className="size-3" /> },
   { id: 'type', label: 'Type', icon: <Tag className="size-3" /> },
-  { id: 'length', label: 'Length', icon: <Clock className="size-3" /> },
   { id: 'totalExercises', label: 'Total Exercises', icon: <Hash className="size-3" /> },
   { id: 'equipment', label: 'Equipment', icon: <Wrench className="size-3" /> },
   { id: 'created', label: 'Created', icon: <Calendar className="size-3" /> },
@@ -78,7 +76,6 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
     description: { class: 'min-w-[250px]', pixel: '250px' },
     type: { class: 'min-w-[140px]', pixel: '140px' },
-    length: { class: 'min-w-[130px]', pixel: '130px' },
     totalExercises: { class: 'min-w-[170px]', pixel: '170px' },
     equipment: { class: 'min-w-[200px]', pixel: '200px' },
     created: { class: 'min-w-[150px]', pixel: '150px' },
@@ -91,18 +88,11 @@ const WorkoutsPage = () => {
   const router = useRouter();
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
-  const [lengthFilter, setLengthFilter] = useState<string | null>(null);
   const [starredWorkouts, setStarredWorkouts] = useState<Set<string>>(new Set());
   const [starFilter, setStarFilter] = useState<string | null>(null);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
-  const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false);
   const itemsPerPage = 25;
-  const [selectedDescription, setSelectedDescription] = useState<{
-    id: string;
-    description: string;
-    programName: string;
-  } | null>(null);
   const [isCreateWorkoutOpen, setIsCreateWorkoutOpen] = useState<boolean>(false);
   const [newWorkoutName, setNewWorkoutName] = useState<string>('');
   const [newWorkoutType, setNewWorkoutType] = useState<string>('');
@@ -113,6 +103,8 @@ const WorkoutsPage = () => {
   const [newDifficultyError, setNewDifficultyError] = useState<string | null>(null);
   const [newSelectedBuilder, setNewSelectedBuilder] = useState<'standard' | 'ai' | null>('ai');
   const [isAssignWorkoutOpen, setIsAssignWorkoutOpen] = useState<boolean>(false);
+  const [isAssignIndividualWorkoutOpen, setIsAssignIndividualWorkoutOpen] = useState<boolean>(false);
+  const [selectedWorkoutForAssignment, setSelectedWorkoutForAssignment] = useState<Workout | null>(null);
   const [isCreateWorkoutStep2, setIsCreateWorkoutStep2] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -441,36 +433,8 @@ Focus on proper form and progressive overload.`;
     return `${months[date.getMonth()]} ${date.getDate()}, 20${year}`;
   };
 
-  const handleDescriptionClick = (event: React.MouseEvent, workout: Workout) => {
-    event.stopPropagation();
-    setSelectedDescription({
-      id: workout.id,
-      description: workout.description,
-      programName: workout.program,
-    });
-    setDescriptionModalOpen(true);
-  };
-
-  const handleDescriptionKeyDown = (event: React.KeyboardEvent, workout: Workout) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      event.stopPropagation();
-      setSelectedDescription({
-        id: workout.id,
-        description: workout.description,
-        programName: workout.program,
-      });
-      setDescriptionModalOpen(true);
-    }
-  };
 
   const uniqueTypes = Array.from(new Set(mockWorkouts.map((w) => w.type))).sort();
-  const uniqueLengths = Array.from(new Set(mockWorkouts.map((w) => w.length))).sort((a, b) => {
-    const aWeeks = parseInt(a.split(' ')[0]);
-    const bWeeks = parseInt(b.split(' ')[0]);
-    if (isNaN(aWeeks) || isNaN(bWeeks)) return a.localeCompare(b);
-    return aWeeks - bWeeks;
-  });
 
   // Create column definitions for DataGrid
   // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
@@ -498,22 +462,20 @@ Focus on proper form and progressive overload.`;
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
             renderCell: (row) => (
-              <div
-                role="button"
-                tabIndex={0}
-                aria-label={`View full description for ${row.program}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDescriptionClick(e, row);
-                }}
-                onKeyDown={(e) => {
-                  handleDescriptionKeyDown(e, row);
-                }}
-                data-no-row-link="true"
-                className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-              >
-                <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="max-w-[250px] break-words"
+                  side="top"
+                  align="start"
+                >
+                  <p className="whitespace-pre-wrap">{row.description}</p>
+                </TooltipContent>
+              </Tooltip>
             ),
           };
         case 'type':
@@ -530,26 +492,6 @@ Focus on proper form and progressive overload.`;
             renderCell: (row) => (
               <div className="flex items-center h-full">
                 <span className="text-sm">{row.type}</span>
-              </div>
-            ),
-          };
-        case 'length':
-          return {
-            id: 'length',
-            label: 'Length',
-            icon: <Clock className="size-3" />,
-            width: {
-              class: getColumnWidth('length', 'class'),
-              pixel: getColumnWidth('length', 'pixel'),
-            },
-            tooltip: 'The duration of the workout program',
-            getSortValue: (row) => {
-              const weeks = parseInt(row.length.split(' ')[0]);
-              return isNaN(weeks) ? 0 : weeks;
-            },
-            renderCell: (row) => (
-              <div className="flex items-center h-full">
-                <span className="text-sm">{row.length}</span>
               </div>
             ),
           };
@@ -581,44 +523,22 @@ Focus on proper form and progressive overload.`;
             },
             tooltip: 'The equipment required for this workout program',
             getSortValue: (row) => row.equipment.toLowerCase(),
-            renderCell: (row) => {
-              const equipmentList = row.equipment.split(', ').filter((item) => item.trim() !== '');
-              return (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`View equipment for ${row.program}`}
-                      data-no-row-link="true"
-                      className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }
-                      }}
-                    >
-                      <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
-                    </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
-                    {equipmentList.map((equipment, index) => (
-                      <DropdownMenuItem key={index} className="cursor-default pointer-events-none">
-                        {equipment}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
-            },
+            renderCell: (row) => (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="max-w-[200px] break-words"
+                  side="top"
+                  align="start"
+                >
+                  <p>{row.equipment}</p>
+                </TooltipContent>
+              </Tooltip>
+            ),
           };
         case 'created':
           return {
@@ -635,7 +555,7 @@ Focus on proper form and progressive overload.`;
               return new Date(2000 + year, month - 1, day).getTime();
             },
             renderCell: (row) => (
-              <div className="flex items-center h-full">
+              <div className="flex items-center h-full w-full pr-6">
                 <span className="text-sm">{formatDate(row.created)}</span>
               </div>
             ),
@@ -674,14 +594,6 @@ Focus on proper form and progressive overload.`;
       getFilterValue: (row) => (starredWorkouts.has(row.id) ? 'starred' : 'unstarred'),
       defaultValue: starFilter,
     },
-    {
-      id: 'length',
-      label: 'Length',
-      icon: <Clock className="size-4" />,
-      options: uniqueLengths.map((length) => ({ value: length, label: length })),
-      getFilterValue: (row) => row.length,
-      defaultValue: lengthFilter,
-    },
   ];
 
   const handleToggleStar = (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
@@ -714,7 +626,36 @@ Focus on proper form and progressive overload.`;
           <Checkbox checked={isSelected} onCheckedChange={() => handleToggleWorkout(workout.id)} />
         </div>
         <span className="text-sm truncate flex-1 min-w-0">{workout.program}</span>
-        <div className="flex items-center justify-end flex-shrink-0" data-no-row-link="true">
+        <div className="flex items-center justify-end flex-shrink-0 gap-1" data-no-row-link="true">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedWorkoutForAssignment(workout);
+                    setIsAssignIndividualWorkoutOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedWorkoutForAssignment(workout);
+                      setIsAssignIndividualWorkoutOpen(true);
+                    }
+                  }}
+                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
+                  aria-label="Assign this workout to a client"
+                >
+                  <User className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Assign this workout to a client</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -722,7 +663,7 @@ Focus on proper form and progressive overload.`;
                   type="button"
                   onClick={(e) => handleToggleStar(workout.id, e)}
                   onKeyDown={(e) => handleStarKeyDown(workout.id, e)}
-                  className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
                   aria-label="Star this workout"
                 >
                   {isStarred ? (
@@ -820,7 +761,6 @@ Focus on proper form and progressive overload.`;
           Program: row.program,
           Description: row.description,
           Type: row.type,
-          Length: row.length,
           'Total Exercises': row.totalExercises,
           Equipment: row.equipment,
           Created: row.created,
@@ -874,15 +814,6 @@ Focus on proper form and progressive overload.`;
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
       />
-      {selectedDescription && (
-        <DescriptionModal
-          open={descriptionModalOpen}
-          onOpenChange={setDescriptionModalOpen}
-          description={selectedDescription.description}
-          programName={selectedDescription.programName}
-          workoutId={selectedDescription.id}
-        />
-      )}
       <SidePanel
         open={isCreateWorkoutOpen}
         onOpenChange={(open) => {
@@ -1089,7 +1020,52 @@ Focus on proper form and progressive overload.`;
         onOpenChange={setIsAssignWorkoutOpen}
         title="Assign workout"
       >
-        <AssignAthletesList onAthleteSelected={() => setIsAssignWorkoutOpen(false)} />
+        <AssignAthletesList
+          onAthleteSelected={(athleteId) => {
+            setIsAssignWorkoutOpen(false);
+            if (athleteId) {
+              if (selectedWorkouts.size > 0) {
+                // For bulk assign, navigate with preselected workout
+                const firstWorkoutId = Array.from(selectedWorkouts)[0];
+                const workout = mockWorkouts.find((w) => w.id === firstWorkoutId);
+                if (workout) {
+                  router.push(
+                    `/athletes/${athleteId}/training-calendar?workoutId=${workout.id}&workoutName=${encodeURIComponent(workout.program)}&openModal=true`
+                  );
+                }
+              } else {
+                // Generic assign - just open the workout modal without preselection
+                router.push(
+                  `/athletes/${athleteId}/training-calendar?openModal=true&modalType=workout`
+                );
+              }
+            }
+          }}
+        />
+      </SidePanel>
+      <SidePanel
+        open={isAssignIndividualWorkoutOpen}
+        onOpenChange={(open) => {
+          setIsAssignIndividualWorkoutOpen(open);
+          if (!open) {
+            setSelectedWorkoutForAssignment(null);
+          }
+        }}
+        title={selectedWorkoutForAssignment ? `Assigning ${selectedWorkoutForAssignment.program}` : 'Assign workout'}
+      >
+        {selectedWorkoutForAssignment && (
+          <AssignAthletesList
+            navigateOnSelect={false}
+            onAthleteSelected={(athleteId) => {
+              if (athleteId) {
+                setIsAssignIndividualWorkoutOpen(false);
+                router.push(
+                  `/athletes/${athleteId}/training-calendar?workoutId=${selectedWorkoutForAssignment.id}&workoutName=${encodeURIComponent(selectedWorkoutForAssignment.program)}&openModal=true`
+                );
+              }
+            }}
+          />
+        )}
       </SidePanel>
     </div>
   );
