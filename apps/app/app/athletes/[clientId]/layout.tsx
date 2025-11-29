@@ -20,15 +20,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ChevronRight, MessageCircle, Trash2, Users, X } from 'lucide-react';
+import { Archive, ChevronRight, MessageCircle, Users, X } from 'lucide-react';
 import { mockAthletes } from '@/components/app/app-shell';
 
 type ClientProfileLayoutProps = {
@@ -146,6 +140,8 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
     .slice(0, 2)
     .join('');
 
+  const firstName = athlete.name.split(' ')[0];
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
@@ -196,14 +192,14 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
                 variant="secondary"
                 size="icon"
                 className="gap-2"
-                aria-label="Delete client options"
+                aria-label="Archive client options"
               >
-                <Trash2 className="size-4" />
+                <Archive className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsDeleteModalOpen(true)}>
-                Continue
+                {`Archive ${firstName}`}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -218,7 +214,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 py-4 bg-sidebar">{children}</div>
+      <div className="w-full flex-1 overflow-auto bg-background">{children}</div>
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent
           className="w-full max-w-[500px] sm:max-w-[500px] flex flex-col"

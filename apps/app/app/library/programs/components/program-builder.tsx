@@ -14,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Check, ChevronRight, X, ChevronLeft, Calendar, Plus, Copy, Trash2, Search, Undo, Redo } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DiscardChangesDialog } from '@/app/library/workouts/new/components/discard-changes-dialog';
 
 type ProgramMeta = {
@@ -84,6 +84,60 @@ export const ProgramBuilder = ({
     totalWeeks: number;
   }>({ workoutsByDay: {}, totalWeeks: 1 });
   const [isLoading, setIsLoading] = useState<boolean>(mode === 'edit');
+  const [selectedWorkoutDetails, setSelectedWorkoutDetails] = useState<{
+    week: number;
+    day: number;
+    workout: Workout & { id: string };
+  } | null>(null);
+
+  type PreviewExercise = {
+    id: string;
+    name: string;
+    sets: string;
+  };
+
+  type PreviewSection = {
+    id: string;
+    type: 'regular' | 'amrap' | 'timed';
+    exercises: PreviewExercise[];
+  };
+
+  const buildMockPreviewSections = (workout: Workout): PreviewSection[] => {
+    return [
+      {
+        id: 'sec-1',
+        type: 'regular',
+        exercises: [
+          {
+            id: 'ex-1',
+            name: `${workout.program} - Main lift`,
+            sets: '3 x 8–10',
+          },
+          {
+            id: 'ex-2',
+            name: 'Accessory 1',
+            sets: '3 x 10–12',
+          },
+          {
+            id: 'ex-3',
+            name: 'Accessory 2',
+            sets: '3 x 12–15',
+          },
+        ],
+      },
+      {
+        id: 'sec-2',
+        type: 'timed',
+        exercises: [
+          {
+            id: 'ex-4',
+            name: 'Finisher circuit',
+            sets: '10 min',
+          },
+        ],
+      },
+    ];
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -426,6 +480,18 @@ export const ProgramBuilder = ({
       saveToHistory(updated);
       return updated;
     });
+  };
+
+  const handleOpenWorkoutDetails = (
+    week: number,
+    day: number,
+    workout: Workout & { id: string },
+  ) => {
+    setSelectedWorkoutDetails({ week, day, workout });
+  };
+
+  const handleCloseWorkoutDetails = () => {
+    setSelectedWorkoutDetails(null);
   };
 
   // Format date from dd-mm-yy format to "7 Mar, 2025"
@@ -777,14 +843,28 @@ export const ProgramBuilder = ({
                             {workouts.map((workout) => (
                               <div
                                 key={workout.id}
-                                className="p-2 rounded-lg border border-border bg-background flex items-start justify-between gap-2"
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`View details for workout ${workout.program}`}
+                                onClick={() => handleOpenWorkoutDetails(week, dayInWeek, workout)}
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    handleOpenWorkoutDetails(week, dayInWeek, workout);
+                                  }
+                                }}
+                                className="p-2 rounded-lg border border-border bg-background flex items-start justify-between gap-2 cursor-pointer"
                               >
                                 <div className="flex-1 min-w-0">
-                                  <span className="text-sm font-medium block truncate">
+                                  <span
+                                    className="text-[10px] font-medium block break-words line-clamp-2"
+                                    title={workout.program}
+                                  >
                                     {workout.program}
                                   </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {workout.totalExercises} {workout.totalExercises === 1 ? 'exercise' : 'exercises'}
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {workout.totalExercises}{' '}
+                                    {workout.totalExercises === 1 ? 'exercise' : 'exercises'}
                                   </span>
                                 </div>
                                 <Button
@@ -792,7 +872,10 @@ export const ProgramBuilder = ({
                                   variant="ghost"
                                   size="icon"
                                   className="h-5 w-5 flex-shrink-0"
-                                  onClick={() => handleDeleteWorkout(week, dayInWeek, workout.id)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleDeleteWorkout(week, dayInWeek, workout.id);
+                                  }}
                                   aria-label="Delete workout"
                                 >
                                   <Trash2 className="size-3 text-muted-foreground hover:text-destructive" />
@@ -1127,6 +1210,138 @@ export const ProgramBuilder = ({
                 Add
               </Button>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!selectedWorkoutDetails} onOpenChange={(open) => !open && handleCloseWorkoutDetails()}>
+        <DialogContent className="max-w-5xl sm:max-w-5xl h-[600px] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex-1 min-w-0">
+              <span
+                className="block truncate text-left"
+                title={selectedWorkoutDetails?.workout.program}
+              >
+                {selectedWorkoutDetails?.workout.program}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedWorkoutDetails && (
+            <>
+              <Separator />
+              <div className="flex flex-1 min-h-0 gap-4 pt-3">
+                <div className="flex-[3] h-full overflow-y-auto">
+                  <div className="flex flex-col gap-3">
+                    <Card className="p-4 border rounded-lg bg-background">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className="text-sm font-medium truncate"
+                            title={selectedWorkoutDetails.workout.program}
+                          >
+                            {selectedWorkoutDetails.workout.program}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(selectedWorkoutDetails.workout.created)}
+                          </span>
+                        </div>
+                        {selectedWorkoutDetails.workout.description && (
+                          <span className="text-xs text-muted-foreground line-clamp-3">
+                            {selectedWorkoutDetails.workout.description}
+                          </span>
+                        )}
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="secondary" className="text-xs">
+                            Type: {selectedWorkoutDetails.workout.type}
+                          </Badge>
+                          {selectedWorkoutDetails.workout.equipment &&
+                            selectedWorkoutDetails.workout.equipment
+                              .split(',')
+                              .filter((item) => item.trim() !== '').length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                {selectedWorkoutDetails.workout.equipment
+                                  .split(',')
+                                  .map((item) => item.trim())
+                                  .filter((item) => item !== '')
+                                  .join(', ')}
+                              </Badge>
+                            )}
+                        </div>
+                      </div>
+                    </Card>
+                    {buildMockPreviewSections(selectedWorkoutDetails.workout).map((section) => (
+                      <Card key={section.id} className="bg-background flex flex-col">
+                        <CardHeader className="px-3 py-2 border-b">
+                          <CardTitle className="uppercase tracking-wide text-[11px] font-medium flex items-center gap-2">
+                            {section.type}{' '}
+                            <span className="font-normal text-[10px]">
+                              ({section.exercises.length})
+                            </span>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-3 py-2">
+                          <div className="flex flex-col gap-1">
+                            {section.exercises.map((exercise) => (
+                              <div
+                                key={exercise.id}
+                                className="flex items-center justify-between gap-2 rounded-md border bg-muted/60 px-2 py-1.5"
+                              >
+                                <div className="flex flex-col min-w-0">
+                                  <span
+                                    className="text-[11px] font-medium truncate"
+                                    title={exercise.name}
+                                  >
+                                    {exercise.name}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {exercise.sets}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+                <Separator orientation="vertical" className="h-full" />
+                <div className="flex-[1.5] h-full overflow-y-auto">
+                  <div className="flex flex-col gap-2">
+                    <h2 className="text-xs font-semibold uppercase tracking-wide">Overview</h2>
+                    <div className="flex flex-col gap-2">
+                      {buildMockPreviewSections(selectedWorkoutDetails.workout).map((section) => (
+                        <Card
+                          key={section.id}
+                          className="border rounded-lg bg-card/80 shadow-sm flex flex-col"
+                        >
+                          <CardHeader className="px-3 py-2 border-b">
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {section.type}{' '}
+                              <span className="font-normal">
+                                ({section.exercises.length})
+                              </span>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-2 flex flex-col gap-1">
+                            {section.exercises.map((exercise) => (
+                              <div
+                                key={exercise.id}
+                                className="flex items-center gap-2 rounded-md border bg-background px-2 py-1"
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                                <span className="text-[11px] flex-1 min-w-0 truncate">
+                                  {exercise.name}
+                                </span>
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

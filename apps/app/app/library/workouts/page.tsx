@@ -99,6 +99,7 @@ const WorkoutsPage = () => {
   const [descriptionModalOpen, setDescriptionModalOpen] = useState<boolean>(false);
   const itemsPerPage = 25;
   const [selectedDescription, setSelectedDescription] = useState<{
+    id: string;
     description: string;
     programName: string;
   } | null>(null);
@@ -440,25 +441,25 @@ Focus on proper form and progressive overload.`;
     return `${months[date.getMonth()]} ${date.getDate()}, 20${year}`;
   };
 
-  const handleDescriptionClick = (
-    event: React.MouseEvent,
-    description: string,
-    programName: string
-  ) => {
+  const handleDescriptionClick = (event: React.MouseEvent, workout: Workout) => {
     event.stopPropagation();
-    setSelectedDescription({ description, programName });
+    setSelectedDescription({
+      id: workout.id,
+      description: workout.description,
+      programName: workout.program,
+    });
     setDescriptionModalOpen(true);
   };
 
-  const handleDescriptionKeyDown = (
-    event: React.KeyboardEvent,
-    description: string,
-    programName: string
-  ) => {
+  const handleDescriptionKeyDown = (event: React.KeyboardEvent, workout: Workout) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       event.stopPropagation();
-      setSelectedDescription({ description, programName });
+      setSelectedDescription({
+        id: workout.id,
+        description: workout.description,
+        programName: workout.program,
+      });
       setDescriptionModalOpen(true);
     }
   };
@@ -503,10 +504,10 @@ Focus on proper form and progressive overload.`;
                 aria-label={`View full description for ${row.program}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDescriptionClick(e, row.description, row.program);
+                  handleDescriptionClick(e, row);
                 }}
                 onKeyDown={(e) => {
-                  handleDescriptionKeyDown(e, row.description, row.program);
+                  handleDescriptionKeyDown(e, row);
                 }}
                 data-no-row-link="true"
                 className="flex items-center h-full cursor-pointer hover:text-primary transition-colors min-w-0 w-full"
@@ -879,6 +880,7 @@ Focus on proper form and progressive overload.`;
           onOpenChange={setDescriptionModalOpen}
           description={selectedDescription.description}
           programName={selectedDescription.programName}
+          workoutId={selectedDescription.id}
         />
       )}
       <SidePanel
