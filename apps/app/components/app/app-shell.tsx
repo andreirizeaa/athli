@@ -12,7 +12,6 @@ import {
   Check,
   CreditCard,
   ChevronsLeft,
-  HelpCircle,
   Home,
   Laptop,
   LogOut,
@@ -1901,17 +1900,6 @@ const AppShellContent = ({
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                className="text-xs"
-              >
-                <Link href="/support">
-                  <HelpCircle className="shrink-0" />
-                  {!isCollapsed && <span>{t('sidebar.support.label') || 'Support'}</span>}
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton className="text-xs bg-primary !text-primary-foreground hover:bg-primary/90 [&_svg]:!text-primary-foreground">
@@ -2376,7 +2364,7 @@ const AppShellContent = ({
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
                   <DropdownMenuItem
-                    className="cursor-pointer px-3 py-2 rounded-t-none rounded-b-none"
+                    className="cursor-pointer px-3 py-2 rounded-b-none"
                     asChild
                   >
                     <Link href="/settings">
