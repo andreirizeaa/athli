@@ -561,9 +561,9 @@ export const ProgramBuilder = ({
     const startWeek = currentWeek;
     const endWeek = Math.min(currentWeek + weeksView - 1, totalWeeks);
     if (weeksView === 1) {
-      return `Week ${startWeek} of ${totalWeeks}`;
+      return t('programs.builder.weekRange', { start: startWeek, total: totalWeeks });
     }
-    return `Week ${startWeek}-${endWeek} of ${totalWeeks}`;
+    return t('programs.builder.weekRangeMultiple', { start: startWeek, end: endWeek, total: totalWeeks });
   };
 
   // Check if 2 weeks view is available
@@ -692,7 +692,7 @@ export const ProgramBuilder = ({
               aria-label={t('programs.builder.addWeekAria')}
             >
               <Plus className="size-4" />
-              <span>Add week</span>
+              <span>{t('programs.builder.addWeek')}</span>
             </Button>
             <Button
               type="button"
@@ -722,7 +722,7 @@ export const ProgramBuilder = ({
               <TabsTrigger
                 value="1"
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                title="Show 1 week at a time on screen"
+                title={t('programs.builder.showOneWeek')}
               >
                 1 week
               </TabsTrigger>
@@ -732,8 +732,8 @@ export const ProgramBuilder = ({
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
                   is2WeeksAvailable
-                    ? 'Show 2 weeks at a time on screen'
-                    : '2 weeks view requires total weeks to be divisible by 2'
+                    ? t('programs.builder.showTwoWeeks')
+                    : t('programs.builder.twoWeeksRequirement')
                 }
               >
                 2 weeks
@@ -744,8 +744,8 @@ export const ProgramBuilder = ({
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
                   is4WeeksAvailable
-                    ? 'Show 4 weeks at a time on screen'
-                    : '4 weeks view requires total weeks to be divisible by 4'
+                    ? t('programs.builder.showFourWeeks')
+                    : t('programs.builder.fourWeeksRequirement')
                 }
               >
                 4 weeks
@@ -772,13 +772,13 @@ export const ProgramBuilder = ({
                             size="icon"
                             className="h-6 w-6"
                             onClick={() => handleDuplicateWeek(weekNumber)}
-                            aria-label="Duplicate week"
+                            aria-label={t('programs.builder.duplicateWeekAria')}
                           >
                             <Copy className="size-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Duplicate week</p>
+                          <p>{t('programs.builder.duplicateWeek')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -792,20 +792,20 @@ export const ProgramBuilder = ({
                             className="h-6 w-6"
                             onClick={() => handleDeleteWeek(weekNumber)}
                             disabled={totalWeeks === 1}
-                            aria-label="Delete week"
+                            aria-label={t('programs.builder.deleteWeekAria')}
                           >
                             <Trash2 className="size-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
-                          <p>Delete week</p>
+                          <p>{t('programs.builder.deleteWeek')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                   <div className="flex-1 flex items-center justify-center">
                     <span className="text-xs uppercase text-muted-foreground -rotate-90 whitespace-nowrap">
-                      Week {weekNumber}
+                      {t('programs.builder.weekLabel', { number: weekNumber })}
                     </span>
                   </div>
                 </div>
@@ -818,7 +818,7 @@ export const ProgramBuilder = ({
                       className="flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full"
                     >
                       <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
-                        <span className="text-xs uppercase text-muted-foreground">{t('library.day')} {day}</span>
+                        <span className="text-xs uppercase text-muted-foreground">{t('programs.builder.dayLabel', { number: day })}</span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -847,7 +847,7 @@ export const ProgramBuilder = ({
                                 key={workout.id}
                                 role="button"
                                 tabIndex={0}
-                                aria-label={`View details for workout ${workout.program}`}
+                                aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
                                 onClick={() => handleOpenWorkoutDetails(week, dayInWeek, workout)}
                                 onKeyDown={(event) => {
                                   if (event.key === 'Enter' || event.key === ' ') {
@@ -954,7 +954,7 @@ export const ProgramBuilder = ({
                           className="p-3 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors"
                           role="button"
                           tabIndex={0}
-                          aria-label={`Select workout ${workout.program}`}
+                          aria-label={t('programs.builder.selectWorkout', { name: workout.program })}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
@@ -991,7 +991,7 @@ export const ProgramBuilder = ({
                     })
                   ) : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
-                      {t('workouts.emptyMessage')}
+                      {t('programs.builder.addWorkout.noWorkoutsFound')}
                     </div>
                   )}
                 </div>
@@ -1099,7 +1099,7 @@ export const ProgramBuilder = ({
                         )}
                         role="button"
                         tabIndex={0}
-                        aria-label="Select repeat every days option"
+                        aria-label={t('programs.builder.selectRepeatEveryDays')}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -1152,7 +1152,7 @@ export const ProgramBuilder = ({
                         )}
                         role="button"
                         tabIndex={0}
-                        aria-label="Select repeat weekly option"
+                        aria-label={t('programs.builder.selectRepeatWeekly')}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -1253,7 +1253,7 @@ export const ProgramBuilder = ({
                         )}
                         <div className="flex flex-wrap gap-1">
                           <Badge variant="secondary" className="text-xs">
-                            Type: {selectedWorkoutDetails.workout.type}
+                            {t('general.type')}: {selectedWorkoutDetails.workout.type}
                           </Badge>
                           {selectedWorkoutDetails.workout.equipment &&
                             selectedWorkoutDetails.workout.equipment
@@ -1309,7 +1309,7 @@ export const ProgramBuilder = ({
                 <Separator orientation="vertical" className="h-full" />
                 <div className="flex-[1.5] h-full overflow-y-auto">
                   <div className="flex flex-col gap-2">
-                    <h2 className="text-xs font-semibold uppercase tracking-wide">Overview</h2>
+                    <h2 className="text-xs font-semibold uppercase tracking-wide">{t('programs.builder.overview')}</h2>
                     <div className="flex flex-col gap-2">
                       {buildMockPreviewSections(selectedWorkoutDetails.workout).map((section) => (
                         <Card
