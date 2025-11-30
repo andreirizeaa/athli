@@ -446,15 +446,7 @@ const AthletesPage = () => {
   };
 
   const handleNavigateToMessages = (athleteId: string) => {
-    if (typeof window !== 'undefined') {
-      try {
-        window.sessionStorage.setItem('messagingSelectedContactId', athleteId);
-      } catch {
-        // Ignore storage errors
-      }
-    }
-
-    router.push(`/messaging?contact=${athleteId}`);
+    router.push(`/messaging/${athleteId}`);
   };
 
   const handleNavigateToTrainingCalendar = (athleteId: string) => {

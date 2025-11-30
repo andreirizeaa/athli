@@ -1703,7 +1703,7 @@ const AppShellContent = ({
   );
 
   const handleSearchResultClick = (contactId: string) => {
-    router.push(`/messaging?contact=${contactId}`);
+    router.push(`/messaging/${contactId}`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
