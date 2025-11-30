@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   Search,
   Send,
@@ -130,6 +131,7 @@ const formatNoteDate = (timestamp: number): string => {
 };
 
 const MessagingPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const params = useParams();
   const contactIdFromPath = params?.contactId as string | undefined;
@@ -1629,22 +1631,24 @@ const MessagingPage = () => {
         <div className="px-4 flex flex-col gap-2 mb-2 mt-2 relative">
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
-              <h1 className="text-[22px] font-semibold">Messages</h1>
+              <h1 className="text-[22px] font-semibold">{t('messages.title')}</h1>
               <p className="text-sm mt-1 mb-4">
                 {filteredContacts.length}{' '}
-                {filteredContacts.length === 1 ? 'conversation' : 'conversations'}
+                {filteredContacts.length === 1
+                  ? t('messages.conversation')
+                  : t('messages.conversations')}
               </p>
             </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="h-9 absolute top-0 right-4 gap-2" aria-label="Broadcast">
+              <Button className="h-9 absolute top-0 right-4 gap-2" aria-label={t('messages.broadcast')}>
                 <RadioTower className="h-4 w-4" />
-                Broadcast
+                {t('messages.broadcast')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>Coming soon!</DropdownMenuItem>
+              <DropdownMenuItem disabled>{t('messages.comingSoon')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -1652,25 +1656,25 @@ const MessagingPage = () => {
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search messages..."
+                placeholder={t('messages.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 h-9"
-                aria-label="Search messages"
+                aria-label={t('messages.searchPlaceholder')}
               />
             </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2 h-9" aria-label="Sort messages">
-                    Sort:{' '}
+                  <Button variant="outline" className="gap-2 h-9" aria-label={t('general.sort')}>
+                    {t('general.sort')}:{' '}
                     {sortFilter === 'all'
-                      ? 'All'
+                      ? t('general.all')
                       : sortFilter === 'unread'
-                        ? 'Unread'
+                        ? t('messages.sortUnread')
                         : sortFilter === 'read'
-                          ? 'Read'
-                          : 'Oldest'}
+                          ? t('messages.sortRead')
+                          : t('messages.sortOldest')}
                     <ChevronDown className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1680,28 +1684,28 @@ const MessagingPage = () => {
                       value="unread"
                       className={cn(sortFilter === 'unread' && 'bg-accent')}
                     >
-                      Unread
+                      {t('messages.sortUnread')}
                       {sortFilter === 'unread' && <Check className="ml-2 size-4" />}
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem
                       value="read"
                       className={cn(sortFilter === 'read' && 'bg-accent')}
                     >
-                      Read
+                      {t('messages.sortRead')}
                       {sortFilter === 'read' && <Check className="ml-2 size-4" />}
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem
                       value="oldest"
                       className={cn(sortFilter === 'oldest' && 'bg-accent')}
                     >
-                      Oldest
+                      {t('messages.sortOldest')}
                       {sortFilter === 'oldest' && <Check className="ml-2 size-4" />}
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem
                       value="all"
                       className={cn(sortFilter === 'all' && 'bg-accent')}
                     >
-                      All
+                      {t('general.all')}
                       {sortFilter === 'all' && <Check className="ml-2 size-4" />}
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
@@ -1710,10 +1714,10 @@ const MessagingPage = () => {
               <Button
                 onClick={() => setIsNewMessageOpen(true)}
                 className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
-                aria-label="New message"
+                aria-label={t('messages.newMessage')}
               >
                 <MessageCirclePlus className="size-4" />
-                New message
+                {t('messages.newMessage')}
               </Button>
             </div>
           </div>
@@ -1729,7 +1733,7 @@ const MessagingPage = () => {
               columns={[
                 {
                   id: 'name',
-                  label: 'Athlete',
+                  label: t('messages.athlete'),
                   icon: <User className="size-3" />,
                   width: { class: 'w-full', pixel: '100%' },
                   getSortValue: (row) => row.name.toLowerCase(),
@@ -1753,9 +1757,9 @@ const MessagingPage = () => {
                           <span
                             className="font-medium text-muted-foreground flex-shrink-0 border border-muted-foreground/30 rounded px-1.5 py-0.5"
                             style={{ fontSize: '12px' }}
-                            aria-label="Draft message"
+                            aria-label={t('messages.draft')}
                           >
-                            DRAFT
+                            {t('messages.draft')}
                           </span>
                         )}
                       </div>
@@ -1806,7 +1810,7 @@ const MessagingPage = () => {
                   router.push(`/messaging/${contact.id}`);
                 }
               }}
-              emptyMessage="No contacts found."
+              emptyMessage={t('messages.noContactsFound')}
               rowHeight="54px"
               compactMode={true}
               showPagination={true}
@@ -1833,10 +1837,10 @@ const MessagingPage = () => {
                     </div>
                     <div>
                       <p className="text-lg font-semibold text-foreground">
-                        Drop your PDFs, videos or images here
+                        {t('messages.dropFilesHere')}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Files will be added to the message composer
+                        {t('messages.filesWillBeAdded')}
                       </p>
                     </div>
                   </div>
@@ -1866,18 +1870,14 @@ const MessagingPage = () => {
                                 router.push(`/athletes/${selectedContact.id}/training-calendar`)
                               }
                               className="gap-2 h-7 text-xs"
-                              aria-label="View training calendar"
+                              aria-label={t('messages.viewTrainingCalendar')}
                             >
                               <Dumbbell className="size-3" />
-                              Training
+                              {t('messages.training')}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>
-                              View{' '}
-                              {selectedContact.name.split(' ')[0] || selectedContact.name}'s training
-                              calendar
-                            </p>
+                            <p>{t('messages.viewTrainingCalendar')}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1889,16 +1889,18 @@ const MessagingPage = () => {
                               size="sm"
                               onClick={() => router.push(`/athletes/${selectedContact.id}/overview`)}
                               className="gap-2 h-7 text-xs"
-                              aria-label="View profile"
+                              aria-label={t('general.profile')}
                             >
                               <User className="size-3" />
-                              Profile
+                              {t('general.profile')}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>
-                              View{' '}
-                              {selectedContact.name.split(' ')[0] || selectedContact.name}'s profile
+                              {t('messages.viewProfile', {
+                                name:
+                                  selectedContact.name.split(' ')[0] || selectedContact.name,
+                              })}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -1960,7 +1962,7 @@ const MessagingPage = () => {
                                         }}
                                         role="button"
                                         tabIndex={0}
-                                        aria-label={`Download ${image.name}`}
+                                        aria-label={t('messages.download', { name: image.name })}
                                         onKeyDown={(e) => {
                                           if (e.key === 'Enter' || e.key === ' ') {
                                             e.preventDefault();
@@ -2012,7 +2014,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label="Reply"
+                                          aria-label={t('messages.reply')}
                                           onClick={() => {
                                             setReplyingToMessage(message);
                                             setTextareaHeight(60);
@@ -2025,7 +2027,7 @@ const MessagingPage = () => {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Reply</p>
+                                        <p>{t('messages.reply')}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -2037,7 +2039,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label="Delete images"
+                                          aria-label={t('messages.deleteImages')}
                                         >
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -2065,7 +2067,7 @@ const MessagingPage = () => {
                                           }}
                                         >
                                           <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete all images
+                                          {t('messages.deleteAllImages')}
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -2085,7 +2087,7 @@ const MessagingPage = () => {
                                 <div
                                   role="button"
                                   tabIndex={0}
-                                  aria-label={`Download ${message.pdf.name}`}
+                                  aria-label={t('messages.download', { name: message.pdf.name })}
                                   onClick={() => handleDownloadMessagePdf(message.pdf)}
                                   onKeyDown={(e) => handleMessagePdfPreviewKeyDown(e, message.pdf)}
                                   className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
@@ -2097,7 +2099,7 @@ const MessagingPage = () => {
                                     <p className="text-sm font-medium text-foreground truncate">
                                       {message.pdf.name}
                                     </p>
-                                    <p className="text-xs text-muted-foreground">PDF</p>
+                                    <p className="text-xs text-muted-foreground">{t('messages.pdf')}</p>
                                   </div>
                                 </div>
                                 <div
@@ -2116,7 +2118,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label="Reply"
+                                          aria-label={t('messages.reply')}
                                           onClick={() => {
                                             setReplyingToMessage(message);
                                             setTextareaHeight(60);
@@ -2129,7 +2131,7 @@ const MessagingPage = () => {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Reply</p>
+                                        <p>{t('messages.reply')}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -2141,7 +2143,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label="Delete PDF"
+                                          aria-label={t('messages.deletePdf')}
                                         >
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -2153,7 +2155,7 @@ const MessagingPage = () => {
                                           }}
                                         >
                                           <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete
+                                          {t('general.delete')}
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -2173,7 +2175,9 @@ const MessagingPage = () => {
                                 <div
                                   role="button"
                                   tabIndex={0}
-                                  aria-label={`Download ${message.video?.name || 'video'}`}
+                                  aria-label={t('messages.download', {
+                                    name: message.video?.name || t('messages.video'),
+                                  })}
                                   onClick={() =>
                                     message.video && handleDownloadMessageVideo(message.video)
                                   }
@@ -2188,9 +2192,9 @@ const MessagingPage = () => {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-foreground truncate">
-                                      {message.video?.name || 'Video'}
+                                      {message.video?.name || t('messages.video')}
                                     </p>
-                                    <p className="text-xs text-muted-foreground">MP4</p>
+                                    <p className="text-xs text-muted-foreground">{t('messages.mp4')}</p>
                                   </div>
                                 </div>
                                 <div
@@ -2209,7 +2213,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label="Reply"
+                                          aria-label={t('messages.reply')}
                                           onClick={() => {
                                             setReplyingToMessage(message);
                                             setTextareaHeight(60);
@@ -2222,7 +2226,7 @@ const MessagingPage = () => {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Reply</p>
+                                        <p>{t('messages.reply')}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -2234,7 +2238,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label="Delete video"
+                                          aria-label={t('messages.deleteVideo')}
                                         >
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -2246,7 +2250,7 @@ const MessagingPage = () => {
                                           }}
                                         >
                                           <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete
+                                          {t('general.delete')}
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -2283,7 +2287,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label="Reply"
+                                          aria-label={t('messages.reply')}
                                           onClick={() => {
                                             setReplyingToMessage(message);
                                             // Force textarea to be multi-line
@@ -2298,7 +2302,7 @@ const MessagingPage = () => {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>Reply</p>
+                                        <p>{t('messages.reply')}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -2315,7 +2319,7 @@ const MessagingPage = () => {
                                           variant="ghost"
                                           size="icon"
                                           className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 data-[state=open]:bg-gray-200 dark:data-[state=open]:bg-white/10"
-                                          aria-label="Delete message"
+                                          aria-label={t('messages.deleteMessage')}
                                         >
                                           <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -2347,7 +2351,7 @@ const MessagingPage = () => {
                                           }}
                                         >
                                           <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete
+                                          {t('general.delete')}
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -2375,7 +2379,7 @@ const MessagingPage = () => {
                                         className={cn('text-xs font-semibold', 'text-foreground')}
                                       >
                                         {message.replyTo.isSent
-                                          ? 'Yourself'
+                                          ? t('messages.yourself')
                                           : selectedContact?.name || 'user'}
                                       </span>
                                     </div>
@@ -2502,7 +2506,7 @@ const MessagingPage = () => {
                                 <div
                                   role="button"
                                   tabIndex={0}
-                                  aria-label={`Download ${image.name}`}
+                                  aria-label={t('messages.download', { name: image.name })}
                                   onClick={() => handleDownloadImage(image)}
                                   onKeyDown={(e) => handleImagePreviewKeyDown(e, image)}
                                   className="bg-muted rounded-lg p-1.5 cursor-pointer hover:bg-muted/80 transition-colors"
@@ -2524,7 +2528,7 @@ const MessagingPage = () => {
                                     e.stopPropagation();
                                     handleRemoveImage(index);
                                   }}
-                                  aria-label={`Remove ${image.name}`}
+                                  aria-label={t('messages.remove', { name: image.name })}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ' ') {
                                       e.preventDefault();
@@ -2549,7 +2553,7 @@ const MessagingPage = () => {
                             <div
                               role="button"
                               tabIndex={0}
-                              aria-label={`Download ${attachedPdf.name}`}
+                              aria-label={t('messages.download', { name: attachedPdf.name })}
                               onClick={handleDownloadPdf}
                               onKeyDown={handlePdfPreviewKeyDown}
                               className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -2570,7 +2574,7 @@ const MessagingPage = () => {
                               size="icon"
                               className="h-6 w-6 flex-shrink-0"
                               onClick={handleRemovePdf}
-                              aria-label="Remove PDF"
+                              aria-label={t('messages.removePdf')}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -2586,7 +2590,7 @@ const MessagingPage = () => {
                             <div
                               role="button"
                               tabIndex={0}
-                              aria-label={`Download ${attachedVideo.name}`}
+                              aria-label={t('messages.download', { name: attachedVideo.name })}
                               onClick={handleDownloadVideo}
                               onKeyDown={handleVideoPreviewKeyDown}
                               className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
@@ -2598,7 +2602,7 @@ const MessagingPage = () => {
                                 <p className="text-sm font-medium text-foreground truncate">
                                   {attachedVideo.name}
                                 </p>
-                                <p className="text-xs text-muted-foreground">MP4</p>
+                                <p className="text-xs text-muted-foreground">{t('messages.mp4')}</p>
                               </div>
                             </div>
                             <Button
@@ -2607,7 +2611,7 @@ const MessagingPage = () => {
                               size="icon"
                               className="h-6 w-6 flex-shrink-0"
                               onClick={handleRemoveVideo}
-                              aria-label="Remove video"
+                              aria-label={t('messages.removeVideo')}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -2625,7 +2629,7 @@ const MessagingPage = () => {
                                 <Reply className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                 <span className="text-xs font-semibold text-foreground">
                                   {replyingToMessage.isSent
-                                    ? 'Yourself'
+                                    ? t('messages.yourself')
                                     : selectedContact?.name || 'user'}
                                 </span>
                               </div>
@@ -2680,7 +2684,7 @@ const MessagingPage = () => {
                                 setReplyingToMessage(null);
                                 setTextareaHeight(36);
                               }}
-                              aria-label="Cancel reply"
+                              aria-label={t('messages.cancelReply')}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -2692,7 +2696,7 @@ const MessagingPage = () => {
                         type="file"
                         className="hidden"
                         onChange={handleFileChange}
-                        aria-label="Upload file"
+                        aria-label={t('messages.uploadFile')}
                         accept="*/*"
                       />
                       <input
@@ -2700,7 +2704,7 @@ const MessagingPage = () => {
                         type="file"
                         className="hidden"
                         onChange={handleImageChange}
-                        aria-label="Upload image"
+                        aria-label={t('messages.uploadImage')}
                         accept="image/*"
                         multiple
                       />
@@ -2709,7 +2713,7 @@ const MessagingPage = () => {
                         type="file"
                         className="hidden"
                         onChange={handlePdfChange}
-                        aria-label="Upload PDF"
+                        aria-label={t('messages.uploadPdf')}
                         accept=".pdf"
                       />
                       <input
@@ -2717,7 +2721,7 @@ const MessagingPage = () => {
                         type="file"
                         className="hidden"
                         onChange={handleVideoChange}
-                        aria-label="Upload video"
+                        aria-label={t('messages.uploadVideo')}
                         accept="video/mp4,.mp4"
                       />
                       {(!textareaHeight || textareaHeight <= 36) &&
@@ -2735,7 +2739,7 @@ const MessagingPage = () => {
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                    aria-label="Attach file"
+                                    aria-label={t('messages.attachFile')}
                                   >
                                     <Plus className="h-4 w-4" />
                                   </Button>
@@ -2744,27 +2748,27 @@ const MessagingPage = () => {
                               <DropdownMenuContent align="start">
                                 <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
                                   <ImageIcon className="mr-2 size-4" />
-                                  Images
+                                  {t('messages.images')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
                                   <FileText className="mr-2 size-4" />
-                                  PDFs
+                                  {t('messages.pdfs')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
                                   <Video className="mr-2 size-4" />
-                                  Videos
+                                  {t('messages.videos')}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                             <TooltipContent>
-                              <p>Attach files</p>
+                              <p>{t('messages.attachFiles')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : null}
                       <Textarea
                         ref={textareaRef}
-                        placeholder="Type, dictate or upload a file..."
+                        placeholder={t('messages.typeMessagePlaceholder')}
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
                         onKeyDown={handleKeyDown}
@@ -2772,7 +2776,7 @@ const MessagingPage = () => {
                           'flex-1 min-w-0 resize-none min-h-[36px] max-h-[120px] py-2 bg-muted dark:bg-muted border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-muted dark:focus-visible:bg-muted',
                           textareaHeight > 36 && 'pr-10'
                         )}
-                        aria-label="Type a message"
+                        aria-label={t('messages.typeMessage')}
                         rows={1}
                       />
                       {textareaHeight > 36 || replyingToMessage || attachedPdf || attachedVideo ? (
@@ -2788,7 +2792,7 @@ const MessagingPage = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                        aria-label="Attach file"
+                                        aria-label={t('messages.attachFile')}
                                       >
                                         <Plus className="h-4 w-4" />
                                       </Button>
@@ -2799,22 +2803,22 @@ const MessagingPage = () => {
                                       onClick={() => imageInputRef.current?.click()}
                                     >
                                       <ImageIcon className="mr-2 size-4" />
-                                      Images
+                                      {t('messages.images')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
                                       <FileText className="mr-2 size-4" />
-                                      PDFs
+                                      {t('messages.pdfs')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       onClick={() => videoInputRef.current?.click()}
                                     >
                                       <Video className="mr-2 size-4" />
-                                      Videos
+                                      {t('messages.videos')}
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                                 <TooltipContent>
-                                  <p>Attach files</p>
+                                  <p>{t('messages.attachFiles')}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -2828,13 +2832,13 @@ const MessagingPage = () => {
                                     <Button
                                       onClick={handleSendMessage}
                                       className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                      aria-label="Send message"
+                                      aria-label={t('messages.sendMessage')}
                                     >
                                       <ArrowUp className="size-4" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Send message</p>
+                                    <p>{t('messages.sendMessage')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -2845,13 +2849,13 @@ const MessagingPage = () => {
                                     <Button
                                       onClick={handleSendMessage}
                                       className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                      aria-label="Send message"
+                                      aria-label={t('messages.sendMessage')}
                                     >
                                       <ArrowUp className="size-4" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Send message</p>
+                                    <p>{t('messages.sendMessage')}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -2865,13 +2869,13 @@ const MessagingPage = () => {
                               <Button
                                 onClick={handleSendMessage}
                                 className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                aria-label="Send message"
+                                aria-label={t('messages.sendMessage')}
                               >
                                 <ArrowUp className="size-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Send message</p>
+                              <p>{t('messages.sendMessage')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -2882,13 +2886,13 @@ const MessagingPage = () => {
                               <Button
                                 onClick={handleSendMessage}
                                 className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                aria-label="Send message"
+                                aria-label={t('messages.sendMessage')}
                               >
                                 <ArrowUp className="size-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Send message</p>
+                              <p>{t('messages.sendMessage')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -2900,7 +2904,7 @@ const MessagingPage = () => {
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
                     <p className="text-muted-foreground text-sm">
-                      Select an athlete to continue messaging or start a new chat
+                      {t('messages.selectAthleteToContinue')}
                     </p>
                   </div>
                 </div>
@@ -2923,7 +2927,7 @@ const MessagingPage = () => {
                   <Separator className="w-full" />
                 </div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Notes</h2>
+                  <h2 className="text-lg font-semibold">{t('messages.notes')}</h2>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
@@ -2935,7 +2939,7 @@ const MessagingPage = () => {
                         }
                       }}
                       className="h-8 w-8"
-                      aria-label="Search notes"
+                      aria-label={t('messages.searchNotes')}
                     >
                       <Search className="h-3 w-3" />
                     </Button>
@@ -2944,10 +2948,10 @@ const MessagingPage = () => {
                       size="sm"
                       onClick={() => setIsCreateNoteOpen(true)}
                       className="gap-2 h-8 text-xs"
-                      aria-label="Create note"
+                      aria-label={t('messages.createNote')}
                     >
                       <NotebookPen className="h-3 w-3" />
-                      Create note
+                      {t('messages.createNote')}
                     </Button>
                   </div>
                 </div>
@@ -2955,12 +2959,12 @@ const MessagingPage = () => {
                   <div className="mb-4">
                     <Input
                       type="search"
-                      placeholder="Search notes..."
+                      placeholder={t('messages.searchNotesPlaceholder')}
                       value={noteSearchQuery}
                       onChange={(e) => setNoteSearchQuery(e.target.value)}
                       className="h-8 text-xs"
                       autoFocus
-                      aria-label="Search notes"
+                      aria-label={t('messages.searchNotes')}
                     />
                   </div>
                 )}
@@ -2975,7 +2979,7 @@ const MessagingPage = () => {
                       onClick={() => handleNoteClick(note)}
                       role="button"
                       tabIndex={0}
-                      aria-label={`View note: ${note.title}`}
+                      aria-label={t('messages.viewNoteAria', { title: note.title })}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
@@ -3006,7 +3010,11 @@ const MessagingPage = () => {
           </div>
         </div>
       </div>
-      <SidePanel open={isNewMessageOpen} onOpenChange={setIsNewMessageOpen} title="New message">
+      <SidePanel
+        open={isNewMessageOpen}
+        onOpenChange={setIsNewMessageOpen}
+        title={t('messages.newMessage')}
+      >
         <AssignAthletesList
           navigateOnSelect={false}
           onAthleteSelected={(athleteId) => {
@@ -3037,7 +3045,7 @@ const MessagingPage = () => {
       <SidePanel
         open={isCreateNoteOpen}
         onOpenChange={setIsCreateNoteOpen}
-        title="Create note"
+        title={t('messages.createNote')}
         footer={
           <div className="flex w-full justify-start gap-2">
             <Button
@@ -3052,7 +3060,7 @@ const MessagingPage = () => {
               }}
               disabled={!noteTitle.trim()}
             >
-              Save
+              {t('general.save')}
             </Button>
             <Button
               variant="outline"
@@ -3063,7 +3071,7 @@ const MessagingPage = () => {
                 setIsNoteEmpty(true);
               }}
             >
-              Cancel
+              {t('general.cancel')}
             </Button>
           </div>
         }
@@ -3071,7 +3079,7 @@ const MessagingPage = () => {
         <div className="flex-1 flex flex-col min-h-0 gap-4">
           <div className="space-y-2">
             <Label htmlFor="note-title">
-              Title <span className="text-destructive">*</span>
+              {t('messages.noteTitle')} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="note-title"
@@ -3081,11 +3089,11 @@ const MessagingPage = () => {
                 setNoteTitle(e.target.value);
                 setIsNoteEmpty(!e.target.value.trim());
               }}
-              placeholder="Enter note title..."
+              placeholder={t('messages.enterNoteTitle')}
             />
           </div>
           <div className="flex-1 flex flex-col min-h-0 space-y-2">
-            <Label htmlFor="note-body">Body</Label>
+            <Label htmlFor="note-body">{t('messages.noteBody')}</Label>
             <Textarea
               id="note-body"
               ref={noteTextareaRef}
@@ -3093,7 +3101,7 @@ const MessagingPage = () => {
               onChange={(e) => {
                 setNoteContent(e.target.value);
               }}
-              placeholder="Write your note here..."
+              placeholder={t('messages.writeNoteHere')}
               className="flex-1 resize-none"
             />
           </div>
@@ -3102,27 +3110,27 @@ const MessagingPage = () => {
       <SidePanel
         open={isViewNoteOpen}
         onOpenChange={setIsViewNoteOpen}
-        title="View note"
+        title={t('messages.viewNote')}
         footer={
           <div className="flex w-full justify-start gap-2">
             <Button onClick={handleSaveNote} disabled={!hasNoteChanges}>
-              Save
+              {t('general.save')}
             </Button>
             <DropdownMenu open={isDeleteNoteMenuOpen} onOpenChange={setIsDeleteNoteMenuOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" type="button" aria-label="Delete note">
-                  Delete
+                <Button variant="outline" type="button" aria-label={t('general.delete')}>
+                  {t('general.delete')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-40">
-                <DropdownMenuItem onClick={handleDeleteNote} aria-label="Delete note">
+                <DropdownMenuItem onClick={handleDeleteNote} aria-label={t('general.delete')}>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                  {t('general.delete')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" onClick={handleCancelNoteEdit}>
-              Cancel
+              {t('general.cancel')}
             </Button>
           </div>
         }
@@ -3131,33 +3139,37 @@ const MessagingPage = () => {
           <div className="flex-1 flex flex-col min-h-0 gap-4">
             <div className="text-xs text-muted-foreground space-y-1">
               <div className="flex items-center gap-2">
-                <span>Created at {formatNoteDate(selectedNote.createdAt)}</span>
+                <span>
+                  {t('messages.createdAt')} {formatNoteDate(selectedNote.createdAt)}
+                </span>
                 {selectedNote.updatedAt && (
                   <>
                     <span>•</span>
-                    <span>Updated at {formatNoteDate(selectedNote.updatedAt)}</span>
+                    <span>
+                      {t('messages.updatedAt')} {formatNoteDate(selectedNote.updatedAt)}
+                    </span>
                   </>
                 )}
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="view-note-title">Title</Label>
+              <Label htmlFor="view-note-title">{t('messages.noteTitle')}</Label>
               <Input
                 id="view-note-title"
                 value={editingNoteTitle}
                 onChange={(e) => setEditingNoteTitle(e.target.value)}
-                placeholder="Enter note title..."
+                placeholder={t('messages.enterNoteTitle')}
                 autoFocus={false}
                 tabIndex={0}
               />
             </div>
             <div className="flex-1 flex flex-col min-h-0 space-y-2">
-              <Label htmlFor="view-note-body">Body</Label>
+              <Label htmlFor="view-note-body">{t('messages.noteBody')}</Label>
               <Textarea
                 id="view-note-body"
                 value={editingNoteBody}
                 onChange={(e) => setEditingNoteBody(e.target.value)}
-                placeholder="Write your note here..."
+                placeholder={t('messages.writeNoteHere')}
                 className="flex-1 resize-none"
                 autoFocus={false}
                 tabIndex={0}

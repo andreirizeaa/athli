@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +25,7 @@ import { ChevronRight, Edit, Trash2, X } from 'lucide-react';
 import { mockPrograms } from '@/components/app/app-shell';
 
 const ProgramDetailPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const params = useParams();
   const programId = params.programId as string;
@@ -37,7 +39,7 @@ const ProgramDetailPage = () => {
 
   const handleDelete = () => {
     setIsDeleteModalOpen(false);
-    toast.success('Program deleted successfully', {
+    toast.success(t('programs.detail.toast.deletedSuccessfully'), {
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -70,7 +72,7 @@ const ProgramDetailPage = () => {
                   onClick={() => router.push('/library')}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                 >
-                  Library
+                  {t('programs.detail.breadcrumb.library')}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -81,7 +83,7 @@ const ProgramDetailPage = () => {
                   onClick={() => router.push('/library/programs')}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                 >
-                  Programs
+                  {t('programs.detail.breadcrumb.programs')}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -89,29 +91,29 @@ const ProgramDetailPage = () => {
               </BreadcrumbSeparator>
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                  {program?.program || 'Program'}
+                  {program?.program || t('programs.detail.breadcrumb.program')}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h1 className="text-[22px] font-semibold">{program?.program || 'Program'}</h1>
+          <h1 className="text-[22px] font-semibold">{program?.program || t('programs.detail.title')}</h1>
         </div>
         <div className="absolute top-2 right-4 flex items-center gap-2">
           <Button
             variant="secondary"
             onClick={handleEdit}
-            aria-label="Edit program"
+            aria-label={t('programs.detail.editAria')}
             className="gap-2"
           >
             <Edit className="size-4" />
-            <span>Edit</span>
+            <span>{t('programs.detail.edit')}</span>
           </Button>
           <Button
             variant="secondary"
             size="icon"
             onClick={() => setIsDeleteModalOpen(true)}
             onKeyDown={handleDeleteKeyDown}
-            aria-label="Delete program"
+            aria-label={t('programs.detail.deleteAria')}
             tabIndex={0}
           >
             <Trash2 className="size-4" />
@@ -127,9 +129,9 @@ const ProgramDetailPage = () => {
         >
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-left">Delete</DialogTitle>
+              <DialogTitle className="text-left">{t('programs.detail.deleteModal.title')}</DialogTitle>
               <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Close">
+                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('programs.detail.deleteModal.closeAria')}>
                   <X className="h-4 w-4" />
                 </Button>
               </DialogClose>
@@ -137,15 +139,15 @@ const ProgramDetailPage = () => {
           </DialogHeader>
           <div className="flex-1 mt-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete this program? This action cannot be undone.
+              {t('programs.detail.deleteModal.description')}
             </p>
           </div>
           <div className="flex items-center justify-end gap-3 pt-4">
             <Button type="button" onClick={handleCancelDelete}>
-              Cancel
+              {t('programs.detail.deleteModal.cancel')}
             </Button>
             <Button type="button" variant="destructive" onClick={handleDelete}>
-              Delete
+              {t('programs.detail.deleteModal.confirm')}
             </Button>
           </div>
         </DialogContent>

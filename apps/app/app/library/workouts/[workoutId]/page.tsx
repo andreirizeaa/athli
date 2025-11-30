@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +32,7 @@ import { ChevronRight, ChevronDown, Edit, Trash2, X } from 'lucide-react';
 import { mockWorkouts } from '@/components/app/app-shell';
 
 const WorkoutDetailPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const params = useParams();
   const workoutId = params.workoutId as string;
@@ -152,7 +154,7 @@ const WorkoutDetailPage = () => {
 
   const handleDelete = () => {
     setIsDeleteModalOpen(false);
-    toast.success('Workout deleted successfully', {
+    toast.success(t('workouts.detail.toast.deletedSuccessfully'), {
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -190,7 +192,7 @@ const WorkoutDetailPage = () => {
                   onClick={() => router.push('/library')}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                 >
-                  Library
+                  {t('workouts.detail.breadcrumb.library')}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -201,7 +203,7 @@ const WorkoutDetailPage = () => {
                   onClick={() => router.push('/library/workouts')}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                 >
-                  Workouts
+                  {t('workouts.detail.breadcrumb.workouts')}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -209,12 +211,12 @@ const WorkoutDetailPage = () => {
               </BreadcrumbSeparator>
               <BreadcrumbItem>
                 <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                  {workout?.program || 'Workout'}
+                  {workout?.program || t('workouts.detail.breadcrumb.workout')}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h1 className="text-[22px] font-semibold">{workout?.program || 'Workout'}</h1>
+          <h1 className="text-[22px] font-semibold">{workout?.program || t('workouts.detail.title')}</h1>
         </div>
         <div className="absolute top-2 right-4 flex items-center gap-2">
           <DropdownMenu>
@@ -223,26 +225,26 @@ const WorkoutDetailPage = () => {
                 variant="secondary"
                 onClick={handleEditManual}
                 onKeyDown={handleEditKeyDown}
-                aria-label="Edit workout"
+                aria-label={t('workouts.detail.editAria')}
                 tabIndex={0}
                 className="gap-2"
               >
                 <Edit className="size-4" />
-                <span>Edit</span>
+                <span>{t('workouts.detail.edit')}</span>
               </Button>
               <ButtonGroupSeparator />
               <DropdownMenuTrigger asChild>
-                <Button variant="secondary" className="px-2" aria-label="Edit options">
+                <Button variant="secondary" className="px-2" aria-label={t('workouts.detail.editOptions.editOptionsAria')}>
                   <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
             </ButtonGroup>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleEditAi}>
-                OneNinety AI
+                {t('workouts.detail.editOptions.oneNinetyAi')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleEditManual}>
-                Manual
+                {t('workouts.detail.editOptions.manual')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -251,7 +253,7 @@ const WorkoutDetailPage = () => {
             size="icon"
             onClick={() => setIsDeleteModalOpen(true)}
             onKeyDown={handleDeleteKeyDown}
-            aria-label="Delete workout"
+            aria-label={t('workouts.detail.deleteAria')}
             tabIndex={0}
           >
             <Trash2 className="size-4" />
@@ -267,9 +269,9 @@ const WorkoutDetailPage = () => {
         >
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-left">Delete</DialogTitle>
+              <DialogTitle className="text-left">{t('workouts.detail.deleteModal.title')}</DialogTitle>
               <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Close">
+                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('workouts.detail.deleteModal.closeAria')}>
                   <X className="h-4 w-4" />
                 </Button>
               </DialogClose>
@@ -277,15 +279,15 @@ const WorkoutDetailPage = () => {
           </DialogHeader>
           <div className="flex-1 mt-4">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete this workout? This action cannot be undone.
+              {t('workouts.detail.deleteModal.description')}
             </p>
           </div>
           <div className="flex items-center justify-end gap-3 pt-4">
             <Button type="button" onClick={handleCancelDelete}>
-              Cancel
+              {t('workouts.detail.deleteModal.cancel')}
             </Button>
             <Button type="button" variant="destructive" onClick={handleDelete}>
-              Delete
+              {t('workouts.detail.deleteModal.confirm')}
             </Button>
           </div>
         </DialogContent>

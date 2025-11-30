@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,7 @@ export const ProgramBuilder = ({
   initialProgramMeta,
   onLoadProgramData,
 }: ProgramBuilderProps) => {
+  const t = useTranslations();
   const router = useRouter();
   const [programMeta, setProgramMeta] = useState<ProgramMeta | null>(initialProgramMeta || null);
   const [selectedWeek, setSelectedWeek] = useState<string>('1');
@@ -179,7 +181,7 @@ export const ProgramBuilder = ({
 
         // If no meta in localStorage, use default values
         setProgramMeta({
-          name: 'New program',
+          name: t('programs.builder.newProgram'),
           type: '',
           difficulty: 'all levels',
           weeks: '',
@@ -499,18 +501,18 @@ export const ProgramBuilder = ({
     const [day, month, year] = dateStr.split('-');
     const date = new Date(2000 + parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
     const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+      t('programs.builder.months.jan'),
+      t('programs.builder.months.feb'),
+      t('programs.builder.months.mar'),
+      t('programs.builder.months.apr'),
+      t('programs.builder.months.may'),
+      t('programs.builder.months.jun'),
+      t('programs.builder.months.jul'),
+      t('programs.builder.months.aug'),
+      t('programs.builder.months.sep'),
+      t('programs.builder.months.oct'),
+      t('programs.builder.months.nov'),
+      t('programs.builder.months.dec'),
     ];
     return `${date.getDate()} ${months[date.getMonth()]}, 20${year}`;
   };
@@ -559,9 +561,9 @@ export const ProgramBuilder = ({
     const startWeek = currentWeek;
     const endWeek = Math.min(currentWeek + weeksView - 1, totalWeeks);
     if (weeksView === 1) {
-      return `Week ${startWeek} of ${totalWeeks}`;
+      return t('programs.builder.weekRange', { start: startWeek, total: totalWeeks });
     }
-    return `Week ${startWeek}-${endWeek} of ${totalWeeks}`;
+    return t('programs.builder.weekRangeMultiple', { start: startWeek, end: endWeek, total: totalWeeks });
   };
 
   // Check if 2 weeks view is available
@@ -587,7 +589,7 @@ export const ProgramBuilder = ({
     return null;
   }
 
-  const pageTitle = mode === 'new' ? 'New program' : 'Edit program';
+  const pageTitle = mode === 'new' ? t('programs.builder.newProgram') : t('programs.builder.editProgram');
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -601,7 +603,7 @@ export const ProgramBuilder = ({
                     onClick={() => handleBreadcrumbClick('/library')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    Library
+                    {t('programs.detail.breadcrumb.library')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -612,7 +614,7 @@ export const ProgramBuilder = ({
                     onClick={() => handleBreadcrumbClick('/library/programs')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    Programs
+                    {t('programs.detail.breadcrumb.programs')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -632,15 +634,15 @@ export const ProgramBuilder = ({
               variant="secondary"
               onClick={handleCancel}
               className="gap-2"
-              aria-label={`Cancel ${mode === 'new' ? 'creating' : 'editing'} program`}
+              aria-label={t('programs.builder.cancelAria')}
             >
               <X className="size-4" />
-              <span>Cancel</span>
+              <span>{t('programs.builder.cancel')}</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button onClick={handleSaveClick} className="gap-2" aria-label="Save program">
+            <Button onClick={handleSaveClick} className="gap-2" aria-label={t('programs.builder.saveAria')}>
               <Check className="size-4" />
-              <span>Save</span>
+              <span>{t('programs.builder.save')}</span>
             </Button>
           </ButtonGroup>
         </div>
@@ -656,7 +658,7 @@ export const ProgramBuilder = ({
               onClick={handlePreviousWeek}
               disabled={currentWeek === 1}
               className="h-8 w-8"
-              aria-label="Previous week"
+              aria-label={t('programs.builder.previousWeekAria')}
             >
               <ChevronLeft className="size-4" />
             </Button>
@@ -677,7 +679,7 @@ export const ProgramBuilder = ({
                 })()
               }
               className="h-8 w-8"
-              aria-label="Next week"
+              aria-label={t('programs.builder.nextWeekAria')}
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -687,10 +689,10 @@ export const ProgramBuilder = ({
               size="sm"
               onClick={handleAddWeek}
               className="gap-2 h-8"
-              aria-label="Add week"
+              aria-label={t('programs.builder.addWeekAria')}
             >
               <Plus className="size-4" />
-              <span>Add week</span>
+              <span>{t('programs.builder.addWeek')}</span>
             </Button>
             <Button
               type="button"
@@ -699,7 +701,7 @@ export const ProgramBuilder = ({
               onClick={handleUndo}
               disabled={historyIndex <= 0}
               className="h-8 w-8 p-0"
-              aria-label="Undo"
+              aria-label={t('programs.builder.undoAria')}
             >
               <Undo className="size-4" />
             </Button>
@@ -710,7 +712,7 @@ export const ProgramBuilder = ({
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
               className="h-8 w-8 p-0"
-              aria-label="Redo"
+              aria-label={t('programs.builder.redoAria')}
             >
               <Redo className="size-4" />
             </Button>
@@ -720,7 +722,7 @@ export const ProgramBuilder = ({
               <TabsTrigger
                 value="1"
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                title="Show 1 week at a time on screen"
+                title={t('programs.builder.showOneWeek')}
               >
                 1 week
               </TabsTrigger>
@@ -730,8 +732,8 @@ export const ProgramBuilder = ({
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
                   is2WeeksAvailable
-                    ? 'Show 2 weeks at a time on screen'
-                    : '2 weeks view requires total weeks to be divisible by 2'
+                    ? t('programs.builder.showTwoWeeks')
+                    : t('programs.builder.twoWeeksRequirement')
                 }
               >
                 2 weeks
@@ -742,8 +744,8 @@ export const ProgramBuilder = ({
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
                   is4WeeksAvailable
-                    ? 'Show 4 weeks at a time on screen'
-                    : '4 weeks view requires total weeks to be divisible by 4'
+                    ? t('programs.builder.showFourWeeks')
+                    : t('programs.builder.fourWeeksRequirement')
                 }
               >
                 4 weeks
@@ -770,13 +772,13 @@ export const ProgramBuilder = ({
                             size="icon"
                             className="h-6 w-6"
                             onClick={() => handleDuplicateWeek(weekNumber)}
-                            aria-label="Duplicate week"
+                            aria-label={t('programs.builder.duplicateWeekAria')}
                           >
                             <Copy className="size-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Duplicate week</p>
+                          <p>{t('programs.builder.duplicateWeek')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -790,20 +792,20 @@ export const ProgramBuilder = ({
                             className="h-6 w-6"
                             onClick={() => handleDeleteWeek(weekNumber)}
                             disabled={totalWeeks === 1}
-                            aria-label="Delete week"
+                            aria-label={t('programs.builder.deleteWeekAria')}
                           >
                             <Trash2 className="size-3" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
-                          <p>Delete week</p>
+                          <p>{t('programs.builder.deleteWeek')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
                   <div className="flex-1 flex items-center justify-center">
                     <span className="text-xs uppercase text-muted-foreground -rotate-90 whitespace-nowrap">
-                      Week {weekNumber}
+                      {t('programs.builder.weekLabel', { number: weekNumber })}
                     </span>
                   </div>
                 </div>
@@ -816,7 +818,7 @@ export const ProgramBuilder = ({
                       className="flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full"
                     >
                       <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
-                        <span className="text-xs uppercase text-muted-foreground">Day {day}</span>
+                        <span className="text-xs uppercase text-muted-foreground">{t('programs.builder.dayLabel', { number: day })}</span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -825,14 +827,14 @@ export const ProgramBuilder = ({
                                 variant="ghost"
                                 size="icon"
                                 className="h-5 w-5 -mr-1 hover:bg-background"
-                                aria-label="Add workout"
+                                aria-label={t('programs.builder.addWorkout.addAria')}
                                 onClick={() => handleOpenAddWorkoutModal(day)}
                               >
                                 <Plus className="size-3" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Add workout</p>
+                              <p>{t('programs.builder.addWorkout.add')}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -845,7 +847,7 @@ export const ProgramBuilder = ({
                                 key={workout.id}
                                 role="button"
                                 tabIndex={0}
-                                aria-label={`View details for workout ${workout.program}`}
+                                aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
                                 onClick={() => handleOpenWorkoutDetails(week, dayInWeek, workout)}
                                 onKeyDown={(event) => {
                                   if (event.key === 'Enter' || event.key === ' ') {
@@ -864,7 +866,7 @@ export const ProgramBuilder = ({
                                   </span>
                                   <span className="text-[10px] text-muted-foreground">
                                     {workout.totalExercises}{' '}
-                                    {workout.totalExercises === 1 ? 'exercise' : 'exercises'}
+                                    {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
                                   </span>
                                 </div>
                                 <Button
@@ -876,7 +878,7 @@ export const ProgramBuilder = ({
                                     event.stopPropagation();
                                     handleDeleteWorkout(week, dayInWeek, workout.id);
                                   }}
-                                  aria-label="Delete workout"
+                                  aria-label={t('general.delete')}
                                 >
                                   <Trash2 className="size-3 text-muted-foreground hover:text-destructive" />
                                 </Button>
@@ -890,11 +892,11 @@ export const ProgramBuilder = ({
                               variant="outline"
                               size="sm"
                               className="gap-1.5 text-xs h-7 px-2 text-muted-foreground"
-                              aria-label="Add workout"
+                              aria-label={t('programs.builder.addWorkout.addAria')}
                               onClick={() => handleOpenAddWorkoutModal(day)}
                             >
                               <Plus className="size-3" />
-                              <span>Add workout</span>
+                              <span>{t('programs.builder.addWorkout.add')}</span>
                             </Button>
                           </div>
                         )}
@@ -923,7 +925,7 @@ export const ProgramBuilder = ({
       >
         <DialogContent className="max-w-4xl sm:max-w-4xl h-[600px] flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Add workout</DialogTitle>
+            <DialogTitle>{t('programs.builder.addWorkout.title')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 flex-1 min-h-0">
             {!selectedWorkout ? (
@@ -932,9 +934,9 @@ export const ProgramBuilder = ({
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
-                    placeholder="Search workouts"
+                    placeholder={t('programs.builder.addWorkout.searchPlaceholder')}
                     className="w-full pl-9"
-                    aria-label="Search workouts"
+                    aria-label={t('programs.builder.addWorkout.searchPlaceholder')}
                     value={workoutSearchQuery}
                     onChange={(e) => setWorkoutSearchQuery(e.target.value)}
                   />
@@ -952,7 +954,7 @@ export const ProgramBuilder = ({
                           className="p-3 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors"
                           role="button"
                           tabIndex={0}
-                          aria-label={`Select workout ${workout.program}`}
+                          aria-label={t('programs.builder.selectWorkout', { name: workout.program })}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
@@ -975,11 +977,11 @@ export const ProgramBuilder = ({
                             )}
                             <div className="flex flex-wrap gap-1">
                               <Badge variant="secondary" className="text-xs">
-                                Type: {workout.type}
+                                {t('general.type')}: {workout.type}
                               </Badge>
                               {equipmentList.length > 0 && (
                                 <Badge variant="secondary" className="text-xs">
-                                  Equipment: {equipmentList.join(', ')}
+                                  {t('general.equipment')}: {equipmentList.join(', ')}
                                 </Badge>
                               )}
                             </div>
@@ -989,7 +991,7 @@ export const ProgramBuilder = ({
                     })
                   ) : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
-                      No workouts found
+                      {t('programs.builder.addWorkout.noWorkoutsFound')}
                     </div>
                   )}
                 </div>
@@ -1010,11 +1012,11 @@ export const ProgramBuilder = ({
                       )}
                       <div className="flex flex-wrap gap-1">
                         <Badge variant="secondary" className="text-xs">
-                          Type: {selectedWorkout.type}
+                          {t('general.type')}: {selectedWorkout.type}
                         </Badge>
                         {selectedWorkout.equipment && selectedWorkout.equipment.split(',').filter((item) => item.trim() !== '').length > 0 && (
                           <Badge variant="secondary" className="text-xs">
-                            Equipment: {selectedWorkout.equipment.split(',').map((item) => item.trim()).filter((item) => item !== '').join(', ')}
+                            {t('general.equipment')}: {selectedWorkout.equipment.split(',').map((item) => item.trim()).filter((item) => item !== '').join(', ')}
                           </Badge>
                         )}
                       </div>
@@ -1022,7 +1024,7 @@ export const ProgramBuilder = ({
                   </Card>
                 )}
                 <div className="flex flex-col gap-4">
-                  <h3 className="text-sm font-medium">Add configurations</h3>
+                  <h3 className="text-sm font-medium">{t('athletes.trainingCalendar.addConfigurations')}</h3>
                   <Card
                     className={cn(
                       'p-4 border rounded-lg cursor-pointer transition-colors',
@@ -1032,7 +1034,7 @@ export const ProgramBuilder = ({
                     )}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Add only for day ${selectedDay !== null ? selectedDay : ''}`}
+                    aria-label={t('programs.builder.addWorkout.scheduleOption.once')}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
@@ -1045,7 +1047,7 @@ export const ProgramBuilder = ({
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">
-                        Add only for day {selectedDay !== null ? selectedDay : ''}
+                        {t('programs.builder.addWorkout.scheduleOption.once')} {selectedDay !== null ? selectedDay : ''}
                       </span>
                       <div
                         className={cn(
@@ -1071,7 +1073,7 @@ export const ProgramBuilder = ({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Add this workout every</span>
+                        <span className="text-sm font-medium">{t('programs.builder.addWorkout.scheduleOption.everyDays')}</span>
                         <Input
                           type="number"
                           min="1"
@@ -1084,9 +1086,9 @@ export const ProgramBuilder = ({
                               setSelectedScheduleOption('every');
                             }
                           }}
-                          aria-label="Number of days"
+                          aria-label={t('programs.builder.addWorkout.numberOfDays')}
                         />
-                        <span className="text-sm text-muted-foreground">days</span>
+                        <span className="text-sm text-muted-foreground">{t('programs.builder.addWorkout.days')}</span>
                       </div>
                       <div
                         className={cn(
@@ -1097,7 +1099,7 @@ export const ProgramBuilder = ({
                         )}
                         role="button"
                         tabIndex={0}
-                        aria-label="Select repeat every days option"
+                        aria-label={t('programs.builder.selectRepeatEveryDays')}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -1124,7 +1126,7 @@ export const ProgramBuilder = ({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Repeat weekly on day</span>
+                        <span className="text-sm font-medium">{t('programs.builder.addWorkout.scheduleOption.weekly')}</span>
                         <Input
                           type="number"
                           min="1"
@@ -1138,7 +1140,7 @@ export const ProgramBuilder = ({
                               setSelectedScheduleOption('weekly');
                             }
                           }}
-                          aria-label="Day of week"
+                          aria-label={t('programs.builder.addWorkout.dayOfWeek')}
                         />
                       </div>
                       <div
@@ -1150,7 +1152,7 @@ export const ProgramBuilder = ({
                         )}
                         role="button"
                         tabIndex={0}
-                        aria-label="Select repeat weekly option"
+                        aria-label={t('programs.builder.selectRepeatWeekly')}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
@@ -1185,9 +1187,9 @@ export const ProgramBuilder = ({
                   setWeeklyDayInput('');
                   setSelectedDay(null);
                 }}
-                aria-label="Cancel"
+                aria-label={t('programs.builder.addWorkout.cancel')}
               >
-                Cancel
+                {t('programs.builder.addWorkout.cancel')}
               </Button>
               <Button
                 type="button"
@@ -1198,16 +1200,16 @@ export const ProgramBuilder = ({
                   setEveryDaysInput('');
                   setWeeklyDayInput('');
                 }}
-                aria-label="Select new workout"
+                aria-label={t('general.select')}
               >
-                Select new workout
+                {t('general.select')}
               </Button>
               <Button
                 type="button"
                 onClick={handleAddWorkout}
-                aria-label="Add workout"
+                aria-label={t('programs.builder.addWorkout.addAria')}
               >
-                Add
+                {t('programs.builder.addWorkout.add')}
               </Button>
             </div>
           )}
@@ -1251,7 +1253,7 @@ export const ProgramBuilder = ({
                         )}
                         <div className="flex flex-wrap gap-1">
                           <Badge variant="secondary" className="text-xs">
-                            Type: {selectedWorkoutDetails.workout.type}
+                            {t('general.type')}: {selectedWorkoutDetails.workout.type}
                           </Badge>
                           {selectedWorkoutDetails.workout.equipment &&
                             selectedWorkoutDetails.workout.equipment
@@ -1307,7 +1309,7 @@ export const ProgramBuilder = ({
                 <Separator orientation="vertical" className="h-full" />
                 <div className="flex-[1.5] h-full overflow-y-auto">
                   <div className="flex flex-col gap-2">
-                    <h2 className="text-xs font-semibold uppercase tracking-wide">Overview</h2>
+                    <h2 className="text-xs font-semibold uppercase tracking-wide">{t('programs.builder.overview')}</h2>
                     <div className="flex flex-col gap-2">
                       {buildMockPreviewSections(selectedWorkoutDetails.workout).map((section) => (
                         <Card
