@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -64,6 +65,8 @@ export const BasicInformation = ({
   selectedBuilder,
   setSelectedBuilder,
 }: BasicInformationProps) => {
+  const t = useTranslations();
+
   const handleStandardBuilderClick = () => {
     setSelectedBuilder('standard');
   };
@@ -77,12 +80,12 @@ export const BasicInformation = ({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-name" className="text-sm font-medium">
-            Workout Name <span className="text-destructive">*</span>
+            {t('workouts.addWorkout.workoutNameRequired')}
           </label>
           <Input
             id="workout-name"
             type="text"
-            placeholder="Name..."
+            placeholder={t('workouts.addWorkout.workoutNamePlaceholder')}
             value={workoutName}
             onChange={(e) => {
               setWorkoutName(e.target.value);
@@ -100,7 +103,7 @@ export const BasicInformation = ({
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-type" className="text-sm font-medium">
-            Type <span className="text-destructive">*</span>
+            {t('workouts.addWorkout.typeRequired')}
           </label>
           <Select
             value={workoutType}
@@ -119,7 +122,7 @@ export const BasicInformation = ({
               )}
               aria-invalid={!!typeError}
             >
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {WORKOUT_TYPES.map((type) => (
@@ -133,7 +136,7 @@ export const BasicInformation = ({
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-difficulty" className="text-sm font-medium">
-            Difficulty <span className="text-destructive">*</span>
+            {t('workouts.addWorkout.difficultyRequired')}
           </label>
           <Select
             value={difficulty}
@@ -152,7 +155,7 @@ export const BasicInformation = ({
               )}
               aria-invalid={!!difficultyError}
             >
-              <SelectValue placeholder="Select..." />
+              <SelectValue placeholder={t('workouts.addWorkout.difficultyPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
               {DIFFICULTY_LEVELS.map((level) => (
@@ -168,11 +171,11 @@ export const BasicInformation = ({
 
       <div className="flex flex-col gap-2">
         <label htmlFor="workout-description" className="text-sm font-medium">
-          Description <span className="text-muted-foreground font-normal">(Optional)</span>
+          {t('workouts.addWorkout.description')} <span className="text-muted-foreground font-normal">{t('workouts.addWorkout.descriptionOptional')}</span>
         </label>
         <Textarea
           id="workout-description"
-          placeholder="Add a description for your workout..."
+          placeholder={t('workouts.addWorkout.descriptionPlaceholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
@@ -181,7 +184,7 @@ export const BasicInformation = ({
       </div>
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">
-          Select how you wish to start <span className="text-destructive">*</span>
+          {t('workouts.addWorkout.selectBuilderRequired')}
         </h3>
         <div className="grid grid-cols-2 gap-4">
           <button
@@ -193,16 +196,16 @@ export const BasicInformation = ({
                 ? 'border-primary bg-primary/5 shadow-sm'
                 : 'bg-background hover:bg-accent/30'
             )}
-            aria-label="Use OneNinety AI to build workout"
+            aria-label={t('workouts.addWorkout.oneNinetyAiAria')}
           >
-            <p className="text-sm font-semibold mb-1">OneNinety AI</p>
+            <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.oneNinetyAi')}</p>
             <p
               className={cn(
                 'text-xs',
                 selectedBuilder === 'ai' ? 'text-foreground/80' : 'text-muted-foreground'
               )}
             >
-              AI Workout Builder
+              {t('workouts.addWorkout.oneNinetyAiDescription')}
             </p>
             <div
               aria-hidden="true"
@@ -230,16 +233,16 @@ export const BasicInformation = ({
                 ? 'border-primary bg-primary/5 shadow-sm'
                 : 'bg-background hover:bg-accent/30'
             )}
-            aria-label="Manually build workout"
+            aria-label={t('workouts.addWorkout.standardBuilderAria')}
           >
-            <p className="text-sm font-semibold mb-1">Standard Builder</p>
+            <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.standardBuilder')}</p>
             <p
               className={cn(
                 'text-xs',
                 selectedBuilder === 'standard' ? 'text-foreground/80' : 'text-muted-foreground'
               )}
             >
-              Manually build your workout
+              {t('workouts.addWorkout.standardBuilderDescription')}
             </p>
             <div
               aria-hidden="true"

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +19,7 @@ type DiscardChangesDialogProps = {
 };
 
 export const DiscardChangesDialog = ({ open, onCancel, onConfirm }: DiscardChangesDialogProps) => {
+  const t = useTranslations();
   return (
     <AlertDialog
       open={open}
@@ -29,12 +31,12 @@ export const DiscardChangesDialog = ({ open, onCancel, onConfirm }: DiscardChang
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Discard changes?</AlertDialogTitle>
-          <AlertDialogDescription>Changes have not been saved yet.</AlertDialogDescription>
+          <AlertDialogTitle>{t('workouts.discardChanges.title')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('workouts.discardChanges.description')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Discard</AlertDialogAction>
+          <AlertDialogCancel onClick={onCancel}>{t('workouts.discardChanges.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{t('workouts.discardChanges.confirm')}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

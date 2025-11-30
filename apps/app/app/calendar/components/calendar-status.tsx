@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { ConnectCalendarButton } from './connect-calendar-button';
 import { CalendarView } from './calendar-view';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 export const CalendarStatus = () => {
+  const t = useTranslations();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -30,7 +32,7 @@ export const CalendarStatus = () => {
         setIsConnected(data.connected);
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : 'Failed to check calendar status';
+          error instanceof Error ? error.message : t('calendar.failedToCheckStatus');
         toast.error(errorMessage);
         setIsConnected(false);
       } finally {
@@ -45,7 +47,7 @@ export const CalendarStatus = () => {
     return (
       <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Checking calendar connection...</p>
+        <p className="text-sm text-muted-foreground">{t('calendar.checkingConnection')}</p>
       </div>
     );
   }
@@ -60,22 +62,21 @@ export const CalendarStatus = () => {
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
-      <h2 className="text-2xl font-semibold">Connect your Calendar</h2>
+      <h2 className="text-2xl font-semibold">{t('calendar.connectYourCalendar')}</h2>
       <p className="text-sm text-muted-foreground text-center max-w-md">
-        You will be able to book sessions directly here and it will sync with your connected
-        calendar.
+        {t('calendar.connectDescription')}
       </p>
       <div className="flex items-center gap-6">
         <Image
           src="/icons/gmail.png"
-          alt="Gmail"
+          alt={t('calendar.gmail')}
           width={30}
           height={30}
           className="object-contain"
         />
         <Image
           src="/icons/outlook.png"
-          alt="Outlook"
+          alt={t('calendar.outlook')}
           width={30}
           height={30}
           className="object-contain"

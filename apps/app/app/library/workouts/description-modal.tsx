@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -70,6 +71,7 @@ const DescriptionModal = ({
   programName,
   workoutId,
 }: DescriptionModalProps) => {
+  const t = useTranslations();
   const router = useRouter();
 
   const previewSections = useMemo(() => buildMockPreviewSections(programName), [programName]);
@@ -134,7 +136,7 @@ const DescriptionModal = ({
           </div>
           <div className="flex-[1.5] h-full overflow-y-auto border-l pl-4">
             <div className="flex flex-col gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wide">Overview</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wide">{t('workouts.descriptionModal.overview')}</h2>
               <div className="flex flex-col gap-2">
                 {previewSections.map((section) => (
                   <Card
@@ -173,12 +175,12 @@ const DescriptionModal = ({
             type="button"
             variant="secondary"
             onClick={handleEditWorkout}
-            aria-label="Edit workout"
+            aria-label={t('workouts.descriptionModal.editWorkoutAria')}
           >
-            Edit workout
+            {t('workouts.descriptionModal.editWorkout')}
           </Button>
-          <Button type="button" onClick={handleClose} aria-label="Close workout preview">
-            Close
+          <Button type="button" onClick={handleClose} aria-label={t('workouts.descriptionModal.closeAria')}>
+            {t('workouts.descriptionModal.close')}
           </Button>
         </div>
       </DialogContent>

@@ -1473,7 +1473,7 @@ const AppShellContent = ({
   pathname,
 }: {
   children: ReactNode;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string>) => string;
   user: ReturnType<typeof useUser>['user'];
   openUserProfile: () => void;
   signOut: (options: { redirectUrl: string }) => void;
@@ -1734,7 +1734,7 @@ const AppShellContent = ({
     },
     {
       href: '/library',
-      label: 'Library',
+      labelKey: 'sidebar.links.library',
       icon: Archive,
     },
   ] as const;
@@ -1778,19 +1778,19 @@ const AppShellContent = ({
                       type="button"
                       onClick={handlePinMenu}
                       className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
-                      aria-label="Keep menu open"
+                      aria-label={t('sidebar.actions.keepMenuOpenAria')}
                     >
                       <PanelLeftOpen className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right">Keep menu open</TooltipContent>
+                  <TooltipContent side="right">{t('sidebar.actions.keepMenuOpen')}</TooltipContent>
                 </Tooltip>
               ) : (
                 <button
                   type="button"
                   onClick={handleUnpinMenu}
                   className="flex items-center justify-center rounded-md p-1.5 hover:bg-muted transition-colors"
-                  aria-label="Close sidebar"
+                  aria-label={t('sidebar.actions.closeSidebarAria')}
                 >
                   <PanelLeftClose className="h-4 w-4" />
                 </button>
@@ -1810,7 +1810,7 @@ const AppShellContent = ({
                   >
                     <Link href="/home">
                       <Home className="shrink-0" />
-                      {!isCollapsed && <span>Home</span>}
+                      {!isCollapsed && <span>{t('sidebar.links.home')}</span>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -1838,7 +1838,7 @@ const AppShellContent = ({
                   } else {
                     isActive = activePath === item.href;
                   }
-                  const label = 'label' in item ? item.label : t(item.labelKey);
+                  const label = 'label' in item ? item.label : ('labelKey' in item ? t(item.labelKey) : '');
 
                   return (
                     <SidebarMenuItem key={item.href}>
@@ -1849,7 +1849,7 @@ const AppShellContent = ({
                       >
                         <Link href={item.href}>
                           <Icon className="shrink-0" />
-                          {!isCollapsed && <span>{label}</span>}
+                          {!isCollapsed && <span>{label as string}</span>}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -1864,7 +1864,7 @@ const AppShellContent = ({
                 <div className="mx-auto h-px w-8 bg-sidebar-border" />
               ) : (
                 <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  BUSINESS
+                  {t('sidebar.group.business')}
                 </span>
               )}
             </div>
@@ -1900,7 +1900,7 @@ const AppShellContent = ({
                 <div className="mx-auto h-px w-8 bg-sidebar-border" />
               ) : (
                 <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  ATHLETES
+                  {t('sidebar.group.athletes')}
                 </span>
               )}
             </div>
@@ -1952,11 +1952,11 @@ const AppShellContent = ({
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="text-xs bg-primary !text-primary-foreground hover:bg-primary/90 [&_svg]:!text-primary-foreground">
                   <Users className="shrink-0" />
-                  {!isCollapsed && <span className="!text-primary-foreground">Add team members</span>}
+                  {!isCollapsed && <span className="!text-primary-foreground">{t('sidebar.footer.addTeamMembers')}</span>}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">Coming soon</div>
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('sidebar.footer.comingSoon')}</div>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
@@ -1967,7 +1967,7 @@ const AppShellContent = ({
                   <button
                     type="button"
                     className="hover:bg-accent/60 flex h-11 w-full items-center justify-center rounded-md p-2"
-                    aria-label="Open account menu"
+                    aria-label={t('sidebar.profile.openAccountMenuAria')}
                   >
                     <Avatar className="h-8 w-8 rounded-md">
                       <AvatarImage src={user?.imageUrl} alt={displayName} />
@@ -1978,7 +1978,7 @@ const AppShellContent = ({
                   <button
                     type="button"
                     className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md pl-0 pr-2 pt-2 pb-2 text-left"
-                    aria-label="Open account menu"
+                    aria-label={t('sidebar.profile.openAccountMenuAria')}
                   >
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8 rounded-md">
@@ -2026,14 +2026,14 @@ const AppShellContent = ({
                   onClick={() => openUserProfile()}
                 >
                   <User />
-                  <span>Account</span>
+                  <span>{t('sidebar.profile.account')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="cursor-pointer px-3 py-2"
                   onClick={() => openUserProfile()}
                 >
                   <CreditCard />
-                  <span>Billing</span>
+                  <span>{t('sidebar.profile.billing')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-0" />
                 <DropdownMenuItem
@@ -2049,7 +2049,7 @@ const AppShellContent = ({
                   }}
                 >
                   <LogOut />
-                  <span>Log out</span>
+                  <span>{t('sidebar.profile.logOut')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -2067,7 +2067,7 @@ const AppShellContent = ({
                     <Input
                       ref={searchInputRef}
                       type="search"
-                      placeholder="Search across OneNinety..."
+                      placeholder={t('sidebar.search.placeholder')}
                       value={searchQuery}
                       onChange={handleSearchChange}
                       className="pl-8 pr-20 h-10"
@@ -2093,7 +2093,7 @@ const AppShellContent = ({
                       <div className="flex flex-col items-center justify-center py-16 px-4 min-h-[400px]">
                         <Search className="h-12 w-12 text-muted-foreground mb-4" />
                         <p className="text-sm text-muted-foreground">
-                          Search for leads, clients or workouts
+                          {t('sidebar.search.emptyMessage')}
                         </p>
                       </div>
                     )}
@@ -2104,7 +2104,7 @@ const AppShellContent = ({
                       programSearchResults.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
                           <p className="text-sm text-muted-foreground">
-                            No results found for{' '}
+                            {t('sidebar.search.noResults')}{' '}
                             <span className="font-medium">"{searchQuery}"</span>.
                           </p>
                         </div>
@@ -2119,7 +2119,7 @@ const AppShellContent = ({
                             <>
                               <div className="px-3 pb-1 pt-2">
                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Athletes
+                                  {t('sidebar.search.athletes')}
                                 </p>
                               </div>
                               <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
@@ -2154,7 +2154,7 @@ const AppShellContent = ({
                                           }
                                         }}
                                         className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                        aria-label={`Open profile for ${result.athlete.name}`}
+                                        aria-label={t('sidebar.search.openProfileAria', { name: result.athlete.name })}
                                       >
                                         <div className="flex flex-col gap-2">
                                           <div className="flex items-center gap-2">
@@ -2191,7 +2191,7 @@ const AppShellContent = ({
                               )}
                               <div className="px-3 pb-1 pt-2">
                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Workouts
+                                  {t('sidebar.search.workouts')}
                                 </p>
                               </div>
                               <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
@@ -2220,7 +2220,7 @@ const AppShellContent = ({
                                         }
                                       }}
                                       className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                      aria-label={`Open workout ${result.workout.program}`}
+                                      aria-label={t('sidebar.search.openWorkoutAria', { name: result.workout.program })}
                                     >
                                       <div className="flex flex-col gap-2">
                                         <div className="flex items-center gap-2">
@@ -2236,7 +2236,7 @@ const AppShellContent = ({
                                           <span>•</span>
                                           <span>{result.workout.length}</span>
                                           <span>•</span>
-                                          <span>{result.workout.totalExercises} exercises</span>
+                                          <span>{result.workout.totalExercises} {t('sidebar.search.exercises')}</span>
                                         </div>
                                       </div>
                                     </Card>
@@ -2255,7 +2255,7 @@ const AppShellContent = ({
                               )}
                               <div className="px-3 pb-1 pt-2">
                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Programs
+                                  {t('sidebar.search.programs')}
                                 </p>
                               </div>
                               <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
@@ -2284,7 +2284,7 @@ const AppShellContent = ({
                                         }
                                       }}
                                       className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                      aria-label={`Open program ${result.program.program}`}
+                                      aria-label={t('sidebar.search.openProgramAria', { name: result.program.program })}
                                     >
                                       <div className="flex flex-col gap-2">
                                         <div className="flex items-center gap-2">
@@ -2300,7 +2300,7 @@ const AppShellContent = ({
                                           <span>•</span>
                                           <span>{result.program.length}</span>
                                           <span>•</span>
-                                          <span>{result.program.totalExercises} exercises</span>
+                                          <span>{result.program.totalExercises} {t('sidebar.search.exercises')}</span>
                                         </div>
                                       </div>
                                     </Card>
@@ -2320,7 +2320,7 @@ const AppShellContent = ({
                               )}
                               <div className="px-3 pb-1 pt-2">
                                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                  Messages
+                                  {t('sidebar.search.messages')}
                                 </p>
                               </div>
                               <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
@@ -2353,7 +2353,7 @@ const AppShellContent = ({
                                           }
                                         }}
                                         className="cursor-pointer hover:bg-accent transition-colors p-3"
-                                        aria-label={`Open conversation with ${result.contact.name}`}
+                                        aria-label={t('sidebar.search.openConversationAria', { name: result.contact.name })}
                                       >
                                         <div className="flex flex-col gap-2">
                                           <div className="flex items-center gap-2">
@@ -2391,14 +2391,14 @@ const AppShellContent = ({
                 <DropdownMenuTrigger asChild>
                   <Button
                     className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
-                    aria-label="AI Assistant"
+                    aria-label={t('sidebar.search.aiAssistantAria')}
                   >
                     <Sparkles className="size-4" />
-                    AI Assistant
+                    {t('sidebar.search.aiAssistant')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">Coming soon</div>
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('sidebar.footer.comingSoon')}</div>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -2465,7 +2465,7 @@ const AppShellContent = ({
                         className={cn(currentTheme === 'light' && 'bg-accent')}
                       >
                         <Sun className="mr-2 size-4" />
-                        <span className="flex-1">Light</span>
+                        <span className="flex-1">{t('sidebar.theme.light')}</span>
                         {currentTheme === 'light' && <Check className="ml-2 size-4" />}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem
@@ -2473,7 +2473,7 @@ const AppShellContent = ({
                         className={cn(currentTheme === 'dark' && 'bg-accent')}
                       >
                         <Moon className="mr-2 size-4" />
-                        <span className="flex-1">Dark</span>
+                        <span className="flex-1">{t('sidebar.theme.dark')}</span>
                         {currentTheme === 'dark' && <Check className="ml-2 size-4" />}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem
@@ -2481,14 +2481,14 @@ const AppShellContent = ({
                         className={cn(currentTheme === 'system' && 'bg-accent')}
                       >
                         <Laptop className="mr-2 size-4" />
-                        <span className="flex-1">System</span>
+                        <span className="flex-1">{t('sidebar.theme.system')}</span>
                         {currentTheme === 'system' && <Check className="ml-2 size-4" />}
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              <Button variant="outline" size="icon" aria-label="Help" onClick={() => {}}>
+              <Button variant="outline" size="icon" aria-label={t('sidebar.help.aria')} onClick={() => {}}>
                 <HelpCircle className="size-4" />
               </Button>
             </div>
@@ -2500,7 +2500,7 @@ const AppShellContent = ({
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
             <Spinner className="size-8 text-primary" />
-            <p className="text-sm text-muted-foreground">Logging out...</p>
+            <p className="text-sm text-muted-foreground">{t('sidebar.logout.loggingOut')}</p>
           </div>
         </div>
       )}

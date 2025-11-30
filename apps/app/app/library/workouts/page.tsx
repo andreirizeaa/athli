@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
@@ -64,13 +65,7 @@ const COLUMN_ORDER: ColumnId[] = [
   'created',
 ];
 
-const WORKOUT_COLUMN_DEFINITIONS = [
-  { id: 'description', label: 'Description', icon: <FileText className="size-3" /> },
-  { id: 'type', label: 'Type', icon: <Tag className="size-3" /> },
-  { id: 'totalExercises', label: 'Total Exercises', icon: <Hash className="size-3" /> },
-  { id: 'equipment', label: 'Equipment', icon: <Wrench className="size-3" /> },
-  { id: 'created', label: 'Created', icon: <Calendar className="size-3" /> },
-];
+// Column definitions will be created dynamically with translations
 
 const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
@@ -85,6 +80,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 };
 
 const WorkoutsPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -167,15 +163,15 @@ const WorkoutsPage = () => {
     if (!isCreateWorkoutStep2) {
       // Step 1: Validate and move to step 2 if AI builder selected
       if (!newWorkoutName.trim()) {
-        setNewNameError('Workout name is required');
+        setNewNameError(t('library.workoutNameRequired'));
         return;
       }
       if (!newWorkoutType) {
-        setNewTypeError('Workout type is required');
+        setNewTypeError(t('library.workoutTypeRequired'));
         return;
       }
       if (!newDifficulty) {
-        setNewDifficultyError('Difficulty is required');
+        setNewDifficultyError(t('library.difficultyRequired'));
         return;
       }
       if (!newSelectedBuilder) {
@@ -441,7 +437,7 @@ Focus on proper form and progressive overload.`;
   const allColumns: ColumnDefinition<Workout>[] = [
     {
       id: 'program',
-      label: 'Workout',
+      label: t('library.workoutColumn'),
       icon: <FileText className="size-3" />,
       getSortValue: (row) => row.program.toLowerCase(),
       getSearchValue: (row) => row.program,
@@ -451,13 +447,13 @@ Focus on proper form and progressive overload.`;
         case 'description':
           return {
             id: 'description',
-            label: 'Description',
+            label: t('general.description'),
             icon: <FileText className="size-3" />,
             width: {
               class: getColumnWidth('description', 'class'),
               pixel: getColumnWidth('description', 'pixel'),
             },
-            tooltip: 'A brief overview of the workout program',
+            tooltip: t('library.briefOverviewWorkout'),
             getSortValue: (row) => row.description.toLowerCase(),
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
@@ -481,13 +477,13 @@ Focus on proper form and progressive overload.`;
         case 'type':
           return {
             id: 'type',
-            label: 'Type',
+            label: t('general.type'),
             icon: <Tag className="size-3" />,
             width: {
               class: getColumnWidth('type', 'class'),
               pixel: getColumnWidth('type', 'pixel'),
             },
-            tooltip: 'The category or style of the workout program',
+            tooltip: t('library.categoryStyleWorkout'),
             getSortValue: (row) => row.type.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
@@ -498,13 +494,13 @@ Focus on proper form and progressive overload.`;
         case 'totalExercises':
           return {
             id: 'totalExercises',
-            label: 'Total Exercises',
+            label: t('library.totalExercises'),
             icon: <Hash className="size-3" />,
             width: {
               class: getColumnWidth('totalExercises', 'class'),
               pixel: getColumnWidth('totalExercises', 'pixel'),
             },
-            tooltip: 'The number of exercises in the workout program',
+            tooltip: t('library.numberOfExercisesWorkout'),
             getSortValue: (row) => row.totalExercises,
             renderCell: (row) => (
               <div className="flex items-center w-full">
@@ -515,13 +511,13 @@ Focus on proper form and progressive overload.`;
         case 'equipment':
           return {
             id: 'equipment',
-            label: 'Equipment',
+            label: t('general.equipment'),
             icon: <Wrench className="size-3" />,
             width: {
               class: getColumnWidth('equipment', 'class'),
               pixel: getColumnWidth('equipment', 'pixel'),
             },
-            tooltip: 'The equipment required for this workout program',
+            tooltip: t('library.equipmentRequiredWorkout'),
             getSortValue: (row) => row.equipment.toLowerCase(),
             renderCell: (row) => (
               <Tooltip>
@@ -543,13 +539,13 @@ Focus on proper form and progressive overload.`;
         case 'created':
           return {
             id: 'created',
-            label: 'Created',
+            label: t('general.created'),
             icon: <Calendar className="size-3" />,
             width: {
               class: getColumnWidth('created', 'class'),
               pixel: getColumnWidth('created', 'pixel'),
             },
-            tooltip: 'The date when the workout program was created',
+            tooltip: t('library.dateCreatedWorkout'),
             getSortValue: (row) => {
               const [day, month, year] = row.created.split('-').map(Number);
               return new Date(2000 + year, month - 1, day).getTime();
@@ -577,7 +573,7 @@ Focus on proper form and progressive overload.`;
   const filters: FilterDefinition<Workout>[] = [
     {
       id: 'type',
-      label: 'Type',
+      label: t('general.type'),
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
@@ -585,11 +581,11 @@ Focus on proper form and progressive overload.`;
     },
     {
       id: 'show',
-      label: 'Show',
+      label: t('general.show'),
       icon: <Star className="size-4" />,
       options: [
-        { value: 'starred', label: 'Starred' },
-        { value: 'unstarred', label: 'Unstarred' },
+        { value: 'starred', label: t('library.starred') },
+        { value: 'unstarred', label: t('library.unstarred') },
       ],
       getFilterValue: (row) => (starredWorkouts.has(row.id) ? 'starred' : 'unstarred'),
       defaultValue: starFilter,
@@ -646,13 +642,13 @@ Focus on proper form and progressive overload.`;
                     }
                   }}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Assign this workout to a client"
+                  aria-label={t('library.assignWorkoutToClient')}
                 >
                   <User className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Assign this workout to a client</p>
+                <p>{t('library.assignWorkoutToClient')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -664,7 +660,7 @@ Focus on proper form and progressive overload.`;
                   onClick={(e) => handleToggleStar(workout.id, e)}
                   onKeyDown={(e) => handleStarKeyDown(workout.id, e)}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Star this workout"
+                  aria-label={t('library.starWorkout')}
                 >
                   {isStarred ? (
                     <Star className="h-4 w-4 fill-primary text-primary" />
@@ -674,7 +670,7 @@ Focus on proper form and progressive overload.`;
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Star this workout</p>
+                <p>{t('library.starWorkout')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -707,14 +703,14 @@ Focus on proper form and progressive overload.`;
           <Checkbox
             checked={isAllSelected}
             onCheckedChange={onToggleAll}
-            aria-label="Select all workouts"
+            aria-label={t('library.selectAllWorkouts')}
           />
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
               <FileText className="size-3 text-muted-foreground" />
-              <span className="text-xs uppercase text-muted-foreground">Workout</span>
+              <span className="text-xs uppercase text-muted-foreground">{t('library.workoutColumn')}</span>
               {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
               {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
             </div>
@@ -725,7 +721,7 @@ Focus on proper form and progressive overload.`;
               className={cn(isAscending && 'bg-accent')}
             >
               <ArrowUpNarrowWide className="size-4 mr-2" />
-              <span className="flex-1">Sort ascending</span>
+              <span className="flex-1">{t('library.sortAscending')}</span>
               {isAscending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -733,7 +729,7 @@ Focus on proper form and progressive overload.`;
               className={cn(isDescending && 'bg-accent')}
             >
               <ArrowDownWideNarrow className="size-4 mr-2" />
-              <span className="flex-1">Sort descending</span>
+              <span className="flex-1">{t('library.sortDescending')}</span>
               {isDescending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -749,10 +745,10 @@ Focus on proper form and progressive overload.`;
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="workouts"
-        subtitle={(count) => `${count} ${count === 1 ? 'workout' : 'workouts'}`}
+        subtitle={(count) => `${count} ${count === 1 ? t('library.workout') : t('library.workoutPlural')}`}
         itemsPerPage={itemsPerPage}
         enableSearch={true}
-        searchPlaceholder="Search..."
+        searchPlaceholder={t('library.searchPlaceholder')}
         filters={filters}
         enableEditColumns={true}
         enableExport={true}
@@ -793,19 +789,19 @@ Focus on proper form and progressive overload.`;
               variant="secondary"
               onClick={handleOpenAssignWorkout}
               className="gap-2"
-              aria-label="Assign workout to athletes"
+              aria-label={t('library.assignWorkout')}
             >
               <UserPlus className="size-4" />
-              <span>Assign</span>
+              <span>{t('general.assign')}</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label="Create workout">
+            <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label={t('library.createWorkout')}>
               <Plus className="size-4" />
-              <span>Create workout</span>
+              <span>{t('library.createWorkout')}</span>
             </Button>
           </ButtonGroup>
         }
-        emptyMessage="No workouts found."
+        emptyMessage={t('library.noWorkoutsFound')}
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="320px"
@@ -822,7 +818,7 @@ Focus on proper form and progressive overload.`;
             resetCreateWorkoutState();
           }
         }}
-        title="New workout"
+        title={t('library.newWorkout')}
         footer={
           <div className="flex w-full justify-start gap-2">
             <Button
@@ -838,7 +834,7 @@ Focus on proper form and progressive overload.`;
                     !newDifficulty ||
                     !newSelectedBuilder)
               }
-              aria-label={isCreateWorkoutStep2 ? 'Generate workout' : 'Continue'}
+              aria-label={isCreateWorkoutStep2 ? t('library.generateWorkout') : t('general.continue')}
               className={cn(
                 ((isCreateWorkoutStep2 && isGenerating) || (!isCreateWorkoutStep2 && isGeneratingStandard)) &&
                   'min-w-[120px] justify-center'
@@ -850,13 +846,13 @@ Focus on proper form and progressive overload.`;
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    Generate
+                    {t('library.generate')}
                   </>
                 )
               ) : isGeneratingStandard ? (
                 <Spinner className="h-4 w-4" />
               ) : (
-                'Continue'
+                t('general.continue')
               )}
             </Button>
             {isCreateWorkoutStep2 && (
@@ -865,9 +861,9 @@ Focus on proper form and progressive overload.`;
                 variant="secondary"
                 onClick={handleCreateWorkoutBack}
                 disabled={isGenerating || isGeneratingStandard}
-                aria-label="Back to workout details"
+                aria-label={t('library.backToWorkoutDetails')}
               >
-                Back
+                {t('general.back')}
               </Button>
             )}
             <Button
@@ -875,9 +871,9 @@ Focus on proper form and progressive overload.`;
               variant="secondary"
               onClick={handleCloseCreateWorkout}
               disabled={isGenerating || isGeneratingStandard}
-              aria-label="Cancel creating workout"
+              aria-label={t('library.cancelCreatingWorkout')}
             >
-              Cancel
+              {t('general.cancel')}
             </Button>
           </div>
         }
@@ -917,13 +913,13 @@ Focus on proper form and progressive overload.`;
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
               >
-                <div className="flex flex-col items-center gap-4 text-center">
+                  <div className="flex flex-col items-center gap-4 text-center">
                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white">
                     <FileText className="h-8 w-8" />
                   </div>
                   <div>
-                    <p className="text-lg font-semibold">Drop your PDF here</p>
-                    <p className="text-sm text-muted-foreground">PDF files only</p>
+                    <p className="text-lg font-semibold">{t('library.dropPdfHere')}</p>
+                    <p className="text-sm text-muted-foreground">{t('library.pdfFilesOnly')}</p>
                   </div>
                 </div>
               </div>
@@ -935,9 +931,9 @@ Focus on proper form and progressive overload.`;
                   <BrainCog className="h-10 w-10" />
                 </div>
               </div>
-              <h2 className="text-xl font-semibold text-center">OneNinety AI Builder</h2>
+              <h2 className="text-xl font-semibold text-center">{t('library.oneNinetyAiBuilder')}</h2>
               <p className="text-sm text-foreground text-center max-w-md">
-                Drag and drop or select PDF files to instantly import into OneNinety.
+                {t('library.dragDropPdf')}
               </p>
             </div>
             <div className="-mx-4 mb-2">
@@ -950,7 +946,7 @@ Focus on proper form and progressive overload.`;
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <h3 className="text-sm font-semibold">
-                    Let&apos;s build a workout <span className="text-destructive">*</span>
+                    {t('library.letsBuildWorkout')} <span className="text-destructive">*</span>
                   </h3>
                 </div>
                 <div className="relative">
@@ -959,7 +955,7 @@ Focus on proper form and progressive overload.`;
                     onChange={(e) => setAiPrompt(e.target.value)}
                     rows={8}
                     className="resize-none text-sm min-h-[200px] pb-12"
-                    placeholder="Ask for an auto-made workout, explain what you want to be included in yours and write in whatever form you wish. Press Enter to add new lines."
+                    placeholder={t('library.workoutPromptPlaceholder')}
                   />
                   <input
                     ref={fileInputRef}
@@ -967,25 +963,25 @@ Focus on proper form and progressive overload.`;
                     accept=".pdf"
                     onChange={handleFileChange}
                     className="hidden"
-                    aria-label="Select PDF file"
+                    aria-label={t('library.selectPdfFile')}
                   />
                   <div className="absolute bottom-2 right-2 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={handleUseExample}
                       className="h-7 px-3 rounded-md bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition-colors"
-                      aria-label="Use example workout prompt"
+                      aria-label={t('library.useExample')}
                     >
-                      Use our example
+                      {t('library.useExample')}
                     </button>
                     <button
                       type="button"
                       onClick={handleFileButtonClick}
                       className="h-7 px-3 rounded-md bg-orange-100 text-orange-700 text-xs font-medium flex items-center gap-1.5 hover:bg-orange-200 transition-colors dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/50"
-                      aria-label="Select PDF file"
+                      aria-label={t('library.selectPdfFile')}
                     >
                       <FileText className="h-3.5 w-3.5" />
-                      PDF
+                      {t('messages.pdf')}
                     </button>
                   </div>
                 </div>
@@ -998,13 +994,13 @@ Focus on proper form and progressive overload.`;
                       <p className="text-sm font-medium text-foreground truncate">
                         {selectedFile.name}
                       </p>
-                      <p className="text-xs text-muted-foreground">PDF</p>
+                      <p className="text-xs text-muted-foreground">{t('messages.pdf')}</p>
                     </div>
                     <button
                       type="button"
                       onClick={handleRemoveFile}
                       className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label="Remove PDF file"
+                      aria-label={t('library.removePdfFile')}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -1018,7 +1014,7 @@ Focus on proper form and progressive overload.`;
       <SidePanel
         open={isAssignWorkoutOpen}
         onOpenChange={setIsAssignWorkoutOpen}
-        title="Assign workout"
+        title={t('library.assignWorkout')}
       >
         <AssignAthletesList
           onAthleteSelected={(athleteId) => {
@@ -1051,7 +1047,7 @@ Focus on proper form and progressive overload.`;
             setSelectedWorkoutForAssignment(null);
           }
         }}
-        title={selectedWorkoutForAssignment ? `Assigning ${selectedWorkoutForAssignment.program}` : 'Assign workout'}
+        title={selectedWorkoutForAssignment ? t('library.assigningWorkout', { name: selectedWorkoutForAssignment.program }) : t('library.assignWorkout')}
       >
         {selectedWorkoutForAssignment && (
           <AssignAthletesList

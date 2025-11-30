@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ type WorkoutMeta = {
 };
 
 const EditStandardWorkoutPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const params = useParams();
   const workoutId = params.workoutId as string;
@@ -104,7 +106,7 @@ const EditStandardWorkoutPage = () => {
     // eslint-disable-next-line no-console
     console.log(payload);
 
-    toast.success(`Workout "${payload.title}" has been updated`, {
+    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }), {
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -147,7 +149,7 @@ const EditStandardWorkoutPage = () => {
                     onClick={() => handleBreadcrumbClick('/library')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    Library
+                    {t('workouts.edit.breadcrumb.library')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -158,7 +160,7 @@ const EditStandardWorkoutPage = () => {
                     onClick={() => handleBreadcrumbClick('/library/workouts')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    Workouts
+                    {t('workouts.edit.breadcrumb.workouts')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -169,7 +171,7 @@ const EditStandardWorkoutPage = () => {
                     onClick={() => handleBreadcrumbClick(`/library/workouts/${workoutId}`)}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    {workoutMeta?.title || 'Workout'}
+                    {workoutMeta?.title || t('workouts.detail.breadcrumb.workout')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -177,27 +179,27 @@ const EditStandardWorkoutPage = () => {
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    Edit workout
+                    {t('workouts.edit.breadcrumb.editWorkout')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold truncate">Edit workout</h1>
+            <h1 className="text-[22px] font-semibold truncate">{t('workouts.edit.title')}</h1>
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button
               variant="secondary"
               onClick={handleCancel}
               className="gap-2"
-              aria-label="Cancel editing workout"
+              aria-label={t('workouts.edit.cancelAria')}
             >
               <X className="size-4" />
-              <span>Cancel</span>
+              <span>{t('workouts.edit.cancel')}</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button onClick={handleSaveClick} className="gap-2" aria-label="Save workout">
+            <Button onClick={handleSaveClick} className="gap-2" aria-label={t('workouts.edit.saveAria')}>
               <Check className="size-4" />
-              <span>Save</span>
+              <span>{t('workouts.edit.save')}</span>
             </Button>
           </ButtonGroup>
         </div>
