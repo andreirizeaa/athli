@@ -72,7 +72,20 @@ function SidebarProvider({
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
+  // Always start with defaultOpen to avoid hydration mismatch
   const [_open, _setOpen] = React.useState(defaultOpen);
+  
+  // Read from localStorage after hydration to avoid SSR mismatch
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && openProp === undefined) {
+      const stored = localStorage.getItem(SIDEBAR_COOKIE_NAME);
+      if (stored !== null) {
+        const storedValue = stored === 'true';
+        _setOpen(storedValue);
+      }
+    }
+  }, [openProp]); // Only run when openProp changes (or on mount if undefined)
+  
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -83,7 +96,11 @@ function SidebarProvider({
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
+      // Store in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SIDEBAR_COOKIE_NAME, String(openState));
+      }
+      // Also set cookie for backwards compatibility
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
     [setOpenProp, open]
@@ -179,8 +196,10 @@ function Sidebar({
     useSidebar();
 
   // When collapsed and hovered, temporarily show as expanded (unless just closed)
+  // This is for visual display only - gap logic uses actual state (pinned)
   const displayState = state === 'collapsed' && isHovered && !justClosed ? 'expanded' : state;
   const displayCollapsible = displayState === 'collapsed' ? collapsible : '';
+  const isPinned = state === 'expanded';
 
   if (collapsible === 'none') {
     return (
@@ -226,21 +245,28 @@ function Sidebar({
     <div
       className="group peer text-sidebar-foreground hidden md:block"
       data-state={displayState}
+      data-pinned={isPinned ? 'true' : 'false'}
       data-collapsible={displayCollapsible}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
     >
-      {/* This is what handles the sidebar gap on desktop */}
+      {/* This is what handles the sidebar gap on desktop - only show when pinned, not on hover */}
       <div
         data-slot="sidebar-gap"
         className={cn(
-          'relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear',
-          'group-data-[collapsible=offcanvas]:w-0',
-          'group-data-[side=right]:rotate-180',
-          variant === 'floating' || variant === 'inset'
-            ? 'group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]'
-            : 'group-data-[collapsible=icon]:w-(--sidebar-width-icon)'
+          'relative bg-transparent transition-[width] duration-200 ease-linear',
+          // When pinned (expanded), always show full width to push content
+          // When collapsed in icon mode, show icon width
+          // When collapsed and not icon mode, show 0 (overlay)
+          state === 'expanded'
+            ? 'w-(--sidebar-width)'
+            : collapsible === 'icon'
+              ? variant === 'floating' || variant === 'inset'
+                ? 'w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]'
+                : 'w-(--sidebar-width-icon)'
+              : 'w-0',
+          'group-data-[side=right]:rotate-180'
         )}
       />
       <div
@@ -252,10 +278,15 @@ function Sidebar({
         }}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          'fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex',
+          'fixed inset-y-0 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex z-50',
           side === 'left'
-            ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
-            : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
+            ? // Show when pinned, hovered, or in icon mode. Hide off-screen only when offcanvas and not hovered
+              isPinned || isHovered || collapsible === 'icon'
+                ? 'left-0'
+                : 'left-[calc(var(--sidebar-width)*-1)]'
+            : isPinned || isHovered || collapsible === 'icon'
+              ? 'right-0'
+              : 'right-[calc(var(--sidebar-width)*-1)]',
           // Adjust the padding for floating and inset variants.
           variant === 'floating' || variant === 'inset'
             ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'

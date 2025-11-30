@@ -24,6 +24,7 @@ import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/csv-export';
 import { generateWorkoutFromPrompt } from '@/lib/generate-exercise';
 import { BasicInformation } from './new/basic-information';
 import {
@@ -50,10 +51,13 @@ import {
   Settings,
   Star,
   User,
+  Archive,
+  Trash2,
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
+import { starWorkouts, archiveWorkouts, deleteWorkouts } from '@/lib/workouts-service';
 
 type ColumnId = 'description' | 'type' | 'totalExercises' | 'equipment' | 'created';
 
@@ -83,9 +87,7 @@ const WorkoutsPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set());
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [starredWorkouts, setStarredWorkouts] = useState<Set<string>>(new Set());
-  const [starFilter, setStarFilter] = useState<string | null>(null);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const itemsPerPage = 25;
@@ -577,7 +579,6 @@ Focus on proper form and progressive overload.`;
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
-      defaultValue: typeFilter,
     },
     {
       id: 'show',
@@ -588,21 +589,25 @@ Focus on proper form and progressive overload.`;
         { value: 'unstarred', label: t('library.unstarred') },
       ],
       getFilterValue: (row) => (starredWorkouts.has(row.id) ? 'starred' : 'unstarred'),
-      defaultValue: starFilter,
     },
   ];
 
-  const handleToggleStar = (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+  const handleToggleStar = async (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    setStarredWorkouts((prev) => {
-      const next = new Set(prev);
-      if (next.has(workoutId)) {
-        next.delete(workoutId);
-      } else {
-        next.add(workoutId);
-      }
-      return next;
-    });
+    try {
+      await starWorkouts(workoutId);
+      setStarredWorkouts((prev) => {
+        const next = new Set(prev);
+        if (next.has(workoutId)) {
+          next.delete(workoutId);
+        } else {
+          next.add(workoutId);
+        }
+        return next;
+      });
+    } catch (error) {
+      console.error('Failed to star workout:', error);
+    }
   };
 
   const handleStarKeyDown = (workoutId: string, e: React.KeyboardEvent) => {
@@ -611,6 +616,69 @@ Focus on proper form and progressive overload.`;
       e.stopPropagation();
       handleToggleStar(workoutId, e);
     }
+  };
+
+  const handleClearSelected = () => {
+    setSelectedWorkouts(new Set());
+  };
+
+  const handleStarSelected = async () => {
+    if (selectedWorkouts.size === 0) return;
+    try {
+      await starWorkouts(Array.from(selectedWorkouts));
+      // Update starred state for selected workouts
+      setStarredWorkouts((prev) => {
+        const next = new Set(prev);
+        selectedWorkouts.forEach((id) => {
+          if (!next.has(id)) {
+            next.add(id);
+          }
+        });
+        return next;
+      });
+      // Clear selection after starring
+      setSelectedWorkouts(new Set());
+    } catch (error) {
+      console.error('Failed to star workouts:', error);
+    }
+  };
+
+  const handleArchiveSelected = async () => {
+    if (selectedWorkouts.size === 0) return;
+    try {
+      await archiveWorkouts(Array.from(selectedWorkouts));
+      // Clear selection after archiving
+      setSelectedWorkouts(new Set());
+    } catch (error) {
+      console.error('Failed to archive workouts:', error);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedWorkouts.size === 0) return;
+    try {
+      await deleteWorkouts(Array.from(selectedWorkouts));
+      // Clear selection after deleting
+      setSelectedWorkouts(new Set());
+    } catch (error) {
+      console.error('Failed to delete workouts:', error);
+    }
+  };
+
+  const handleExportSelected = () => {
+    if (selectedWorkouts.size === 0) return;
+    const selectedWorkoutsData = mockWorkouts.filter((workout) =>
+      selectedWorkouts.has(workout.id)
+    );
+    const exportData = selectedWorkoutsData.map((row) => ({
+      Program: row.program,
+      Description: row.description,
+      Type: row.type,
+      'Total Exercises': row.totalExercises,
+      Equipment: row.equipment,
+      Created: row.created,
+    }));
+    exportToCSV(exportData, 'selected-workouts.csv');
   };
 
   // Create first column renderer
@@ -701,6 +769,7 @@ Focus on proper form and progressive overload.`;
       <div className="flex items-center gap-3 h-full w-full">
         {enableRowSelection && (
           <Checkbox
+            key={`select-all-workouts-${isAllSelected}`}
             checked={isAllSelected}
             onCheckedChange={onToggleAll}
             aria-label={t('library.selectAllWorkouts')}
@@ -800,6 +869,102 @@ Focus on proper form and progressive overload.`;
               <span>{t('library.createWorkout')}</span>
             </Button>
           </ButtonGroup>
+        }
+        selectionActions={
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearSelected}
+                    className="gap-2"
+                    aria-label={t('workouts.actions.clearSelectedAria')}
+                  >
+                    <X className="size-4" />
+                    <span>
+                      Clear {selectedWorkouts.size} selected
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('workouts.actions.clearSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleExportSelected}
+                    className="gap-2"
+                    aria-label={t('workouts.actions.exportSelectedAria')}
+                  >
+                    <Download className="size-4" />
+                    <span>{t('workouts.actions.export')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('workouts.actions.export')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleStarSelected}
+                    className="gap-2"
+                    aria-label={t('workouts.actions.starSelectedAria')}
+                  >
+                    <Star className="size-4" />
+                    <span>{t('workouts.actions.starSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('workouts.actions.starSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleArchiveSelected}
+                    className="gap-2"
+                    aria-label={t('workouts.actions.archiveSelectedAria')}
+                  >
+                    <Archive className="size-4" />
+                    <span>{t('workouts.actions.archiveSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('workouts.actions.archiveSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleDeleteSelected}
+                    className="gap-2 text-destructive hover:text-destructive"
+                    aria-label={t('workouts.actions.deleteSelectedAria')}
+                  >
+                    <Trash2 className="size-4" />
+                    <span>{t('workouts.actions.deleteSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('workouts.actions.deleteSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         }
         emptyMessage={t('library.noWorkoutsFound')}
         rowHeight="54px"

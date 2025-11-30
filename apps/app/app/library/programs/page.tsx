@@ -30,6 +30,7 @@ import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/csv-export';
 import {
   Search,
   X,
@@ -52,10 +53,13 @@ import {
   Settings,
   User,
   Star,
+  Archive,
+  Trash2,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
 import { mockPrograms } from '@/components/app/app-shell';
+import { starPrograms, archivePrograms, deletePrograms } from '@/lib/programs-service';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
 
@@ -110,9 +114,7 @@ const ProgramsPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
-  const [starFilter, setStarFilter] = useState<string | null>(null);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const itemsPerPage = 25;
@@ -154,17 +156,23 @@ const ProgramsPage = () => {
     setIsAssignProgramOpen(true);
   };
 
-  const handleToggleStar = (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+  const handleToggleStar = async (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    setStarredPrograms((prev) => {
-      const next = new Set(prev);
-      if (next.has(programId)) {
-        next.delete(programId);
-      } else {
-        next.add(programId);
-      }
-      return next;
-    });
+    try {
+      await starPrograms(programId);
+      setStarredPrograms((prev) => {
+        const next = new Set(prev);
+        if (next.has(programId)) {
+          next.delete(programId);
+        } else {
+          next.add(programId);
+        }
+        return next;
+      });
+    } catch (error) {
+      // Error handling - could show toast here
+      console.error('Failed to star program:', error);
+    }
   };
 
   const handleStarKeyDown = (programId: string, e: React.KeyboardEvent) => {
@@ -173,6 +181,70 @@ const ProgramsPage = () => {
       e.stopPropagation();
       handleToggleStar(programId, e);
     }
+  };
+
+  const handleClearSelected = () => {
+    setSelectedPrograms(new Set());
+  };
+
+  const handleStarSelected = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      await starPrograms(Array.from(selectedPrograms));
+      // Update starred state for selected programs
+      setStarredPrograms((prev) => {
+        const next = new Set(prev);
+        selectedPrograms.forEach((id) => {
+          if (!next.has(id)) {
+            next.add(id);
+          }
+        });
+        return next;
+      });
+      // Clear selection after starring
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to star programs:', error);
+    }
+  };
+
+  const handleArchiveSelected = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      await archivePrograms(Array.from(selectedPrograms));
+      // Clear selection after archiving
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to archive programs:', error);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      await deletePrograms(Array.from(selectedPrograms));
+      // Clear selection after deleting
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to delete programs:', error);
+    }
+  };
+
+  const handleExportSelected = () => {
+    if (selectedPrograms.size === 0) return;
+    const selectedProgramsData = mockPrograms.filter((program) =>
+      selectedPrograms.has(program.id)
+    );
+    const exportData = selectedProgramsData.map((row) => ({
+      Program: row.program,
+      Description: row.description,
+      Type: row.type,
+      Length: row.length,
+      'Total Exercises': row.totalExercises,
+      Equipment: row.equipment,
+      Created: row.created,
+    }));
+    exportToCSV(exportData, 'selected-programs.csv');
   };
 
   const resetCreateProgramState = () => {
@@ -488,7 +560,6 @@ const ProgramsPage = () => {
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
-      defaultValue: typeFilter,
     },
     {
       id: 'show',
@@ -499,7 +570,6 @@ const ProgramsPage = () => {
         { value: 'unstarred', label: t('programs.filters.unstarred') },
       ],
       getFilterValue: (row) => (starredPrograms.has(row.id) ? 'starred' : 'unstarred'),
-      defaultValue: starFilter,
     },
   ];
 
@@ -591,6 +661,7 @@ const ProgramsPage = () => {
       <div className="flex items-center gap-3 h-full w-full">
         {enableRowSelection && (
           <Checkbox
+            key={`select-all-programs-${isAllSelected}`}
             checked={isAllSelected}
             onCheckedChange={onToggleAll}
             aria-label={t('programs.actions.selectAllPrograms')}
@@ -691,6 +762,102 @@ const ProgramsPage = () => {
               <span>{t('programs.actions.createProgram')}</span>
             </Button>
           </ButtonGroup>
+        }
+        selectionActions={
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.clearSelectedAria')}
+                  >
+                    <X className="size-4" />
+                    <span>
+                      Clear {selectedPrograms.size} selected
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.clearSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleExportSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.exportSelectedAria')}
+                  >
+                    <Download className="size-4" />
+                    <span>{t('programs.actions.export')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.export')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleStarSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.starSelectedAria')}
+                  >
+                    <Star className="size-4" />
+                    <span>{t('programs.actions.starSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.starSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleArchiveSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.archiveSelectedAria')}
+                  >
+                    <Archive className="size-4" />
+                    <span>{t('programs.actions.archiveSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.archiveSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleDeleteSelected}
+                    className="gap-2 text-destructive hover:text-destructive"
+                    aria-label={t('programs.actions.deleteSelectedAria')}
+                  >
+                    <Trash2 className="size-4" />
+                    <span>{t('programs.actions.deleteSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.deleteSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         }
         emptyMessage={t('programs.emptyMessage')}
         rowHeight="54px"
