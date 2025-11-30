@@ -1,11 +1,16 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 
 const SettingsPage = () => {
+  const t = useTranslations();
+
   return (
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
         <div className="px-4">
-          <h1 className="text-[22px] font-semibold mb-2 mt-2">Settings</h1>
+          <h1 className="text-[22px] font-semibold mb-2 mt-2">{t('settings.title')}</h1>
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>

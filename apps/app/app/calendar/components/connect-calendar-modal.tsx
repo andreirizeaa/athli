@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { useTranslations } from 'next-intl';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ const getProviderName = (provider: CalendarProvider): string => {
 };
 
 export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModalProps) => {
+  const t = useTranslations();
   const { user } = useUser();
   const [email, setEmail] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -85,7 +87,7 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
 
   const handleConnect = async () => {
     if (!email) {
-      toast.error('Please enter a valid email address');
+      toast.error(t('calendar.connect.pleaseEnterEmail'));
       return;
     }
 
@@ -97,14 +99,12 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
     setDetectedProvider(provider);
 
     if (!provider) {
-      toast.error('Unable to detect calendar provider. Please check your email address.');
+      toast.error(t('calendar.connect.unableToDetectProvider'));
       return;
     }
 
     if (provider === 'icloud') {
-      toast.error(
-        'iCloud calendar integration is not yet available. Please use Google or Outlook calendar.'
-      );
+      toast.error(t('calendar.connect.icloudNotAvailable'));
       return;
     }
 
@@ -162,7 +162,7 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
       }
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Failed to connect calendar';
+        error instanceof Error ? error.message : t('calendar.connect.connectionFailed');
       toast.error(errorMessage);
       setIsConnecting(false);
     }
@@ -183,42 +183,41 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Connect</DialogTitle>
+          <DialogTitle>{t('calendar.connect.title')}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            Only one Google or Microsoft (365, Outlook) calendar per user can be connected.
+            {t('calendar.connect.description')}
           </p>
           <div className="grid gap-2">
             <Label htmlFor="email">
-              Email address <span className="text-destructive">*</span>
+              {t('calendar.connect.emailAddress')} <span className="text-destructive">*</span>
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
               <Input
                 id="email"
                 type="email"
-                placeholder="your.email@example.com"
+                placeholder={t('calendar.connect.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={handleEmailKeyDown}
                 className="pl-9"
                 disabled={isConnecting}
-                aria-label="Email address for calendar connection"
+                aria-label={t('calendar.connect.emailAria')}
               />
             </div>
             {isDetecting && (
               <p className="text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  Detecting calendar provider...
+                  {t('calendar.connect.detectingProvider')}
                 </span>
               </p>
             )}
             {!isDetecting && hasAttemptedDetection && email && !detectedProvider && (
               <p className="text-xs text-destructive">
-                Unable to detect calendar provider. Please ensure your email uses Google Workspace
-                or Microsoft 365.
+                {t('calendar.connect.unableToDetect')}
               </p>
             )}
           </div>
@@ -227,24 +226,24 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isConnecting}
-              aria-label="Cancel calendar connection"
+              aria-label={t('calendar.connect.cancelAria')}
             >
-              Cancel
+              {t('calendar.connect.cancel')}
             </Button>
             <Button
               onClick={handleConnect}
               disabled={isConnecting || !email || isDetecting}
-              aria-label="Connect calendar"
+              aria-label={t('calendar.connect.connectAria')}
             >
               {isConnecting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting...
+                  {t('calendar.connect.connecting')}
                 </>
               ) : isDetecting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Checking...
+                  {t('calendar.connect.checking')}
                 </>
               ) : (
                 `Connect ${getProviderName(detectedProvider) || 'Calendar'}`

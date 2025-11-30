@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Spinner } from '@/components/ui/spinner';
+import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
 import { EditColumnsSidebar } from '@/components/app/edit-columns-sidebar';
@@ -89,6 +90,7 @@ export type DataGridProps<T = any> = {
   defaultColumnOrder?: string[];
   defaultVisibleColumns?: string[];
   customActions?: React.ReactNode;
+  selectionActions?: React.ReactNode;
   emptyMessage?: string;
   rowHeight?: string;
   stickyFirstColumn?: boolean;
@@ -200,6 +202,7 @@ export function DataGrid<T extends Record<string, any>>({
   defaultColumnOrder,
   defaultVisibleColumns,
   customActions,
+  selectionActions,
   emptyMessage = 'No items found.',
   rowHeight = '54px',
   stickyFirstColumn = false,
@@ -225,9 +228,9 @@ export function DataGrid<T extends Record<string, any>>({
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(defaultVisibleColumns || columns.map((col) => col.id))
   );
-  const [internalSelectedRowIds, setInternalSelectedRowIds] = useState<Set<string>>(new Set());
   const [isPageLoading, setIsPageLoading] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(enableEditColumns);
+  const [pagesFullySelected, setPagesFullySelected] = useState<Set<number>>(new Set());
   const filtersInitializedRef = useRef(false);
   const previousFiltersRef = useRef<string>('');
   const tableBodyRef = useRef<HTMLTableSectionElement>(null);
@@ -243,17 +246,22 @@ export function DataGrid<T extends Record<string, any>>({
     }
   };
 
-  const selectedRowIds = controlledSelectedRowIds ?? internalSelectedRowIds;
-  const setSelectedRowIds: (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => void =
-    onSelectionChange
-      ? (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => {
-          if (ids instanceof Set) {
-            onSelectionChange(ids);
-          } else {
-            onSelectionChange(ids(selectedRowIds));
-          }
-        }
-      : setInternalSelectedRowIds;
+  // DataGrid is fully controlled when enableRowSelection is true
+  // When row selection is enabled, selectedRowIds and onSelectionChange must be provided
+  const selectedRowIds = controlledSelectedRowIds ?? new Set<string>();
+  const setSelectedRowIds = (ids: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+    if (!onSelectionChange) {
+      if (enableRowSelection) {
+        console.warn('DataGrid: onSelectionChange is required when enableRowSelection is true');
+      }
+      return;
+    }
+    if (ids instanceof Set) {
+      onSelectionChange(ids);
+    } else {
+      onSelectionChange(ids(selectedRowIds));
+    }
+  };
 
   // Initialize filter values
   useEffect(() => {
@@ -399,6 +407,64 @@ export function DataGrid<T extends Record<string, any>>({
     setCurrentPage(1);
   }, [searchQuery, filterValues, sortColumn, sortDirection]);
 
+  // Cleanup: Sync "full page" state with actual selection state
+  // - Remove pages that are no longer fully selected
+  // - Add pages where all items are selected (even if manually selected)
+  useEffect(() => {
+    if (!enableRowSelection) return;
+
+    setPagesFullySelected((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+
+      // Check all pages
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        const pageStart = (pageNum - 1) * itemsPerPage;
+        const pageEnd = pageStart + itemsPerPage;
+        const pageData = sortedData.slice(pageStart, pageEnd);
+
+        if (pageData.length === 0) {
+          // Empty page - remove marker if present
+          if (next.has(pageNum)) {
+            next.delete(pageNum);
+            changed = true;
+          }
+        } else {
+          const allSelected = pageData.every((row) => selectedRowIds.has(getRowId(row)));
+          const isMarked = next.has(pageNum);
+
+          if (allSelected && !isMarked) {
+            // All items selected but not marked - add marker
+            next.add(pageNum);
+            changed = true;
+          } else if (!allSelected && isMarked) {
+            // Marked but not all items selected - remove marker
+            next.delete(pageNum);
+            changed = true;
+          }
+        }
+      }
+
+      // Remove markers for pages that no longer exist
+      next.forEach((pageNum) => {
+        const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+        if (pageNum > totalPages) {
+          next.delete(pageNum);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [
+    sortedData,
+    selectedRowIds,
+    itemsPerPage,
+    enableRowSelection,
+    getRowId,
+  ]);
+
   // Show loading overlay when page changes
   useEffect(() => {
     if (disableLoadingOverlay) {
@@ -529,25 +595,63 @@ export function DataGrid<T extends Record<string, any>>({
       }
       return next;
     });
+
+    // When a single row is toggled, the page is no longer fully selected
+    if (pagesFullySelected.has(currentPage)) {
+      setPagesFullySelected((prev) => {
+        const next = new Set(prev);
+        next.delete(currentPage);
+        return next;
+      });
+    }
   };
 
-  const isAllSelected =
-    paginatedData.length > 0 && paginatedData.every((row) => selectedRowIds.has(getRowId(row)));
-  const isIndeterminate =
-    paginatedData.some((row) => selectedRowIds.has(getRowId(row))) && !isAllSelected;
+  // Industry-standard approach: Check if current page is marked as fully selected
+  // This is separate from actual row selection state
+  const isAllSelected = useMemo(() => {
+    if (!enableRowSelection || paginatedData.length === 0) {
+      return false;
+    }
+    return pagesFullySelected.has(currentPage);
+  }, [enableRowSelection, paginatedData.length, pagesFullySelected, currentPage]);
+
+  const isIndeterminate = useMemo(() => {
+    if (!enableRowSelection || paginatedData.length === 0) {
+      return false;
+    }
+    const hasSomeSelected = paginatedData.some((row) => selectedRowIds.has(getRowId(row)));
+    return hasSomeSelected && !isAllSelected;
+  }, [enableRowSelection, paginatedData, selectedRowIds, isAllSelected, getRowId]);
 
   const handleToggleAll = () => {
+    if (!enableRowSelection) return;
+
+    const pageIds = paginatedData.map((row) => getRowId(row));
+
     if (isAllSelected) {
-      const paginatedIds = new Set(paginatedData.map((row) => getRowId(row)));
-      setSelectedRowIds((prev: Set<string>) => {
+      // Deselect current page items
+      setSelectedRowIds((prev) => {
         const next = new Set(prev);
-        paginatedIds.forEach((id) => next.delete(id));
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+      // Remove current page from fully selected pages
+      setPagesFullySelected((prev) => {
+        const next = new Set(prev);
+        next.delete(currentPage);
         return next;
       });
     } else {
-      setSelectedRowIds((prev: Set<string>) => {
+      // Select all items on current page
+      setSelectedRowIds((prev) => {
         const next = new Set(prev);
-        paginatedData.forEach((row) => next.add(getRowId(row)));
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
+      // Mark current page as fully selected
+      setPagesFullySelected((prev) => {
+        const next = new Set(prev);
+        next.add(currentPage);
         return next;
       });
     }
@@ -725,28 +829,37 @@ export function DataGrid<T extends Record<string, any>>({
       )}
       <div className="w-full flex-1 flex flex-col overflow-hidden">
         {!compactMode && (
-          <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0">
-            {enableSearch && (
-              <div className="relative w-[250px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                <Input
-                  type="text"
-                  placeholder={searchPlaceholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className={cn('pl-9 w-full', searchQuery && 'pr-9')}
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Clear search"
-                  >
-                    <X className="size-4" />
-                  </button>
-                )}
-              </div>
+          <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0 relative">
+            <div className="flex items-center gap-4 flex-1">
+              {enableSearch && (
+                <div className="relative w-[250px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder={searchPlaceholder}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn('pl-9 w-full', searchQuery && 'pr-9')}
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {selectionActions && selectedRowIds.size > 0 && (
+              <Card className="absolute left-2 top-2 z-40 bg-background border-border py-0 px-0 rounded-md">
+                <div className="px-2 py-[5px]">
+                  {selectionActions}
+                </div>
+              </Card>
             )}
             <div className="flex items-center gap-2">
               {filters.map((filter) => {
@@ -1222,11 +1335,23 @@ export function DataGrid<T extends Record<string, any>>({
           open={isEditColumnsOpen}
           onOpenChange={setIsEditColumnsOpen}
           gridKey={gridKey}
-          columns={columns.map((col) => ({
-            id: col.id,
-            label: col.label,
-            icon: col.icon,
-          }))}
+          columns={columns
+            .filter((col) => {
+              // Exclude the first column (pinned column) from edit columns
+              if (firstColumnId && col.id === firstColumnId) {
+                return false;
+              }
+              // Also exclude any pinned columns
+              if (pinnedColumns && pinnedColumns.includes(col.id)) {
+                return false;
+              }
+              return true;
+            })
+            .map((col) => ({
+              id: col.id,
+              label: col.label,
+              icon: col.icon,
+            }))}
           visibleColumns={Array.from(visibleColumns)}
           columnOrder={columnOrder}
           pinnedColumns={pinnedColumns}

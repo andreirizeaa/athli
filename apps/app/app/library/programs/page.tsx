@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/csv-export';
 import {
   Search,
   X,
@@ -51,10 +53,13 @@ import {
   Settings,
   User,
   Star,
+  Archive,
+  Trash2,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
 import { mockPrograms } from '@/components/app/app-shell';
+import { starPrograms, archivePrograms, deletePrograms } from '@/lib/programs-service';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
 
@@ -106,11 +111,10 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 };
 
 const ProgramsPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
-  const [starFilter, setStarFilter] = useState<string | null>(null);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const itemsPerPage = 25;
@@ -152,17 +156,23 @@ const ProgramsPage = () => {
     setIsAssignProgramOpen(true);
   };
 
-  const handleToggleStar = (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+  const handleToggleStar = async (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    setStarredPrograms((prev) => {
-      const next = new Set(prev);
-      if (next.has(programId)) {
-        next.delete(programId);
-      } else {
-        next.add(programId);
-      }
-      return next;
-    });
+    try {
+      await starPrograms(programId);
+      setStarredPrograms((prev) => {
+        const next = new Set(prev);
+        if (next.has(programId)) {
+          next.delete(programId);
+        } else {
+          next.add(programId);
+        }
+        return next;
+      });
+    } catch (error) {
+      // Error handling - could show toast here
+      console.error('Failed to star program:', error);
+    }
   };
 
   const handleStarKeyDown = (programId: string, e: React.KeyboardEvent) => {
@@ -171,6 +181,70 @@ const ProgramsPage = () => {
       e.stopPropagation();
       handleToggleStar(programId, e);
     }
+  };
+
+  const handleClearSelected = () => {
+    setSelectedPrograms(new Set());
+  };
+
+  const handleStarSelected = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      await starPrograms(Array.from(selectedPrograms));
+      // Update starred state for selected programs
+      setStarredPrograms((prev) => {
+        const next = new Set(prev);
+        selectedPrograms.forEach((id) => {
+          if (!next.has(id)) {
+            next.add(id);
+          }
+        });
+        return next;
+      });
+      // Clear selection after starring
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to star programs:', error);
+    }
+  };
+
+  const handleArchiveSelected = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      await archivePrograms(Array.from(selectedPrograms));
+      // Clear selection after archiving
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to archive programs:', error);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedPrograms.size === 0) return;
+    try {
+      await deletePrograms(Array.from(selectedPrograms));
+      // Clear selection after deleting
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to delete programs:', error);
+    }
+  };
+
+  const handleExportSelected = () => {
+    if (selectedPrograms.size === 0) return;
+    const selectedProgramsData = mockPrograms.filter((program) =>
+      selectedPrograms.has(program.id)
+    );
+    const exportData = selectedProgramsData.map((row) => ({
+      Program: row.program,
+      Description: row.description,
+      Type: row.type,
+      Length: row.length,
+      'Total Exercises': row.totalExercises,
+      Equipment: row.equipment,
+      Created: row.created,
+    }));
+    exportToCSV(exportData, 'selected-programs.csv');
   };
 
   const resetCreateProgramState = () => {
@@ -196,17 +270,17 @@ const ProgramsPage = () => {
 
   const handleCreateProgramContinue = () => {
     if (!newProgramName.trim()) {
-      setNewProgramError('Program name is required');
+      setNewProgramError(t('programs.addProgram.programNameRequiredError'));
       return;
     }
 
     if (!newProgramType) {
-      setNewProgramTypeError('Program type is required');
+      setNewProgramTypeError(t('programs.addProgram.programTypeRequiredError'));
       return;
     }
 
     if (!newProgramDifficulty) {
-      setNewProgramDifficultyError('Difficulty is required');
+      setNewProgramDifficultyError(t('programs.addProgram.difficultyRequiredError'));
       return;
     }
 
@@ -326,7 +400,7 @@ const ProgramsPage = () => {
   const allColumns: ColumnDefinition<Program>[] = [
     {
       id: 'program',
-      label: 'Program',
+      label: t('programs.columns.program'),
       icon: <FileText className="size-3" />,
       getSortValue: (row) => row.program.toLowerCase(),
       getSearchValue: (row) => row.program,
@@ -336,13 +410,13 @@ const ProgramsPage = () => {
         case 'description':
           return {
             id: 'description',
-            label: 'Description',
+            label: t('general.description'),
             icon: <FileText className="size-3" />,
             width: {
               class: getColumnWidth('description', 'class'),
               pixel: getColumnWidth('description', 'pixel'),
             },
-            tooltip: 'A brief overview of the program',
+            tooltip: t('programs.columnTooltips.description'),
             getSortValue: (row) => row.description.toLowerCase(),
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
@@ -366,13 +440,13 @@ const ProgramsPage = () => {
         case 'type':
           return {
             id: 'type',
-            label: 'Type',
+            label: t('general.type'),
             icon: <Tag className="size-3" />,
             width: {
               class: getColumnWidth('type', 'class'),
               pixel: getColumnWidth('type', 'pixel'),
             },
-            tooltip: 'The category or style of the program',
+            tooltip: t('programs.columnTooltips.type'),
             getSortValue: (row) => row.type.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
@@ -383,13 +457,13 @@ const ProgramsPage = () => {
         case 'length':
           return {
             id: 'length',
-            label: 'Length',
+            label: t('programs.columns.length'),
             icon: <Clock className="size-3" />,
             width: {
               class: getColumnWidth('length', 'class'),
               pixel: getColumnWidth('length', 'pixel'),
             },
-            tooltip: 'The duration of the program',
+            tooltip: t('programs.columnTooltips.length'),
             getSortValue: (row) => {
               const weeks = parseInt(row.length.split(' ')[0]);
               return isNaN(weeks) ? 0 : weeks;
@@ -403,13 +477,13 @@ const ProgramsPage = () => {
         case 'totalExercises':
           return {
             id: 'totalExercises',
-            label: 'Total Exercises',
+            label: t('programs.columns.totalExercises'),
             icon: <Hash className="size-3" />,
             width: {
               class: getColumnWidth('totalExercises', 'class'),
               pixel: getColumnWidth('totalExercises', 'pixel'),
             },
-            tooltip: 'The number of exercises in the program',
+            tooltip: t('programs.columnTooltips.totalExercises'),
             getSortValue: (row) => row.totalExercises,
             renderCell: (row) => (
               <div className="flex items-center w-full">
@@ -420,13 +494,13 @@ const ProgramsPage = () => {
         case 'equipment':
           return {
             id: 'equipment',
-            label: 'Equipment',
+            label: t('general.equipment'),
             icon: <Wrench className="size-3" />,
             width: {
               class: getColumnWidth('equipment', 'class'),
               pixel: getColumnWidth('equipment', 'pixel'),
             },
-            tooltip: 'The equipment required for this program',
+            tooltip: t('programs.columnTooltips.equipment'),
             getSortValue: (row) => row.equipment.toLowerCase(),
             renderCell: (row) => (
               <Tooltip>
@@ -448,13 +522,13 @@ const ProgramsPage = () => {
         case 'created':
           return {
             id: 'created',
-            label: 'Created',
+            label: t('general.created'),
             icon: <Calendar className="size-3" />,
             width: {
               class: getColumnWidth('created', 'class'),
               pixel: getColumnWidth('created', 'pixel'),
             },
-            tooltip: 'The date when the program was created',
+            tooltip: t('programs.columnTooltips.created'),
             getSortValue: (row) => {
               const [day, month, year] = row.created.split('-').map(Number);
               return new Date(2000 + year, month - 1, day).getTime();
@@ -482,22 +556,20 @@ const ProgramsPage = () => {
   const filters: FilterDefinition<Program>[] = [
     {
       id: 'type',
-      label: 'Type',
+      label: t('programs.filters.type'),
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
-      defaultValue: typeFilter,
     },
     {
       id: 'show',
-      label: 'Show',
+      label: t('general.show'),
       icon: <Star className="size-4" />,
       options: [
-        { value: 'starred', label: 'Starred' },
-        { value: 'unstarred', label: 'Unstarred' },
+        { value: 'starred', label: t('programs.filters.starred') },
+        { value: 'unstarred', label: t('programs.filters.unstarred') },
       ],
       getFilterValue: (row) => (starredPrograms.has(row.id) ? 'starred' : 'unstarred'),
-      defaultValue: starFilter,
     },
   ];
 
@@ -530,13 +602,13 @@ const ProgramsPage = () => {
                     }
                   }}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Assign this program to a client"
+                  aria-label={t('programs.actions.assignProgramToClient')}
                 >
                   <User className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Assign this program to a client</p>
+                <p>{t('programs.actions.assignProgramToClient')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -548,7 +620,7 @@ const ProgramsPage = () => {
                   onClick={(e) => handleToggleStar(program.id, e)}
                   onKeyDown={(e) => handleStarKeyDown(program.id, e)}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Star this program"
+                  aria-label={t('programs.actions.starProgram')}
                 >
                   {isStarred ? (
                     <Star className="h-4 w-4 fill-primary text-primary" />
@@ -558,7 +630,7 @@ const ProgramsPage = () => {
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Star this program</p>
+                <p>{t('programs.actions.starProgram')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -589,16 +661,17 @@ const ProgramsPage = () => {
       <div className="flex items-center gap-3 h-full w-full">
         {enableRowSelection && (
           <Checkbox
+            key={`select-all-programs-${isAllSelected}`}
             checked={isAllSelected}
             onCheckedChange={onToggleAll}
-            aria-label="Select all programs"
+            aria-label={t('programs.actions.selectAllPrograms')}
           />
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
               <FileText className="size-3 text-muted-foreground" />
-              <span className="text-xs uppercase text-muted-foreground">Program</span>
+              <span className="text-xs uppercase text-muted-foreground">{t('programs.columns.program')}</span>
               {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
               {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
             </div>
@@ -609,7 +682,7 @@ const ProgramsPage = () => {
               className={cn(isAscending && 'bg-accent')}
             >
               <ArrowUpNarrowWide className="size-4 mr-2" />
-              <span className="flex-1">Sort ascending</span>
+              <span className="flex-1">{t('programs.actions.sortAscending')}</span>
               {isAscending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -617,7 +690,7 @@ const ProgramsPage = () => {
               className={cn(isDescending && 'bg-accent')}
             >
               <ArrowDownWideNarrow className="size-4 mr-2" />
-              <span className="flex-1">Sort descending</span>
+              <span className="flex-1">{t('programs.actions.sortDescending')}</span>
               {isDescending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -633,10 +706,10 @@ const ProgramsPage = () => {
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="programs"
-        subtitle={(count) => `${count} ${count === 1 ? 'program' : 'programs'}`}
+        subtitle={(count) => `${count} ${count === 1 ? t('programs.program') : t('programs.programPlural')}`}
         itemsPerPage={itemsPerPage}
         enableSearch={true}
-        searchPlaceholder="Search..."
+        searchPlaceholder={t('programs.searchPlaceholder')}
         filters={filters}
         enableEditColumns={true}
         enableExport={true}
@@ -678,19 +751,115 @@ const ProgramsPage = () => {
               variant="secondary"
               onClick={handleOpenAssignProgram}
               className="gap-2"
-              aria-label="Assign program to athletes"
+              aria-label={t('programs.actions.assignProgram')}
             >
               <UserPlus className="size-4" />
-              <span>Assign</span>
+              <span>{t('general.assign')}</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label="Create program">
+            <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('programs.actions.createProgram')}>
               <Plus className="size-4" />
-              <span>Create program</span>
+              <span>{t('programs.actions.createProgram')}</span>
             </Button>
           </ButtonGroup>
         }
-        emptyMessage="No programs found."
+        selectionActions={
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.clearSelectedAria')}
+                  >
+                    <X className="size-4" />
+                    <span>
+                      Clear {selectedPrograms.size} selected
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.clearSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleExportSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.exportSelectedAria')}
+                  >
+                    <Download className="size-4" />
+                    <span>{t('programs.actions.export')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.export')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleStarSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.starSelectedAria')}
+                  >
+                    <Star className="size-4" />
+                    <span>{t('programs.actions.starSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.starSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleArchiveSelected}
+                    className="gap-2"
+                    aria-label={t('programs.actions.archiveSelectedAria')}
+                  >
+                    <Archive className="size-4" />
+                    <span>{t('programs.actions.archiveSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.archiveSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleDeleteSelected}
+                    className="gap-2 text-destructive hover:text-destructive"
+                    aria-label={t('programs.actions.deleteSelectedAria')}
+                  >
+                    <Trash2 className="size-4" />
+                    <span>{t('programs.actions.deleteSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.actions.deleteSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        }
+        emptyMessage={t('programs.emptyMessage')}
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="320px"
@@ -702,7 +871,7 @@ const ProgramsPage = () => {
       <SidePanel
         open={isAssignProgramOpen}
         onOpenChange={setIsAssignProgramOpen}
-        title="Assign program"
+        title={t('programs.actions.assignProgram')}
       >
         <AssignAthletesList
           onAthleteSelected={(athleteId) => {
@@ -735,7 +904,7 @@ const ProgramsPage = () => {
             setSelectedProgramForAssignment(null);
           }
         }}
-        title={selectedProgramForAssignment ? `Assigning ${selectedProgramForAssignment.program}` : 'Assign program'}
+        title={selectedProgramForAssignment ? t('programs.assigning.title', { name: selectedProgramForAssignment.program }) : t('programs.assigning.titleGeneric')}
       >
         {selectedProgramForAssignment && (
           <AssignAthletesList
@@ -759,7 +928,7 @@ const ProgramsPage = () => {
             resetCreateProgramState();
           }
         }}
-        title="New program"
+        title={t('programs.addProgram.title')}
         footer={
           <div className="flex w-full justify-start gap-2">
             <Button
@@ -771,18 +940,18 @@ const ProgramsPage = () => {
                 !newProgramType ||
                 !newProgramDifficulty
               }
-              aria-label="Continue"
+              aria-label={t('programs.addProgram.continueAria')}
               className={cn(isNavigating && 'min-w-[120px] justify-center')}
             >
-              {isNavigating ? <Spinner className="h-4 w-4" /> : 'Continue'}
+              {isNavigating ? <Spinner className="h-4 w-4" /> : t('programs.addProgram.continue')}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={handleCloseCreateProgram}
-              aria-label="Cancel creating program"
+              aria-label={t('programs.addProgram.cancelAria')}
             >
-              Cancel
+              {t('programs.addProgram.cancel')}
             </Button>
           </div>
         }
@@ -791,12 +960,12 @@ const ProgramsPage = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <label htmlFor="program-name" className="text-sm font-medium">
-                Program Name <span className="text-destructive">*</span>
+                {t('programs.addProgram.programName')} <span className="text-destructive">*</span>
               </label>
               <Input
                 id="program-name"
                 type="text"
-                placeholder="Name..."
+                placeholder={t('programs.addProgram.programNamePlaceholder')}
                 value={newProgramName}
                 onChange={(event) => {
                   setNewProgramName(event.target.value);
@@ -811,7 +980,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-type" className="text-sm font-medium">
-                Type <span className="text-destructive">*</span>
+                {t('programs.addProgram.type')} <span className="text-destructive">*</span>
               </label>
               <Select
                 value={newProgramType}
@@ -830,7 +999,7 @@ const ProgramsPage = () => {
                   )}
                   aria-invalid={!!newProgramTypeError}
                 >
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
                   {PROGRAM_TYPES.map((type) => (
@@ -846,7 +1015,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-difficulty" className="text-sm font-medium">
-                Difficulty <span className="text-destructive">*</span>
+                {t('programs.addProgram.difficulty')} <span className="text-destructive">*</span>
               </label>
               <Select
                 value={newProgramDifficulty}
@@ -866,7 +1035,7 @@ const ProgramsPage = () => {
                   )}
                   aria-invalid={!!newProgramDifficultyError}
                 >
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
                   {PROGRAM_DIFFICULTY_LEVELS.map((level) => (
@@ -882,7 +1051,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-weeks" className="text-sm font-medium">
-                Weeks
+                {t('programs.addProgram.weeks')}
               </label>
               <Input
                 id="program-weeks"
@@ -890,7 +1059,7 @@ const ProgramsPage = () => {
                 inputMode="numeric"
                 min={1}
                 step={1}
-                placeholder="Number of weeks"
+                placeholder={t('programs.addProgram.weeksPlaceholder')}
                 value={newProgramWeeks}
                 onChange={(event) => {
                   const value = event.target.value.replace(/[^0-9]/g, '');
@@ -902,13 +1071,13 @@ const ProgramsPage = () => {
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="program-description" className="text-sm font-medium">
-              Description <span className="text-muted-foreground font-normal">(Optional)</span>
+              {t('programs.addProgram.description')} <span className="text-muted-foreground font-normal">{t('programs.addProgram.descriptionOptional')}</span>
             </label>
             <Textarea
               id="program-description"
               value={newProgramDescription}
               onChange={(event) => setNewProgramDescription(event.target.value)}
-              placeholder="Add a description for your program..."
+              placeholder={t('programs.addProgram.descriptionPlaceholder')}
               rows={4}
               className="resize-none"
             />

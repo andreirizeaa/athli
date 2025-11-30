@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter, useSelectedLayoutSegments } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { PageTabs } from '@/components/page-tabs';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,20 +16,21 @@ type LibraryLayoutProps = {
   children: React.ReactNode;
 };
 
-const tabs = [
-  {
-    value: 'workouts',
-    label: 'Workouts',
-  },
-  {
-    value: 'programs',
-    label: 'Programs',
-  },
-];
-
 const LibraryLayout = ({ children }: LibraryLayoutProps) => {
+  const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
+
+  const tabs = [
+    {
+      value: 'workouts',
+      label: t('library.workouts'),
+    },
+    {
+      value: 'programs',
+      label: t('library.programs'),
+    },
+  ];
 
   const validTabValues = tabs.map((tab) => tab.value);
   // Check if any segment matches a tab value (for routes like /library/workouts/new, segments would be ["workouts", "new"])
@@ -49,12 +51,12 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
       {shouldShowHeader && (
         <div className="w-full px-4">
           <div className="flex items-center justify-between mb-2 mt-2">
-            <h1 className="text-[22px] font-semibold">Library</h1>
+            <h1 className="text-[22px] font-semibold">{t('library.title')}</h1>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="gap-2" aria-label="Open marketplace">
+                <Button className="gap-2" aria-label={t('library.openMarketplace')}>
                   <Store className="size-4" />
-                  Marketplace
+                  {t('library.marketplace')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -62,10 +64,7 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
                 className="w-80 bg-neutral-800 text-white dark:bg-white dark:text-neutral-800"
               >
                 <div className="p-4 flex items-center justify-center min-h-[80px]">
-                  <p className="text-sm text-center">
-                    Coming soon! Browse pre-made workouts and programs, sell your own programs and
-                    more!
-                  </p>
+                  <p className="text-sm text-center">{t('library.marketplaceComingSoon')}</p>
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>

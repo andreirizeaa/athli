@@ -10,6 +10,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app/app-shell';
+import { IntercomProvider } from '@/components/intercom-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -53,6 +54,7 @@ export default async function RootLayout({
               theme: shadcn,
             }}
           >
+            <IntercomProvider />
             <SupabaseProvider>
               <IntlProvider>
                 <AppShell>{children}</AppShell>

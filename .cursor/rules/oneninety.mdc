@@ -151,7 +151,69 @@ Pattern:
 - UI must not flash during theme change (use class-based theming).
 
 --------------------------------------------------------
-16. GENERAL ENGINEERING RULES
+16. INTERNATIONALIZATION (i18n) RULES
+--------------------------------------------------------
+- ALWAYS use translations for ALL static text displayed on screen.
+- NEVER hardcode strings in components (buttons, labels, placeholders, messages, etc.).
+- Use `next-intl` with `useTranslations()` hook: `const t = useTranslations();`
+- Translation file location: `apps/app/lib/i18n/en.ts`
+- Keep translations structured hierarchically by feature/section:
+  - Match the app structure (e.g., `sidebar`, `dashboard`, `athletes`, `programs`, `workouts`, `settings`)
+  - Group related translations together (e.g., `actions`, `columns`, `filters`, `toast`, `modal`)
+  - Use nested objects for organization: `athletes.detail.breadcrumb.library`
+- ALWAYS check `general` section first for reusable translations:
+  - Common actions: `save`, `cancel`, `delete`, `edit`, `close`, `confirm`
+  - Common states: `loading`, `error`, `success`, `warning`
+  - Common labels: `description`, `type`, `equipment`, `created`
+  - Use `t('general.save')` instead of creating duplicate keys
+- Translation key naming conventions:
+  - Use descriptive, hierarchical keys: `programs.detail.deleteModal.title`
+  - Include context in key names: `addProgram`, `editProgram`, `deleteProgram`
+  - Use suffixes for variants: `saveAria`, `cancelAria` for aria-labels
+  - Plural forms: `program` and `programPlural` or use `{count, plural, ...}` syntax
+- Dynamic values and interpolation:
+  - Use placeholders: `t('workouts.edit.toast.updatedSuccessfully', { name: workoutName })`
+  - Support pluralization: `t('programs.subtitle', { count: programs.length })`
+- Component implementation:
+  - Add `'use client'` directive when using `useTranslations()` in client components
+  - Import: `import { useTranslations } from 'next-intl';`
+  - Initialize: `const t = useTranslations();` at the top of component
+  - Replace all hardcoded strings: `<span>{t('sidebar.links.dashboard')}</span>`
+- Translation file structure example:
+  ```typescript
+  programs: {
+    title: 'Programs',
+    actions: {
+      createProgram: 'Create program',
+      editProgram: 'Edit program',
+    },
+    detail: {
+      breadcrumb: {
+        library: 'Library',
+        programs: 'Programs',
+      },
+      deleteModal: {
+        title: 'Delete',
+        description: 'Are you sure...',
+      },
+    },
+  },
+  ```
+- Accessibility:
+  - ALL aria-labels must be translated: `aria-label={t('sidebar.actions.closeSidebarAria')}`
+  - Tooltips must be translated: `<TooltipContent>{t('sidebar.actions.keepMenuOpen')}</TooltipContent>`
+  - Placeholders must be translated: `placeholder={t('sidebar.search.placeholder')}`
+- Error messages and toasts:
+  - All user-facing messages must be translated
+  - Use structured keys: `toast.deletedSuccessfully`, `toast.failedToSave`
+- When adding new features:
+  1. First, check if translations exist in `general` section
+  2. Add new keys to appropriate section in `en.ts` following existing structure
+  3. Update components to use `t()` instead of hardcoded strings
+  4. Maintain consistency with existing translation patterns
+
+--------------------------------------------------------
+17. GENERAL ENGINEERING RULES
 --------------------------------------------------------
 - No unused imports or variables.
 - No console logs in production.
