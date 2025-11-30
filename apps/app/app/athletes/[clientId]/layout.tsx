@@ -44,6 +44,10 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       label: 'Metrics',
     },
     {
+      value: 'appointment-sessions',
+      label: 'Bookings',
+    },
+    {
       value: 'training-calendar',
       label: 'Training Calendar',
     },
@@ -83,7 +87,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   };
 
   const handleNavigateToMessages = (athleteId: string) => {
-    router.push(`/messaging?contact=${athleteId}`);
+    router.push(`/messaging/${athleteId}`);
   };
 
   const handleArchive = async () => {
