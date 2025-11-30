@@ -12,12 +12,12 @@ import {
   Check,
   CreditCard,
   ChevronsLeft,
+  HelpCircle,
   Home,
   Laptop,
   LogOut,
   Megaphone,
   MessageCircle,
-  HelpCircle,
   Moon,
   MoreVertical,
   PanelLeftClose,
@@ -27,6 +27,7 @@ import {
   Sparkles,
   Sun,
   User,
+  UserPlus,
   Users,
   CalendarDays,
 } from 'lucide-react';
@@ -61,6 +62,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
@@ -1492,22 +1496,6 @@ const AppShellContent = ({
   const isPinnedOpen = state === 'expanded' && !isHovered;
   const isHoverExpanded = state === 'collapsed' && isHovered;
 
-  // Keep sidebar open when profile dropdown is open, collapse when it closes
-  React.useEffect(() => {
-    if (isProfileDropdownOpen) {
-      setOpen(true);
-      setJustClosed(false);
-    } else {
-      // Collapse sidebar when profile dropdown closes
-      setIsHovered(false);
-      setJustClosed(true);
-      setOpen(false);
-      // Reset the justClosed flag after a short delay to allow hover to work again
-      setTimeout(() => {
-        setJustClosed(false);
-      }, 300);
-    }
-  }, [isProfileDropdownOpen, setOpen, setIsHovered, setJustClosed]);
 
   const handlePinMenu = () => {
     setOpen(true);
@@ -1808,21 +1796,6 @@ const AppShellContent = ({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          <SidebarGroup className="pb-0">
-            <div className="flex h-6 items-center px-2">
-              {isCollapsed ? (
-                <div className="mx-auto h-px w-8 bg-sidebar-border" />
-              ) : (
-                <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  {t('sidebar.group.library')}
-                </span>
-              )}
-            </div>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
                 {generalNavItems.map((item) => {
                   const Icon = item.icon;
                   let isActive = false;
@@ -1849,21 +1822,6 @@ const AppShellContent = ({
                     </SidebarMenuItem>
                   );
                 })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-          <SidebarGroup className="pb-0">
-            <div className="flex h-6 items-center px-2">
-              {isCollapsed ? (
-                <div className="mx-auto h-px w-8 bg-sidebar-border" />
-              ) : (
-                <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  {t('sidebar.group.business')}
-                </span>
-              )}
-            </div>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
                 {businessNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive =
@@ -1929,125 +1887,44 @@ const AppShellContent = ({
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="mt-auto px-2 pb-3">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={activePath === '/settings'}
-              className={cn('text-xs', getActiveSidebarClasses(activePath === '/settings'))}
-            >
-              <Link href="/settings">
-                <Settings className="shrink-0" />
-                {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="text-xs bg-primary !text-primary-foreground hover:bg-primary/90 [&_svg]:!text-primary-foreground">
-                  <Users className="shrink-0" />
-                  {!isCollapsed && <span className="!text-primary-foreground">{t('sidebar.footer.addTeamMembers')}</span>}
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('sidebar.footer.comingSoon')}</div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
-              <DropdownMenuTrigger asChild>
-                {isCollapsed ? (
-                  <button
-                    type="button"
-                    className="hover:bg-accent/60 flex h-11 w-full items-center justify-center rounded-md p-2"
-                    aria-label={t('sidebar.profile.openAccountMenuAria')}
-                  >
-                    <Avatar className="h-8 w-8 rounded-md">
-                      <AvatarImage src={user?.imageUrl} alt={displayName} />
-                      <AvatarFallback>{initials}</AvatarFallback>
-                    </Avatar>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="hover:bg-accent/60 text-sm flex h-11 w-full items-center justify-between gap-2 rounded-md pl-0 pr-2 pt-2 pb-2 text-left"
-                    aria-label={t('sidebar.profile.openAccountMenuAria')}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8 rounded-md">
-                        <AvatarImage src={user?.imageUrl} alt={displayName} />
-                        <AvatarFallback>{initials}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-1 flex-col overflow-hidden">
-                        <span className="text-foreground truncate text-sm font-medium">
-                          {displayName}
-                        </span>
-                        {displayEmail && (
-                          <span className="text-muted-foreground truncate text-xs">
-                            {displayEmail}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                )}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                side="right"
-                align="center"
-                collisionPadding={{ bottom: 8 }}
-                className="w-64 rounded-2xl p-0"
+          <SidebarMenu className="gap-0.5">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={activePath === '/settings'}
+                className={cn('text-xs', getActiveSidebarClasses(activePath === '/settings'))}
               >
-                <div className="flex items-center gap-3 px-3 py-3">
-                  <Avatar className="h-10 w-10 rounded-md">
-                    <AvatarImage src={user?.imageUrl} alt={displayName} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <span className="text-foreground truncate text-sm font-medium">
-                      {displayName}
-                    </span>
-                    {displayEmail && (
-                      <span className="text-muted-foreground truncate text-xs">{displayEmail}</span>
-                    )}
-                  </div>
-                </div>
-                <DropdownMenuSeparator className="my-0" />
-                <DropdownMenuItem
-                  className="cursor-pointer px-3 py-2"
-                  onClick={() => openUserProfile()}
-                >
-                  <User />
-                  <span>{t('sidebar.profile.account')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer px-3 py-2"
-                  onClick={() => openUserProfile()}
-                >
-                  <CreditCard />
-                  <span>{t('sidebar.profile.billing')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="my-0" />
-                <DropdownMenuItem
-                  className="cursor-pointer px-3 py-2"
-                  variant="destructive"
-                  onClick={() => {
-                    setIsLoggingOut(true);
-                    const wwwUrl =
-                      process.env.NODE_ENV === 'production'
-                        ? 'https://oneninety.com'
-                        : 'http://localhost:3000';
-                    signOut({ redirectUrl: wwwUrl });
-                  }}
-                >
-                  <LogOut />
-                  <span>{t('sidebar.profile.logOut')}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
+                <Link href="/settings">
+                  <Settings className="shrink-0" />
+                  {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                className="text-xs"
+              >
+                <Link href="/support">
+                  <HelpCircle className="shrink-0" />
+                  {!isCollapsed && <span>{t('sidebar.support.label') || 'Support'}</span>}
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton className="text-xs bg-primary !text-primary-foreground hover:bg-primary/90 [&_svg]:!text-primary-foreground">
+                    <UserPlus className="shrink-0" />
+                    {!isCollapsed && <span className="!text-primary-foreground">{t('sidebar.footer.addTeamMembers')}</span>}
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('sidebar.footer.comingSoon')}</div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex-1 overflow-hidden flex flex-col">
@@ -2378,9 +2255,6 @@ const AppShellContent = ({
                   </div>
                 </PopoverContent>
               </Popover>
-              <div className="flex items-center justify-center px-2">
-                <div className="h-6 border-l" />
-              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -2395,96 +2269,139 @@ const AppShellContent = ({
                   <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('sidebar.footer.comingSoon')}</div>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-            <div className="flex items-center justify-center px-2">
-              <div className="h-6 border-l" />
-            </div>
-            <div className="flex items-center gap-1">
-              <DropdownMenu>
+              <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label={`Select language (current: ${availableLanguages.find((lang) => lang.code === currentLanguage)?.label || 'English'})`}
+                  <button
+                    type="button"
+                    className="rounded-md overflow-hidden hover:opacity-80 transition-opacity"
+                    aria-label={t('sidebar.profile.openAccountMenuAria')}
                   >
-                    <span className="text-lg leading-none">
-                      {availableLanguages.find((lang) => lang.code === currentLanguage)?.flag ||
-                        '🇬🇧'}
-                    </span>
-                  </Button>
+                    <Avatar className="h-8 w-8 rounded-md">
+                      <AvatarImage src={user?.imageUrl} alt={displayName} />
+                      <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                    </Avatar>
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuRadioGroup
-                    value={currentLanguage}
-                    onValueChange={setCurrentLanguage}
-                  >
-                    {availableLanguages.map((language) => (
-                      <DropdownMenuRadioItem
-                        key={language.code}
-                        value={language.code}
-                        className={cn(currentLanguage === language.code && 'bg-accent')}
+                <DropdownMenuContent
+                  side="bottom"
+                  align="end"
+                  collisionPadding={{ bottom: 8 }}
+                  className="w-64 rounded-2xl p-0"
+                >
+                  <div className="flex items-center gap-3 px-3 py-3">
+                    <Avatar className="h-10 w-10 rounded-md">
+                      <AvatarImage src={user?.imageUrl} alt={displayName} />
+                      <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                      <span className="text-foreground truncate text-sm font-medium">
+                        {displayName}
+                      </span>
+                      {displayEmail && (
+                        <span className="text-muted-foreground truncate text-xs">{displayEmail}</span>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenuSeparator className="my-0" />
+                  {isThemeMounted && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="px-3 py-2 rounded-t-none">
+                        {currentTheme === 'dark' ? (
+                          <Moon className="mr-2 size-4" />
+                        ) : currentTheme === 'light' ? (
+                          <Sun className="mr-2 size-4" />
+                        ) : (
+                          <Laptop className="mr-2 size-4" />
+                        )}
+                        <span className="flex-1">{t('sidebar.theme.label') || 'Theme'}</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuRadioGroup
+                          value={currentTheme}
+                          onValueChange={(value) => setTheme(value)}
+                        >
+                          <DropdownMenuRadioItem
+                            value="light"
+                            className={cn(currentTheme === 'light' && 'bg-accent')}
+                          >
+                            <Sun className="mr-2 size-4" />
+                            <span className="flex-1">{t('sidebar.theme.light')}</span>
+                            {currentTheme === 'light' && <Check className="ml-2 size-4" />}
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem
+                            value="dark"
+                            className={cn(currentTheme === 'dark' && 'bg-accent')}
+                          >
+                            <Moon className="mr-2 size-4" />
+                            <span className="flex-1">{t('sidebar.theme.dark')}</span>
+                            {currentTheme === 'dark' && <Check className="ml-2 size-4" />}
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem
+                            value="system"
+                            className={cn(currentTheme === 'system' && 'bg-accent')}
+                          >
+                            <Laptop className="mr-2 size-4" />
+                            <span className="flex-1">{t('sidebar.theme.system')}</span>
+                            {currentTheme === 'system' && <Check className="ml-2 size-4" />}
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="px-3 py-2">
+                      <span className="mr-2 text-lg leading-none">
+                        {availableLanguages.find((lang) => lang.code === currentLanguage)?.flag ||
+                          '🇬🇧'}
+                      </span>
+                      <span className="flex-1">{t('sidebar.language.label') || 'Language'}</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup
+                        value={currentLanguage}
+                        onValueChange={setCurrentLanguage}
                       >
-                        <span className="mr-2 text-lg leading-none">{language.flag}</span>
-                        <span className="flex-1">{language.label}</span>
-                        {currentLanguage === language.code && <Check className="ml-2 size-4" />}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
+                        {availableLanguages.map((language) => (
+                          <DropdownMenuRadioItem
+                            key={language.code}
+                            value={language.code}
+                            className={cn(currentLanguage === language.code && 'bg-accent')}
+                          >
+                            <span className="mr-2 text-lg leading-none">{language.flag}</span>
+                            <span className="flex-1">{language.label}</span>
+                            {currentLanguage === language.code && <Check className="ml-2 size-4" />}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuItem
+                    className="cursor-pointer px-3 py-2 rounded-t-none rounded-b-none"
+                    asChild
+                  >
+                    <Link href="/settings">
+                      <Settings className="mr-2 size-4" />
+                      <span>{t('sidebar.settings.label') || 'Settings'}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-0" />
+                  <DropdownMenuItem
+                    className="cursor-pointer px-3 py-2 rounded-t-none"
+                    variant="destructive"
+                    onClick={() => {
+                      setIsLoggingOut(true);
+                      const wwwUrl =
+                        process.env.NODE_ENV === 'production'
+                          ? 'https://oneninety.com'
+                          : 'http://localhost:3000';
+                      signOut({ redirectUrl: wwwUrl });
+                    }}
+                  >
+                    <LogOut className="mr-2 size-4" />
+                    <span>{t('sidebar.profile.logOut')}</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {isThemeMounted && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      aria-label={t('sidebar.theme.toggleAria')}
-                    >
-                      {currentTheme === 'dark' ? (
-                        <Moon className="size-4" />
-                      ) : currentTheme === 'light' ? (
-                        <Sun className="size-4" />
-                      ) : (
-                        <Laptop className="size-4" />
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuRadioGroup
-                      value={currentTheme}
-                      onValueChange={(value) => setTheme(value)}
-                    >
-                      <DropdownMenuRadioItem
-                        value="light"
-                        className={cn(currentTheme === 'light' && 'bg-accent')}
-                      >
-                        <Sun className="mr-2 size-4" />
-                        <span className="flex-1">{t('sidebar.theme.light')}</span>
-                        {currentTheme === 'light' && <Check className="ml-2 size-4" />}
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem
-                        value="dark"
-                        className={cn(currentTheme === 'dark' && 'bg-accent')}
-                      >
-                        <Moon className="mr-2 size-4" />
-                        <span className="flex-1">{t('sidebar.theme.dark')}</span>
-                        {currentTheme === 'dark' && <Check className="ml-2 size-4" />}
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem
-                        value="system"
-                        className={cn(currentTheme === 'system' && 'bg-accent')}
-                      >
-                        <Laptop className="mr-2 size-4" />
-                        <span className="flex-1">{t('sidebar.theme.system')}</span>
-                        {currentTheme === 'system' && <Check className="ml-2 size-4" />}
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-              <Button variant="outline" size="icon" aria-label={t('sidebar.help.aria')} onClick={() => {}}>
-                <HelpCircle className="size-4" />
-              </Button>
             </div>
           </div>
         </div>
