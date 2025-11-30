@@ -120,20 +120,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Intercom custom branding - ensures styling persists even after widget reloads */
-#intercom-container .intercom-launcher-frame {
-  background-color: var(--intercom-bg-color, #000000) !important;
-}
-
-#intercom-container .intercom-launcher-button {
-  background-color: var(--intercom-bg-color, #000000) !important;
-}
-
-/* Custom launcher icon support */
-#intercom-container .intercom-launcher-button-icon {
-  background-image: var(--intercom-icon-url, none) !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
