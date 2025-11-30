@@ -15,7 +15,7 @@ export const enMessages = {
   },
   sidebar: {
     group: {
-      general: 'General',
+      library: 'Library',
       business: 'Business',
       athletes: 'Athletes',
     },

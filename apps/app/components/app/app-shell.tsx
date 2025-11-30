@@ -14,7 +14,6 @@ import {
   ChevronsLeft,
   Home,
   Laptop,
-  LayoutDashboard,
   LogOut,
   Megaphone,
   MessageCircle,
@@ -1728,11 +1727,6 @@ const AppShellContent = ({
 
   const generalNavItems = [
     {
-      href: '/dashboard',
-      labelKey: 'sidebar.links.dashboard',
-      icon: LayoutDashboard,
-    },
-    {
       href: '/library',
       labelKey: 'sidebar.links.library',
       icon: Archive,
@@ -1823,7 +1817,7 @@ const AppShellContent = ({
                 <div className="mx-auto h-px w-8 bg-sidebar-border" />
               ) : (
                 <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                  {t('sidebar.group.general')}
+                  {t('sidebar.group.library')}
                 </span>
               )}
             </div>

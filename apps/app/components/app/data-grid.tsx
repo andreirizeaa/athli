@@ -1222,11 +1222,23 @@ export function DataGrid<T extends Record<string, any>>({
           open={isEditColumnsOpen}
           onOpenChange={setIsEditColumnsOpen}
           gridKey={gridKey}
-          columns={columns.map((col) => ({
-            id: col.id,
-            label: col.label,
-            icon: col.icon,
-          }))}
+          columns={columns
+            .filter((col) => {
+              // Exclude the first column (pinned column) from edit columns
+              if (firstColumnId && col.id === firstColumnId) {
+                return false;
+              }
+              // Also exclude any pinned columns
+              if (pinnedColumns && pinnedColumns.includes(col.id)) {
+                return false;
+              }
+              return true;
+            })
+            .map((col) => ({
+              id: col.id,
+              label: col.label,
+              icon: col.icon,
+            }))}
           visibleColumns={Array.from(visibleColumns)}
           columnOrder={columnOrder}
           pinnedColumns={pinnedColumns}
