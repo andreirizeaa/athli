@@ -14,6 +14,7 @@ type SidePanelProps = {
   footer?: React.ReactNode;
   side?: 'left' | 'right';
   contentClassName?: string;
+  onOpenAutoFocus?: (event: Event) => void;
 };
 
 export const SidePanel = ({
@@ -24,6 +25,7 @@ export const SidePanel = ({
   footer,
   side = 'right',
   contentClassName,
+  onOpenAutoFocus,
 }: SidePanelProps) => {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -33,6 +35,7 @@ export const SidePanel = ({
           'w-full sm:w-[500px] sm:max-w-[500px] px-0 pb-0 flex flex-col',
           contentClassName
         )}
+        onOpenAutoFocus={onOpenAutoFocus}
       >
         <div className="px-4 pt-3">
           <h2 className="text-base font-semibold">{title}</h2>

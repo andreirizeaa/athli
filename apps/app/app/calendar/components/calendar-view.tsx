@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Pen } from 'lucide-react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Pen, Trash2, Mail, X, Clock, Users } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -15,13 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { SidePanel } from '@/components/app/side-panel';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
+import { toast } from 'sonner';
+import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar-service';
 
 interface CalendarEvent {
   id: string;
@@ -36,9 +46,15 @@ interface CalendarEvent {
   };
   description?: string;
   location?: string;
+  attendees?: Array<{
+    email?: string;
+    displayName?: string;
+    responseStatus?: string;
+  }>;
 }
 
 export const CalendarView = () => {
+  const { user } = useUser();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -46,18 +62,15 @@ export const CalendarView = () => {
   const [eventsCache, setEventsCache] = useState<Map<string, CalendarEvent[]>>(new Map());
   const [fetchedRanges, setFetchedRanges] = useState<Array<{ start: string; end: string }>>([]);
   const [isBookMeetingOpen, setIsBookMeetingOpen] = useState(false);
-  const [isCustomDuration, setIsCustomDuration] = useState(false);
   const [meetingForm, setMeetingForm] = useState({
     title: '',
     date: '',
     startTime: '',
-    duration: '',
+    endTime: '',
     description: '',
     location: '',
   });
-  const [inviteSearchQuery, setInviteSearchQuery] = useState('');
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [selectedAthletes, setSelectedAthletes] = useState<Athlete[]>([]);
+  const [selectedAthleteEmails, setSelectedAthleteEmails] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartMinutes, setDragStartMinutes] = useState<number | null>(null);
   const [dragEndMinutes, setDragEndMinutes] = useState<number | null>(null);
@@ -65,48 +78,106 @@ export const CalendarView = () => {
   const [dragDayIndex, setDragDayIndex] = useState<number | null>(null);
   const [clickY, setClickY] = useState<number | null>(null);
   const [clickHeight, setClickHeight] = useState<number | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
+  const [preferredSide, setPreferredSide] = useState<'top' | 'bottom'>('bottom');
+  const [isEditMeetingOpen, setIsEditMeetingOpen] = useState(false);
+  const [editClients, setEditClients] = useState<string[]>([]);
+  const [editClientOptions, setEditClientOptions] = useState<Option[]>([]);
+  const [editClientInput, setEditClientInput] = useState('');
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [emailForm, setEmailForm] = useState({
+    emails: [] as string[],
+    subject: '',
+    message: '',
+  });
+  const [emailOptions, setEmailOptions] = useState<Option[]>([]);
+  const [emailSearchQuery, setEmailSearchQuery] = useState('');
+  const eventRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Fuzzy match function for athlete search
-  const isFuzzyMatch = (text: string, query: string) => {
-    const normalizedText = text.toLowerCase();
-    const normalizedQuery = query.toLowerCase().trim();
-
-    if (!normalizedQuery) {
-      return false;
+  // Prevent scrolling and click propagation when popover is open
+  useEffect(() => {
+    if (dropdownOpen) {
+      document.body.style.overflow = 'hidden';
+      
+      // Prevent clicks from propagating to underlying elements when clicking outside popover
+      const handleClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        const popoverContent = document.querySelector('[data-slot="popover-content"]');
+        
+        // If clicking outside the popover content, prevent all event propagation
+        if (popoverContent && !popoverContent.contains(target)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          // Close the popover
+          setDropdownOpen(false);
+          setSelectedEvent(null);
+          setPopoverAnchor(null);
+        }
+      };
+      
+      // Use capture phase to intercept clicks before they reach other handlers
+      document.addEventListener('click', handleClick, true);
+      document.addEventListener('mousedown', handleClick, true);
+      
+      return () => {
+        document.body.style.overflow = '';
+        document.removeEventListener('click', handleClick, true);
+        document.removeEventListener('mousedown', handleClick, true);
+      };
+    } else {
+      document.body.style.overflow = '';
     }
+  }, [dropdownOpen]);
 
-    if (normalizedText.includes(normalizedQuery)) {
-      return true;
-    }
+  // Convert athletes to options for MultiAsyncSelect (email as value, name as label)
+  const athleteOptions = useMemo(() => {
+    return mockAthletes.map((athlete) => ({
+      label: athlete.name,
+      value: athlete.email,
+    }));
+  }, []);
 
-    let textIndex = 0;
-    let queryIndex = 0;
-
-    while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
-      if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
-        queryIndex += 1;
+  // Combine athlete options with custom emails for email modal
+  const emailOptionsWithSearch = useMemo(() => {
+    const options = [...athleteOptions, ...emailOptions];
+    if (emailSearchQuery.trim()) {
+      const email = emailSearchQuery.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(email) && !options.find((opt) => opt.value === email)) {
+        options.push({ label: email, value: email });
       }
-      textIndex += 1;
     }
+    // Remove duplicates
+    return options.filter((opt, index, self) => 
+      index === self.findIndex((o) => o.value === opt.value)
+    );
+  }, [athleteOptions, emailOptions, emailSearchQuery]);
 
-    return queryIndex === normalizedQuery.length;
-  };
-
-  // Filter athletes based on search query
-  const filteredAthletes = useMemo(() => {
-    const query = inviteSearchQuery.trim();
-    if (!query) {
-      return [];
+  // Combine athlete options with custom emails for edit clients
+  const editClientOptionsWithSearch = useMemo(() => {
+    const options = [...athleteOptions, ...editClientOptions];
+    if (editClientInput && editClientInput.trim()) {
+      const email = editClientInput.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(email) && !options.find((opt) => opt.value === email)) {
+        options.push({ label: email, value: email });
+      }
     }
-    return mockAthletes.filter((athlete) => {
-      const hasMatch =
-        isFuzzyMatch(athlete.name, query) ||
-        isFuzzyMatch(athlete.email, query) ||
-        isFuzzyMatch(athlete.phone, query) ||
-        isFuzzyMatch(athlete.country, query);
-      return hasMatch && !selectedAthletes.find((a) => a.id === athlete.id);
-    });
-  }, [inviteSearchQuery, selectedAthletes]);
+    // Remove duplicates
+    return options.filter((opt, index, self) => 
+      index === self.findIndex((o) => o.value === opt.value)
+    );
+  }, [athleteOptions, editClientOptions, editClientInput]);
+
+  // Set default location when create panel opens
+  useEffect(() => {
+    if (isBookMeetingOpen && !meetingForm.location) {
+      setMeetingForm((prev) => ({ ...prev, location: 'In person (Gym)' }));
+    }
+  }, [isBookMeetingOpen]);
 
   // Check if required fields are filled
   const isFormValid = useMemo(() => {
@@ -114,10 +185,22 @@ export const CalendarView = () => {
       meetingForm.title.trim() !== '' &&
       meetingForm.date !== '' &&
       meetingForm.startTime !== '' &&
-      meetingForm.duration !== '' &&
-      selectedAthletes.length > 0
+      meetingForm.endTime !== '' &&
+      meetingForm.location !== '' &&
+      selectedAthleteEmails.length > 0
     );
-  }, [meetingForm.title, meetingForm.date, meetingForm.startTime, meetingForm.duration, selectedAthletes.length]);
+  }, [meetingForm.title, meetingForm.date, meetingForm.startTime, meetingForm.endTime, meetingForm.location, selectedAthleteEmails.length]);
+  
+  // Check if edit form is valid
+  const isEditFormValid = useMemo(() => {
+    return (
+      meetingForm.title.trim() !== '' &&
+      meetingForm.date !== '' &&
+      meetingForm.startTime !== '' &&
+      meetingForm.endTime !== '' &&
+      meetingForm.location !== ''
+    );
+  }, [meetingForm.title, meetingForm.date, meetingForm.startTime, meetingForm.endTime, meetingForm.location]);
 
   // Calculate time from Y position (snapped to 15-minute intervals)
   const getTimeFromPosition = (y: number, height: number, date: Date) => {
@@ -213,21 +296,20 @@ export const CalendarView = () => {
       const startDate = new Date(dragDate);
       startDate.setHours(Math.floor(finalStartMinutes / 60), finalStartMinutes % 60, 0, 0);
       
+      const endDate = new Date(dragDate);
+      endDate.setHours(Math.floor((finalStartMinutes + durationMinutes) / 60), (finalStartMinutes + durationMinutes) % 60, 0, 0);
+      
       const dateString = format(startDate, 'yyyy-MM-dd');
-      const timeString = format(startDate, 'HH:mm');
-      const duration = durationMinutes.toString();
-
-      // Check if duration is over 90 minutes (custom)
-      const isCustom = durationMinutes > 90 || !['15', '30', '45', '60', '75', '90'].includes(duration);
+      const startTimeString = format(startDate, 'HH:mm');
+      const endTimeString = format(endDate, 'HH:mm');
 
       setMeetingForm({
         ...meetingForm,
         date: dateString,
-        startTime: timeString,
-        duration,
+        startTime: startTimeString,
+        endTime: endTimeString,
       });
       setIsBookMeetingOpen(true);
-      setIsCustomDuration(isCustom);
     }
 
     setIsDragging(false);
@@ -303,21 +385,20 @@ export const CalendarView = () => {
         const startDate = new Date(dragDate);
         startDate.setHours(Math.floor(finalStartMinutes / 60), finalStartMinutes % 60, 0, 0);
         
+        const endDate = new Date(dragDate);
+        endDate.setHours(Math.floor((finalStartMinutes + durationMinutes) / 60), (finalStartMinutes + durationMinutes) % 60, 0, 0);
+        
         const dateString = format(startDate, 'yyyy-MM-dd');
-        const timeString = format(startDate, 'HH:mm');
-        const duration = durationMinutes.toString();
-
-        // Check if duration is over 90 minutes (custom)
-        const isCustom = durationMinutes > 90 || !['15', '30', '45', '60', '75', '90'].includes(duration);
+        const startTimeString = format(startDate, 'HH:mm');
+        const endTimeString = format(endDate, 'HH:mm');
 
         setMeetingForm((prev) => ({
           ...prev,
           date: dateString,
-          startTime: timeString,
-          duration,
+          startTime: startTimeString,
+          endTime: endTimeString,
         }));
         setIsBookMeetingOpen(true);
-        setIsCustomDuration(isCustom);
       }
 
       setIsDragging(false);
@@ -640,6 +721,129 @@ export const CalendarView = () => {
     setCurrentDate(new Date());
   };
 
+  const handleEditMeeting = () => {
+    if (!selectedEvent) return;
+    
+    // Initialize form with selected event data
+    const startDate = selectedEvent.start.dateTime
+      ? new Date(selectedEvent.start.dateTime)
+      : selectedEvent.start.date
+        ? new Date(selectedEvent.start.date)
+        : new Date();
+    
+    const endDate = selectedEvent.end.dateTime
+      ? new Date(selectedEvent.end.dateTime)
+      : selectedEvent.end.date
+        ? new Date(selectedEvent.end.date)
+        : new Date(startDate.getTime() + 60 * 60 * 1000);
+    
+    setMeetingForm({
+      title: selectedEvent.summary,
+      date: format(startDate, 'yyyy-MM-dd'),
+      startTime: format(startDate, 'HH:mm'),
+      endTime: format(endDate, 'HH:mm'),
+      description: selectedEvent.description || '',
+      location: selectedEvent.location || 'In person (Gym)',
+    });
+    
+    // Initialize clients from attendees (excluding user email)
+    const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
+    const initialClients = (selectedEvent.attendees || [])
+      .map((attendee) => attendee.email?.toLowerCase())
+      .filter((email): email is string => !!email && email !== userEmail);
+    
+    setEditClients(initialClients);
+    // Initialize options with existing clients
+    setEditClientOptions(initialClients.map((email) => ({ label: email, value: email })));
+    setIsEditMeetingOpen(true);
+    setDropdownOpen(false);
+  };
+
+  const handleDeleteMeeting = async () => {
+    if (!selectedEvent) return;
+    
+    try {
+      await deleteCalendarEvent({ eventId: selectedEvent.id });
+      toast.success('Meeting deleted successfully');
+      setDropdownOpen(false);
+      setSelectedEvent(null);
+      // Refresh events by refetching
+      setEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
+    } catch (error) {
+      toast.error('Failed to delete meeting');
+      console.error('Error deleting meeting:', error);
+    }
+  };
+
+  const handleEmailMeeting = () => {
+    setIsEmailModalOpen(true);
+    // Keep dropdown open
+  };
+
+
+  const handleSendEmail = async () => {
+    if (!selectedEvent || !emailForm.subject.trim() || emailForm.emails.length === 0) {
+      return;
+    }
+
+    try {
+      await sendAppointmentInfo({
+        emails: emailForm.emails,
+        subject: emailForm.subject,
+        message: emailForm.message,
+        eventId: selectedEvent.id,
+      });
+      toast.success('Email sent successfully');
+      setIsEmailModalOpen(false);
+      setEmailForm({
+        emails: [],
+        subject: '',
+        message: '',
+      });
+      // Keep dropdown open after sending email
+    } catch (error) {
+      toast.error('Failed to send email');
+      console.error('Error sending email:', error);
+    }
+  };
+
+  const handleUpdateMeeting = async (updatedData: {
+    title: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    description: string;
+    location: string;
+  }) => {
+    if (!selectedEvent) return;
+
+    try {
+      const startDateTime = new Date(`${updatedData.date}T${updatedData.startTime}`);
+      const endDateTime = new Date(`${updatedData.date}T${updatedData.endTime}`);
+
+      await updateCalendarEvent({
+        eventId: selectedEvent.id,
+        summary: updatedData.title,
+        start: {
+          dateTime: startDateTime.toISOString(),
+        },
+        end: {
+          dateTime: endDateTime.toISOString(),
+        },
+        description: updatedData.description || undefined,
+        location: updatedData.location || undefined,
+      });
+
+      toast.success('Meeting updated successfully');
+      setIsEditMeetingOpen(false);
+      setDropdownOpen(false);
+      // Refresh events would happen here
+    } catch (error) {
+      toast.error('Failed to update meeting');
+      console.error('Error updating meeting:', error);
+    }
+  };
+
   const getWeekRange = () => {
     if (viewMode === 'week') {
       const firstDate = calendarDates[0]?.[0];
@@ -689,6 +893,16 @@ export const CalendarView = () => {
           <div className="flex items-center gap-3">
             <Button
               type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleToday}
+              className="h-8"
+              aria-label="Go to today"
+            >
+              Today
+            </Button>
+            <Button
+              type="button"
               variant="ghost"
               size="icon"
               onClick={handlePrevious}
@@ -710,16 +924,6 @@ export const CalendarView = () => {
               aria-label="Next period"
             >
               <ChevronRight className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleToday}
-              className="h-8"
-              aria-label="Go to today"
-            >
-              Today
             </Button>
           </div>
           <div className="flex items-center gap-3">
@@ -881,11 +1085,27 @@ export const CalendarView = () => {
                             return (
                               <div
                                 key={event.id}
+                                ref={(el) => {
+                                  if (el) eventRefs.current.set(event.id, el);
+                                  else eventRefs.current.delete(event.id);
+                                }}
                                 data-event
                                 className="absolute left-1 right-1 bg-orange-100 dark:bg-orange-900 border-l-2 border-orange-300 dark:border-orange-700 rounded px-1.5 py-0.5 cursor-pointer z-10"
                                 style={style}
                                 title={event.summary}
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const windowHeight = window.innerHeight;
+                                  const spaceBelow = windowHeight - rect.bottom;
+                                  const spaceAbove = rect.top;
+                                  // If there's less than 350px below (approximate popover height) and more space above, prefer top
+                                  const shouldShowAbove = spaceBelow < 350 && spaceAbove > spaceBelow;
+                                  setPreferredSide(shouldShowAbove ? 'top' : 'bottom');
+                                  setPopoverAnchor(e.currentTarget);
+                                  setSelectedEvent(event);
+                                  setDropdownOpen(true);
+                                }}
                               >
                                 <div className="flex flex-col">
                                   <span className="text-[10px] font-medium text-black dark:text-white line-clamp-1">
@@ -948,23 +1168,19 @@ export const CalendarView = () => {
                       {/* Day header */}
                       <div className="flex flex-col items-center flex-shrink-0">
                         {isFirstRow && (
-                          <span
-                            className={cn(
-                              'text-[10px] uppercase pb-0',
-                              isCurrentDay && 'text-primary'
-                            )}
-                          >
+                          <span className="text-[10px] uppercase pb-0 text-muted-foreground">
                             {dayNames[dayIndex]}
                           </span>
                         )}
-                        <span
-                          className={cn(
-                            'text-xs text-center pt-0.5 pb-1',
-                            isCurrentDay && 'text-primary font-semibold'
-                          )}
-                        >
+                        {isCurrentDay ? (
+                          <span className="text-xs text-center pt-0.5 pb-1 flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground font-medium">
                           {date.getDate()}
                         </span>
+                        ) : (
+                          <span className="text-xs text-center pt-0.5 pb-1">
+                            {date.getDate()}
+                          </span>
+                        )}
                       </div>
 
                       {/* Events */}
@@ -978,8 +1194,24 @@ export const CalendarView = () => {
                           .map((event) => (
                             <div
                               key={event.id}
-                              className="text-[10px] bg-orange-100 dark:bg-orange-900 border-l-2 border-orange-300 dark:border-orange-700 rounded px-1.5 py-0.5 truncate"
+                              ref={(el) => {
+                                if (el) eventRefs.current.set(event.id, el);
+                                else eventRefs.current.delete(event.id);
+                              }}
+                              className="text-[10px] bg-orange-100 dark:bg-orange-900 border-l-2 border-orange-300 dark:border-orange-700 rounded px-1.5 py-0.5 truncate cursor-pointer"
                               title={event.summary}
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const windowHeight = window.innerHeight;
+                                const spaceBelow = windowHeight - rect.bottom;
+                                const spaceAbove = rect.top;
+                                // If there's less than 350px below (approximate popover height) and more space above, prefer top
+                                const shouldShowAbove = spaceBelow < 350 && spaceAbove > spaceBelow;
+                                setPreferredSide(shouldShowAbove ? 'top' : 'bottom');
+                                setPopoverAnchor(e.currentTarget);
+                                setSelectedEvent(event);
+                                setDropdownOpen(true);
+                              }}
                             >
                               {event.start.dateTime && (
                                 <span className="font-medium">
@@ -1009,19 +1241,17 @@ export const CalendarView = () => {
               disabled={!isFormValid}
               onClick={() => {
                 // Handle save logic here
-                console.log('Add meeting:', { ...meetingForm, invitedAthletes: selectedAthletes });
+                console.log('Add meeting:', { ...meetingForm, invitedAthletes: selectedAthleteEmails });
                 setIsBookMeetingOpen(false);
                 setMeetingForm({
                   title: '',
                   date: '',
                   startTime: '',
-                  duration: '',
+                  endTime: '',
                   description: '',
                   location: '',
                 });
-                setSelectedAthletes([]);
-                setInviteSearchQuery('');
-                setIsCustomDuration(false);
+                setSelectedAthleteEmails([]);
               }}
             >
               Add
@@ -1035,13 +1265,11 @@ export const CalendarView = () => {
                     title: '',
                     date: '',
                     startTime: '',
-                    duration: '',
+                    endTime: '',
                     description: '',
                     location: '',
                   });
-                  setSelectedAthletes([]);
-                  setInviteSearchQuery('');
-                  setIsCustomDuration(false);
+                  setSelectedAthleteEmails([]);
                 }}
             >
               Cancel
@@ -1065,96 +1293,18 @@ export const CalendarView = () => {
             <Label>
               Invite <span className="text-destructive">*</span>
             </Label>
-            <Popover open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={isInviteOpen}
-                  className="w-full justify-start text-left font-normal"
-                >
-                  {inviteSearchQuery || 'Search athletes...'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0" align="start">
-                <Command>
-                  <CommandInput
-                    placeholder="Search athletes..."
-                    value={inviteSearchQuery}
-                    onValueChange={setInviteSearchQuery}
-                  />
-                  <CommandList>
-                    <CommandEmpty>No athletes found.</CommandEmpty>
-                    <CommandGroup>
-                      {filteredAthletes.map((athlete) => {
-                        const initials = athlete.name
-                          .split(' ')
-                          .map((part) => part.charAt(0).toUpperCase())
-                          .slice(0, 2)
-                          .join('');
-                        return (
-                          <CommandItem
-                            key={athlete.id}
-                            value={athlete.id}
-                            onSelect={() => {
-                              if (!selectedAthletes.find((a) => a.id === athlete.id)) {
-                                setSelectedAthletes([...selectedAthletes, athlete]);
-                              }
-                              setInviteSearchQuery('');
-                              setIsInviteOpen(false);
-                            }}
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <Avatar className="h-6 w-6">
-                                <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                              </Avatar>
-                              <span className="flex-1">{athlete.name}</span>
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {selectedAthletes.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {selectedAthletes.map((athlete) => {
-                  const initials = athlete.name
-                    .split(' ')
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join('');
-                  return (
-                    <div
-                      key={athlete.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-muted rounded-md text-sm"
-                    >
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                        <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-                      </Avatar>
-                      <span>{athlete.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedAthletes(selectedAthletes.filter((a) => a.id !== athlete.id));
-                        }}
-                        className="ml-1 hover:opacity-70"
-                        aria-label={`Remove ${athlete.name}`}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <MultiAsyncSelect
+              options={athleteOptions}
+              value={selectedAthleteEmails}
+              onValueChange={(values) => {
+                setSelectedAthleteEmails(values);
+              }}
+              placeholder="Search athletes..."
+              searchPlaceholder="Search athletes..."
+            />
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex gap-4">
+            <div className="flex flex-col gap-2 w-[50%]">
             <Label htmlFor="date">
               Date <span className="text-destructive">*</span>
             </Label>
@@ -1164,9 +1314,27 @@ export const CalendarView = () => {
               value={meetingForm.date}
               onChange={(e) => setMeetingForm({ ...meetingForm, date: e.target.value })}
             />
+            </div>
+            <div className="flex flex-col gap-2 w-[50%]">
+              <Label htmlFor="location">
+                Location <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={meetingForm.location || 'In person (Gym)'}
+                onValueChange={(value) => setMeetingForm({ ...meetingForm, location: value })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Online">Online</SelectItem>
+                  <SelectItem value="In person (Gym)">In person (Gym)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex flex-col gap-2 w-[30%]">
+            <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="startTime">
                 Start time <span className="text-destructive">*</span>
               </Label>
@@ -1175,60 +1343,21 @@ export const CalendarView = () => {
                 type="time"
                 value={meetingForm.startTime}
                 onChange={(e) => setMeetingForm({ ...meetingForm, startTime: e.target.value })}
+                className="w-full"
               />
             </div>
-            <div className="flex flex-col gap-2 w-[70%]">
-              <Label htmlFor="duration">
-                Duration <span className="text-destructive">*</span>
+            <div className="flex flex-col gap-2 w-[50%]">
+              <Label htmlFor="endTime">
+                End time <span className="text-destructive">*</span>
               </Label>
-              <div className="flex gap-2">
-                <Select
-                  value={meetingForm.duration && ['15', '30', '45', '60', '75', '90'].includes(meetingForm.duration) ? meetingForm.duration : (isCustomDuration || (meetingForm.duration && !['15', '30', '45', '60', '75', '90'].includes(meetingForm.duration))) ? 'custom' : ''}
-                  onValueChange={(value) => {
-                    if (value !== 'custom') {
-                      setMeetingForm({ ...meetingForm, duration: value });
-                      setIsCustomDuration(false);
-                    } else {
-                      setIsCustomDuration(true);
-                      setMeetingForm({ ...meetingForm, duration: '' });
-                    }
-                  }}
-                >
-                  <SelectTrigger className={(isCustomDuration || (meetingForm.duration && !['15', '30', '45', '60', '75', '90'].includes(meetingForm.duration))) ? 'w-[50%]' : 'w-full'}>
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 mins</SelectItem>
-                    <SelectItem value="30">30 mins</SelectItem>
-                    <SelectItem value="45">45 mins</SelectItem>
-                    <SelectItem value="60">60 mins</SelectItem>
-                    <SelectItem value="75">75 mins</SelectItem>
-                    <SelectItem value="90">90 mins</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-                {(isCustomDuration || (meetingForm.duration && !['15', '30', '45', '60', '75', '90'].includes(meetingForm.duration))) && (
-                  <Input
-                    id="duration"
-                    type="number"
-                    placeholder="Custom minutes"
-                    value={meetingForm.duration}
-                    onChange={(e) => setMeetingForm({ ...meetingForm, duration: e.target.value })}
-                    min="1"
-                    className="w-[50%]"
-                  />
-                )}
-              </div>
+              <Input
+                id="endTime"
+                type="time"
+                value={meetingForm.endTime}
+                onChange={(e) => setMeetingForm({ ...meetingForm, endTime: e.target.value })}
+                className="w-full"
+              />
             </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              placeholder="Meeting location"
-              value={meetingForm.location}
-              onChange={(e) => setMeetingForm({ ...meetingForm, location: e.target.value })}
-            />
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="description">Description</Label>
@@ -1242,6 +1371,453 @@ export const CalendarView = () => {
           </div>
         </div>
       </SidePanel>
+      {/* Event Card Popover */}
+      {selectedEvent && dropdownOpen && popoverAnchor && (
+        <Popover 
+          open={dropdownOpen} 
+          onOpenChange={(open) => {
+            if (!open) {
+              setDropdownOpen(false);
+              setSelectedEvent(null);
+              setPopoverAnchor(null);
+            }
+          }}
+        >
+          <PopoverAnchor asChild>
+            <div
+              ref={(el) => {
+                if (el && popoverAnchor) {
+                  // Position anchor at the clicked element's location
+                  const rect = popoverAnchor.getBoundingClientRect();
+                  el.style.position = 'fixed';
+                  el.style.top = `${rect.top}px`;
+                  el.style.left = `${rect.left}px`;
+                  el.style.width = `${rect.width}px`;
+                  el.style.height = `${rect.height}px`;
+                  el.style.pointerEvents = 'none';
+                  el.style.opacity = '0';
+                }
+              }}
+              aria-hidden="true"
+            />
+          </PopoverAnchor>
+          <PopoverContent 
+            className="w-80 p-0 focus:outline-none" 
+            align="start" 
+            side={preferredSide}
+            sideOffset={4}
+            collisionPadding={16}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => {
+              // Prevent the click from triggering handlers on underlying elements
+              // The global handler will close the popover, so we just prevent propagation here
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <div className="relative">
+              {/* Action buttons in top right corner */}
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleEditMeeting}
+                  aria-label="Edit meeting"
+                  tabIndex={-1}
+                  onFocus={(e) => e.target.blur()}
+                >
+                  <Pen className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleEmailMeeting}
+                  aria-label="Email meeting"
+                  tabIndex={-1}
+                  onFocus={(e) => e.target.blur()}
+                >
+                  <Mail className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={handleDeleteMeeting}
+                  aria-label="Delete meeting"
+                  tabIndex={-1}
+                  onFocus={(e) => e.target.blur()}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    setSelectedEvent(null);
+                  }}
+                  aria-label="Close"
+                  tabIndex={-1}
+                  onFocus={(e) => e.target.blur()}
+                >
+                  <X className="size-3.5" />
+                </Button>
+                            </div>
+
+              {/* Card content */}
+              <div className="p-4 pt-12">
+                {/* Title */}
+                <h3 className="text-base font-normal mb-3 pr-16">{selectedEvent.summary}</h3>
+
+                {/* Date and Time */}
+                <div className="mb-4 flex items-center gap-1.5">
+                  <Clock className="size-3 text-muted-foreground flex-shrink-0" />
+                  {selectedEvent.start.dateTime ? (
+                    <div className="text-[0.65rem] font-normal">
+                      {format(new Date(selectedEvent.start.dateTime), 'EEEE, MMMM d, yyyy')} ·{' '}
+                      {format(new Date(selectedEvent.start.dateTime), 'h:mm a')} -{' '}
+                      {selectedEvent.end.dateTime
+                        ? format(new Date(selectedEvent.end.dateTime), 'h:mm a')
+                        : ''}
+                    </div>
+                  ) : selectedEvent.start.date ? (
+                    <div className="text-[0.65rem] font-normal">
+                      {format(new Date(selectedEvent.start.date), 'EEEE, MMMM d, yyyy')}
+                    </div>
+                  ) : (
+                    <div className="text-[0.65rem] font-normal text-muted-foreground">No date specified</div>
+                  )}
+                </div>
+
+                {/* Clients (attendees emails) */}
+                {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (() => {
+                  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
+                  const clientEmails = selectedEvent.attendees
+                    .map((attendee) => attendee.email?.toLowerCase())
+                    .filter((email): email is string => !!email && email !== userEmail);
+                  
+                  if (clientEmails.length === 0) return null;
+                  
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <Users className="size-3 text-muted-foreground flex-shrink-0" />
+                      <div className="flex flex-wrap gap-2">
+                        {clientEmails.map((email, index) => (
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-[0.65rem] font-normal px-2 py-1"
+                          >
+                            {email}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+              </PopoverContent>
+            </Popover>
+      )}
+
+      {/* Edit Meeting Side Panel */}
+      <SidePanel
+        open={isEditMeetingOpen}
+        onOpenChange={setIsEditMeetingOpen}
+        title="Edit meeting"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        footer={
+          <div className="flex items-center justify-start gap-2">
+            <Button
+              type="button"
+              disabled={!isEditFormValid}
+              onClick={() => {
+                handleUpdateMeeting(meetingForm);
+              }}
+            >
+              Save
+            </Button>
+            <Button
+                        type="button"
+              variant="outline"
+                        onClick={() => {
+                setIsEditMeetingOpen(false);
+                        }}
+                      >
+              Cancel
+            </Button>
+                    </div>
+        }
+      >
+        {selectedEvent && (
+          <div className="flex flex-col gap-4">
+            {/* Preview Card */}
+            <Card className="border">
+              <CardContent className="p-4">
+                {/* Title */}
+                <h3 className="text-base font-normal mb-3">
+                  {meetingForm.title || selectedEvent.summary || 'Untitled Meeting'}
+                </h3>
+
+                {/* Date and Time */}
+                {meetingForm.date && meetingForm.startTime && meetingForm.endTime && (
+                  <div className="mb-4 flex items-center gap-1.5">
+                    <Clock className="size-3 text-muted-foreground flex-shrink-0" />
+                    <div className="text-[0.65rem] font-normal">
+                      {(() => {
+                        try {
+                          const startDate = new Date(`${meetingForm.date}T${meetingForm.startTime}`);
+                          const endDate = new Date(`${meetingForm.date}T${meetingForm.endTime}`);
+                          return `${format(startDate, 'EEEE, MMMM d, yyyy')} · ${format(startDate, 'h:mm a')} - ${format(endDate, 'h:mm a')}`;
+                        } catch {
+                          return 'Invalid date/time';
+                        }
+                      })()}
+                    </div>
+              </div>
+            )}
+
+                {/* Clients (attendees emails) */}
+                {editClients.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Users className="size-3 text-muted-foreground flex-shrink-0" />
+                    <div className="flex flex-wrap gap-2">
+                      {editClients.map((email, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="text-[0.65rem] font-normal px-2 py-1"
+                        >
+                          {email}
+                        </Badge>
+                      ))}
+          </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+          <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-title">
+                Title <span className="text-destructive">*</span>
+            </Label>
+            <Input
+                id="edit-title"
+                placeholder="Meeting title"
+                value={meetingForm.title || selectedEvent.summary}
+                onChange={(e) => setMeetingForm({ ...meetingForm, title: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-4">
+              <div className="flex flex-col gap-2 w-[50%]">
+                <Label htmlFor="edit-date">
+                  Date <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                  id="edit-date"
+                  type="date"
+                  value={
+                    meetingForm.date ||
+                    (selectedEvent.start.dateTime
+                      ? format(new Date(selectedEvent.start.dateTime), 'yyyy-MM-dd')
+                      : selectedEvent.start.date || '')
+                  }
+                  onChange={(e) => setMeetingForm({ ...meetingForm, date: e.target.value })}
+              />
+            </div>
+              <div className="flex flex-col gap-2 w-[50%]">
+                <Label htmlFor="edit-location">
+                  Location <span className="text-destructive">*</span>
+              </Label>
+                <Select
+                  value={meetingForm.location || selectedEvent.location || 'In person (Gym)'}
+                  onValueChange={(value) => setMeetingForm({ ...meetingForm, location: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Online">Online</SelectItem>
+                    <SelectItem value="In person (Gym)">In person (Gym)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex flex-col gap-2 w-[50%]">
+                <Label htmlFor="edit-startTime">
+                  Start time <span className="text-destructive">*</span>
+                </Label>
+                  <Input
+                  id="edit-startTime"
+                  type="time"
+                  value={
+                    meetingForm.startTime ||
+                    (selectedEvent.start.dateTime
+                      ? format(new Date(selectedEvent.start.dateTime), 'HH:mm')
+                      : '')
+                  }
+                  onChange={(e) => setMeetingForm({ ...meetingForm, startTime: e.target.value })}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex flex-col gap-2 w-[50%]">
+                <Label htmlFor="edit-endTime">
+                  End time <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="edit-endTime"
+                  type="time"
+                  value={
+                    meetingForm.endTime ||
+                    (selectedEvent.end.dateTime
+                      ? format(new Date(selectedEvent.end.dateTime), 'HH:mm')
+                      : '')
+                  }
+                  onChange={(e) => setMeetingForm({ ...meetingForm, endTime: e.target.value })}
+                  className="w-full"
+                />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-clients">Clients</Label>
+            <MultiAsyncSelect
+              options={editClientOptionsWithSearch}
+              value={editClients}
+              onValueChange={(values) => {
+                setEditClients(values);
+                // Add selected emails to options if not already present
+                values.forEach((email) => {
+                  if (!editClientOptions.find((opt) => opt.value === email)) {
+                    setEditClientOptions((prev) => [...prev, { label: email, value: email }]);
+                  }
+                });
+              }}
+              onSearch={(value) => {
+                setEditClientInput(value);
+              }}
+              placeholder="Enter client email addresses"
+              searchPlaceholder="Search or enter email..."
+              hideSelectAll
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+              <Label htmlFor="edit-description">Description</Label>
+            <Textarea
+                id="edit-description"
+              placeholder="Meeting description"
+                value={meetingForm.description || selectedEvent.description || ''}
+              onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
+              rows={4}
+            />
+          </div>
+        </div>
+        )}
+      </SidePanel>
+
+      {/* Email Modal */}
+      <Dialog
+        open={isEmailModalOpen}
+        onOpenChange={(open) => {
+          setIsEmailModalOpen(open);
+          if (!open) {
+            // Keep dropdown open when email modal closes
+            // User can still interact with dropdown
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Email client</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email-emails">
+                Clients <span className="text-destructive">*</span>
+              </Label>
+              <MultiAsyncSelect
+                options={emailOptionsWithSearch}
+                value={emailForm.emails}
+                onValueChange={(values) => {
+                  setEmailForm({ ...emailForm, emails: values });
+                  // Add selected emails to options if not already present
+                  values.forEach((email) => {
+                    if (!emailOptions.find((opt) => opt.value === email)) {
+                      setEmailOptions((prev) => [...prev, { label: email, value: email }]);
+                    }
+                  });
+                }}
+                onSearch={(value) => {
+                  setEmailSearchQuery(value);
+                }}
+                placeholder="Search by name"
+                searchPlaceholder="Search by name"
+                hideSelectAll
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email-subject">
+                Subject <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="email-subject"
+                placeholder="Subject.."
+                value={emailForm.subject}
+                onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email-message">Message</Label>
+              <Textarea
+                id="email-message"
+                placeholder="Message..."
+                value={emailForm.message}
+                onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
+                rows={6}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-4">
+            <span className="text-xs text-muted-foreground">
+              Appointment details will be included in the email.
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEmailModalOpen(false);
+                  setEmailForm({
+                    emails: [],
+                    subject: '',
+                    message: '',
+                  });
+                  setEmailOptions([]);
+                  setEmailSearchQuery('');
+                  // Keep dropdown open
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSendEmail}
+                disabled={!emailForm.subject.trim() || emailForm.emails.length === 0}
+              >
+                Send
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
