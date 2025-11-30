@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { CalendarStatus } from './components/calendar-status';
 
 const CalendarPage = () => {
+  const t = useTranslations();
   const [provider, setProvider] = useState<'google' | 'outlook' | null>(null);
 
   useEffect(() => {
@@ -30,12 +32,12 @@ const CalendarPage = () => {
     <div className="h-full w-full flex flex-col overflow-hidden">
       <div className="w-full relative flex-shrink-0">
         <div className="pl-4 pr-4 flex items-center justify-between">
-          <h1 className="text-[22px] font-semibold mb-2 mt-2">Calendar</h1>
+          <h1 className="text-[22px] font-semibold mb-2 mt-2">{t('calendar.title')}</h1>
           {provider && (
             <div className="flex items-center">
               <Image
                 src={provider === 'google' ? '/icons/gmail.png' : '/icons/outlook.png'}
-                alt={provider === 'google' ? 'Gmail' : 'Outlook'}
+                alt={provider === 'google' ? t('calendar.gmail') : t('calendar.outlook')}
                 width={24}
                 height={24}
                 className="object-contain"

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Pen, Trash2, Mail, X, Clock, Users } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -54,6 +55,7 @@ interface CalendarEvent {
 }
 
 export const CalendarView = () => {
+  const t = useTranslations();
   const { user } = useUser();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -175,7 +177,7 @@ export const CalendarView = () => {
   // Set default location when create panel opens
   useEffect(() => {
     if (isBookMeetingOpen && !meetingForm.location) {
-      setMeetingForm((prev) => ({ ...prev, location: 'In person (Gym)' }));
+      setMeetingForm((prev) => ({ ...prev, location: t('calendar.meeting.inPersonGym') }));
     }
   }, [isBookMeetingOpen]);
 
@@ -419,7 +421,15 @@ export const CalendarView = () => {
   }, [isDragging, dragStartMinutes, dragEndMinutes, dragDate, dragDayIndex]);
 
   // Day names for header
-  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dayNames = [
+    t('calendar.days.mon'),
+    t('calendar.days.tue'),
+    t('calendar.days.wed'),
+    t('calendar.days.thu'),
+    t('calendar.days.fri'),
+    t('calendar.days.sat'),
+    t('calendar.days.sun'),
+  ];
 
   // Get start of week (Monday)
   const getWeekStart = (date: Date) => {
@@ -743,7 +753,7 @@ export const CalendarView = () => {
       startTime: format(startDate, 'HH:mm'),
       endTime: format(endDate, 'HH:mm'),
       description: selectedEvent.description || '',
-      location: selectedEvent.location || 'In person (Gym)',
+      location: selectedEvent.location || t('calendar.meeting.inPersonGym'),
     });
     
     // Initialize clients from attendees (excluding user email)
@@ -764,13 +774,13 @@ export const CalendarView = () => {
     
     try {
       await deleteCalendarEvent({ eventId: selectedEvent.id });
-      toast.success('Meeting deleted successfully');
+      toast.success(t('calendar.toast.meetingDeleted'));
       setDropdownOpen(false);
       setSelectedEvent(null);
       // Refresh events by refetching
       setEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
     } catch (error) {
-      toast.error('Failed to delete meeting');
+      toast.error(t('calendar.toast.failedToDelete'));
       console.error('Error deleting meeting:', error);
     }
   };
@@ -793,7 +803,7 @@ export const CalendarView = () => {
         message: emailForm.message,
         eventId: selectedEvent.id,
       });
-      toast.success('Email sent successfully');
+      toast.success(t('calendar.toast.emailSent'));
       setIsEmailModalOpen(false);
       setEmailForm({
         emails: [],
@@ -802,7 +812,7 @@ export const CalendarView = () => {
       });
       // Keep dropdown open after sending email
     } catch (error) {
-      toast.error('Failed to send email');
+      toast.error(t('calendar.toast.failedToSendEmail'));
       console.error('Error sending email:', error);
     }
   };
@@ -834,12 +844,12 @@ export const CalendarView = () => {
         location: updatedData.location || undefined,
       });
 
-      toast.success('Meeting updated successfully');
+      toast.success(t('calendar.toast.meetingUpdated'));
       setIsEditMeetingOpen(false);
       setDropdownOpen(false);
       // Refresh events would happen here
     } catch (error) {
-      toast.error('Failed to update meeting');
+      toast.error(t('calendar.toast.failedToUpdate'));
       console.error('Error updating meeting:', error);
     }
   };
@@ -868,10 +878,10 @@ export const CalendarView = () => {
 
   // Format hour for display (12AM, 1AM, 2AM, etc.)
   const formatHour = (hour: number): string => {
-    if (hour === 0) return '12AM';
+    if (hour === 0) return t('calendar.time.am12');
     if (hour < 12) return `${hour}AM`;
-    if (hour === 12) return '12PM';
-    if (hour === 24) return '12PM'; // 24th hour shows as 12PM
+    if (hour === 12) return t('calendar.time.pm12');
+    if (hour === 24) return t('calendar.time.pm12'); // 24th hour shows as 12PM
     return `${hour - 12}PM`;
   };
 
@@ -880,7 +890,7 @@ export const CalendarView = () => {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading calendar events...</p>
+          <p className="text-sm text-muted-foreground">{t('calendar.loadingEvents')}</p>
         </div>
       </div>
     );
@@ -897,9 +907,9 @@ export const CalendarView = () => {
               size="sm"
               onClick={handleToday}
               className="h-8"
-              aria-label="Go to today"
+              aria-label={t('calendar.goToToday')}
             >
-              Today
+              {t('calendar.today')}
             </Button>
             <Button
               type="button"
@@ -907,7 +917,7 @@ export const CalendarView = () => {
               size="icon"
               onClick={handlePrevious}
               className="h-8 w-8"
-              aria-label="Previous period"
+              aria-label={t('calendar.previousPeriod')}
             >
               <ChevronLeft className="size-4" />
             </Button>
@@ -921,7 +931,7 @@ export const CalendarView = () => {
               size="icon"
               onClick={handleNext}
               className="h-8 w-8"
-              aria-label="Next period"
+              aria-label={t('calendar.nextPeriod')}
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -933,13 +943,13 @@ export const CalendarView = () => {
                   value="week"
                   className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
                 >
-                  Week
+                  {t('calendar.week')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="month"
                   className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
                 >
-                  Month
+                  {t('calendar.month')}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -948,11 +958,11 @@ export const CalendarView = () => {
               variant="outline"
               size="sm"
               className="h-9 gap-2"
-              aria-label="Book a meeting"
+              aria-label={t('calendar.bookMeetingAria')}
               onClick={() => setIsBookMeetingOpen(true)}
             >
               <Pen className="size-4" />
-              Book a meeting
+              {t('calendar.bookMeeting')}
             </Button>
           </div>
         </div>
@@ -1032,7 +1042,7 @@ export const CalendarView = () => {
                       )}
                       {hour === 12 && (
                         <span className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground -translate-y-1/2 bg-background">
-                          12PM
+                          {t('calendar.time.pm12')}
                         </span>
                       )}
                     </div>
@@ -1233,7 +1243,7 @@ export const CalendarView = () => {
       <SidePanel
         open={isBookMeetingOpen}
         onOpenChange={setIsBookMeetingOpen}
-        title="Book a meeting"
+        title={t('calendar.bookMeeting')}
         footer={
           <div className="flex items-center justify-start gap-2">
             <Button
@@ -1254,7 +1264,7 @@ export const CalendarView = () => {
                 setSelectedAthleteEmails([]);
               }}
             >
-              Add
+              {t('calendar.meeting.add')}
             </Button>
             <Button
               type="button"
@@ -1272,7 +1282,7 @@ export const CalendarView = () => {
                   setSelectedAthleteEmails([]);
                 }}
             >
-              Cancel
+              {t('general.cancel')}
             </Button>
           </div>
         }
@@ -1280,18 +1290,18 @@ export const CalendarView = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="title">
-              Title <span className="text-destructive">*</span>
+              {t('calendar.meeting.titleRequired')}
             </Label>
             <Input
               id="title"
-              placeholder="Meeting title"
+              placeholder={t('calendar.meeting.titlePlaceholder')}
               value={meetingForm.title}
               onChange={(e) => setMeetingForm({ ...meetingForm, title: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-2">
             <Label>
-              Invite <span className="text-destructive">*</span>
+              {t('calendar.meeting.inviteRequired')}
             </Label>
             <MultiAsyncSelect
               options={athleteOptions}
@@ -1299,14 +1309,14 @@ export const CalendarView = () => {
               onValueChange={(values) => {
                 setSelectedAthleteEmails(values);
               }}
-              placeholder="Search athletes..."
-              searchPlaceholder="Search athletes..."
+              placeholder={t('calendar.meeting.searchAthletes')}
+              searchPlaceholder={t('calendar.meeting.searchAthletes')}
             />
           </div>
           <div className="flex gap-4">
             <div className="flex flex-col gap-2 w-[50%]">
             <Label htmlFor="date">
-              Date <span className="text-destructive">*</span>
+              {t('calendar.meeting.dateRequired')}
             </Label>
             <Input
               id="date"
@@ -1317,18 +1327,18 @@ export const CalendarView = () => {
             </div>
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="location">
-                Location <span className="text-destructive">*</span>
+                {t('calendar.meeting.locationRequired')}
               </Label>
               <Select
-                value={meetingForm.location || 'In person (Gym)'}
+                value={meetingForm.location || t('calendar.meeting.inPersonGym')}
                 onValueChange={(value) => setMeetingForm({ ...meetingForm, location: value })}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select location" />
+                  <SelectValue placeholder={t('calendar.meeting.selectLocation')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Online">Online</SelectItem>
-                  <SelectItem value="In person (Gym)">In person (Gym)</SelectItem>
+                  <SelectItem value="Online">{t('calendar.meeting.online')}</SelectItem>
+                  <SelectItem value="In person (Gym)">{t('calendar.meeting.inPersonGym')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1336,7 +1346,7 @@ export const CalendarView = () => {
           <div className="flex gap-4">
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="startTime">
-                Start time <span className="text-destructive">*</span>
+                {t('calendar.meeting.startTimeRequired')}
               </Label>
               <Input
                 id="startTime"
@@ -1348,7 +1358,7 @@ export const CalendarView = () => {
             </div>
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="endTime">
-                End time <span className="text-destructive">*</span>
+                {t('calendar.meeting.endTimeRequired')}
               </Label>
               <Input
                 id="endTime"
@@ -1360,10 +1370,10 @@ export const CalendarView = () => {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('calendar.meeting.description')}</Label>
             <Textarea
               id="description"
-              placeholder="Meeting description"
+              placeholder={t('calendar.meeting.descriptionPlaceholder')}
               value={meetingForm.description}
               onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
               rows={4}
@@ -1424,7 +1434,7 @@ export const CalendarView = () => {
                   size="icon"
                   className="h-7 w-7"
                   onClick={handleEditMeeting}
-                  aria-label="Edit meeting"
+                  aria-label={t('calendar.event.editAria')}
                   tabIndex={-1}
                   onFocus={(e) => e.target.blur()}
                 >
@@ -1436,7 +1446,7 @@ export const CalendarView = () => {
                   size="icon"
                   className="h-7 w-7"
                   onClick={handleEmailMeeting}
-                  aria-label="Email meeting"
+                  aria-label={t('calendar.event.emailAria')}
                   tabIndex={-1}
                   onFocus={(e) => e.target.blur()}
                 >
@@ -1448,7 +1458,7 @@ export const CalendarView = () => {
                   size="icon"
                   className="h-7 w-7 text-destructive hover:text-destructive"
                   onClick={handleDeleteMeeting}
-                  aria-label="Delete meeting"
+                  aria-label={t('calendar.event.deleteAria')}
                   tabIndex={-1}
                   onFocus={(e) => e.target.blur()}
                 >
@@ -1463,7 +1473,7 @@ export const CalendarView = () => {
                     setDropdownOpen(false);
                     setSelectedEvent(null);
                   }}
-                  aria-label="Close"
+                  aria-label={t('calendar.event.closeAria')}
                   tabIndex={-1}
                   onFocus={(e) => e.target.blur()}
                 >
@@ -1492,7 +1502,7 @@ export const CalendarView = () => {
                       {format(new Date(selectedEvent.start.date), 'EEEE, MMMM d, yyyy')}
                     </div>
                   ) : (
-                    <div className="text-[0.65rem] font-normal text-muted-foreground">No date specified</div>
+                    <div className="text-[0.65rem] font-normal text-muted-foreground">{t('calendar.event.noDateSpecified')}</div>
                   )}
                 </div>
 
@@ -1532,7 +1542,7 @@ export const CalendarView = () => {
       <SidePanel
         open={isEditMeetingOpen}
         onOpenChange={setIsEditMeetingOpen}
-        title="Edit meeting"
+        title={t('calendar.event.edit')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
           <div className="flex items-center justify-start gap-2">
@@ -1543,7 +1553,7 @@ export const CalendarView = () => {
                 handleUpdateMeeting(meetingForm);
               }}
             >
-              Save
+              {t('general.save')}
             </Button>
             <Button
                         type="button"
@@ -1552,7 +1562,7 @@ export const CalendarView = () => {
                 setIsEditMeetingOpen(false);
                         }}
                       >
-              Cancel
+              {t('general.cancel')}
             </Button>
                     </div>
         }
@@ -1564,7 +1574,7 @@ export const CalendarView = () => {
               <CardContent className="p-4">
                 {/* Title */}
                 <h3 className="text-base font-normal mb-3">
-                  {meetingForm.title || selectedEvent.summary || 'Untitled Meeting'}
+                  {meetingForm.title || selectedEvent.summary || t('calendar.event.untitled')}
                 </h3>
 
                 {/* Date and Time */}
@@ -1578,7 +1588,7 @@ export const CalendarView = () => {
                           const endDate = new Date(`${meetingForm.date}T${meetingForm.endTime}`);
                           return `${format(startDate, 'EEEE, MMMM d, yyyy')} · ${format(startDate, 'h:mm a')} - ${format(endDate, 'h:mm a')}`;
                         } catch {
-                          return 'Invalid date/time';
+                          return t('calendar.event.invalidDateTime');
                         }
                       })()}
                     </div>
@@ -1607,11 +1617,11 @@ export const CalendarView = () => {
 
           <div className="flex flex-col gap-2">
               <Label htmlFor="edit-title">
-                Title <span className="text-destructive">*</span>
+                {t('calendar.meeting.titleRequired')}
             </Label>
             <Input
                 id="edit-title"
-                placeholder="Meeting title"
+                placeholder={t('calendar.meeting.titlePlaceholder')}
                 value={meetingForm.title || selectedEvent.summary}
                 onChange={(e) => setMeetingForm({ ...meetingForm, title: e.target.value })}
             />
@@ -1619,7 +1629,7 @@ export const CalendarView = () => {
           <div className="flex gap-4">
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-date">
-                  Date <span className="text-destructive">*</span>
+                  {t('calendar.meeting.dateRequired')}
               </Label>
               <Input
                   id="edit-date"
@@ -1635,18 +1645,18 @@ export const CalendarView = () => {
             </div>
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-location">
-                  Location <span className="text-destructive">*</span>
+                  {t('calendar.meeting.locationRequired')}
               </Label>
                 <Select
-                  value={meetingForm.location || selectedEvent.location || 'In person (Gym)'}
+                  value={meetingForm.location || selectedEvent.location || t('calendar.meeting.inPersonGym')}
                   onValueChange={(value) => setMeetingForm({ ...meetingForm, location: value })}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select location" />
+                    <SelectValue placeholder={t('calendar.meeting.selectLocation')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Online">Online</SelectItem>
-                    <SelectItem value="In person (Gym)">In person (Gym)</SelectItem>
+                    <SelectItem value="Online">{t('calendar.meeting.online')}</SelectItem>
+                    <SelectItem value="In person (Gym)">{t('calendar.meeting.inPersonGym')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1654,7 +1664,7 @@ export const CalendarView = () => {
             <div className="flex gap-4">
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-startTime">
-                  Start time <span className="text-destructive">*</span>
+                  {t('calendar.meeting.startTimeRequired')}
                 </Label>
                   <Input
                   id="edit-startTime"
@@ -1671,7 +1681,7 @@ export const CalendarView = () => {
               </div>
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-endTime">
-                  End time <span className="text-destructive">*</span>
+                  {t('calendar.meeting.endTimeRequired')}
                 </Label>
                 <Input
                   id="edit-endTime"
@@ -1688,7 +1698,7 @@ export const CalendarView = () => {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="edit-clients">Clients</Label>
+            <Label htmlFor="edit-clients">{t('calendar.event.clients')}</Label>
             <MultiAsyncSelect
               options={editClientOptionsWithSearch}
               value={editClients}
@@ -1704,16 +1714,16 @@ export const CalendarView = () => {
               onSearch={(value) => {
                 setEditClientInput(value);
               }}
-              placeholder="Enter client email addresses"
-              searchPlaceholder="Search or enter email..."
+              placeholder={t('calendar.event.enterClientEmails')}
+              searchPlaceholder={t('calendar.event.searchOrEnterEmail')}
               hideSelectAll
             />
           </div>
           <div className="flex flex-col gap-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description">{t('calendar.meeting.description')}</Label>
             <Textarea
                 id="edit-description"
-              placeholder="Meeting description"
+              placeholder={t('calendar.meeting.descriptionPlaceholder')}
                 value={meetingForm.description || selectedEvent.description || ''}
               onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
               rows={4}
@@ -1736,12 +1746,12 @@ export const CalendarView = () => {
       >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Email client</DialogTitle>
+            <DialogTitle>{t('calendar.email.title')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="email-emails">
-                Clients <span className="text-destructive">*</span>
+                {t('calendar.email.clientsRequired')}
               </Label>
               <MultiAsyncSelect
                 options={emailOptionsWithSearch}
@@ -1758,27 +1768,27 @@ export const CalendarView = () => {
                 onSearch={(value) => {
                   setEmailSearchQuery(value);
                 }}
-                placeholder="Search by name"
-                searchPlaceholder="Search by name"
+                placeholder={t('calendar.email.searchByName')}
+                searchPlaceholder={t('calendar.email.searchByName')}
                 hideSelectAll
               />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="email-subject">
-                Subject <span className="text-destructive">*</span>
+                {t('calendar.email.subjectRequired')}
               </Label>
               <Input
                 id="email-subject"
-                placeholder="Subject.."
+                placeholder={t('calendar.email.subjectPlaceholder')}
                 value={emailForm.subject}
                 onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email-message">Message</Label>
+              <Label htmlFor="email-message">{t('calendar.email.message')}</Label>
               <Textarea
                 id="email-message"
-                placeholder="Message..."
+                placeholder={t('calendar.email.messagePlaceholder')}
                 value={emailForm.message}
                 onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
                 rows={6}
@@ -1787,7 +1797,7 @@ export const CalendarView = () => {
           </div>
           <div className="flex items-center justify-between pt-4">
             <span className="text-xs text-muted-foreground">
-              Appointment details will be included in the email.
+              {t('calendar.email.appointmentDetailsIncluded')}
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -1805,14 +1815,14 @@ export const CalendarView = () => {
                   // Keep dropdown open
                 }}
               >
-                Cancel
+                {t('general.cancel')}
               </Button>
               <Button
                 type="button"
                 onClick={handleSendEmail}
                 disabled={!emailForm.subject.trim() || emailForm.emails.length === 0}
               >
-                Send
+                {t('calendar.email.send')}
               </Button>
             </div>
           </div>

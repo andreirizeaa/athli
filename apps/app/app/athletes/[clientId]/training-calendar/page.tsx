@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ import {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const ClientTrainingCalendarPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -621,7 +623,15 @@ const ClientTrainingCalendarPage = () => {
   }, [selectedWeek, currentWeek, startDate]);
 
   // Get day names (Mon-Sun)
-  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const dayNames = [
+    t('calendar.days.mon'),
+    t('calendar.days.tue'),
+    t('calendar.days.wed'),
+    t('calendar.days.thu'),
+    t('calendar.days.fri'),
+    t('calendar.days.sat'),
+    t('calendar.days.sun'),
+  ];
 
   // Get number of rows based on selected week view
   const getRowsCount = () => {
@@ -774,7 +784,7 @@ const ClientTrainingCalendarPage = () => {
               <CircleX className="size-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Not started</p>
+              <p>{t('athletes.trainingCalendar.notStarted')}</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -785,7 +795,7 @@ const ClientTrainingCalendarPage = () => {
               <CircleEllipsis className="size-4 text-yellow-500" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>In progress</p>
+              <p>{t('athletes.trainingCalendar.inProgress')}</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -796,7 +806,7 @@ const ClientTrainingCalendarPage = () => {
               <CircleCheck className="size-4 text-green-500" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Completed</p>
+              <p>{t('athletes.trainingCalendar.completed')}</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -807,7 +817,7 @@ const ClientTrainingCalendarPage = () => {
               <CircleX className="size-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Not started</p>
+              <p>{t('athletes.trainingCalendar.notStarted')}</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -824,7 +834,7 @@ const ClientTrainingCalendarPage = () => {
               <CircleX className="size-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Not started</p>
+              <p>{t('athletes.trainingCalendar.notStarted')}</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -835,7 +845,7 @@ const ClientTrainingCalendarPage = () => {
               <CircleCheck className="size-4 text-green-500" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Completed</p>
+              <p>{t('athletes.trainingCalendar.completed')}</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -846,7 +856,7 @@ const ClientTrainingCalendarPage = () => {
               <CircleX className="size-4 text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Not started</p>
+              <p>{t('athletes.trainingCalendar.notStarted')}</p>
             </TooltipContent>
           </Tooltip>
         );
@@ -1184,9 +1194,9 @@ const ClientTrainingCalendarPage = () => {
               size="sm"
               onClick={handleToday}
               className="h-8"
-              aria-label="Go to today"
+              aria-label={t('athletes.trainingCalendar.goToToday')}
             >
-              Today
+              {t('athletes.trainingCalendar.today')}
             </Button>
             <Button
               type="button"
@@ -1194,7 +1204,7 @@ const ClientTrainingCalendarPage = () => {
               size="icon"
               onClick={handlePreviousWeek}
               className="h-8 w-8"
-              aria-label="Previous week"
+              aria-label={t('athletes.trainingCalendar.previousWeek')}
             >
               <ChevronLeft className="size-4" />
             </Button>
@@ -1232,7 +1242,7 @@ const ClientTrainingCalendarPage = () => {
                 })()
               }
               className="h-8 w-8"
-              aria-label="Next week"
+              aria-label={t('athletes.trainingCalendar.nextWeek')}
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -1243,7 +1253,7 @@ const ClientTrainingCalendarPage = () => {
               onClick={handleUndo}
               disabled={historyIndex <= 0}
               className="h-8 w-8 p-0"
-              aria-label="Undo"
+              aria-label={t('athletes.trainingCalendar.undo')}
             >
               <Undo className="size-4" />
             </Button>
@@ -1254,7 +1264,7 @@ const ClientTrainingCalendarPage = () => {
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
               className="h-8 w-8 p-0"
-              aria-label="Redo"
+              aria-label={t('athletes.trainingCalendar.redo')}
             >
               <Redo className="size-4" />
             </Button>
@@ -1264,9 +1274,9 @@ const ClientTrainingCalendarPage = () => {
               <TabsTrigger
                 value="1"
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                title="Show 1 week at a time on screen"
+                title={t('athletes.trainingCalendar.showOneWeek')}
               >
-                1 week
+                {t('athletes.trainingCalendar.oneWeek')}
               </TabsTrigger>
               <TabsTrigger
                 value="2"
@@ -1274,11 +1284,11 @@ const ClientTrainingCalendarPage = () => {
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
                   is2WeeksAvailable
-                    ? 'Show 2 weeks at a time on screen'
-                    : '2 weeks view requires total weeks to be divisible by 2'
+                    ? t('athletes.trainingCalendar.showTwoWeeks')
+                    : t('athletes.trainingCalendar.twoWeeksRequirement')
                 }
               >
-                2 weeks
+                {t('athletes.trainingCalendar.twoWeeks')}
               </TabsTrigger>
               <TabsTrigger
                 value="4"
@@ -1286,11 +1296,11 @@ const ClientTrainingCalendarPage = () => {
                 className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
                   is4WeeksAvailable
-                    ? 'Show 4 weeks at a time on screen'
-                    : '4 weeks view requires total weeks to be divisible by 4'
+                    ? t('athletes.trainingCalendar.showFourWeeks')
+                    : t('athletes.trainingCalendar.fourWeeksRequirement')
                 }
               >
-                4 weeks
+                {t('athletes.trainingCalendar.fourWeeks')}
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -1337,17 +1347,17 @@ const ClientTrainingCalendarPage = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-5 w-5 -mr-1 hover:bg-background"
-                                  aria-label="Add workout or program"
+                                  aria-label={t('athletes.trainingCalendar.addWorkoutOrProgram')}
                                 >
                                   <Plus className="size-3" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleOpenAddWorkoutModal(date)}>
-                                  <span>Add workout</span>
+                                  <span>{t('athletes.trainingCalendar.addWorkout')}</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleOpenAddProgramModal(date)}>
-                                  <span>Add program</span>
+                                  <span>{t('athletes.trainingCalendar.addProgram')}</span>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1363,7 +1373,7 @@ const ClientTrainingCalendarPage = () => {
                                     key={workout.id}
                                     role="button"
                                     tabIndex={0}
-                                    aria-label={`View details for workout ${workout.program}`}
+                                    aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.program })}
                                     onClick={() => handleOpenWorkoutDetails(dateKey, workout)}
                                     onKeyDown={(event) => {
                                       if (event.key === 'Enter' || event.key === ' ') {
@@ -1386,7 +1396,7 @@ const ClientTrainingCalendarPage = () => {
                                         </span>
                                         <span className="text-[10px] text-muted-foreground">
                                           {workout.totalExercises}{' '}
-                                          {workout.totalExercises === 1 ? 'exercise' : 'exercises'}
+                                          {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
                                         </span>
                                       </div>
                                     </div>
@@ -1399,7 +1409,7 @@ const ClientTrainingCalendarPage = () => {
                                         event.stopPropagation();
                                         handleDeleteWorkout(dateKey, workout.id);
                                       }}
-                                      aria-label="Delete workout"
+                                      aria-label={t('athletes.trainingCalendar.deleteWorkoutAria')}
                                     >
                                       <Trash2 className="size-3 text-muted-foreground hover:text-destructive" />
                                     </Button>
@@ -1416,22 +1426,22 @@ const ClientTrainingCalendarPage = () => {
                                     variant="outline"
                                     size="sm"
                                     className="gap-1.5 text-xs h-7 px-2 text-muted-foreground"
-                                    aria-label="Add workout"
+                                    aria-label={t('athletes.trainingCalendar.addWorkout')}
                                     onClick={() => handleOpenAddWorkoutModal(date)}
                                   >
                                     <Dumbbell className="size-3" />
-                                    <span>Add workout</span>
+                                    <span>{t('athletes.trainingCalendar.addWorkout')}</span>
                                   </Button>
                                   <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     className="gap-1.5 text-xs h-7 px-2 text-muted-foreground"
-                                    aria-label="Add program"
+                                    aria-label={t('athletes.trainingCalendar.addProgram')}
                                     onClick={() => handleOpenAddProgramModal(date)}
                                   >
                                     <FileText className="size-3" />
-                                    <span>Add program</span>
+                                    <span>{t('athletes.trainingCalendar.addProgram')}</span>
                                   </Button>
                                 </div>
                               </div>
@@ -1469,7 +1479,7 @@ const ClientTrainingCalendarPage = () => {
         >
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
-              {selectedDateForWorkout ? `Add workout - ${formatDate(selectedDateForWorkout)}` : 'Add workout'}
+              {selectedDateForWorkout ? t('athletes.trainingCalendar.addWorkoutModalWithDate', { date: formatDate(selectedDateForWorkout) }) : t('athletes.trainingCalendar.addWorkoutModal')}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-1 min-h-0 gap-4">
@@ -1478,9 +1488,9 @@ const ClientTrainingCalendarPage = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
-                    placeholder="Search workouts"
+                    placeholder={t('athletes.trainingCalendar.searchWorkoutsPlaceholder')}
                     className="w-full pl-9"
-                    aria-label="Search workouts"
+                    aria-label={t('athletes.trainingCalendar.searchWorkouts')}
                     value={workoutSearchQuery}
                     onChange={(e) => setWorkoutSearchQuery(e.target.value)}
                   />
@@ -1504,7 +1514,7 @@ const ClientTrainingCalendarPage = () => {
                         )}
                           role="button"
                           tabIndex={0}
-                          aria-label={`Select workout ${workout.program}`}
+                          aria-label={t('athletes.trainingCalendar.selectWorkout', { name: workout.program })}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
@@ -1529,11 +1539,11 @@ const ClientTrainingCalendarPage = () => {
                             )}
                             <div className="flex flex-wrap gap-1">
                               <Badge variant="secondary" className="text-xs">
-                                Type: {workout.type}
+                                {t('athletes.trainingCalendar.table.type')}: {workout.type}
                               </Badge>
                               {equipmentList.length > 0 && (
                                 <Badge variant="secondary" className="text-xs">
-                                  Equipment: {equipmentList.join(', ')}
+                                  {t('general.equipment')}: {equipmentList.join(', ')}
                                 </Badge>
                               )}
                             </div>
@@ -1543,14 +1553,14 @@ const ClientTrainingCalendarPage = () => {
                     })
                   ) : (
                     <div className="text-center py-8 text-sm text-muted-foreground">
-                      No workouts found
+                      {t('athletes.trainingCalendar.noWorkoutsFound')}
                     </div>
                   )}
                 </div>
                     </div>
             <Separator orientation="vertical" />
             <div className="flex-[1] flex flex-col gap-4 min-h-0">
-                  <h3 className="text-sm font-medium">Add configurations</h3>
+                  <h3 className="text-sm font-medium">{t('athletes.trainingCalendar.addConfigurations')}</h3>
               <div className={cn('flex flex-col gap-4 flex-1 overflow-y-auto', !selectedWorkout && 'opacity-50 pointer-events-none')}>
                   <Card
                     className={cn(
@@ -1561,7 +1571,7 @@ const ClientTrainingCalendarPage = () => {
                     )}
                     role="button"
                   tabIndex={selectedWorkout ? 0 : -1}
-                    aria-label="Add only for this day"
+                    aria-label={t('athletes.trainingCalendar.addOnlyForThisDayAria')}
                   aria-disabled={!selectedWorkout}
                     onKeyDown={(e) => {
                     if (!selectedWorkout) return;
@@ -1577,7 +1587,7 @@ const ClientTrainingCalendarPage = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">
-                        Add only for this day
+                        {t('athletes.trainingCalendar.addOnlyForThisDay')}
                       </span>
                       <div
                         className={cn(
@@ -1603,7 +1613,7 @@ const ClientTrainingCalendarPage = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Add this workout every</span>
+                        <span className="text-sm font-medium">{t('athletes.trainingCalendar.addThisWorkoutEvery')}</span>
                         <Input
                           type="number"
                           min="1"
@@ -1618,9 +1628,9 @@ const ClientTrainingCalendarPage = () => {
                             }
                           }}
                         disabled={!selectedWorkout}
-                          aria-label="Number of days"
+                          aria-label={t('athletes.trainingCalendar.numberOfDays')}
                         />
-                        <span className="text-sm text-muted-foreground">days</span>
+                        <span className="text-sm text-muted-foreground">{t('athletes.trainingCalendar.days')}</span>
                       </div>
                       <div
                         className={cn(
@@ -1632,7 +1642,7 @@ const ClientTrainingCalendarPage = () => {
                         )}
                         role="button"
                       tabIndex={selectedWorkout ? 0 : -1}
-                        aria-label="Select repeat every days option"
+                        aria-label={t('athletes.trainingCalendar.selectRepeatEveryDays')}
                       aria-disabled={!selectedWorkout}
                         onKeyDown={(e) => {
                         if (!selectedWorkout) return;
@@ -1662,7 +1672,7 @@ const ClientTrainingCalendarPage = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">Repeat weekly on day</span>
+                        <span className="text-sm font-medium">{t('athletes.trainingCalendar.repeatWeeklyOnDay')}</span>
                         <Input
                           type="number"
                           min="1"
@@ -1678,7 +1688,7 @@ const ClientTrainingCalendarPage = () => {
                             }
                           }}
                         disabled={!selectedWorkout}
-                          aria-label="Day of week"
+                          aria-label={t('athletes.trainingCalendar.dayOfWeek')}
                         />
                       </div>
                       <div
@@ -1691,7 +1701,7 @@ const ClientTrainingCalendarPage = () => {
                         )}
                         role="button"
                       tabIndex={selectedWorkout ? 0 : -1}
-                        aria-label="Select repeat weekly option"
+                        aria-label={t('athletes.trainingCalendar.selectRepeatWeekly')}
                       aria-disabled={!selectedWorkout}
                         onKeyDown={(e) => {
                         if (!selectedWorkout) return;
@@ -1719,17 +1729,17 @@ const ClientTrainingCalendarPage = () => {
                 type="button"
                 variant="secondary"
                 onClick={handleCloseAddWorkoutModal}
-                aria-label="Cancel"
+                aria-label={t('general.cancel')}
               >
-                Cancel
+                {t('general.cancel')}
               </Button>
             <Button
               type="button"
               onClick={handleAddWorkoutConfirm}
               disabled={!selectedWorkout}
-              aria-label="Add workout"
+              aria-label={t('athletes.trainingCalendar.addAria')}
             >
-              Add
+              {t('athletes.trainingCalendar.add')}
             </Button>
           </div>
         </DialogContent>
@@ -1768,7 +1778,7 @@ const ClientTrainingCalendarPage = () => {
                                 <CardHeader className="border-b p-0 pb-2">
                                   <div className="flex items-center justify-between px-3 pt-1">
                                     <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
-                                      {section.type}{' '}
+                                      {section.type === 'regular' ? t('athletes.trainingCalendar.section.regular') : section.type === 'amrap' ? t('athletes.trainingCalendar.section.amrap') : t('athletes.trainingCalendar.section.timed')}{' '}
                                       <span className="font-normal text-xs">
                                         ({section.exercises ? section.exercises.length : 0})
                                       </span>
@@ -1778,10 +1788,10 @@ const ClientTrainingCalendarPage = () => {
                                         </TooltipTrigger>
                                         <TooltipContent>
                                           {section.type === 'regular'
-                                            ? 'Exercise for exercise. Follow the sets and reps specified.'
+                                            ? t('athletes.trainingCalendar.section.regularDescription')
                                             : section.type === 'amrap'
-                                              ? 'Track the total amount of rounds completed in the allocated time.'
-                                              : 'Track total duration until completion of assigned rounds.'}
+                                              ? t('athletes.trainingCalendar.section.amrapDescription')
+                                              : t('athletes.trainingCalendar.section.timedDescription')}
                                         </TooltipContent>
                                       </Tooltip>
                                     </CardTitle>
@@ -1790,7 +1800,7 @@ const ClientTrainingCalendarPage = () => {
                                         <>
                                           <div className="flex items-center gap-2 text-xs">
                                             <span className="font-medium">
-                                              {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
+                                              {section.type === 'amrap' ? t('athletes.trainingCalendar.section.timeSeconds') : t('athletes.trainingCalendar.section.rounds')}
                                             </span>
                                             <span className="text-muted-foreground">
                                               {section.type === 'amrap'
@@ -1871,39 +1881,39 @@ const ClientTrainingCalendarPage = () => {
                                                         <TableHeader className="bg-sidebar">
                                                           <TableRow className="h-8">
                                                             <TableHead className="text-center h-8 py-1 px-2">
-                                                              Set
+                                                              {t('athletes.trainingCalendar.table.set')}
                                                             </TableHead>
                                                             <TableHead className="text-center h-8 py-1 px-2 w-[130px]">
-                                                              Type
+                                                              {t('athletes.trainingCalendar.table.type')}
                                                             </TableHead>
                                                             {exercise.exerciseType === 'distance_duration' ? (
                                                               <>
                                                                 <TableHead className="text-center h-8 py-1 px-2">
-                                                                  Distance
+                                                                  {t('athletes.trainingCalendar.table.distance')}
                                                                 </TableHead>
                                                                 <TableHead className="text-center h-8 py-1 px-2">
-                                                                  Duration
+                                                                  {t('athletes.trainingCalendar.table.duration')}
                                                                 </TableHead>
                                                               </>
                                                             ) : (
                                                               <>
                                                                 <TableHead className="text-center h-8 py-1 px-2">
-                                                                  Reps
+                                                                  {t('athletes.trainingCalendar.table.reps')}
                                                                 </TableHead>
                                                                 {exercise.exerciseType === 'weight_reps' && (
                                                                   <TableHead className="text-center h-8 py-1 px-2">
-                                                                    Weight
+                                                                    {t('athletes.trainingCalendar.table.weight')}
                                                                   </TableHead>
                                                                 )}
                                                               </>
                                                             )}
                                                             <TableHead className="text-center h-8 py-1 px-2">
-                                                              Rest (s)
+                                                              {t('athletes.trainingCalendar.table.restSeconds')}
                                                             </TableHead>
                                                             {/* Only show status column for regular sections, not AMRAP/timed */}
                                                             {section.type !== 'amrap' && section.type !== 'timed' && (
                                                               <TableHead className="text-center h-8 py-1 px-2">
-                                                                Status
+                                                                {t('athletes.trainingCalendar.table.status')}
                                                               </TableHead>
                                                             )}
                                                           </TableRow>
@@ -1921,9 +1931,9 @@ const ClientTrainingCalendarPage = () => {
                                                                   <div className="flex justify-center">
                                                                     <span className="text-[11px] capitalize">
                                                                       {set.type === 'warmUp'
-                                                                        ? 'Warm up'
+                                                                        ? t('athletes.trainingCalendar.table.warmUp')
                                                                         : set.type === 'dropset'
-                                                                          ? 'Dropset'
+                                                                          ? t('athletes.trainingCalendar.table.dropset')
                                                                           : set.type}
                                                                     </span>
                                                                   </div>
@@ -1981,7 +1991,7 @@ const ClientTrainingCalendarPage = () => {
                                     ) : (
                                       <div className="flex items-center justify-center w-full my-4 py-3 border-2 border-dashed rounded-lg border-muted">
                                         <p className="text-muted-foreground text-sm text-center">
-                                          No exercises
+                                          {t('athletes.trainingCalendar.noExercises')}
                                         </p>
                                       </div>
                                     )}
@@ -1993,7 +2003,7 @@ const ClientTrainingCalendarPage = () => {
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full gap-4">
-                          <p className="text-muted-foreground text-center">No sections available.</p>
+                          <p className="text-muted-foreground text-center">{t('athletes.trainingCalendar.noSections')}</p>
                         </div>
                       )}
                     </div>
@@ -2021,16 +2031,16 @@ const ClientTrainingCalendarPage = () => {
                       const baseId = selectedWorkoutDetails.workout.id.split('-')[0];
                       router.push(`/library/workouts/${baseId}/edit/standard`);
                     }}
-                    aria-label="Edit workout"
+                    aria-label={t('athletes.trainingCalendar.editWorkoutAria')}
                   >
-                    Edit workout
+                    {t('athletes.trainingCalendar.editWorkout')}
               </Button>
               <Button
                 type="button"
                     onClick={handleCloseWorkoutDetails}
-                    aria-label="Close workout details"
+                    aria-label={t('athletes.trainingCalendar.closeAria')}
               >
-                    Close
+                    {t('athletes.trainingCalendar.close')}
               </Button>
             </div>
               </>
@@ -2059,7 +2069,7 @@ const ClientTrainingCalendarPage = () => {
           }}
         >
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Add program</DialogTitle>
+            <DialogTitle>{t('athletes.trainingCalendar.addProgramModal')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 flex-1 min-h-0">
             <div className="flex flex-1 min-h-0 gap-4">
@@ -2068,9 +2078,9 @@ const ClientTrainingCalendarPage = () => {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
-                    placeholder="Search programs"
+                    placeholder={t('athletes.trainingCalendar.searchProgramsPlaceholder')}
                     className="w-full pl-9"
-                    aria-label="Search programs"
+                    aria-label={t('athletes.trainingCalendar.searchPrograms')}
                     value={programSearchQuery}
                     onChange={(event) => setProgramSearchQuery(event.target.value)}
                   />
@@ -2091,7 +2101,7 @@ const ClientTrainingCalendarPage = () => {
                             )}
                             role="button"
                             tabIndex={0}
-                            aria-label={`Select program ${program.program}`}
+                            aria-label={t('athletes.trainingCalendar.selectProgram', { name: program.program })}
                             onClick={() => setSelectedProgram(program)}
                             onKeyDown={(event) => {
                               if (event.key === 'Enter' || event.key === ' ') {
@@ -2116,7 +2126,7 @@ const ClientTrainingCalendarPage = () => {
                               )}
                               <div className="flex flex-wrap gap-1">
                                 <Badge variant="secondary" className="text-xs">
-                                  Type: {program.type}
+                                  {t('athletes.trainingCalendar.table.type')}: {program.type}
                                 </Badge>
                                 {program.equipment && (
                                   <Badge variant="secondary" className="text-xs">
@@ -2131,7 +2141,7 @@ const ClientTrainingCalendarPage = () => {
                     </div>
                   ) : (
                     <div className="text-sm text-muted-foreground py-8 text-center">
-                      No programs found.
+                      {t('athletes.trainingCalendar.noProgramsFound')}
                     </div>
                   )}
                 </div>
@@ -2140,17 +2150,17 @@ const ClientTrainingCalendarPage = () => {
                 <Card className="p-4 border rounded-lg bg-background">
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-2">
-                      <span className="text-xs font-medium text-muted-foreground">Start date</span>
+                      <span className="text-xs font-medium text-muted-foreground">{t('athletes.trainingCalendar.startDate')}</span>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             type="button"
                             variant="outline"
                             className="w-full justify-start text-left text-xs font-normal"
-                            aria-label="Program start date"
+                            aria-label={t('athletes.trainingCalendar.programStartDate')}
                           >
                             <Calendar className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                            {programStartDate ? formatDate(programStartDate) : 'Select start date'}
+                            {programStartDate ? formatDate(programStartDate) : t('athletes.trainingCalendar.selectStartDate')}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -2184,7 +2194,7 @@ const ClientTrainingCalendarPage = () => {
                       </Popover>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-medium text-muted-foreground">End date</span>
+                      <span className="text-xs font-medium text-muted-foreground">{t('athletes.trainingCalendar.endDate')}</span>
                       <span className="text-xs text-muted-foreground">
                         {selectedProgram && programStartDate
                           ? (() => {
@@ -2199,7 +2209,7 @@ const ClientTrainingCalendarPage = () => {
                               end.setDate(start.getDate() + totalProgramWeeks * 7 - 1);
                               return formatDate(end);
                             })()
-                          : 'Select a program and start date'}
+                          : t('athletes.trainingCalendar.selectProgramAndStartDate')}
                       </span>
                     </div>
                   </div>
@@ -2212,17 +2222,17 @@ const ClientTrainingCalendarPage = () => {
               type="button"
               variant="secondary"
               onClick={handleCloseAddProgramModal}
-              aria-label="Cancel add program"
+              aria-label={t('athletes.trainingCalendar.cancelAddProgram')}
             >
-              Cancel
+              {t('general.cancel')}
             </Button>
             <Button
               type="button"
               onClick={handleAddProgramConfirm}
               disabled={!selectedProgram || !programStartDate}
-              aria-label="Add program to calendar"
+              aria-label={t('athletes.trainingCalendar.addProgramAria')}
             >
-              Add
+              {t('athletes.trainingCalendar.add')}
             </Button>
           </div>
         </DialogContent>

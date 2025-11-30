@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { ConnectCalendarModal } from './connect-calendar-modal';
 
 export const ConnectCalendarButton = () => {
+  const t = useTranslations();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleOpenModal = () => {
@@ -24,9 +26,9 @@ export const ConnectCalendarButton = () => {
         onClick={handleOpenModal}
         onKeyDown={handleKeyDown}
         className="mt-2"
-        aria-label="Connect Calendar"
+        aria-label={t('calendar.connectCalendar')}
       >
-        Connect Calendar
+        {t('calendar.connectCalendar')}
       </Button>
       <ConnectCalendarModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </>

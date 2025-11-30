@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -148,6 +149,7 @@ const AthleteNameTooltip = ({ name }: { name: string }) => {
 };
 
 const AthletesPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
@@ -224,11 +226,11 @@ const AthletesPage = () => {
       const years = Math.floor(days / 365);
       const remainingDays = days % 365;
       if (remainingDays === 0) {
-        return `${years} ${years === 1 ? 'year' : 'years'}`;
+        return `${years} ${years === 1 ? t('athletes.timeUnits.year') : t('athletes.timeUnits.years')}`;
       }
-      return `${years} ${years === 1 ? 'year' : 'years'} ${remainingDays} ${remainingDays === 1 ? 'day' : 'days'}`;
+      return `${years} ${years === 1 ? t('athletes.timeUnits.year') : t('athletes.timeUnits.years')} ${remainingDays} ${remainingDays === 1 ? t('athletes.timeUnits.day') : t('athletes.timeUnits.days')}`;
     }
-    return `${days} ${days === 1 ? 'day' : 'days'}`;
+    return `${days} ${days === 1 ? t('athletes.timeUnits.day') : t('athletes.timeUnits.days')}`;
   };
 
   const isFuzzyMatch = (text: string, query: string): boolean => {
@@ -682,7 +684,7 @@ const AthletesPage = () => {
         case 'lastActivity':
           return {
             id: 'lastActivity',
-            label: 'Last activity',
+            label: t('athletes.columns.lastActivity'),
             icon: <ClockAlert className="size-3" />,
             width: getColumnWidth('lastActivity', 'pixel')
               ? {
@@ -690,7 +692,7 @@ const AthletesPage = () => {
                   pixel: getColumnWidth('lastActivity', 'pixel'),
                 }
               : undefined,
-            tooltip: 'Time since last logged on to app',
+            tooltip: t('athletes.columnTooltips.lastActivity'),
             getSortValue: (row) => row.lastActivity,
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
@@ -703,14 +705,13 @@ const AthletesPage = () => {
         case 'last7DaysTraining':
           return {
             id: 'last7DaysTraining',
-            label: 'L7D Training',
+            label: t('athletes.columns.last7DaysTraining'),
             icon: <Dumbbell className="size-3" />,
             width: {
               class: getColumnWidth('last7DaysTraining', 'class'),
               pixel: getColumnWidth('last7DaysTraining', 'pixel'),
             },
-            tooltip:
-              'How much they trained in the last 7 days out of their total assigned schedule',
+            tooltip: t('athletes.columnTooltips.last7DaysTraining'),
             getSortValue: (row) => {
               const [completed, total] = row.last7DaysTraining.split('/').map(Number);
               return total > 0 ? completed / total : 0;
@@ -731,14 +732,13 @@ const AthletesPage = () => {
         case 'last30DaysTraining':
           return {
             id: 'last30DaysTraining',
-            label: 'L30D Training',
+            label: t('athletes.columns.last30DaysTraining'),
             icon: <Dumbbell className="size-3" />,
             width: {
               class: getColumnWidth('last30DaysTraining', 'class'),
               pixel: getColumnWidth('last30DaysTraining', 'pixel'),
             },
-            tooltip:
-              'How much they trained in the last 30 days out of their total assigned schedule',
+            tooltip: t('athletes.columnTooltips.last30DaysTraining'),
             getSortValue: (row) => {
               const [completed, total] = row.last30DaysTraining.split('/').map(Number);
               return total > 0 ? completed / total : 0;
@@ -759,13 +759,13 @@ const AthletesPage = () => {
         case 'category':
           return {
             id: 'category',
-            label: 'Category',
+            label: t('athletes.columns.category'),
             icon: <Grid2x2 className="size-3" />,
             width: {
               class: getColumnWidth('category', 'class'),
               pixel: getColumnWidth('category', 'pixel'),
             },
-            tooltip: 'Whether or not they are online or in person',
+            tooltip: t('athletes.columnTooltips.category'),
             getSortValue: (row) => row.category,
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
@@ -778,24 +778,24 @@ const AthletesPage = () => {
         case 'connected':
           return {
             id: 'connected',
-            label: 'Connected?',
+            label: t('athletes.columns.connected'),
             icon: <HeartPulse className="size-3" />,
             width: {
               class: getColumnWidth('connected', 'class'),
               pixel: getColumnWidth('connected', 'pixel'),
             },
-            tooltip: "The status of the user's app, i.e. if they have connected to the app",
+            tooltip: t('athletes.columnTooltips.connected'),
             getSortValue: (row) => (row.connected === true ? 1 : row.connected === false ? 0 : 0.5),
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
               let connectedLabel = '';
               if (row.connected === true) {
-                connectedLabel = 'Connected';
+                connectedLabel = t('athletes.status.connected');
               } else if (row.connected === false) {
-                connectedLabel = 'Not connected';
+                connectedLabel = t('athletes.status.notConnected');
               } else if (row.connected === 'invitation-sent') {
-                connectedLabel = 'Invitation sent';
+                connectedLabel = t('athletes.status.invitationSent');
               }
               return (
                 <div className="flex items-center w-full">
@@ -807,7 +807,7 @@ const AthletesPage = () => {
         case 'email':
           return {
             id: 'email',
-            label: 'Email',
+            label: t('athletes.columns.email'),
             icon: <Mail className="size-3" />,
             width: {
               class: getColumnWidth('email', 'class'),
@@ -839,7 +839,7 @@ const AthletesPage = () => {
                       role="button"
                       tabIndex={0}
                       aria-label={
-                        isRevealed ? `Hide email for ${row.name}` : `Reveal email for ${row.name}`
+                        isRevealed ? t('athletes.actions.hideEmail', { name: row.name }) : t('athletes.actions.revealEmail', { name: row.name })
                       }
                       onClick={(e) => {
                         e.stopPropagation();
@@ -860,7 +860,7 @@ const AthletesPage = () => {
                     <div
                       role="button"
                       tabIndex={0}
-                      aria-label={`Copy email for ${row.name}`}
+                      aria-label={t('athletes.actions.copyEmail', { name: row.name })}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCopy(row.email, row.id, 'email');
@@ -889,7 +889,7 @@ const AthletesPage = () => {
         case 'phone':
           return {
             id: 'phone',
-            label: 'Phone',
+            label: t('athletes.columns.phone'),
             icon: <Phone className="size-3" />,
             width: {
               class: getColumnWidth('phone', 'class'),
@@ -912,7 +912,7 @@ const AthletesPage = () => {
                       role="button"
                       tabIndex={0}
                       aria-label={
-                        isRevealed ? `Hide phone for ${row.name}` : `Reveal phone for ${row.name}`
+                        isRevealed ? t('athletes.actions.hidePhone', { name: row.name }) : t('athletes.actions.revealPhone', { name: row.name })
                       }
                       onClick={(e) => {
                         e.stopPropagation();
@@ -933,7 +933,7 @@ const AthletesPage = () => {
                     <div
                       role="button"
                       tabIndex={0}
-                      aria-label={`Copy phone for ${row.name}`}
+                      aria-label={t('athletes.actions.copyPhone', { name: row.name })}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCopy(row.phone, row.id, 'phone');
@@ -962,7 +962,7 @@ const AthletesPage = () => {
         case 'country':
           return {
             id: 'country',
-            label: 'Country',
+            label: t('athletes.columns.country'),
             icon: <Globe className="size-3" />,
             width: {
               class: getColumnWidth('country', 'class'),
@@ -980,7 +980,7 @@ const AthletesPage = () => {
         case 'age':
           return {
             id: 'age',
-            label: 'Age',
+            label: t('athletes.columns.age'),
             icon: <User className="size-3" />,
             width: { class: getColumnWidth('age', 'class'), pixel: getColumnWidth('age', 'pixel') },
             getSortValue: (row) => row.age,
@@ -995,13 +995,13 @@ const AthletesPage = () => {
         case 'clientFor':
           return {
             id: 'clientFor',
-            label: 'Client For',
+            label: t('athletes.columns.clientFor'),
             icon: <ClockAlert className="size-3" />,
             width: {
               class: getColumnWidth('clientFor', 'class'),
               pixel: getColumnWidth('clientFor', 'pixel'),
             },
-            tooltip: 'How long they have been a client',
+            tooltip: t('athletes.columnTooltips.clientFor'),
             getSortValue: (row) => row.clientFor,
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
@@ -1032,23 +1032,23 @@ const AthletesPage = () => {
   const filters: FilterDefinition<Athlete>[] = [
     {
       id: 'category',
-      label: 'Category',
+      label: t('athletes.filters.category'),
       icon: <Grid2x2 className="size-4" />,
       options: [
-        { value: 'online', label: 'Online' },
-        { value: 'in-person', label: 'In-person' },
+        { value: 'online', label: t('athletes.filters.online') },
+        { value: 'in-person', label: t('athletes.filters.inPerson') },
       ],
       getFilterValue: (row) => row.category,
       defaultValue: categoryFilter,
     },
     {
       id: 'connected',
-      label: 'Connected',
+      label: t('athletes.filters.connected'),
       icon: <HeartPulse className="size-4" />,
       options: [
-        { value: 'true', label: 'Connected' },
-        { value: 'false', label: 'Not Connected' },
-        { value: 'invitation-sent', label: 'Invitation Sent' },
+        { value: 'true', label: t('athletes.status.connected') },
+        { value: 'false', label: t('athletes.filters.notConnected') },
+        { value: 'invitation-sent', label: t('athletes.filters.invitationSent') },
       ],
       getFilterValue: (row) => {
         if (row.connected === true) return 'true';
@@ -1067,13 +1067,13 @@ const AthletesPage = () => {
         <Checkbox
           checked={getSelectAllCheckedState()}
           onCheckedChange={handleToggleAll}
-          aria-label="Select all athletes"
+          aria-label={t('athletes.actions.selectAll')}
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
               <User className="size-3 text-muted-foreground" />
-              <span className="text-xs uppercase text-muted-foreground">Athlete</span>
+              <span className="text-xs uppercase text-muted-foreground">{t('athletes.columns.athlete')}</span>
               {sortColumn === 'name' && sortDirection === 'asc' && (
                 <ArrowUpNarrowWide className="size-3 text-muted-foreground" />
               )}
@@ -1088,7 +1088,7 @@ const AthletesPage = () => {
               className={cn(sortColumn === 'name' && sortDirection === 'asc' && 'bg-accent')}
             >
               <ArrowUpNarrowWide className="size-4 mr-2" />
-              <span className="flex-1">Sort ascending</span>
+              <span className="flex-1">{t('athletes.actions.sortAscending')}</span>
               {sortColumn === 'name' && sortDirection === 'asc' && (
                 <Check className="ml-2 size-4" />
               )}
@@ -1098,7 +1098,7 @@ const AthletesPage = () => {
               className={cn(sortColumn === 'name' && sortDirection === 'desc' && 'bg-accent')}
             >
               <ArrowDownWideNarrow className="size-4 mr-2" />
-              <span className="flex-1">Sort descending</span>
+              <span className="flex-1">{t('athletes.actions.sortDescending')}</span>
               {sortColumn === 'name' && sortDirection === 'desc' && (
                 <Check className="ml-2 size-4" />
               )}
@@ -1141,7 +1141,7 @@ const AthletesPage = () => {
                 <div
                   role="button"
                   tabIndex={0}
-                  aria-label={`Message ${athlete.name}`}
+                  aria-label={t('athletes.actions.messageAria', { name: athlete.name })}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleNavigateToMessages(athlete.id);
@@ -1160,7 +1160,7 @@ const AthletesPage = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Message the client</p>
+                <p>{t('athletes.actions.messageClient')}</p>
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -1168,7 +1168,7 @@ const AthletesPage = () => {
                 <div
                   role="button"
                   tabIndex={0}
-                  aria-label={`Open training calendar for ${athlete.name}`}
+                  aria-label={t('athletes.actions.viewTrainingCalendarAria', { name: athlete.name })}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleNavigateToTrainingCalendar(athlete.id);
@@ -1187,7 +1187,7 @@ const AthletesPage = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>View clients training calendar</p>
+                <p>{t('athletes.actions.viewTrainingCalendar')}</p>
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -1195,7 +1195,7 @@ const AthletesPage = () => {
                 <div
                   role="button"
                   tabIndex={0}
-                  aria-label={`Copy ${athlete.name}`}
+                  aria-label={t('athletes.actions.copyAthleteNameAria', { name: athlete.name })}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleCopy(athlete.name, athlete.id, 'name');
@@ -1218,7 +1218,7 @@ const AthletesPage = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Copy athlete name</p>
+                <p>{t('athletes.actions.copyAthleteName')}</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -1233,32 +1233,32 @@ const AthletesPage = () => {
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="athletes"
-        title="Athletes"
-        subtitle={(count) => `${count} ${count === 1 ? 'client' : 'clients'}`}
+        title={t('athletes.title')}
+        subtitle={(count) => t('athletes.subtitle', { count })}
         itemsPerPage={itemsPerPage}
         enableSearch={true}
-        searchPlaceholder="Search..."
+        searchPlaceholder={t('athletes.searchPlaceholder')}
         filters={filters}
         enableEditColumns={true}
         enableExport={true}
         exportFileName="athletes.csv"
         exportDataTransform={(row) => ({
-          Name: row.name,
-          Email: row.email,
-          Phone: row.phone,
-          Country: row.country,
-          Category: row.category === 'online' ? 'Online' : 'In-person',
-          Connected:
+          [t('athletes.export.name')]: row.name,
+          [t('athletes.export.email')]: row.email,
+          [t('athletes.export.phone')]: row.phone,
+          [t('athletes.export.country')]: row.country,
+          [t('athletes.export.category')]: row.category === 'online' ? t('athletes.filters.online') : t('athletes.filters.inPerson'),
+          [t('athletes.export.connected')]:
             row.connected === true
-              ? 'Connected'
+              ? t('athletes.status.connected')
               : row.connected === false
-                ? 'Not Connected'
-                : 'Invitation Sent',
-          'Last Activity': row.lastActivity,
-          'Last 7 Days Training': row.last7DaysTraining,
-          'Last 30 Days Training': row.last30DaysTraining,
-          Age: row.age,
-          'Client For': row.clientFor,
+                ? t('athletes.filters.notConnected')
+                : t('athletes.filters.invitationSent'),
+          [t('athletes.export.lastActivity')]: row.lastActivity,
+          [t('athletes.export.last7DaysTraining')]: row.last7DaysTraining,
+          [t('athletes.export.last30DaysTraining')]: row.last30DaysTraining,
+          [t('athletes.export.age')]: row.age,
+          [t('athletes.export.clientFor')]: row.clientFor,
         })}
         enableRowSelection={true}
         selectedRowIds={selectedAthletes}
@@ -1290,19 +1290,19 @@ const AthletesPage = () => {
                 onClick={handleCopyInviteLink}
                 onKeyDown={handleInviteLinkKeyDown}
                 className="gap-2"
-                aria-label="Copy invite link"
+                aria-label={t('athletes.actions.copyInviteLink')}
               >
                 {isInviteLinkCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                <span>Your invite link</span>
+                <span>{t('athletes.actions.yourInviteLink')}</span>
               </Button>
               <ButtonGroupSeparator />
               <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
                 <UserPlus className="size-4" />
-                <span>Add Client</span>
+                <span>{t('athletes.actions.addClient')}</span>
               </Button>
               <ButtonGroupSeparator />
               <DropdownMenuTrigger asChild>
-                <Button className="px-2" aria-label="More options">
+                <Button className="px-2" aria-label={t('general.more')}>
                   <ChevronDown className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1310,16 +1310,16 @@ const AthletesPage = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsAddAthleteOpen(true)}>
                 <UserPlus className="size-4 mr-2" />
-                <span>Single client</span>
+                <span>{t('athletes.actions.singleClient')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
                 <Users className="size-4 mr-2" />
-                <span>Upload clients</span>
+                <span>{t('athletes.actions.uploadClients')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         }
-        emptyMessage="No athletes found."
+        emptyMessage={t('athletes.emptyMessage')}
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="350px"

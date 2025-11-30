@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -18,14 +19,12 @@ import { Input } from '@/components/ui/input';
 import { SidePanel } from '@/components/app/side-panel';
 import { cn } from '@/lib/utils';
 
-const addAthleteSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Please enter a valid email address'),
-  coachingType: z.union([z.literal('online'), z.literal('in-person')]),
-});
-
-type AddAthleteFormValues = z.infer<typeof addAthleteSchema>;
+type AddAthleteFormValues = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  coachingType: 'online' | 'in-person';
+};
 
 interface AddClientSidePanelProps {
   open: boolean;
@@ -33,6 +32,13 @@ interface AddClientSidePanelProps {
 }
 
 export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelProps) => {
+  const t = useTranslations();
+  const addAthleteSchema = z.object({
+    firstName: z.string().min(1, t('athletes.addClient.firstNameRequiredError')),
+    lastName: z.string().min(1, t('athletes.addClient.lastNameRequiredError')),
+    email: z.string().email(t('athletes.addClient.emailInvalidError')),
+    coachingType: z.union([z.literal('online'), z.literal('in-person')]),
+  });
   const form = useForm<AddAthleteFormValues>({
     resolver: zodResolver(addAthleteSchema),
     mode: 'onChange',
@@ -49,8 +55,12 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
     console.log('Form values:', values);
     onOpenChange(false);
     form.reset();
-    toast.success('Invitation sent successfully', {
-      description: `An invitation has been sent to ${values.firstName} ${values.lastName} at ${values.email}`,
+    toast.success(t('athletes.addClient.invitationSent'), {
+      description: t('athletes.addClient.invitationSentDescription', {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+      }),
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -75,24 +85,24 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
     <SidePanel
       open={open}
       onOpenChange={handleOpenChange}
-      title="Add athlete"
+      title={t('athletes.addClient.title')}
       footer={
         <div className="flex w-full justify-start gap-2">
           <Button
             type="button"
             onClick={form.handleSubmit(handleSubmitInvitation)}
             disabled={!form.formState.isValid}
-            aria-label="Send invitation"
+            aria-label={t('athletes.addClient.sendInvitationAria')}
           >
-            Send Invitation
+            {t('athletes.addClient.sendInvitation')}
           </Button>
           <Button
             type="button"
             variant="secondary"
             onClick={handleCancel}
-            aria-label="Cancel adding athlete"
+            aria-label={t('athletes.addClient.cancelAria')}
           >
-            Cancel
+            {t('general.cancel')}
           </Button>
         </div>
       }
@@ -111,10 +121,10 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  First Name <span className="text-destructive">*</span>
+                  {t('athletes.addClient.firstNameRequired')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter first name" {...field} />
+                  <Input placeholder={t('athletes.addClient.firstNamePlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -126,10 +136,10 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Last Name <span className="text-destructive">*</span>
+                  {t('athletes.addClient.lastNameRequired')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter last name" {...field} />
+                  <Input placeholder={t('athletes.addClient.lastNamePlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -141,10 +151,10 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Email <span className="text-destructive">*</span>
+                  {t('athletes.addClient.emailRequired')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter email address" {...field} />
+                  <Input type="email" placeholder={t('athletes.addClient.emailPlaceholder')} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -156,7 +166,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Coaching Type <span className="text-destructive">*</span>
+                  {t('athletes.addClient.coachingTypeRequired')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
                   <Tabs
@@ -170,16 +180,16 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
                       <TabsTrigger
                         value="online"
                         className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                        aria-label="Online coaching"
+                        aria-label={t('athletes.addClient.onlineAria')}
                       >
-                        Online
+                        {t('athletes.addClient.online')}
                       </TabsTrigger>
                       <TabsTrigger
                         value="in-person"
                         className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                        aria-label="In-person coaching"
+                        aria-label={t('athletes.addClient.inPersonAria')}
                       >
-                        In-person
+                        {t('athletes.addClient.inPerson')}
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>

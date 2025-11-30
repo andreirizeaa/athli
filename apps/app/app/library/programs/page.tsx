@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
@@ -106,6 +107,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 };
 
 const ProgramsPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -196,17 +198,17 @@ const ProgramsPage = () => {
 
   const handleCreateProgramContinue = () => {
     if (!newProgramName.trim()) {
-      setNewProgramError('Program name is required');
+      setNewProgramError(t('library.programNameRequired'));
       return;
     }
 
     if (!newProgramType) {
-      setNewProgramTypeError('Program type is required');
+      setNewProgramTypeError(t('library.programTypeRequired'));
       return;
     }
 
     if (!newProgramDifficulty) {
-      setNewProgramDifficultyError('Difficulty is required');
+      setNewProgramDifficultyError(t('library.difficultyRequired'));
       return;
     }
 
@@ -326,7 +328,7 @@ const ProgramsPage = () => {
   const allColumns: ColumnDefinition<Program>[] = [
     {
       id: 'program',
-      label: 'Program',
+      label: t('library.programColumn'),
       icon: <FileText className="size-3" />,
       getSortValue: (row) => row.program.toLowerCase(),
       getSearchValue: (row) => row.program,
@@ -336,13 +338,13 @@ const ProgramsPage = () => {
         case 'description':
           return {
             id: 'description',
-            label: 'Description',
+            label: t('general.description'),
             icon: <FileText className="size-3" />,
             width: {
               class: getColumnWidth('description', 'class'),
               pixel: getColumnWidth('description', 'pixel'),
             },
-            tooltip: 'A brief overview of the program',
+            tooltip: t('library.briefOverviewProgram'),
             getSortValue: (row) => row.description.toLowerCase(),
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
@@ -366,13 +368,13 @@ const ProgramsPage = () => {
         case 'type':
           return {
             id: 'type',
-            label: 'Type',
+            label: t('general.type'),
             icon: <Tag className="size-3" />,
             width: {
               class: getColumnWidth('type', 'class'),
               pixel: getColumnWidth('type', 'pixel'),
             },
-            tooltip: 'The category or style of the program',
+            tooltip: t('library.categoryStyleProgram'),
             getSortValue: (row) => row.type.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
@@ -383,13 +385,13 @@ const ProgramsPage = () => {
         case 'length':
           return {
             id: 'length',
-            label: 'Length',
+            label: t('library.length'),
             icon: <Clock className="size-3" />,
             width: {
               class: getColumnWidth('length', 'class'),
               pixel: getColumnWidth('length', 'pixel'),
             },
-            tooltip: 'The duration of the program',
+            tooltip: t('library.programDuration'),
             getSortValue: (row) => {
               const weeks = parseInt(row.length.split(' ')[0]);
               return isNaN(weeks) ? 0 : weeks;
@@ -403,13 +405,13 @@ const ProgramsPage = () => {
         case 'totalExercises':
           return {
             id: 'totalExercises',
-            label: 'Total Exercises',
+            label: t('library.totalExercises'),
             icon: <Hash className="size-3" />,
             width: {
               class: getColumnWidth('totalExercises', 'class'),
               pixel: getColumnWidth('totalExercises', 'pixel'),
             },
-            tooltip: 'The number of exercises in the program',
+            tooltip: t('library.numberOfExercisesProgram'),
             getSortValue: (row) => row.totalExercises,
             renderCell: (row) => (
               <div className="flex items-center w-full">
@@ -420,13 +422,13 @@ const ProgramsPage = () => {
         case 'equipment':
           return {
             id: 'equipment',
-            label: 'Equipment',
+            label: t('general.equipment'),
             icon: <Wrench className="size-3" />,
             width: {
               class: getColumnWidth('equipment', 'class'),
               pixel: getColumnWidth('equipment', 'pixel'),
             },
-            tooltip: 'The equipment required for this program',
+            tooltip: t('library.equipmentRequiredProgram'),
             getSortValue: (row) => row.equipment.toLowerCase(),
             renderCell: (row) => (
               <Tooltip>
@@ -448,13 +450,13 @@ const ProgramsPage = () => {
         case 'created':
           return {
             id: 'created',
-            label: 'Created',
+            label: t('general.created'),
             icon: <Calendar className="size-3" />,
             width: {
               class: getColumnWidth('created', 'class'),
               pixel: getColumnWidth('created', 'pixel'),
             },
-            tooltip: 'The date when the program was created',
+            tooltip: t('library.dateCreatedProgram'),
             getSortValue: (row) => {
               const [day, month, year] = row.created.split('-').map(Number);
               return new Date(2000 + year, month - 1, day).getTime();
@@ -482,7 +484,7 @@ const ProgramsPage = () => {
   const filters: FilterDefinition<Program>[] = [
     {
       id: 'type',
-      label: 'Type',
+      label: t('library.type'),
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
@@ -490,11 +492,11 @@ const ProgramsPage = () => {
     },
     {
       id: 'show',
-      label: 'Show',
+      label: t('general.show'),
       icon: <Star className="size-4" />,
       options: [
-        { value: 'starred', label: 'Starred' },
-        { value: 'unstarred', label: 'Unstarred' },
+        { value: 'starred', label: t('library.starred') },
+        { value: 'unstarred', label: t('library.unstarred') },
       ],
       getFilterValue: (row) => (starredPrograms.has(row.id) ? 'starred' : 'unstarred'),
       defaultValue: starFilter,
@@ -530,13 +532,13 @@ const ProgramsPage = () => {
                     }
                   }}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Assign this program to a client"
+                  aria-label={t('library.assignProgramToClient')}
                 >
                   <User className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Assign this program to a client</p>
+                <p>{t('library.assignProgramToClient')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -548,7 +550,7 @@ const ProgramsPage = () => {
                   onClick={(e) => handleToggleStar(program.id, e)}
                   onKeyDown={(e) => handleStarKeyDown(program.id, e)}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Star this program"
+                  aria-label={t('library.starProgram')}
                 >
                   {isStarred ? (
                     <Star className="h-4 w-4 fill-primary text-primary" />
@@ -558,7 +560,7 @@ const ProgramsPage = () => {
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Star this program</p>
+                <p>{t('library.starProgram')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -591,14 +593,14 @@ const ProgramsPage = () => {
           <Checkbox
             checked={isAllSelected}
             onCheckedChange={onToggleAll}
-            aria-label="Select all programs"
+            aria-label={t('library.selectAllPrograms')}
           />
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
               <FileText className="size-3 text-muted-foreground" />
-              <span className="text-xs uppercase text-muted-foreground">Program</span>
+              <span className="text-xs uppercase text-muted-foreground">{t('library.programColumn')}</span>
               {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
               {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
             </div>
@@ -609,7 +611,7 @@ const ProgramsPage = () => {
               className={cn(isAscending && 'bg-accent')}
             >
               <ArrowUpNarrowWide className="size-4 mr-2" />
-              <span className="flex-1">Sort ascending</span>
+              <span className="flex-1">{t('library.sortAscending')}</span>
               {isAscending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -617,7 +619,7 @@ const ProgramsPage = () => {
               className={cn(isDescending && 'bg-accent')}
             >
               <ArrowDownWideNarrow className="size-4 mr-2" />
-              <span className="flex-1">Sort descending</span>
+              <span className="flex-1">{t('library.sortDescending')}</span>
               {isDescending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -633,10 +635,10 @@ const ProgramsPage = () => {
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="programs"
-        subtitle={(count) => `${count} ${count === 1 ? 'program' : 'programs'}`}
+        subtitle={(count) => `${count} ${count === 1 ? t('library.program') : t('library.programPlural')}`}
         itemsPerPage={itemsPerPage}
         enableSearch={true}
-        searchPlaceholder="Search..."
+        searchPlaceholder={t('library.searchPlaceholder')}
         filters={filters}
         enableEditColumns={true}
         enableExport={true}
@@ -678,19 +680,19 @@ const ProgramsPage = () => {
               variant="secondary"
               onClick={handleOpenAssignProgram}
               className="gap-2"
-              aria-label="Assign program to athletes"
+              aria-label={t('library.assignProgram')}
             >
               <UserPlus className="size-4" />
-              <span>Assign</span>
+              <span>{t('general.assign')}</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label="Create program">
+            <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('library.createProgram')}>
               <Plus className="size-4" />
-              <span>Create program</span>
+              <span>{t('library.createProgram')}</span>
             </Button>
           </ButtonGroup>
         }
-        emptyMessage="No programs found."
+        emptyMessage={t('library.noProgramsFound')}
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="320px"
@@ -702,7 +704,7 @@ const ProgramsPage = () => {
       <SidePanel
         open={isAssignProgramOpen}
         onOpenChange={setIsAssignProgramOpen}
-        title="Assign program"
+        title={t('library.assignProgram')}
       >
         <AssignAthletesList
           onAthleteSelected={(athleteId) => {
@@ -735,7 +737,7 @@ const ProgramsPage = () => {
             setSelectedProgramForAssignment(null);
           }
         }}
-        title={selectedProgramForAssignment ? `Assigning ${selectedProgramForAssignment.program}` : 'Assign program'}
+        title={selectedProgramForAssignment ? t('library.assigningProgram', { name: selectedProgramForAssignment.program }) : t('library.assignProgram')}
       >
         {selectedProgramForAssignment && (
           <AssignAthletesList
@@ -759,7 +761,7 @@ const ProgramsPage = () => {
             resetCreateProgramState();
           }
         }}
-        title="New program"
+        title={t('library.newProgram')}
         footer={
           <div className="flex w-full justify-start gap-2">
             <Button
@@ -771,18 +773,18 @@ const ProgramsPage = () => {
                 !newProgramType ||
                 !newProgramDifficulty
               }
-              aria-label="Continue"
+              aria-label={t('general.continue')}
               className={cn(isNavigating && 'min-w-[120px] justify-center')}
             >
-              {isNavigating ? <Spinner className="h-4 w-4" /> : 'Continue'}
+              {isNavigating ? <Spinner className="h-4 w-4" /> : t('general.continue')}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={handleCloseCreateProgram}
-              aria-label="Cancel creating program"
+              aria-label={t('library.cancelCreatingProgram')}
             >
-              Cancel
+              {t('general.cancel')}
             </Button>
           </div>
         }
@@ -791,12 +793,12 @@ const ProgramsPage = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <label htmlFor="program-name" className="text-sm font-medium">
-                Program Name <span className="text-destructive">*</span>
+                {t('library.programName')} <span className="text-destructive">*</span>
               </label>
               <Input
                 id="program-name"
                 type="text"
-                placeholder="Name..."
+                placeholder={t('library.namePlaceholder')}
                 value={newProgramName}
                 onChange={(event) => {
                   setNewProgramName(event.target.value);
@@ -811,7 +813,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-type" className="text-sm font-medium">
-                Type <span className="text-destructive">*</span>
+                {t('library.type')} <span className="text-destructive">*</span>
               </label>
               <Select
                 value={newProgramType}
@@ -830,7 +832,7 @@ const ProgramsPage = () => {
                   )}
                   aria-invalid={!!newProgramTypeError}
                 >
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
                   {PROGRAM_TYPES.map((type) => (
@@ -846,7 +848,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-difficulty" className="text-sm font-medium">
-                Difficulty <span className="text-destructive">*</span>
+                {t('library.difficultyRequired').replace(' is required', '')} <span className="text-destructive">*</span>
               </label>
               <Select
                 value={newProgramDifficulty}
@@ -866,7 +868,7 @@ const ProgramsPage = () => {
                   )}
                   aria-invalid={!!newProgramDifficultyError}
                 >
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue placeholder={t('general.select')} />
                 </SelectTrigger>
                 <SelectContent>
                   {PROGRAM_DIFFICULTY_LEVELS.map((level) => (
@@ -882,7 +884,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-weeks" className="text-sm font-medium">
-                Weeks
+                {t('library.weeks')}
               </label>
               <Input
                 id="program-weeks"
@@ -890,7 +892,7 @@ const ProgramsPage = () => {
                 inputMode="numeric"
                 min={1}
                 step={1}
-                placeholder="Number of weeks"
+                placeholder={t('library.numberOfWeeks')}
                 value={newProgramWeeks}
                 onChange={(event) => {
                   const value = event.target.value.replace(/[^0-9]/g, '');
@@ -902,13 +904,13 @@ const ProgramsPage = () => {
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="program-description" className="text-sm font-medium">
-              Description <span className="text-muted-foreground font-normal">(Optional)</span>
+              {t('library.programDescription')} <span className="text-muted-foreground font-normal">{t('library.optional')}</span>
             </label>
             <Textarea
               id="program-description"
               value={newProgramDescription}
               onChange={(event) => setNewProgramDescription(event.target.value)}
-              placeholder="Add a description for your program..."
+              placeholder={t('library.addDescription')}
               rows={4}
               className="resize-none"
             />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,6 +24,7 @@ interface UploadClientsSidePanelProps {
 }
 
 export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSidePanelProps) => {
+  const t = useTranslations();
   const [uploadStep, setUploadStep] = useState<number>(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -59,7 +61,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
     <SidePanel
       open={open}
       onOpenChange={handleOpenChange}
-      title="Upload clients"
+      title={t('athletes.uploadClients.title')}
       contentClassName="sm:w-[600px] sm:max-w-[600px]"
       footer={
         uploadStep !== 3 ? (
@@ -77,7 +79,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                       const result = await parseCSV(selectedFile);
 
                       if (!result.isValid) {
-                        setCsvError(result.error || 'Invalid CSV file');
+                        setCsvError(result.error || t('athletes.uploadClients.invalidCsv'));
                         setIsValidatingCSV(false);
                         return;
                       }
@@ -88,20 +90,20 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                       setUploadStep(2);
                       setIsValidatingCSV(false);
                     } catch (error) {
-                      setCsvError('Error processing CSV file');
+                      setCsvError(t('athletes.uploadClients.errorProcessing'));
                       setIsValidatingCSV(false);
                     }
                   }
                 }}
-                aria-label="Continue to review clients"
+                aria-label={t('athletes.uploadClients.continueToReview')}
               >
                 {isValidatingCSV ? (
                   <>
                     <Spinner className="mr-2" />
-                    Validating...
+                    {t('athletes.uploadClients.validating')}
                   </>
                 ) : (
-                  'Continue'
+                  t('athletes.uploadClients.continue')
                 )}
               </Button>
             )}
@@ -109,18 +111,18 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
               <Button
                 type="button"
                 onClick={() => setUploadStep(3)}
-                aria-label="Continue to final step"
+                aria-label={t('athletes.uploadClients.continueToFinal')}
               >
-                Continue
+                {t('athletes.uploadClients.continue')}
               </Button>
             )}
             <Button
               type="button"
               variant="secondary"
               onClick={handleCancel}
-              aria-label="Cancel uploading clients"
+              aria-label={t('athletes.uploadClients.cancelAria')}
             >
-              Cancel
+              {t('athletes.uploadClients.cancel')}
             </Button>
           </div>
         ) : undefined
@@ -173,7 +175,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
         {uploadStep === 1 && (
           <div className="flex flex-col items-center gap-6">
             <div className="flex flex-col items-center gap-2">
-              <h3 className="text-lg font-semibold">Upload CSV</h3>
+              <h3 className="text-lg font-semibold">{t('athletes.uploadClients.step1')}</h3>
               {csvError && <p className="text-sm text-destructive text-center">{csvError}</p>}
             </div>
             <div className="w-full max-w-md">
@@ -199,15 +201,15 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                         }
                       }}
                     >
-                      Change File
+                      {t('athletes.uploadClients.changeFile')}
                     </Button>
                   </>
                 ) : (
                   <>
                     <Upload className="size-10 text-muted-foreground" />
                     <div className="text-center">
-                      <p className="text-sm font-medium mb-1">Click to upload or drag and drop</p>
-                      <p className="text-xs text-muted-foreground">CSV file only</p>
+                      <p className="text-sm font-medium mb-1">{t('athletes.uploadClients.clickToUpload')}</p>
+                      <p className="text-xs text-muted-foreground">{t('athletes.uploadClients.csvFileOnly')}</p>
                     </div>
                     <Input
                       ref={fileInputRef}
@@ -230,22 +232,22 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                       className="cursor-pointer"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      Select File
+                      {t('athletes.uploadClients.selectFile')}
                     </Button>
                   </>
                 )}
               </div>
             </div>
             <p className="text-sm text-center text-muted-foreground">
-              Please download this{' '}
+              {t('athletes.uploadClients.downloadTemplate')}{' '}
               <a
                 href="/clients.csv"
                 download="clients.csv"
                 className="underline text-foreground hover:text-primary transition-colors font-semibold text-base"
               >
-                CSV Template
+                {t('athletes.uploadClients.csvTemplate')}
               </a>
-              , add your client info and then upload.
+              {t('athletes.uploadClients.addClientInfo')}
             </p>
           </div>
         )}
@@ -254,24 +256,24 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
         {uploadStep === 2 && (
           <div className="flex flex-col gap-6">
             <h3 className="text-lg font-semibold text-center">
-              Review {parsedClients.length} new {parsedClients.length === 1 ? 'client' : 'clients'}
+              {t('athletes.uploadClients.reviewTitle', { count: parsedClients.length })}
             </h3>
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]" />
-                    <TableHead>First Name</TableHead>
-                    <TableHead>Last Name</TableHead>
-                    <TableHead className="w-[200px]">Email</TableHead>
-                    <TableHead>Category</TableHead>
+                    <TableHead>{t('athletes.uploadClients.firstName')}</TableHead>
+                    <TableHead>{t('athletes.uploadClients.lastName')}</TableHead>
+                    <TableHead className="w-[200px]">{t('athletes.uploadClients.email')}</TableHead>
+                    <TableHead>{t('athletes.uploadClients.category')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {parsedClients.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        No clients found
+                        {t('athletes.uploadClients.noClientsFound')}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -284,7 +286,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             onClick={() => handleRemoveClient(index)}
-                            aria-label={`Remove ${client.firstName} ${client.lastName}`}
+                            aria-label={t('athletes.uploadClients.removeClient', { firstName: client.firstName, lastName: client.lastName })}
                           >
                             {/* Reuse Upload icon for consistency; delete icon not required */}
                             <Trash2 className="h-4 w-4" />
@@ -306,9 +308,9 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
         {/* Step 3: All Done */}
         {uploadStep === 3 && (
           <div className="flex flex-col items-center gap-6">
-            <h3 className="text-lg font-semibold text-center">All Done</h3>
+            <h3 className="text-lg font-semibold text-center">{t('athletes.uploadClients.allDone')}</h3>
             <Button type="button" onClick={handleCancel}>
-              Close
+              {t('athletes.uploadClients.close')}
             </Button>
           </div>
         )}

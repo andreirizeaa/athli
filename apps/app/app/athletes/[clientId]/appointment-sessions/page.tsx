@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { ClientCalendarStatus } from './components/client-calendar-status';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { mockAthletes } from '@/components/app/app-shell';
 
 const AppointmentSessionsPage = () => {
+  const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   const athlete = mockAthletes.find((item) => item.id === clientId);
@@ -33,7 +35,7 @@ const AppointmentSessionsPage = () => {
     return (
       <div className="h-full w-full flex flex-col overflow-hidden">
         <div className="w-full flex-1 min-h-0 overflow-hidden flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">Client not found</p>
+          <p className="text-sm text-muted-foreground">{t('athletes.profile.clientNotFound')}</p>
         </div>
       </div>
     );

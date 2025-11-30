@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ type WorkoutMeta = {
 };
 
 const StandardWorkoutPage = () => {
+  const t = useTranslations();
   const router = useRouter();
   const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -60,7 +62,7 @@ const StandardWorkoutPage = () => {
 
     // If no meta in localStorage, use default values for new workout
     setWorkoutMeta({
-      title: 'New workout',
+      title: t('workouts.addWorkout.title'),
       description: '',
       type: 'Push',
       difficulty: 'Intermediate',
@@ -102,7 +104,7 @@ const StandardWorkoutPage = () => {
     // eslint-disable-next-line no-console
     console.log(payload);
 
-    toast.success(`Push workout "${payload.title}" has been saved`, {
+    toast.success(t('workouts.new.toast.savedSuccessfully', { name: payload.title, type: payload.type }), {
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -143,7 +145,7 @@ const StandardWorkoutPage = () => {
                     onClick={() => handleBreadcrumbClick('/library')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    Library
+                    {t('workouts.detail.breadcrumb.library')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -154,7 +156,7 @@ const StandardWorkoutPage = () => {
                     onClick={() => handleBreadcrumbClick('/library/workouts')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    Workouts
+                    {t('workouts.detail.breadcrumb.workouts')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -162,27 +164,27 @@ const StandardWorkoutPage = () => {
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    New workout
+                    {t('workouts.addWorkout.title')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold truncate">New workout</h1>
+            <h1 className="text-[22px] font-semibold truncate">{t('workouts.addWorkout.title')}</h1>
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button
               variant="secondary"
               onClick={handleCancel}
               className="gap-2"
-              aria-label="Cancel creating workout"
+              aria-label={t('workouts.addWorkout.cancelAria')}
             >
               <X className="size-4" />
-              <span>Cancel</span>
+              <span>{t('workouts.addWorkout.cancel')}</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button onClick={handleSaveClick} className="gap-2" aria-label="Save workout">
+            <Button onClick={handleSaveClick} className="gap-2" aria-label={t('workouts.edit.saveAria')}>
               <Check className="size-4" />
-              <span>Save</span>
+              <span>{t('workouts.edit.save')}</span>
             </Button>
           </ButtonGroup>
         </div>

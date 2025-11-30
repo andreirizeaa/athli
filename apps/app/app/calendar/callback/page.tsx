@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CalendarCallbackPage() {
+  const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isProcessing, setIsProcessing] = useState(true);
@@ -52,7 +54,7 @@ export default function CalendarCallbackPage() {
 
           if (!accessToken) {
             throw new Error(
-              'Calendar connection failed. No access token returned.'
+              t('calendar.callback.calendarConnectionFailed')
             );
           }
 
@@ -91,19 +93,19 @@ export default function CalendarCallbackPage() {
 
           if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Failed to save calendar connection');
+            throw new Error(error.error || t('calendar.callback.failedToSave'));
           }
 
-          toast.success('Calendar connected successfully!');
+          toast.success(t('calendar.toast.connectedSuccessfully'));
           router.push('/calendar');
           return;
         }
 
         // If we get here, no tokens were found
-        throw new Error('No tokens returned from OAuth provider');
+        throw new Error(t('calendar.callback.noTokensReturned'));
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : 'Failed to connect calendar';
+          error instanceof Error ? error.message : t('calendar.callback.connectionFailed');
         toast.error(errorMessage);
         router.push('/calendar');
       } finally {
@@ -119,7 +121,7 @@ export default function CalendarCallbackPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Connecting your calendar...</p>
+          <p className="text-sm text-muted-foreground">{t('calendar.callback.connecting')}</p>
         </div>
       </div>
     );

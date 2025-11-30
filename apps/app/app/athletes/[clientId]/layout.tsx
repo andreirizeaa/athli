@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams, useRouter, useSelectedLayoutSegments } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ type ClientProfileLayoutProps = {
 };
 
 const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
+  const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
   const params = useParams<{ clientId: string }>();
@@ -37,23 +39,23 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const tabs = [
     {
       value: 'overview',
-      label: 'Overview',
+      label: t('athletes.profile.overview'),
     },
     {
       value: 'metrics',
-      label: 'Metrics',
+      label: t('athletes.profile.metrics'),
     },
     {
       value: 'appointment-sessions',
-      label: 'Bookings',
+      label: t('athletes.profile.bookings'),
     },
     {
       value: 'training-calendar',
-      label: 'Training Calendar',
+      label: t('athletes.profile.trainingCalendar'),
     },
     {
       value: 'app-settings',
-      label: 'App Settings',
+      label: t('athletes.profile.appSettings'),
     },
   ];
 
@@ -96,7 +98,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
     try {
       await archiveUser(clientId);
       setIsArchiveModalOpen(false);
-      toast.success('Client archived successfully', {
+      toast.success(t('athletes.profile.archivedSuccessfully'), {
         style: {
           background: 'rgb(220 252 231)',
           color: 'rgb(20 83 45)',
@@ -105,7 +107,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       });
       handleNavigateToAthletes();
     } catch (error) {
-      toast.error('Failed to archive client', {
+      toast.error(t('athletes.profile.failedToArchive'), {
         style: {
           background: 'rgb(254 242 242)',
           color: 'rgb(153 27 27)',
@@ -124,20 +126,20 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       <div className="h-full w-full flex flex-col">
         <div className="w-full relative">
           <div className="px-4 flex items-center justify-between mb-2 mt-2">
-            <h1 className="text-[22px] font-semibold">Client not found</h1>
+            <h1 className="text-[22px] font-semibold">{t('athletes.profile.clientNotFound')}</h1>
             <Button
               onClick={handleNavigateToAthletes}
               className="gap-2"
-              aria-label="View all clients"
+              aria-label={t('athletes.profile.viewAllClients')}
             >
               <Users className="size-4" />
-              <span>All Clients</span>
+              <span>{t('athletes.profile.allClients')}</span>
             </Button>
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
         <div className="w-full flex-1 overflow-auto px-4 py-4 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">We could not find a client with this id.</p>
+          <p className="text-sm text-muted-foreground">{t('athletes.profile.clientNotFoundDescription')}</p>
         </div>
       </div>
     );
@@ -162,7 +164,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
                   onClick={handleNavigateToAthletes}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                 >
-                  Athletes
+                  {t('athletes.profile.athletes')}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -190,16 +192,16 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
             onClick={() => handleNavigateToMessages(clientId)}
             variant="secondary"
             className="gap-2"
-            aria-label="Open message with this client"
+            aria-label={t('athletes.profile.messageAria')}
           >
             <MessageCircle className="size-4" />
-            <span>Message</span>
+            <span>{t('athletes.profile.message')}</span>
           </Button>
           <Button
             variant="secondary"
             size="icon"
             className="gap-2"
-            aria-label="Archive client"
+            aria-label={t('athletes.profile.archiveAria')}
             onClick={() => setIsArchiveModalOpen(true)}
           >
             <Archive className="size-4" />
@@ -223,9 +225,9 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         >
           <DialogHeader className="flex-shrink-0">
             <div className="flex items-center justify-between">
-              <DialogTitle className="text-left">Are you sure you want to archive {firstName}?</DialogTitle>
+              <DialogTitle className="text-left">{t('athletes.profile.archiveConfirmTitle', { firstName })}</DialogTitle>
               <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Close">
+                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('general.close')}>
                   <X className="h-4 w-4" />
                 </Button>
               </DialogClose>
@@ -233,15 +235,15 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
           </DialogHeader>
           <div className="flex-1 mt-4">
             <p className="text-sm text-muted-foreground">
-              Archiving the user will remove their access to the app immediately. Archives can be restored which may incur charges depending on client limits.
+              {t('athletes.profile.archiveDescription')}
             </p>
           </div>
           <div className="flex items-center justify-end gap-3 pt-4">
             <Button type="button" variant="secondary" onClick={handleCancelArchive}>
-              No
+              {t('athletes.profile.no')}
             </Button>
             <Button type="button" onClick={handleArchive}>
-              Yes
+              {t('athletes.profile.yes')}
             </Button>
           </div>
         </DialogContent>
