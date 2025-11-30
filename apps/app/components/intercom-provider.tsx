@@ -89,7 +89,6 @@ export const IntercomProvider = () => {
         }
         const data = await response.json();
         if (data.jwt) {
-          console.log('Intercom JWT token:', data.jwt);
           setJwt(data.jwt);
         }
       } catch (error) {
@@ -109,18 +108,6 @@ export const IntercomProvider = () => {
     const emailAddress = user.emailAddresses[0]?.emailAddress || '';
     const fullName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '';
     const createdAt = user.createdAt ? Math.floor(new Date(user.createdAt).getTime() / 1000) : undefined;
-
-    console.log('Booting Intercom with JWT:', jwt);
-    console.log('Intercom boot config:', {
-      api_base: 'https://api-iam.intercom.io',
-      app_id: 'anv873r9',
-      intercom_user_jwt: jwt,
-      user_id: user.id,
-      ...(fullName && { name: fullName }),
-      ...(emailAddress && { email: emailAddress }),
-      ...(createdAt && { created_at: createdAt }),
-      session_duration: 86400000,
-    });
 
     window.Intercom('boot', {
       api_base: 'https://api-iam.intercom.io',
