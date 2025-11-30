@@ -198,17 +198,17 @@ const ProgramsPage = () => {
 
   const handleCreateProgramContinue = () => {
     if (!newProgramName.trim()) {
-      setNewProgramError(t('library.programNameRequired'));
+      setNewProgramError(t('programs.addProgram.programNameRequiredError'));
       return;
     }
 
     if (!newProgramType) {
-      setNewProgramTypeError(t('library.programTypeRequired'));
+      setNewProgramTypeError(t('programs.addProgram.programTypeRequiredError'));
       return;
     }
 
     if (!newProgramDifficulty) {
-      setNewProgramDifficultyError(t('library.difficultyRequired'));
+      setNewProgramDifficultyError(t('programs.addProgram.difficultyRequiredError'));
       return;
     }
 
@@ -328,7 +328,7 @@ const ProgramsPage = () => {
   const allColumns: ColumnDefinition<Program>[] = [
     {
       id: 'program',
-      label: t('library.programColumn'),
+      label: t('programs.columns.program'),
       icon: <FileText className="size-3" />,
       getSortValue: (row) => row.program.toLowerCase(),
       getSearchValue: (row) => row.program,
@@ -344,7 +344,7 @@ const ProgramsPage = () => {
               class: getColumnWidth('description', 'class'),
               pixel: getColumnWidth('description', 'pixel'),
             },
-            tooltip: t('library.briefOverviewProgram'),
+            tooltip: t('programs.columnTooltips.description'),
             getSortValue: (row) => row.description.toLowerCase(),
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
@@ -374,7 +374,7 @@ const ProgramsPage = () => {
               class: getColumnWidth('type', 'class'),
               pixel: getColumnWidth('type', 'pixel'),
             },
-            tooltip: t('library.categoryStyleProgram'),
+            tooltip: t('programs.columnTooltips.type'),
             getSortValue: (row) => row.type.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
@@ -385,13 +385,13 @@ const ProgramsPage = () => {
         case 'length':
           return {
             id: 'length',
-            label: t('library.length'),
+            label: t('programs.columns.length'),
             icon: <Clock className="size-3" />,
             width: {
               class: getColumnWidth('length', 'class'),
               pixel: getColumnWidth('length', 'pixel'),
             },
-            tooltip: t('library.programDuration'),
+            tooltip: t('programs.columnTooltips.length'),
             getSortValue: (row) => {
               const weeks = parseInt(row.length.split(' ')[0]);
               return isNaN(weeks) ? 0 : weeks;
@@ -405,13 +405,13 @@ const ProgramsPage = () => {
         case 'totalExercises':
           return {
             id: 'totalExercises',
-            label: t('library.totalExercises'),
+            label: t('programs.columns.totalExercises'),
             icon: <Hash className="size-3" />,
             width: {
               class: getColumnWidth('totalExercises', 'class'),
               pixel: getColumnWidth('totalExercises', 'pixel'),
             },
-            tooltip: t('library.numberOfExercisesProgram'),
+            tooltip: t('programs.columnTooltips.totalExercises'),
             getSortValue: (row) => row.totalExercises,
             renderCell: (row) => (
               <div className="flex items-center w-full">
@@ -428,7 +428,7 @@ const ProgramsPage = () => {
               class: getColumnWidth('equipment', 'class'),
               pixel: getColumnWidth('equipment', 'pixel'),
             },
-            tooltip: t('library.equipmentRequiredProgram'),
+            tooltip: t('programs.columnTooltips.equipment'),
             getSortValue: (row) => row.equipment.toLowerCase(),
             renderCell: (row) => (
               <Tooltip>
@@ -456,7 +456,7 @@ const ProgramsPage = () => {
               class: getColumnWidth('created', 'class'),
               pixel: getColumnWidth('created', 'pixel'),
             },
-            tooltip: t('library.dateCreatedProgram'),
+            tooltip: t('programs.columnTooltips.created'),
             getSortValue: (row) => {
               const [day, month, year] = row.created.split('-').map(Number);
               return new Date(2000 + year, month - 1, day).getTime();
@@ -484,7 +484,7 @@ const ProgramsPage = () => {
   const filters: FilterDefinition<Program>[] = [
     {
       id: 'type',
-      label: t('library.type'),
+      label: t('programs.filters.type'),
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: type })),
       getFilterValue: (row) => row.type,
@@ -495,8 +495,8 @@ const ProgramsPage = () => {
       label: t('general.show'),
       icon: <Star className="size-4" />,
       options: [
-        { value: 'starred', label: t('library.starred') },
-        { value: 'unstarred', label: t('library.unstarred') },
+        { value: 'starred', label: t('programs.filters.starred') },
+        { value: 'unstarred', label: t('programs.filters.unstarred') },
       ],
       getFilterValue: (row) => (starredPrograms.has(row.id) ? 'starred' : 'unstarred'),
       defaultValue: starFilter,
@@ -532,13 +532,13 @@ const ProgramsPage = () => {
                     }
                   }}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label={t('library.assignProgramToClient')}
+                  aria-label={t('programs.actions.assignProgramToClient')}
                 >
                   <User className="h-4 w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{t('library.assignProgramToClient')}</p>
+                <p>{t('programs.actions.assignProgramToClient')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -550,7 +550,7 @@ const ProgramsPage = () => {
                   onClick={(e) => handleToggleStar(program.id, e)}
                   onKeyDown={(e) => handleStarKeyDown(program.id, e)}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label={t('library.starProgram')}
+                  aria-label={t('programs.actions.starProgram')}
                 >
                   {isStarred ? (
                     <Star className="h-4 w-4 fill-primary text-primary" />
@@ -560,7 +560,7 @@ const ProgramsPage = () => {
                 </button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{t('library.starProgram')}</p>
+                <p>{t('programs.actions.starProgram')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -593,14 +593,14 @@ const ProgramsPage = () => {
           <Checkbox
             checked={isAllSelected}
             onCheckedChange={onToggleAll}
-            aria-label={t('library.selectAllPrograms')}
+            aria-label={t('programs.actions.selectAllPrograms')}
           />
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
               <FileText className="size-3 text-muted-foreground" />
-              <span className="text-xs uppercase text-muted-foreground">{t('library.programColumn')}</span>
+              <span className="text-xs uppercase text-muted-foreground">{t('programs.columns.program')}</span>
               {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
               {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
             </div>
@@ -611,7 +611,7 @@ const ProgramsPage = () => {
               className={cn(isAscending && 'bg-accent')}
             >
               <ArrowUpNarrowWide className="size-4 mr-2" />
-              <span className="flex-1">{t('library.sortAscending')}</span>
+              <span className="flex-1">{t('programs.actions.sortAscending')}</span>
               {isAscending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -619,7 +619,7 @@ const ProgramsPage = () => {
               className={cn(isDescending && 'bg-accent')}
             >
               <ArrowDownWideNarrow className="size-4 mr-2" />
-              <span className="flex-1">{t('library.sortDescending')}</span>
+              <span className="flex-1">{t('programs.actions.sortDescending')}</span>
               {isDescending && <Check className="ml-2 size-4" />}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -635,10 +635,10 @@ const ProgramsPage = () => {
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="programs"
-        subtitle={(count) => `${count} ${count === 1 ? t('library.program') : t('library.programPlural')}`}
+        subtitle={(count) => `${count} ${count === 1 ? t('programs.program') : t('programs.programPlural')}`}
         itemsPerPage={itemsPerPage}
         enableSearch={true}
-        searchPlaceholder={t('library.searchPlaceholder')}
+        searchPlaceholder={t('programs.searchPlaceholder')}
         filters={filters}
         enableEditColumns={true}
         enableExport={true}
@@ -680,19 +680,19 @@ const ProgramsPage = () => {
               variant="secondary"
               onClick={handleOpenAssignProgram}
               className="gap-2"
-              aria-label={t('library.assignProgram')}
+              aria-label={t('programs.actions.assignProgram')}
             >
               <UserPlus className="size-4" />
               <span>{t('general.assign')}</span>
             </Button>
             <ButtonGroupSeparator />
-            <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('library.createProgram')}>
+            <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('programs.actions.createProgram')}>
               <Plus className="size-4" />
-              <span>{t('library.createProgram')}</span>
+              <span>{t('programs.actions.createProgram')}</span>
             </Button>
           </ButtonGroup>
         }
-        emptyMessage={t('library.noProgramsFound')}
+        emptyMessage={t('programs.emptyMessage')}
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="320px"
@@ -704,7 +704,7 @@ const ProgramsPage = () => {
       <SidePanel
         open={isAssignProgramOpen}
         onOpenChange={setIsAssignProgramOpen}
-        title={t('library.assignProgram')}
+        title={t('programs.actions.assignProgram')}
       >
         <AssignAthletesList
           onAthleteSelected={(athleteId) => {
@@ -737,7 +737,7 @@ const ProgramsPage = () => {
             setSelectedProgramForAssignment(null);
           }
         }}
-        title={selectedProgramForAssignment ? t('library.assigningProgram', { name: selectedProgramForAssignment.program }) : t('library.assignProgram')}
+        title={selectedProgramForAssignment ? t('programs.assigning.title', { name: selectedProgramForAssignment.program }) : t('programs.assigning.titleGeneric')}
       >
         {selectedProgramForAssignment && (
           <AssignAthletesList
@@ -761,7 +761,7 @@ const ProgramsPage = () => {
             resetCreateProgramState();
           }
         }}
-        title={t('library.newProgram')}
+        title={t('programs.addProgram.title')}
         footer={
           <div className="flex w-full justify-start gap-2">
             <Button
@@ -773,18 +773,18 @@ const ProgramsPage = () => {
                 !newProgramType ||
                 !newProgramDifficulty
               }
-              aria-label={t('general.continue')}
+              aria-label={t('programs.addProgram.continueAria')}
               className={cn(isNavigating && 'min-w-[120px] justify-center')}
             >
-              {isNavigating ? <Spinner className="h-4 w-4" /> : t('general.continue')}
+              {isNavigating ? <Spinner className="h-4 w-4" /> : t('programs.addProgram.continue')}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={handleCloseCreateProgram}
-              aria-label={t('library.cancelCreatingProgram')}
+              aria-label={t('programs.addProgram.cancelAria')}
             >
-              {t('general.cancel')}
+              {t('programs.addProgram.cancel')}
             </Button>
           </div>
         }
@@ -793,12 +793,12 @@ const ProgramsPage = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <label htmlFor="program-name" className="text-sm font-medium">
-                {t('library.programName')} <span className="text-destructive">*</span>
+                {t('programs.addProgram.programName')} <span className="text-destructive">*</span>
               </label>
               <Input
                 id="program-name"
                 type="text"
-                placeholder={t('library.namePlaceholder')}
+                placeholder={t('programs.addProgram.programNamePlaceholder')}
                 value={newProgramName}
                 onChange={(event) => {
                   setNewProgramName(event.target.value);
@@ -813,7 +813,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-type" className="text-sm font-medium">
-                {t('library.type')} <span className="text-destructive">*</span>
+                {t('programs.addProgram.type')} <span className="text-destructive">*</span>
               </label>
               <Select
                 value={newProgramType}
@@ -848,7 +848,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-difficulty" className="text-sm font-medium">
-                {t('library.difficultyRequired').replace(' is required', '')} <span className="text-destructive">*</span>
+                {t('programs.addProgram.difficulty')} <span className="text-destructive">*</span>
               </label>
               <Select
                 value={newProgramDifficulty}
@@ -884,7 +884,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-weeks" className="text-sm font-medium">
-                {t('library.weeks')}
+                {t('programs.addProgram.weeks')}
               </label>
               <Input
                 id="program-weeks"
@@ -892,7 +892,7 @@ const ProgramsPage = () => {
                 inputMode="numeric"
                 min={1}
                 step={1}
-                placeholder={t('library.numberOfWeeks')}
+                placeholder={t('programs.addProgram.weeksPlaceholder')}
                 value={newProgramWeeks}
                 onChange={(event) => {
                   const value = event.target.value.replace(/[^0-9]/g, '');
@@ -904,13 +904,13 @@ const ProgramsPage = () => {
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="program-description" className="text-sm font-medium">
-              {t('library.programDescription')} <span className="text-muted-foreground font-normal">{t('library.optional')}</span>
+              {t('programs.addProgram.description')} <span className="text-muted-foreground font-normal">{t('programs.addProgram.descriptionOptional')}</span>
             </label>
             <Textarea
               id="program-description"
               value={newProgramDescription}
               onChange={(event) => setNewProgramDescription(event.target.value)}
-              placeholder={t('library.addDescription')}
+              placeholder={t('programs.addProgram.descriptionPlaceholder')}
               rows={4}
               className="resize-none"
             />
