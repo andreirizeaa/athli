@@ -42,9 +42,9 @@ export const SidePanel = ({
         </div>
         <Separator />
         {children && (
-          <div className="flex-1 overflow-hidden px-4 pt-3 flex flex-col min-h-0">{children}</div>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-3 flex flex-col min-h-0">{children}</div>
         )}
-        {footer && <div className="px-4 py-3">{footer}</div>}
+        {footer && <div className="px-4 py-3 mt-auto">{footer}</div>}
       </SheetContent>
     </Sheet>
   );

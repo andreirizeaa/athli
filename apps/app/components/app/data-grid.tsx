@@ -92,6 +92,7 @@ export type DataGridProps<T = any> = {
   customActions?: React.ReactNode;
   selectionActions?: React.ReactNode;
   emptyMessage?: string;
+  emptyState?: React.ReactNode;
   rowHeight?: string;
   stickyFirstColumn?: boolean;
   firstColumnWidth?: string;
@@ -204,6 +205,7 @@ export function DataGrid<T extends Record<string, any>>({
   customActions,
   selectionActions,
   emptyMessage = 'No items found.',
+  emptyState,
   rowHeight = '54px',
   stickyFirstColumn = false,
   firstColumnWidth = '350px',
@@ -353,6 +355,10 @@ export function DataGrid<T extends Record<string, any>>({
           const rowValue = filter.getFilterValue
             ? filter.getFilterValue(row)
             : (row[filter.id] as string);
+          // Support comma-separated values (for arrays like muscle groups)
+          if (typeof rowValue === 'string' && rowValue.includes(',')) {
+            return rowValue.split(',').includes(filterValue);
+          }
           return rowValue === filterValue;
         });
       }
@@ -1150,13 +1156,20 @@ export function DataGrid<T extends Record<string, any>>({
             </TableHeader>
             <TableBody ref={tableBodyRef}>
               {paginatedData.length === 0 ? (
-                <TableRow className="hover:bg-transparent" style={{ height: rowHeight }}>
+                <TableRow className="hover:bg-transparent">
                   <TableCell
                     colSpan={filteredColumnOrder.length + (stickyFirstColumn ? 1 : 0)}
-                    className="!px-6 align-middle text-sm text-muted-foreground text-center"
-                    style={{ height: rowHeight }}
+                    className="!p-0 align-middle"
                   >
-                    {emptyMessage}
+                    {emptyState ? (
+                      <div className="flex items-center justify-center min-h-[400px] w-full">
+                        {emptyState}
+                      </div>
+                    ) : (
+                      <div className="!px-6 align-middle text-sm text-muted-foreground text-center" style={{ height: rowHeight }}>
+                        {emptyMessage}
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
