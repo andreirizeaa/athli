@@ -92,6 +92,7 @@ export type DataGridProps<T = any> = {
   customActions?: React.ReactNode;
   selectionActions?: React.ReactNode;
   emptyMessage?: string;
+  emptyState?: React.ReactNode;
   rowHeight?: string;
   stickyFirstColumn?: boolean;
   firstColumnWidth?: string;
@@ -204,6 +205,7 @@ export function DataGrid<T extends Record<string, any>>({
   customActions,
   selectionActions,
   emptyMessage = 'No items found.',
+  emptyState,
   rowHeight = '54px',
   stickyFirstColumn = false,
   firstColumnWidth = '350px',
@@ -353,6 +355,10 @@ export function DataGrid<T extends Record<string, any>>({
           const rowValue = filter.getFilterValue
             ? filter.getFilterValue(row)
             : (row[filter.id] as string);
+          // Support comma-separated values (for arrays like muscle groups)
+          if (typeof rowValue === 'string' && rowValue.includes(',')) {
+            return rowValue.split(',').includes(filterValue);
+          }
           return rowValue === filterValue;
         });
       }
@@ -1014,7 +1020,11 @@ export function DataGrid<T extends Record<string, any>>({
         )}
         <div
           ref={scrollableContainerRef}
-          className={cn('flex-1 overflow-auto relative', compactMode ? 'w-full' : '')}
+          className={cn(
+            'flex-1 relative',
+            compactMode ? 'w-full' : '',
+            paginatedData.length === 0 ? 'overflow-y-auto overflow-x-hidden' : 'overflow-auto'
+          )}
           style={{ paddingBottom: showPagination ? (compactMode ? '36px' : rowHeight) : '0px' }}
           onScroll={() => {
             if (scrollableContainerRef.current && isPageLoading) {
@@ -1022,7 +1032,16 @@ export function DataGrid<T extends Record<string, any>>({
             }
           }}
         >
-          {!disableLoadingOverlay && isPageLoading && (
+          {paginatedData.length === 0 && (emptyState || emptyMessage) && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-background">
+              {emptyState || (
+                <div className="text-sm text-muted-foreground text-center">
+                  {emptyMessage}
+                </div>
+              )}
+            </div>
+          )}
+          {!disableLoadingOverlay && isPageLoading && paginatedData.length > 0 && (
             <div
               className="sticky top-0 left-0 right-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
               style={{
@@ -1048,10 +1067,11 @@ export function DataGrid<T extends Record<string, any>>({
           `,
             }}
           />
-          <table
-            className="table-fixed border-separate border-spacing-0 w-full"
-            style={{ tableLayout: 'fixed', width: '100%' }}
-          >
+          {paginatedData.length > 0 && (
+            <table
+              className="table-fixed border-separate border-spacing-0 w-full"
+              style={{ tableLayout: 'fixed', width: '100%' }}
+            >
             <colgroup>
               {stickyFirstColumn && (
                 <col
@@ -1149,17 +1169,7 @@ export function DataGrid<T extends Record<string, any>>({
               </TableRow>
             </TableHeader>
             <TableBody ref={tableBodyRef}>
-              {paginatedData.length === 0 ? (
-                <TableRow className="hover:bg-transparent" style={{ height: rowHeight }}>
-                  <TableCell
-                    colSpan={filteredColumnOrder.length + (stickyFirstColumn ? 1 : 0)}
-                    className="!px-6 align-middle text-sm text-muted-foreground text-center"
-                    style={{ height: rowHeight }}
-                  >
-                    {emptyMessage}
-                  </TableCell>
-                </TableRow>
-              ) : (
+              {paginatedData.length > 0 && (
                 paginatedData.map((row) => {
                   const rowId = getRowId(row);
                   const isSelected = selectedRowIds.has(rowId);
@@ -1231,6 +1241,7 @@ export function DataGrid<T extends Record<string, any>>({
               )}
             </TableBody>
           </table>
+          )}
         </div>
         {showPagination && (
           <div

@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -1321,7 +1322,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="title">
-              Title <span className="text-destructive">*</span>
+              <span>Title<RequiredAsterisk /></span>
             </Label>
             <Input
               id="title"
@@ -1332,7 +1333,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           </div>
           <div className="flex flex-col gap-2">
             <Label>
-              Invite <span className="text-destructive">*</span>
+              <span>Invite<RequiredAsterisk /></span>
             </Label>
             <MultiAsyncSelect
               options={athleteOptions}
@@ -1353,7 +1354,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           <div className="flex gap-4">
             <div className="flex flex-col gap-2 w-[50%]">
             <Label htmlFor="date">
-              Date <span className="text-destructive">*</span>
+              <span>Date<RequiredAsterisk /></span>
             </Label>
             <Input
               id="date"
@@ -1364,7 +1365,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
             </div>
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="location">
-                Location <span className="text-destructive">*</span>
+                <span>Location<RequiredAsterisk /></span>
               </Label>
               <Select
                 value={meetingForm.location || 'In person (Gym)'}
@@ -1383,7 +1384,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           <div className="flex gap-4">
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="startTime">
-                Start time <span className="text-destructive">*</span>
+                <span>Start time<RequiredAsterisk /></span>
               </Label>
               <Input
                 id="startTime"
@@ -1395,7 +1396,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
             </div>
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="endTime">
-                End time <span className="text-destructive">*</span>
+                <span>End time<RequiredAsterisk /></span>
               </Label>
               <Input
                 id="endTime"
@@ -1654,7 +1655,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
 
           <div className="flex flex-col gap-2">
               <Label htmlFor="edit-title">
-                Title <span className="text-destructive">*</span>
+                <span>Title<RequiredAsterisk /></span>
             </Label>
             <Input
                 id="edit-title"
@@ -1666,7 +1667,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           <div className="flex gap-4">
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-date">
-                  Date <span className="text-destructive">*</span>
+                  <span>Date<RequiredAsterisk /></span>
               </Label>
               <Input
                   id="edit-date"
@@ -1682,7 +1683,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
             </div>
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-location">
-                  Location <span className="text-destructive">*</span>
+                  <span>Location<RequiredAsterisk /></span>
               </Label>
                 <Select
                   value={meetingForm.location || selectedEvent.location || 'In person (Gym)'}
@@ -1701,7 +1702,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
             <div className="flex gap-4">
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-startTime">
-                  Start time <span className="text-destructive">*</span>
+                  <span>Start time<RequiredAsterisk /></span>
                 </Label>
                   <Input
                   id="edit-startTime"
@@ -1718,7 +1719,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
               </div>
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-endTime">
-                  End time <span className="text-destructive">*</span>
+                  <span>End time<RequiredAsterisk /></span>
                 </Label>
                 <Input
                   id="edit-endTime"
@@ -1784,7 +1785,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="email-emails">
-                Clients <span className="text-destructive">*</span>
+                <span>Clients<RequiredAsterisk /></span>
               </Label>
               <MultiAsyncSelect
                 options={emailOptionsWithSearch}
@@ -1799,7 +1800,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="email-subject">
-                Subject <span className="text-destructive">*</span>
+                <span>Subject<RequiredAsterisk /></span>
               </Label>
               <Input
                 id="email-subject"

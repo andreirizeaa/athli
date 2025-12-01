@@ -30,6 +30,10 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
       value: 'programs',
       label: t('library.programs'),
     },
+    {
+      value: 'exercises',
+      label: t('library.exercises'),
+    },
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
