@@ -37,8 +37,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
       id: 'personal',
       icon: User,
       sections: [
-        { id: 'profile', href: '/settings/account/profile' },
-        { id: 'notifications', href: '/settings/account/notifications' },
+        { id: 'account', href: '/settings/profile/account' },
+        { id: 'notifications', href: '/settings/profile/notifications' },
       ],
     },
     {
@@ -235,7 +235,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                               )}
                             </button>
                             {isExpanded && (
-                              <div className="flex flex-col gap-0.5 pl-4">
+                              <div className="flex flex-col gap-0.5 pl-4 relative mt-1">
+                                <div className="absolute left-2 top-0 bottom-0 w-px bg-border" />
                                 {section.subSections?.map((subSection) => {
                                   const isSubActive = isPathActive(subSection.href);
                                   return (

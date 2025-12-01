@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import {
   Select,
   SelectContent,
@@ -29,6 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/compon
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
 import { toast } from 'sonner';
@@ -96,6 +98,8 @@ export const CalendarView = () => {
   });
   const [emailOptions, setEmailOptions] = useState<Option[]>([]);
   const [emailSearchQuery, setEmailSearchQuery] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(undefined);
   const eventRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Prevent scrolling and click propagation when popover is open
@@ -857,8 +861,9 @@ export const CalendarView = () => {
   const getWeekRange = () => {
     if (viewMode === 'week') {
       const firstDate = calendarDates[0]?.[0];
-      if (!firstDate) return '';
-      return format(firstDate, 'd MMM yyyy');
+      const lastDate = calendarDates[0]?.[6];
+      if (!firstDate || !lastDate) return '';
+      return `${format(firstDate, 'd MMM, yyyy')} - ${format(lastDate, 'd MMM, yyyy')}`;
     } else {
       return format(currentDate, 'MMMM yyyy');
     }
@@ -921,10 +926,41 @@ export const CalendarView = () => {
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="size-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{getWeekRange()}</span>
-            </div>
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <div className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
+                  <CalendarIcon className="size-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{getWeekRange()}</span>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  key={`${viewMode}-${currentDate.getTime()}`}
+                  mode="single"
+                  selected={selectedCalendarDate || (viewMode === 'week' ? calendarDates[0]?.[0] : currentDate)}
+                  onSelect={(date) => {
+                    if (!date) {
+                      setSelectedCalendarDate(undefined);
+                      return;
+                    }
+                    setSelectedCalendarDate(date);
+                    if (viewMode === 'week') {
+                      // Navigate to the week containing the selected date
+                      setCurrentDate(date);
+                    } else {
+                      // Navigate to the month containing the selected date
+                      setCurrentDate(date);
+                    }
+                    setIsCalendarOpen(false);
+                  }}
+                  defaultMonth={viewMode === 'week' ? calendarDates[0]?.[0] : currentDate}
+                  initialFocus
+                  captionLayout="dropdown"
+                  fromYear={2020}
+                  toYear={2030}
+                />
+              </PopoverContent>
+            </Popover>
             <Button
               type="button"
               variant="ghost"
@@ -1290,7 +1326,7 @@ export const CalendarView = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="title">
-              {t('calendar.meeting.titleRequired')}
+              <span>{t('calendar.meeting.title')}<RequiredAsterisk /></span>
             </Label>
             <Input
               id="title"
@@ -1301,7 +1337,7 @@ export const CalendarView = () => {
           </div>
           <div className="flex flex-col gap-2">
             <Label>
-              {t('calendar.meeting.inviteRequired')}
+              <span>{t('calendar.meeting.invite')}<RequiredAsterisk /></span>
             </Label>
             <MultiAsyncSelect
               options={athleteOptions}
@@ -1316,7 +1352,7 @@ export const CalendarView = () => {
           <div className="flex gap-4">
             <div className="flex flex-col gap-2 w-[50%]">
             <Label htmlFor="date">
-              {t('calendar.meeting.dateRequired')}
+              <span>{t('calendar.meeting.date')}<RequiredAsterisk /></span>
             </Label>
             <Input
               id="date"
@@ -1327,7 +1363,7 @@ export const CalendarView = () => {
             </div>
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="location">
-                {t('calendar.meeting.locationRequired')}
+                <span>{t('calendar.meeting.location')}<RequiredAsterisk /></span>
               </Label>
               <Select
                 value={meetingForm.location || t('calendar.meeting.inPersonGym')}
@@ -1346,7 +1382,7 @@ export const CalendarView = () => {
           <div className="flex gap-4">
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="startTime">
-                {t('calendar.meeting.startTimeRequired')}
+                <span>{t('calendar.meeting.startTime')}<RequiredAsterisk /></span>
               </Label>
               <Input
                 id="startTime"
@@ -1358,7 +1394,7 @@ export const CalendarView = () => {
             </div>
             <div className="flex flex-col gap-2 w-[50%]">
               <Label htmlFor="endTime">
-                {t('calendar.meeting.endTimeRequired')}
+                <span>{t('calendar.meeting.endTime')}<RequiredAsterisk /></span>
               </Label>
               <Input
                 id="endTime"
@@ -1629,8 +1665,8 @@ export const CalendarView = () => {
           <div className="flex gap-4">
               <div className="flex flex-col gap-2 w-[50%]">
                 <Label htmlFor="edit-date">
-                  {t('calendar.meeting.dateRequired')}
-              </Label>
+                  <span>{t('calendar.meeting.date')}<RequiredAsterisk /></span>
+                </Label>
               <Input
                   id="edit-date"
                   type="date"

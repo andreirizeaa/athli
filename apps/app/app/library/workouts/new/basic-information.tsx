@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/utils';
 
 const WORKOUT_TYPES = [
@@ -80,7 +81,7 @@ export const BasicInformation = ({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-name" className="text-sm font-medium">
-            {t('workouts.addWorkout.workoutNameRequired')}
+            {t('workouts.addWorkout.workoutName')}<RequiredAsterisk />
           </label>
           <Input
             id="workout-name"
@@ -103,7 +104,7 @@ export const BasicInformation = ({
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-type" className="text-sm font-medium">
-            {t('workouts.addWorkout.typeRequired')}
+            {t('workouts.addWorkout.type')}<RequiredAsterisk />
           </label>
           <Select
             value={workoutType}
@@ -136,7 +137,7 @@ export const BasicInformation = ({
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-difficulty" className="text-sm font-medium">
-            {t('workouts.addWorkout.difficultyRequired')}
+            {t('workouts.addWorkout.difficulty')}<RequiredAsterisk />
           </label>
           <Select
             value={difficulty}
@@ -184,7 +185,7 @@ export const BasicInformation = ({
       </div>
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">
-          {t('workouts.addWorkout.selectBuilderRequired')}
+          {t('workouts.addWorkout.selectBuilder')}<RequiredAsterisk />
         </h3>
         <div className="grid grid-cols-2 gap-4">
           <button

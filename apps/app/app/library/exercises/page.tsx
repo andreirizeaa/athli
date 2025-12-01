@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
@@ -1250,7 +1251,7 @@ const ExercisesPage = () => {
         <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
               <label htmlFor="exercise-name" className="text-sm font-medium">
-                {t('exercises.addExercise.exerciseName')} <span className="text-destructive">*</span>
+                {t('exercises.addExercise.exerciseName')}<RequiredAsterisk />
               </label>
               <Input
                 id="exercise-name"
@@ -1271,7 +1272,7 @@ const ExercisesPage = () => {
 
             <div className="flex flex-col gap-2">
             <label htmlFor="exercise-instructions" className="text-sm font-medium">
-              {t('exercises.addExercise.instructions')} <span className="text-destructive">*</span>
+              {t('exercises.addExercise.instructions')}<RequiredAsterisk />
             </label>
             <Textarea
               id="exercise-instructions"
@@ -1294,7 +1295,7 @@ const ExercisesPage = () => {
 
           <div className="flex flex-col gap-2">
             <label htmlFor="video-link" className="text-sm font-medium">
-              {t('exercises.addExercise.videoLink')} <span className="text-destructive">*</span>
+              {t('exercises.addExercise.videoLink')}<RequiredAsterisk />
             </label>
             <div className="relative">
               <Input
@@ -1397,7 +1398,7 @@ const ExercisesPage = () => {
 
           <div className="flex flex-col gap-2">
             <label htmlFor="category" className="text-sm font-medium">
-              {t('exercises.addExercise.category')} <span className="text-destructive">*</span>
+              {t('exercises.addExercise.category')}<RequiredAsterisk />
               </label>
               <Select
               value={category}
@@ -1428,7 +1429,7 @@ const ExercisesPage = () => {
 
             <div className="flex flex-col gap-2">
             <label htmlFor="muscle-groups" className="text-sm font-medium">
-              {t('exercises.addExercise.muscleGroups')} <span className="text-destructive">*</span>
+              {t('exercises.addExercise.muscleGroups')}<RequiredAsterisk />
             </label>
             <MultiAsyncSelect
               options={MUSCLE_GROUPS.map((group) => ({ label: group, value: group }))}
@@ -1448,7 +1449,7 @@ const ExercisesPage = () => {
 
           <div className="flex flex-col gap-2">
             <label htmlFor="equipment" className="text-sm font-medium">
-              {t('exercises.addExercise.equipment')} <span className="text-destructive">*</span>
+              {t('exercises.addExercise.equipment')}<RequiredAsterisk />
               </label>
               <Select
               value={equipment}
@@ -1479,7 +1480,7 @@ const ExercisesPage = () => {
 
             <div className="flex flex-col gap-2">
             <label htmlFor="modality" className="text-sm font-medium">
-              {t('exercises.addExercise.modality')} <span className="text-destructive">*</span>
+              {t('exercises.addExercise.modality')}<RequiredAsterisk />
               </label>
             <Select
               value={modality}

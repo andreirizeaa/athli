@@ -24,6 +24,7 @@ import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
 import { generateWorkoutFromPrompt } from '@/lib/generate-exercise';
@@ -1126,7 +1127,7 @@ Focus on proper form and progressive overload.`;
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <h3 className="text-sm font-semibold">
-                    {t('library.letsBuildWorkout')} <span className="text-destructive">*</span>
+                    {t('library.letsBuildWorkout')}<RequiredAsterisk />
                   </h3>
                 </div>
                 <div className="relative">
