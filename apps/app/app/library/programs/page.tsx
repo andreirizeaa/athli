@@ -28,6 +28,7 @@ import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
@@ -860,6 +861,20 @@ const ProgramsPage = () => {
           </div>
         }
         emptyMessage={t('programs.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('programs.emptyState.title')}
+            subtitle={t('programs.emptyState.subtitle')}
+            action={
+              <Button
+                onClick={handleOpenCreateProgram}
+                aria-label={t('programs.emptyState.startCreatingAria')}
+              >
+                {t('programs.emptyState.startCreating')}
+              </Button>
+            }
+          />
+        }
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="320px"

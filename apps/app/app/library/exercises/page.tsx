@@ -28,6 +28,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
@@ -702,9 +703,20 @@ const ExercisesPage = () => {
             renderCell: (row) => {
               const muscleGroup = (row as any).muscleGroup || '';
               return (
-              <div className="flex items-center h-full">
-                  <span className="text-sm">{muscleGroup}</span>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center h-full min-w-0 w-full">
+                      <span className="text-sm truncate block min-w-0 w-full">{muscleGroup}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="max-w-[200px] break-words"
+                  side="top"
+                  align="start"
+                >
+                  <p>{muscleGroup}</p>
+                </TooltipContent>
+              </Tooltip>
               );
             },
           };
@@ -1126,20 +1138,18 @@ const ExercisesPage = () => {
         }
         emptyMessage={t('exercises.emptyMessage')}
         emptyState={
-          <div className="flex flex-col items-center justify-center gap-2 py-12">
-            <h3 className="text-4xl font-bold">{t('exercises.emptyState.title')}</h3>
-            <div className="max-w-[100px] w-full mx-auto flex justify-center">
-              <p className="text-l font-semibold text-muted-foreground text-center">
-                {t('exercises.emptyState.subtitle')}
-              </p>
-            </div>
-            <Button
-              onClick={handleStartCreating}
-              aria-label={t('exercises.emptyState.startCreatingAria')}
-            >
-              {t('exercises.emptyState.startCreating')}
-            </Button>
-          </div>
+          <EmptyGridState
+            title={t('exercises.emptyState.title')}
+            subtitle={t('exercises.emptyState.subtitle')}
+            action={
+              <Button
+                onClick={handleStartCreating}
+                aria-label={t('exercises.emptyState.startCreatingAria')}
+              >
+                {t('exercises.emptyState.startCreating')}
+              </Button>
+            }
+          />
         }
         rowHeight="54px"
         stickyFirstColumn={true}

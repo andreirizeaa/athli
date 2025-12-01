@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
@@ -967,6 +968,20 @@ Focus on proper form and progressive overload.`;
           </div>
         }
         emptyMessage={t('library.noWorkoutsFound')}
+        emptyState={
+          <EmptyGridState
+            title={t('workouts.emptyState.title')}
+            subtitle={t('workouts.emptyState.subtitle')}
+            action={
+              <Button
+                onClick={handleOpenCreateWorkout}
+                aria-label={t('workouts.emptyState.startCreatingAria')}
+              >
+                {t('workouts.emptyState.startCreating')}
+              </Button>
+            }
+          />
+        }
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="320px"

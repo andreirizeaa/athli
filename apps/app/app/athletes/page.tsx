@@ -24,6 +24,7 @@ import { exportToCSV } from '@/lib/csv-export';
 import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import {
   User,
   Users,
@@ -1208,6 +1209,38 @@ const AthletesPage = () => {
           </div>
         }
         emptyMessage={t('athletes.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('athletes.emptyState.title')}
+            subtitle={t('athletes.emptyState.subtitle')}
+            action={
+              <DropdownMenu>
+                <ButtonGroup>
+                  <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
+                    <UserPlus className="size-4" />
+                    <span>{t('athletes.actions.addClient')}</span>
+                  </Button>
+                  <ButtonGroupSeparator />
+                  <DropdownMenuTrigger asChild>
+                    <Button className="px-2" aria-label={t('general.more')}>
+                      <ChevronDown className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </ButtonGroup>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsAddAthleteOpen(true)}>
+                    <UserPlus className="size-4 mr-2" />
+                    <span>{t('athletes.actions.singleClient')}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
+                    <Users className="size-4 mr-2" />
+                    <span>{t('athletes.actions.uploadClients')}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            }
+          />
+        }
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="350px"
