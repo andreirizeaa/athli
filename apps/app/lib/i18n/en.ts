@@ -12,6 +12,29 @@ export const enMessages = {
   },
   settings: {
     title: 'Settings',
+    searchPlaceholder: 'Search settings...',
+    groups: {
+      personal: 'Personal Settings',
+      appSettings: 'App Settings',
+      business: 'Business',
+    },
+    sections: {
+      profile: 'Profile',
+      notifications: 'Notifications',
+      customisations: 'Customisations',
+      integrations: 'Integrations',
+      email: 'Email',
+      company: 'Company',
+      billing: 'Billing',
+      companyInformation: 'Information',
+      companyBranding: 'Branding',
+      companyTeam: 'Team',
+    },
+    integrations: {
+      email: {
+        description: 'Configure your email integration settings here.',
+      },
+    },
   },
   sidebar: {
     group: {
@@ -253,6 +276,12 @@ export const enMessages = {
     title: 'Programs',
     subtitle: '{count} {count, plural, =1 {program} other {programs}}',
     emptyMessage: 'No programs found.',
+    emptyState: {
+      title: 'Build a program',
+      subtitle: 'Quickly build programs of any length and type and save them to your library.',
+      startCreating: 'Create program',
+      startCreatingAria: 'Create a new program',
+    },
     searchPlaceholder: 'Search...',
     program: 'program',
     programPlural: 'programs',
@@ -518,6 +547,12 @@ export const enMessages = {
     title: 'Workouts',
     subtitle: '{count} {count, plural, =1 {workout} other {workouts}}',
     emptyMessage: 'No workouts found.',
+    emptyState: {
+      title: 'Build a workout',
+      subtitle: 'Build your own custom workouts to match your training style',
+      startCreating: 'Create workout',
+      startCreatingAria: 'Create a new workout',
+    },
     searchPlaceholder: 'Search...',
     workout: 'workout',
     workoutPlural: 'workouts',
@@ -806,6 +841,10 @@ export const enMessages = {
     title: 'Athletes',
     subtitle: '{count} {count, plural, =1 {client} other {clients}}',
     emptyMessage: 'No athletes found.',
+    emptyState: {
+      title: 'Invite your clients',
+      subtitle: 'Manage all of your clients through OneNinety',
+    },
     searchPlaceholder: 'Search...',
     columns: {
       lastActivity: 'Last activity',
