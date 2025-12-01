@@ -30,6 +30,7 @@ import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
 import {
@@ -975,7 +976,7 @@ const ProgramsPage = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <label htmlFor="program-name" className="text-sm font-medium">
-                {t('programs.addProgram.programName')} <span className="text-destructive">*</span>
+                {t('programs.addProgram.programName')}<RequiredAsterisk />
               </label>
               <Input
                 id="program-name"
@@ -995,7 +996,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-type" className="text-sm font-medium">
-                {t('programs.addProgram.type')} <span className="text-destructive">*</span>
+                {t('programs.addProgram.type')}<RequiredAsterisk />
               </label>
               <Select
                 value={newProgramType}
@@ -1030,7 +1031,7 @@ const ProgramsPage = () => {
             </div>
             <div className="flex flex-col gap-2">
               <label htmlFor="program-difficulty" className="text-sm font-medium">
-                {t('programs.addProgram.difficulty')} <span className="text-destructive">*</span>
+                {t('programs.addProgram.difficulty')}<RequiredAsterisk />
               </label>
               <Select
                 value={newProgramDifficulty}

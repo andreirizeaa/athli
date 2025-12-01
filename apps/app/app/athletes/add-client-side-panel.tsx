@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { SidePanel } from '@/components/app/side-panel';
 import { cn } from '@/lib/utils';
 
@@ -121,7 +122,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  {t('athletes.addClient.firstNameRequired')} <span className="text-destructive">*</span>
+                  <span>{t('athletes.addClient.firstName')}<RequiredAsterisk /></span>
                 </FormLabel>
                 <FormControl>
                   <Input placeholder={t('athletes.addClient.firstNamePlaceholder')} {...field} />
@@ -136,7 +137,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  {t('athletes.addClient.lastNameRequired')} <span className="text-destructive">*</span>
+                  <span>{t('athletes.addClient.lastName')}<RequiredAsterisk /></span>
                 </FormLabel>
                 <FormControl>
                   <Input placeholder={t('athletes.addClient.lastNamePlaceholder')} {...field} />
@@ -151,7 +152,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  {t('athletes.addClient.emailRequired')} <span className="text-destructive">*</span>
+                  <span>{t('athletes.addClient.email')}<RequiredAsterisk /></span>
                 </FormLabel>
                 <FormControl>
                   <Input type="email" placeholder={t('athletes.addClient.emailPlaceholder')} {...field} />
@@ -166,7 +167,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  {t('athletes.addClient.coachingTypeRequired')} <span className="text-destructive">*</span>
+                  <span>{t('athletes.addClient.coachingType')}<RequiredAsterisk /></span>
                 </FormLabel>
                 <FormControl>
                   <Tabs

@@ -103,3 +103,4 @@ export const sendAppointmentInfo = async (data: SendAppointmentInfoData): Promis
   // if (!response.ok) throw new Error('Failed to send appointment info')
 };
 
+

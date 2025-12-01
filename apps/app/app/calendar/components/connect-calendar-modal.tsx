@@ -13,6 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { Loader2, Mail } from 'lucide-react';
@@ -191,7 +192,7 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
           </p>
           <div className="grid gap-2">
             <Label htmlFor="email">
-              {t('calendar.connect.emailAddress')} <span className="text-destructive">*</span>
+              <span>{t('calendar.connect.emailAddress')}<RequiredAsterisk /></span>
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />

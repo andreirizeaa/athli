@@ -3,15 +3,16 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const AccountPage = () => {
+const GeneralPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/settings/account/profile');
+    router.replace('/settings/account/general/profile');
   }, [router]);
 
   return null;
 };
 
-export default AccountPage;
+export default GeneralPage;
+
 

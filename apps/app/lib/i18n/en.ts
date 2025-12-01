@@ -19,7 +19,10 @@ export const enMessages = {
       business: 'Business',
     },
     sections: {
+      account: 'Account',
+      general: 'General',
       profile: 'Profile',
+      security: 'Security',
       notifications: 'Notifications',
       customisations: 'Customisations',
       integrations: 'Integrations',
@@ -33,6 +36,99 @@ export const enMessages = {
     integrations: {
       email: {
         description: 'Configure your email integration settings here.',
+      },
+    },
+    customisations: {
+      preferences: {
+        title: 'Preferences',
+        language: {
+          label: 'Language',
+        },
+        theme: {
+          label: 'Theme',
+        },
+        units: {
+          label: 'Units',
+          imperial: 'Imperial',
+          metric: 'Metric',
+        },
+      },
+    },
+    profile: {
+      accountInfo: 'Account Info',
+      profilePicture: 'Profile Picture',
+      upload: 'Upload',
+      uploadAria: 'Upload profile picture',
+      delete: 'Delete',
+      deleteAria: 'Delete profile picture',
+      firstName: 'First Name',
+      firstNameRequired: 'First Name *',
+      firstNamePlaceholder: 'Enter first name',
+      lastName: 'Last Name',
+      lastNameRequired: 'Last Name *',
+      lastNamePlaceholder: 'Enter last name',
+      email: 'Email',
+      emailPlaceholder: 'Enter email address',
+      editEmail: 'Edit',
+      editEmailAria: 'Edit email address',
+      connectedAccounts: 'Connected accounts',
+      connectAccount: 'Connect account',
+      connectAccountAria: 'Connect account',
+      connectAccountError: 'Failed to connect account. Please try again.',
+      noConnectedAccounts: 'No connected accounts',
+      verification: {
+        title: 'Additional verification required',
+        description: 'Clerk requires additional verification to connect external accounts. Please verify your identity through your account settings, then try connecting again.',
+        openProfile: 'Open account settings',
+        retry: 'Retry connection',
+      },
+      changeEmail: {
+        title: 'Change email',
+        newEmail: 'New email',
+        newEmailRequired: 'New email *',
+        newEmailPlaceholder: 'Enter new email address',
+        confirmEmail: 'Confirm email',
+        confirmEmailRequired: 'Confirm email *',
+        confirmEmailPlaceholder: 'Confirm new email address',
+        changeEmailButton: 'Change email',
+        newEmailRequiredError: 'New email is required',
+        confirmEmailRequiredError: 'Confirm email is required',
+        emailsDoNotMatch: 'Emails do not match',
+        invalidEmail: 'Please enter a valid email address',
+      },
+    },
+    notifications: {
+      clients: {
+        title: 'Clients',
+        description: 'Select the notifications you want to receive from users.',
+        email: 'EMAIL',
+        options: {
+          newClientSignup: {
+            label: 'Receive a notification every time a new client signs up',
+          },
+          clientActivity: {
+            label: 'Receive a notification when a client completes a workout',
+          },
+          clientMessages: {
+            label: 'Receive notifications when clients send messages ',
+          },
+          preAppointmentInformation: {
+            label: 'Get a notification with all information for a client before a session',
+          },
+        },
+      },
+      system: {
+        title: 'System',
+        description: 'Select the notifications you want to receive regarding the system.',
+        email: 'EMAIL',
+        options: {
+          systemDowntimes: {
+            label: 'Receive messages to inform you about system downtimes',
+          },
+          newFeatures: {
+            label: 'Receive messages to inform you about new features',
+          },
+        },
       },
     },
   },
@@ -757,6 +853,7 @@ export const enMessages = {
       searchAthletes: 'Search athletes...',
       date: 'Date',
       dateRequired: 'Date *',
+      selectDate: 'Select date',
       location: 'Location',
       locationRequired: 'Location *',
       selectLocation: 'Select location',

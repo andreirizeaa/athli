@@ -63,3 +63,4 @@ const IntegrationsLayout = ({ children }: IntegrationsLayoutProps) => {
 
 export default IntegrationsLayout;
 
+
