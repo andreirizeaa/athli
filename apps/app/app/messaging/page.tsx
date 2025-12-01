@@ -32,6 +32,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -3079,7 +3080,7 @@ const MessagingPage = () => {
         <div className="flex-1 flex flex-col min-h-0 gap-4">
           <div className="space-y-2">
             <Label htmlFor="note-title">
-              {t('messages.noteTitle')} <span className="text-destructive">*</span>
+              {t('messages.noteTitle')}<RequiredAsterisk />
             </Label>
             <Input
               id="note-title"

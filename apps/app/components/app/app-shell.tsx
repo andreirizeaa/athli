@@ -2243,20 +2243,14 @@ const AppShellContent = ({
                   </div>
                 </PopoverContent>
               </Popover>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
-                    aria-label={t('sidebar.search.aiAssistantAria')}
-                  >
-                    <Sparkles className="size-4" />
-                    {t('sidebar.search.aiAssistant')}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('sidebar.footer.comingSoon')}</div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
+                aria-label={t('sidebar.search.aiAssistantAria')}
+                onClick={() => openUserProfile()}
+              >
+                <Sparkles className="size-4" />
+                {t('sidebar.search.aiAssistant')}
+              </Button>
               <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button
