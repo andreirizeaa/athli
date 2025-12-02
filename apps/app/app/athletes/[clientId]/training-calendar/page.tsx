@@ -58,7 +58,7 @@ import {
   getTrainingCalendar,
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
-} from '@/lib/athlete-service';
+} from '@/lib/athletes/athlete-service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

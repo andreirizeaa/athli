@@ -61,7 +61,7 @@ import {
 
 import type { Program } from '@/components/app/app-shell';
 import { mockPrograms } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/lib/programs-service';
+import { starPrograms, archivePrograms, deletePrograms } from '@/lib/library/programs/programs-service';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
 

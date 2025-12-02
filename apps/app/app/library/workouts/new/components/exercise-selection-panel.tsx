@@ -6,7 +6,7 @@ import { GripVertical, Play, Search, X } from 'lucide-react';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/exercise-search';
+import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
 
 type ExerciseSelectionPanelProps = {
   onExerciseClick?: (exercise: Exercise) => void;

@@ -10,9 +10,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/exercise-search';
-import type { GeneratedWorkout } from '@/lib/generate-exercise';
-import { generateWorkoutFromPrompt, prompt } from '@/lib/generate-exercise';
+import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
+import type { GeneratedWorkout } from '@/lib/library/workouts/generate-exercise';
+import { generateWorkoutFromPrompt, prompt } from '@/lib/library/workouts/generate-exercise';
 import { toast } from 'sonner';
 import type {
   ExerciseGroupPayload,

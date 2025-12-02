@@ -19,7 +19,7 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@
 import { toast } from 'sonner';
 import { Archive, ChevronRight, MessageCircle, Users, X } from 'lucide-react';
 import { mockAthletes } from '@/components/app/app-shell';
-import { archiveUser } from '@/lib/athlete-service';
+import { archiveUser } from '@/lib/athletes/athlete-service';
 
 type ClientProfileLayoutProps = {
   children: React.ReactNode;

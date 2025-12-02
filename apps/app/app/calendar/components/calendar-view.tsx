@@ -34,7 +34,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
 import { toast } from 'sonner';
-import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar-service';
+import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar/calendar-service';
 
 interface CalendarEvent {
   id: string;

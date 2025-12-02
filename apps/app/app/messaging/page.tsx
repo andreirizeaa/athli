@@ -55,9 +55,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { messageDraftStorage } from '@/lib/message-draft-storage';
-import { sendMessage } from '@/lib/message-service';
-import { searchNotes } from '@/lib/notes-service';
+import { messageDraftStorage } from '@/lib/messaging/message-draft-storage';
+import { sendMessage } from '@/lib/messaging/message-service';
+import { searchNotes } from '@/lib/messaging/notes-service';
 import {
   mockContacts,
   mockMessages,

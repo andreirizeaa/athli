@@ -71,7 +71,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { availableLanguages } from '@/lib/intl-provider';
+import { availableLanguages } from '@/lib/providers/intl-provider';
 import { UnsavedChangesProvider } from '@/app/settings/context/unsaved-changes-context';
 
 export type Contact = {
@@ -168,6 +168,18 @@ export type Program = {
   totalExercises: number;
   equipment: string;
   created: string; // dd-mm-yy format
+};
+
+export type Exercise = {
+  id: string;
+  program: string; // Exercise name
+  description: string; // Exercise instructions
+  category: string;
+  muscleGroup: string[]; // Array of muscle groups
+  equipment: string;
+  modality: string;
+  created: string; // dd-mm-yy format
+  videoLink?: string;
 };
 
 export const mockAthletes: Athlete[] = [
@@ -1361,6 +1373,113 @@ export const mockPrograms: Program[] = [
   },
 ];
 
+export const mockExercises: Exercise[] = [
+  {
+    id: '1',
+    program: 'Bench Press',
+    description: 'Lie on bench, lower bar to chest, press up. Focus on controlled movement and full range of motion.',
+    category: 'Weight & Reps',
+    muscleGroup: ['Chest', 'Triceps', 'Shoulders'],
+    equipment: 'Barbell',
+    modality: 'Strength',
+    created: '15-01-24',
+    videoLink: 'https://www.youtube.com/watch?v=rT7DgCr-3pg',
+  },
+  {
+    id: '2',
+    program: 'Pull-ups',
+    description: 'Hang from bar, pull body up until chin clears bar, lower with control. Keep core engaged throughout.',
+    category: 'Reps',
+    muscleGroup: ['Back', 'Biceps', 'Lats'],
+    equipment: 'Bodyweight',
+    modality: 'Strength',
+    created: '14-01-24',
+    videoLink: 'https://www.youtube.com/watch?v=eGo4IYlbE5g',
+  },
+  {
+    id: '3',
+    program: 'Squats',
+    description: 'Stand with feet shoulder-width apart, lower hips back and down, keep knees tracking over toes, return to standing.',
+    category: 'Weight & Reps',
+    muscleGroup: ['Quadriceps', 'Glutes', 'Hamstrings'],
+    equipment: 'Barbell',
+    modality: 'Strength',
+    created: '13-01-24',
+    videoLink: 'https://www.youtube.com/watch?v=YaXPRqUwItQ',
+  },
+  {
+    id: '4',
+    program: 'Deadlift',
+    description: 'Stand with feet hip-width apart, hinge at hips, grip bar, drive through heels to stand, keep back straight.',
+    category: 'Weight & Reps',
+    muscleGroup: ['Back', 'Glutes', 'Hamstrings', 'Traps'],
+    equipment: 'Barbell',
+    modality: 'Strength',
+    created: '12-01-24',
+  },
+  {
+    id: '5',
+    program: 'Running',
+    description: 'Maintain steady pace, focus on breathing rhythm, land mid-foot, keep posture upright.',
+    category: 'Distance / Duration',
+    muscleGroup: ['Quadriceps', 'Calves', 'Glutes'],
+    equipment: 'Bodyweight',
+    modality: 'Cardio',
+    created: '11-01-24',
+    videoLink: 'https://vimeo.com/123456789',
+  },
+  {
+    id: '6',
+    program: 'Box Jumps',
+    description: 'Stand facing box, jump onto box landing softly, step down and repeat. Focus on explosive power.',
+    category: 'Reps',
+    muscleGroup: ['Quadriceps', 'Glutes', 'Calves'],
+    equipment: 'Bodyweight',
+    modality: 'Plyos',
+    created: '10-01-24',
+  },
+  {
+    id: '7',
+    program: 'Shoulder Press',
+    description: 'Press weight overhead, lower with control. Keep core tight and avoid arching back excessively.',
+    category: 'Weight & Reps',
+    muscleGroup: ['Shoulders', 'Triceps', 'Delts'],
+    equipment: 'Dumbbell',
+    modality: 'Strength',
+    created: '09-01-24',
+  },
+  {
+    id: '8',
+    program: 'Plank',
+    description: 'Hold body in straight line, support on forearms and toes, engage core, breathe normally.',
+    category: 'Distance / Duration',
+    muscleGroup: ['Abs', 'Obliques', 'Full Body'],
+    equipment: 'Bodyweight',
+    modality: 'Stability',
+    created: '08-01-24',
+  },
+  {
+    id: '9',
+    program: 'Bicep Curls',
+    description: 'Curl weight toward shoulders, squeeze at top, lower with control. Keep elbows stationary.',
+    category: 'Weight & Reps',
+    muscleGroup: ['Biceps', 'Forearms'],
+    equipment: 'Dumbbell',
+    modality: 'Strength',
+    created: '07-01-24',
+  },
+  {
+    id: '10',
+    program: 'Yoga Flow',
+    description: 'Move through poses with breath, maintain alignment, focus on flexibility and balance.',
+    category: 'Distance / Duration',
+    muscleGroup: ['Full Body'],
+    equipment: 'Bodyweight',
+    modality: 'Mobility',
+    created: '06-01-24',
+  },
+];
+
 export const mockMessages: Record<string, Message[]> = {
   '1': [
     {
@@ -1697,6 +1816,36 @@ const AppShellContent = ({
     [searchQuery]
   );
 
+  const exerciseSearchResults = React.useMemo(
+    () =>
+      mockExercises.reduce<Array<{ exercise: Exercise }>>((results, exercise) => {
+        const query = searchQuery.trim();
+
+        if (!query) {
+          return results;
+        }
+
+        const hasMatchInExercise =
+          isFuzzyMatch(exercise.program, query) ||
+          isFuzzyMatch(exercise.description, query) ||
+          isFuzzyMatch(exercise.category, query) ||
+          isFuzzyMatch(exercise.equipment, query) ||
+          isFuzzyMatch(exercise.modality, query) ||
+          exercise.muscleGroup.some((group) => isFuzzyMatch(group, query));
+
+        if (!hasMatchInExercise) {
+          return results;
+        }
+
+        results.push({
+          exercise,
+        });
+
+        return results;
+      }, []),
+    [searchQuery]
+  );
+
   const handleSearchResultClick = (contactId: string) => {
     router.push(`/messaging/${contactId}`);
     setIsSearchOpen(false);
@@ -1717,6 +1866,12 @@ const AppShellContent = ({
 
   const handleProgramSearchResultClick = (programId: string) => {
     router.push(`/library/programs/${programId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleExerciseSearchResultClick = (exerciseId: string) => {
+    router.push(`/library/exercises`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
@@ -1901,8 +2056,8 @@ const AppShellContent = ({
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={activePath === '/settings'}
-                className={cn('text-xs', getActiveSidebarClasses(activePath === '/settings'))}
+                isActive={activePath === '/settings' || activePath.startsWith('/settings/')}
+                className={cn('text-xs', getActiveSidebarClasses(activePath === '/settings' || activePath.startsWith('/settings/')))}
               >
                 <Link href="/settings">
                   <Settings className="shrink-0" />
@@ -1969,7 +2124,8 @@ const AppShellContent = ({
                       messageSearchResults.length === 0 &&
                       athleteSearchResults.length === 0 &&
                       workoutSearchResults.length === 0 &&
-                      programSearchResults.length === 0 && (
+                      programSearchResults.length === 0 &&
+                      exerciseSearchResults.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
                           <p className="text-sm text-muted-foreground">
                             {t('sidebar.search.noResults')}{' '}
@@ -1981,7 +2137,8 @@ const AppShellContent = ({
                       (messageSearchResults.length > 0 ||
                         athleteSearchResults.length > 0 ||
                         workoutSearchResults.length > 0 ||
-                        programSearchResults.length > 0) && (
+                        programSearchResults.length > 0 ||
+                        exerciseSearchResults.length > 0) && (
                         <div className="py-2">
                           {athleteSearchResults.length > 0 && (
                             <>
@@ -2168,7 +2325,72 @@ const AppShellContent = ({
                                           <span>•</span>
                                           <span>{result.program.length}</span>
                                           <span>•</span>
-                                          <span>{result.program.totalExercises} {t('sidebar.search.exercises')}</span>
+                                          <span>{result.program.totalExercises} {t('sidebar.search.exercisesCount')}</span>
+                                        </div>
+                                      </div>
+                                    </Card>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          {exerciseSearchResults.length > 0 && (
+                            <>
+                              {(athleteSearchResults.length > 0 ||
+                                workoutSearchResults.length > 0 ||
+                                programSearchResults.length > 0) && (
+                                <div className="px-3 pt-4 pb-1">
+                                  <div className="h-px bg-border" />
+                                </div>
+                              )}
+                              <div className="px-3 pb-1 pt-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  {t('sidebar.search.exercises')}
+                                </p>
+                              </div>
+                              <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                                <div
+                                  className={cn(
+                                    'grid gap-2',
+                                    exerciseSearchResults.length === 1
+                                      ? 'grid-cols-1'
+                                      : exerciseSearchResults.length === 2
+                                        ? 'grid-cols-2'
+                                        : 'grid-cols-2 sm:grid-cols-3'
+                                  )}
+                                >
+                                  {exerciseSearchResults.map((result) => (
+                                    <Card
+                                      key={result.exercise.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() =>
+                                        handleExerciseSearchResultClick(result.exercise.id)
+                                      }
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                          e.preventDefault();
+                                          handleExerciseSearchResultClick(result.exercise.id);
+                                        }
+                                      }}
+                                      className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                      aria-label={t('sidebar.search.openExerciseAria', { name: result.exercise.program })}
+                                    >
+                                      <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                            <Archive className="h-4 w-4 text-muted-foreground" />
+                                          </div>
+                                          <span className="text-sm font-medium truncate">
+                                            {result.exercise.program}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                          <span>{result.exercise.modality}</span>
+                                          <span>•</span>
+                                          <span>{result.exercise.equipment}</span>
+                                          <span>•</span>
+                                          <span>{result.exercise.muscleGroup.slice(0, 2).join(', ')}</span>
                                         </div>
                                       </div>
                                     </Card>
@@ -2181,7 +2403,8 @@ const AppShellContent = ({
                             <>
                               {(athleteSearchResults.length > 0 ||
                                 workoutSearchResults.length > 0 ||
-                                programSearchResults.length > 0) && (
+                                programSearchResults.length > 0 ||
+                                exerciseSearchResults.length > 0) && (
                                 <div className="px-3 pt-4 pb-1">
                                   <div className="h-px bg-border" />
                                 </div>
