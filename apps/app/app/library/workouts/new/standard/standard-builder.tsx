@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/exercise-search';
+import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
 import { toast } from 'sonner';
 import type {
   ExerciseGroupPayload,

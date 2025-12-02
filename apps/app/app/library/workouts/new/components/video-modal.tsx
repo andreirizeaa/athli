@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Exercise } from '@/lib/exercise-search';
+import type { Exercise } from '@/lib/library/exercises/exercise-search';
 
 type VideoModalProps = {
   open: boolean;

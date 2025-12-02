@@ -57,8 +57,8 @@ import {
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/lib/programs-service';
-import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise } from '@/lib/exercises-service';
+import { starPrograms, archivePrograms, deletePrograms } from '@/lib/library/programs/programs-service';
+import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise } from '@/lib/library/exercises/exercises-service';
 
 type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment' | 'created';
 
