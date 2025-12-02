@@ -17,7 +17,9 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Archive, ChevronRight, MessageCircle, Users, X } from 'lucide-react';
+import { Archive, ChevronRight, MessageCircle, Users, X, Send } from 'lucide-react';
+import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { mockAthletes } from '@/components/app/app-shell';
 import { archiveUser } from '@/lib/athletes/athlete-service';
 
@@ -53,10 +55,6 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       value: 'training-calendar',
       label: t('athletes.profile.trainingCalendar'),
     },
-    {
-      value: 'app-settings',
-      label: t('athletes.profile.appSettings'),
-    },
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
@@ -90,6 +88,18 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
 
   const handleNavigateToMessages = (athleteId: string) => {
     router.push(`/messaging/${athleteId}`);
+  };
+
+  const handleResendInvite = () => {
+    // TODO: Implement resend invite functionality
+    console.log('Resending invite to:', clientId);
+    toast.success(t('athletes.profile.resendInvite'), {
+      style: {
+        background: 'rgb(220 252 231)',
+        color: 'rgb(20 83 45)',
+        border: '1px solid rgb(187 247 208)',
+      },
+    });
   };
 
   const handleArchive = async () => {
@@ -154,8 +164,8 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const firstName = athlete.name.split(' ')[0];
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
+    <div className="h-full w-full flex flex-col overflow-auto">
+      <div className="w-full relative flex-shrink-0">
         <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
           <Breadcrumb>
             <BreadcrumbList className="text-xs gap-1">
@@ -188,6 +198,26 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
           </div>
         </div>
         <div className="absolute top-2 right-4 flex items-center gap-2">
+          <ButtonGroup>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={handleResendInvite}
+                  variant="secondary"
+                  className="gap-2"
+                  aria-label={t('athletes.profile.resendInviteAria')}
+                >
+                  <Send className="size-4" />
+                  <span>{t('athletes.profile.resendInvite')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('athletes.profile.resendInviteAria')}</p>
+              </TooltipContent>
+            </Tooltip>
+            <ButtonGroupSeparator className="bg-background !w-[2px]" />
+            <Tooltip>
+              <TooltipTrigger asChild>
           <Button
             onClick={() => handleNavigateToMessages(clientId)}
             variant="secondary"
@@ -197,6 +227,14 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
             <MessageCircle className="size-4" />
             <span>{t('athletes.profile.message')}</span>
           </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('athletes.profile.messageAria')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </ButtonGroup>
+          <Tooltip>
+            <TooltipTrigger asChild>
           <Button
             variant="secondary"
             size="icon"
@@ -206,6 +244,11 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
           >
             <Archive className="size-4" />
           </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('athletes.profile.archiveAria')}</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="px-4">
           <PageTabs
@@ -217,7 +260,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto bg-background">{children}</div>
+      <div className="w-full flex-shrink-0 bg-background">{children}</div>
       <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
         <DialogContent
           className="w-full max-w-[500px] sm:max-w-[500px] flex flex-col"
