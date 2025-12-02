@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
+import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -17,12 +18,14 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { Loader2, Mail } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type CalendarProvider = 'google' | 'outlook' | 'icloud' | null;
 
 interface ConnectCalendarModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  provider?: 'google' | 'outlook' | null;
 }
 
 
@@ -39,7 +42,7 @@ const getProviderName = (provider: CalendarProvider): string => {
   }
 };
 
-export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModalProps) => {
+export const ConnectCalendarModal = ({ open, onOpenChange, provider }: ConnectCalendarModalProps) => {
   const t = useTranslations();
   const { user } = useUser();
   const [email, setEmail] = useState('');
@@ -47,6 +50,7 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
   const [detectedProvider, setDetectedProvider] = useState<CalendarProvider>(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const [hasAttemptedDetection, setHasAttemptedDetection] = useState(false);
+  const [providerMismatch, setProviderMismatch] = useState(false);
 
   const detectProviderFromEmail = async (emailAddress: string): Promise<CalendarProvider> => {
     if (!emailAddress || !emailAddress.includes('@')) {
@@ -83,6 +87,7 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
       setDetectedProvider(null);
       setIsDetecting(false);
       setHasAttemptedDetection(false);
+      setProviderMismatch(false);
     }
   }, [open, user]);
 
@@ -95,19 +100,27 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
     // Check provider when Connect is clicked
     setHasAttemptedDetection(true);
     setIsDetecting(true);
-    const provider = await detectProviderFromEmail(email);
+    const detected = await detectProviderFromEmail(email);
     setIsDetecting(false);
-    setDetectedProvider(provider);
+    setDetectedProvider(detected);
 
-    if (!provider) {
+    if (!detected) {
       toast.error(t('calendar.connect.unableToDetectProvider'));
       return;
     }
 
-    if (provider === 'icloud') {
+    if (detected === 'icloud') {
       toast.error(t('calendar.connect.icloudNotAvailable'));
       return;
     }
+
+    // If a specific provider was selected, validate it matches
+    if (provider && detected !== provider) {
+      setProviderMismatch(true);
+      return;
+    }
+
+    setProviderMismatch(false);
 
     setIsConnecting(true);
 
@@ -125,10 +138,15 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
         process.env.NEXT_PUBLIC_SUPABASE_KEY
       );
 
+      const providerToUse = provider || detectedProvider;
+      if (!providerToUse) {
+        throw new Error('No provider specified');
+      }
+
       let oauthProvider: string;
       let scopes: string;
 
-      switch (provider) {
+      switch (providerToUse) {
         case 'google':
           oauthProvider = 'google';
           scopes = 'https://www.googleapis.com/auth/calendar';
@@ -144,7 +162,11 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
       // Get the current origin to build the redirect URL
       // This is where Supabase will redirect AFTER processing the OAuth
       // Include provider in query params so callback can detect it
-      const redirectUrl = `${window.location.origin}/calendar/callback?provider=${provider}`;
+      // Check if we're coming from integrations page
+      const returnUrl = window.location.pathname.includes('/settings/app/integrations')
+        ? '/settings/app/integrations'
+        : '/calendar';
+      const redirectUrl = `${window.location.origin}/calendar/callback?provider=${providerToUse}&returnUrl=${encodeURIComponent(returnUrl)}`;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: oauthProvider as 'google' | 'azure',
@@ -180,15 +202,31 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
     handleKeyDown(event);
   };
 
+  const providerName = provider ? getProviderName(provider) : getProviderName(detectedProvider);
+  const providerLogo = provider === 'google' ? '/icons/gmail.png' : provider === 'outlook' ? '/icons/outlook.png' : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{t('calendar.connect.title')}</DialogTitle>
+          <div className="flex items-center gap-3">
+            {providerLogo && (
+              <Image
+                src={providerLogo}
+                alt={providerName || 'Calendar'}
+                width={32}
+                height={32}
+                className="object-contain"
+              />
+            )}
+            <DialogTitle>
+              {provider ? t('calendar.connect.connectProvider', { provider: providerName }) : t('calendar.connect.title')}
+            </DialogTitle>
+          </div>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
-            {t('calendar.connect.description')}
+            {t('calendar.connect.onlyOneCalendar')}
           </p>
           <div className="grid gap-2">
             <Label htmlFor="email">
@@ -201,9 +239,12 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
                 type="email"
                 placeholder={t('calendar.connect.emailPlaceholder')}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setProviderMismatch(false);
+                }}
                 onKeyDown={handleEmailKeyDown}
-                className="pl-9"
+                className={cn('pl-9', providerMismatch && 'border-destructive focus-visible:ring-destructive')}
                 disabled={isConnecting}
                 aria-label={t('calendar.connect.emailAria')}
               />
@@ -219,6 +260,11 @@ export const ConnectCalendarModal = ({ open, onOpenChange }: ConnectCalendarModa
             {!isDetecting && hasAttemptedDetection && email && !detectedProvider && (
               <p className="text-xs text-destructive">
                 {t('calendar.connect.unableToDetect')}
+              </p>
+            )}
+            {providerMismatch && (
+              <p className="text-xs text-destructive">
+                {t('calendar.connect.providerMismatch', { selected: providerName, detected: getProviderName(detectedProvider) })}
               </p>
             )}
           </div>
