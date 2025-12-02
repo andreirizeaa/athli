@@ -97,7 +97,9 @@ export default function CalendarCallbackPage() {
           }
 
           toast.success(t('calendar.toast.connectedSuccessfully'));
-          router.push('/calendar');
+          // Check if there's a return URL parameter
+          const returnUrl = searchParams.get('returnUrl') || hashParams.get('returnUrl');
+          router.push(returnUrl || '/calendar');
           return;
         }
 
@@ -107,7 +109,8 @@ export default function CalendarCallbackPage() {
         const errorMessage =
           error instanceof Error ? error.message : t('calendar.callback.connectionFailed');
         toast.error(errorMessage);
-        router.push('/calendar');
+        const returnUrl = searchParams.get('returnUrl');
+        router.push(returnUrl || '/calendar');
       } finally {
         setIsProcessing(false);
       }

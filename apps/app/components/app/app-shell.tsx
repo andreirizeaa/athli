@@ -72,6 +72,7 @@ import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { availableLanguages } from '@/lib/intl-provider';
+import { UnsavedChangesProvider } from '@/app/settings/context/unsaved-changes-context';
 
 export type Contact = {
   id: string;
@@ -1427,6 +1428,14 @@ type AppShellProps = {
 };
 
 export const AppShell = ({ children }: AppShellProps) => {
+  return (
+    <UnsavedChangesProvider>
+      <AppShellWithProvider>{children}</AppShellWithProvider>
+    </UnsavedChangesProvider>
+  );
+};
+
+const AppShellWithProvider = ({ children }: AppShellProps) => {
   const t = useTranslations();
   const { user } = useUser();
   const { openUserProfile, signOut } = useClerk();
@@ -1494,6 +1503,7 @@ const AppShellContent = ({
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const isPinnedOpen = state === 'expanded' && !isHovered;
   const isHoverExpanded = state === 'collapsed' && isHovered;
+  const navigationRouter = useRouter();
 
 
   const handlePinMenu = () => {
@@ -1516,7 +1526,6 @@ const AppShellContent = ({
   // Normalize pathname by removing trailing slashes (except for root)
   const normalizedPathname = pathname && pathname !== '/' ? pathname.replace(/\/$/, '') : pathname;
   const [activePath, setActivePath] = React.useState(normalizedPathname);
-  const router = useRouter();
 
   React.useEffect(() => {
     setIsClient(true);
@@ -1712,6 +1721,8 @@ const AppShellContent = ({
     setSearchQuery('');
   };
 
+  const router = navigationRouter;
+
   const generalNavItems = [
     {
       href: '/library',
@@ -1900,17 +1911,15 @@ const AppShellContent = ({
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton className="text-xs bg-primary !text-primary-foreground hover:bg-primary/90 [&_svg]:!text-primary-foreground">
-                    <UserPlus className="shrink-0" />
-                    {!isCollapsed && <span className="!text-primary-foreground">{t('sidebar.footer.addTeamMembers')}</span>}
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <div className="px-2 py-1.5 text-sm text-muted-foreground">{t('sidebar.footer.comingSoon')}</div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <SidebarMenuButton
+                asChild
+                className="text-xs bg-primary !text-primary-foreground hover:bg-primary/90 [&_svg]:!text-primary-foreground"
+              >
+                <Link href="/settings/business/company/team">
+                  <UserPlus className="shrink-0" />
+                  {!isCollapsed && <span className="!text-primary-foreground">{t('sidebar.footer.addTeamMembers')}</span>}
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

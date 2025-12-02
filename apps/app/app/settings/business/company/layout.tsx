@@ -4,15 +4,19 @@ import { useTranslations } from 'next-intl';
 import { useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PageTabs } from '@/components/page-tabs';
+import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
+import { useCompanySave, CompanySaveProvider } from './context/company-save-context';
 
 type CompanyLayoutProps = {
   children: React.ReactNode;
 };
 
-const CompanyLayout = ({ children }: CompanyLayoutProps) => {
+const CompanyLayoutContent = ({ children }: CompanyLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
+  const { hasUnsavedChanges } = useUnsavedChanges();
+  const { onSave, isSaving, hasSaveHandler } = useCompanySave();
 
   const tabs = [
     {
@@ -49,9 +53,14 @@ const CompanyLayout = ({ children }: CompanyLayoutProps) => {
             <h1 className="text-[22px] font-semibold">
               {t('settings.sections.company')}
             </h1>
-            <Button>
-              {t('general.save')}
-            </Button>
+            {hasSaveHandler && onSave && (
+              <Button 
+                onClick={onSave}
+                disabled={!hasUnsavedChanges || isSaving}
+              >
+                {isSaving ? t('general.saving') : t('general.save')}
+              </Button>
+            )}
           </div>
           <div className="-mb-2">
             <PageTabs
@@ -66,6 +75,14 @@ const CompanyLayout = ({ children }: CompanyLayoutProps) => {
         {children}
       </div>
     </>
+  );
+};
+
+const CompanyLayout = ({ children }: CompanyLayoutProps) => {
+  return (
+    <CompanySaveProvider>
+      <CompanyLayoutContent>{children}</CompanyLayoutContent>
+    </CompanySaveProvider>
   );
 };
 
