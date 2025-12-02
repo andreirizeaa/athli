@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { availableLanguages } from '@/lib/intl-provider';
+import { availableLanguages } from '@/lib/providers/intl-provider';
 
 const CustomisationsPage = () => {
   const t = useTranslations();
@@ -34,7 +34,7 @@ const CustomisationsPage = () => {
           <h1 className="text-[22px] font-semibold mb-2 mt-2">
             {t('settings.sections.customisations')}
           </h1>
-          <Button className="mb-2 mt-2">
+          <Button className="mb-2 mt-2 invisible" aria-hidden="true">
             {t('general.save')}
           </Button>
         </div>
@@ -42,13 +42,13 @@ const CustomisationsPage = () => {
       </div>
       <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-secondary flex justify-center items-start">
         <Card className="bg-background max-w-3xl w-full">
-          <CardHeader>
+          <CardHeader className="px-4">
             <CardTitle>{t('settings.customisations.preferences.title')}</CardTitle>
           </CardHeader>
           <Separator className="w-full mt-[-8px] mb-[-4px]" />
           <div className="w-full">
             <div className="space-y-0">
-              <div className="grid grid-cols-[1fr_auto] gap-4 pb-2 px-6 border-b items-center -mt-0.5">
+              <div className="grid grid-cols-[1fr_auto] gap-4 pb-2 px-4 border-b items-center -mt-0.5">
                 <label htmlFor="language" className="text-sm">
                   {t('settings.customisations.preferences.language.label')}
                 </label>
@@ -75,7 +75,7 @@ const CustomisationsPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-6 border-b items-center">
+              <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-4 border-b items-center">
                 <label htmlFor="theme" className="text-sm">
                   {t('settings.customisations.preferences.theme.label')}
                 </label>
@@ -129,7 +129,7 @@ const CustomisationsPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-[1fr_auto] gap-4 pt-2 px-6 items-center">
+              <div className="grid grid-cols-[1fr_auto] gap-4 pt-2 px-4 items-center">
                 <label htmlFor="units" className="text-sm">
                   {t('settings.customisations.preferences.units.label')}
                 </label>

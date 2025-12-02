@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Info, Play, RefreshCw, Trash2, X } from 'lucide-react';
-import { Exercise, searchExercises } from '@/lib/exercise-search';
+import { Exercise, searchExercises } from '@/lib/library/exercises/exercise-search';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';

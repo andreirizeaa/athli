@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { User, Building2, Search, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { UnsavedChangesProvider, useUnsavedChanges } from './context/unsaved-changes-context';
+import { DiscardChangesDialog } from './components/discard-changes-dialog';
 
 interface SectionConfig {
   id: string;
@@ -25,12 +27,15 @@ type SettingsLayoutProps = {
   children: React.ReactNode;
 };
 
-const SettingsLayout = ({ children }: SettingsLayoutProps) => {
+const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
   const t = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
+  const { hasUnsavedChanges, setHasUnsavedChanges } = useUnsavedChanges();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const groups: GroupConfig[] = [
     {
@@ -46,13 +51,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
       icon: Settings,
       sections: [
         { id: 'customisations', href: '/settings/app/customisations' },
-        {
-          id: 'integrations',
-          href: '/settings/app/integrations/email',
-          subSections: [
-            { id: 'email', href: '/settings/app/integrations/email' },
-          ],
-        },
+        { id: 'integrations', href: '/settings/app/integrations' },
       ],
     },
     {
@@ -149,9 +148,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
 
   // Check if company section should be expanded based on pathname
   const isCompanyPath = pathname.startsWith('/settings/business/company');
-  const isIntegrationsPath = pathname.startsWith('/settings/app/integrations');
 
-  // Update expanded sections when search results change or when on company/integrations path
+  // Update expanded sections when search results change or when on company path
   const effectiveExpandedSections = useMemo(() => {
     const base = new Set(expandedSections);
     if (searchQuery.trim()) {
@@ -160,14 +158,32 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     if (isCompanyPath) {
       base.add('company');
     }
-    if (isIntegrationsPath) {
-      base.add('integrations');
-    }
     return base;
-  }, [searchQuery, expandedSections, filteredGroups.sectionsToExpand, isCompanyPath, isIntegrationsPath]);
+  }, [searchQuery, expandedSections, filteredGroups.sectionsToExpand, isCompanyPath]);
 
   const shouldExpandCompany = effectiveExpandedSections.has('company');
-  const shouldExpandIntegrations = effectiveExpandedSections.has('integrations');
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (hasUnsavedChanges && pathname !== href) {
+      e.preventDefault();
+      setPendingNavigation(href);
+      setIsDiscardDialogOpen(true);
+    }
+  };
+
+  const handleConfirmDiscard = () => {
+    setIsDiscardDialogOpen(false);
+    setHasUnsavedChanges(false);
+    if (pendingNavigation) {
+      router.push(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancelDiscard = () => {
+    setIsDiscardDialogOpen(false);
+    setPendingNavigation(null);
+  };
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -206,8 +222,6 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                         : isPathActive(section.href);
                       const isExpanded = section.id === 'company' 
                         ? shouldExpandCompany 
-                        : section.id === 'integrations'
-                        ? shouldExpandIntegrations
                         : effectiveExpandedSections.has(section.id);
                       const hasSubSections = section.subSections && section.subSections.length > 0;
                       
@@ -243,6 +257,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                                     <Link
                                       key={subSection.id}
                                       href={subSection.href}
+                                      onClick={(e) => handleLinkClick(e, subSection.href)}
                                       className={cn(
                                         'w-full text-left rounded-md p-2 h-8 text-xs transition-colors font-semibold',
                                         'hover:bg-accent hover:text-accent-foreground',
@@ -269,6 +284,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                         <Link
                           key={section.id}
                           href={section.href}
+                          onClick={(e) => handleLinkClick(e, section.href)}
                           className={cn(
                             'w-full text-left rounded-md p-2 h-8 text-xs transition-colors font-semibold',
                             'hover:bg-accent hover:text-accent-foreground',
@@ -297,8 +313,18 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           {children}
         </div>
       </div>
+      <DiscardChangesDialog
+        open={isDiscardDialogOpen}
+        onCancel={handleCancelDiscard}
+        onConfirm={handleConfirmDiscard}
+      />
     </div>
   );
+};
+
+const SettingsLayout = ({ children }: SettingsLayoutProps) => {
+  // UnsavedChangesProvider is now in AppShell, so we just render the content
+  return <SettingsLayoutContent>{children}</SettingsLayoutContent>;
 };
 
 export default SettingsLayout;
