@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { availableLanguages } from '@/lib/intl-provider';
+import { availableLanguages } from '@/lib/providers/intl-provider';
 
 const CustomisationsPage = () => {
   const t = useTranslations();

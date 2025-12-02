@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-import { availableLanguages } from '@/lib/intl-provider';
+import { availableLanguages } from '@/lib/providers/intl-provider';
 
 const menuItems = [
   { name: 'Features', href: '#link' },

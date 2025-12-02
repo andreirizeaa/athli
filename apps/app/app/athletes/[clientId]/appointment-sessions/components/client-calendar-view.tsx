@@ -32,7 +32,7 @@ import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-selec
 import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
 import { toast } from 'sonner';
-import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar-service';
+import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar/calendar-service';
 import Image from 'next/image';
 
 interface CalendarEvent {

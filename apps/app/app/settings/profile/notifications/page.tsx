@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { updateNotifications, type NotificationSettings } from '@/lib/settings-service';
+import { updateNotifications, type NotificationSettings } from '@/lib/settings/settings-service';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { toast } from 'sonner';
 
