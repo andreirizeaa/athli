@@ -21,6 +21,19 @@ export interface Athlete {
   createdAt: number; // timestamp in milliseconds
 }
 
+export interface AthleteDetails {
+  firstName: string;
+  lastName: string;
+  email: string;
+  age: number | null;
+  weight: number | null; // in kg
+  height: number | null; // in cm
+  category: 'online' | 'in-person';
+  gender: 'male' | 'female' | 'prefer-not-to-say';
+  phone: string;
+  country: string;
+}
+
 /**
  * Dummy athlete service method to add a single client
  * This will be connected to the backend in the future
@@ -126,6 +139,240 @@ export const archiveUser = async (athleteId: string): Promise<void> => {
   //   headers: { 'Content-Type': 'application/json' },
   // })
   // if (!response.ok) throw new Error('Failed to archive user')
+  // return await response.json()
+};
+
+/**
+ * Dummy athlete service method to get athlete bio
+ * This will be connected to the backend in the future
+ */
+export const getAthleteBio = async (athleteId: string): Promise<string> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+
+  console.log('Getting athlete bio:', {
+    athleteId,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Mock data for John Smith (id: '1')
+  if (athleteId === '1') {
+    return 'John is a dedicated athlete with 5 years of training experience. He focuses on strength training and has shown excellent progress in his squat and deadlift. He trains 4-5 times per week and is committed to achieving his fitness goals.';
+  }
+
+  // Return empty string for other clients
+  return '';
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/bio`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get athlete bio')
+  // const data = await response.json()
+  // return data.bio || ''
+};
+
+/**
+ * Dummy athlete service method to save athlete bio
+ * This will be connected to the backend in the future
+ */
+export const saveAthleteBio = async (athleteId: string, bio: string): Promise<void> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+
+  console.log('Saving athlete bio:', {
+    athleteId,
+    bio,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/bio`, {
+  //   method: 'PUT',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ bio }),
+  // })
+  // if (!response.ok) throw new Error('Failed to save athlete bio')
+  // return await response.json()
+};
+
+/**
+ * Dummy athlete service method to get athlete goals
+ * This will be connected to the backend in the future
+ */
+export const getAthleteGoals = async (athleteId: string): Promise<string[]> => {
+  console.log('Getting athlete goals:', {
+    athleteId,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  if (athleteId === '1') {
+    return [
+      'Increase squat max by 20kg within 3 months',
+      'Improve cardiovascular endurance for upcoming competition',
+      'Maintain consistent training schedule of 4-5 sessions per week',
+    ];
+  }
+
+  return [];
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/goals`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get athlete goals')
+  // const data = await response.json()
+  // return data.goals || []
+};
+
+/**
+ * Dummy athlete service method to save athlete goals
+ * This will be connected to the backend in the future
+ */
+export const saveAthleteGoals = async (athleteId: string, goals: string[]): Promise<void> => {
+  console.log('Saving athlete goals:', {
+    athleteId,
+    goals,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/goals`, {
+  //   method: 'PUT',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ goals }),
+  // })
+  // if (!response.ok) throw new Error('Failed to save athlete goals')
+  // return await response.json()
+};
+
+/**
+ * Dummy athlete service method to get athlete injuries
+ * This will be connected to the backend in the future
+ */
+export const getAthleteInjuries = async (athleteId: string): Promise<string[]> => {
+  console.log('Getting athlete injuries:', {
+    athleteId,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  if (athleteId === '1') {
+    return [
+      'Previous left shoulder discomfort during overhead movements',
+      'Currently monitoring and adjusting training load accordingly',
+    ];
+  }
+
+  return [];
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/injuries`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get athlete injuries')
+  // const data = await response.json()
+  // return data.injuries || []
+};
+
+/**
+ * Dummy athlete service method to save athlete injuries
+ * This will be connected to the backend in the future
+ */
+export const saveAthleteInjuries = async (athleteId: string, injuries: string[]): Promise<void> => {
+  console.log('Saving athlete injuries:', {
+    athleteId,
+    injuries,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/injuries`, {
+  //   method: 'PUT',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ injuries }),
+  // })
+  // if (!response.ok) throw new Error('Failed to save athlete injuries')
+  // return await response.json()
+};
+
+/**
+ * Dummy athlete service method to get athlete details
+ * This will be connected to the backend in the future
+ */
+export const getAthleteDetails = async (athleteId: string): Promise<AthleteDetails> => {
+  console.log('Getting athlete details:', {
+    athleteId,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  if (athleteId === '1') {
+    return {
+      firstName: 'John',
+      lastName: 'Smith',
+      email: 'john.smith@example.com',
+      age: 32,
+      weight: 85, // kg
+      height: 180, // cm
+      category: 'in-person',
+      gender: 'male',
+      phone: '+1 (555) 123-4567',
+      country: 'United States',
+    };
+  }
+
+  return {
+    firstName: '',
+    lastName: '',
+    email: '',
+    age: null,
+    weight: null,
+    height: null,
+    category: 'online',
+    gender: 'male',
+    phone: '',
+    country: '',
+  };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/details`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get athlete details')
+  // return await response.json()
+};
+
+/**
+ * Dummy athlete service method to save athlete details
+ * This will be connected to the backend in the future
+ */
+export const saveAthleteDetails = async (athleteId: string, details: AthleteDetails): Promise<void> => {
+  console.log('Saving athlete details:', {
+    athleteId,
+    details,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${athleteId}/details`, {
+  //   method: 'PUT',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(details),
+  // })
+  // if (!response.ok) throw new Error('Failed to save athlete details')
   // return await response.json()
 };
 
