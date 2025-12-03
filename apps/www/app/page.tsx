@@ -14,6 +14,16 @@ export default function Home() {
   const { isSignedIn, isLoaded } = useUser();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const hasRedirected = useRef(false);
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Cleanup timeout on unmount
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoaded || hasRedirected.current) {
@@ -25,68 +35,78 @@ export default function Home() {
     if (isSignedIn) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
       
+      // Validate appUrl
+      if (!appUrl || appUrl === 'undefined') {
+        console.error('NEXT_PUBLIC_APP_URL is not set correctly');
+        return;
+      }
+      
       // Check if we're already on the app domain to prevent redirect loops
       const currentUrl = new URL(window.location.href);
-      const appUrlObj = new URL(appUrl);
+      let appUrlObj: URL;
+      
+      try {
+        appUrlObj = new URL(appUrl);
+      } catch (error) {
+        console.error('Invalid app URL:', appUrl, error);
+        return;
+      }
       
       // If already on the app domain, don't redirect
       if (currentUrl.origin === appUrlObj.origin) {
         return;
       }
 
-      // Check for redirect loop using sessionStorage
-      const redirectKey = 'www_redirect_attempts';
-      const maxAttempts = 3;
-      const redirectAttempts = parseInt(sessionStorage.getItem(redirectKey) || '0', 10);
-      
-      // If we've exceeded max redirect attempts, stop to prevent infinite loop
-      if (redirectAttempts >= maxAttempts) {
-        sessionStorage.removeItem(redirectKey);
-        console.warn('Redirect loop detected, stopping redirect attempts');
-        return;
-      }
-
-      // Check URL parameters to detect if we're in a redirect loop
+      // Check URL parameters for loop prevention flag
       const urlParams = new URLSearchParams(window.location.search);
-      const redirectedParam = urlParams.get('redirected');
+      const loopPreventionFlag = urlParams.get('__www_redirect');
       
-      // If we've been redirected before, don't redirect again to prevent loops
-      if (redirectedParam === 'true') {
-        sessionStorage.removeItem(redirectKey);
+      // If we have the loop prevention flag, we've already tried redirecting
+      // Wait a bit longer and try once more, then stop
+      if (loopPreventionFlag === 'true') {
+        // Check how many times we've been here
+        const retryCount = parseInt(sessionStorage.getItem('www_redirect_retry') || '0', 10);
+        
+        if (retryCount >= 1) {
+          // We've already retried, stop to prevent infinite loop
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('__www_redirect');
+          window.history.replaceState({}, '', newUrl.toString());
+          sessionStorage.removeItem('www_redirect_retry');
+          console.warn('Redirect loop detected, stopping redirect after retry');
+          return;
+        }
+        
+        // Increment retry count and wait longer
+        sessionStorage.setItem('www_redirect_retry', String(retryCount + 1));
+        hasRedirected.current = true;
+        setIsRedirecting(true);
+        
+        redirectTimeoutRef.current = setTimeout(() => {
+          console.log('Retrying redirect to app (without flag):', appUrl);
+          window.location.replace(appUrl);
+        }, 2000);
         return;
       }
 
-      // Check if we just came from the app domain (prevent redirect loops)
-      // This happens when app redirects back to www due to session not being ready
-      let shouldWait = false;
-      if (document.referrer) {
-        try {
-          const referrerUrl = new URL(document.referrer);
-          if (referrerUrl.origin === appUrlObj.origin) {
-            // We just came from the app, increment redirect attempts
-            sessionStorage.setItem(redirectKey, String(redirectAttempts + 1));
-            shouldWait = true;
-          }
-        } catch {
-          // Invalid referrer URL, continue with normal redirect
-        }
-      }
-
-      // If not coming from app, reset redirect attempts
-      if (!shouldWait) {
-        sessionStorage.removeItem(redirectKey);
-      }
-
+      // Normal redirect - user is signed in and we're on www
       hasRedirected.current = true;
       setIsRedirecting(true);
       
-      // If coming from app, wait longer for session to propagate
-      // Otherwise redirect immediately
-      const redirectDelay = shouldWait ? 1500 : 0;
+      // Log for debugging
+      console.log('User signed in, redirecting to app:', appUrl);
+      console.log('Current URL:', window.location.href);
       
-      setTimeout(() => {
-        window.location.replace(appUrl);
-      }, redirectDelay);
+      // Redirect immediately (or with minimal delay)
+      redirectTimeoutRef.current = setTimeout(() => {
+        // Add redirect flag to help app identify this is from www
+        const redirectUrl = new URL(appUrl);
+        redirectUrl.searchParams.set('__www_redirect', 'true');
+        const finalUrl = redirectUrl.toString();
+        console.log('Executing redirect to:', finalUrl);
+        // Use href instead of replace to ensure it happens
+        window.location.href = finalUrl;
+      }, 100);
     }
   }, [isLoaded, isSignedIn]);
 
