@@ -52,7 +52,7 @@ const StandardWorkoutPage = () => {
       try {
         const parsed = JSON.parse(raw) as WorkoutMeta;
         setWorkoutMeta(parsed);
-        // Clear the access flag if it exists
+        // Clear the access flag after setting meta to prevent re-redirects
         window.localStorage.removeItem('oneninety_workout_builder_access');
         return;
       } catch {
@@ -68,7 +68,10 @@ const StandardWorkoutPage = () => {
       difficulty: 'Intermediate',
       builder: 'standard',
     });
-  }, [router]);
+    // Clear the access flag after setting default meta
+    window.localStorage.removeItem('oneninety_workout_builder_access');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const navigateBackToWorkouts = () => {
     router.push('/library/workouts');

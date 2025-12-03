@@ -126,7 +126,7 @@ const WorkoutsPage = () => {
   };
 
   const handleNavigateToWorkout = (workoutId: string) => {
-    router.push(`/library/workouts/${workoutId}`);
+    router.push(`/library/workouts/${workoutId}/edit/standard`);
   };
 
   const handleNavigateToAthletes = () => {
@@ -303,15 +303,25 @@ const WorkoutsPage = () => {
       }
 
       try {
-        // Set access flag for AI builder
+        // Set access flag for AI builder - ensure it's set before navigation
         window.localStorage.setItem('oneninety_workout_builder_access', 'ai');
+        // Force a small delay to ensure localStorage is written
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch {
         // Ignore storage errors
       }
 
-      const targetPath = '/library/workouts/new/ai';
-      router.push(targetPath);
-      setIsCreateWorkoutOpen(false);
+      // Wait a bit longer before navigation to ensure everything is ready
+      setTimeout(() => {
+        const targetPath = '/library/workouts/new/ai';
+        router.push(targetPath);
+        
+        // Keep sidebar open during navigation, close after a brief delay
+        setTimeout(() => {
+          setIsCreateWorkoutOpen(false);
+          setIsGenerating(false);
+        }, 300);
+      }, 600);
     }
   };
 

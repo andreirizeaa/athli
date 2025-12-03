@@ -186,7 +186,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '1',
     name: 'John Smith',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '22/30',
@@ -201,7 +201,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '2',
     name: 'Sarah Johnson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '28/30',
@@ -216,7 +216,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '3',
     name: 'Mike Wilson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '30 minutes ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '18/30',
@@ -231,7 +231,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '4',
     name: 'Emily Davis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 days ago',
     last7DaysTraining: '3/7',
     last30DaysTraining: '15/30',
@@ -246,7 +246,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '5',
     name: 'David Brown',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '30/30',
@@ -261,7 +261,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '6',
     name: 'Lisa Anderson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 week ago',
     last7DaysTraining: '2/7',
     last30DaysTraining: '10/30',
@@ -276,7 +276,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '7',
     name: 'Chris Martinez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chris',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '12 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '25/30',
@@ -291,7 +291,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '8',
     name: 'Jessica Taylor',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 days ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '20/30',
@@ -306,7 +306,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '9',
     name: 'Robert Lee',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Robert',
+    avatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '26/30',
@@ -321,7 +321,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '10',
     name: 'Amanda White',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amanda',
+    avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '6 hours ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '19/30',
@@ -336,7 +336,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '11',
     name: 'Michael Chen',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael',
+    avatar: 'https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '29/30',
@@ -351,7 +351,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '12',
     name: 'Sophie Martin',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie',
+    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 days ago',
     last7DaysTraining: '3/7',
     last30DaysTraining: '14/30',
@@ -366,7 +366,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '13',
     name: 'James Thompson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=James',
+    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '8 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '21/30',
@@ -381,7 +381,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '14',
     name: 'Emma Garcia',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
+    avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '27/30',
@@ -396,7 +396,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '15',
     name: 'Daniel Rodriguez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Daniel',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 days ago',
     last7DaysTraining: '2/7',
     last30DaysTraining: '12/30',
@@ -411,7 +411,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '16',
     name: 'Olivia Williams',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Olivia',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 hour ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '30/30',
@@ -426,7 +426,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '17',
     name: 'William Jones',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=William',
+    avatar: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '12 hours ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '17/30',
@@ -441,7 +441,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '18',
     name: 'Isabella Brown',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Isabella',
+    avatar: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 days ago',
     last7DaysTraining: '3/7',
     last30DaysTraining: '13/30',
@@ -456,7 +456,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '19',
     name: 'Alexander Davis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alexander',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '24/30',
@@ -471,7 +471,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '20',
     name: 'Mia Miller',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mia',
+    avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '20/30',
@@ -486,7 +486,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '21',
     name: 'Benjamin Wilson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Benjamin',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '6 days ago',
     last7DaysTraining: '1/7',
     last30DaysTraining: '8/30',
@@ -501,7 +501,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '22',
     name: 'Charlotte Moore',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Charlotte',
+    avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '7 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '25/30',
@@ -516,7 +516,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '23',
     name: 'Lucas Taylor',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 days ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '18/30',
@@ -531,7 +531,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '24',
     name: 'Amelia Anderson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Amelia',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '28/30',
@@ -546,7 +546,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '25',
     name: 'Henry Thomas',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Henry',
+    avatar: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 week ago',
     last7DaysTraining: '2/7',
     last30DaysTraining: '11/30',
@@ -561,7 +561,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '26',
     name: 'Harper Jackson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Harper',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '22/30',
@@ -576,7 +576,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '27',
     name: 'Ethan White',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ethan',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '26/30',
@@ -591,7 +591,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '28',
     name: 'Ava Harris',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ava',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 days ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '19/30',
@@ -606,7 +606,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '29',
     name: 'Mason Martin',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mason',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '8 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '30/30',
@@ -621,7 +621,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '30',
     name: 'Ella Thompson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ella',
+    avatar: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '3/7',
     last30DaysTraining: '15/30',
@@ -636,7 +636,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '31',
     name: 'Noah Garcia',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Noah',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '21/30',
@@ -651,7 +651,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '32',
     name: 'Grace Martinez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grace',
+    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '6 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '27/30',
@@ -666,7 +666,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '33',
     name: 'Liam Robinson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 days ago',
     last7DaysTraining: '2/7',
     last30DaysTraining: '12/30',
@@ -681,7 +681,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '34',
     name: 'Chloe Clark',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Chloe',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '29/30',
@@ -696,7 +696,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '35',
     name: 'Jacob Rodriguez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jacob',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '17/30',
@@ -711,7 +711,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '36',
     name: 'Lily Lewis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lily',
+    avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '7 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '23/30',
@@ -726,7 +726,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '37',
     name: 'Logan Walker',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Logan',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 days ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '24/30',
@@ -741,7 +741,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '38',
     name: 'Zoe Hall',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zoe',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 days ago',
     last7DaysTraining: '1/7',
     last30DaysTraining: '9/30',
@@ -756,7 +756,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '39',
     name: 'Carter Allen',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carter',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '28/30',
@@ -771,7 +771,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '40',
     name: 'Nora Young',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nora',
+    avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 hour ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '26/30',
@@ -786,7 +786,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '41',
     name: 'Owen King',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Owen',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 days ago',
     last7DaysTraining: '3/7',
     last30DaysTraining: '14/30',
@@ -801,7 +801,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '42',
     name: 'Scarlett Wright',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Scarlett',
+    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '6 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '20/30',
@@ -816,7 +816,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '43',
     name: 'Wyatt Lopez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wyatt',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '25/30',
@@ -831,7 +831,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '44',
     name: 'Victoria Hill',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Victoria',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '18/30',
@@ -846,7 +846,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '45',
     name: 'Jack Scott',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '8 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '30/30',
@@ -861,7 +861,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '46',
     name: 'Aria Green',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aria',
+    avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 days ago',
     last7DaysTraining: '2/7',
     last30DaysTraining: '11/30',
@@ -876,7 +876,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '47',
     name: 'Luke Adams',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Luke',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '27/30',
@@ -891,7 +891,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '48',
     name: 'Layla Baker',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Layla',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '22/30',
@@ -906,7 +906,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '49',
     name: 'Ryan Nelson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ryan',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 days ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '19/30',
@@ -921,7 +921,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '50',
     name: 'Penelope Carter',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Penelope',
+    avatar: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 week ago',
     last7DaysTraining: '1/7',
     last30DaysTraining: '7/30',
@@ -936,7 +936,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '51',
     name: 'Nathan Mitchell',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nathan',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '7 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '29/30',
@@ -951,7 +951,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '52',
     name: 'Hannah Perez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Hannah',
+    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '24/30',
@@ -966,7 +966,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '53',
     name: 'Isaac Roberts',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Isaac',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '3/7',
     last30DaysTraining: '16/30',
@@ -981,7 +981,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '54',
     name: 'Addison Turner',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Addison',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '21/30',
@@ -996,7 +996,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '55',
     name: 'Caleb Phillips',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Caleb',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 days ago',
     last7DaysTraining: '2/7',
     last30DaysTraining: '13/30',
@@ -1011,7 +1011,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '56',
     name: 'Aubrey Campbell',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aubrey',
+    avatar: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '6 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '25/30',
@@ -1026,7 +1026,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '57',
     name: 'Julian Parker',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Julian',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '28/30',
@@ -1041,7 +1041,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '58',
     name: 'Stella Evans',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Stella',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 day ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '17/30',
@@ -1056,7 +1056,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '59',
     name: 'Levi Edwards',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Levi',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '4 days ago',
     last7DaysTraining: '1/7',
     last30DaysTraining: '10/30',
@@ -1071,7 +1071,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '60',
     name: 'Natalie Collins',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Natalie',
+    avatar: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '5 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '26/30',
@@ -1086,7 +1086,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '61',
     name: 'Aaron Stewart',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aaron',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '3 hours ago',
     last7DaysTraining: '5/7',
     last30DaysTraining: '23/30',
@@ -1101,7 +1101,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '62',
     name: 'Lillian Sanchez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lillian',
+    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '2 days ago',
     last7DaysTraining: '4/7',
     last30DaysTraining: '20/30',
@@ -1116,7 +1116,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '63',
     name: 'Eli Morris',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eli',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '8 hours ago',
     last7DaysTraining: '7/7',
     last30DaysTraining: '30/30',
@@ -1131,7 +1131,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '64',
     name: 'Aurora Rogers',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aurora',
+    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '1 week ago',
     last7DaysTraining: '2/7',
     last30DaysTraining: '12/30',
@@ -1146,7 +1146,7 @@ export const mockAthletes: Athlete[] = [
   {
     id: '65',
     name: 'Grayson Reed',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Grayson',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastActivity: '6 hours ago',
     last7DaysTraining: '6/7',
     last30DaysTraining: '27/30',
@@ -1164,7 +1164,7 @@ export const mockContacts: Contact[] = [
   {
     id: '1',
     name: 'John Smith',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
     lastMessage: 'Hey, how are you doing?',
     timestamp: '2:30 PM',
     unreadCount: 2,
@@ -1173,7 +1173,7 @@ export const mockContacts: Contact[] = [
   {
     id: '2',
     name: 'Sarah Johnson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=faces',
     lastMessage: 'Thanks for the workout plan!',
     timestamp: '1:15 PM',
     isOnline: false,
@@ -1181,7 +1181,7 @@ export const mockContacts: Contact[] = [
   {
     id: '3',
     name: 'Mike Wilson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=faces',
     lastMessage: 'Can we schedule a session?',
     timestamp: '12:45 PM',
     unreadCount: 1,
@@ -1190,7 +1190,7 @@ export const mockContacts: Contact[] = [
   {
     id: '4',
     name: 'Emily Davis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=faces',
     lastMessage: 'The nutrition plan looks great',
     timestamp: 'Yesterday',
     isOnline: false,
@@ -1198,7 +1198,7 @@ export const mockContacts: Contact[] = [
   {
     id: '5',
     name: 'David Brown',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=faces',
     lastMessage: 'See you at the gym tomorrow',
     timestamp: 'Yesterday',
     isOnline: true,
@@ -1206,7 +1206,7 @@ export const mockContacts: Contact[] = [
   {
     id: '6',
     name: 'Lisa Anderson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=faces',
     lastMessage: 'Perfect, thanks!',
     timestamp: '2 days ago',
     isOnline: false,
@@ -1620,6 +1620,7 @@ const AppShellContent = ({
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
+  const [isAiAssistantPopoverOpen, setIsAiAssistantPopoverOpen] = React.useState(false);
   const isPinnedOpen = state === 'expanded' && !isHovered;
   const isHoverExpanded = state === 'collapsed' && isHovered;
   const navigationRouter = useRouter();
@@ -1859,13 +1860,13 @@ const AppShellContent = ({
   };
 
   const handleWorkoutSearchResultClick = (workoutId: string) => {
-    router.push(`/library/workouts/${workoutId}`);
+    router.push(`/library/workouts/${workoutId}/edit/standard`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
 
   const handleProgramSearchResultClick = (programId: string) => {
-    router.push(`/library/programs/${programId}`);
+    router.push(`/library/programs/${programId}/edit`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
@@ -2475,14 +2476,29 @@ const AppShellContent = ({
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button
-                className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
-                aria-label={t('sidebar.search.aiAssistantAria')}
-                onClick={() => openUserProfile()}
-              >
-                <Sparkles className="size-4" />
-                {t('sidebar.search.aiAssistant')}
-              </Button>
+              <Popover open={isAiAssistantPopoverOpen} onOpenChange={setIsAiAssistantPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
+                    aria-label={t('sidebar.search.aiAssistantAria')}
+                  >
+                    <Sparkles className="size-4" />
+                    {t('sidebar.search.aiAssistant')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-auto p-4"
+                  align="end"
+                  sideOffset={8}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm text-foreground">
+                      {t('sidebar.search.aiAssistantComingSoon')}
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <DropdownMenu open={isProfileDropdownOpen} onOpenChange={setIsProfileDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <button

@@ -52,9 +52,6 @@ export async function GET() {
       noTimestamp: false, // Include iat (issued at) claim
     });
 
-    console.log('Generated JWT payload:', payload);
-    console.log('JWT token:', token);
-
     return NextResponse.json({ jwt: token });
   } catch (error) {
     console.error('JWT generation error:', error);

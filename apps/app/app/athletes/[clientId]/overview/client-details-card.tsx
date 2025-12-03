@@ -142,7 +142,7 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
 
   return (
     <>
-      <Card className="bg-background flex flex-col flex-1 min-w-0" style={{ height: '20vh', minHeight: '20vh', maxHeight: '20vh' }}>
+      <Card className="bg-background flex flex-col flex-1 min-w-0 w-full" style={{ height: '400px', minHeight: '400px', maxHeight: '400px' }}>
         <CardHeader className="px-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle>{t('athletes.profile.athleteDetails')}</CardTitle>
@@ -165,75 +165,96 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
               <p className="text-xs text-muted-foreground">{t('general.loading')}</p>
             </div>
           ) : details ? (
-            <div className="flex gap-x-4 gap-y-2 text-xs items-start">
-              <div className="space-y-2 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <p className="text-foreground leading-tight truncate">
-                    {`${details.firstName || ''} ${details.lastName || ''}`.trim() || '-'}
-                  </p>
+            <div className="flex flex-col gap-3 text-sm">
+              {athlete && (
+                <div className="flex justify-center mb-2">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage src={athlete.avatar} alt={athlete.name} />
+                    <AvatarFallback className="text-lg">
+                      {details.firstName && details.lastName
+                        ? `${details.firstName.charAt(0).toUpperCase()}${details.lastName.charAt(0).toUpperCase()}`
+                        : details.firstName
+                          ? details.firstName.charAt(0).toUpperCase()
+                          : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <p className="text-foreground leading-tight truncate">{details.email || '-'}</p>
+              )}
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="text-xs text-foreground leading-tight">
+                      {`${details.firstName || ''} ${details.lastName || ''}`.trim() || '-'}
+                    </p>
                 </div>
-              </div>
-              <div className="space-y-2 flex-shrink-0">
                 {details.age !== null && details.age !== undefined && (
-                  <div className="flex items-center gap-2">
-                    <ArrowUp10 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <p className="text-foreground leading-tight">
+                    <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+                      <ArrowUp10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <p className="text-xs text-foreground leading-tight">
                       {details.age}
                     </p>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Users className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <p className="text-foreground leading-tight">
-                    {details.gender === 'male' ? t('athletes.profile.male') :
-                     details.gender === 'female' ? t('athletes.profile.female') :
-                     t('athletes.profile.preferNotToSay')}
-                  </p>
                 </div>
-              </div>
-              <div className="space-y-2 flex-shrink-0">
+                <div className="flex gap-4">
                 {details.weight !== null && details.weight !== undefined && (
-                  <div className="flex items-center gap-2">
-                    <Scale className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <p className="text-foreground leading-tight">
+                    <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+                      <Scale className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <p className="text-xs text-foreground leading-tight">
                       {details.weight} kg
                     </p>
                   </div>
                 )}
                 {details.height !== null && details.height !== undefined && (
-                  <div className="flex items-center gap-2">
-                    <Ruler className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <p className="text-foreground leading-tight">
+                    <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+                      <Ruler className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <p className="text-xs text-foreground leading-tight">
                       {details.height} cm
                     </p>
                   </div>
                 )}
               </div>
-              <div className="space-y-2 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                  <p className="text-foreground leading-tight">{details.category === 'online' ? t('athletes.profile.online') : t('athletes.profile.inPerson')}</p>
+                <div className="flex gap-4">
+                  <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+                    <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="text-xs text-foreground leading-tight">
+                      {details.gender === 'male' ? t('athletes.profile.male') :
+                       details.gender === 'female' ? t('athletes.profile.female') :
+                       t('athletes.profile.preferNotToSay')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="text-xs text-foreground leading-tight">{details.category === 'online' ? t('athletes.profile.online') : t('athletes.profile.inPerson')}</p>
+                  </div>
                 </div>
-                {details.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <p className="text-foreground leading-tight truncate">{details.phone}</p>
+                {details.country && (
+                  <div className="flex items-center gap-3 w-full">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="text-xs text-foreground leading-tight">{details.country}</p>
                   </div>
                 )}
-              </div>
-              {details.country && (
-                <div className="space-y-2 flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    <p className="text-foreground leading-tight truncate">{details.country}</p>
+                {details.phone && (
+                  <div className="flex items-center gap-3 w-full">
+                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="text-xs text-foreground leading-tight">{details.phone}</p>
                   </div>
+                )}
+                <div className="flex items-center gap-3 w-full">
+                  <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  {details.email ? (
+                    <a
+                      href={`mailto:${details.email}`}
+                      className="text-xs text-primary underline hover:text-primary/80 leading-tight"
+                    >
+                      {details.email}
+                    </a>
+                  ) : (
+                    <p className="text-xs text-foreground leading-tight">-</p>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
