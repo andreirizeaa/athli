@@ -142,15 +142,15 @@ const ClientTrainingCalendarPage = () => {
     exerciseId: string;
     instanceId: string;
     name: string;
-    exerciseType: 'weight_reps' | 'reps' | 'distance_duration';
+    exerciseType?: 'weight_reps' | 'reps' | 'distance_duration';
     equipments?: string[];
     supersetGroupId?: string | null;
     sets?: Array<{
       setNumber: number;
-      type: 'warmUp' | 'normal' | 'failure' | 'dropset';
-      reps: string;
-      weight: string;
-      rest: string;
+      type?: 'warmUp' | 'normal' | 'failure' | 'dropset';
+      reps?: string;
+      weight?: string;
+      rest?: string;
       distance?: string;
       duration?: string;
     }>;
@@ -2018,7 +2018,7 @@ const ClientTrainingCalendarPage = () => {
                         onDeleteSection={() => {}}
                         onDeleteExercise={() => {}}
                         onDeleteSuperset={() => {}}
-                        groupExercisesBySuperset={groupExercisesBySuperset}
+                        groupExercisesBySuperset={groupExercisesBySuperset as any}
                       />
                     </div>
                   </div>
