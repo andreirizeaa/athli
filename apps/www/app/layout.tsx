@@ -39,10 +39,10 @@ export default function RootLayout({
             appearance={{
               theme: shadcn,
             }}
-            afterSignInUrl={
+            signInFallbackRedirectUrl={
               process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
             }
-            afterSignUpUrl={
+            signUpFallbackRedirectUrl={
               process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
             }
           >
