@@ -16,6 +16,8 @@ export default function Home() {
   const hasRedirected = useRef(false);
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  console.log('isSignedIn', isSignedIn);
+
   useEffect(() => {
     // Don't run until Clerk has finished loading
     if (!isLoaded) return;
