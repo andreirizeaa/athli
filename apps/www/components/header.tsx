@@ -40,10 +40,7 @@ export const HeroHeader = () => {
 
   const handleAuthClick = () => {
     if (isSignedIn) {
-      const appUrl =
-        process.env.NODE_ENV === 'production'
-          ? 'https://app.oneninety.com'
-          : 'http://localhost:3001';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
       window.location.href = appUrl;
       return;
     }

@@ -35,8 +35,7 @@ export default async function RootLayout({
   const { userId } = await auth();
 
   if (!userId) {
-    const wwwUrl =
-      process.env.NODE_ENV === 'production' ? 'https://oneninety.com' : 'http://localhost:3000';
+    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000';
     redirect(wwwUrl);
   }
 
