@@ -20,6 +20,7 @@ import { AiBuilder } from '../../../new/ai/ai-builder';
 import type { WorkoutProgramPayload } from '../../../new/workout-schema';
 import { DiscardChangesDialog } from '../../../new/components/discard-changes-dialog';
 import { mockWorkouts } from '@/components/app/app-shell';
+import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
 
 type WorkoutMeta = {
   title: string;
@@ -66,14 +67,29 @@ const EditAiWorkoutPage = () => {
         difficulty: 'Intermediate',
         builder: 'ai',
       });
+
+      // Ensure workout schema is set in localStorage for edit mode
+      // Only set if no AI generated workout exists and no saved schema
+      const aiGenerated = window.localStorage.getItem('oneninety_ai_generated_workout');
+      const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+      if (!aiGenerated && !savedSchema) {
+        // Set the shared mock schema if no schema exists
+        window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
+      }
+
+      // Set the access flag if not already set
+      const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+      if (!accessFlag || accessFlag !== 'edit-ai') {
+        window.localStorage.setItem('oneninety_workout_builder_access', 'edit-ai');
+      }
     } else {
       // If workout not found, redirect back
-      router.push(`/library/workouts/${workoutId}`);
+      router.push('/library/workouts');
     }
   }, [router, workoutId]);
 
-  const navigateBackToWorkout = () => {
-    router.push(`/library/workouts/${workoutId}`);
+  const navigateBackToWorkouts = () => {
+    router.push('/library/workouts');
   };
 
   const handleCancel = () => {
@@ -82,13 +98,13 @@ const EditAiWorkoutPage = () => {
       return;
     }
 
-    navigateBackToWorkout();
+    navigateBackToWorkouts();
   };
 
   const handleConfirmDiscard = () => {
     setIsDiscardDialogOpen(false);
     setHasUnsavedChanges(false);
-    navigateBackToWorkout();
+    navigateBackToWorkouts();
   };
 
   const handleSaveClick = () => {
@@ -115,7 +131,7 @@ const EditAiWorkoutPage = () => {
     });
 
     setHasUnsavedChanges(false);
-    navigateBackToWorkout();
+    navigateBackToWorkouts();
   };
 
   if (!workoutMeta) {
@@ -132,8 +148,6 @@ const EditAiWorkoutPage = () => {
       router.push('/library');
     } else if (path === '/library/workouts') {
       router.push('/library/workouts');
-    } else if (path === `/library/workouts/${workoutId}`) {
-      navigateBackToWorkout();
     }
   };
 
@@ -167,12 +181,9 @@ const EditAiWorkoutPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbLink
-                    onClick={() => handleBreadcrumbClick(`/library/workouts/${workoutId}`)}
-                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
-                  >
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
                     {workoutMeta?.title || t('workouts.detail.breadcrumb.workout')}
-                  </BreadcrumbLink>
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
                   <ChevronRight className="h-2 w-2" />

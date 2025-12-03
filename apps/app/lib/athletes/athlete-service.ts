@@ -704,3 +704,276 @@ const mockJohnSmithCompletionLogs: TrainingCalendarCompletionLogs = (() => {
   return { workouts, sets };
 })();
 
+export interface WorkoutStatistics {
+  completed: number;
+  inProgress: number;
+  notStarted: number;
+}
+
+/**
+ * Service method to get workout statistics for different time periods
+ * This will be connected to the backend in the future
+ */
+export const getWorkoutStatistics = async (
+  clientId: string,
+  period: 'last7Days' | 'last30Days' | 'nextWeek'
+): Promise<WorkoutStatistics> => {
+  console.log('Getting workout statistics:', {
+    clientId,
+    period,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Mock data for John Smith (id: '1')
+  if (clientId === '1') {
+    if (period === 'last7Days') {
+      return {
+        completed: 4,
+        inProgress: 1,
+        notStarted: 2,
+      };
+    }
+    if (period === 'last30Days') {
+      return {
+        completed: 12,
+        inProgress: 2,
+        notStarted: 10,
+      };
+    }
+    if (period === 'nextWeek') {
+      return {
+        completed: 0,
+        inProgress: 0,
+        notStarted: 3,
+      };
+    }
+  }
+
+  // Return empty statistics for other clients
+  return {
+    completed: 0,
+    inProgress: 0,
+    notStarted: 0,
+  };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${clientId}/workout-statistics?period=${period}`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get workout statistics')
+  // return await response.json()
+};
+
+export interface AssignedItem {
+  id: string;
+  type: 'program' | 'workout';
+  name: string;
+  description: string;
+  equipment: string;
+}
+
+/**
+ * Service method to get the current assigned program or workout for a client
+ * This will be connected to the backend in the future
+ */
+export const getCurrentAssignedItem = async (clientId: string): Promise<AssignedItem | null> => {
+  console.log('Getting current assigned item:', {
+    clientId,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Mock data for John Smith (id: '1') - returns a program
+  if (clientId === '1') {
+    return {
+      id: '1',
+      type: 'program',
+      name: 'Strength Builder',
+      description:
+        'A comprehensive strength training program designed to build muscle mass and increase overall strength. This program focuses on compound movements and progressive overload principles.',
+      equipment: 'Barbell, Dumbbells, Bench',
+    };
+  }
+
+  // Return null for other clients (no assigned item)
+  return null;
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${clientId}/current-assigned-item`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get current assigned item')
+  // const data = await response.json()
+  // return data.item || null
+};
+
+export interface StrengthDataPoint {
+  date: string; // Format: "MMM YY" or similar
+  strength: number; // percentage points from start (0 = starting point)
+}
+
+export interface WeightDataPoint {
+  date: string; // Format: "MMM YY" or similar
+  weight: number; // in kg
+}
+
+/**
+ * Service method to get strength overview chart data for a client
+ * Strength is measured in percentage points from the starting point (0 = start)
+ * This will be connected to the backend in the future
+ */
+export const getStrengthOverview = async (
+  clientId: string
+): Promise<StrengthDataPoint[]> => {
+  console.log('Getting strength overview:', {
+    clientId,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Import mockAthletes to get clientFor days
+  const { mockAthletes } = await import('@/components/app/app-shell');
+  const athlete = mockAthletes.find((a) => a.id === clientId);
+
+  if (!athlete || !athlete.clientFor) {
+    return [];
+  }
+
+  // Calculate start date (today - clientFor days)
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - athlete.clientFor);
+
+  // Generate data points from start date to today
+  const dataPoints: StrengthDataPoint[] = [];
+  const totalDays = athlete.clientFor;
+  const numPoints = Math.min(15, Math.max(6, Math.floor(totalDays / 30))); // 6-15 points based on duration
+
+  // Starting strength is 0 (baseline)
+  let currentStrength = 0;
+
+  for (let i = 0; i < numPoints; i++) {
+    const date = new Date(startDate);
+    const daysOffset = Math.floor((totalDays / (numPoints - 1)) * i);
+    date.setDate(startDate.getDate() + daysOffset);
+
+    // Format date as "MMM YY"
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear().toString().slice(-2);
+    const dateLabel = `${month} ${year}`;
+
+    // Simulate strength changes (percentage points from start)
+    // Create more varied patterns: ups, downs, negatives, and fluctuations
+    let strengthChange;
+    if (i === 0) {
+      // Start at 0
+      strengthChange = 0;
+    } else if (i < numPoints / 3) {
+      // Early period: can go negative or positive with larger swings
+      strengthChange = (Math.random() - 0.5) * 30; // -15 to +15 percentage points
+    } else if (i < (numPoints * 2) / 3) {
+      // Middle period: more variation, can drop significantly
+      strengthChange = (Math.random() - 0.4) * 25; // -15 to +10 percentage points (slight downward bias)
+    } else {
+      // Later period: recovery and growth, but still with some drops
+      strengthChange = (Math.random() - 0.3) * 20; // -10 to +10 percentage points
+    }
+    
+    currentStrength = Math.max(-100, Math.min(100, currentStrength + strengthChange));
+
+    dataPoints.push({
+      date: dateLabel,
+      strength: Math.round(currentStrength * 10) / 10,
+    });
+  }
+
+  return dataPoints;
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${clientId}/strength-overview`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get strength overview')
+  // const data = await response.json()
+  // return data.points || []
+};
+
+/**
+ * Service method to get weight overview chart data for a client
+ * Weight is measured in kg, centered around the starting weight
+ * This will be connected to the backend in the future
+ */
+export const getWeightOverview = async (
+  clientId: string
+): Promise<WeightOverviewResult> => {
+  console.log('Getting weight overview:', {
+    clientId,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Import mockAthletes to get clientFor days
+  const { mockAthletes } = await import('@/components/app/app-shell');
+  const athlete = mockAthletes.find((a) => a.id === clientId);
+
+  if (!athlete || !athlete.clientFor) {
+    return [];
+  }
+
+  // Calculate start date (today - clientFor days)
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - athlete.clientFor);
+
+  // Generate data points from start date to today
+  const dataPoints: WeightDataPoint[] = [];
+  const totalDays = athlete.clientFor;
+  const numPoints = Math.min(15, Math.max(6, Math.floor(totalDays / 30))); // 6-15 points based on duration
+
+  // Starting weight (mock - in real app, this would come from the first measurement)
+  const startingWeight = 80 + Math.random() * 10; // 80-90 kg
+  let currentWeight = startingWeight;
+
+  for (let i = 0; i < numPoints; i++) {
+    const date = new Date(startDate);
+    const daysOffset = Math.floor((totalDays / (numPoints - 1)) * i);
+    date.setDate(startDate.getDate() + daysOffset);
+
+    // Format date as "MMM YY"
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear().toString().slice(-2);
+    const dateLabel = `${month} ${year}`;
+
+    // Simulate weight changes (fluctuates around starting weight)
+    const weightChange = (Math.random() - 0.5) * 3; // -1.5 to +1.5 kg per period
+    currentWeight = Math.max(startingWeight - 20, Math.min(startingWeight + 20, currentWeight + weightChange));
+
+    dataPoints.push({
+      date: dateLabel,
+      weight: Math.round(currentWeight * 10) / 10,
+    });
+  }
+
+  return { dataPoints, startingWeight };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/athletes/${clientId}/weight-overview`, {
+  //   method: 'GET',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to get weight overview')
+  // const data = await response.json()
+  // return { dataPoints: data.points || [], startingWeight: data.startingWeight || 80 }
+};
+
+export interface WeightOverviewResult {
+  dataPoints: WeightDataPoint[];
+  startingWeight: number;
+}
+

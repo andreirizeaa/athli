@@ -14,6 +14,7 @@ import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise
 import type { GeneratedWorkout } from '@/lib/library/workouts/generate-exercise';
 import { generateWorkoutFromPrompt, prompt } from '@/lib/library/workouts/generate-exercise';
 import { toast } from 'sonner';
+import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
 import type {
   ExerciseGroupPayload,
   ExerciseType,
@@ -317,6 +318,38 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Load shared mock schema in edit mode if no schema exists
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+    const isEditMode = accessFlag === 'edit-ai';
+    const hasNewWorkoutMeta = window.localStorage.getItem('oneninety_new_workout_meta');
+    const aiGenerated = window.localStorage.getItem('oneninety_ai_generated_workout');
+    
+    // If we're in edit mode OR if we're not creating a new workout (no meta and no AI generated)
+    // then we should load the schema
+    if (isEditMode || (!hasNewWorkoutMeta && !aiGenerated)) {
+      const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+      
+      // Only load mock schema if no saved schema and no AI generated workout
+      if (!savedSchema && !aiGenerated) {
+        // Load shared mock schema for edit mode
+        window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
+        setWorkoutSchema(MOCK_WORKOUT_SCHEMA);
+      } else if (savedSchema && !aiGenerated) {
+        // Load saved schema if no AI generated workout
+        try {
+          const parsed = JSON.parse(savedSchema);
+          setWorkoutSchema(parsed);
+        } catch {
+          // If parsing fails, use mock schema
+          setWorkoutSchema(MOCK_WORKOUT_SCHEMA);
+        }
+      }
+    }
+  }, []);
 
   // Calculate single-line character limit based on container width
   useEffect(() => {

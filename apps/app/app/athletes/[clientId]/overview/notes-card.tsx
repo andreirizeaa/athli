@@ -11,7 +11,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Trash2, Edit, Plus } from 'lucide-react';
+import { Trash2, Edit, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/messaging/notes-service';
@@ -32,6 +32,7 @@ export const NotesCard = ({ clientId }: NotesCardProps) => {
   const [hasNoteChanges, setHasNoteChanges] = useState(false);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const noteTitleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -181,12 +182,33 @@ export const NotesCard = ({ clientId }: NotesCardProps) => {
     return format(new Date(timestamp), 'MMM d, yyyy');
   };
 
+  const filteredNotes = notes.filter((note) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      note.title.toLowerCase().includes(query) ||
+      note.body?.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <>
-      <Card className="bg-background" style={{ width: '50vw', minWidth: '50vw', maxWidth: '50vw' }}>
+      <Card className="bg-background w-full flex flex-col" style={{ height: '556px', minHeight: '556px', maxHeight: '556px' }}>
         <CardHeader className="px-4">
           <div className="flex items-center justify-between">
-            <CardTitle>{t('messages.notes')}</CardTitle>
+            <CardTitle>{t('messages.notes')} ({notes.length})</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-7 h-7 text-xs w-[200px]"
+                  aria-label="Search notes"
+                />
+              </div>
             <Button
               variant="outline"
               size="sm"
@@ -197,10 +219,11 @@ export const NotesCard = ({ clientId }: NotesCardProps) => {
               <Plus className="h-3 w-3" />
               {t('messages.createNote')}
             </Button>
+            </div>
           </div>
         </CardHeader>
         <Separator className="w-full mt-[-8px]" />
-        <CardContent className="px-0">
+        <CardContent className="px-0 flex flex-col flex-1 min-h-0">
           <div className="px-4 pb-2 pt-6">
             <div className="grid grid-cols-[1fr_auto_auto] gap-4">
               <div className="text-xs font-semibold uppercase text-muted-foreground">{t('messages.note')}</div>
@@ -209,18 +232,20 @@ export const NotesCard = ({ clientId }: NotesCardProps) => {
             </div>
           </div>
           <Separator className="w-full" />
-          <div className="w-full" style={{ maxHeight: '40vh', overflowY: 'auto' }}>
+          <div className="w-full" style={{ maxHeight: '500px', overflowY: 'auto' }}>
             {isLoading ? (
               <div className="px-4 py-4">
                 <p className="text-sm text-muted-foreground">{t('messages.loadingNotes')}</p>
               </div>
-            ) : notes.length === 0 ? (
+            ) : filteredNotes.length === 0 ? (
               <div className="px-4 py-4">
-                <p className="text-sm text-muted-foreground">{t('messages.noNotesFound')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? t('messages.noNotesFound') : t('messages.noNotesFound')}
+                </p>
               </div>
             ) : (
               <div className="space-y-0">
-                {notes.map((note) => (
+                {filteredNotes.map((note) => (
                   <div
                     key={note.id}
                     className="border-b cursor-pointer transition-colors hover:bg-accent"

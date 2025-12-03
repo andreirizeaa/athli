@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,16 +35,25 @@ const AiWorkoutPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [saveSignal, setSaveSignal] = useState(0);
+  const hasInitialized = useRef(false);
+  const hasCheckedAccess = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (hasInitialized.current) return;
     
-    // Check for access flag - if not present, redirect to workouts
-    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
-    if (accessFlag !== 'ai') {
-      router.push('/library/workouts');
-      return;
+    // Check for access flag only once - if not present, redirect to workouts
+    if (!hasCheckedAccess.current) {
+      hasCheckedAccess.current = true;
+      const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+      if (accessFlag !== 'ai') {
+        router.push('/library/workouts');
+        return;
+      }
     }
+    
+    // Mark as initialized to prevent re-running
+    hasInitialized.current = true;
     
     // Try to load meta from localStorage (if coming from create panel)
     const raw = window.localStorage.getItem('oneninety_new_workout_meta');
@@ -52,8 +61,7 @@ const AiWorkoutPage = () => {
       try {
         const parsed = JSON.parse(raw) as WorkoutMeta;
         setWorkoutMeta(parsed);
-        // Clear the access flag if it exists
-        window.localStorage.removeItem('oneninety_workout_builder_access');
+        // Don't clear the access flag here - keep it until page is fully ready
         return;
       } catch {
         // If parsing fails, fall through to default values
@@ -68,7 +76,19 @@ const AiWorkoutPage = () => {
       difficulty: 'Intermediate',
       builder: 'ai',
     });
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Clear access flag only after component is fully mounted and meta is set
+  useEffect(() => {
+    if (workoutMeta && hasInitialized.current) {
+      // Clear the access flag after everything is ready
+      const timer = setTimeout(() => {
+        window.localStorage.removeItem('oneninety_workout_builder_access');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [workoutMeta]);
 
   const navigateBackToWorkouts = () => {
     router.push('/library/workouts');

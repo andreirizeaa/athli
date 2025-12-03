@@ -6,7 +6,11 @@ import { ClientBioCard } from './client-bio-card';
 import { GoalsCard } from './goals-card';
 import { InjuryCard } from './injury-card';
 import { ClientDetailsCard } from './client-details-card';
-import { AthleteTrainingCard } from './athlete-training-card';
+import { ClientForCard } from './client-for-card';
+import { AthleteWorkoutsCard } from './athlete-workouts-card';
+import { CurrentAssignedItemCard } from './current-assigned-item-card';
+import { StrengthOverviewCard } from './strength-overview-card';
+import { WeightOverviewCard } from './weight-overview-card';
 
 const ClientOverviewPage = () => {
   const params = useParams<{ clientId: string }>();
@@ -17,19 +21,33 @@ const ClientOverviewPage = () => {
       {clientId && (
         <>
           <div className="w-full flex gap-4">
+            <div className="flex flex-col gap-4" style={{ width: 'calc(50% - 0.67rem)', flexShrink: 0 }}>
             <ClientBioCard clientId={clientId} />
-            <ClientDetailsCard clientId={clientId} />
-          </div>
-          <div className="w-full flex gap-4">
-            <AthleteTrainingCard clientId={clientId} />
-          </div>
-          <div className="w-full flex gap-4 items-start">
-            <div style={{ width: '50vw', minWidth: '50vw', maxWidth: '50vw' }}>
-              <NotesCard clientId={clientId} />
+              <AthleteWorkoutsCard clientId={clientId} />
             </div>
-            <div className="flex flex-col gap-4" style={{ width: '25%', minWidth: '25%', maxWidth: '25%', height: 'calc(40vh + 120px + 8px)' }}>
+            <div className="flex flex-col gap-4" style={{ width: 'calc(30% - 0.67rem)', flexShrink: 0 }}>
               <GoalsCard clientId={clientId} />
               <InjuryCard clientId={clientId} />
+            </div>
+            <div className="flex flex-col gap-4" style={{ width: 'calc(20% - 0.67rem)', flexShrink: 0 }}>
+            <ClientDetailsCard clientId={clientId} />
+              <ClientForCard clientId={clientId} />
+          </div>
+          </div>
+          <div className="w-full flex gap-4 items-start mb-24">
+            <div style={{ width: 'calc(50% - 0.5rem)', flexShrink: 0 }}>
+              <NotesCard clientId={clientId} />
+            </div>
+            <div className="flex flex-col gap-4" style={{ width: 'calc(50% - 0.5rem)', flexShrink: 0 }}>
+              <CurrentAssignedItemCard clientId={clientId} />
+              <div className="flex gap-4">
+                <div style={{ width: 'calc(50% - 0.5rem)', flexShrink: 0 }}>
+                  <StrengthOverviewCard clientId={clientId} />
+                </div>
+                <div style={{ width: 'calc(50% - 0.5rem)', flexShrink: 0 }}>
+                  <WeightOverviewCard clientId={clientId} />
+                </div>
+              </div>
             </div>
           </div>
         </>

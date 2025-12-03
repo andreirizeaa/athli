@@ -104,7 +104,7 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
 
   return (
     <>
-      <Card className="bg-background flex flex-col w-full flex-1 min-h-0" style={{ minHeight: 'calc((40vh + 120px - 1rem) / 2 + 4px)' }}>
+      <Card className="bg-background flex flex-col w-full flex-1 min-h-0" style={{ height: '240px', minHeight: '240px', maxHeight: '240px' }}>
         <CardHeader className="px-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle>{t('athletes.profile.goals')}</CardTitle>
