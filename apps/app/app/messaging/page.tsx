@@ -275,7 +275,7 @@ const MessagingPage = () => {
   const [openDeleteMenuId, setOpenDeleteMenuId] = React.useState<string | null>(null);
   const [replyingToMessage, setReplyingToMessage] = React.useState<Message | null>(null);
   const [drafts, setDrafts] = React.useState<
-    Record<string, import('@/lib/message-draft-storage').MessageDraftData>
+    Record<string, import('@/lib/messaging/message-draft-storage').MessageDraftData>
   >({});
   const [attachedPdf, setAttachedPdf] = React.useState<File | null>(null);
   const [attachedImages, setAttachedImages] = React.useState<File[]>([]);
@@ -356,8 +356,8 @@ const MessagingPage = () => {
 
         // If we have optimistic image updates (has images but empty data)
         if (prevDraft?.images && prevDraft.images.length > 0) {
-          const prevHasData = prevDraft.images.some((img) => img.data && img.data !== '');
-          const savedHasData = savedDraft?.images?.some((img) => img.data && img.data !== '');
+          const prevHasData = prevDraft.images.some((img: { data?: string }) => img.data && img.data !== '');
+          const savedHasData = savedDraft?.images?.some((img: { data?: string }) => img.data && img.data !== '');
 
           // Preserve optimistic update only if saved version doesn't have data yet
           if (!prevHasData && !savedHasData) {

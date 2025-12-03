@@ -1,4 +1,4 @@
-import type { ClientData } from './csv-parser';
+import type { ClientData } from '../csv-parser';
 
 export interface AddClientData {
   firstName: string;
