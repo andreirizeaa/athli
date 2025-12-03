@@ -25,7 +25,18 @@ type ExerciseWithSuperset = {
   exerciseId: string;
   instanceId: string;
   name: string;
+  exerciseType?: 'weight_reps' | 'reps' | 'distance_duration';
+  equipments?: string[];
   supersetGroupId?: string | null;
+  sets?: Array<{
+    setNumber: number;
+    type?: 'warmUp' | 'normal' | 'failure' | 'dropset';
+    reps?: string;
+    weight?: string;
+    rest?: string;
+    distance?: string;
+    duration?: string;
+  }>;
 };
 
 type Section = {
@@ -52,7 +63,7 @@ type OverviewPanelProps = {
   onDeleteSection: (sectionId: string) => void;
   onDeleteExercise: (sectionId: string, exerciseId: string) => void;
   onDeleteSuperset: (sectionId: string, exerciseIds: string[]) => void;
-  groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => Array<ExerciseWithSuperset[]>;
+  groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => ExerciseWithSuperset[][];
   onExerciseClick?: (exerciseId: string) => void;
 };
 
