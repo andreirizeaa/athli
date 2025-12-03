@@ -17,8 +17,11 @@ export default clerkMiddleware(async (auth, req) => {
       // Don't redirect back immediately to prevent loops
       // Instead, let the request through - the layout will handle it with a retry
       if (redirectFlag === 'true') {
+        // Set a custom header so the layout knows to wait longer
+        const response = NextResponse.next();
+        response.headers.set('x-from-www-redirect', 'true');
         // Let the request through to layout (which will retry auth check)
-        return NextResponse.next();
+        return response;
       }
 
       // Redirect to www site instead of Clerk's sign-in
