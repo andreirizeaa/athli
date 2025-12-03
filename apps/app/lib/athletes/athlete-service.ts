@@ -475,7 +475,7 @@ export const getTrainingCalendarCompletionLogs = async (
   }
 
   // Return empty logs for other clients
-  return { workouts: [], sets: [] };
+  return { workouts: [], sets: [], sections: [] };
 
   // In the future, this will make an actual API call:
   // const response = await fetch(`/api/athletes/${clientId}/training-calendar/completion-logs`, {
@@ -701,7 +701,7 @@ const mockJohnSmithCompletionLogs: TrainingCalendarCompletionLogs = (() => {
   // Week 3 and 4 - Future weeks (not started)
   // No entries needed as they default to 'not_started'
 
-  return { workouts, sets };
+  return { workouts, sets, sections: [] };
 })();
 
 export interface WorkoutStatistics {
@@ -922,7 +922,7 @@ export const getWeightOverview = async (
   const athlete = mockAthletes.find((a) => a.id === clientId);
 
   if (!athlete || !athlete.clientFor) {
-    return [];
+    return { dataPoints: [], startingWeight: 0 };
   }
 
   // Calculate start date (today - clientFor days)

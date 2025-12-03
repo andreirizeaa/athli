@@ -2486,7 +2486,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                 );
                 return section?.exercises?.find((e) => e.instanceId === ex.instanceId);
               }).filter((e): e is ExerciseWithSuperset => e !== undefined);
-              return groupExercisesBySuperset(fullExercises);
+              return groupExercisesBySuperset(fullExercises) as any;
             }}
             onExerciseClick={handleExerciseClickById}
           />

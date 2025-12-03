@@ -1523,15 +1523,15 @@ export const StandardBuilder = ({
         <div className="p-4">
           <EquipmentPanel sections={workoutSchema.sections} />
           <OverviewPanel
-            sections={workoutSchema.sections}
+            sections={workoutSchema.sections as any}
             onSectionsChange={(sections) => {
               onDirtyChange?.();
-              setWorkoutSchema((prev) => ({ ...prev, sections }));
+              setWorkoutSchema((prev) => ({ ...prev, sections: sections as any }));
             }}
             onDeleteSection={handleDeleteSection}
             onDeleteExercise={handleDeleteExerciseFromOverview}
             onDeleteSuperset={handleDeleteSupersetFromOverview}
-            groupExercisesBySuperset={groupExercisesBySuperset}
+            groupExercisesBySuperset={groupExercisesBySuperset as any}
             onExerciseClick={handleExerciseClickById}
           />
         </div>
