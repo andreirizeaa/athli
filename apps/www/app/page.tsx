@@ -23,10 +23,7 @@ export default function Home() {
     // This handles the case where Clerk redirects back to www after sign-in
     if (isSignedIn) {
       setIsRedirecting(true);
-      const appUrl =
-        process.env.NODE_ENV === 'production'
-          ? 'https://app.oneninety.com'
-          : 'http://localhost:3001';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
       // Use replace to avoid adding to history
       window.location.replace(appUrl);
     }

@@ -40,14 +40,10 @@ export default function RootLayout({
               theme: shadcn,
             }}
             afterSignInUrl={
-              process.env.NODE_ENV === 'production'
-                ? 'https://app.oneninety.com'
-                : 'http://localhost:3001'
+              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
             }
             afterSignUpUrl={
-              process.env.NODE_ENV === 'production'
-                ? 'https://app.oneninety.com'
-                : 'http://localhost:3001'
+              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
             }
           >
             <IntlProvider>{children}</IntlProvider>

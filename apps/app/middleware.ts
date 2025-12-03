@@ -10,8 +10,7 @@ export default clerkMiddleware(async (auth, req) => {
 
     if (!userId) {
       // Redirect to www site instead of Clerk's sign-in
-      const wwwUrl =
-        process.env.NODE_ENV === 'production' ? 'https://oneninety.com' : 'http://localhost:3000';
+      const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000';
       return NextResponse.redirect(new URL(wwwUrl, req.url));
     }
   }
