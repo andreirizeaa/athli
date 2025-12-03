@@ -40,10 +40,10 @@ export default function RootLayout({
               theme: shadcn,
             }}
             afterSignInUrl={
-              (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001').replace(/\/$/, '')
+              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
             }
             afterSignUpUrl={
-              (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001').replace(/\/$/, '')
+              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
             }
           >
             <IntlProvider>{children}</IntlProvider>

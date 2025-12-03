@@ -40,7 +40,7 @@ export const HeroHeader = () => {
 
   const handleAuthClick = () => {
     if (isSignedIn) {
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001').replace(/\/$/, '');
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
       window.location.href = appUrl;
       return;
     }
