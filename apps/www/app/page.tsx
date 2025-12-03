@@ -28,6 +28,7 @@ export default function Home() {
         console.warn('NEXT_PUBLIC_APP_URL is not set. Please set it in your Vercel environment variables.');
         return;
       }
+      
 
       if (typeof window === 'undefined') {
         return;
