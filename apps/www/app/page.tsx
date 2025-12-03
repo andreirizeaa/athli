@@ -33,7 +33,10 @@ export default function Home() {
     // If user is signed in, redirect to app
     // This handles the case where Clerk redirects back to www after sign-in
     if (isSignedIn) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+      const appUrl =
+        process.env.NODE_ENV === 'production'
+          ? 'https://one-ninety-app.vercel.app'
+          : 'http://localhost:3001';
       
       // Check if we're already on the app domain to prevent redirect loops
       const currentUrl = new URL(window.location.href);
@@ -49,7 +52,7 @@ export default function Home() {
       
       // Redirect to app (simple, like localhost)
       redirectTimeoutRef.current = setTimeout(() => {
-        window.location.replace(appUrl);
+      window.location.replace(appUrl);
       }, 100);
     }
   }, [isLoaded, isSignedIn]);

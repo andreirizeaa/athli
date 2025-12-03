@@ -39,11 +39,15 @@ export default function RootLayout({
             appearance={{
               theme: shadcn,
             }}
-            signInFallbackRedirectUrl={
-              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+            signInForceRedirectUrl={
+              process.env.NODE_ENV === 'production'
+                ? 'https://one-ninety-app.vercel.app'
+                : 'http://localhost:3001'
             }
-            signUpFallbackRedirectUrl={
-              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+            signUpForceRedirectUrl={
+              process.env.NODE_ENV === 'production'
+                ? 'https://one-ninety-app.vercel.app'
+                : 'http://localhost:3001'
             }
           >
             <IntlProvider>{children}</IntlProvider>
