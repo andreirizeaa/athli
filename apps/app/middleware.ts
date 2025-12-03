@@ -9,6 +9,18 @@ export default clerkMiddleware(async (auth, req) => {
     const { userId } = await auth();
 
     if (!userId) {
+      // Check if we just came from www with redirect flag (prevent redirect loops)
+      const url = new URL(req.url);
+      const redirectFlag = url.searchParams.get('__www_redirect');
+      
+      // If we have the redirect flag, it means we just came from www
+      // Don't redirect back immediately to prevent loops
+      // Instead, let the request through - the layout will handle it with a retry
+      if (redirectFlag === 'true') {
+        // Let the request through to layout (which will retry auth check)
+        return NextResponse.next();
+      }
+
       // Redirect to www site instead of Clerk's sign-in
       const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000';
       return NextResponse.redirect(new URL(wwwUrl, req.url));

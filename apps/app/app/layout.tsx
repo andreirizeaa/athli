@@ -32,9 +32,24 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
+  // Try to get userId with retries to handle session propagation delays
+  let userId = null;
+  let retries = 3; // Increased retries
+  
+  while (retries > 0 && !userId) {
+    const authResult = await auth();
+    userId = authResult.userId;
+    
+    if (!userId && retries > 1) {
+      // Wait longer for session to propagate in production
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    retries--;
+  }
 
   if (!userId) {
+    // Only redirect back to www if we've exhausted retries
+    // This gives the session time to propagate
     const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000';
     redirect(wwwUrl);
   }
