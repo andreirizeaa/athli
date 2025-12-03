@@ -32,7 +32,7 @@ export default function HeroSection() {
 
   const handleStartBuildingClick = () => {
     if (isSignedIn) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001').replace(/\/$/, '');
       window.location.href = appUrl;
       return;
     }
