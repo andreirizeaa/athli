@@ -147,7 +147,7 @@ const ProgramsPage = () => {
   };
 
   const handleNavigateToProgram = (programId: string) => {
-    router.push(`/library/programs/${programId}`);
+    router.push(`/library/programs/${programId}/edit`);
   };
 
   const handleNavigateToAthletes = () => {

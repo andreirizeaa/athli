@@ -8,6 +8,7 @@ import Footer from '@/components/footer';
 import FAQsTwo from '@/components/faqs-2';
 import Pricing from '@/components/pricing';
 import { Spinner } from '@/components/ui/spinner';
+import FeaturesSection from '@/components/features-7';
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useUser();
@@ -35,8 +36,8 @@ export default function Home() {
     <>
       <HeroSection />
       <Features />
+      <FeaturesSection />
       <FAQsTwo />
-      <Pricing />
       <Footer />
       {isRedirecting && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">

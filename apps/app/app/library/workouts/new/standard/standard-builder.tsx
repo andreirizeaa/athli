@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
 import { toast } from 'sonner';
+import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
 import type {
   ExerciseGroupPayload,
   ExerciseType,
@@ -266,15 +267,49 @@ export const StandardBuilder = ({
   saveSignal,
   onSaveSuccess,
 }: StandardBuilderProps) => {
-  const [workoutSchema, setWorkoutSchema] = useState<WorkoutSchema>({
-    sections: [
-      {
-        id: `sec_regular_${Date.now()}`,
-        type: 'regular',
-        exercises: [],
-      },
-    ],
-  });
+  // Initialize with schema from localStorage if available (for edit mode)
+  const getInitialSchema = (): WorkoutSchema => {
+    if (typeof window === 'undefined') {
+      return {
+        sections: [
+          {
+            id: `sec_regular_${Date.now()}`,
+            type: 'regular',
+            exercises: [],
+          },
+        ],
+      };
+    }
+
+    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+    if (accessFlag === 'edit-standard') {
+      const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+      if (savedSchema) {
+        try {
+          const parsed = JSON.parse(savedSchema);
+          if (parsed.sections && parsed.sections.length > 0 && parsed.sections.some((s: any) => s.exercises && s.exercises.length > 0)) {
+            return parsed;
+          }
+        } catch {
+          // Fall through to use mock schema
+        }
+      }
+      // Use mock schema for edit mode
+      return MOCK_WORKOUT_SCHEMA;
+    }
+
+    return {
+      sections: [
+        {
+          id: `sec_regular_${Date.now()}`,
+          type: 'regular',
+          exercises: [],
+        },
+      ],
+    };
+  };
+
+  const [workoutSchema, setWorkoutSchema] = useState<WorkoutSchema>(getInitialSchema());
   const [builderMode, setBuilderMode] = useState<'exercise' | 'section'>('exercise');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
@@ -292,6 +327,35 @@ export const StandardBuilder = ({
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Load shared mock schema in edit mode if no schema exists
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+    const isEditMode = accessFlag === 'edit-standard';
+    
+    if (isEditMode) {
+      const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+      if (savedSchema) {
+        // Load saved schema
+        try {
+          const parsed = JSON.parse(savedSchema);
+          // Only update if schema has sections with exercises
+          if (parsed.sections && parsed.sections.length > 0 && parsed.sections.some((s: any) => s.exercises && s.exercises.length > 0)) {
+            setWorkoutSchema(parsed);
+            return;
+          }
+        } catch {
+          // If parsing fails, fall through to use mock schema
+        }
+      }
+      
+      // If no valid schema, use mock schema
+      window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
+      setWorkoutSchema(MOCK_WORKOUT_SCHEMA);
+    }
+  }, []);
 
   const handleExerciseClick = (exercise: Exercise) => {
     // First, try to scroll to the exercise if it exists in the middle area
