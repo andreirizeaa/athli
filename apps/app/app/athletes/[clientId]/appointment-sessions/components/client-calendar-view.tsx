@@ -700,7 +700,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           
           // Check if client email is in attendees
           const hasClientAsGuest = event.attendees?.some(
-            (attendee) => attendee.email?.toLowerCase() === clientEmail.toLowerCase()
+            (attendee: { email?: string; displayName?: string; responseStatus?: string }) => attendee.email?.toLowerCase() === clientEmail.toLowerCase()
           ) ?? false;
           
           return isInRange && hasClientAsGuest;
