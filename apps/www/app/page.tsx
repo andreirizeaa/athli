@@ -16,8 +16,6 @@ export default function Home() {
   const hasRedirected = useRef(false);
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  console.log('isSignedIn', isSignedIn);
-
   useEffect(() => {
     // Don't run until Clerk has finished loading
     if (!isLoaded) return;
@@ -35,6 +33,10 @@ export default function Home() {
   
     const currentUrl = new URL(window.location.href);
     const appUrlObj = new URL(appUrl);
+
+    console.log('currentUrl', currentUrl.origin);
+    console.log('appUrlObj', appUrlObj.origin);
+    console.log('signed in', isSignedIn);
   
     // Only redirect if we're not already on the app domain
     if (currentUrl.origin !== appUrlObj.origin) {
