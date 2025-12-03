@@ -26,17 +26,10 @@ export default function Home() {
     // Only redirect when the user is signed in
     if (!isSignedIn) return;
   
-    const appUrl =
-      process.env.NODE_ENV === 'production'
-        ? 'https://one-ninety-app.vercel.app'
-        : 'http://localhost:3001';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
   
     const currentUrl = new URL(window.location.href);
     const appUrlObj = new URL(appUrl);
-
-    console.log('currentUrl', currentUrl.origin);
-    console.log('appUrlObj', appUrlObj.origin);
-    console.log('signed in', isSignedIn);
   
     // Only redirect if we're not already on the app domain
     if (currentUrl.origin !== appUrlObj.origin) {
