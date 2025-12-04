@@ -4,8 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { Check, Laptop, Menu, Moon, Sun, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useClerk, useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
 
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
@@ -18,6 +16,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { availableLanguages } from '@/lib/intl-provider';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
 const menuItems = [
   { name: 'Features', href: '#link' },
@@ -32,21 +32,8 @@ export const HeroHeader = () => {
   const [isThemeMounted, setIsThemeMounted] = React.useState(false);
   const [currentLanguage, setCurrentLanguage] = React.useState('en');
   const { resolvedTheme, setTheme, theme } = useTheme();
-  const { isSignedIn } = useUser();
-  const { openSignIn } = useClerk();
-  const router = useRouter();
 
   const currentTheme = theme || 'system';
-
-  const handleAuthClick = () => {
-    if (isSignedIn) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
-      window.location.href = appUrl;
-      return;
-    }
-
-    openSignIn();
-  };
 
   React.useEffect(() => {
     setIsThemeMounted(true);
@@ -116,14 +103,18 @@ export const HeroHeader = () => {
               <div className="flex w-full justify-end md:w-fit">
                 <div className="flex items-center gap-1.5">
                   {!isScrolled && (
-                    <Button variant="outline" size="sm" onClick={handleAuthClick}>
+                    <Link href={`${APP_URL}/sign-in`}>
+                      <Button variant="outline" size="sm">
                       <span>Login</span>
                     </Button>
+                    </Link>
                   )}
                   {isScrolled && (
-                    <Button size="sm" onClick={handleAuthClick}>
+                    <Link href={`${APP_URL}/sign-up`}>
+                      <Button size="sm">
                       <span>Grow Today</span>
                     </Button>
+                    </Link>
                   )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

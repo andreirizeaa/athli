@@ -1,17 +1,27 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
+const isPublicRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+]);
+
 const isProtectedRoute = createRouteMatcher(['/((?!_next|api|favicon.ico|.*\\..*|$).*)']);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Protect all routes except root (which redirects)
+  // Allow public routes (sign-in, sign-up)
+  if (isPublicRoute(req)) {
+    return NextResponse.next();
+  }
+
+  // Protect all other routes
   if (isProtectedRoute(req)) {
     const { userId } = await auth();
 
     if (!userId) {
-      // Redirect to www site instead of Clerk's sign-in
-      const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000';
-      return NextResponse.redirect(new URL(wwwUrl, req.url));
+      // Redirect to sign-in page
+      const signInUrl = new URL('/sign-in', req.url);
+      return NextResponse.redirect(signInUrl);
     }
   }
 });
