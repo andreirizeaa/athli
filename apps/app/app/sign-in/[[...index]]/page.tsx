@@ -1,16 +1,17 @@
 'use client';
 
 import { SignIn } from '@clerk/nextjs';
-import Link from 'next/link';
-import { Logo } from '@/components/logo';
+import Features from '@/components/features-11';
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen w-full bg-background flex items-center justify-center relative">
-      <Link href="/" className="absolute top-6 left-6 z-10" aria-label="Home">
-        <Logo />
-      </Link>
-      <SignIn routing="path" path="/sign-in" />
+    <div className="min-h-screen w-full bg-background flex">
+      <div className="w-2/5 flex items-center justify-center">
+        <SignIn routing="path" path="/sign-in" />
+      </div>
+      <div className="w-3/5 bg-muted flex items-center justify-center py-8">
+        <Features />
+      </div>
     </div>
   );
 }
