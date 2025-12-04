@@ -10,6 +10,12 @@ export const enMessages = {
     title: 'Dashboard',
     comingSoon: 'Coming Soon',
   },
+  features: {
+    manageClients: 'Manage all your clients',
+    assignSchedule: 'Assign schedule',
+    customExercises: 'Custom exercises',
+    messageAthletes: 'Message athletes directly',
+  },
   settings: {
     title: 'Settings',
     searchPlaceholder: 'Search settings...',
