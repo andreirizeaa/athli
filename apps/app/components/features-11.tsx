@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl'
 export default function Features() {
     const t = useTranslations();
     return (
-        <section className="dark:bg-muted/25 bg-zinc-50">
+        <section className="bg-muted">
             <div className="mx-auto max-w-5xl px-6">
                 <div className="mx-auto grid gap-2 sm:grid-cols-5">
                     <Card className="group overflow-hidden shadow-zinc-950/5 sm:col-span-3 sm:rounded-none sm:rounded-tl-xl bg-background">
@@ -40,7 +40,7 @@ export default function Features() {
 
                         <CardContent className="mt-auto h-fit p-0">
                             <div className="mask-l-from-80% mask-l-to-95% mask-b-from-80% mask-b-to-95% relative pr-6 md:pr-12">
-                                <div className="aspect-76/59 overflow-hidden rounded-bl-lg border-b border-l">
+                                <div className="aspect-76/59 overflow-hidden rounded-tr-lg border-t border-r">
                                     <Image
                                         src="/assign-dark.png"
                                         className="hidden dark:block"
@@ -61,7 +61,7 @@ export default function Features() {
                     </Card>
                     <Card className="group overflow-hidden shadow-zinc-950/5 sm:col-span-2 sm:rounded-none sm:rounded-bl-xl bg-background">
                         <div className="mask-t-from-80% mask-t-to-95% mask-r-from-80% mask-r-to-95% relative h-fit pl-6 pt-1 md:pl-12">
-                            <div className="bg-background max-h-[240] max-w-md overflow-hidden rounded-tr-lg border-r border-t dark:bg-zinc-950">
+                            <div className="bg-background max-h-[240] max-w-md overflow-hidden rounded-bl-lg border-l border-b dark:bg-zinc-950">
                                 <Image
                                     src="/create-dark.png"
                                     className="hidden dark:block h-auto w-full object-cover"
@@ -84,7 +84,7 @@ export default function Features() {
                     </Card>
                     <Card className="group overflow-hidden shadow-zinc-950/5 sm:col-span-3 sm:rounded-none sm:rounded-br-xl bg-background">
                         <div className="mask-t-from-75% mask-t-to-95% mask-l-from-80% mask-l-to-100% relative h-fit">
-                            <div className="bg-background max-w-md overflow-hidden rounded-tl-lg border-l border-t dark:bg-zinc-950">
+                            <div className="bg-background max-w-md overflow-hidden rounded-br-lg border-r border-b dark:bg-zinc-950">
                                 <Image
                                     src="/exercise-creation-dark.png"
                                     className="hidden dark:block"
