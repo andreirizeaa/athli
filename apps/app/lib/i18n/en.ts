@@ -47,7 +47,6 @@ export const enMessages = {
     noUnreadMessages: 'No unread messages',
     client: 'Client',
     unread: 'Unread',
-    action: 'Action',
     noProgrammingRequired: 'No programming required',
     lastScheduledWorkout: 'Last scheduled workout is on {date}',
     trainingCalendar: 'Training calendar',
