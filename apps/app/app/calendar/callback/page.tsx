@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function CalendarCallbackPage() {
+const CalendarCallbackContent = () => {
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -131,5 +131,22 @@ export default function CalendarCallbackPage() {
   }
 
   return null;
+};
+
+export default function CalendarCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <CalendarCallbackContent />
+    </Suspense>
+  );
 }
 
