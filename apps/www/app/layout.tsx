@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { ClerkProvider } from '@clerk/nextjs';
-import { shadcn } from '@clerk/themes';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { IntlProvider } from '@/lib/intl-provider';
 
@@ -34,20 +32,8 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-        >
-          <ClerkProvider
-            appearance={{
-              theme: shadcn,
-            }}
-            signInForceRedirectUrl={
-              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
-            }
-            signUpForceRedirectUrl={
-              process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
-            }
           >
             <IntlProvider>{children}</IntlProvider>
-          </ClerkProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -7,8 +7,8 @@ import Image from 'next/image';
 import { TextEffect } from '@/components/ui/text-effect';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 import { HeroHeader } from './header';
-import { useClerk, useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
 
 const transitionVariants = {
   item: {
@@ -26,19 +26,6 @@ const transitionVariants = {
 };
 
 export default function HeroSection() {
-  const { isSignedIn } = useUser();
-  const { openSignIn } = useClerk();
-  const router = useRouter();
-
-  const handleStartBuildingClick = () => {
-    if (isSignedIn) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001';
-      window.location.href = appUrl;
-      return;
-    }
-
-    openSignIn();
-  };
 
   return (
     <>
@@ -158,13 +145,14 @@ export default function HeroSection() {
                     key={1}
                     className="bg-foreground/10 rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5"
                   >
+                    <Link href={`${APP_URL}/sign-up`}>
                     <Button
                       size="lg"
                       className="rounded-xl px-5 text-base"
-                      onClick={handleStartBuildingClick}
                     >
                       <span className="text-nowrap">Grow Today</span>
                     </Button>
+                    </Link>
                   </div>
                   <Button
                     key={2}

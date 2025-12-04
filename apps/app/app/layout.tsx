@@ -7,9 +7,7 @@ import { ThemeProvider } from '@/lib/providers/theme-provider';
 import { IntlProvider } from '@/lib/providers/intl-provider';
 import SupabaseProvider from '@/lib/providers/supabase-provider';
 import { Toaster } from '@/components/ui/sonner';
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
-import { AppShell } from '@/components/app/app-shell';
+import { ConditionalAppShell } from '@/components/app/conditional-app-shell';
 import { IntercomProvider } from '@/components/intercom-provider';
 
 const geistSans = Geist({
@@ -32,13 +30,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000';
-    redirect(wwwUrl);
-  }
-
   return (
     <html lang="en" suppressHydrationWarning className="h-full">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
@@ -52,11 +43,15 @@ export default async function RootLayout({
             appearance={{
               theme: shadcn,
             }}
+            signInUrl="/sign-in"
+            signUpUrl="/sign-up"
+            signInForceRedirectUrl="/home"
+            signUpForceRedirectUrl="/home"
           >
             <IntercomProvider />
             <SupabaseProvider>
               <IntlProvider>
-                <AppShell>{children}</AppShell>
+                <ConditionalAppShell>{children}</ConditionalAppShell>
               </IntlProvider>
             </SupabaseProvider>
           </ClerkProvider>
