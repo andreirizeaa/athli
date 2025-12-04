@@ -42,6 +42,12 @@ export default async function RootLayout({
           <ClerkProvider
             appearance={{
               theme: shadcn,
+              elements: {
+                rootBox: 'bg-transparent',
+                card: 'bg-transparent shadow-none',
+                cardBox: 'bg-transparent',
+                main: 'bg-transparent',
+              },
             }}
             signInUrl="/sign-in"
             signUpUrl="/sign-up"
