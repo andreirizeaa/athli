@@ -15,10 +15,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { availableLanguages } from '@/lib/providers/intl-provider';
+import { useThemeConfig } from '@/components/app/active-theme';
+import { THEMES, DEFAULT_THEME } from '@/lib/theme';
 
 const CustomisationsPage = () => {
   const t = useTranslations();
   const { theme, setTheme } = useTheme();
+  const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
   const [language, setLanguage] = useState('en');
   const [units, setUnits] = useState('metric');
   const [isMounted, setIsMounted] = useState(false);
@@ -40,7 +43,7 @@ const CustomisationsPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-secondary flex justify-center items-start">
+      <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex justify-center items-start">
         <Card className="bg-background max-w-3xl w-full">
           <CardHeader className="px-4">
             <CardTitle>{t('settings.customisations.preferences.title')}</CardTitle>
@@ -126,6 +129,48 @@ const CustomisationsPage = () => {
                         <span>{t('sidebar.theme.system')}</span>
                       </div>
                     </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-4 border-b items-center">
+                <label htmlFor="colorTheme" className="text-sm">
+                  {t('settings.customisations.preferences.color.label')}
+                </label>
+                <Select
+                  value={themeConfig.preset}
+                  onValueChange={(value) => {
+                    setThemeConfig({ ...themeConfig, ...DEFAULT_THEME, preset: value as any });
+                  }}
+                >
+                  <SelectTrigger id="colorTheme" className="w-[180px]">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="size-4 rounded-full border border-border"
+                          style={{
+                            backgroundColor: THEMES.find((t) => t.value === themeConfig.preset)?.colors[0] || THEMES[0].colors[0],
+                          }}
+                        />
+                        <span>
+                          {THEMES.find((t) => t.value === themeConfig.preset)?.name || THEMES[0].name}
+                        </span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {THEMES.map((themeOption) => (
+                      <SelectItem key={themeOption.value} value={themeOption.value}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="size-4 rounded-full border border-border"
+                            style={{
+                              backgroundColor: themeOption.colors[0],
+                            }}
+                          />
+                          <span>{themeOption.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -1190,10 +1190,10 @@ const ClientTrainingCalendarPage = () => {
           <div className="flex items-center gap-3">
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               size="sm"
               onClick={handleToday}
-              className="h-8"
+              className="h-8 border-primary"
               aria-label={t('athletes.trainingCalendar.goToToday')}
             >
               {t('athletes.trainingCalendar.today')}

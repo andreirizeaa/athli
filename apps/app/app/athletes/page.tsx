@@ -1068,16 +1068,15 @@ const AthletesPage = () => {
             <DropdownMenu>
               <ButtonGroup>
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   onClick={handleCopyInviteLink}
                   onKeyDown={handleInviteLinkKeyDown}
-                  className="gap-2"
+                  className="gap-2 border border-primary"
                   aria-label={t('athletes.actions.copyInviteLink')}
                 >
                   {isInviteLinkCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
                   <span>{t('athletes.actions.yourInviteLink')}</span>
                 </Button>
-                <ButtonGroupSeparator />
                 <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
                   <UserPlus className="size-4" />
                   <span>{t('athletes.actions.addClient')}</span>

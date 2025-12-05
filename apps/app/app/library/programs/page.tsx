@@ -714,15 +714,14 @@ const ProgramsPage = () => {
           <div>
             <ButtonGroup>
               <Button
-                variant="secondary"
+                variant="ghost"
                 onClick={handleOpenAssignProgram}
-                className="gap-2"
+                className="gap-2 border border-primary"
                 aria-label={t('programs.actions.assignProgram')}
               >
                 <UserPlus className="size-4" />
                 <span>{t('general.assign')}</span>
               </Button>
-              <ButtonGroupSeparator />
               <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('programs.actions.createProgram')}>
                 <Plus className="size-4" />
                 <span>{t('programs.actions.createProgram')}</span>
@@ -975,7 +974,7 @@ const ProgramsPage = () => {
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={handleCloseCreateProgram}
               aria-label={t('programs.addProgram.cancelAria')}
             >

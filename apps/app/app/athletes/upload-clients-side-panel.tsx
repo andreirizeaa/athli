@@ -118,7 +118,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
             )}
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={handleCancel}
               aria-label={t('athletes.uploadClients.cancelAria')}
             >

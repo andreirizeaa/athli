@@ -614,16 +614,6 @@ export const CompletedWorkoutsCard = () => {
           ) : (
             <>
               <div className="pt-4 pb-2 flex-shrink-0">
-                <div className="flex items-center justify-between pt-2 px-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase">
-                      {t('home.athlete')}
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <Separator />
-                </div>
               </div>
               <div className="pb-4 space-y-3">
                 {filteredCompletedWorkouts.map((workout) => (
@@ -746,12 +736,12 @@ export const CompletedWorkoutsCard = () => {
                                     )}
                                     <div className="flex flex-wrap gap-1">
                                       {workout.workoutType && (
-                                        <Badge variant="secondary" className="text-xs">
+                                        <Badge variant="outline" className="text-xs">
                                           {t('general.type')}: {workout.workoutType}
                                         </Badge>
                                       )}
                                       {workout.workoutEquipment && (
-                                        <Badge variant="secondary" className="text-xs">
+                                        <Badge variant="outline" className="text-xs">
                                           {t('general.equipment')}: {workout.workoutEquipment}
                                         </Badge>
                                       )}

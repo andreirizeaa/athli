@@ -631,15 +631,14 @@ export const ProgramBuilder = ({
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button
-              variant="secondary"
+              variant="ghost"
               onClick={handleCancel}
-              className="gap-2"
+              className="gap-2 border border-primary"
               aria-label={t('programs.builder.cancelAria')}
             >
               <X className="size-4" />
               <span>{t('programs.builder.cancel')}</span>
             </Button>
-            <ButtonGroupSeparator />
             <Button onClick={handleSaveClick} className="gap-2" aria-label={t('programs.builder.saveAria')}>
               <Check className="size-4" />
               <span>{t('programs.builder.save')}</span>

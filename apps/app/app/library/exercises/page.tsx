@@ -1148,102 +1148,6 @@ const ExercisesPage = () => {
           </div>
         }
         emptyMessage={t('exercises.emptyMessage')}
-          <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleClearSelected}
-                    className="gap-2"
-                    aria-label={t('exercises.actions.clearSelectedAria')}
-                  >
-                    <X className="size-4" />
-                    <span>
-                      Clear {selectedExercises.size} selected
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('exercises.actions.clearSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleExportSelected}
-                    className="gap-2"
-                    aria-label={t('exercises.actions.exportSelectedAria')}
-                  >
-                    <Download className="size-4" />
-                    <span>{t('exercises.actions.export')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('exercises.actions.export')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleStarSelected}
-                    className="gap-2"
-                    aria-label={t('exercises.actions.starSelectedAria')}
-                  >
-                    <Star className="size-4" />
-                    <span>{t('exercises.actions.starSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('exercises.actions.starSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleArchiveSelected}
-                    className="gap-2"
-                    aria-label={t('exercises.actions.archiveSelectedAria')}
-                  >
-                    <Archive className="size-4" />
-                    <span>{t('exercises.actions.archiveSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('exercises.actions.archiveSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleDeleteSelected}
-                    className="gap-2 text-destructive hover:text-destructive"
-                    aria-label={t('exercises.actions.deleteSelectedAria')}
-                  >
-                    <Trash2 className="size-4" />
-                    <span>{t('exercises.actions.deleteSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('exercises.actions.deleteSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        }
-        emptyMessage={t('exercises.emptyMessage')}
         emptyState={
           <EmptyGridState
             title={t('exercises.emptyState.title')}
@@ -1346,7 +1250,7 @@ const ExercisesPage = () => {
             </Button>
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={handleCloseCreateExercise}
               disabled={isSaving}
               aria-label={t('exercises.addExercise.cancelAria')}
