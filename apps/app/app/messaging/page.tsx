@@ -15,11 +15,9 @@ import {
   Check,
   ArrowUpNarrowWide,
   ArrowDownWideNarrow,
-  MessageCirclePlus,
   CalendarDays,
   Dumbbell,
   Archive,
-  ChevronDown,
   Plus,
   Image as ImageIcon,
   FileText,
@@ -65,11 +63,11 @@ import {
   type Contact,
   type Message,
 } from '@/components/app/app-shell';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ContactListItem } from './components/contact-list-item';
 import { format } from 'date-fns';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
-import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Note = {
@@ -270,7 +268,6 @@ const MessagingPage = () => {
     setHasNoteChanges(false);
   };
 
-  const [sortFilter, setSortFilter] = React.useState<string>('all');
   const [textareaHeight, setTextareaHeight] = React.useState(36);
   const [openDeleteMenuId, setOpenDeleteMenuId] = React.useState<string | null>(null);
   const [replyingToMessage, setReplyingToMessage] = React.useState<Message | null>(null);
@@ -1630,198 +1627,94 @@ const MessagingPage = () => {
     <div className="h-full w-full flex flex-col">
       <div className="w-full relative">
         <div className="px-4 flex flex-col gap-2 mb-2 mt-2 relative">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="flex flex-col">
               <h1 className="text-[22px] font-semibold">{t('messages.title')}</h1>
-              <p className="text-sm mt-1 mb-4">
+              <p className="text-sm mt-1">
                 {filteredContacts.length}{' '}
                 {filteredContacts.length === 1
                   ? t('messages.conversation')
                   : t('messages.conversations')}
               </p>
             </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="h-9 absolute top-0 right-4 gap-2" aria-label={t('messages.broadcast')}>
-                <RadioTower className="h-4 w-4" />
-                {t('messages.broadcast')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>{t('messages.comingSoon')}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <div className="relative w-[250px]">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder={t('messages.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-9"
-                aria-label={t('messages.searchPlaceholder')}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2 h-9" aria-label={t('general.sort')}>
-                    {t('general.sort')}:{' '}
-                    {sortFilter === 'all'
-                      ? t('general.all')
-                      : sortFilter === 'unread'
-                        ? t('messages.sortUnread')
-                        : sortFilter === 'read'
-                          ? t('messages.sortRead')
-                          : t('messages.sortOldest')}
-                    <ChevronDown className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuRadioGroup value={sortFilter} onValueChange={setSortFilter}>
-                    <DropdownMenuRadioItem
-                      value="unread"
-                      className={cn(sortFilter === 'unread' && 'bg-accent')}
-                    >
-                      {t('messages.sortUnread')}
-                      {sortFilter === 'unread' && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem
-                      value="read"
-                      className={cn(sortFilter === 'read' && 'bg-accent')}
-                    >
-                      {t('messages.sortRead')}
-                      {sortFilter === 'read' && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem
-                      value="oldest"
-                      className={cn(sortFilter === 'oldest' && 'bg-accent')}
-                    >
-                      {t('messages.sortOldest')}
-                      {sortFilter === 'oldest' && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem
-                      value="all"
-                      className={cn(sortFilter === 'all' && 'bg-accent')}
-                    >
-                      {t('general.all')}
-                      {sortFilter === 'all' && <Check className="ml-2 size-4" />}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                onClick={() => setIsNewMessageOpen(true)}
-                className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90"
-                aria-label={t('messages.newMessage')}
-              >
-                <MessageCirclePlus className="size-4" />
-                {t('messages.newMessage')}
-              </Button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="h-9 gap-2" aria-label={t('messages.broadcast')}>
+                  <RadioTower className="h-4 w-4" />
+                  {t('messages.broadcast')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled>{t('messages.comingSoon')}</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
+        <Separator className="mb-4"/>
       </div>
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
-          {/* Left Column - Athletes Table */}
-          <div className="flex-[1.5] bg-background h-full overflow-hidden">
-            <DataGrid
-              data={filteredAthletes}
-              columns={[
-                {
-                  id: 'name',
-                  label: t('messages.athlete'),
-                  icon: <User className="size-3" />,
-                  width: { class: 'w-full', pixel: '100%' },
-                  getSortValue: (row) => row.name.toLowerCase(),
-                  getSearchValue: (row) => row.name,
-                  renderCell: (row, isSelected) => {
-                    const initials = row.name
-                      .split(' ')
-                      .map((part) => part.charAt(0).toUpperCase())
-                      .slice(0, 2)
-                      .join('');
-                    return (
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={row.avatar} alt={row.name} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium text-sm truncate flex-1 min-w-0">
-                          {row.name}
-                        </span>
-                        {hasDraft(row.id) && (
-                          <span
-                            className="font-medium text-muted-foreground flex-shrink-0 border border-muted-foreground/30 rounded px-1.5 py-0.5"
-                            style={{ fontSize: '12px' }}
-                            aria-label={t('messages.draft')}
-                          >
-                            {t('messages.draft')}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  },
-                },
-              ]}
-              getRowId={(row) => row.id}
-              gridKey="messaging-contacts"
-              enableSearch={false}
-              enableEditColumns={false}
-              enableExport={false}
-              enableRowSelection={false}
-              selectedRowIds={selectedContactId ? new Set([selectedContactId]) : new Set()}
-              disableLoadingOverlay={true}
-              onRowClick={(row) => {
-                // Find or create contact for this athlete
-                let contact = mockContacts.find((c) => c.id === row.id);
-                if (!contact) {
-                  // Create a contact from athlete data
-                  contact = {
-                    id: row.id,
-                    name: row.name,
-                    avatar: row.avatar,
-                    lastMessage: '',
-                    timestamp: '',
-                    unreadCount: 0,
-                    isOnline: false,
-                  };
-                }
-                router.push(`/messaging/${contact.id}`);
-              }}
-              onRowKeyDown={(row, event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  let contact = mockContacts.find((c) => c.id === row.id);
-                  if (!contact) {
-                    contact = {
-                      id: row.id,
-                      name: row.name,
-                      avatar: row.avatar,
-                      lastMessage: '',
-                      timestamp: '',
-                      unreadCount: 0,
-                      isOnline: false,
-                    };
-                  }
-                  router.push(`/messaging/${contact.id}`);
-                }
-              }}
-              emptyMessage={t('messages.noContactsFound')}
-              rowHeight="54px"
-              compactMode={true}
-              showPagination={true}
-              itemsPerPage={25}
-            />
+          {/* Left Column - Contacts Sidebar */}
+          <div className="flex-[1] bg-background h-full overflow-hidden flex flex-col pl-4 pb-4">
+            <Card className="w-full h-full pb-0 flex flex-col">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="text"
+                      placeholder={t('messages.searchPlaceholder')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={cn('pl-9 w-full h-9', searchQuery && 'pr-9')}
+                      aria-label={t('messages.searchPlaceholder')}
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Clear search"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Button
+                    onClick={() => setIsNewMessageOpen(true)}
+                    variant="outline"
+                    className="h-9 w-9 rounded-full p-0 flex-shrink-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    aria-label={t('messages.newMessage')}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-auto p-0">
+                <div className="block min-w-0 divide-y">
+                  {filteredContacts.length ? (
+                    filteredContacts.map((contact) => (
+                      <ContactListItem
+                        contact={contact}
+                        key={contact.id}
+                        active={selectedContactId === contact.id}
+                        hasDraft={hasDraft(contact.id)}
+                        onClick={() => router.push(`/messaging/${contact.id}`)}
+                        onViewProfile={() => router.push(`/athletes/${contact.id}/overview`)}
+                      />
+                    ))
+                  ) : (
+                    <div className="text-muted-foreground mt-4 text-center text-sm">
+                      {t('messages.noContactsFound')}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <Separator orientation="vertical" />
           {/* Middle Column - Chat */}
           <div
-            className="relative flex-[4] h-full"
+            className="relative flex-[3] h-full"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -1852,8 +1745,12 @@ const MessagingPage = () => {
               {selectedContact ? (
                 <>
                   {/* Message Header */}
-                  <div className="flex items-center justify-between px-4 h-[40px] border-b border-border flex-shrink-0">
+                  <div className="flex items-center justify-between px-4 h-[40px] flex-shrink-0">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Avatar className="h-8 w-8 flex-shrink-0 rounded-full">
+                        <AvatarImage src={selectedContact.avatar} alt={selectedContact.name} className="rounded-full" />
+                        <AvatarFallback className="rounded-full">{getInitials(selectedContact.name)}</AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-sm truncate mb-[1px]">
                           {selectedContact.name}
@@ -1865,16 +1762,14 @@ const MessagingPage = () => {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              variant="secondary"
-                              size="sm"
+                              variant="outline"
                               onClick={() =>
                                 router.push(`/athletes/${selectedContact.id}/training-calendar`)
                               }
-                              className="gap-2 h-7 text-xs"
+                              className="h-9 w-9 rounded-full p-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                               aria-label={t('messages.viewTrainingCalendar')}
                             >
-                              <Dumbbell className="size-3" />
-                              {t('messages.training')}
+                              <Dumbbell className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -1886,14 +1781,12 @@ const MessagingPage = () => {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              variant="secondary"
-                              size="sm"
+                              variant="outline"
                               onClick={() => router.push(`/athletes/${selectedContact.id}/overview`)}
-                              className="gap-2 h-7 text-xs"
+                              className="h-9 w-9 rounded-full p-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                               aria-label={t('general.profile')}
                             >
-                              <User className="size-3" />
-                              {t('general.profile')}
+                              <User className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -2912,102 +2805,93 @@ const MessagingPage = () => {
               )}
             </div>
           </div>
-          <Separator orientation="vertical" />
           {/* Right Column - Notes */}
-          <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-            {selectedContact ? (
-              <div className="p-4">
-                <div className="flex flex-col items-center mb-3">
-                  <Avatar className="h-16 w-16 mb-2">
-                    <AvatarImage src={selectedContact.avatar} alt={selectedContact.name} />
-                    <AvatarFallback>{getInitials(selectedContact.name)}</AvatarFallback>
-                  </Avatar>
-                  <h3 className="font-semibold text-sm">{selectedContact.name}</h3>
-                </div>
-                <div className="mb-3 -mx-4 w-[calc(100%+2rem)]">
-                  <Separator className="w-full" />
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">{t('messages.notes')}</h2>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setIsNoteSearchOpen(!isNoteSearchOpen);
-                        if (isNoteSearchOpen) {
-                          setNoteSearchQuery('');
-                        }
-                      }}
-                      className="h-8 w-8"
-                      aria-label={t('messages.searchNotes')}
-                    >
-                      <Search className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setIsCreateNoteOpen(true)}
-                      className="gap-2 h-8 text-xs"
-                      aria-label={t('messages.createNote')}
-                    >
-                      <NotebookPen className="h-3 w-3" />
-                      {t('messages.createNote')}
-                    </Button>
-                  </div>
-                </div>
-                {isNoteSearchOpen && (
-                  <div className="mb-4">
-                    <Input
-                      type="search"
-                      placeholder={t('messages.searchNotesPlaceholder')}
-                      value={noteSearchQuery}
-                      onChange={(e) => setNoteSearchQuery(e.target.value)}
-                      className="h-8 text-xs"
-                      autoFocus
-                      aria-label={t('messages.searchNotes')}
-                    />
-                  </div>
-                )}
-                <div className="space-y-3">
-                  {filteredNotes.map((note) => (
-                    <Card
-                      key={note.id}
-                      className={cn(
-                        'cursor-pointer transition-colors hover:bg-accent py-0',
-                        note.body ? 'h-[140px]' : 'h-auto'
-                      )}
-                      onClick={() => handleNoteClick(note)}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={t('messages.viewNoteAria', { title: note.title })}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleNoteClick(note);
-                        }
-                      }}
-                    >
-                      <CardContent
-                        className={cn('px-4 py-3 h-full flex flex-col', !note.body && 'h-auto')}
+          <div className="flex-[1] h-full overflow-hidden pr-4 pb-4">
+            <Card className="h-full border rounded-lg flex flex-col overflow-hidden">
+              {selectedContact ? (
+                <div className="px-4 flex-1 flex flex-col min-h-0">
+                  <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                    <h2 className="text-lg font-semibold">{t('messages.notes')}</h2>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setIsNoteSearchOpen(!isNoteSearchOpen);
+                          if (isNoteSearchOpen) {
+                            setNoteSearchQuery('');
+                          }
+                        }}
+                        className="h-8 w-8"
+                        aria-label={t('messages.searchNotes')}
                       >
-                        <div className="space-y-2 flex-1 flex flex-col">
-                          <div className="font-semibold text-sm">{note.title}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatNoteDate(note.updatedAt || note.createdAt)}
-                          </div>
-                          {note.body && (
-                            <div className="text-sm text-muted-foreground line-clamp-3 overflow-hidden flex-1">
-                              {note.body}
+                        <Search className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsCreateNoteOpen(true)}
+                        className="gap-2 h-8 text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                        aria-label={t('messages.createNote')}
+                      >
+                        <NotebookPen className="h-3 w-3" />
+                        {t('messages.createNote')}
+                      </Button>
+                    </div>
+                  </div>
+                  {isNoteSearchOpen && (
+                    <div className="mb-4 flex-shrink-0">
+                      <Input
+                        type="search"
+                        placeholder={t('messages.searchNotesPlaceholder')}
+                        value={noteSearchQuery}
+                        onChange={(e) => setNoteSearchQuery(e.target.value)}
+                        className="h-8 text-xs"
+                        autoFocus
+                        aria-label={t('messages.searchNotes')}
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-3 flex-1 overflow-y-auto">
+                    {filteredNotes.map((note) => (
+                      <Card
+                        key={note.id}
+                        className={cn(
+                          'cursor-pointer transition-colors hover:bg-accent py-0',
+                          note.body ? 'h-[140px]' : 'h-auto'
+                        )}
+                        onClick={() => handleNoteClick(note)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={t('messages.viewNoteAria', { title: note.title })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleNoteClick(note);
+                          }
+                        }}
+                      >
+                        <CardContent
+                          className={cn('px-4 py-3 h-full flex flex-col', !note.body && 'h-auto')}
+                        >
+                          <div className="space-y-2 flex-1 flex flex-col">
+                            <div className="font-semibold text-sm">{note.title}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatNoteDate(note.updatedAt || note.createdAt)}
                             </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                            {note.body && (
+                              <div className="text-sm text-muted-foreground line-clamp-3 overflow-hidden flex-1">
+                                {note.body}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </Card>
           </div>
         </div>
       </div>

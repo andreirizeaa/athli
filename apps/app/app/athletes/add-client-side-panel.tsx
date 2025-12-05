@@ -99,7 +99,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
           </Button>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             onClick={handleCancel}
             aria-label={t('athletes.addClient.cancelAria')}
           >

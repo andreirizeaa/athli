@@ -924,10 +924,10 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           <div className="flex items-center gap-3">
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               size="sm"
               onClick={handleToday}
-              className="h-8"
+              className="h-8 border-primary"
               aria-label="Go to today"
             >
               Today
@@ -976,7 +976,6 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
             </Tabs>
             <Button
               type="button"
-              variant="outline"
               size="sm"
               className="h-9 gap-2"
               aria-label="Book a meeting"
@@ -1132,7 +1131,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
                                   else eventRefs.current.delete(event.id);
                                 }}
                                 data-event
-                                className="absolute left-1 right-1 bg-orange-100 dark:bg-orange-900 border-l-2 border-orange-300 dark:border-orange-700 rounded px-1.5 py-0.5 cursor-pointer z-10"
+                                className="absolute left-1 right-1 bg-primary/10 dark:bg-primary/20 border-l-2 border-primary dark:border-primary/70 rounded px-1.5 py-0.5 cursor-pointer z-10"
                                 style={style}
                                 title={event.summary}
                                 onClick={(e) => {
@@ -1190,7 +1189,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
             <div
               className="grid grid-cols-7 gap-px border-t border-b border-border bg-border h-full"
               style={{ 
-                gridAutoRows: `calc(100% / ${numberOfRows})`
+                gridTemplateRows: `repeat(${numberOfRows}, 1fr)`
               }}
             >
               {calendarDates.map((weekDates, weekIndex) =>
@@ -1240,7 +1239,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
                                 if (el) eventRefs.current.set(event.id, el);
                                 else eventRefs.current.delete(event.id);
                               }}
-                              className="text-[10px] bg-orange-100 dark:bg-orange-900 border-l-2 border-orange-300 dark:border-orange-700 rounded px-1.5 py-0.5 truncate cursor-pointer"
+                              className="text-[10px] bg-primary/10 dark:bg-primary/20 border-l-2 border-primary dark:border-primary/70 rounded px-1.5 py-0.5 truncate cursor-pointer"
                               title={event.summary}
                               onClick={(e) => {
                                 const rect = e.currentTarget.getBoundingClientRect();

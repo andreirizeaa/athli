@@ -394,6 +394,7 @@ export const EditColumnsSidebar = ({
             rowHeight="54px"
             stickyFirstColumn={false}
             disableLoadingOverlay={true}
+            gridPadding={true}
           />
         </SortableContext>
       </DndContext>

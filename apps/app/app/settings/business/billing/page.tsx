@@ -20,7 +20,7 @@ const BillingPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 py-4 bg-secondary">
+      <div className="w-full flex-1 overflow-auto px-4 py-4 bg-background">
         {/* Billing settings content will go here */}
       </div>
     </>

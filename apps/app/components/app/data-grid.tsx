@@ -70,8 +70,6 @@ export type DataGridProps<T = any> = {
   columns: ColumnDefinition<T>[];
   getRowId: (row: T) => string;
   gridKey: string;
-  title?: string;
-  subtitle?: string | ((filteredCount: number) => string);
   itemsPerPage?: number;
   enableSearch?: boolean;
   searchPlaceholder?: string;
@@ -89,8 +87,6 @@ export type DataGridProps<T = any> = {
   pinnedColumns?: string[];
   defaultColumnOrder?: string[];
   defaultVisibleColumns?: string[];
-  customActions?: React.ReactNode;
-  selectionActions?: React.ReactNode;
   emptyMessage?: string;
   emptyState?: React.ReactNode;
   rowHeight?: string;
@@ -111,6 +107,10 @@ export type DataGridProps<T = any> = {
   showPagination?: boolean;
   tableWrapperClassName?: string;
   disableLoadingOverlay?: boolean;
+  onFilteredDataChange?: (filteredCount: number) => void;
+  selectionActions?: React.ReactNode;
+  gridPadding?: boolean;
+  compactPagination?: boolean;
 };
 
 const isFuzzyMatch = (text: string, query: string): boolean => {
@@ -183,8 +183,6 @@ export function DataGrid<T extends Record<string, any>>({
   columns,
   getRowId,
   gridKey,
-  title,
-  subtitle,
   itemsPerPage = 25,
   enableSearch = true,
   searchPlaceholder = 'Search...',
@@ -202,8 +200,6 @@ export function DataGrid<T extends Record<string, any>>({
   pinnedColumns = [],
   defaultColumnOrder,
   defaultVisibleColumns,
-  customActions,
-  selectionActions,
   emptyMessage = 'No items found.',
   emptyState,
   rowHeight = '54px',
@@ -216,6 +212,10 @@ export function DataGrid<T extends Record<string, any>>({
   showPagination = true,
   tableWrapperClassName,
   disableLoadingOverlay = false,
+  onFilteredDataChange,
+  selectionActions,
+  gridPadding = false,
+  compactPagination = false,
 }: DataGridProps<T>) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -366,6 +366,13 @@ export function DataGrid<T extends Record<string, any>>({
 
     return result;
   }, [data, searchQuery, filterValues, filters, enableSearch, searchFields]);
+
+  // Notify parent of filtered data count change
+  useEffect(() => {
+    if (onFilteredDataChange) {
+      onFilteredDataChange(filteredData.length);
+    }
+  }, [filteredData.length, onFilteredDataChange]);
 
   // Sort data
   const sortedData = useMemo(() => {
@@ -687,7 +694,7 @@ export function DataGrid<T extends Record<string, any>>({
           key={column.id}
           className={cn(
             '!px-6 !py-0 h-10 !bg-background',
-            compactMode ? 'border-t border-b' : 'border-b',
+            gridPadding ? 'border-b' : compactMode ? 'border-t border-b' : 'border-b',
             column.width?.class || 'min-w-[130px]'
           )}
           style={{
@@ -711,23 +718,28 @@ export function DataGrid<T extends Record<string, any>>({
       );
     }
 
-    const headerContent = (
-      <div className="flex items-center gap-2 cursor-pointer h-full w-full">
-        {column.icon && <div className="text-muted-foreground">{column.icon}</div>}
-        <span className="text-xs uppercase text-muted-foreground">{column.label}</span>
+    const headerWidth = column.width?.pixel || '130px';
+
+    const headerButton = (
+      <Button
+        variant="ghost"
+        className="flex items-center gap-2 h-full w-full justify-start rounded-none px-0 hover:bg-transparent"
+      >
+        <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent">
+          {column.icon && <div className="text-muted-foreground">{column.icon}</div>}
+          {column.label}
+        </span>
         {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
         {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
-      </div>
+      </Button>
     );
-
-    const headerWidth = column.width?.pixel || '130px';
 
     return (
       <TableHead
         key={column.id}
         className={cn(
           '!px-6 !py-0 h-10 !bg-background',
-          compactMode ? 'border-t border-b' : 'border-b',
+          gridPadding ? 'border-b' : compactMode ? 'border-t border-b' : 'border-b',
           column.width?.class || 'min-w-[130px]'
         )}
         style={{
@@ -742,7 +754,9 @@ export function DataGrid<T extends Record<string, any>>({
           {column.tooltip ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>{headerContent}</DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild>
+                  {headerButton}
+                </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent
                 className="whitespace-normal break-words text-left"
@@ -752,7 +766,9 @@ export function DataGrid<T extends Record<string, any>>({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <DropdownMenuTrigger asChild>{headerContent}</DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild>
+              {headerButton}
+            </DropdownMenuTrigger>
           )}
           <DropdownMenuContent align="start">
             {column.sortable !== false && (
@@ -818,24 +834,16 @@ export function DataGrid<T extends Record<string, any>>({
         compactMode && '-mx-4 w-[calc(100%+2rem)]'
       )}
     >
-      {!compactMode && (title || subtitle || customActions) && (
-        <div className="w-full relative">
-          <div className="px-4 flex items-center justify-between mb-2 mt-2">
-            <div className="flex flex-col">
-              {title && <h1 className="text-[22px] font-semibold">{title}</h1>}
-              {subtitle && (
-                <p className="text-sm text-foreground">
-                  {typeof subtitle === 'function' ? subtitle(sortedData.length) : subtitle}
-                </p>
-              )}
-            </div>
-            {customActions && <div>{customActions}</div>}
-          </div>
-        </div>
-      )}
       <div className="w-full flex-1 flex flex-col overflow-hidden">
         {!compactMode && (
-          <div className="w-full px-4 py-3 border-b flex items-center justify-between gap-4 flex-shrink-0 relative">
+          <div className="w-full px-4 py-3 flex items-center justify-between gap-4 flex-shrink-0 relative">
+            {selectionActions && selectedRowIds.size > 0 && (
+              <Card className="absolute left-2 top-2 z-40 bg-background border-border py-0 px-0 rounded-md">
+                <div className="px-2 py-[5px]">
+                  {selectionActions}
+                </div>
+              </Card>
+            )}
             <div className="flex items-center gap-4 flex-1">
               {enableSearch && (
                 <div className="relative w-[250px]">
@@ -860,13 +868,6 @@ export function DataGrid<T extends Record<string, any>>({
                 </div>
               )}
             </div>
-            {selectionActions && selectedRowIds.size > 0 && (
-              <Card className="absolute left-2 top-2 z-40 bg-background border-border py-0 px-0 rounded-md">
-                <div className="px-2 py-[5px]">
-                  {selectionActions}
-                </div>
-              </Card>
-            )}
             <div className="flex items-center gap-2">
               {filters.map((filter) => {
                 const filterValue = filterValues[filter.id] || 'all';
@@ -944,25 +945,27 @@ export function DataGrid<T extends Record<string, any>>({
         )}
         {compactMode && enableSearch && (
           <div className="relative mb-4 px-4 pt-2 -mt-1">
-            <Search className="pointer-events-none absolute left-7 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder={searchPlaceholder}
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="w-full pl-9"
-              aria-label="Search"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-7 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Clear search"
-              >
-                <X className="size-4" />
-              </button>
-            )}
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className={cn('w-full pl-9', searchQuery && 'pr-9')}
+                aria-label="Search"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
           </div>
         )}
         {compactMode && filters.length > 0 && (
@@ -1019,19 +1022,29 @@ export function DataGrid<T extends Record<string, any>>({
           </div>
         )}
         <div
-          ref={scrollableContainerRef}
           className={cn(
-            'flex-1 relative',
-            compactMode ? 'w-full' : '',
-            paginatedData.length === 0 ? 'overflow-y-auto overflow-x-hidden' : 'overflow-auto'
+            'flex-1 relative flex flex-col min-h-0',
+            gridPadding && 'pl-4 pr-4 pb-4',
+            compactMode ? 'w-full' : ''
           )}
-          style={{ paddingBottom: showPagination ? (compactMode ? '36px' : rowHeight) : '0px' }}
-          onScroll={() => {
-            if (scrollableContainerRef.current && isPageLoading) {
-              setOverlayHeight(scrollableContainerRef.current.clientHeight);
-            }
-          }}
         >
+          <div
+            ref={scrollableContainerRef}
+            className={cn(
+              'flex-1 relative border rounded-lg flex flex-col overflow-hidden min-h-0'
+            )}
+            onScroll={() => {
+              if (scrollableContainerRef.current && isPageLoading) {
+                setOverlayHeight(scrollableContainerRef.current.clientHeight);
+              }
+            }}
+          >
+            <div
+              className={cn(
+                'flex-1 relative overflow-auto',
+                paginatedData.length === 0 ? 'overflow-y-auto overflow-x-hidden' : ''
+              )}
+            >
           {paginatedData.length === 0 && (emptyState || emptyMessage) && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-background">
               {emptyState || (
@@ -1100,7 +1113,11 @@ export function DataGrid<T extends Record<string, any>>({
               <TableRow className="hover:bg-transparent h-10">
                 {stickyFirstColumn && renderFirstColumn && (
                   <TableHead
-                    className={cn('!px-6 !py-0 h-10 !bg-background', 'border-r border-b')}
+                    className={cn(
+                      '!px-6 !py-0 h-10 !bg-background',
+                      'border-r border-b',
+                      gridPadding && 'border-t-0'
+                    )}
                     style={{
                       position: 'sticky',
                       left: 0,
@@ -1242,15 +1259,15 @@ export function DataGrid<T extends Record<string, any>>({
             </TableBody>
           </table>
           )}
-        </div>
-        {showPagination && (
-          <div
-            className={cn(
-              'w-full border-t bg-background flex items-center justify-start flex-shrink-0',
-              compactMode ? 'px-4 gap-2' : 'px-4 gap-4'
-            )}
-            style={{ height: compactMode ? '36px' : rowHeight }}
-          >
+          </div>
+          {showPagination && (
+            <div
+              className={cn(
+                'w-full border-t bg-background flex items-center justify-start flex-shrink-0 rounded-b-lg',
+                (compactMode || compactPagination) ? 'px-4 gap-2' : 'px-4 gap-4'
+              )}
+              style={{ height: (compactMode || compactPagination) ? '36px' : rowHeight }}
+            >
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -1258,9 +1275,9 @@ export function DataGrid<T extends Record<string, any>>({
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
                 aria-label="Previous page"
-                className={cn(compactMode && 'h-7 w-7')}
+                className={cn((compactMode || compactPagination) && 'h-7 w-7')}
               >
-                <ChevronLeft className={cn('text-foreground', compactMode ? 'size-3' : 'size-4')} />
+                <ChevronLeft className={cn('text-foreground', (compactMode || compactPagination) ? 'size-3' : 'size-4')} />
               </Button>
               <DropdownMenu
                 onOpenChange={(open) => {
@@ -1278,11 +1295,11 @@ export function DataGrid<T extends Record<string, any>>({
                   <Button
                     ref={handlePageDropdownTriggerRef}
                     variant="outline"
-                    className={cn('px-2 gap-1.5', compactMode ? 'h-7 text-xs' : 'h-9')}
+                    className={cn('px-2 gap-1.5', (compactMode || compactPagination) ? 'h-7 text-xs' : 'h-9')}
                   >
-                    <span className={cn(compactMode && 'text-xs')}>{currentPage}</span>
+                    <span className={cn((compactMode || compactPagination) && 'text-xs')}>{currentPage}</span>
                     <ChevronDown
-                      className={cn('text-foreground', compactMode ? 'size-3' : 'size-4')}
+                      className={cn('text-foreground', (compactMode || compactPagination) ? 'size-3' : 'size-4')}
                     />
                   </Button>
                 </DropdownMenuTrigger>
@@ -1290,7 +1307,7 @@ export function DataGrid<T extends Record<string, any>>({
                   align="center"
                   className={cn(
                     'overflow-y-auto',
-                    compactMode ? 'max-h-[200px] text-xs' : 'max-h-[300px]'
+                    (compactMode || compactPagination) ? 'max-h-[200px] text-xs' : 'max-h-[300px]'
                   )}
                   style={
                     pageDropdownWidth
@@ -1308,12 +1325,12 @@ export function DataGrid<T extends Record<string, any>>({
                         value={page.toString()}
                         className={cn(
                           currentPage === page && 'bg-accent',
-                          compactMode && 'text-xs py-1.5'
+                          (compactMode || compactPagination) && 'text-xs py-1.5'
                         )}
                       >
                         <span className="flex-1">{page}</span>
                         {currentPage === page && (
-                          <Check className={cn('size-4', compactMode && 'size-3')} />
+                          <Check className={cn('size-4', (compactMode || compactPagination) && 'size-3')} />
                         )}
                       </DropdownMenuRadioItem>
                     ))}
@@ -1326,20 +1343,22 @@ export function DataGrid<T extends Record<string, any>>({
                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages || totalPages === 0}
                 aria-label="Next page"
-                className={cn(compactMode && 'h-7 w-7')}
+                className={cn((compactMode || compactPagination) && 'h-7 w-7')}
               >
                 <ChevronRight
-                  className={cn('text-foreground', compactMode ? 'size-3' : 'size-4')}
+                  className={cn('text-foreground', (compactMode || compactPagination) ? 'size-3' : 'size-4')}
                 />
               </Button>
             </div>
-            <div className={cn('text-foreground', compactMode ? 'text-xs' : 'text-sm')}>
+            <div className={cn('text-foreground', (compactMode || compactPagination) ? 'text-xs' : 'text-sm')}>
               {sortedData.length > 0
                 ? `${startIndex + 1}-${Math.min(endIndex, sortedData.length)} of ${sortedData.length}`
                 : '0 of 0'}
             </div>
           </div>
-        )}
+          )}
+          </div>
+        </div>
       </div>
       {enableEditColumns && (
         <EditColumnsSidebar

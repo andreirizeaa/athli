@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { cookies } from 'next/headers';
 import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { shadcn } from '@clerk/themes';
@@ -9,6 +10,9 @@ import SupabaseProvider from '@/lib/providers/supabase-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { ConditionalAppShell } from '@/components/app/conditional-app-shell';
 import { IntercomProvider } from '@/components/intercom-provider';
+import { ActiveThemeProvider } from '@/components/app/active-theme';
+import { DEFAULT_THEME } from '@/lib/theme';
+import { cn } from '@/lib/utils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -30,38 +34,59 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const themeSettings = {
+    preset: (cookieStore.get('theme_preset')?.value ?? DEFAULT_THEME.preset) as any,
+    scale: (cookieStore.get('theme_scale')?.value ?? DEFAULT_THEME.scale) as any,
+    radius: (cookieStore.get('theme_radius')?.value ?? DEFAULT_THEME.radius) as any,
+    contentLayout: (cookieStore.get('theme_content_layout')?.value ??
+      DEFAULT_THEME.contentLayout) as any,
+  };
+
+  const bodyAttributes = Object.fromEntries(
+    Object.entries(themeSettings)
+      .filter(([_, value]) => value)
+      .map(([key, value]) => [`data-theme-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`, value])
+  );
+
   return (
     <html lang="en" suppressHydrationWarning className="h-full">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
+      <body
+        suppressHydrationWarning
+        className={cn(`${geistSans.variable} ${geistMono.variable} antialiased h-full`, 'bg-background group/layout font-sans')}
+        {...bodyAttributes}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <ClerkProvider
-            appearance={{
-              theme: shadcn,
-              elements: {
-                rootBox: 'bg-transparent',
-                card: 'bg-transparent shadow-none',
-                cardBox: 'bg-transparent',
-                main: 'bg-transparent',
-              },
-            }}
-            signInUrl="/sign-in"
-            signUpUrl="/sign-up"
-            signInForceRedirectUrl="/home"
-            signUpForceRedirectUrl="/home"
-          >
-            <IntercomProvider />
-            <SupabaseProvider>
-              <IntlProvider>
-                <ConditionalAppShell>{children}</ConditionalAppShell>
-              </IntlProvider>
-            </SupabaseProvider>
-          </ClerkProvider>
-          <Toaster position="bottom-right" />
+          <ActiveThemeProvider initialTheme={themeSettings}>
+            <ClerkProvider
+              appearance={{
+                theme: shadcn,
+                elements: {
+                  rootBox: 'bg-transparent',
+                  card: 'bg-transparent shadow-none',
+                  cardBox: 'bg-transparent',
+                  main: 'bg-transparent',
+                },
+              }}
+              signInUrl="/sign-in"
+              signUpUrl="/sign-up"
+              signInForceRedirectUrl="/home"
+              signUpForceRedirectUrl="/home"
+            >
+              <IntercomProvider />
+              <SupabaseProvider>
+                <IntlProvider>
+                  <ConditionalAppShell>{children}</ConditionalAppShell>
+                </IntlProvider>
+              </SupabaseProvider>
+            </ClerkProvider>
+            <Toaster position="bottom-right" />
+          </ActiveThemeProvider>
         </ThemeProvider>
       </body>
     </html>

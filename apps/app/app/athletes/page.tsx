@@ -151,6 +151,7 @@ const AthletesPage = () => {
   const [isAddAthleteOpen, setIsAddAthleteOpen] = useState<boolean>(false);
   const [isUploadClientsOpen, setIsUploadClientsOpen] = useState<boolean>(false);
   const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false);
+  const [filteredCount, setFilteredCount] = useState<number>(mockAthletes.length);
   const itemsPerPage = 25;
   const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const copyTimeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -1055,14 +1056,59 @@ const AthletesPage = () => {
   };
   return (
     <div className="h-full w-full flex flex-col">
+      <div className="w-full relative">
+        <div className="px-4 flex items-center justify-between mb-2 mt-2">
+          <div className="flex flex-col">
+            <h1 className="text-[22px] font-semibold">{t('athletes.title')}</h1>
+            <p className="text-sm text-foreground">
+              {t('athletes.subtitle', { count: filteredCount })}
+            </p>
+          </div>
+          <div>
+            <DropdownMenu>
+              <ButtonGroup>
+                <Button
+                  variant="ghost"
+                  onClick={handleCopyInviteLink}
+                  onKeyDown={handleInviteLinkKeyDown}
+                  className="gap-2 border border-primary"
+                  aria-label={t('athletes.actions.copyInviteLink')}
+                >
+                  {isInviteLinkCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  <span>{t('athletes.actions.yourInviteLink')}</span>
+                </Button>
+                <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
+                  <UserPlus className="size-4" />
+                  <span>{t('athletes.actions.addClient')}</span>
+                </Button>
+                <ButtonGroupSeparator />
+                <DropdownMenuTrigger asChild>
+                  <Button className="px-2" aria-label={t('general.more')}>
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </ButtonGroup>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsAddAthleteOpen(true)}>
+                  <UserPlus className="size-4 mr-2" />
+                  <span>{t('athletes.actions.singleClient')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
+                  <Users className="size-4 mr-2" />
+                  <span>{t('athletes.actions.uploadClients')}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
       <DataGrid
         data={mockAthletes}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="athletes"
-        title={t('athletes.title')}
-        subtitle={(count) => t('athletes.subtitle', { count })}
         itemsPerPage={itemsPerPage}
+        onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('athletes.searchPlaceholder')}
         searchFields={[(row) => `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`]}
@@ -1111,43 +1157,6 @@ const AthletesPage = () => {
         defaultColumnOrder={['name', ...COLUMN_ORDER]}
         defaultVisibleColumns={['name', ...COLUMN_ORDER]}
         firstColumnId="name"
-        customActions={
-          <DropdownMenu>
-            <ButtonGroup>
-              <Button
-                variant="secondary"
-                onClick={handleCopyInviteLink}
-                onKeyDown={handleInviteLinkKeyDown}
-                className="gap-2"
-                aria-label={t('athletes.actions.copyInviteLink')}
-              >
-                {isInviteLinkCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
-                <span>{t('athletes.actions.yourInviteLink')}</span>
-              </Button>
-              <ButtonGroupSeparator />
-              <Button onClick={() => setIsAddAthleteOpen(true)} className="gap-2">
-                <UserPlus className="size-4" />
-                <span>{t('athletes.actions.addClient')}</span>
-              </Button>
-              <ButtonGroupSeparator />
-              <DropdownMenuTrigger asChild>
-                <Button className="px-2" aria-label={t('general.more')}>
-                  <ChevronDown className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-            </ButtonGroup>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setIsAddAthleteOpen(true)}>
-                <UserPlus className="size-4 mr-2" />
-                <span>{t('athletes.actions.singleClient')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
-                <Users className="size-4 mr-2" />
-                <span>{t('athletes.actions.uploadClients')}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
         selectionActions={
           <div className="flex items-center gap-1">
             <TooltipProvider>
@@ -1247,6 +1256,8 @@ const AthletesPage = () => {
         renderFirstColumn={renderFirstColumn}
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
+        gridPadding={true}
+        compactPagination={true}
       />
       <AddClientSidePanel open={isAddAthleteOpen} onOpenChange={setIsAddAthleteOpen} />
       <UploadClientsSidePanel open={isUploadClientsOpen} onOpenChange={setIsUploadClientsOpen} />
