@@ -91,11 +91,11 @@ export const CurrentAssignedItemCard = ({ clientId }: CurrentAssignedItemCardPro
               </span>
             )}
             <div className="flex flex-wrap gap-1">
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="outline" className="text-xs">
                 {t('general.type')}: {assignedItem.type === 'program' ? t('programs.title') : t('library.workoutColumn')}
               </Badge>
               {equipmentList.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="outline" className="text-xs">
                   {t('general.equipment')}: {equipmentList.join(', ')}
                 </Badge>
               )}

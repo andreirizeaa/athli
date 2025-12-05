@@ -192,6 +192,9 @@ export const enMessages = {
         theme: {
           label: 'Theme',
         },
+        color: {
+          label: 'Color Theme',
+        },
         units: {
           label: 'Units',
           imperial: 'Imperial',
@@ -330,7 +333,10 @@ export const enMessages = {
     actions: {
       keepMenuOpen: 'Keep menu open',
       keepMenuOpenAria: 'Keep menu open',
+      closeSidebar: 'Close sidebar',
       closeSidebarAria: 'Close sidebar',
+      openSidebar: 'Open sidebar',
+      openSidebarAria: 'Open sidebar',
     },
     footer: {
       addTeamMembers: 'Add team members',
@@ -344,7 +350,7 @@ export const enMessages = {
     },
     search: {
       placeholder: 'Search across OneNinety...',
-      emptyMessage: 'Search for leads, clients or workouts',
+      emptyMessage: 'Search for clients, workouts, programs or exercises...',
       noResults: 'No results found for',
       athletes: 'Athletes',
       workouts: 'Workouts',
@@ -369,6 +375,11 @@ export const enMessages = {
       light: 'Light',
       dark: 'Dark',
       system: 'System',
+      preset: 'Theme Preset',
+    },
+    color: {
+      label: 'Theme',
+      default: 'Default',
     },
     language: {
       label: 'English',
@@ -445,7 +456,7 @@ export const enMessages = {
     conversations: 'conversations',
     broadcast: 'Broadcast',
     comingSoon: 'Coming soon!',
-    searchPlaceholder: 'Search messages...',
+    searchPlaceholder: 'Search chats...',
     sortUnread: 'Unread',
     sortRead: 'Read',
     sortOldest: 'Oldest',

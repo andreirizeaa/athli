@@ -165,7 +165,7 @@ const IntegrationsPage = () => {
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        <div className="w-full relative flex-1 bg-secondary flex flex-col items-center justify-center gap-4">
+        <div className="w-full relative flex-1 bg-background flex flex-col items-center justify-center gap-4">
           <div className="flex flex-col items-center justify-center gap-4">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <p className="text-sm text-muted-foreground">
@@ -192,7 +192,7 @@ const IntegrationsPage = () => {
       </div>
       <div className="w-full relative flex-1">
         <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm" />
-        <div className="relative z-20 px-4 pt-4 pb-2 bg-secondary flex flex-col items-center gap-4 min-h-full">
+        <div className="relative z-20 px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4 min-h-full">
         <Card className="bg-background max-w-3xl w-full">
           <CardHeader className="px-4">
             <CardTitle>
