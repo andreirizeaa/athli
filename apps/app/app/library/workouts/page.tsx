@@ -92,6 +92,7 @@ const WorkoutsPage = () => {
   const [starredWorkouts, setStarredWorkouts] = useState<Set<string>>(new Set());
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
+  const [filteredCount, setFilteredCount] = useState<number>(mockWorkouts.length);
   const itemsPerPage = 25;
   const [isCreateWorkoutOpen, setIsCreateWorkoutOpen] = useState<boolean>(false);
   const [newWorkoutName, setNewWorkoutName] = useState<string>('');
@@ -821,13 +822,40 @@ Focus on proper form and progressive overload.`;
 
   return (
     <div className="h-full w-full flex flex-col">
+      <div className="w-full relative">
+        <div className="px-4 flex items-center justify-between mb-2 mt-2">
+          <div className="flex flex-col">
+            <p className="text-sm text-foreground">
+              {`${filteredCount} ${filteredCount === 1 ? t('library.workout') : t('library.workoutPlural')}`}
+            </p>
+          </div>
+          <div>
+            <ButtonGroup>
+              <Button
+                variant="secondary"
+                onClick={handleOpenAssignWorkout}
+                className="gap-2"
+                aria-label={t('library.assignWorkout')}
+              >
+                <UserPlus className="size-4" />
+                <span>{t('general.assign')}</span>
+              </Button>
+              <ButtonGroupSeparator />
+              <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label={t('library.createWorkout')}>
+                <Plus className="size-4" />
+                <span>{t('library.createWorkout')}</span>
+              </Button>
+            </ButtonGroup>
+          </div>
+        </div>
+      </div>
       <DataGrid
         data={mockWorkouts}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="workouts"
-        subtitle={(count) => `${count} ${count === 1 ? t('library.workout') : t('library.workoutPlural')}`}
         itemsPerPage={itemsPerPage}
+        onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('library.searchPlaceholder')}
         filters={filters}
@@ -864,24 +892,6 @@ Focus on proper form and progressive overload.`;
         }}
         defaultColumnOrder={COLUMN_ORDER}
         defaultVisibleColumns={COLUMN_ORDER}
-        customActions={
-          <ButtonGroup>
-            <Button
-              variant="secondary"
-              onClick={handleOpenAssignWorkout}
-              className="gap-2"
-              aria-label={t('library.assignWorkout')}
-            >
-              <UserPlus className="size-4" />
-              <span>{t('general.assign')}</span>
-            </Button>
-            <ButtonGroupSeparator />
-            <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label={t('library.createWorkout')}>
-              <Plus className="size-4" />
-              <span>{t('library.createWorkout')}</span>
-            </Button>
-          </ButtonGroup>
-        }
         selectionActions={
           <div className="flex items-center gap-1">
             <TooltipProvider>
@@ -1000,6 +1010,8 @@ Focus on proper form and progressive overload.`;
         renderFirstColumn={renderFirstColumn}
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
+        gridPadding={true}
+        compactPagination={true}
       />
       <SidePanel
         open={isCreateWorkoutOpen}

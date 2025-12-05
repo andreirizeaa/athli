@@ -66,17 +66,15 @@ const HomePage = () => {
 
 
   return (
-    <div className="h-full w-full flex flex-col bg-secondary">
-      <div className="w-full relative bg-background">
-        <div className="px-4">
-          <div className="flex items-baseline gap-2 mb-2 mt-2">
-            <h1 className="text-[22px] font-semibold">{greeting}</h1>
-            <p className="text-sm text-foreground">{dateString}</p>
-          </div>
+    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+      <div className="w-full relative flex-shrink-0">
+        <div className="pl-4 pr-4 flex items-baseline gap-2">
+          <h1 className="text-[22px] font-semibold mb-2 mt-2">{greeting}</h1>
+          <p className="text-sm text-foreground mb-2 mt-2">{dateString}</p>
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 py-4">
+      <div className="w-full flex-1 px-4 py-4">
         <div className="w-full flex gap-4">
           <div className="flex flex-col" style={{ width: '50%', height: '1200px' }}>
             <CompletedWorkoutsCard />

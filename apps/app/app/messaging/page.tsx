@@ -1723,7 +1723,7 @@ const MessagingPage = () => {
             </div>
           </div>
         </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
+        <Separator className="w-full" />
       </div>
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
@@ -1816,9 +1816,9 @@ const MessagingPage = () => {
               compactMode={true}
               showPagination={true}
               itemsPerPage={25}
+              gridPadding={true}
             />
           </div>
-          <Separator orientation="vertical" />
           {/* Middle Column - Chat */}
           <div
             className="relative flex-[4] h-full"
@@ -1852,7 +1852,7 @@ const MessagingPage = () => {
               {selectedContact ? (
                 <>
                   {/* Message Header */}
-                  <div className="flex items-center justify-between px-4 h-[40px] border-b border-border flex-shrink-0">
+                  <div className="flex items-center justify-between px-4 h-[40px] flex-shrink-0">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-sm truncate mb-[1px]">
@@ -2912,102 +2912,100 @@ const MessagingPage = () => {
               )}
             </div>
           </div>
-          <Separator orientation="vertical" />
           {/* Right Column - Notes */}
-          <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-            {selectedContact ? (
-              <div className="p-4">
-                <div className="flex flex-col items-center mb-3">
-                  <Avatar className="h-16 w-16 mb-2">
-                    <AvatarImage src={selectedContact.avatar} alt={selectedContact.name} />
-                    <AvatarFallback>{getInitials(selectedContact.name)}</AvatarFallback>
-                  </Avatar>
-                  <h3 className="font-semibold text-sm">{selectedContact.name}</h3>
-                </div>
-                <div className="mb-3 -mx-4 w-[calc(100%+2rem)]">
-                  <Separator className="w-full" />
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">{t('messages.notes')}</h2>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setIsNoteSearchOpen(!isNoteSearchOpen);
-                        if (isNoteSearchOpen) {
-                          setNoteSearchQuery('');
-                        }
-                      }}
-                      className="h-8 w-8"
-                      aria-label={t('messages.searchNotes')}
-                    >
-                      <Search className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setIsCreateNoteOpen(true)}
-                      className="gap-2 h-8 text-xs"
-                      aria-label={t('messages.createNote')}
-                    >
-                      <NotebookPen className="h-3 w-3" />
-                      {t('messages.createNote')}
-                    </Button>
+          <div className="flex-[1.5] h-full overflow-hidden pl-4 pr-4 pb-4">
+            <Card className="h-full border rounded-lg flex flex-col overflow-hidden">
+              {selectedContact ? (
+                <div className="p-4 flex-1 flex flex-col min-h-0">
+                  <div className="flex flex-col items-center mb-3 flex-shrink-0">
+                    <Avatar className="h-16 w-16 mb-2">
+                      <AvatarImage src={selectedContact.avatar} alt={selectedContact.name} />
+                      <AvatarFallback>{getInitials(selectedContact.name)}</AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-semibold text-sm">{selectedContact.name}</h3>
                   </div>
-                </div>
-                {isNoteSearchOpen && (
-                  <div className="mb-4">
-                    <Input
-                      type="search"
-                      placeholder={t('messages.searchNotesPlaceholder')}
-                      value={noteSearchQuery}
-                      onChange={(e) => setNoteSearchQuery(e.target.value)}
-                      className="h-8 text-xs"
-                      autoFocus
-                      aria-label={t('messages.searchNotes')}
-                    />
-                  </div>
-                )}
-                <div className="space-y-3">
-                  {filteredNotes.map((note) => (
-                    <Card
-                      key={note.id}
-                      className={cn(
-                        'cursor-pointer transition-colors hover:bg-accent py-0',
-                        note.body ? 'h-[140px]' : 'h-auto'
-                      )}
-                      onClick={() => handleNoteClick(note)}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={t('messages.viewNoteAria', { title: note.title })}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleNoteClick(note);
-                        }
-                      }}
-                    >
-                      <CardContent
-                        className={cn('px-4 py-3 h-full flex flex-col', !note.body && 'h-auto')}
+                  <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                    <h2 className="text-lg font-semibold">{t('messages.notes')}</h2>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setIsNoteSearchOpen(!isNoteSearchOpen);
+                          if (isNoteSearchOpen) {
+                            setNoteSearchQuery('');
+                          }
+                        }}
+                        className="h-8 w-8"
+                        aria-label={t('messages.searchNotes')}
                       >
-                        <div className="space-y-2 flex-1 flex flex-col">
-                          <div className="font-semibold text-sm">{note.title}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {formatNoteDate(note.updatedAt || note.createdAt)}
-                          </div>
-                          {note.body && (
-                            <div className="text-sm text-muted-foreground line-clamp-3 overflow-hidden flex-1">
-                              {note.body}
+                        <Search className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setIsCreateNoteOpen(true)}
+                        className="gap-2 h-8 text-xs"
+                        aria-label={t('messages.createNote')}
+                      >
+                        <NotebookPen className="h-3 w-3" />
+                        {t('messages.createNote')}
+                      </Button>
+                    </div>
+                  </div>
+                  {isNoteSearchOpen && (
+                    <div className="mb-4 flex-shrink-0">
+                      <Input
+                        type="search"
+                        placeholder={t('messages.searchNotesPlaceholder')}
+                        value={noteSearchQuery}
+                        onChange={(e) => setNoteSearchQuery(e.target.value)}
+                        className="h-8 text-xs"
+                        autoFocus
+                        aria-label={t('messages.searchNotes')}
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-3 flex-1 overflow-y-auto">
+                    {filteredNotes.map((note) => (
+                      <Card
+                        key={note.id}
+                        className={cn(
+                          'cursor-pointer transition-colors hover:bg-accent py-0',
+                          note.body ? 'h-[140px]' : 'h-auto'
+                        )}
+                        onClick={() => handleNoteClick(note)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={t('messages.viewNoteAria', { title: note.title })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleNoteClick(note);
+                          }
+                        }}
+                      >
+                        <CardContent
+                          className={cn('px-4 py-3 h-full flex flex-col', !note.body && 'h-auto')}
+                        >
+                          <div className="space-y-2 flex-1 flex flex-col">
+                            <div className="font-semibold text-sm">{note.title}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatNoteDate(note.updatedAt || note.createdAt)}
                             </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                            {note.body && (
+                              <div className="text-sm text-muted-foreground line-clamp-3 overflow-hidden flex-1">
+                                {note.body}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
+            </Card>
           </div>
         </div>
       </div>

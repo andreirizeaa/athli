@@ -370,6 +370,10 @@ export const enMessages = {
       dark: 'Dark',
       system: 'System',
     },
+    color: {
+      label: 'Theme',
+      default: 'Default',
+    },
     language: {
       label: 'English',
       aria: 'Change language (current: English)',

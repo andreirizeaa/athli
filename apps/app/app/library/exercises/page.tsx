@@ -182,6 +182,7 @@ const ExercisesPage = () => {
   const [isLoadingExercises, setIsLoadingExercises] = useState<boolean>(true);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
+  const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState<boolean>(false);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
@@ -992,13 +993,28 @@ const ExercisesPage = () => {
 
   return (
     <div className="h-full w-full flex flex-col">
+      <div className="w-full relative">
+        <div className="px-4 flex items-center justify-between mb-2 mt-2">
+          <div className="flex flex-col">
+            <p className="text-sm text-foreground">
+              {`${filteredCount} ${filteredCount === 1 ? t('exercises.exercise') : t('exercises.exercisePlural')}`}
+            </p>
+          </div>
+          <div>
+            <Button onClick={handleOpenCreateExercise} className="gap-2" aria-label={t('exercises.actions.createExercise')}>
+              <Plus className="size-4" />
+              <span>{t('exercises.actions.createExercise')}</span>
+            </Button>
+          </div>
+        </div>
+      </div>
       <DataGrid
         data={exercises}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="exercises"
-        subtitle={(count) => `${count} ${count === 1 ? t('exercises.exercise') : t('exercises.exercisePlural')}`}
         itemsPerPage={itemsPerPage}
+        onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('exercises.searchPlaceholder')}
         filters={filters}
@@ -1035,13 +1051,103 @@ const ExercisesPage = () => {
         }}
         defaultColumnOrder={COLUMN_ORDER}
         defaultVisibleColumns={COLUMN_ORDER}
-        customActions={
-            <Button onClick={handleOpenCreateExercise} className="gap-2" aria-label={t('exercises.actions.createExercise')}>
-              <Plus className="size-4" />
-              <span>{t('exercises.actions.createExercise')}</span>
-            </Button>
-        }
         selectionActions={
+          <div className="flex items-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearSelected}
+                    className="gap-2"
+                    aria-label={t('exercises.actions.clearSelectedAria')}
+                  >
+                    <X className="size-4" />
+                    <span>
+                      Clear {selectedExercises.size} selected
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('exercises.actions.clearSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleExportSelected}
+                    className="gap-2"
+                    aria-label={t('exercises.actions.exportSelectedAria')}
+                  >
+                    <Download className="size-4" />
+                    <span>{t('exercises.actions.export')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('exercises.actions.export')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleStarSelected}
+                    className="gap-2"
+                    aria-label={t('exercises.actions.starSelectedAria')}
+                  >
+                    <Star className="size-4" />
+                    <span>{t('exercises.actions.starSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('exercises.actions.starSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleArchiveSelected}
+                    className="gap-2"
+                    aria-label={t('exercises.actions.archiveSelectedAria')}
+                  >
+                    <Archive className="size-4" />
+                    <span>{t('exercises.actions.archiveSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('exercises.actions.archiveSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleDeleteSelected}
+                    className="gap-2 text-destructive hover:text-destructive"
+                    aria-label={t('exercises.actions.deleteSelectedAria')}
+                  >
+                    <Trash2 className="size-4" />
+                    <span>{t('exercises.actions.deleteSelected')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('exercises.actions.deleteSelected')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        }
+        emptyMessage={t('exercises.emptyMessage')}
           <div className="flex items-center gap-1">
             <TooltipProvider>
               <Tooltip>
@@ -1159,6 +1265,8 @@ const ExercisesPage = () => {
         renderFirstColumn={renderFirstColumn}
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
+        gridPadding={true}
+        compactPagination={true}
       />
       <SidePanel
         open={isAssignExerciseOpen}
