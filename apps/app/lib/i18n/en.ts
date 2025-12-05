@@ -1464,6 +1464,16 @@ export const enMessages = {
       cancelAddProgram: 'Cancel add program',
     },
   },
+  error: {
+    notFound: {
+      title: '404 Page',
+      description: 'This is an example of a template for 404 error pages. Built with shadcn/ui, Tailwind CSS and Next.js.',
+      heading: '404',
+      message: 'Page Not Found',
+      backToHome: 'Back to Home',
+      backToHomeAria: 'Go back to home page',
+    },
+  },
 } as const;
 
 export type EnMessages = typeof enMessages;
