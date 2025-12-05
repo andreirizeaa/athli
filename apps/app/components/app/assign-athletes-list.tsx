@@ -118,6 +118,7 @@ export const AssignAthletesList = ({
       compactMode={true}
       showPagination={true}
       itemsPerPage={25}
+      gridPadding={true}
     />
   );
 };

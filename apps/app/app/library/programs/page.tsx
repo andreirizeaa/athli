@@ -119,6 +119,7 @@ const ProgramsPage = () => {
   const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
+  const [filteredCount, setFilteredCount] = useState<number>(mockPrograms.length);
   const itemsPerPage = 25;
   const [isCreateProgramOpen, setIsCreateProgramOpen] = useState<boolean>(false);
   const [newProgramName, setNewProgramName] = useState<string>('');
@@ -703,13 +704,40 @@ const ProgramsPage = () => {
 
   return (
     <div className="h-full w-full flex flex-col">
+      <div className="w-full relative">
+        <div className="px-4 flex items-center justify-between mb-2 mt-2">
+          <div className="flex flex-col">
+            <p className="text-sm text-foreground">
+              {`${filteredCount} ${filteredCount === 1 ? t('programs.program') : t('programs.programPlural')}`}
+            </p>
+          </div>
+          <div>
+            <ButtonGroup>
+              <Button
+                variant="secondary"
+                onClick={handleOpenAssignProgram}
+                className="gap-2"
+                aria-label={t('programs.actions.assignProgram')}
+              >
+                <UserPlus className="size-4" />
+                <span>{t('general.assign')}</span>
+              </Button>
+              <ButtonGroupSeparator />
+              <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('programs.actions.createProgram')}>
+                <Plus className="size-4" />
+                <span>{t('programs.actions.createProgram')}</span>
+              </Button>
+            </ButtonGroup>
+          </div>
+        </div>
+      </div>
       <DataGrid
         data={mockPrograms}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="programs"
-        subtitle={(count) => `${count} ${count === 1 ? t('programs.program') : t('programs.programPlural')}`}
         itemsPerPage={itemsPerPage}
+        onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('programs.searchPlaceholder')}
         filters={filters}
@@ -747,24 +775,6 @@ const ProgramsPage = () => {
         }}
         defaultColumnOrder={COLUMN_ORDER}
         defaultVisibleColumns={COLUMN_ORDER}
-        customActions={
-          <ButtonGroup>
-            <Button
-              variant="secondary"
-              onClick={handleOpenAssignProgram}
-              className="gap-2"
-              aria-label={t('programs.actions.assignProgram')}
-            >
-              <UserPlus className="size-4" />
-              <span>{t('general.assign')}</span>
-            </Button>
-            <ButtonGroupSeparator />
-            <Button onClick={handleOpenCreateProgram} className="gap-2" aria-label={t('programs.actions.createProgram')}>
-              <Plus className="size-4" />
-              <span>{t('programs.actions.createProgram')}</span>
-            </Button>
-          </ButtonGroup>
-        }
         selectionActions={
           <div className="flex items-center gap-1">
             <TooltipProvider>
@@ -883,6 +893,8 @@ const ProgramsPage = () => {
         renderFirstColumn={renderFirstColumn}
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
+        gridPadding={true}
+        compactPagination={true}
       />
       <SidePanel
         open={isAssignProgramOpen}
