@@ -193,9 +193,9 @@ const AiWorkoutPage = () => {
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={handleCancel}
-              className="gap-2 border border-primary"
+              className="gap-2"
               aria-label={t('workouts.addWorkout.cancelAria')}
             >
               <X className="size-4" />

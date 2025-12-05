@@ -1060,7 +1060,7 @@ Focus on proper form and progressive overload.`;
             {isCreateWorkoutStep2 && (
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 onClick={handleCreateWorkoutBack}
                 disabled={isGenerating || isGeneratingStandard}
                 aria-label={t('library.backToWorkoutDetails')}
@@ -1116,7 +1116,7 @@ Focus on proper form and progressive overload.`;
                 onDrop={handleDrop}
               >
                   <div className="flex flex-col items-center gap-4 text-center">
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
                     <FileText className="h-8 w-8" />
                   </div>
                   <div>
@@ -1128,8 +1128,8 @@ Focus on proper form and progressive overload.`;
             )}
             <div className="flex flex-col items-center gap-4 flex-shrink-0 pb-4">
               <div className="relative flex items-center justify-center py-8 px-8">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 blur-sm opacity-30 -z-10"></div>
-                <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white shadow-lg">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 blur-sm opacity-30 -z-10"></div>
+                <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg">
                   <BrainCog className="h-10 w-10" />
                 </div>
               </div>
@@ -1144,7 +1144,7 @@ Focus on proper form and progressive overload.`;
             <div className="flex-1 overflow-auto">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white">
+                  <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <h3 className="text-sm font-semibold">
@@ -1168,23 +1168,26 @@ Focus on proper form and progressive overload.`;
                     aria-label={t('library.selectPdfFile')}
                   />
                   <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={handleUseExample}
-                      className="h-7 px-3 rounded-md bg-secondary text-secondary-foreground text-xs font-medium hover:bg-secondary/80 transition-colors"
+                      className="h-7 px-3 text-xs"
                       aria-label={t('library.useExample')}
                     >
                       {t('library.useExample')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      size="sm"
                       onClick={handleFileButtonClick}
-                      className="h-7 px-3 rounded-md bg-orange-100 text-orange-700 text-xs font-medium flex items-center gap-1.5 hover:bg-orange-200 transition-colors dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/50"
+                      className="h-7 px-3 text-xs gap-1.5"
                       aria-label={t('library.selectPdfFile')}
                     >
                       <FileText className="h-3.5 w-3.5" />
                       {t('messages.pdf')}
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {selectedFile && (

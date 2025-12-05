@@ -1661,8 +1661,8 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                   {chatMessages.length === 0 ? (
                     <div className="flex flex-col items-center gap-4 py-8">
                       <div className="relative flex items-center justify-center py-8 px-8">
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 blur-sm opacity-30 -z-10"></div>
-                        <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-amber-400 to-pink-400 text-white shadow-lg">
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 blur-sm opacity-30 -z-10"></div>
+                        <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg">
                           <BrainCog className="h-10 w-10" />
                         </div>
                       </div>
