@@ -4,8 +4,23 @@ export const DEFAULT_THEME = {
     scale: "none",
     contentLayout: "full"
   } as const;
-  
-  export type ThemeType = typeof DEFAULT_THEME;
+
+export type PresetValue = 
+  | "default"
+  | "underground"
+  | "rose-garden"
+  | "lake-view"
+  | "sunset-glow"
+  | "forest-whisper"
+  | "ocean-breeze"
+  | "lavender-dream";
+
+export type ThemeType = {
+  preset: PresetValue;
+  radius: "default" | "sm" | "md" | "lg";
+  scale: "none" | "sm" | "md" | "lg";
+  contentLayout: "full" | "boxed";
+};
   
   export const THEMES = [
     {
