@@ -18,7 +18,7 @@ import {
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { Archive, ChevronRight, MessageCircle, Users, X, Send } from 'lucide-react';
-import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { mockAthletes } from '@/components/app/app-shell';
 import { archiveUser } from '@/lib/athletes/athlete-service';
@@ -203,8 +203,8 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
               <TooltipTrigger asChild>
                 <Button
                   onClick={handleResendInvite}
-                  variant="secondary"
-                  className="gap-2"
+                  variant="ghost"
+                  className="gap-2 border border-primary"
                   aria-label={t('athletes.profile.resendInviteAria')}
                 >
                   <Send className="size-4" />
@@ -215,12 +215,10 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
                 <p>{t('athletes.profile.resendInviteAria')}</p>
               </TooltipContent>
             </Tooltip>
-            <ButtonGroupSeparator className="bg-background !w-[2px]" />
             <Tooltip>
               <TooltipTrigger asChild>
           <Button
             onClick={() => handleNavigateToMessages(clientId)}
-            variant="secondary"
             className="gap-2"
             aria-label={t('athletes.profile.messageAria')}
           >
@@ -236,7 +234,6 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
           <Tooltip>
             <TooltipTrigger asChild>
           <Button
-            variant="secondary"
             size="icon"
             className="gap-2"
             aria-label={t('athletes.profile.archiveAria')}
@@ -282,7 +279,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
             </p>
           </div>
           <div className="flex items-center justify-end gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={handleCancelArchive}>
+            <Button type="button" variant="outline" onClick={handleCancelArchive}>
               {t('athletes.profile.no')}
             </Button>
             <Button type="button" onClick={handleArchive}>

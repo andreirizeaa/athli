@@ -193,15 +193,14 @@ const AiWorkoutPage = () => {
           </div>
           <ButtonGroup className="flex-shrink-0">
             <Button
-              variant="secondary"
+              variant="ghost"
               onClick={handleCancel}
-              className="gap-2"
+              className="gap-2 border border-primary"
               aria-label={t('workouts.addWorkout.cancelAria')}
             >
               <X className="size-4" />
               <span>{t('workouts.addWorkout.cancel')}</span>
             </Button>
-            <ButtonGroupSeparator />
             <Button onClick={handleSaveClick} className="gap-2" aria-label={t('workouts.edit.saveAria')}>
               <Check className="size-4" />
               <span>{t('workouts.edit.save')}</span>

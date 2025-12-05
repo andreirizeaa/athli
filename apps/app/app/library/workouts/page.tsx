@@ -832,15 +832,14 @@ Focus on proper form and progressive overload.`;
           <div>
             <ButtonGroup>
               <Button
-                variant="secondary"
+                variant="ghost"
                 onClick={handleOpenAssignWorkout}
-                className="gap-2"
+                className="gap-2 border border-primary"
                 aria-label={t('library.assignWorkout')}
               >
                 <UserPlus className="size-4" />
                 <span>{t('general.assign')}</span>
               </Button>
-              <ButtonGroupSeparator />
               <Button onClick={handleOpenCreateWorkout} className="gap-2" aria-label={t('library.createWorkout')}>
                 <Plus className="size-4" />
                 <span>{t('library.createWorkout')}</span>
@@ -1071,7 +1070,7 @@ Focus on proper form and progressive overload.`;
             )}
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={handleCloseCreateWorkout}
               disabled={isGenerating || isGeneratingStandard}
               aria-label={t('library.cancelCreatingWorkout')}

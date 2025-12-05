@@ -131,8 +131,8 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
               {goals.map((goal, index) => (
                 <Badge
                   key={index}
-                  variant="secondary"
-                  className="!whitespace-normal break-words max-w-full cursor-pointer hover:bg-secondary/80 transition-colors p-2 !rounded-md"
+                  variant="outline"
+                  className="!whitespace-normal break-words max-w-full cursor-pointer hover:bg-accent transition-colors p-2 !rounded-md"
                   onClick={handleEditGoals}
                   role="button"
                   tabIndex={0}
