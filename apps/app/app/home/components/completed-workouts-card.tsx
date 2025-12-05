@@ -864,22 +864,6 @@ export const CompletedWorkoutsCard = () => {
           ) : (
             <>
               <div className="pt-4 pb-2 flex-shrink-0">
-                <div className="flex items-center justify-between pt-2 px-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-muted-foreground uppercase">
-                      {t('home.athlete')}
-                    </span>
-                    <span className="text-xs font-medium text-muted-foreground uppercase">
-                      & {t('home.workout')}
-                    </span>
-                  </div>
-                  <span className="text-xs font-medium text-muted-foreground uppercase">
-                    {t('home.actions')}
-                  </span>
-                </div>
-                <div className="py-2">
-                  <Separator />
-                </div>
               </div>
               <div className="pb-4 space-y-3">
                 {filteredMissedWorkouts.map((workout) => (
