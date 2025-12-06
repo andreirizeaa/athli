@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { Pen, Trash2, Mail, X, Clock, Users } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
 import { toast } from 'sonner';
 import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar/calendar-service';
+import { calendarApi } from '@/lib/api/calendar-api';
 
 interface CalendarEvent {
   id: string;
@@ -58,6 +59,7 @@ interface CalendarEvent {
 export const CalendarView = () => {
   const t = useTranslations();
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -642,11 +644,12 @@ export const CalendarView = () => {
       }
 
       try {
-        const url = new URL('/api/calendar/events', window.location.origin);
-        url.searchParams.set('timeMin', extendedRange.start);
-        url.searchParams.set('timeMax', extendedRange.end);
-
-        const response = await fetch(url.toString());
+        const token = await getToken();
+        const response = await calendarApi.events(
+          extendedRange.start,
+          extendedRange.end,
+          token
+        );
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           const errorMessage = errorData.error || `Failed to fetch events: ${response.status}`;
@@ -710,7 +713,7 @@ export const CalendarView = () => {
     };
 
     fetchEvents();
-  }, [extendedRange.start, extendedRange.end, hasCachedEvents, dateRange]);
+  }, [extendedRange.start, extendedRange.end, hasCachedEvents, dateRange, getToken]);
 
   const handlePrevious = () => {
     if (viewMode === 'week') {

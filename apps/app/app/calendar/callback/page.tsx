@@ -3,14 +3,17 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@clerk/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { calendarApi } from '@/lib/api/calendar-api';
 
 const CalendarCallbackContent = () => {
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getToken } = useAuth();
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
@@ -79,17 +82,15 @@ const CalendarCallbackContent = () => {
           }
 
           // Send provider tokens to API for storage
-          const response = await fetch('/api/calendar/callback', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          const token = await getToken();
+          const response = await calendarApi.callback(
+            {
               provider_access_token: accessToken,
               provider_refresh_token: refreshToken,
               provider: provider === 'outlook' ? 'azure' : 'google',
-            }),
-          });
+            },
+            token
+          );
 
           if (!response.ok) {
             const error = await response.json();
@@ -117,7 +118,7 @@ const CalendarCallbackContent = () => {
     };
 
     processCallback();
-  }, [router, searchParams]);
+  }, [router, searchParams, getToken]);
 
   if (isProcessing) {
     return (
