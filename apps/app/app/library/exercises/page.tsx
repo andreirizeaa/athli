@@ -897,35 +897,6 @@ const ExercisesPage = () => {
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedExerciseForAssignment(exercise);
-                    setIsAssignIndividualExerciseOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedExerciseForAssignment(exercise);
-                      setIsAssignIndividualExerciseOpen(true);
-                    }
-                  }}
-                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label={t('exercises.actions.assignExerciseToClient')}
-                >
-                  <User className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('exercises.actions.assignExerciseToClient')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
                   onClick={(e) => handleToggleStar(exercise.id, e)}
                   onKeyDown={(e) => handleStarKeyDown(exercise.id, e)}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
