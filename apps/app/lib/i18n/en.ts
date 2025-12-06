@@ -502,7 +502,7 @@ export const enMessages = {
     uploadVideo: 'Upload video',
     attachFile: 'Attach file',
     attachFiles: 'Attach files',
-    typeMessagePlaceholder: 'Type, dictate or upload a file...',
+    typeMessagePlaceholder: 'Type or upload a file',
     typeMessage: 'Type a message',
     sendMessage: 'Send message',
     images: 'Images',
@@ -711,7 +711,9 @@ export const enMessages = {
       selectRepeatWeekly: 'Select repeat weekly option',
       showOneWeek: 'Show one week',
       showTwoWeeks: 'Show two weeks',
+      twoWeeksRequirement: 'Add at least 2 weeks to view two weeks',
       showFourWeeks: 'Show four weeks',
+      fourWeeksRequirement: 'Add at least 4 weeks to view four weeks',
       viewDetailsForWorkout: 'View details for workout {name}',
       selectWorkout: 'Select workout {name}',
       months: {

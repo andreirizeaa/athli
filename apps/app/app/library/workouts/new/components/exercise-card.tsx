@@ -493,7 +493,7 @@ export const ExerciseCard = ({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex flex-col gap-3 p-3 bg-background dark:bg-transparent border',
+        'relative flex flex-col gap-3 p-3 bg-background border',
         // Shape logic:
         // - standalone: fully rounded
         // - top of superset: rounded top only
@@ -744,7 +744,7 @@ export const ExerciseCard = ({
             </TableHeader>
             <TableBody>
               {sets.map((set, index) => (
-                <TableRow key={index} className="h-10">
+                <TableRow key={index} className="h-10 bg-background">
                   <TableCell className="font-medium text-center py-1 px-2">{index + 1}</TableCell>
                   <TableCell className="py-1 px-2 w-[130px]">
                     <div className="flex justify-center">
@@ -865,7 +865,7 @@ export const ExerciseCard = ({
                                     <TableBody>
                                       {dropsetData?.setIndex === index &&
                                         dropsetData.repsDrops.map((drop, dropIndex) => (
-                                          <TableRow key={dropIndex} className="h-10">
+                                          <TableRow key={dropIndex} className="h-10 bg-background">
                                             <TableCell className="font-medium text-center py-1 px-2">
                                               {drop.dropNumber}
                                             </TableCell>
@@ -925,7 +925,7 @@ export const ExerciseCard = ({
                                             </TableCell>
                                           </TableRow>
                                         ))}
-                                      <TableRow className="h-8">
+                                      <TableRow className="h-8 bg-background">
                                         <TableCell colSpan={4} className="text-center py-1 px-2">
                                           <Button
                                             type="button"
@@ -1081,7 +1081,7 @@ export const ExerciseCard = ({
               ))}
               {!isSingleSetOnly && (
                 <TableRow
-                  className="h-8 cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="h-8 bg-background cursor-pointer hover:bg-accent/50 transition-colors"
                   onClick={handleAddSet}
                   role="button"
                   tabIndex={0}

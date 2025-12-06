@@ -154,8 +154,8 @@ const AiWorkoutPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="w-full relative flex-shrink-0">
         <div className="px-4 flex items-start justify-between gap-4 mb-2 mt-2">
           <div className="flex flex-col gap-1 flex-1 min-w-0">
             <Breadcrumb>
@@ -209,7 +209,7 @@ const AiWorkoutPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto bg-sidebar">
+      <div className="w-full flex-1 min-h-0 overflow-hidden bg-sidebar">
         <AiBuilder
           meta={workoutMeta}
           onDirtyChange={() => setHasUnsavedChanges(true)}

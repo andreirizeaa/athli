@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ClientCalendarStatus } from './components/client-calendar-status';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { mockAthletes } from '@/components/app/app-shell';
 
 const AppointmentSessionsPage = () => {
@@ -42,10 +42,8 @@ const AppointmentSessionsPage = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
-      <div className="w-full flex-1 min-h-0 overflow-hidden">
-        <ClientCalendarStatus clientEmail={athlete.email} provider={provider} />
-      </div>
+    <div className="w-full h-full flex flex-col overflow-hidden">
+      <ClientCalendarStatus clientEmail={athlete.email} provider={provider} />
     </div>
   );
 };
