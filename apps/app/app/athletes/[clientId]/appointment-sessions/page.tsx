@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@clerk/nextjs';
 import { ClientCalendarStatus } from './components/client-calendar-status';
 import { useParams } from 'next/navigation';
 import { mockAthletes } from '@/components/app/app-shell';
+import { calendarApi } from '@/lib/api/calendar-api';
 
 const AppointmentSessionsPage = () => {
   const t = useTranslations();
+  const { getToken } = useAuth();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   const athlete = mockAthletes.find((item) => item.id === clientId);
@@ -16,7 +19,8 @@ const AppointmentSessionsPage = () => {
   useEffect(() => {
     const fetchProvider = async () => {
       try {
-        const response = await fetch('/api/calendar/status');
+        const token = await getToken();
+        const response = await calendarApi.status(token);
         if (response.ok) {
           const data = await response.json();
           if (data.connected && data.provider) {
@@ -29,7 +33,7 @@ const AppointmentSessionsPage = () => {
     };
 
     fetchProvider();
-  }, []);
+  }, [getToken]);
 
   if (!athlete) {
     return (

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@clerk/nextjs';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import Image from 'next/image';
 import { ConnectCalendarModal } from '@/app/calendar/components/connect-calendar-modal';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { calendarApi } from '@/lib/api/calendar-api';
 
 type IntegrationProvider = 'google' | 'outlook';
 
@@ -65,6 +67,7 @@ const comingSoonIntegrations: ComingSoonIntegration[] = [
 const IntegrationsPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const { getToken } = useAuth();
   const [connectedProviders, setConnectedProviders] = useState<IntegrationProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
@@ -73,7 +76,8 @@ const IntegrationsPage = () => {
   useEffect(() => {
     const checkConnections = async () => {
       try {
-        const response = await fetch('/api/calendar/status');
+        const token = await getToken();
+        const response = await calendarApi.status(token);
         if (!response.ok) {
           if (response.status === 401) {
             router.push('/sign-in');
@@ -99,13 +103,12 @@ const IntegrationsPage = () => {
     };
 
     checkConnections();
-  }, [router, t]);
+  }, [router, t, getToken]);
 
   const handleDisconnect = async (provider: IntegrationProvider) => {
     try {
-      const response = await fetch('/api/calendar/disconnect', {
-        method: 'DELETE',
-      });
+      const token = await getToken();
+      const response = await calendarApi.disconnect(token);
 
       if (!response.ok) {
         throw new Error('Failed to disconnect');
@@ -130,7 +133,8 @@ const IntegrationsPage = () => {
 
   const refreshConnections = async () => {
     try {
-      const response = await fetch('/api/calendar/status');
+      const token = await getToken();
+      const response = await calendarApi.status(token);
       if (response.ok) {
         const data = await response.json();
         if (data.connected && data.provider) {

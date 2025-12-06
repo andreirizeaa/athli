@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs';
+import { intercomApi } from '@/lib/api/intercom-api';
 
 declare global {
   interface Window {
@@ -12,6 +13,7 @@ declare global {
 
 export const IntercomProvider = () => {
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const [jwt, setJwt] = useState<string | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
@@ -83,7 +85,8 @@ export const IntercomProvider = () => {
 
     const fetchJwt = async () => {
       try {
-        const response = await fetch('/api/intercom/jwt');
+        const token = await getToken();
+        const response = await intercomApi.jwt(token);
         if (!response.ok) {
           return;
         }
@@ -97,7 +100,7 @@ export const IntercomProvider = () => {
     };
 
     fetchJwt();
-  }, [user, isLoaded]);
+  }, [user, isLoaded, getToken]);
 
   // Boot Intercom with JWT and user data
   useEffect(() => {
