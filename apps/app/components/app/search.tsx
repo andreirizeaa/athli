@@ -225,7 +225,7 @@ export function SearchComponent() {
   };
 
   const handleExerciseSearchResultClick = (exerciseId: string) => {
-    router.push(`/library/exercises`);
+    router.push(`/library/exercises?exerciseId=${exerciseId}`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };

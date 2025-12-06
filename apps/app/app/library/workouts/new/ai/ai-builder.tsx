@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
@@ -315,9 +314,11 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   );
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [isLoadingAiWorkout, setIsLoadingAiWorkout] = useState(false);
+  const [newSectionId, setNewSectionId] = useState<string | null>(null);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Load shared mock schema in edit mode if no schema exists
   useEffect(() => {
@@ -903,15 +904,14 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   };
 
   const handleExerciseClickById = (exerciseId: string) => {
-    // Find the exercise by ID from the search results
-    const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
-    if (exercise) {
-      handleExerciseClick(exercise);
-    } else {
-      // If exercise not found, try to scroll using just the ID
-      const exerciseRef = exerciseRefs.current.get(exerciseId);
-      if (exerciseRef && contentScrollRef.current) {
+    // First, try to scroll to the exercise using the ref
+    const exerciseRef = exerciseRefs.current.get(exerciseId);
+    if (exerciseRef && contentScrollRef.current) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
         const scrollContainer = contentScrollRef.current;
+        if (!scrollContainer) return;
+        
         const containerRect = scrollContainer.getBoundingClientRect();
         const exerciseRect = exerciseRef.getBoundingClientRect();
         const scrollTop = scrollContainer.scrollTop;
@@ -922,6 +922,12 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
           top: Math.max(0, targetScroll),
           behavior: 'smooth',
         });
+      });
+    } else {
+      // If ref not found, try to find exercise and use handleExerciseClick
+      const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
+      if (exercise) {
+        handleExerciseClick(exercise);
       }
     }
   };
@@ -1152,11 +1158,6 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   }, [saveSignal]);
 
   const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed') => {
-    // Preserve current scroll position in the middle content column
-    if (contentScrollRef.current) {
-      pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
-    }
-
     const newSection = {
       id: `sec_${type}_${Date.now()}`,
       type,
@@ -1170,15 +1171,41 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       ...prev,
       sections: [...prev.sections, newSection],
     }));
+    
+    // Set the new section ID to trigger scrolling
+    setNewSectionId(newSection.id);
   };
 
-  // After sections change (e.g. a new section is added), restore scroll position
-  useLayoutEffect(() => {
-    if (pendingScrollTopRef.current !== null && contentScrollRef.current) {
-      contentScrollRef.current.scrollTop = pendingScrollTopRef.current;
-      pendingScrollTopRef.current = null;
+  // Scroll to newly added section
+  useEffect(() => {
+    if (newSectionId && contentScrollRef.current) {
+      // Use a small timeout to ensure the DOM has updated
+      const timeoutId = setTimeout(() => {
+        const sectionRef = sectionRefs.current.get(newSectionId);
+        if (sectionRef && contentScrollRef.current) {
+          requestAnimationFrame(() => {
+            const scrollContainer = contentScrollRef.current;
+            if (!scrollContainer) return;
+            
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const sectionRect = sectionRef.getBoundingClientRect();
+            const scrollTop = scrollContainer.scrollTop;
+            const sectionTop = sectionRect.top - containerRect.top + scrollTop;
+
+            const targetScroll = sectionTop - containerRect.height / 2 + sectionRect.height / 2;
+            scrollContainer.scrollTo({
+              top: Math.max(0, targetScroll),
+              behavior: 'smooth',
+            });
+            
+            setNewSectionId(null);
+          });
+        }
+      }, 50);
+
+      return () => clearTimeout(timeoutId);
     }
-  }, [workoutSchema.sections.length]);
+  }, [newSectionId, workoutSchema.sections.length]);
 
   const handleDeleteSection = (sectionId: string) => {
     onDirtyChange?.();
@@ -1595,9 +1622,10 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   };
 
   return (
-    <div className="flex h-full">
-      <div className="flex-[2] bg-background h-full overflow-hidden flex flex-col">
-        <div className="px-4 pt-4 flex-shrink-0">
+    <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-background p-2">
+      <div className="flex-[1.5] p-2 h-full flex flex-col min-h-0">
+        <Card className="relative h-full" style={{ height: '100%' }}>
+          <CardContent className="absolute inset-0 p-4 overflow-y-auto flex flex-col">
           <Tabs
             value={builderMode}
             onValueChange={(value) => {
@@ -1626,10 +1654,9 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
         {builderMode === 'chat' && (
           <div
-            className="flex flex-col flex-1 min-h-0 overflow-hidden relative"
+                className="flex-1 min-h-0 mt-4 flex flex-col overflow-hidden"
             onDragEnter={handleChatDragEnter}
             onDragOver={handleChatDragOver}
             onDragLeave={handleChatDragLeave}
@@ -1655,8 +1682,11 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                 </div>
               </div>
             )}
-              {/* Chat Messages */}
-              <ScrollArea className="flex-1 min-h-0" ref={chatScrollRef}>
+                {/* Chat Messages - Scrollable */}
+              <div 
+                ref={chatScrollRef}
+                  className="flex-1 min-h-0 overflow-y-auto"
+              >
                 <div className="flex flex-col gap-3 px-4 pt-4 pb-4">
                   {chatMessages.length === 0 ? (
                     <div className="flex flex-col items-center gap-4 py-8">
@@ -1692,7 +1722,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                                 'max-w-[80%] rounded-xl px-3 py-2',
                                 message.isSent
                                   ? 'bg-primary/20 text-foreground'
-                                  : 'bg-muted text-foreground',
+                                  : 'bg-sidebar text-foreground',
                                 isLastInSequence && message.isSent && 'rounded-br-sm',
                                 isLastInSequence && !message.isSent && 'rounded-bl-sm'
                               )}
@@ -1739,7 +1769,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                   )}
                   {isSendingMessage && (
                     <div className="flex justify-start">
-                      <div className="max-w-[80%] rounded-xl px-3 py-2 bg-muted text-foreground">
+                      <div className="max-w-[80%] rounded-xl px-3 py-2 bg-sidebar text-foreground">
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse" />
                           <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse delay-75" />
@@ -1749,13 +1779,13 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                     </div>
                   )}
                 </div>
-              </ScrollArea>
-              {/* Chat Input */}
-              <div className="px-4 pb-4 pt-4 flex-shrink-0">
+              </div>
+                {/* Chat Input - Fixed at bottom */}
+              <div className="flex-shrink-0">
                 <div
                   ref={containerRef}
                   className={cn(
-                    'relative flex bg-muted px-3 py-2 transition-all duration-700 ease-in-out',
+                    'relative flex bg-sidebar px-3 py-2 transition-all duration-700 ease-in-out',
                     isMultiLine ? 'flex-col' : 'items-center'
                   )}
                   style={{ borderRadius: '28px' }}
@@ -1837,7 +1867,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                       }
                     }}
                     className={cn(
-                      'resize-none min-h-[36px] max-h-[120px] py-2 bg-muted dark:bg-muted border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-muted dark:focus-visible:bg-muted',
+                      'resize-none min-h-[36px] max-h-[120px] py-2 bg-sidebar dark:bg-sidebar border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-sidebar dark:focus-visible:bg-sidebar',
                       isMultiLine ? 'w-full' : 'flex-1 min-w-0'
                     )}
                     aria-label="Type a message"
@@ -1944,7 +1974,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
             </div>
           )}
           {builderMode === 'exercise' && (
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <div className="flex-1 min-h-0 mt-4">
               <ExerciseSelectionPanel
                 onExerciseClick={handleExerciseClick}
                 onDragStart={handleDragStart}
@@ -1953,382 +1983,421 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
             </div>
           )}
           {builderMode === 'section' && (
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <div className="flex-1 min-h-0 mt-4">
               <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
             </div>
           )}
+          </CardContent>
+        </Card>
       </div>
-      <Separator orientation="vertical" />
-      <div className="relative flex-[3.5] h-full">
-        {isLoadingAiWorkout && (
-          <div className="absolute inset-0 mt-[1px] bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">Generating workout...</p>
+      <div className="flex-[2.5] p-2 h-full flex flex-col min-h-0">
+        <Card className="relative h-full" style={{ height: '100%' }}>
+          {isLoadingAiWorkout && (
+            <div className="absolute inset-0 mt-[1px] bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-sm text-muted-foreground">Generating workout...</p>
+              </div>
             </div>
-          </div>
-        )}
-        <div
-          ref={contentScrollRef}
-          className="p-4 h-full overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted [&::-webkit-scrollbar-track]:bg-transparent"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'hsl(var(--muted)) transparent',
-          }}
-        >
-          {workoutSchema.sections.length > 0 ? (
-            <div className="flex flex-col gap-4 w-full">
-              {workoutSchema.sections.map((section) => (
-                <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
-                  <Card className="bg-background w-full flex flex-col relative">
-                    <CardHeader className="border-b p-0 pb-2">
-                      <div className="flex items-center justify-between px-3 pt-1">
-                        <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
-                          {section.type}{' '}
-                          <span className="font-normal text-xs">
-                            ({section.exercises ? section.exercises.length : 0})
-                          </span>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="size-4 text-foreground translate-y-[1px]" />
-                            </TooltipTrigger>
-                            <TooltipContent>{getSectionDescription(section.type)}</TooltipContent>
-                          </Tooltip>
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          {(section.type === 'amrap' || section.type === 'timed') && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="font-medium">
-                                {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
-                              </span>
-                              <Input
-                                type="text"
-                                inputMode="numeric"
-                                value={
-                                  section.type === 'amrap'
-                                    ? section.roundDurationSec?.toString() || ''
-                                    : section.targetRounds?.toString() || ''
-                                }
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  onDirtyChange?.();
-                                  setWorkoutSchema((prev) => ({
-                                    ...prev,
-                                    sections: prev.sections.map((sec) => {
-                                      if (sec.id === section.id) {
-                                        if (section.type === 'amrap') {
+          )}
+          <CardContent ref={contentScrollRef} className="absolute inset-0 p-4 overflow-y-auto">
+            {workoutSchema.sections.length > 0 ? (
+              <div className="flex flex-col gap-4 w-full min-h-0">
+                {workoutSchema.sections.map((section) => (
+                  <div
+                    key={section.id}
+                    ref={(el) => {
+                      if (el) {
+                        sectionRefs.current.set(section.id, el);
+                      } else {
+                        sectionRefs.current.delete(section.id);
+                      }
+                    }}
+                    className="relative flex w-full items-stretch flex-shrink-0 min-w-0"
+                  >
+                    <Card className="bg-sidebar w-full flex flex-col relative min-w-0">
+                      <CardHeader className="border-b p-0 pb-2">
+                        <div className="flex items-center justify-between px-3 pt-1">
+                          <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
+                            {section.type}{' '}
+                            <span className="font-normal text-xs">
+                              ({section.exercises ? section.exercises.length : 0})
+                            </span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="size-4 text-foreground translate-y-[1px]" />
+                              </TooltipTrigger>
+                              <TooltipContent>{getSectionDescription(section.type)}</TooltipContent>
+                            </Tooltip>
+                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            {(section.type === 'amrap' || section.type === 'timed') && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="font-medium">
+                                  {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
+                                </span>
+                                <Input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={
+                                    section.type === 'amrap'
+                                      ? section.roundDurationSec?.toString() || ''
+                                      : section.targetRounds?.toString() || ''
+                                  }
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    onDirtyChange?.();
+                                    setWorkoutSchema((prev) => ({
+                                      ...prev,
+                                      sections: prev.sections.map((sec) => {
+                                        if (sec.id === section.id) {
+                                          if (section.type === 'amrap') {
+                                            return {
+                                              ...sec,
+                                              roundDurationSec: value
+                                                ? parseInt(value, 10)
+                                                : undefined,
+                                            };
+                                          }
                                           return {
                                             ...sec,
-                                            roundDurationSec: value
-                                              ? parseInt(value, 10)
-                                              : undefined,
+                                            targetRounds: value ? parseInt(value, 10) : undefined,
                                           };
                                         }
-                                        return {
-                                          ...sec,
-                                          targetRounds: value ? parseInt(value, 10) : undefined,
-                                        };
-                                      }
-                                      return sec;
-                                    }),
-                                  }));
+                                        return sec;
+                                      }),
+                                    }));
 
-                                  // Clear missing-config validation for this section as soon as a value is entered
-                                  if (value && value.trim() !== '') {
-                                    setSectionValidationErrors((prev) => {
-                                      const existing = prev[section.id];
-                                      if (!existing || !existing.missingConfig) return prev;
-                                      const nextSection = { ...existing };
-                                      delete nextSection.missingConfig;
-                                      const next: SectionValidationErrors = { ...prev };
-                                      if (Object.keys(nextSection).length === 0) {
-                                        delete next[section.id];
-                                      } else {
-                                        next[section.id] = nextSection;
-                                      }
-                                      return next;
-                                    });
-                                  }
-                                }}
-                                className={cn(
-                                  'h-7 w-24 text-center text-[11px]',
-                                  sectionValidationErrors[section.id]?.missingConfig &&
-                                    'border-destructive focus-visible:ring-destructive'
-                                )}
-                                placeholder="-"
-                              />
-                            </div>
-                          )}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:border-destructive"
-                            onClick={() => handleDeleteSection(section.id)}
-                            onKeyDown={(e) => handleDeleteKeyDown(e, section.id)}
-                            aria-label={`Delete ${section.type} section`}
-                          >
-                            <Trash2 className="size-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent
-                      className="flex-1 flex flex-col px-3 py-1.5"
-                      onDragOver={(e) => handleDragOver(e, section.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleSectionDrop(e, section.id)}
-                    >
-                      <div
-                        className={cn(
-                          'flex-1 w-full',
-                          section.exercises && section.exercises.length > 0
-                            ? 'flex flex-col gap-0'
-                            : 'flex items-center justify-center'
-                        )}
-                      >
-                        {section.exercises && section.exercises.length > 0 ? (
-                          <div className="w-full flex flex-col gap-0">
-                            {/* Slot before the first exercise */}
-                            <div
-                              onDragOver={(e) => handleSlotDragOver(e, section.id, 0)}
-                              onDragLeave={handleSlotDragLeave}
-                              onDrop={(e) => handleSlotDrop(e, section.id, 0)}
-                              className={cn(
-                                'transition-all w-full',
-                                draggedExercise &&
-                                  dragOverSlot &&
-                                  dragOverSlot.sectionId === section.id &&
-                                  dragOverSlot.slotIndex === 0
-                                  ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                                  : 'h-1'
-                              )}
-                            >
-                              {draggedExercise &&
-                                dragOverSlot &&
-                                dragOverSlot.sectionId === section.id &&
-                                dragOverSlot.slotIndex === 0 && (
-                                  <span>Drop your exercise here</span>
-                                )}
-                            </div>
-
-                            {section.exercises.map((exercise, exerciseIndex) => {
-                              const nextExercise = section.exercises?.[exerciseIndex + 1];
-                              const prevExercise =
-                                exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
-
-                              const isLinkedToNext = !!(
-                                exercise.supersetGroupId &&
-                                nextExercise?.supersetGroupId === exercise.supersetGroupId
-                              );
-
-                              const isLinkedToPrev = !!(
-                                exercise.supersetGroupId &&
-                                prevExercise?.supersetGroupId === exercise.supersetGroupId
-                              );
-
-                              const wrapperClasses = cn(
-                                'flex flex-col',
-                                isLinkedToNext ? 'gap-0' : 'gap-2',
-                                exerciseIndex === 0
-                                  ? ''
-                                  : isLinkedToPrev
-                                    ? '-mt-px'
-                                    : isLinkedToNext
-                                      ? 'mt-0'
-                                      : 'mt-1'
-                              );
-
-                              return (
-                                <div
-                                  key={exercise.instanceId}
-                                  ref={(el) => {
-                                    if (el) {
-                                      exerciseRefs.current.set(exercise.exerciseId, el);
-                                    } else {
-                                      exerciseRefs.current.delete(exercise.exerciseId);
+                                    // Clear missing-config validation for this section as soon as a value is entered
+                                    if (value && value.trim() !== '') {
+                                      setSectionValidationErrors((prev) => {
+                                        const existing = prev[section.id];
+                                        if (!existing || !existing.missingConfig) return prev;
+                                        const nextSection = { ...existing };
+                                        delete nextSection.missingConfig;
+                                        const next: SectionValidationErrors = { ...prev };
+                                        if (Object.keys(nextSection).length === 0) {
+                                          delete next[section.id];
+                                        } else {
+                                          next[section.id] = nextSection;
+                                        }
+                                        return next;
+                                      });
                                     }
                                   }}
-                                  className={wrapperClasses}
-                                >
-                                  <ExerciseCard
-                                    exercise={exercise}
-                                    isLinkedToPrev={isLinkedToPrev}
-                                    isLinkedToNext={isLinkedToNext}
-                                    onVideoClick={handleExerciseClick}
-                                    sectionType={section.type}
-                                    validationErrors={validationErrors[exercise.instanceId]}
-                                    onClearValidationField={(setIndex, field) =>
-                                      clearSetValidationField(exercise.instanceId, setIndex, field)
-                                    }
-                                    onExerciseChange={(newExercise) => {
-                                      onDirtyChange?.();
-                                      const castExercise = newExercise as ExerciseWithSuperset;
-                                      recomputeExerciseValidation(
-                                        exercise.instanceId,
-                                        castExercise.exerciseType as
-                                          | 'weight_reps'
-                                          | 'reps'
-                                          | 'distance_duration',
-                                        castExercise.sets || []
-                                      );
-                                      setWorkoutSchema((prev) => ({
-                                        ...prev,
-                                        sections: prev.sections.map((sec) => {
-                                          if (sec.id === section.id && sec.exercises) {
-                                            const updatedExercises: ExerciseWithSuperset[] = [
-                                              ...sec.exercises,
-                                            ];
-                                            updatedExercises[exerciseIndex] = {
-                                              ...castExercise,
-                                              supersetGroupId: exercise.supersetGroupId,
-                                            };
-                                            return {
-                                              ...sec,
-                                              exercises: updatedExercises,
-                                            };
-                                          }
-                                          return sec;
-                                        }),
-                                      }));
-                                    }}
-                                    onDelete={() => {
-                                      onDirtyChange?.();
-                                      setWorkoutSchema((prev) => ({
-                                        ...prev,
-                                        sections: prev.sections.map((sec) => {
-                                          if (sec.id === section.id && sec.exercises) {
-                                            const updatedExercises = sec.exercises.filter(
-                                              (_, idx) => idx !== exerciseIndex
-                                            );
-                                            return {
-                                              ...sec,
-                                              exercises: updatedExercises,
-                                            };
-                                          }
-                                          return sec;
-                                        }),
-                                      }));
-                                    }}
-                                  />
+                                  className={cn(
+                                    'h-7 w-24 text-center text-[11px]',
+                                    sectionValidationErrors[section.id]?.missingConfig &&
+                                      'border-destructive focus-visible:ring-destructive'
+                                  )}
+                                  placeholder="-"
+                                />
+                              </div>
+                            )}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive hover:border-destructive"
+                              onClick={() => handleDeleteSection(section.id)}
+                              onKeyDown={(e) => handleDeleteKeyDown(e, section.id)}
+                              aria-label={`Delete ${section.type} section`}
+                            >
+                              <Trash2 className="size-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent
+                        className="flex-1 flex flex-col px-3 py-1.5"
+                        onDragOver={(e) => handleDragOver(e, section.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleSectionDrop(e, section.id)}
+                      >
+                        <div
+                          className={cn(
+                            'flex-1 w-full',
+                            section.exercises && section.exercises.length > 0
+                              ? 'flex flex-col gap-0'
+                              : 'flex items-center justify-center'
+                          )}
+                        >
+                          {section.exercises && section.exercises.length > 0 ? (
+                            <div className="w-full flex flex-col gap-0">
+                              {/* Slot before the first exercise */}
+                              <div
+                                onDragOver={(e) => handleSlotDragOver(e, section.id, 0)}
+                                onDragLeave={handleSlotDragLeave}
+                                onDrop={(e) => handleSlotDrop(e, section.id, 0)}
+                                className={cn(
+                                  'transition-all w-full',
+                                  draggedExercise &&
+                                    dragOverSlot &&
+                                    dragOverSlot.sectionId === section.id &&
+                                    dragOverSlot.slotIndex === 0
+                                    ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
+                                    : 'h-1'
+                                )}
+                              >
+                                {draggedExercise &&
+                                  dragOverSlot &&
+                                  dragOverSlot.sectionId === section.id &&
+                                  dragOverSlot.slotIndex === 0 && (
+                                    <span>Drop your exercise here</span>
+                                  )}
+                              </div>
 
-                                  {/* Slot between this exercise and the next */}
+                              {section.exercises.map((exercise, exerciseIndex) => {
+                                const nextExercise = section.exercises?.[exerciseIndex + 1];
+                                const prevExercise =
+                                  exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
+
+                                const isLinkedToNext = !!(
+                                  exercise.supersetGroupId &&
+                                  nextExercise?.supersetGroupId === exercise.supersetGroupId
+                                );
+
+                                const isLinkedToPrev = !!(
+                                  exercise.supersetGroupId &&
+                                  prevExercise?.supersetGroupId === exercise.supersetGroupId
+                                );
+
+                                const wrapperClasses = cn(
+                                  'flex flex-col',
+                                  isLinkedToNext ? 'gap-0' : 'gap-2',
+                                  exerciseIndex === 0
+                                    ? ''
+                                    : isLinkedToPrev
+                                      ? '-mt-px'
+                                      : isLinkedToNext
+                                        ? 'mt-0'
+                                        : 'mt-1'
+                                );
+
+                                return (
                                   <div
-                                    onDragOver={(e) =>
-                                      handleSlotDragOver(e, section.id, exerciseIndex + 1)
-                                    }
-                                    onDragLeave={handleSlotDragLeave}
-                                    onDrop={(e) => handleSlotDrop(e, section.id, exerciseIndex + 1)}
-                                    className={cn(
-                                      'transition-all w-full',
-                                      draggedExercise &&
+                                    key={exercise.instanceId}
+                                    ref={(el) => {
+                                      if (el) {
+                                        exerciseRefs.current.set(exercise.exerciseId, el);
+                                      } else {
+                                        exerciseRefs.current.delete(exercise.exerciseId);
+                                      }
+                                    }}
+                                    className={wrapperClasses}
+                                  >
+                                    <ExerciseCard
+                                      exercise={exercise}
+                                      isLinkedToPrev={isLinkedToPrev}
+                                      isLinkedToNext={isLinkedToNext}
+                                      onVideoClick={handleExerciseClick}
+                                      sectionType={section.type}
+                                      validationErrors={validationErrors[exercise.instanceId]}
+                                      onClearValidationField={(setIndex, field) =>
+                                        clearSetValidationField(exercise.instanceId, setIndex, field)
+                                      }
+                                      onExerciseChange={(newExercise) => {
+                                        onDirtyChange?.();
+                                        const castExercise = newExercise as ExerciseWithSuperset;
+                                        recomputeExerciseValidation(
+                                          exercise.instanceId,
+                                          castExercise.exerciseType as
+                                            | 'weight_reps'
+                                            | 'reps'
+                                            | 'distance_duration',
+                                          castExercise.sets || []
+                                        );
+                                        setWorkoutSchema((prev) => ({
+                                          ...prev,
+                                          sections: prev.sections.map((sec) => {
+                                            if (sec.id === section.id && sec.exercises) {
+                                              const updatedExercises: ExerciseWithSuperset[] = [
+                                                ...sec.exercises,
+                                              ];
+                                              updatedExercises[exerciseIndex] = {
+                                                ...castExercise,
+                                                supersetGroupId: exercise.supersetGroupId,
+                                              };
+                                              return {
+                                                ...sec,
+                                                exercises: updatedExercises,
+                                              };
+                                            }
+                                            return sec;
+                                          }),
+                                        }));
+                                      }}
+                                      onDelete={() => {
+                                        onDirtyChange?.();
+                                        setWorkoutSchema((prev) => ({
+                                          ...prev,
+                                          sections: prev.sections.map((sec) => {
+                                            if (sec.id === section.id && sec.exercises) {
+                                              const updatedExercises = sec.exercises.filter(
+                                                (_, idx) => idx !== exerciseIndex
+                                              );
+                                              return {
+                                                ...sec,
+                                                exercises: updatedExercises,
+                                              };
+                                            }
+                                            return sec;
+                                          }),
+                                        }));
+                                      }}
+                                    />
+
+                                    {/* Slot between this exercise and the next */}
+                                    <div
+                                      onDragOver={(e) =>
+                                        handleSlotDragOver(e, section.id, exerciseIndex + 1)
+                                      }
+                                      onDragLeave={handleSlotDragLeave}
+                                      onDrop={(e) => handleSlotDrop(e, section.id, exerciseIndex + 1)}
+                                      className={cn(
+                                        'transition-all w-full',
+                                        draggedExercise &&
+                                          dragOverSlot &&
+                                          dragOverSlot.sectionId === section.id &&
+                                          dragOverSlot.slotIndex === exerciseIndex + 1
+                                          ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
+                                          : isLinkedToNext
+                                            ? 'h-0'
+                                            : 'h-1'
+                                      )}
+                                    >
+                                      {draggedExercise &&
                                         dragOverSlot &&
                                         dragOverSlot.sectionId === section.id &&
-                                        dragOverSlot.slotIndex === exerciseIndex + 1
-                                        ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                                        : isLinkedToNext
-                                          ? 'h-0'
-                                          : 'h-1'
-                                    )}
-                                  >
-                                    {draggedExercise &&
-                                      dragOverSlot &&
-                                      dragOverSlot.sectionId === section.id &&
-                                      dragOverSlot.slotIndex === exerciseIndex + 1 && (
-                                        <span>Drop your exercise here</span>
+                                        dragOverSlot.slotIndex === exerciseIndex + 1 && (
+                                          <span>Drop your exercise here</span>
+                                        )}
+                                    </div>
+                                    {section.exercises &&
+                                      exerciseIndex < section.exercises.length - 1 && (
+                                        <>
+                                          {isLinkedToNext ? (
+                                            <div className="relative flex items-center justify-center bg-sidebar border-x py-1">
+                                              <Separator className="absolute w-full" />
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="gap-1.5 bg-sidebar z-10 text-xs h-7 px-2"
+                                                onClick={() =>
+                                                  handleSupersetUnlink(section.id, exerciseIndex)
+                                                }
+                                              >
+                                                <Link2Off className="size-3" />
+                                                Unlink
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            <div className="flex justify-center -mt-2 mb-2">
+                                              <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="gap-1.5 text-xs h-7 px-2"
+                                                onClick={() =>
+                                                  handleSupersetLink(section.id, exerciseIndex)
+                                                }
+                                              >
+                                                <Link2 className="size-3" />
+                                                Superset
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </>
                                       )}
                                   </div>
-                                  {section.exercises &&
-                                    exerciseIndex < section.exercises.length - 1 && (
-                                      <>
-                                        {isLinkedToNext ? (
-                                          <div className="relative flex items-center justify-center bg-background border-x py-1">
-                                            <Separator className="absolute w-full" />
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
-                                              onClick={() =>
-                                                handleSupersetUnlink(section.id, exerciseIndex)
-                                              }
-                                            >
-                                              <Link2Off className="size-3" />
-                                              Unlink
-                                            </Button>
-                                          </div>
-                                        ) : (
-                                          <div className="flex justify-center -mt-2 mb-2">
-                                            <Button
-                                              type="button"
-                                              variant="outline"
-                                              size="sm"
-                                              className="gap-1.5 text-xs h-7 px-2"
-                                              onClick={() =>
-                                                handleSupersetLink(section.id, exerciseIndex)
-                                              }
-                                            >
-                                              <Link2 className="size-3" />
-                                              Superset
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </>
-                                    )}
-                                </div>
-                              );
-                            })}
-                            <div className="flex justify-center">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAddExercise(section.id)}
-                                className="gap-1.5 text-xs h-7 px-2"
-                              >
-                                <Plus className="size-3" />
-                                Add Exercise
-                              </Button>
+                                );
+                              })}
+                              <div className="flex justify-center">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAddExercise(section.id)}
+                                  className="gap-1.5 text-xs h-7 px-2"
+                                >
+                                  <Plus className="size-3" />
+                                  Add Exercise
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div
-                            className={cn(
-                              'flex items-center justify-center w-full my-4 py-3 border-2 border-dashed rounded-lg transition-colors',
-                              dragOverSectionId === section.id
-                                ? 'border-primary bg-primary/5'
-                                : sectionValidationErrors[section.id]?.emptyExercises
-                                  ? 'border-destructive bg-destructive/5'
-                                  : 'border-muted'
-                            )}
-                          >
-                            <p className="text-muted-foreground text-sm text-center">
-                              Drag exercises from
-                              <br />
-                              the left to add
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                          ) : (
+                            <div
+                              className={cn(
+                                'flex items-center justify-center w-full my-4 py-3 border-2 border-dashed rounded-lg transition-colors',
+                                dragOverSectionId === section.id
+                                  ? 'border-primary bg-primary/5'
+                                  : sectionValidationErrors[section.id]?.emptyExercises
+                                    ? 'border-destructive bg-destructive/5'
+                                    : 'border-muted'
+                              )}
+                            >
+                              <p className="text-muted-foreground text-sm text-center">
+                                Drag exercises from
+                                <br />
+                                the left to add
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
+                <div className="flex items-center justify-center py-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7 px-2"
+                        aria-label="Add new section"
+                      >
+                        <Plus className="size-3" />
+                        <span>Add section</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
+                        <Dumbbell className="mr-2 size-4 text-foreground" />
+                        Regular
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
+                        <NotebookPen className="mr-2 size-4 text-foreground" />
+                        AMRAP
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
+                        <Timer className="mr-2 size-4 text-foreground" />
+                        Timed
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              ))}
-              <div className="flex items-center justify-center py-2">
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-4">
+                <p className="text-muted-foreground text-center">
+                  Add your first section to start building your workout.
+                </p>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs h-7 px-2"
+                      className="gap-2"
                       aria-label="Add new section"
                     >
-                      <Plus className="size-3" />
+                      <Plus className="size-4" />
                       <span>Add section</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
+                  <DropdownMenuContent align="center">
                     <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
                       <Dumbbell className="mr-2 size-4 text-foreground" />
                       Regular
@@ -2344,46 +2413,13 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-              <p className="text-muted-foreground text-center">
-                Add your first section to start building your workout.
-              </p>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="gap-2"
-                    aria-label="Add new section"
-                  >
-                    <Plus className="size-4" />
-                    <span>Add section</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center">
-                  <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
-                    <Dumbbell className="mr-2 size-4 text-foreground" />
-                    Regular
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
-                    <NotebookPen className="mr-2 size-4 text-foreground" />
-                    AMRAP
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
-                    <Timer className="mr-2 size-4 text-foreground" />
-                    Timed
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-      <Separator orientation="vertical" />
-      <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-        <div className="p-4">
+      <div className="flex-[1] p-2 h-full flex flex-col min-h-0">
+        <Card className="relative h-full" style={{ height: '100%' }}>
+          <CardContent className="absolute inset-0 p-4 overflow-y-auto">
           <EquipmentPanel sections={workoutSchema.sections} />
           <OverviewPanel
             sections={workoutSchema.sections.map((section) => ({
@@ -2490,7 +2526,8 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
             }}
             onExerciseClick={handleExerciseClickById}
           />
-        </div>
+          </CardContent>
+        </Card>
       </div>
       <VideoModal
         open={isVideoModalOpen}

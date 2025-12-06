@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -36,6 +36,27 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateSidebarHeight = () => {
+      if (contentRef.current && sidebarRef.current) {
+        const contentHeight = contentRef.current.scrollHeight;
+        sidebarRef.current.style.minHeight = `${contentHeight}px`;
+      }
+    };
+
+    updateSidebarHeight();
+    const resizeObserver = new ResizeObserver(updateSidebarHeight);
+    if (contentRef.current) {
+      resizeObserver.observe(contentRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [children]);
 
   const groups: GroupConfig[] = [
     {
@@ -188,9 +209,9 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
   return (
     <div className="h-full w-full flex flex-col">
       {/* Two Column Layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* Left Sidebar - 1/7 width */}
-        <div className="w-[14.285714%] flex flex-col border-r">
+        <div ref={sidebarRef} className="w-[14.285714%] flex flex-col border-r bg-background">
           <div className="flex flex-col py-2">
             {/* Search Bar */}
             <div className="px-2 mb-2">
@@ -309,7 +330,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
         </div>
 
         {/* Right Content - 6/7 width */}
-        <div className="flex-1 flex flex-col">
+        <div ref={contentRef} className="flex-1 flex flex-col">
           {children}
         </div>
       </div>

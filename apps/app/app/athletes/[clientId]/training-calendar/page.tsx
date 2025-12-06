@@ -1184,9 +1184,10 @@ const ClientTrainingCalendarPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="w-full px-4 py-2 flex items-center justify-between">
+    <div className="w-full flex flex-col p-4">
+      <Card className="w-full flex flex-col p-0" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+        <div className="w-full relative flex-shrink-0">
+          <div className="w-full px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
               type="button"
@@ -1307,24 +1308,35 @@ const ClientTrainingCalendarPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto bg-background px-4 pb-4 pt-2">
-        <div className="h-full flex flex-col">
-          {/* Day names header - only at the top */}
-          <div className="flex gap-4 flex-shrink-0 mb-1">
-            {calendarDates[0]?.map((date, dayIndex) => (
-              <div key={dayIndex} className="flex-1">
-                <div className="px-3">
-                  <span className="text-xs uppercase text-muted-foreground">{dayNames[dayIndex]}</span>
-                </div>
+      <div className="w-full flex-1 bg-background rounded-b-xl px-4 pb-4 pt-2 min-h-0 flex flex-col">
+        {/* Day names header - only at the top */}
+        <div className="flex gap-4 flex-shrink-0 mb-1">
+          {calendarDates[0]?.map((date, dayIndex) => (
+            <div key={dayIndex} className="flex-1">
+              <div className="px-3">
+                <span className="text-xs uppercase text-muted-foreground">{dayNames[dayIndex]}</span>
               </div>
-            ))}
-          </div>
-          {/* Calendar rows - one row per week */}
-          <div className="flex-1 flex flex-col gap-4 min-h-0">
-            {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
-              const weekDates = calendarDates[rowIndex] || [];
-              return (
-                <div key={rowIndex} className="flex gap-4 flex-1 min-h-0">
+            </div>
+          ))}
+        </div>
+        {/* Calendar rows - one row per week */}
+        <div className="flex-1 flex flex-col min-h-0" style={{ gap: '1rem' }}>
+          {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
+            const weekDates = calendarDates[rowIndex] || [];
+            const rowsCount = getRowsCount();
+            // Calculate height: (100% - gaps) / rowsCount
+            // Each gap is 1rem, so we calculate: calc((100% - (n-1) * 1rem) / n)
+            const gapCount = rowsCount - 1;
+            return (
+              <div 
+                key={rowIndex} 
+                className="flex gap-4 min-h-0 flex-shrink-0" 
+                style={{ 
+                  height: gapCount > 0 
+                    ? `calc((100% - ${gapCount} * 1rem) / ${rowsCount})`
+                    : '100%'
+                }}
+              >
                   {weekDates.map((date, dayIndex) => {
                     const dateKey = getDateKey(date);
                     const workoutsForDate = workoutsByDate[dateKey] ?? [];
@@ -1455,7 +1467,6 @@ const ClientTrainingCalendarPage = () => {
               );
             })}
           </div>
-        </div>
       </div>
       <Dialog
         open={isAddWorkoutModalOpen}
@@ -1538,11 +1549,11 @@ const ClientTrainingCalendarPage = () => {
                               </span>
                             )}
                             <div className="flex flex-wrap gap-1">
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="outline" className="text-xs">
                                 {t('athletes.trainingCalendar.table.type')}: {workout.type}
                               </Badge>
                               {equipmentList.length > 0 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" className="text-xs">
                                   {t('general.equipment')}: {equipmentList.join(', ')}
                                 </Badge>
                               )}
@@ -1727,7 +1738,7 @@ const ClientTrainingCalendarPage = () => {
           <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-2">
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 onClick={handleCloseAddWorkoutModal}
                 aria-label={t('general.cancel')}
               >
@@ -2125,11 +2136,11 @@ const ClientTrainingCalendarPage = () => {
                                 </span>
                               )}
                               <div className="flex flex-wrap gap-1">
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" className="text-xs">
                                   {t('athletes.trainingCalendar.table.type')}: {program.type}
                                 </Badge>
                                 {program.equipment && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge variant="outline" className="text-xs">
                                     {program.equipment}
                                   </Badge>
                                 )}
@@ -2220,7 +2231,7 @@ const ClientTrainingCalendarPage = () => {
           <div className="flex items-center justify-end gap-2 pt-2 flex-shrink-0">
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={handleCloseAddProgramModal}
               aria-label={t('athletes.trainingCalendar.cancelAddProgram')}
             >
@@ -2237,6 +2248,7 @@ const ClientTrainingCalendarPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+      </Card>
     </div>
   );
 };

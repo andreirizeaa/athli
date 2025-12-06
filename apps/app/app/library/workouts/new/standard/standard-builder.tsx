@@ -1073,9 +1073,10 @@ export const StandardBuilder = ({
   };
 
   return (
-    <div className="flex h-full">
-      <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-        <div className="p-4">
+    <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-background p-2">
+      <div className="flex-[1] p-2 h-full flex flex-col min-h-0">
+        <Card className="relative h-full" style={{ height: '100%' }}>
+          <CardContent className="absolute inset-0 p-4 overflow-y-auto flex flex-col">
           <Tabs
             value={builderMode}
             onValueChange={(value) => {
@@ -1099,25 +1100,33 @@ export const StandardBuilder = ({
             </TabsList>
           </Tabs>
           {builderMode === 'exercise' && (
-            <ExerciseSelectionPanel
-              onExerciseClick={handleExerciseClick}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            />
+            <div className="flex-1 min-h-0 mt-4">
+              <ExerciseSelectionPanel
+                onExerciseClick={handleExerciseClick}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+              />
+            </div>
           )}
           {builderMode === 'section' && (
-            <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
+            <div className="flex-1 min-h-0 mt-4">
+              <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
+            </div>
           )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
-      <Separator orientation="vertical" />
-      <div className="relative flex-[4] h-full">
-        <div ref={contentScrollRef} className="p-4 h-full overflow-y-auto">
+      <div className="flex-[3] p-2 h-full flex flex-col min-h-0">
+        <Card className="relative h-full" style={{ height: '100%' }}>
+          <CardContent 
+            ref={contentScrollRef} 
+            className="absolute inset-0 p-4 overflow-y-auto"
+          >
           {workoutSchema.sections.length > 0 ? (
-            <div className="flex flex-col gap-4 w-full">
+            <div className="flex flex-col gap-4 w-full min-h-0">
               {workoutSchema.sections.map((section) => (
-                <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
-                  <Card className="bg-background w-full flex flex-col relative">
+                <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0 min-w-0">
+                  <Card className="bg-sidebar w-full flex flex-col relative min-w-0">
                     <CardHeader className="border-b p-0 pb-2">
                       <div className="flex items-center justify-between px-3 pt-1">
                         <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
@@ -1379,13 +1388,13 @@ export const StandardBuilder = ({
                                     exerciseIndex < section.exercises.length - 1 && (
                                       <>
                                         {isLinkedToNext ? (
-                                          <div className="relative flex items-center justify-center bg-background border-x py-1">
+                                          <div className="relative flex items-center justify-center bg-sidebar border-x py-1">
                                             <Separator className="absolute w-full" />
                                             <Button
                                               type="button"
                                               variant="outline"
                                               size="sm"
-                                              className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
+                                              className="gap-1.5 bg-sidebar z-10 text-xs h-7 px-2"
                                               onClick={() =>
                                                 handleSupersetUnlink(section.id, exerciseIndex)
                                               }
@@ -1516,11 +1525,12 @@ export const StandardBuilder = ({
               </DropdownMenu>
             </div>
           )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
-      <Separator orientation="vertical" />
-      <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-        <div className="p-4">
+      <div className="flex-[1] p-2 h-full flex flex-col min-h-0">
+        <Card className="relative h-full" style={{ height: '100%' }}>
+          <CardContent className="absolute inset-0 p-4 overflow-y-auto">
           <EquipmentPanel sections={workoutSchema.sections} />
           <OverviewPanel
             sections={workoutSchema.sections as any}
@@ -1534,7 +1544,8 @@ export const StandardBuilder = ({
             groupExercisesBySuperset={groupExercisesBySuperset as any}
             onExerciseClick={handleExerciseClickById}
           />
-        </div>
+          </CardContent>
+        </Card>
       </div>
       <VideoModal
         open={isVideoModalOpen}

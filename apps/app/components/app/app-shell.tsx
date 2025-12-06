@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { UnsavedChangesProvider } from '@/app/settings/context/unsaved-changes-context';
+import { useLanguage } from '@/lib/providers/intl-provider';
 import { AppSidebar } from './app-sidebar';
 import { AppHeader } from './app-header';
 
@@ -43,8 +44,8 @@ export const AppShell = ({ children }: AppShellProps) => {
 
 const AppShellWithProvider = ({ children }: AppShellProps) => {
   const t = useTranslations();
+  const { locale, setLocale } = useLanguage();
   const [isThemeMounted, setIsThemeMounted] = React.useState(false);
-  const [currentLanguage, setCurrentLanguage] = React.useState('en');
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   React.useEffect(() => {
@@ -54,14 +55,14 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
   return (
     <SidebarProvider defaultOpen={false} className="h-svh">
       <AppSidebar />
-      <SidebarInset className="flex-1 overflow-hidden flex flex-col">
+      <SidebarInset className="flex-1 flex flex-col overflow-hidden">
         <AppHeader
-        isThemeMounted={isThemeMounted}
-        currentLanguage={currentLanguage}
-        setCurrentLanguage={setCurrentLanguage}
+          isThemeMounted={isThemeMounted}
+          currentLanguage={locale}
+          setCurrentLanguage={setLocale}
           setIsLoggingOut={setIsLoggingOut}
         />
-        <div className="flex-1 overflow-auto min-h-0">{children}</div>
+        <div className="flex-1 overflow-y-auto min-h-0">{children}</div>
       </SidebarInset>
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">

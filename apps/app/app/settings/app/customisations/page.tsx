@@ -14,7 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { availableLanguages } from '@/lib/providers/intl-provider';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { availableLanguages, useLanguage } from '@/lib/providers/intl-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { THEMES, DEFAULT_THEME } from '@/lib/theme';
 
@@ -22,7 +25,7 @@ const CustomisationsPage = () => {
   const t = useTranslations();
   const { theme, setTheme } = useTheme();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
-  const [language, setLanguage] = useState('en');
+  const { locale, setLocale } = useLanguage();
   const [units, setUnits] = useState('metric');
   const [isMounted, setIsMounted] = useState(false);
 
@@ -55,15 +58,15 @@ const CustomisationsPage = () => {
                 <label htmlFor="language" className="text-sm">
                   {t('settings.customisations.preferences.language.label')}
                 </label>
-                <Select value={language} onValueChange={setLanguage}>
+                <Select value={locale} onValueChange={setLocale}>
                   <SelectTrigger id="language" className="w-[180px]">
                     <SelectValue>
                       <div className="flex items-center gap-2">
                         <span>
-                          {availableLanguages.find((lang) => lang.code === language)?.flag || '🇬🇧'}
+                          {availableLanguages.find((lang) => lang.code === locale)?.flag || '🇬🇧'}
                         </span>
                         <span>
-                          {availableLanguages.find((lang) => lang.code === language)?.label || 'English'}
+                          {availableLanguages.find((lang) => lang.code === locale)?.label || 'English'}
                         </span>
                       </div>
                     </SelectValue>
@@ -78,59 +81,86 @@ const CustomisationsPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-4 border-b items-center">
-                <label htmlFor="theme" className="text-sm">
-                  {t('settings.customisations.preferences.theme.label')}
-                </label>
-                <Select value={isMounted ? (theme || 'system') : 'system'} onValueChange={(value) => setTheme(value)}>
-                  <SelectTrigger id="theme" className="w-[180px]">
-                    <SelectValue>
-                      {isMounted ? (
-                        <div className="flex items-center gap-2">
-                          {theme === 'light' ? (
-                            <Sun className="size-4" />
-                          ) : theme === 'dark' ? (
-                            <Moon className="size-4" />
-                          ) : (
-                            <Laptop className="size-4" />
+              <div className="py-2 px-4 border-b">
+                <div className="space-y-1">
+                  <Label className="text-sm">
+                    {t('settings.customisations.preferences.theme.label')}
+                  </Label>
+                  <RadioGroup
+                    value={isMounted ? (theme || 'light') : 'light'}
+                    onValueChange={(value) => setTheme(value)}
+                    className="flex max-w-md gap-6 pt-2"
+                  >
+                    <div className="flex flex-col">
+                      <Label
+                        htmlFor="theme-light"
+                        className="flex flex-col cursor-pointer"
+                      >
+                        <RadioGroupItem value="light" id="theme-light" className="sr-only" />
+                        <div
+                          className={cn(
+                            'items-center rounded-lg border-2 p-1 transition-colors',
+                            (isMounted ? (theme || 'light') : 'light') === 'light'
+                              ? 'border-primary bg-white'
+                              : 'border-border bg-white hover:border-accent'
                           )}
-                          <span>
-                            {theme === 'light'
-                              ? t('sidebar.theme.light')
-                              : theme === 'dark'
-                                ? t('sidebar.theme.dark')
-                                : t('sidebar.theme.system')}
-                          </span>
+                        >
+                          <div className="space-y-2 rounded-lg bg-[#ecedef] p-2">
+                            <div className="space-y-2 rounded-md bg-white p-2 shadow-xs">
+                              <div className="h-2 w-[80px] rounded-lg bg-[#ecedef]" />
+                              <div className="h-2 w-[100px] rounded-lg bg-[#ecedef]" />
+                            </div>
+                            <div className="flex items-center space-x-2 rounded-md bg-white p-2 shadow-xs">
+                              <div className="h-4 w-4 rounded-full bg-[#ecedef]" />
+                              <div className="h-2 w-[100px] rounded-lg bg-[#ecedef]" />
+                            </div>
+                            <div className="flex items-center space-x-2 rounded-md bg-white p-2 shadow-xs">
+                              <div className="h-4 w-4 rounded-full bg-[#ecedef]" />
+                              <div className="h-2 w-[100px] rounded-lg bg-[#ecedef]" />
+                            </div>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Laptop className="size-4" />
-                          <span>{t('sidebar.theme.system')}</span>
+                        <span className="block w-full p-2 text-center font-normal">
+                          {t('sidebar.theme.light')}
+                        </span>
+                      </Label>
+                    </div>
+                    <div className="flex flex-col">
+                      <Label
+                        htmlFor="theme-dark"
+                        className="flex flex-col cursor-pointer"
+                      >
+                        <RadioGroupItem value="dark" id="theme-dark" className="sr-only" />
+                        <div
+                          className={cn(
+                            'items-center rounded-lg border-2 p-1 transition-colors',
+                            (isMounted ? (theme || 'light') : 'light') === 'dark'
+                              ? 'border-primary bg-white'
+                              : 'border-border bg-white hover:border-accent'
+                          )}
+                        >
+                          <div className="space-y-2 rounded-lg bg-slate-950 p-2">
+                            <div className="space-y-2 rounded-md bg-slate-800 p-2 shadow-xs">
+                              <div className="h-2 w-[80px] rounded-lg bg-slate-400" />
+                              <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
+                            </div>
+                            <div className="flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-xs">
+                              <div className="h-4 w-4 rounded-full bg-slate-400" />
+                              <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
+                            </div>
+                            <div className="flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-xs">
+                              <div className="h-4 w-4 rounded-full bg-slate-400" />
+                              <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">
-                      <div className="flex items-center gap-2">
-                        <Sun className="size-4" />
-                        <span>{t('sidebar.theme.light')}</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center gap-2">
-                        <Moon className="size-4" />
-                        <span>{t('sidebar.theme.dark')}</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system">
-                      <div className="flex items-center gap-2">
-                        <Laptop className="size-4" />
-                        <span>{t('sidebar.theme.system')}</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                        <span className="block w-full p-2 text-center font-normal">
+                          {t('sidebar.theme.dark')}
+                        </span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
               <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-4 border-b items-center">
                 <label htmlFor="colorTheme" className="text-sm">

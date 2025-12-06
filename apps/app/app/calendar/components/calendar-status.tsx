@@ -45,7 +45,7 @@ export const CalendarStatus = () => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
+      <div className="flex flex-col items-center justify-center gap-4 w-full h-full min-h-[calc(100vh-200px)]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         <p className="text-sm text-muted-foreground">{t('calendar.checkingConnection')}</p>
       </div>
@@ -54,14 +54,14 @@ export const CalendarStatus = () => {
 
   if (isConnected) {
     return (
-      <div className="w-full h-full flex flex-col overflow-hidden">
+      <div className="w-full flex flex-col">
         <CalendarView />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
+    <div className="flex flex-col items-center justify-center gap-4 w-full h-full min-h-[calc(100vh-200px)]">
       <h2 className="text-2xl font-semibold">{t('calendar.connectYourCalendar')}</h2>
       <p className="text-sm text-muted-foreground text-center max-w-md">
         {t('calendar.connectDescription')}
