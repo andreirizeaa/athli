@@ -178,8 +178,8 @@ const IntegrationsPage = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-auto">
-      <div className="w-full relative bg-background flex-shrink-0">
+    <>
+      <div className="w-full relative bg-background">
         <div className="pl-4 pr-4 flex items-center justify-between">
           <h1 className="text-[22px] font-semibold mb-2 mt-2">
             {t('settings.sections.integrations')}
@@ -190,9 +190,7 @@ const IntegrationsPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full relative flex-1">
-        <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm" />
-        <div className="relative z-20 px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4 min-h-full">
+      <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4">
         <Card className="bg-background max-w-3xl w-full">
           <CardHeader className="px-4">
             <CardTitle>
@@ -244,6 +242,8 @@ const IntegrationsPage = () => {
                         </div>
                         <Button
                           variant="outline"
+                          size="sm"
+                          className="h-8 border-primary dark:!border-primary"
                           onClick={() => handleDisconnect(integration.id)}
                           aria-label={`${t('settings.integrations.disconnect')} ${integration.name}`}
                         >
@@ -380,7 +380,6 @@ const IntegrationsPage = () => {
             </CardContent>
           </Card>
         )}
-        </div>
       </div>
       <ConnectCalendarModal
         open={connectModalOpen}
@@ -394,7 +393,7 @@ const IntegrationsPage = () => {
         }}
         provider={selectedProvider}
       />
-    </div>
+    </>
   );
 };
 

@@ -70,15 +70,7 @@ export const IntlProvider = ({ children }: IntlProviderProps) => {
   const messages = messagesMap[locale as keyof typeof messagesMap] || enMessages;
   const currentLocale = locale || 'en';
 
-  if (!isMounted) {
-    // Return default during SSR/hydration
-    return (
-      <NextIntlClientProvider locale="en" messages={enMessages} timeZone="UTC">
-        {children}
-      </NextIntlClientProvider>
-    );
-  }
-
+  // Always provide LanguageContext, even during SSR/hydration
   return (
     <LanguageContext.Provider value={{ locale: currentLocale, setLocale }}>
       <NextIntlClientProvider locale={currentLocale} messages={messages} timeZone="UTC">

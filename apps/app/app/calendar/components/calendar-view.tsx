@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Pen, Trash2, Mail, X, Clock, Users } from 'lucide-react';
+import { Pen, Trash2, Mail, X, Clock, Users } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { CalendarHeader } from './calendar-header';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,11 +26,10 @@ import {
 } from '@/components/ui/dialog';
 import { SidePanel } from '@/components/app/side-panel';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
-import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
 import { toast } from 'sonner';
@@ -98,8 +97,6 @@ export const CalendarView = () => {
   });
   const [emailOptions, setEmailOptions] = useState<Option[]>([]);
   const [emailSearchQuery, setEmailSearchQuery] = useState('');
-  const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(undefined);
   const eventRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Prevent scrolling and click propagation when popover is open
@@ -858,16 +855,6 @@ export const CalendarView = () => {
     }
   };
 
-  const getWeekRange = () => {
-    if (viewMode === 'week') {
-      const firstDate = calendarDates[0]?.[0];
-      const lastDate = calendarDates[0]?.[6];
-      if (!firstDate || !lastDate) return '';
-      return `${format(firstDate, 'd MMM, yyyy')} - ${format(lastDate, 'd MMM, yyyy')}`;
-    } else {
-      return format(currentDate, 'MMMM yyyy');
-    }
-  };
 
   // Check if a date is today
   const isToday = (date: Date): boolean => {
@@ -892,7 +879,7 @@ export const CalendarView = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full min-h-[calc(100vh-200px)]">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="text-sm text-muted-foreground">{t('calendar.loadingEvents')}</p>
@@ -902,111 +889,26 @@ export const CalendarView = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden">
-      <div className="w-full relative flex-shrink-0">
-        <div className="w-full px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleToday}
-              className="h-8 border-primary"
-              aria-label={t('calendar.goToToday')}
-            >
-              {t('calendar.today')}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handlePrevious}
-              className="h-8 w-8"
-              aria-label={t('calendar.previousPeriod')}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
-                  <CalendarIcon className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{getWeekRange()}</span>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  key={`${viewMode}-${currentDate.getTime()}`}
-                  mode="single"
-                  selected={selectedCalendarDate || (viewMode === 'week' ? calendarDates[0]?.[0] : currentDate)}
-                  onSelect={(date) => {
-                    if (!date) {
-                      setSelectedCalendarDate(undefined);
-                      return;
-                    }
-                    setSelectedCalendarDate(date);
-                    if (viewMode === 'week') {
-                      // Navigate to the week containing the selected date
-                      setCurrentDate(date);
-                    } else {
-                      // Navigate to the month containing the selected date
-                      setCurrentDate(date);
-                    }
-                    setIsCalendarOpen(false);
-                  }}
-                  defaultMonth={viewMode === 'week' ? calendarDates[0]?.[0] : currentDate}
-                  initialFocus
-                  captionLayout="dropdown"
-                  fromYear={2020}
-                  toYear={2030}
-                />
-              </PopoverContent>
-            </Popover>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleNext}
-              className="h-8 w-8"
-              aria-label={t('calendar.nextPeriod')}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-3">
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'week' | 'month')}>
-              <TabsList className="w-auto">
-                <TabsTrigger
-                  value="week"
-                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  {t('calendar.week')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="month"
-                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  {t('calendar.month')}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 gap-2"
-              aria-label={t('calendar.bookMeetingAria')}
-              onClick={() => setIsBookMeetingOpen(true)}
-            >
-              <Pen className="size-4" />
-              {t('calendar.bookMeeting')}
-            </Button>
-          </div>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
-      <div className="w-full flex-1 bg-background overflow-auto min-h-0">
+    <div className="w-full h-full flex flex-col p-4">
+      <Card className="w-full h-full flex flex-col p-0">
+        <CalendarHeader
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          currentDate={currentDate}
+          onCurrentDateChange={setCurrentDate}
+          onToday={handleToday}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onBookMeeting={() => setIsBookMeetingOpen(true)}
+          provider={undefined}
+          calendarDates={calendarDates}
+        />
+        <div className="w-full bg-background rounded-b-xl pb-4 flex-1 min-h-0 overflow-hidden">
         {viewMode === 'week' ? (
           // Week view: Grid layout like Google Calendar
           <div className="flex flex-col">
+            {/* Full width divider above day headers */}
+            <Separator />
             {/* Day headers */}
             <div className="flex flex-shrink-0">
               <div className="w-16 flex-shrink-0 border-r border-border">
@@ -1188,12 +1090,12 @@ export const CalendarView = () => {
           </div>
         ) : (
           // Month view: Grid layout
-          <div className="h-full flex flex-col overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-0">
             {/* Calendar grid - 7 columns, variable rows */}
             <div
               className="grid grid-cols-7 gap-px border-t border-b border-border bg-border h-full"
               style={{ 
-                gridAutoRows: `calc(100% / ${numberOfRows})`
+                gridTemplateRows: `repeat(${numberOfRows}, 1fr)`
               }}
             >
               {calendarDates.map((weekDates, weekIndex) =>
@@ -1275,6 +1177,7 @@ export const CalendarView = () => {
           </div>
         )}
       </div>
+      </Card>
       <SidePanel
         open={isBookMeetingOpen}
         onOpenChange={setIsBookMeetingOpen}

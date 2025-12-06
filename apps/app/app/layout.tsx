@@ -50,10 +50,10 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang="en" suppressHydrationWarning className="h-full">
+    <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={cn(`${geistSans.variable} ${geistMono.variable} antialiased h-full`, 'bg-background group/layout font-sans')}
+        className={cn(`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`, 'bg-background group/layout font-sans')}
         {...bodyAttributes}
       >
         <ThemeProvider

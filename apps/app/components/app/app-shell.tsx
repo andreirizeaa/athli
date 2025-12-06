@@ -55,14 +55,14 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
   return (
     <SidebarProvider defaultOpen={false} className="h-svh">
       <AppSidebar />
-      <SidebarInset className="flex-1 overflow-hidden flex flex-col">
+      <SidebarInset className="flex-1 flex flex-col">
         <AppHeader
           isThemeMounted={isThemeMounted}
           currentLanguage={locale}
           setCurrentLanguage={setLocale}
           setIsLoggingOut={setIsLoggingOut}
         />
-        <div className="flex-1 overflow-auto min-h-0">{children}</div>
+        <div className="flex-1">{children}</div>
       </SidebarInset>
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">

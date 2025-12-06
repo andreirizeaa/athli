@@ -502,7 +502,7 @@ export const esMessages = {
     uploadVideo: 'Subir video',
     attachFile: 'Adjuntar archivo',
     attachFiles: 'Adjuntar archivos',
-    typeMessagePlaceholder: 'Escribe, dicta o sube un archivo...',
+    typeMessagePlaceholder: 'Escribe o sube un archivo',
     typeMessage: 'Escribe un mensaje',
     sendMessage: 'Enviar mensaje',
     images: 'Imágenes',
@@ -710,7 +710,9 @@ export const esMessages = {
       selectRepeatWeekly: 'Seleccionar opción repetir semanalmente',
       showOneWeek: 'Mostrar una semana',
       showTwoWeeks: 'Mostrar dos semanas',
+      twoWeeksRequirement: 'Agrega al menos 2 semanas para ver dos semanas',
       showFourWeeks: 'Mostrar cuatro semanas',
+      fourWeeksRequirement: 'Agrega al menos 4 semanas para ver cuatro semanas',
       viewDetailsForWorkout: 'Ver detalles del entrenamiento {name}',
       selectWorkout: 'Seleccionar entrenamiento {name}',
       months: {

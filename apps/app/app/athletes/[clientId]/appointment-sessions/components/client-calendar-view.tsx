@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Pen, Trash2, Mail, X, Clock, Users } from 'lucide-react';
+import { Pen, Trash2, Mail, X, Clock, Users } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { CalendarHeader } from '@/app/calendar/components/calendar-header';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
@@ -25,7 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import { SidePanel } from '@/components/app/side-panel';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
-import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
@@ -33,7 +34,6 @@ import { cn } from '@/lib/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
 import { toast } from 'sonner';
 import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar/calendar-service';
-import Image from 'next/image';
 
 interface CalendarEvent {
   id: string;
@@ -61,6 +61,7 @@ type ClientCalendarViewProps = {
 };
 
 export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarViewProps) => {
+  const t = useTranslations();
   const { user } = useUser();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -875,15 +876,6 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
     }
   };
 
-  const getWeekRange = () => {
-    if (viewMode === 'week') {
-      const firstDate = calendarDates[0]?.[0];
-      if (!firstDate) return '';
-      return format(firstDate, 'd MMM yyyy');
-    } else {
-      return format(currentDate, 'MMMM yyyy');
-    }
-  };
 
   // Check if a date is today
   const isToday = (date: Date): boolean => {
@@ -908,101 +900,36 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full min-h-screen">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading calendar events...</p>
+          <p className="text-sm text-muted-foreground">{t('calendar.loadingEvents')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden">
-      <div className="w-full relative flex-shrink-0">
-        <div className="w-full px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleToday}
-              className="h-8 border-primary"
-              aria-label="Go to today"
-            >
-              Today
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handlePrevious}
-              className="h-8 w-8"
-              aria-label="Previous period"
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="size-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{getWeekRange()}</span>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleNext}
-              className="h-8 w-8"
-              aria-label="Next period"
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-3">
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'week' | 'month')}>
-              <TabsList className="w-auto">
-                <TabsTrigger
-                  value="week"
-                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  Week
-                </TabsTrigger>
-                <TabsTrigger
-                  value="month"
-                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  Month
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 gap-2"
-              aria-label="Book a meeting"
-              onClick={() => setIsBookMeetingOpen(true)}
-            >
-              <Pen className="size-4" />
-              Book a meeting
-            </Button>
-            {provider && (
-              <div className="flex items-center">
-                <Image
-                  src={provider === 'google' ? '/icons/gmail.png' : '/icons/outlook.png'}
-                  alt={provider === 'google' ? 'Gmail' : 'Outlook'}
-                  width={24}
-                  height={24}
-                  className="object-contain"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
-      <div className="w-full flex-1 bg-background overflow-auto min-h-0">
+    <div className="w-full h-full flex flex-col overflow-hidden p-4">
+      <Card className="w-full flex flex-col p-0 h-full">
+        <CalendarHeader
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          currentDate={currentDate}
+          onCurrentDateChange={setCurrentDate}
+          onToday={handleToday}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          onBookMeeting={() => setIsBookMeetingOpen(true)}
+          provider={provider}
+          calendarDates={calendarDates}
+        />
+        <div className="w-full bg-background rounded-b-xl pb-4 flex-1 min-h-0 overflow-hidden">
         {viewMode === 'week' ? (
           // Week view: Grid layout like Google Calendar
           <div className="flex flex-col">
+            {/* Full width divider above day headers */}
+            <Separator />
             {/* Day headers */}
             <div className="flex flex-shrink-0">
               <div className="w-16 flex-shrink-0 border-r border-border">
@@ -1184,7 +1111,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           </div>
         ) : (
           // Month view: Grid layout
-          <div className="h-full flex flex-col overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-0">
             {/* Calendar grid - 7 columns, variable rows */}
             <div
               className="grid grid-cols-7 gap-px border-t border-b border-border bg-border h-full"
@@ -1271,6 +1198,7 @@ export const ClientCalendarView = ({ clientEmail, provider }: ClientCalendarView
           </div>
         )}
       </div>
+      </Card>
       <SidePanel
         open={isBookMeetingOpen}
         onOpenChange={setIsBookMeetingOpen}
