@@ -3,17 +3,21 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@clerk/nextjs';
 import { Separator } from '@/components/ui/separator';
 import { CalendarStatus } from './components/calendar-status';
+import { calendarApi } from '@/lib/api/calendar-api';
 
 const CalendarPage = () => {
   const t = useTranslations();
+  const { getToken } = useAuth();
   const [provider, setProvider] = useState<'google' | 'outlook' | null>(null);
 
   useEffect(() => {
     const fetchProvider = async () => {
       try {
-        const response = await fetch('/api/calendar/status');
+        const token = await getToken();
+        const response = await calendarApi.status(token);
         if (response.ok) {
           const data = await response.json();
           if (data.connected && data.provider) {
@@ -26,7 +30,7 @@ const CalendarPage = () => {
     };
 
     fetchProvider();
-  }, []);
+  }, [getToken]);
 
   return (
     <div className="w-full flex flex-col h-full">

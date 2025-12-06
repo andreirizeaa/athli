@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@clerk/nextjs';
 import { ConnectCalendarButton } from './connect-calendar-button';
 import { CalendarView } from './calendar-view';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { calendarApi } from '@/lib/api/calendar-api';
 
 export const CalendarStatus = () => {
   const t = useTranslations();
+  const { getToken } = useAuth();
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -17,7 +20,8 @@ export const CalendarStatus = () => {
   useEffect(() => {
     const checkCalendarConnection = async () => {
       try {
-        const response = await fetch('/api/calendar/status');
+        const token = await getToken();
+        const response = await calendarApi.status(token);
         if (!response.ok) {
           if (response.status === 401) {
             router.push('/sign-in');
@@ -41,7 +45,7 @@ export const CalendarStatus = () => {
     };
 
     checkCalendarConnection();
-  }, [router]);
+  }, [router, getToken]);
 
   if (isLoading) {
     return (

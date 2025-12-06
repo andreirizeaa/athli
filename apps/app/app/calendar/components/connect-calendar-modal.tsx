@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
+import { calendarApi } from '@/lib/api/calendar-api';
 import Image from 'next/image';
 import {
   Dialog,
@@ -58,7 +59,7 @@ export const ConnectCalendarModal = ({ open, onOpenChange, provider }: ConnectCa
     }
 
     try {
-      const response = await fetch(`/api/calendar/detect-provider?email=${encodeURIComponent(emailAddress)}`);
+      const response = await calendarApi.detectProvider(emailAddress);
       
       if (!response.ok) {
         return null;
