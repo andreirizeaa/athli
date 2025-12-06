@@ -48,7 +48,7 @@ export const ClientCalendarStatus = ({ clientEmail, provider }: ClientCalendarSt
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
+      <div className="flex flex-col items-center justify-center gap-4 w-full h-full min-h-screen">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         <p className="text-sm text-muted-foreground">Checking calendar connection...</p>
       </div>
@@ -64,7 +64,7 @@ export const ClientCalendarStatus = ({ clientEmail, provider }: ClientCalendarSt
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
+    <div className="flex flex-col items-center justify-center gap-4 w-full h-full min-h-screen">
       <h2 className="text-2xl font-semibold">Connect your Calendar</h2>
       <p className="text-sm text-muted-foreground text-center max-w-md">
         You will be able to book sessions directly here and it will sync with your connected

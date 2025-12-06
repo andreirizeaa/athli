@@ -318,7 +318,7 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
         <PopoverTrigger asChild>
           <div
             className={cn(
-              "cursor-pointer flex h-auto min-h-[36px] w-full min-w-[160px] items-center justify-between rounded-md border border-input bg-transparent px-2 py-0.5 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+              "cursor-pointer flex h-auto min-h-[36px] w-full min-w-[160px] items-center justify-between rounded-md border border-input bg-sidebar px-2 py-0.5 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
               className
             )}
           >

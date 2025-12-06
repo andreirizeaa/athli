@@ -89,7 +89,7 @@ const OverviewSectionCard = ({
     <div ref={setNodeRef} style={style} {...attributes}>
       <div
         className={cn(
-          'border rounded-lg bg-card/80 shadow-sm mb-2 select-none',
+          'border rounded-lg bg-sidebar shadow-sm mb-2 select-none',
           isDragging && 'opacity-80'
         )}
       >

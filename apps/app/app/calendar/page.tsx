@@ -29,7 +29,7 @@ const CalendarPage = () => {
   }, []);
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
+    <div className="w-full flex flex-col h-full">
       <div className="w-full relative flex-shrink-0">
         <div className="pl-4 pr-4 flex items-center justify-between">
           <h1 className="text-[22px] font-semibold mb-2 mt-2">{t('calendar.title')}</h1>
@@ -47,7 +47,7 @@ const CalendarPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 min-h-0 overflow-hidden">
+      <div className="w-full flex-1 min-h-0">
         <CalendarStatus />
       </div>
     </div>

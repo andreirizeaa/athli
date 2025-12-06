@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,16 +35,25 @@ const StandardWorkoutPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [saveSignal, setSaveSignal] = useState(0);
+  const hasInitialized = useRef(false);
+  const hasCheckedAccess = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (hasInitialized.current) return;
     
-    // Check for access flag - if not present, redirect to workouts
-    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
-    if (accessFlag !== 'standard') {
-      router.push('/library/workouts');
-      return;
+    // Check for access flag only once - if not present, redirect to workouts
+    if (!hasCheckedAccess.current) {
+      hasCheckedAccess.current = true;
+      const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+      if (accessFlag !== 'standard') {
+        router.push('/library/workouts');
+        return;
+      }
     }
+    
+    // Mark as initialized to prevent re-running
+    hasInitialized.current = true;
     
     // Try to load meta from localStorage (if coming from create panel)
     const raw = window.localStorage.getItem('oneninety_new_workout_meta');
@@ -137,8 +146,8 @@ const StandardWorkoutPage = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="w-full relative flex-shrink-0">
         <div className="px-4 flex items-start justify-between gap-4 mb-2 mt-2">
           <div className="flex flex-col gap-1 flex-1 min-w-0">
             <Breadcrumb>
@@ -192,7 +201,7 @@ const StandardWorkoutPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto bg-sidebar">
+      <div className="w-full flex-1 min-h-0 overflow-hidden bg-sidebar">
         <StandardBuilder
           meta={workoutMeta}
           onDirtyChange={() => setHasUnsavedChanges(true)}

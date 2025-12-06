@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -176,6 +176,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 const ExercisesPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const [starredExercises, setStarredExercises] = useState<Set<string>>(new Set());
   const [exercises, setExercises] = useState<Program[]>([]);
@@ -276,6 +277,27 @@ const ExercisesPage = () => {
   useEffect(() => {
     loadExercises();
   }, []);
+
+  // Handle exerciseId from URL params (e.g., from search)
+  useEffect(() => {
+    const exerciseId = searchParams.get('exerciseId');
+    if (exerciseId && exercises.length > 0) {
+      // Check if exercise exists
+      const exercise = exercises.find((ex) => ex.id === exerciseId);
+      if (exercise && editingExerciseId !== exerciseId) {
+        // Only open if it's a different exercise than currently being edited
+        handleNavigateToExercise(exerciseId);
+        // Remove exerciseId from URL to clean it up
+        const newSearchParams = new URLSearchParams(searchParams.toString());
+        newSearchParams.delete('exerciseId');
+        const newUrl = newSearchParams.toString()
+          ? `${window.location.pathname}?${newSearchParams.toString()}`
+          : window.location.pathname;
+        router.replace(newUrl);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, exercises, editingExerciseId, router]);
 
   const handleToggleStar = async (exerciseId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -870,35 +892,6 @@ const ExercisesPage = () => {
         </div>
         <span className="text-sm truncate flex-1 min-w-0">{exercise.program}</span>
         <div className="flex items-center justify-end flex-shrink-0 gap-1" data-no-row-link="true">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedExerciseForAssignment(exercise);
-                    setIsAssignIndividualExerciseOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedExerciseForAssignment(exercise);
-                      setIsAssignIndividualExerciseOpen(true);
-                    }
-                  }}
-                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label={t('exercises.actions.assignExerciseToClient')}
-                >
-                  <User className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('exercises.actions.assignExerciseToClient')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
