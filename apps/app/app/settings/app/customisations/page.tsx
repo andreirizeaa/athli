@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { availableLanguages } from '@/lib/providers/intl-provider';
+import { availableLanguages, useLanguage } from '@/lib/providers/intl-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { THEMES, DEFAULT_THEME } from '@/lib/theme';
 
@@ -22,7 +22,7 @@ const CustomisationsPage = () => {
   const t = useTranslations();
   const { theme, setTheme } = useTheme();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
-  const [language, setLanguage] = useState('en');
+  const { locale, setLocale } = useLanguage();
   const [units, setUnits] = useState('metric');
   const [isMounted, setIsMounted] = useState(false);
 
@@ -55,15 +55,15 @@ const CustomisationsPage = () => {
                 <label htmlFor="language" className="text-sm">
                   {t('settings.customisations.preferences.language.label')}
                 </label>
-                <Select value={language} onValueChange={setLanguage}>
+                <Select value={locale} onValueChange={setLocale}>
                   <SelectTrigger id="language" className="w-[180px]">
                     <SelectValue>
                       <div className="flex items-center gap-2">
                         <span>
-                          {availableLanguages.find((lang) => lang.code === language)?.flag || '🇬🇧'}
+                          {availableLanguages.find((lang) => lang.code === locale)?.flag || '🇬🇧'}
                         </span>
                         <span>
-                          {availableLanguages.find((lang) => lang.code === language)?.label || 'English'}
+                          {availableLanguages.find((lang) => lang.code === locale)?.label || 'English'}
                         </span>
                       </div>
                     </SelectValue>
