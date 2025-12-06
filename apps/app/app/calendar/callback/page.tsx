@@ -86,7 +86,7 @@ const CalendarCallbackContent = () => {
           const response = await calendarApi.callback(
             {
               provider_access_token: accessToken,
-              provider_refresh_token: refreshToken,
+              provider_refresh_token: refreshToken || undefined,
               provider: provider === 'outlook' ? 'azure' : 'google',
             },
             token
