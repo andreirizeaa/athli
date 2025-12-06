@@ -21,8 +21,8 @@ export const emailApi = {
       provider: string;
       provider_access_token?: string;
       access_token?: string;
-      provider_refresh_token?: string;
-      refresh_token?: string;
+      provider_refresh_token?: string | null;
+      refresh_token?: string | null;
     },
     token?: string | null
   ) => {
