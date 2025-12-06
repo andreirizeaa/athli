@@ -87,6 +87,22 @@ export function createExpressApp() {
   // Swagger documentation
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+  // API v1 base route info
+  app.get('/api/v1', (_req, res) => {
+    res.status(200).json({
+      message: 'OneNinety API v1',
+      version: '1.0.0',
+      endpoints: {
+        health: '/health',
+        docs: '/api-docs',
+        calendar: '/api/v1/calendar',
+        email: '/api/v1/email',
+        intercom: '/api/v1/intercom',
+        provider: '/api/v1/provider',
+      },
+    });
+  });
+
   // API v1 routes
   app.use('/api/v1', v1Router);
 

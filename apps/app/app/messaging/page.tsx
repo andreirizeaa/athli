@@ -2159,7 +2159,7 @@ const MessagingPage = () => {
                                   'max-w-[80%] rounded-xl px-2 py-2 relative group',
                                   message.isSent
                                     ? 'bg-primary/20 text-foreground'
-                                    : 'bg-muted text-foreground',
+                                    : 'bg-sidebar text-foreground',
                                   isLastInSequence && message.isSent && 'rounded-br-sm',
                                   isLastInSequence && !message.isSent && 'rounded-bl-sm'
                                 )}
@@ -2347,7 +2347,7 @@ const MessagingPage = () => {
                                         className="absolute -bottom-1 left-0 w-0 h-0"
                                         style={{
                                           borderRight: '8px solid transparent',
-                                          borderTop: '8px solid hsl(var(--muted))',
+                                          borderTop: '8px solid hsl(var(--sidebar))',
                                           borderLeft: '0 solid transparent',
                                         }}
                                       />
@@ -2377,7 +2377,7 @@ const MessagingPage = () => {
                   <div className="px-4 pb-4 pt-4 flex-shrink-0">
                     <div
                       className={cn(
-                        'relative flex bg-muted px-3 py-2 transition-all duration-700 ease-in-out',
+                        'relative flex bg-sidebar px-3 py-2 transition-all duration-700 ease-in-out',
                         textareaHeight > 36 ||
                           replyingToMessage ||
                           attachedPdf ||
@@ -2667,7 +2667,7 @@ const MessagingPage = () => {
                         onChange={(e) => setMessageInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         className={cn(
-                          'flex-1 min-w-0 resize-none min-h-[36px] max-h-[120px] py-2 bg-muted dark:bg-muted border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-muted dark:focus-visible:bg-muted',
+                          'flex-1 min-w-0 resize-none min-h-[36px] max-h-[120px] py-2 bg-sidebar dark:bg-sidebar border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-sidebar dark:focus-visible:bg-sidebar',
                           textareaHeight > 36 && 'pr-10'
                         )}
                         aria-label={t('messages.typeMessage')}
