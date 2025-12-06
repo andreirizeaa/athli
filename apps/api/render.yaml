@@ -2,7 +2,7 @@ services:
   - type: web
     name: api
     env: node
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --ignore-scripts && cd apps/api && npm ci && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
