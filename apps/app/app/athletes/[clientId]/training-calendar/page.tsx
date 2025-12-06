@@ -1549,11 +1549,11 @@ const ClientTrainingCalendarPage = () => {
                               </span>
                             )}
                             <div className="flex flex-wrap gap-1">
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="outline" className="text-xs">
                                 {t('athletes.trainingCalendar.table.type')}: {workout.type}
                               </Badge>
                               {equipmentList.length > 0 && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" className="text-xs">
                                   {t('general.equipment')}: {equipmentList.join(', ')}
                                 </Badge>
                               )}
@@ -1738,7 +1738,7 @@ const ClientTrainingCalendarPage = () => {
           <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-2">
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 onClick={handleCloseAddWorkoutModal}
                 aria-label={t('general.cancel')}
               >
@@ -2136,11 +2136,11 @@ const ClientTrainingCalendarPage = () => {
                                 </span>
                               )}
                               <div className="flex flex-wrap gap-1">
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" className="text-xs">
                                   {t('athletes.trainingCalendar.table.type')}: {program.type}
                                 </Badge>
                                 {program.equipment && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge variant="outline" className="text-xs">
                                     {program.equipment}
                                   </Badge>
                                 )}
@@ -2231,7 +2231,7 @@ const ClientTrainingCalendarPage = () => {
           <div className="flex items-center justify-end gap-2 pt-2 flex-shrink-0">
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               onClick={handleCloseAddProgramModal}
               aria-label={t('athletes.trainingCalendar.cancelAddProgram')}
             >
