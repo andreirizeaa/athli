@@ -12,7 +12,7 @@
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",
-    "prepare": "husky install"
+    "prepare": "node -e \"try { require('husky').install() } catch (e) {}\""
   },
   "devDependencies": {
     "husky": "^9.1.7",

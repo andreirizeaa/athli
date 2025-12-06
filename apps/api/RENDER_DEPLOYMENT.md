@@ -26,8 +26,8 @@ This guide will help you deploy the Express API to Render.
 - **Root Directory**: `apps/api`
 
 **Build & Deploy:**
-- **Build Command**: `npm ci && npm run build`
-- **Start Command**: `npm start`
+- **Build Command**: `npm ci --ignore-scripts && cd apps/api && npm ci && npm run build`
+- **Start Command**: `cd apps/api && npm start`
 
 ### Step 3: Environment Variables
 
