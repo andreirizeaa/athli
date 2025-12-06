@@ -6,9 +6,9 @@ import { logger } from './config/logger';
 async function bootstrap() {
   const app = await createApp();
   const server = http.createServer(app);
-  const port = Number(env.PORT);
+  const port = Number(env.PORT) || Number(process.env.PORT) || 3000;
 
-  server.listen(port, () => {
+  server.listen(port, '0.0.0.0', () => {
     logger.info({ port }, 'Server listening');
   });
 

@@ -161,9 +161,18 @@ The repository pattern is implemented with an in-memory store. To integrate a re
 - Monitor metrics via `/metrics` endpoint
 - Use process manager (PM2) or container orchestrator for auto-restart
 
-## Docker
+## Deployment to Render
 
-A multi-stage Dockerfile can be added for containerized deployments. See the specification document for Docker setup details.
+See [RENDER_DEPLOYMENT.md](./RENDER_DEPLOYMENT.md) for detailed instructions on deploying to Render.
+
+Quick steps:
+1. Connect your GitHub repository to Render
+2. Create a new Web Service
+3. Set Root Directory to `apps/api`
+4. Build Command: `npm ci && npm run build`
+5. Start Command: `npm start`
+6. Add all environment variables in Render dashboard
+7. Deploy!
 
 ## License
 
