@@ -7,105 +7,105 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		5A510CF6F7213F786B64F66D /* libPods-FormAI.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A5FC34A6707D19CB362E7D1B /* libPods-FormAI.a */; };
-		5A8551482E08FAC82CD07A67 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7D53C5FC16DFF6DB486F5E64 /* PrivacyInfo.xcprivacy */; };
-		8582F51671D894BA8A4380B0 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67EAAE229064A532D588C986 /* ExpoModulesProvider.swift */; };
-		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		82E0EC4A3F2B4F2BAE82B952 /* default-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = BFB12AF4B8694CE4A4B87ABB /* default-Icon-60x60@2x.png */; };
-		4215504C7DAA4B2595EC761D /* default-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FC720140CAD94013A9E341D0 /* default-Icon-60x60@3x.png */; };
-		BF02F1DBDF9E4944B3306ADB /* black-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1FF69B592842408BA46A6F14 /* black-Icon-60x60@2x.png */; };
-		F633CDB010264D6682436D77 /* black-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA0597E5F45F692E2830A /* black-Icon-60x60@3x.png */; };
-		C6BCCDD326D949B68AD5FF55 /* blue-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E3B7AB9D3EF4284B8FADCD6 /* blue-Icon-60x60@2x.png */; };
-		A8EB873BC7524730AF4E6554 /* blue-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 015974E3114544BC81FB4138 /* blue-Icon-60x60@3x.png */; };
-		1EE7DDAD0AD24ECB9EF5E335 /* green-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 71DC9CC652D84F0EA2FFC181 /* green-Icon-60x60@2x.png */; };
-		8F49D44B632142E487E2583B /* green-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = A5CFDEEE033543E2B4249693 /* green-Icon-60x60@3x.png */; };
+		00A28E4C1ADB4D4C8307C2C6 /* gradient-9-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A1C209D0C6AC4985A6C2932D /* gradient-9-Icon-60x60@2x.png */; };
+		0493E656735D4BC4B1FAAEFA /* gradient-6-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDE547702FE745E282225727 /* gradient-6-Icon-60x60@3x.png */; };
 		0A3A67DCFC3E4B5A8DDCEAAC /* orange-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = E069789BFCFF491EAB17AF85 /* orange-Icon-60x60@2x.png */; };
-		75076A3D3B564085B2F03437 /* orange-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FD60A6C3D5504DF6AE50A023 /* orange-Icon-60x60@3x.png */; };
-		E6F1CE87B8EA4B84840DC4BD /* pink-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 38EAC33F7A31418D80DAB441 /* pink-Icon-60x60@2x.png */; };
-		AB4BF97F12D34DF6AD7354D4 /* pink-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = EE75241086324DD7ABD950A3 /* pink-Icon-60x60@3x.png */; };
-		800127D4C9804F808D5188DD /* purple-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 697D9F3EB6424C9EA15139F9 /* purple-Icon-60x60@2x.png */; };
-		7888F859C18E4F4081B19C13 /* purple-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = B57596E3D59D4B998DC4FB72 /* purple-Icon-60x60@3x.png */; };
-		C83728A478904BD79536F5D5 /* red-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C65B9867571449658EB35666 /* red-Icon-60x60@2x.png */; };
-		C3E3A1103802466E8DC35040 /* red-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = E52CABFA6AE54C55A9A4BB58 /* red-Icon-60x60@3x.png */; };
 		0C23FDC5BFF347CD901E1CBF /* yellow-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B57B22F8D60E48A486E3930F /* yellow-Icon-60x60@2x.png */; };
 		0C32BD62DD3944F7BE4666F4 /* yellow-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 17F42D9171BC491F9F89563B /* yellow-Icon-60x60@3x.png */; };
-		F0A2DE5413E543B3B5037BC5 /* gradient-1-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D325BBD932E4717AB194934 /* gradient-1-Icon-60x60@2x.png */; };
-		B33A3088A88E424F9DC12D4D /* gradient-1-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6B32BBFEB93A4D2B9FDD2457 /* gradient-1-Icon-60x60@3x.png */; };
-		7D87B443591D4DCE892AC09A /* gradient-2-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1F499ED62AED4E909A328B3D /* gradient-2-Icon-60x60@2x.png */; };
-		E736BD9DE98A490CBDF4D84D /* gradient-2-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 762F8CB5BB5E454D9293B178 /* gradient-2-Icon-60x60@3x.png */; };
-		A6EE31166B9C4F3293BCA6C6 /* gradient-3-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 13496A78965949B98A5BAC1D /* gradient-3-Icon-60x60@2x.png */; };
-		9B024A1B62B14CD8A5D9C698 /* gradient-3-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = BF8409F02FFE48E5A6542FE7 /* gradient-3-Icon-60x60@3x.png */; };
-		8A772B505D1E47D4AD087A31 /* gradient-4-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6AB522209225409CA97AAA9C /* gradient-4-Icon-60x60@2x.png */; };
-		5A6B896DE7024037B2968E0C /* gradient-4-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 33895A244210472CAB4AE89A /* gradient-4-Icon-60x60@3x.png */; };
-		C891F26BE59D4206A2D9B051 /* gradient-5-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0FAB09E894FE4CCCBBED6BD1 /* gradient-5-Icon-60x60@2x.png */; };
-		D8E59604284740F3BFC3A327 /* gradient-5-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 826EDBF1AADD4D4DB2ACEC72 /* gradient-5-Icon-60x60@3x.png */; };
-		962B52E501E7418097477CB0 /* gradient-6-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 2BFB148CCC4649199CA36B79 /* gradient-6-Icon-60x60@2x.png */; };
-		0493E656735D4BC4B1FAAEFA /* gradient-6-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FDE547702FE745E282225727 /* gradient-6-Icon-60x60@3x.png */; };
-		D957B725FF974806B2B98D8A /* gradient-7-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 4C7D220C6821489781A54577 /* gradient-7-Icon-60x60@2x.png */; };
-		33CAF4C691A147AEBC018DBC /* gradient-7-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B75139C452A4809B549A448 /* gradient-7-Icon-60x60@3x.png */; };
-		4D122CB035A640FD9BBA3778 /* gradient-8-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6637E65339F840CE967A08FF /* gradient-8-Icon-60x60@2x.png */; };
-		E292FD819CD94D1E8D961119 /* gradient-8-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0C9E7EF195394E649AB6017C /* gradient-8-Icon-60x60@3x.png */; };
-		00A28E4C1ADB4D4C8307C2C6 /* gradient-9-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A1C209D0C6AC4985A6C2932D /* gradient-9-Icon-60x60@2x.png */; };
-		D2E898EA01F142A7BC7303C9 /* gradient-9-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 93B342592E0D46F5BEC1C974 /* gradient-9-Icon-60x60@3x.png */; };
+		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		1D42BC728D474EC4B1EF9906 /* gradient-10-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 5B2E188CA6AF46069BE8EF20 /* gradient-10-Icon-60x60@2x.png */; };
+		1EE7DDAD0AD24ECB9EF5E335 /* green-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 71DC9CC652D84F0EA2FFC181 /* green-Icon-60x60@2x.png */; };
+		33CAF4C691A147AEBC018DBC /* gradient-7-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 4B75139C452A4809B549A448 /* gradient-7-Icon-60x60@3x.png */; };
+		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		4215504C7DAA4B2595EC761D /* default-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FC720140CAD94013A9E341D0 /* default-Icon-60x60@3x.png */; };
+		4D122CB035A640FD9BBA3778 /* gradient-8-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6637E65339F840CE967A08FF /* gradient-8-Icon-60x60@2x.png */; };
+		5A510CF6F7213F786B64F66D /* libPods-FormAI.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A5FC34A6707D19CB362E7D1B /* libPods-FormAI.a */; };
+		5A6B896DE7024037B2968E0C /* gradient-4-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 33895A244210472CAB4AE89A /* gradient-4-Icon-60x60@3x.png */; };
+		5A8551482E08FAC82CD07A67 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7D53C5FC16DFF6DB486F5E64 /* PrivacyInfo.xcprivacy */; };
 		7094F27EA4E341D09106F68A /* gradient-10-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8B318337998540F1A412F030 /* gradient-10-Icon-60x60@3x.png */; };
+		75076A3D3B564085B2F03437 /* orange-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = FD60A6C3D5504DF6AE50A023 /* orange-Icon-60x60@3x.png */; };
+		7888F859C18E4F4081B19C13 /* purple-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = B57596E3D59D4B998DC4FB72 /* purple-Icon-60x60@3x.png */; };
+		7D87B443591D4DCE892AC09A /* gradient-2-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1F499ED62AED4E909A328B3D /* gradient-2-Icon-60x60@2x.png */; };
+		800127D4C9804F808D5188DD /* purple-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 697D9F3EB6424C9EA15139F9 /* purple-Icon-60x60@2x.png */; };
+		82E0EC4A3F2B4F2BAE82B952 /* default-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = BFB12AF4B8694CE4A4B87ABB /* default-Icon-60x60@2x.png */; };
+		8582F51671D894BA8A4380B0 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67EAAE229064A532D588C986 /* ExpoModulesProvider.swift */; };
+		8A772B505D1E47D4AD087A31 /* gradient-4-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6AB522209225409CA97AAA9C /* gradient-4-Icon-60x60@2x.png */; };
+		8F49D44B632142E487E2583B /* green-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = A5CFDEEE033543E2B4249693 /* green-Icon-60x60@3x.png */; };
+		962B52E501E7418097477CB0 /* gradient-6-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 2BFB148CCC4649199CA36B79 /* gradient-6-Icon-60x60@2x.png */; };
+		9B024A1B62B14CD8A5D9C698 /* gradient-3-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = BF8409F02FFE48E5A6542FE7 /* gradient-3-Icon-60x60@3x.png */; };
+		A6EE31166B9C4F3293BCA6C6 /* gradient-3-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 13496A78965949B98A5BAC1D /* gradient-3-Icon-60x60@2x.png */; };
+		A8EB873BC7524730AF4E6554 /* blue-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 015974E3114544BC81FB4138 /* blue-Icon-60x60@3x.png */; };
+		AB4BF97F12D34DF6AD7354D4 /* pink-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = EE75241086324DD7ABD950A3 /* pink-Icon-60x60@3x.png */; };
+		B33A3088A88E424F9DC12D4D /* gradient-1-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6B32BBFEB93A4D2B9FDD2457 /* gradient-1-Icon-60x60@3x.png */; };
+		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		BF02F1DBDF9E4944B3306ADB /* black-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1FF69B592842408BA46A6F14 /* black-Icon-60x60@2x.png */; };
+		C3E3A1103802466E8DC35040 /* red-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = E52CABFA6AE54C55A9A4BB58 /* red-Icon-60x60@3x.png */; };
+		C6BCCDD326D949B68AD5FF55 /* blue-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6E3B7AB9D3EF4284B8FADCD6 /* blue-Icon-60x60@2x.png */; };
+		C83728A478904BD79536F5D5 /* red-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C65B9867571449658EB35666 /* red-Icon-60x60@2x.png */; };
+		C891F26BE59D4206A2D9B051 /* gradient-5-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0FAB09E894FE4CCCBBED6BD1 /* gradient-5-Icon-60x60@2x.png */; };
+		D2E898EA01F142A7BC7303C9 /* gradient-9-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 93B342592E0D46F5BEC1C974 /* gradient-9-Icon-60x60@3x.png */; };
+		D8E59604284740F3BFC3A327 /* gradient-5-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 826EDBF1AADD4D4DB2ACEC72 /* gradient-5-Icon-60x60@3x.png */; };
+		D957B725FF974806B2B98D8A /* gradient-7-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 4C7D220C6821489781A54577 /* gradient-7-Icon-60x60@2x.png */; };
+		E292FD819CD94D1E8D961119 /* gradient-8-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0C9E7EF195394E649AB6017C /* gradient-8-Icon-60x60@3x.png */; };
+		E6F1CE87B8EA4B84840DC4BD /* pink-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 38EAC33F7A31418D80DAB441 /* pink-Icon-60x60@2x.png */; };
+		E736BD9DE98A490CBDF4D84D /* gradient-2-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 762F8CB5BB5E454D9293B178 /* gradient-2-Icon-60x60@3x.png */; };
+		F0A2DE5413E543B3B5037BC5 /* gradient-1-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1D325BBD932E4717AB194934 /* gradient-1-Icon-60x60@2x.png */; };
+		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F633CDB010264D6682436D77 /* black-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 3EDBA0597E5F45F692E2830A /* black-Icon-60x60@3x.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		015974E3114544BC81FB4138 /* blue-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "blue-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/blue-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		0C9E7EF195394E649AB6017C /* gradient-8-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-8-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-8-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		0FAB09E894FE4CCCBBED6BD1 /* gradient-5-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-5-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-5-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		13496A78965949B98A5BAC1D /* gradient-3-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-3-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-3-Icon-60x60@2x.png"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* FormAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FormAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = FormAI/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = FormAI/Info.plist; sourceTree = "<group>"; };
+		17F42D9171BC491F9F89563B /* yellow-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "yellow-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/yellow-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		1D325BBD932E4717AB194934 /* gradient-1-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-1-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-1-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		1F499ED62AED4E909A328B3D /* gradient-2-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-2-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-2-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		1FF69B592842408BA46A6F14 /* black-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "black-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/black-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		2BFB148CCC4649199CA36B79 /* gradient-6-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-6-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-6-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		33895A244210472CAB4AE89A /* gradient-4-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-4-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-4-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		38EAC33F7A31418D80DAB441 /* pink-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "pink-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/pink-Icon-60x60@2x.png"; sourceTree = "<group>"; };
 		3C3BC0C736A3807C16049899 /* Pods-FormAI.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FormAI.release.xcconfig"; path = "Target Support Files/Pods-FormAI/Pods-FormAI.release.xcconfig"; sourceTree = "<group>"; };
+		3EDBA0597E5F45F692E2830A /* black-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "black-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/black-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		4B75139C452A4809B549A448 /* gradient-7-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-7-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-7-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		4C7D220C6821489781A54577 /* gradient-7-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-7-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-7-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		5B2E188CA6AF46069BE8EF20 /* gradient-10-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-10-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-10-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		6637E65339F840CE967A08FF /* gradient-8-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-8-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-8-Icon-60x60@2x.png"; sourceTree = "<group>"; };
 		67EAAE229064A532D588C986 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-FormAI/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		697D9F3EB6424C9EA15139F9 /* purple-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "purple-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/purple-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		6AB522209225409CA97AAA9C /* gradient-4-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-4-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-4-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		6B32BBFEB93A4D2B9FDD2457 /* gradient-1-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-1-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-1-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		6E3B7AB9D3EF4284B8FADCD6 /* blue-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "blue-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/blue-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		71DC9CC652D84F0EA2FFC181 /* green-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "green-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/green-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		762F8CB5BB5E454D9293B178 /* gradient-2-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-2-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-2-Icon-60x60@3x.png"; sourceTree = "<group>"; };
 		789C4A719D2B54A7FFAEA716 /* Pods-FormAI.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FormAI.debug.xcconfig"; path = "Target Support Files/Pods-FormAI/Pods-FormAI.debug.xcconfig"; sourceTree = "<group>"; };
 		7D53C5FC16DFF6DB486F5E64 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = FormAI/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		826EDBF1AADD4D4DB2ACEC72 /* gradient-5-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-5-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-5-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		8B318337998540F1A412F030 /* gradient-10-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-10-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-10-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		93B342592E0D46F5BEC1C974 /* gradient-9-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-9-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-9-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		A1C209D0C6AC4985A6C2932D /* gradient-9-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-9-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-9-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		A5CFDEEE033543E2B4249693 /* green-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "green-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/green-Icon-60x60@3x.png"; sourceTree = "<group>"; };
 		A5FC34A6707D19CB362E7D1B /* libPods-FormAI.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-FormAI.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = FormAI/SplashScreen.storyboard; sourceTree = "<group>"; };
+		B57596E3D59D4B998DC4FB72 /* purple-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "purple-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/purple-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		B57B22F8D60E48A486E3930F /* yellow-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "yellow-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/yellow-Icon-60x60@2x.png"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		BF8409F02FFE48E5A6542FE7 /* gradient-3-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-3-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-3-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		BFB12AF4B8694CE4A4B87ABB /* default-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "default-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/default-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		C65B9867571449658EB35666 /* red-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "red-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/red-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		E069789BFCFF491EAB17AF85 /* orange-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "orange-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/orange-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		E52CABFA6AE54C55A9A4BB58 /* red-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "red-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/red-Icon-60x60@3x.png"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		EE75241086324DD7ABD950A3 /* pink-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "pink-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/pink-Icon-60x60@3x.png"; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = FormAI/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* FormAI-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "FormAI-Bridging-Header.h"; path = "FormAI/FormAI-Bridging-Header.h"; sourceTree = "<group>"; };
-		BFB12AF4B8694CE4A4B87ABB /* default-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "default-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/default-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		FC720140CAD94013A9E341D0 /* default-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "default-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/default-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		1FF69B592842408BA46A6F14 /* black-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "black-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/black-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		3EDBA0597E5F45F692E2830A /* black-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "black-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/black-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		6E3B7AB9D3EF4284B8FADCD6 /* blue-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "blue-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/blue-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		015974E3114544BC81FB4138 /* blue-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "blue-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/blue-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		71DC9CC652D84F0EA2FFC181 /* green-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "green-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/green-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		A5CFDEEE033543E2B4249693 /* green-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "green-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/green-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E069789BFCFF491EAB17AF85 /* orange-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "orange-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/orange-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		FD60A6C3D5504DF6AE50A023 /* orange-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "orange-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/orange-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		38EAC33F7A31418D80DAB441 /* pink-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "pink-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/pink-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		EE75241086324DD7ABD950A3 /* pink-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "pink-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/pink-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		697D9F3EB6424C9EA15139F9 /* purple-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "purple-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/purple-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		B57596E3D59D4B998DC4FB72 /* purple-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "purple-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/purple-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		C65B9867571449658EB35666 /* red-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "red-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/red-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		E52CABFA6AE54C55A9A4BB58 /* red-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "red-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/red-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		B57B22F8D60E48A486E3930F /* yellow-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "yellow-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/yellow-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		17F42D9171BC491F9F89563B /* yellow-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "yellow-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/yellow-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		1D325BBD932E4717AB194934 /* gradient-1-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-1-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-1-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		6B32BBFEB93A4D2B9FDD2457 /* gradient-1-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-1-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-1-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		1F499ED62AED4E909A328B3D /* gradient-2-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-2-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-2-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		762F8CB5BB5E454D9293B178 /* gradient-2-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-2-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-2-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		13496A78965949B98A5BAC1D /* gradient-3-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-3-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-3-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		BF8409F02FFE48E5A6542FE7 /* gradient-3-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-3-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-3-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		6AB522209225409CA97AAA9C /* gradient-4-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-4-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-4-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		33895A244210472CAB4AE89A /* gradient-4-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-4-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-4-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		0FAB09E894FE4CCCBBED6BD1 /* gradient-5-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-5-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-5-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		826EDBF1AADD4D4DB2ACEC72 /* gradient-5-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-5-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-5-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		2BFB148CCC4649199CA36B79 /* gradient-6-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-6-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-6-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		FDE547702FE745E282225727 /* gradient-6-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-6-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-6-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		4C7D220C6821489781A54577 /* gradient-7-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-7-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-7-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		4B75139C452A4809B549A448 /* gradient-7-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-7-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-7-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		6637E65339F840CE967A08FF /* gradient-8-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-8-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-8-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		0C9E7EF195394E649AB6017C /* gradient-8-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-8-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-8-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		A1C209D0C6AC4985A6C2932D /* gradient-9-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-9-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-9-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		93B342592E0D46F5BEC1C974 /* gradient-9-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-9-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-9-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		5B2E188CA6AF46069BE8EF20 /* gradient-10-Icon-60x60@2x.png */ = {isa = PBXFileReference; name = "gradient-10-Icon-60x60@2x.png"; path = "FormAI/DynamicAppIcons/gradient-10-Icon-60x60@2x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		8B318337998540F1A412F030 /* gradient-10-Icon-60x60@3x.png */ = {isa = PBXFileReference; name = "gradient-10-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-10-Icon-60x60@3x.png"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		FC720140CAD94013A9E341D0 /* default-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "default-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/default-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		FD60A6C3D5504DF6AE50A023 /* orange-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "orange-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/orange-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		FDE547702FE745E282225727 /* gradient-6-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-6-Icon-60x60@3x.png"; path = "FormAI/DynamicAppIcons/gradient-6-Icon-60x60@3x.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -290,6 +290,8 @@
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
 						LastSwiftMigration = 1250;
+						DevelopmentTeam = "Z5FML96ZUF";
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -421,18 +423,13 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoMediaLibrary/ExpoMediaLibrary_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/GTMSessionFetcher/GTMSessionFetcher_Core_Privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/GoogleSignIn/GoogleSignIn.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/Mixpanel-swift/Mixpanel.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/PurchasesHybridCommon/PurchasesHybridCommon.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RCT-Folly/RCT-Folly_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ReachabilitySwift/ReachabilitySwift.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/RevenueCat/RevenueCat.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/RevenueCatUI/RevenueCat_RevenueCatUI.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/SuperwallKit/SuperwallKit.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/boost/boost_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-launcher/EXDevLauncher.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-menu/EXDevMenu.bundle",
@@ -455,18 +452,13 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoMediaLibrary_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GTMSessionFetcher_Core_Privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleSignIn.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Mixpanel.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/PurchasesHybridCommon.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RCT-Folly_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNSVGFilters.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ReachabilitySwift.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RevenueCat.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RevenueCat_RevenueCatUI.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SDWebImage.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SuperwallKit.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/boost_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevLauncher.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevMenu.bundle",
@@ -557,13 +549,16 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.athli.app";
-				PRODUCT_NAME = "Athli";
+				PRODUCT_BUNDLE_IDENTIFIER = com.athli.app;
+				PRODUCT_NAME = Athli;
 				SWIFT_OBJC_BRIDGING_HEADER = "FormAI/FormAI-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "Z5FML96ZUF";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Debug;
 		};
@@ -588,12 +583,15 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.athli.app";
-				PRODUCT_NAME = "Athli";
+				PRODUCT_BUNDLE_IDENTIFIER = com.athli.app;
+				PRODUCT_NAME = Athli;
 				SWIFT_OBJC_BRIDGING_HEADER = "FormAI/FormAI-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "Z5FML96ZUF";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Release;
 		};
@@ -656,7 +654,7 @@
 					"$(inherited)",
 					" ",
 				);
-				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				USE_HERMES = true;
@@ -714,7 +712,7 @@
 					"$(inherited)",
 					" ",
 				);
-				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../../node_modules/react-native";
 				SDKROOT = iphoneos;
 				USE_HERMES = true;
 				VALIDATE_PRODUCT = YES;
@@ -743,9 +741,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin PBXVariantGroup section */
-/* End PBXVariantGroup section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }
