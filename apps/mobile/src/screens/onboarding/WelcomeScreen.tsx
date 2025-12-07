@@ -18,23 +18,18 @@ import { useLanguage } from '../../context/LanguageContext';
 import { LANGUAGES } from '../../constants/languages';
 import i18n from '../../utils/i18n';
 import { hapticFeedback } from '../../utils/haptic';
-import { track } from '../../services/analytics';
 import { X } from 'lucide-react-native';
 import { appColors } from '../../constants/appColorScheme';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
   onSignIn: () => void;
-  onNavigateToOnboarding?: () => void;
-  onRequirePayment?: () => void;
   isAppVisible?: boolean;
 }
 
 export function WelcomeScreen({
   onGetStarted,
   onSignIn,
-  onNavigateToOnboarding,
-  onRequirePayment,
   isAppVisible = false,
 }: WelcomeScreenProps) {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -52,7 +47,7 @@ export function WelcomeScreen({
   // Create video player with stable reference
   const playerRef = React.useRef<any>(null);
   const [videoReady, setVideoReady] = useState(false);
-  const player = useVideoPlayer(require('../../../assets/formai-homescreen.mp4'), (player) => {
+  const player = useVideoPlayer(require('../../../assets/athli-homescreen.mp4'), (player) => {
     player.loop = true;
     player.muted = true;
     player.volume = 0; // Ensure volume is 0
@@ -61,9 +56,6 @@ export function WelcomeScreen({
 
   // Fade in animation when component mounts
   useEffect(() => {
-    // Track home screen view
-    track('Welcome Screen shown');
-
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 300,
@@ -203,13 +195,11 @@ export function WelcomeScreen({
 
   const handleGetStarted = () => {
     hapticFeedback.selection();
-    track('Welcome Screen CTA Clicked', { cta: 'get_started' });
     onGetStarted();
   };
 
   const handleSignIn = () => {
     hapticFeedback.selection();
-    track('Welcome Screen CTA Clicked', { cta: 'sign_in' });
     setShowSignInModal(true);
   };
 
@@ -219,13 +209,11 @@ export function WelcomeScreen({
 
   const handleLanguagePress = () => {
     hapticFeedback.selection();
-    track('Welcome Screen Language Pill Clicked');
     setShowLanguageModal(true);
   };
 
   const handleLanguageSelect = (languageCode: string) => {
     hapticFeedback.selection();
-    track('Welcome Screen Language Selected', { language: languageCode });
     setLanguage(languageCode);
     setShowLanguageModal(false);
   };
@@ -446,8 +434,6 @@ export function WelcomeScreen({
         visible={showSignInModal}
         onClose={handleCloseSignInModal}
         onSignIn={onSignIn}
-        onNavigateToOnboarding={onNavigateToOnboarding}
-        onRequirePayment={onRequirePayment}
       />
     </>
   );

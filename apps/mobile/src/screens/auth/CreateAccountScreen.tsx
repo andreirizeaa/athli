@@ -9,10 +9,8 @@ import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { LoadingOverlay } from '../../components/ui/overlays/LoadingOverlay';
 import { appColors } from '../../constants/appColorScheme';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { usePurchases } from '../../context/PurchasesContext';
 import { supabase } from '../../lib/supabase';
 import { showAlert } from '../../services/alertService';
-import { track } from '../../services/analytics';
 import { registerAndSaveExpoPushToken } from '../../services/push';
 import { setUserId } from '../../services/storageService';
 import { fetchUserById } from '../../services/userService';
@@ -26,33 +24,45 @@ interface CreateAccountScreenProps {
 
 export function CreateAccountScreen({ onNext, onBack }: CreateAccountScreenProps) {
   const { onboardingData, updateOnboardingData } = useOnboarding();
-  const { logIn } = usePurchases();
   const navigation = useNavigation<any>();
   const [isSigningIn, setIsSigningIn] = React.useState(false);
 
   const isExpoGo = Constants.appOwnership === 'expo';
 
+  // Configure Google Sign-In only if not in Expo Go
+  // Note: We don't pre-configure here to avoid native module crashes
+  // Configuration will happen right before sign-in
   React.useEffect(() => {
-    if (!isExpoGo) {
-      import('@react-native-google-signin/google-signin')
-        .then(({ GoogleSignin }) => {
-          GoogleSignin.configure({
-            scopes: ['email', 'profile'],
-            iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!,
-          });
-        })
-        .catch((error) => {});
-    }
+    // Intentionally empty - configuration happens on-demand in handleGoogleSignIn
   }, [isExpoGo]);
 
   const handleGoogleSignIn = async () => {
     try {
       hapticFeedback.selection();
       if (isExpoGo) {
+        showAlert('Error', 'Google Sign-In is not available in Expo Go. Please use a development build.');
         return;
       }
+
+      const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+      if (!googleClientId) {
+        showAlert('Error', 'Google Sign-In is not configured. Please check your environment variables.');
+        return;
+      }
+
       const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
-      await GoogleSignin.hasPlayServices();
+      
+      // Ensure Google Sign-In is configured before attempting sign in
+      GoogleSignin.configure({
+        scopes: ['email', 'profile'],
+        iosClientId: googleClientId,
+      });
+
+      // hasPlayServices() is Android-only, skip on iOS
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices();
+      }
+      
       setIsSigningIn(true);
       const userInfo = await GoogleSignin.signIn();
 
@@ -64,7 +74,7 @@ export function CreateAccountScreen({ onNext, onBack }: CreateAccountScreenProps
         if (error) {
           showAlert(
             'Sign In Error',
-            'Unable to sign in with Google. Please try again.',
+            error.message || 'Unable to sign in with Google. Please try again.',
             undefined,
             'CREATE_ACCOUNT_GOOGLE_SIGN_IN_ERROR'
           );
@@ -84,13 +94,27 @@ export function CreateAccountScreen({ onNext, onBack }: CreateAccountScreenProps
               );
               setIsSigningIn(false);
             }
+          } else {
+            setIsSigningIn(false);
+            showAlert('Error', 'No user data received from Google Sign-In.');
           }
         }
       } else {
-        throw new Error('no ID token present!');
+        setIsSigningIn(false);
+        showAlert('Error', 'No ID token received from Google Sign-In.');
       }
     } catch (error: any) {
       setIsSigningIn(false);
+      // Only show error if it's not a user cancellation
+      if (error?.code !== 'SIGN_IN_CANCELLED' && error?.code !== '10') {
+        console.error('Google Sign-In error:', error);
+        showAlert(
+          'Sign In Error',
+          error?.message || 'An error occurred during Google Sign-In. Please try again.',
+          undefined,
+          'CREATE_ACCOUNT_GOOGLE_SIGN_IN_ERROR'
+        );
+      }
     }
   };
 
@@ -146,9 +170,6 @@ export function CreateAccountScreen({ onNext, onBack }: CreateAccountScreenProps
 
   const handleTermsOfServicePress = async () => {
     hapticFeedback.selection();
-    // Track sign in screen clicks
-    track('Sign In Screen clicks', { event: 'Terms' });
-    // Small delay to ensure haptic feedback is felt before opening browser
     setTimeout(async () => {
       try {
         await Linking.openURL('https://useformai.com/legal/tos');
@@ -160,9 +181,6 @@ export function CreateAccountScreen({ onNext, onBack }: CreateAccountScreenProps
 
   const handlePrivacyPolicyPress = async () => {
     hapticFeedback.selection();
-    // Track sign in screen clicks
-    track('Sign In Screen clicks', { event: 'Privacy' });
-    // Small delay to ensure haptic feedback is felt before opening browser
     setTimeout(async () => {
       try {
         await Linking.openURL('https://useformai.com/legal/privacy');
@@ -183,15 +201,7 @@ export function CreateAccountScreen({ onNext, onBack }: CreateAccountScreenProps
       const { user: existingUser } = await fetchUserById(data.user.id);
 
       if (existingUser) {
-        // User already exists, just log them in and navigate to main app
-        await logIn(data.user.id);
-
-        // Track sign in completion for existing user
-        track('Sign In Completed', {
-          signin_method: signInMethod,
-          user_id: data.user.id,
-        });
-
+        // User already exists, navigate to main app
         try {
           // Register Expo push token for existing user
           await registerAndSaveExpoPushToken(data.user.id);
@@ -230,14 +240,6 @@ export function CreateAccountScreen({ onNext, onBack }: CreateAccountScreenProps
       updateOnboardingData('walkthroughCompleted', false);
       updateOnboardingData('userId', data.user.id);
       updateOnboardingData('profilePicture', profilePicture);
-
-      await logIn(data.user.id);
-
-      // Track signup completion
-      track('Signup Completed', {
-        signup_method: signInMethod,
-        user_id: data.user.id,
-      });
 
       try {
         // Register Expo push token and persist it before onboarding persistence

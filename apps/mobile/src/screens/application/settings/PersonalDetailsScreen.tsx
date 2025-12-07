@@ -5,8 +5,6 @@ import Constants from 'expo-constants';
 import i18n from '../../../utils/i18n';
 import { hapticFeedback } from '../../../utils/haptic';
 import { useUserDetails } from '../../../context/UserDetailsContext';
-import { usePurchases } from '../../../context/PurchasesContext';
-import { usePlacement } from 'expo-superwall';
 import { Pencil, ChevronLeft } from 'lucide-react-native';
 import { track } from '../../../services/analytics';
 import { showAlert } from '../../../services/alertService';
@@ -104,17 +102,13 @@ export function PersonalDetailsScreen({
   onEditGender,
 }: PersonalDetailsScreenProps) {
   const { userDetails, getWeightDisplay, getHeightDisplay, getAgeRangeDisplay } = useUserDetails();
-  const { hasHdVideos } = usePurchases();
-  const { registerPlacement } = usePlacement();
-
   // Track screen view on mount
   useEffect(() => {
     track('Screen viewed', { screen_name: 'Personal Details' });
   }, []);
 
-  const videoQuality = hasHdVideos
-    ? i18n.t('personalDetails.highDefinition')
-    : i18n.t('personalDetails.low');
+  // HD videos always available
+  const videoQuality = i18n.t('personalDetails.highDefinition');
 
   const handleEditCurrentWeight = () => {
     onEditCurrentWeight(getWeightDisplay());
@@ -134,25 +128,7 @@ export function PersonalDetailsScreen({
 
   const handleHdVideoPress = async () => {
     hapticFeedback.selection();
-    try {
-      // Track paywall shown
-      track('Low quality paywall shown', { source: 'personal_details' });
-
-      await registerPlacement({
-        placement: 'hd_video_trigger',
-      });
-
-      // Track paywall completion
-      track('Low quality paywall complete', { source: 'personal_details' });
-    } catch (error) {
-      showAlert(
-        'Error',
-        'Unable to access premium features. Please try again.',
-        undefined,
-        'PERSONAL_DETAILS_PREMIUM_FEATURES_ERROR',
-        error
-      );
-    }
+    // HD videos always available - no action needed
   };
 
   return (
@@ -208,13 +184,7 @@ export function PersonalDetailsScreen({
             <PersonalDetailOption
               title={i18n.t('personalDetails.videoQuality')}
               value={videoQuality}
-              onPress={
-                !hasHdVideos
-                  ? () => {
-                      handleHdVideoPress();
-                    }
-                  : undefined
-              }
+              onPress={undefined}
             />
           </View>
         </View>

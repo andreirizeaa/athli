@@ -5,14 +5,11 @@ import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import * as StoreReview from 'expo-store-review';
-import { usePlacement } from 'expo-superwall';
 import {
   BellRing,
   FileText,
-  FileVideoCamera,
   IdCard,
   Languages,
-  LogOut,
   MailPlus,
   Megaphone,
   Pencil,
@@ -36,7 +33,6 @@ import {
 } from 'react-native';
 import { useLiftData } from '../../../context/LiftDataContext';
 import { useLoadingLifts } from '../../../context/LoadingLiftsContext';
-import { usePurchases } from '../../../context/PurchasesContext';
 import { useTutorial, useTutorialTarget } from '../../../context/TutorialContext';
 import { useUserDetails } from '../../../context/UserDetailsContext';
 import { supabase } from '../../../lib/supabase';
@@ -51,14 +47,12 @@ import { hapticFeedback } from '../../../utils/haptic';
 import i18n from '../../../utils/i18n';
 import { openAppSettings } from '../../../utils/openAppSettings';
 import { DeleteAccountModal } from './DeleteAccountModal';
-import { LogoutModal } from './LogoutModal';
 
 interface SettingsScreenProps {
   onPersonalDetailsPress: () => void;
   onUnitsPress: () => void;
   onLanguagePress: () => void;
   onSharePress: () => void;
-  onLogout?: () => void;
   onEditNamePress?: () => void;
   onAppIconPress?: () => void;
 }
@@ -108,16 +102,13 @@ export function SettingsScreen({
   onUnitsPress,
   onLanguagePress,
   onSharePress,
-  onLogout,
   onEditNamePress,
   onAppIconPress,
 }: SettingsScreenProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const { hasSubscription, hasHdVideos } = usePurchases();
+  // Removed subscription checks - all features available
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReplayingTutorial, setIsReplayingTutorial] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [currentAppIcon, setCurrentAppIcon] = useState<string>('default');
@@ -125,25 +116,25 @@ export function SettingsScreen({
 
   // App icon mapping
   const APP_ICONS = {
-    'default': require('../../../../assets/appIcons/formai-ios-icon.png'),
-    'black': require('../../../../assets/appIcons/form-ai-icon-black.png'),
-    'blue': require('../../../../assets/appIcons/form-ai-icon-blue.png'),
-    'green': require('../../../../assets/appIcons/form-ai-icon-green.png'),
-    'orange': require('../../../../assets/appIcons/form-ai-icon-orange.png'),
-    'pink': require('../../../../assets/appIcons/form-ai-icon-pink.png'),
-    'purple': require('../../../../assets/appIcons/form-ai-icon-purple.png'),
-    'red': require('../../../../assets/appIcons/form-ai-icon-red.png'),
-    'yellow': require('../../../../assets/appIcons/form-ai-icon-yellow.png'),
-    'gradient-1': require('../../../../assets/appIcons/form-ai-icon-gradient-1.png'),
-    'gradient-2': require('../../../../assets/appIcons/form-ai-icon-gradient-2.png'),
-    'gradient-3': require('../../../../assets/appIcons/form-ai-icon-gradient-3.png'),
-    'gradient-4': require('../../../../assets/appIcons/form-ai-icon-gradient-4.png'),
-    'gradient-5': require('../../../../assets/appIcons/form-ai-icon-gradient-5.png'),
-    'gradient-6': require('../../../../assets/appIcons/form-ai-icon-gradient-6.png'),
-    'gradient-7': require('../../../../assets/appIcons/form-ai-icon-gradient-7.png'),
-    'gradient-8': require('../../../../assets/appIcons/form-ai-icon-gradient-8.png'),
-    'gradient-9': require('../../../../assets/appIcons/form-ai-icon-gradient-9.png'),
-    'gradient-10': require('../../../../assets/appIcons/form-ai-icon-gradient-10.png'),
+    'default': require('../../../../assets/appIcons/athli-ios-icon.png'),
+    'black': require('../../../../assets/appIcons/athli-icon-black.png'),
+    'blue': require('../../../../assets/appIcons/athli-icon-blue.png'),
+    'green': require('../../../../assets/appIcons/athli-icon-green.png'),
+    'orange': require('../../../../assets/appIcons/athli-icon-orange.png'),
+    'pink': require('../../../../assets/appIcons/athli-icon-pink.png'),
+    'purple': require('../../../../assets/appIcons/athli-icon-purple.png'),
+    'red': require('../../../../assets/appIcons/athli-icon-red.png'),
+    'yellow': require('../../../../assets/appIcons/athli-icon-yellow.png'),
+    'gradient-1': require('../../../../assets/appIcons/athli-icon-gradient-1.png'),
+    'gradient-2': require('../../../../assets/appIcons/athli-icon-gradient-2.png'),
+    'gradient-3': require('../../../../assets/appIcons/athli-icon-gradient-3.png'),
+    'gradient-4': require('../../../../assets/appIcons/athli-icon-gradient-4.png'),
+    'gradient-5': require('../../../../assets/appIcons/athli-icon-gradient-5.png'),
+    'gradient-6': require('../../../../assets/appIcons/athli-icon-gradient-6.png'),
+    'gradient-7': require('../../../../assets/appIcons/athli-icon-gradient-7.png'),
+    'gradient-8': require('../../../../assets/appIcons/athli-icon-gradient-8.png'),
+    'gradient-9': require('../../../../assets/appIcons/athli-icon-gradient-9.png'),
+    'gradient-10': require('../../../../assets/appIcons/athli-icon-gradient-10.png'),
   };
   const iconSize = 26;
   const iconColor = '#000000';
@@ -182,7 +173,6 @@ export function SettingsScreen({
 
   // Reset loading states on mount to prevent lingering indicators
   useEffect(() => {
-    setIsLoggingOut(false);
     setIsDeleting(false);
     setIsReplayingTutorial(false);
     setIsSyncing(false);
@@ -252,9 +242,7 @@ export function SettingsScreen({
   // Reset modal states when component unmounts or navigation occurs
   useEffect(() => {
     return () => {
-      setShowLogoutModal(false);
       setShowDeleteModal(false);
-      setIsLoggingOut(false); // Also reset logout loading state
     };
   }, []);
 
@@ -265,8 +253,6 @@ export function SettingsScreen({
   // Tutorial context
   const { start: startTutorial } = useTutorial();
 
-  // Superwall placement
-  const { registerPlacement } = usePlacement();
 
   const handleDeleteAccountPress = () => {
     // Track settings screen clicks
@@ -304,7 +290,6 @@ export function SettingsScreen({
       await removeUserId();
 
       setShowDeleteModal(false);
-      if (onLogout) onLogout();
     } catch (e: any) {
       showAlert('Delete failed', 'Please try again later', () => {
         hapticFeedback.selection();
@@ -315,22 +300,6 @@ export function SettingsScreen({
     }
   };
 
-  const handleLogoutPress = () => {
-    // Track settings screen clicks
-    track('Settings screen clicks', { event: 'Log out' });
-    setShowLogoutModal(true);
-  };
-
-  const handleCloseLogoutModal = () => {
-    setShowLogoutModal(false);
-  };
-
-  const handleConfirmLogout = () => {
-    // Close modal immediately and trigger logout right away
-    setShowLogoutModal(false);
-    setIsLoggingOut(false);
-    onLogout?.();
-  };
 
   const handleUnitsPress = () => {
     // Track settings screen clicks
@@ -363,7 +332,7 @@ export function SettingsScreen({
     // Small delay to ensure haptic feedback is felt before opening browser
     setTimeout(async () => {
       try {
-        await Linking.openURL('https://form-ai.canny.io/feature-requests');
+        await Linking.openURL('https://athli.canny.io/feature-requests');
       } catch (error) {
         showAlert('Error', 'Unable to open feature requests. Please try again later.');
       }
@@ -372,45 +341,14 @@ export function SettingsScreen({
 
   const handleSyncDataPress = async () => {
     hapticFeedback.selection();
-
-    // Check subscription status before allowing sync
-    if (!hasSubscription) {
-      // Track settings screen clicks
-      track('Settings screen clicks', { event: 'Sync Data - No Subscription' });
-      // Track paywall shown
-      track('Sync paywall shown', { source: 'settings' });
-
-      try {
-        await registerPlacement({
-          placement: 'sync_trigger',
-        });
-
-        // Track paywall completion
-        track('Sync paywall complete', { source: 'settings' });
-      } catch (error) {
-        showAlert(
-          'Error',
-          'Unable to access premium features. Please try again.',
-          undefined,
-          'SETTINGS_SYNC_PAYWALL_ERROR',
-          error
-        );
-      }
-      return;
-    }
-
     // Track settings screen clicks
     track('Settings screen clicks', { event: 'Sync Data' });
 
     try {
       setIsSyncing(true);
-
       await performManualSync();
-
-      // Update last sync time after successful sync
       const syncTime = await getFormattedLastSyncTime();
       setLastSyncTime(syncTime);
-
       hapticFeedback.success();
     } catch (error) {
       hapticFeedback.error();
@@ -515,7 +453,7 @@ export function SettingsScreen({
         await StoreReview.requestReview();
       } else {
         // Fallback: open app store page
-        const appStoreUrl = 'https://apps.apple.com/us/app/form-ai-train-safer-now/id6749869538';
+        const appStoreUrl = 'https://apps.apple.com/us/app/athli-train-safer-now/id6749869538';
         const canOpen = await Linking.canOpenURL(appStoreUrl);
 
         if (canOpen) {
@@ -558,29 +496,6 @@ export function SettingsScreen({
     }
   };
 
-  const handleHdVideoPress = async () => {
-    try {
-      // Track settings screen clicks
-      track('Settings screen clicks', { event: 'Video quality' });
-      // Track paywall shown
-      track('Low quality paywall shown', { source: 'settings' });
-
-      await registerPlacement({
-        placement: 'hd_video_trigger',
-      });
-
-      // Track paywall completion
-      track('Low quality paywall complete', { source: 'settings' });
-    } catch (error) {
-      showAlert(
-        'Error',
-        'Unable to access premium features. Please try again.',
-        undefined,
-        'SETTINGS_PREMIUM_FEATURES_ERROR',
-        error
-      );
-    }
-  };
 
   const handleAddTestLift = () => {
     hapticFeedback.selection();
@@ -653,16 +568,16 @@ export function SettingsScreen({
         liftTime: randomTime,
         metricWeight: randomWeight,
         reps: randomReps,
-        rawVideoURL: require('../../../../assets/tutorial/formai-example-video.mp4'),
-        poseVideoURL: require('../../../../assets/tutorial/formai-example-pose.mp4'),
-        thumbnailURL: require('../../../../assets/tutorial/formai-example-video-thumbnail.jpg'),
+        rawVideoURL: require('../../../../assets/tutorial/athli-example-video.mp4'),
+        poseVideoURL: require('../../../../assets/tutorial/athli-example-pose.mp4'),
+        thumbnailURL: require('../../../../assets/tutorial/athli-example-video-thumbnail.jpg'),
         analysis: {
           accuracy: clampedAccuracy,
           lineGraphValues: randomLineGraphValues,
           barChartValues: randomLineGraphValues,
           feedback: [
             {
-              imageURL: require('../../../../assets/tutorial/formai-example-feedback.png'),
+              imageURL: require('../../../../assets/tutorial/athli-example-feedback.png'),
               flaws: [
                 'Right knee is caving inward compared to the left, showing knee valgus.',
                 'Right ankle angle suggests the heel may be lifting more than the left.',
@@ -709,16 +624,16 @@ export function SettingsScreen({
       liftTime: timeString,
       metricWeight: 65,
       reps: 5,
-      rawVideoURL: require('../../../../assets/tutorial/formai-example-video.mp4'),
-      poseVideoURL: require('../../../../assets/tutorial/formai-example-pose.mp4'),
-      thumbnailURL: require('../../../../assets/tutorial/formai-example-video-thumbnail.jpg'),
+      rawVideoURL: require('../../../../assets/tutorial/athli-example-video.mp4'),
+      poseVideoURL: require('../../../../assets/tutorial/athli-example-pose.mp4'),
+      thumbnailURL: require('../../../../assets/tutorial/athli-example-video-thumbnail.jpg'),
       analysis: {
         accuracy: 50,
         lineGraphValues: [70, 72, 74, 71, 73],
         barChartValues: [70, 72, 74, 71, 73],
         feedback: [
           {
-            imageURL: require('../../../../assets/tutorial/formai-example-feedback.png'),
+            imageURL: require('../../../../assets/tutorial/athli-example-feedback.png'),
             flaws: [
               'Slight forward lean in the bottom position',
               'Knees tracking slightly inward on descent',
@@ -746,8 +661,8 @@ export function SettingsScreen({
       liftTime: timeString,
       metricWeight: 40,
       reps: 8,
-      rawVideoURL: require('../../../../assets/tutorial/formai-example-video.mp4'),
-      poseVideoURL: require('../../../../assets/tutorial/formai-example-pose.mp4'),
+      rawVideoURL: require('../../../../assets/tutorial/athli-example-video.mp4'),
+      poseVideoURL: require('../../../../assets/tutorial/athli-example-pose.mp4'),
       thumbnailURL: require('../../../../assets/tutorial/thumbnail.jpeg'),
       analysis: {
         accuracy: 90,
@@ -755,7 +670,7 @@ export function SettingsScreen({
         barChartValues: [80, 82, 84, 81, 83, 80, 82, 84],
         feedback: [
           {
-            imageURL: require('../../../../assets/tutorial/formai-example-feedback.png'),
+            imageURL: require('../../../../assets/tutorial/athli-example-feedback.png'),
             flaws: ['Hip drive could be more explosive', 'Depth slightly inconsistent across reps'],
             improvement: [
               'Focus on driving hips up and forward out of the hole',
@@ -862,16 +777,6 @@ export function SettingsScreen({
           /> */}
           </View>
 
-          {/* Second Card - Video Quality (only show if user doesn't have HD videos) */}
-          {!hasHdVideos && (
-            <View style={styles.card}>
-              <SettingsOption
-                icon={<FileVideoCamera size={iconSize} color={iconColor} />}
-                title={i18n.t('settings.whyLowQualityVideos')}
-                onPress={handleHdVideoPress}
-              />
-            </View>
-          )}
 
           {/* Third Card */}
           {/* <View style={styles.card}>
@@ -976,13 +881,6 @@ export function SettingsScreen({
           <Text style={styles.sectionTitle}>{i18n.t('settings.cardAccountActions')}</Text>
           <View style={styles.card}>
             <SettingsOption
-              icon={<LogOut size={iconSize} color={iconColor} />}
-              title={i18n.t('settings.logout')}
-              onPress={handleLogoutPress}
-              isLoading={isLoggingOut}
-            />
-            <View style={styles.separator} />
-            <SettingsOption
               icon={<UserMinus size={iconSize} color={iconColor} />}
               title={i18n.t('settings.deleteAccount')}
               onPress={handleDeleteAccountPress}
@@ -1029,13 +927,6 @@ export function SettingsScreen({
           isVisible={showDeleteModal}
           onClose={handleCloseDeleteModal}
           onConfirm={handleConfirmDeleteAccount}
-        />
-
-        {/* Logout Modal */}
-        <LogoutModal
-          isVisible={showLogoutModal}
-          onClose={handleCloseLogoutModal}
-          onConfirm={handleConfirmLogout}
         />
 
         {/* Personal Details Screen */}

@@ -18,10 +18,8 @@ import {
 } from 'react-native';
 import { appColors } from '../../constants/appColorScheme';
 import { useOnboarding } from '../../context/OnboardingContext';
-import { usePurchases } from '../../context/PurchasesContext';
 import { supabase } from '../../lib/supabase';
 import { showAlert } from '../../services/alertService';
-import { track } from '../../services/analytics';
 import { registerAndSaveExpoPushToken } from '../../services/push';
 import { removeUserId, setUserId } from '../../services/storageService';
 import { fetchUserById, requiresOnboarding } from '../../services/userService';
@@ -34,21 +32,16 @@ interface WelcomeScreenSignInProps {
   visible: boolean;
   onClose: () => void;
   onSignIn: () => void;
-  onNavigateToOnboarding?: () => void;
-  onRequirePayment?: () => void;
 }
 
 export function WelcomeScreenSignIn({
   visible,
   onClose,
   onSignIn,
-  onNavigateToOnboarding,
-  onRequirePayment,
 }: WelcomeScreenSignInProps) {
   const [isSigningIn, setIsSigningIn] = React.useState(false);
   const [isAnimatingOut, setIsAnimatingOut] = React.useState(false);
   const [isVisible, setIsVisible] = React.useState(false);
-  const { hasSubscription, logIn } = usePurchases();
   const { updateOnboardingData } = useOnboarding();
   const navigation = useNavigation<any>();
 
@@ -59,19 +52,10 @@ export function WelcomeScreenSignIn({
   const isExpoGo = Constants.appOwnership === 'expo';
 
   // Configure Google Sign-In only if not in Expo Go
+  // Note: We don't pre-configure here to avoid native module crashes
+  // Configuration will happen right before sign-in
   React.useEffect(() => {
-    if (!isExpoGo) {
-      import('@react-native-google-signin/google-signin')
-        .then(({ GoogleSignin }) => {
-          GoogleSignin.configure({
-            scopes: ['email', 'profile'],
-            iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID!,
-          });
-        })
-        .catch(() => {
-          // Intentionally no logs
-        });
-    }
+    // Intentionally empty - configuration happens on-demand in handleGoogleSignIn
   }, [isExpoGo]);
 
   // Handle slide-in animation when visible prop changes
@@ -101,77 +85,137 @@ export function WelcomeScreenSignIn({
           i18n.t('onboarding.incompleteAccount.title'),
           i18n.t('onboarding.incompleteAccount.message'),
           () => {
-            if (onNavigateToOnboarding) onNavigateToOnboarding();
-            else onSignIn();
+            onSignIn();
           }
         );
         return;
       }
-      await logIn(userId);
-
-      // Track sign-in completion
-      track('Sign In Completed', {
-        user_id: userId,
-      });
-
       // Ensure push token is registered for signed-in users
       await registerAndSaveExpoPushToken(userId);
-      if (requiresOnboarding(user)) {
-        hapticFeedback.error();
-        await removeUserId();
-        showAlert(
-          i18n.t('onboarding.incompleteAccount.title'),
-          i18n.t('onboarding.incompleteAccount.message'),
-          () => {
-            if (onNavigateToOnboarding) onNavigateToOnboarding();
-            else onSignIn();
-          }
-        );
-        return;
-      }
-      if (!hasSubscription) {
-        hapticFeedback.success();
-        if (onRequirePayment) onRequirePayment();
-        else onSignIn();
+      
+      // If user exists and onboarding is complete, go straight to app
+      if (!requiresOnboarding(user)) {
+        onSignIn();
         return;
       }
 
-      onSignIn();
+      // User needs to complete account creation
+      hapticFeedback.error();
+      await removeUserId();
+      showAlert(
+        i18n.t('onboarding.incompleteAccount.title'),
+        i18n.t('onboarding.incompleteAccount.message'),
+        () => {
+          // Navigate to create account screen
+          onSignIn();
+        }
+      );
     } catch {
       onSignIn();
     }
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('handleGoogleSignIn called');
+    console.log('EXPO_PUBLIC_GOOGLE_CLIENT_ID:', process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
     try {
+      console.log('Before hapticFeedback');
       hapticFeedback.selection();
-      if (isExpoGo) return;
+      console.log('After hapticFeedback');
+      if (isExpoGo) {
+        showAlert('Error', 'Google Sign-In is not available in Expo Go. Please use a development build.');
+        return;
+      }
 
-      const { GoogleSignin } = await import('@react-native-google-signin/google-signin');
-      await GoogleSignin.hasPlayServices();
-      setIsSigningIn(true);
-      const userInfo = await GoogleSignin.signIn();
+      const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+      if (!googleClientId) {
+        showAlert('Error', 'Google Sign-In is not configured. Please check your environment variables.');
+        return;
+      }
 
-      if (userInfo.idToken) {
-        const { data, error } = await supabase.auth.signInWithIdToken({
-          provider: 'google',
-          token: userInfo.idToken,
+      // Wrap the import in a try-catch to catch native module loading errors
+      let GoogleSignin;
+      try {
+        const module = await import('@react-native-google-signin/google-signin');
+        GoogleSignin = module.GoogleSignin;
+      } catch (importError: any) {
+        console.error('Failed to import Google Sign-In module:', importError);
+        showAlert(
+          'Error',
+          'Google Sign-In module failed to load. Please rebuild the app with: npx expo prebuild --clean'
+        );
+        return;
+      }
+
+      if (!GoogleSignin) {
+        showAlert('Error', 'Google Sign-In module is not available.');
+        return;
+      }
+      
+      // Ensure Google Sign-In is configured before attempting sign in
+      try {
+        GoogleSignin.configure({
+          scopes: ['email', 'profile'],
+          iosClientId: googleClientId,
         });
-        if (error) {
-          setIsSigningIn(false);
-        } else if (data.user?.id) {
-          await handlePostAuthentication(data.user.id);
-          setIsSigningIn(false);
-        } else {
-          setIsSigningIn(false);
-          onSignIn();
+      } catch (configError: any) {
+        console.error('Failed to configure Google Sign-In:', configError);
+        showAlert('Error', 'Failed to configure Google Sign-In. Please check your configuration.');
+        return;
+      }
+
+      // hasPlayServices() is Android-only, skip on iOS
+      if (Platform.OS === 'android') {
+        try {
+          await GoogleSignin.hasPlayServices();
+        } catch (playServicesError: any) {
+          console.error('Play Services check failed:', playServicesError);
+          showAlert('Error', 'Google Play Services is not available.');
+          return;
         }
+      }
+      
+      setIsSigningIn(true);
+      
+      let userInfo;
+      try {
+        userInfo = await GoogleSignin.signIn();
+      } catch (signInError: any) {
+        setIsSigningIn(false);
+        // Only show error if it's not a user cancellation
+        if (signInError?.code === 'SIGN_IN_CANCELLED' || signInError?.code === '10') {
+          return; // User cancelled, silently return
+        }
+        console.error('Google Sign-In error:', signInError);
+        showAlert('Sign In Error', signInError?.message || 'An error occurred during Google Sign-In. Please try again.');
+        return;
+      }
+
+      if (!userInfo || !userInfo.idToken) {
+        setIsSigningIn(false);
+        showAlert('Error', 'No ID token received from Google Sign-In.');
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: userInfo.idToken,
+      });
+      
+      if (error) {
+        setIsSigningIn(false);
+        showAlert('Sign In Error', error.message || 'Unable to sign in with Google. Please try again.');
+      } else if (data.user?.id) {
+        await handlePostAuthentication(data.user.id);
+        setIsSigningIn(false);
       } else {
         setIsSigningIn(false);
+        onSignIn();
       }
     } catch (error: any) {
       setIsSigningIn(false);
-      // Swallow non-critical codes like user cancellation
+      console.error('Unexpected error in Google Sign-In:', error);
+      showAlert('Error', 'An unexpected error occurred. Please try again or rebuild the app.');
     }
   };
 
@@ -227,9 +271,6 @@ export function WelcomeScreenSignIn({
 
   const handleTermsOfServicePress = async () => {
     hapticFeedback.selection();
-    // Track sign in screen clicks
-    track('Sign In Screen clicks', { event: 'Terms' });
-    // Small delay to ensure haptic feedback is felt before opening browser
     setTimeout(async () => {
       try {
         await Linking.openURL('https://useformai.com/legal/tos');
@@ -241,9 +282,6 @@ export function WelcomeScreenSignIn({
 
   const handlePrivacyPolicyPress = async () => {
     hapticFeedback.selection();
-    // Track sign in screen clicks
-    track('Sign In Screen clicks', { event: 'Privacy' });
-    // Small delay to ensure haptic feedback is felt before opening browser
     setTimeout(async () => {
       try {
         await Linking.openURL('https://useformai.com/legal/privacy');
@@ -336,7 +374,15 @@ export function WelcomeScreenSignIn({
                     borderColor: appColors.onboarding.signIn.googleButton.border,
                   },
                 ]}
-                onPress={handleGoogleSignIn}
+                onPress={() => {
+                  try {
+                    console.log('Google Sign-In button pressed');
+                    handleGoogleSignIn();
+                  } catch (error) {
+                    console.error('Error in Google Sign-In button handler:', error);
+                    showAlert('Error', 'Failed to start Google Sign-In. Please try again.');
+                  }
+                }}
                 activeOpacity={0.8}
               >
                 <View style={styles.buttonContent}>

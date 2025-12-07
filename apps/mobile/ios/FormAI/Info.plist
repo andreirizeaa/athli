@@ -13,7 +13,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Form AI</string>
+    <string>Athli</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIcons</key>
@@ -409,7 +409,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>exp+formai</string>
+          <string>exp+athli</string>
         </array>
       </dict>
     </array>
@@ -454,15 +454,15 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Form AI uses the camera to let you record workout videos so you can submit them for lift analysis to receive form feedback.</string>
+    <string>Athli uses the camera to let you record workout videos so you can submit them for lift analysis to receive form feedback.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Form AI may request your location to personalize experiences and support features that depend on your current region and also for usage analytics.</string>
+    <string>Athli may request your location to personalize experiences and support features that depend on your current region and also for usage analytics.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Form AI accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.</string>
+    <string>Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Form AI accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.</string>
+    <string>Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.</string>
     <key>NSUserTrackingUsageDescription</key>
     <string>We use this to ensure the app works for you and others that download it by reviewing usage logs.</string>
     <key>SKIncludeConsumableInAppPurchaseHistory</key>

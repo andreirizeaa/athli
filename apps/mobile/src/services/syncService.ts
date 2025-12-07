@@ -1,7 +1,6 @@
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserId } from './storageService';
-import { SuperwallExpoModule } from 'expo-superwall';
 
 const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 const LAST_SYNC_KEY = 'last_sync_time';
@@ -67,9 +66,6 @@ async function performSync(): Promise<void> {
   if (!currentUserId || !queryClient) return;
 
   try {
-    // Reset Superwall status first to ensure subscription state is fresh
-    await resetSuperwallStatus();
-
     // Invalidate and refetch all relevant queries in parallel
     await Promise.all([
       // User Check-ins
@@ -138,23 +134,6 @@ export async function getFormattedLastSyncTime(): Promise<string | null> {
   return timeString.replace(/\b(am|pm)\b/gi, (match) => match.toUpperCase());
 }
 
-// Reset Superwall status
-async function resetSuperwallStatus(): Promise<void> {
-  try {
-    // Complete Superwall refresh flow: reset → identify
-    await SuperwallExpoModule.reset();
-
-    const userId = await getUserId();
-    if (userId) {
-      await SuperwallExpoModule.identify(userId);
-    }
-
-    // Note: Superwall handles purchase restoration automatically
-    // when users interact with paywalls, no manual restore needed
-  } catch (error) {
-    console.warn('Failed to reset Superwall status during sync:', error);
-  }
-}
 
 // Check if sync is currently running
 export function isSyncRunning(): boolean {

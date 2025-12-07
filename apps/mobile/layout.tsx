@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initializeSyncService, startSyncService, stopSyncService } from './src/services/syncService';
 import { useQuickActionCallback } from 'expo-quick-actions/hooks';
 import { openDeletionFeedbackEmail } from './src/services/emailService';
-import { track } from './src/services/analytics';
 import { LoadingLiftsProvider } from './src/context/LoadingLiftsContext';
 import { LiftDataProvider } from './src/context/LiftDataContext';
 import { UserDetailsProvider } from './src/context/UserDetailsContext';
@@ -20,15 +19,13 @@ import { getUserId, removeUserId, setUserId } from './src/services/storageServic
 import { handleAuthError } from './src/services/authErrorService';
 import { AccountLoadingScreen } from './src/screens/onboarding/AccountLoadingScreen';
 import { fetchUserById, requiresOnboarding } from './src/services/userService';
-import { usePurchases, PurchasesProvider } from './src/context/PurchasesContext';
-import { SuperwallProvider } from './src/context/SuperwallContext';
 import { useUserDetails } from './src/context/UserDetailsContext';
 import { useLiftData } from './src/context/LiftDataContext';
 import { useUserCheckIns } from './src/context/UserCheckInsContext';
 import { showAlert } from './src/services/alertService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type AppRoute = 'SPLASH' | 'ONBOARDING_WELCOME' | 'ONBOARDING_PAYMENT' | 'ACCOUNT_LOADING' | 'MAIN';
+type AppRoute = 'SPLASH' | 'ONBOARDING_WELCOME' | 'ACCOUNT_LOADING' | 'MAIN';
 
 // Keep splash screen visible until we explicitly hide it
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -51,18 +48,10 @@ function AppContent() {
     if (action?.id === 'deletion_feedback' && !emailComposerCalled.current) {
       emailComposerCalled.current = true;
       
-      // Track the quick action event
-      track('Feedback quick action', {
-        event: 'Quick action triggered',
-        action_id: 'deletion_feedback',
-        source: 'ios_quick_action'
-      });
-      
       openDeletionFeedbackEmail();
     }
   });
 
-  const { hasSubscription, isInitializing } = usePurchases();
   const { isUserDetailsLoaded, refetchUserDetails, userDetails, setSignedInUser: setUserDetailsSignedInUser } = useUserDetails();
   const { isLiftDataLoaded, liftData, setSignedInUser: setLiftDataSignedInUser } = useLiftData();
   const { 
@@ -73,13 +62,11 @@ function AppContent() {
   } = useUserCheckIns();
 
   // Centralized data gate check - single source of truth
+  // Allow contexts to be ready even with null data (for bypassing auth)
   const contextsReady =
     isUserDetailsLoaded &&
     isLiftDataLoaded &&
-    !isUserCheckInsLoading &&
-    userDetails != null &&
-    liftData != null &&
-    checkIns != null;
+    !isUserCheckInsLoading;
 
   // Hide splash screen when content is ready
   useEffect(() => {
@@ -100,9 +87,9 @@ function AppContent() {
     const task = InteractionManager.runAfterInteractions(async () => {
       try {
         const assetsToLoad = [
-          require('./assets/formai-homescreen.mp4'),
+          require('./assets/athli-homescreen.mp4'),
           require('./assets/recording-tip.png'),
-          require('./assets/formai-loading.png'),
+          require('./assets/athli-loading.png'),
           require('./assets/icons/instagram.png'),
           require('./assets/icons/tiktok.png'),
           require('./assets/icons/facebook.png'),
@@ -112,12 +99,12 @@ function AppContent() {
           require('./assets/icons/appstore.png'),
           require('./assets/icons/playstore.png'),
           require('./assets/icons/x.png'),
-          require('./assets/tutorial/formai-example-feedback.png'),
-          require('./assets/tutorial/formai-example-pose.mp4'),
-          require('./assets/tutorial/formai-example-video-thumbnail.jpg'),
-          require('./assets/tutorial/formai-example-video.mp4'),
+          require('./assets/tutorial/athli-example-feedback.png'),
+          require('./assets/tutorial/athli-example-pose.mp4'),
+          require('./assets/tutorial/athli-example-video-thumbnail.jpg'),
+          require('./assets/tutorial/athli-example-video.mp4'),
           require('./assets/onboarding/progress_tracking.png'),
-          require('./assets/formai-payment-screen.png'),
+          require('./assets/athli-payment-screen.png'),
         ].filter(asset => {
           // Filter out any assets that might be objects instead of module references
           if (typeof asset === 'object' && asset !== null && !asset.uri && !asset.__packager_asset) {
@@ -143,63 +130,33 @@ function AppContent() {
   useEffect(() => {
     async function setActiveLayout() {
       try {
-        if (isInitializing === true || isInitializing === undefined) return;
-
-        const storedUserId = await getUserId();
-        if (!storedUserId) {
-          setRoute('ONBOARDING_WELCOME');
-          return;
-        }
-
-        let user;
-        try {
-          const result = await fetchUserById(storedUserId);
-          user = result.user;
-          if (!user) {
-            setRoute('ONBOARDING_WELCOME');
-            return;
-          }
-        } catch (error) {
-          // Handle auth errors gracefully
-          await handleAuthError(supabase, error, () => setRoute('ONBOARDING_WELCOME'));
-          setRoute('ONBOARDING_WELCOME');
-          return;
-        }
-
-        if (requiresOnboarding(user)) {
-          setRoute('ONBOARDING_WELCOME');
-          return;
-        }
-        if (!hasSubscription) {
-          setRoute('ONBOARDING_PAYMENT');
-          return;
-        }
-
-        goToMainGated();
+        // Bypass authentication and go directly to main app
+        // All sign-in/onboarding files are kept but not used
+        setRoute('MAIN');
+        setIsLoading(false);
       } catch {
-        setRoute('ONBOARDING_WELCOME');
-      } finally {
+        // If anything fails, still go to main
+        setRoute('MAIN');
         setIsLoading(false);
       }
     }
 
     setActiveLayout();
-  }, [hasSubscription, isInitializing]);
+  }, []);
 
 
-  // Set sticky data gate once per app session - wait for RevenueCat + initial data
+  // Set sticky data gate once per app session - wait for initial data
   useEffect(() => {
-    if (!passedInitialDataGate && !isInitializing && contextsReady) {
+    if (!passedInitialDataGate && contextsReady) {
       setPassedInitialDataGate(true);
     }
-  }, [passedInitialDataGate, isInitializing, contextsReady]);
+  }, [passedInitialDataGate, contextsReady]);
 
   // Set app ready when all conditions are met (don't wait for assets)
-  // For onboarding routes, ready immediately. For MAIN, wait for data gate.
+  // For onboarding routes, ready immediately. For MAIN, ready immediately when bypassing auth
   useEffect(() => {
     const isOnboardingRoute =
       route === 'ONBOARDING_WELCOME' ||
-      route === 'ONBOARDING_PAYMENT' ||
       route === 'ACCOUNT_LOADING';
 
     if (isOnboardingRoute) {
@@ -207,9 +164,9 @@ function AppContent() {
       return;
     }
 
-    // MAIN requires data gate *every time* we land on MAIN
-    setAppReady(!isLoading && contextsReady);
-  }, [route, isLoading, contextsReady]);
+    // MAIN: ready immediately when bypassing auth (no need to wait for user data)
+    setAppReady(!isLoading);
+  }, [route, isLoading]);
 
   // Set content ready when app is ready and routing is decided
   // For onboarding routes, use routingDecided. For MAIN, use appReady.
@@ -244,7 +201,6 @@ function AppContent() {
     goToMainGated();
   };
   const handleSignIn = () => setRoute('ACCOUNT_LOADING');
-  const handlePaymentComplete = () => handleOnboardingComplete();
 
   const handleAccountLoadingComplete = async () => {
     // Make sure providers *know* the userId immediately
@@ -279,33 +235,6 @@ function AppContent() {
     });
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      // Set route to onboarding immediately to prevent AccountLoadingScreen from showing
-      setRoute('ONBOARDING_WELCOME');
-
-      // Reset loading states immediately
-      setIsLoading(true);
-      setAppReady(false);
-      setContentReady(false);
-      setRoutingDecided(false);
-      setPassedInitialDataGate(false);
-
-      if ((global as any).resetUserDetailsContext) {
-        (global as any).resetUserDetailsContext();
-      }
-      await supabase.auth.signOut();
-      await removeUserId();
-    } catch (error) {
-      showAlert(
-        'Logout Error',
-        'An error occurred during logout. Please try again.',
-        undefined,
-        'LAYOUT_LOGOUT_ERROR',
-        error
-      );
-    }
-  };
 
   // Single switch statement for rendering based on route
   const renderContent = () => {
@@ -315,20 +244,10 @@ function AppContent() {
       case 'ONBOARDING_WELCOME':
         return (
           <OnboardingNavigator
-            onComplete={handlePaymentComplete}
+            onComplete={handleOnboardingComplete}
             onSignIn={handleSignIn}
             onUserNeedsOnboarding={handleUserNeedsOnboarding}
             initialRouteName="Welcome"
-            isAppVisible={splashHidden}
-          />
-        );
-      case 'ONBOARDING_PAYMENT':
-        return (
-          <OnboardingNavigator
-            onComplete={handlePaymentComplete}
-            onSignIn={handleSignIn}
-            onUserNeedsOnboarding={handleUserNeedsOnboarding}
-            initialRouteName="Payment"
             isAppVisible={splashHidden}
           />
         );
@@ -347,7 +266,7 @@ function AppContent() {
           );
         }
 
-        return <MainAppLayout onLogout={handleLogout} isAppVisible={splashHidden} />;
+        return <MainAppLayout isAppVisible={splashHidden} />;
       }
       default:
         return null;
