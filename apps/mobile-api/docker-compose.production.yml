@@ -1,0 +1,77 @@
+services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      - PYTHONPATH=/app
+      - GUNICORN_WORKERS=${API_WORKERS:-8}
+      - PORT=8000
+    ports: ["8000:8000"]
+    command: gunicorn -c gunicorn.conf.py main:app
+    depends_on: [redis]
+    # Resource limits for optimal performance
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    
+  # CPU-bound pose worker (1 vCPU/2GB: concurrency=1, scale horizontally)
+  pose-worker:
+    build: .
+    env_file: .env
+    environment:
+      - PYTHONPATH=/app
+      - OMP_NUM_THREADS=1
+      - OPENBLAS_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - NUMEXPR_NUM_THREADS=1
+      - GOTO_NUM_THREADS=1
+      - OPENCV_NUM_THREADS=1
+      - OPENCV_OPENCL_RUNTIME=disabled
+    tmpfs:
+      - /tmp:rw,size=1g
+    command: celery -A celery_app.celery worker -Q pose --pool=prefork --concurrency=${CELERY_POSE_CONCURRENCY:-1} --autoscale=${CELERY_POSE_AUTOSCALE_MAX:-2},${CELERY_POSE_AUTOSCALE_MIN:-1} --loglevel=${CELERY_LOG_LEVEL:-INFO} -n pose@%h
+    depends_on: [redis]
+
+  # I/O-bound analyze worker (1 vCPU/2GB: high concurrency with threads)
+  analyze-worker:
+    build: .
+    env_file: .env
+    environment:
+      - PYTHONPATH=/app
+    tmpfs:
+      - /tmp:rw,size=500m
+    command: celery -A celery_app.celery worker -Q analyze --pool=threads --concurrency=${CELERY_ANALYZE_CONCURRENCY:-50} --loglevel=${CELERY_LOG_LEVEL:-INFO} -n analyze@%h
+    depends_on: [redis]
+
+  # Default queue worker for backward compatibility
+  default-worker:
+    build: .
+    env_file: .env
+    environment:
+      - PYTHONPATH=/app
+    command: celery -A celery_app.celery worker -Q default --pool=prefork --concurrency=${CELERY_DEFAULT_CONCURRENCY:-1} --loglevel=${CELERY_LOG_LEVEL:-INFO} -n default@%h
+    depends_on: [redis]
+
+  # Optional: monitoring with Flower
+  flower:
+    build: .
+    env_file: .env
+    environment:
+      - PYTHONPATH=/app
+    ports: ["5555:5555"]
+    command: celery -A celery_app.celery flower --port=5555
+    depends_on: [redis]
+    
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    # Optional: Redis persistence
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
