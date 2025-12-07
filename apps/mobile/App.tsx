@@ -7,11 +7,8 @@ import { Layout } from './layout';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { OnboardingProvider } from './src/context/OnboardingContext';
-import { SuperwallProvider } from './src/context/SuperwallContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { initAnalytics } from './src/services/analytics';
 import { handleLiftNotificationData } from './src/services/notificationNavigation';
-import { PurchasesProvider } from './src/context/PurchasesContext';
 
 export default function App() {
   useEffect(() => {
@@ -31,9 +28,6 @@ export default function App() {
 
     // Initialize background fetch
     void initBackgroundFetch();
-
-    // Initialize analytics
-    void initAnalytics();
 
     // Emit event when a push is received while app is foregrounded
     const recv = Notifications.addNotificationReceivedListener(async (notification) => {
@@ -67,13 +61,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <OnboardingProvider>
-          <PurchasesProvider>
-            <SuperwallProvider>
-              <LanguageProvider>
-                <Layout />
-              </LanguageProvider>
-            </SuperwallProvider>
-          </PurchasesProvider>
+          <LanguageProvider>
+            <Layout />
+          </LanguageProvider>
         </OnboardingProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

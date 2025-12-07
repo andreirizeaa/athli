@@ -18,5 +18,8 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
     "turbo": "latest"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
   }
 }

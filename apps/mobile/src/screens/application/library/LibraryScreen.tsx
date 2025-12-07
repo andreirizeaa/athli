@@ -314,34 +314,6 @@ export function LibraryScreen({ onBack, onTriggerAddOptions }: LibraryScreenProp
     }
   }, []);
 
-  const handlePhotoLibraryPermissionAllow = useCallback(async () => {
-    hapticFeedback.selection();
-    setShowPhotoLibraryPermissionModal(false);
-
-    try {
-      const result = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      // Check if full access granted (all photos) - ONLY proceed with full access
-      if (result.granted && result.accessPrivileges === 'all') {
-        hapticFeedback.success();
-        // Retry search after permission granted
-        setTimeout(() => {
-          handleSearchPress();
-        }, 100);
-      } else {
-        // Permission denied or limited access, open settings
-        openAppSettings();
-      }
-    } catch (e) {
-      // Silent fail
-    }
-  }, [handleSearchPress]);
-
-  const handlePhotoLibraryPermissionCancel = useCallback(() => {
-    hapticFeedback.selection();
-    setShowPhotoLibraryPermissionModal(false);
-  }, []);
-
   const handleSearchPress = useCallback(async () => {
     hapticFeedback.selection();
     // Track library screen clicks for search container
@@ -469,7 +441,35 @@ export function LibraryScreen({ onBack, onTriggerAddOptions }: LibraryScreenProp
         );
       }
     }
-  }, [navigation, activeTab]);
+  }, [navigation, activeTab, checkPhotoLibraryPermission]);
+
+  const handlePhotoLibraryPermissionAllow = useCallback(async () => {
+    hapticFeedback.selection();
+    setShowPhotoLibraryPermissionModal(false);
+
+    try {
+      const result = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      // Check if full access granted (all photos) - ONLY proceed with full access
+      if (result.granted && result.accessPrivileges === 'all') {
+        hapticFeedback.success();
+        // Retry search after permission granted
+        setTimeout(() => {
+          handleSearchPress();
+        }, 100);
+      } else {
+        // Permission denied or limited access, open settings
+        openAppSettings();
+      }
+    } catch (e) {
+      // Silent fail
+    }
+  }, [handleSearchPress]);
+
+  const handlePhotoLibraryPermissionCancel = useCallback(() => {
+    hapticFeedback.selection();
+    setShowPhotoLibraryPermissionModal(false);
+  }, []);
 
   const handleResetDateRange = useCallback(() => {
     hapticFeedback.success();

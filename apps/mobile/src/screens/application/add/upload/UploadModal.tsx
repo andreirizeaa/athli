@@ -30,7 +30,6 @@ import { PracticesScreen } from '../common/PracticesScreen';
 import { WeightRepsScreen } from '../common/WeightRepsScreen';
 import { useLoadingLifts } from '../../../../context/LoadingLiftsContext';
 import { useSelectedDate } from '../../../../context/SelectedDateContext';
-import { usePurchases } from '../../../../context/PurchasesContext';
 import { gymMovements, BodyPart } from '../../../../constants/gymMovements';
 import { X } from 'lucide-react-native';
 import {
@@ -57,7 +56,8 @@ export function UploadModal({ isVisible, onClose }: UploadModalProps) {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { addLoadingLift } = useLoadingLifts();
   const { selectedDate } = useSelectedDate();
-  const { hasHdVideos } = usePurchases();
+  // Always allow HD videos - no subscription check
+  const hasHdVideos = true;
   const [selectedVideo, setSelectedVideo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [showMovementSelection, setShowMovementSelection] = useState(false);
   const [showWeightReps, setShowWeightReps] = useState(false);
@@ -263,7 +263,7 @@ export function UploadModal({ isVisible, onClose }: UploadModalProps) {
       skipToPreviewWithDemo: () => {
         // Skip to demo video for tutorial (bypass duplicate check for demo)
         setSelectedVideo({
-          uri: require('../../../../../assets/tutorial/formai-example-video.mp4'),
+          uri: require('../../../../../assets/tutorial/athli-example-video.mp4'),
           width: 1920,
           height: 1080,
           duration: 30,

@@ -639,16 +639,16 @@ export function TutorialLiftSeeder() {
           liftTime: randomTime,
           metricWeight: randomWeight,
           reps: randomReps,
-          rawVideoURL: require('../../assets/tutorial/formai-example-video.mp4'),
-          poseVideoURL: require('../../assets/tutorial/formai-example-pose.mp4'),
-          thumbnailURL: require('../../assets/tutorial/formai-example-video-thumbnail.jpg'),
+          rawVideoURL: require('../../assets/tutorial/athli-example-video.mp4'),
+          poseVideoURL: require('../../assets/tutorial/athli-example-pose.mp4'),
+          thumbnailURL: require('../../assets/tutorial/athli-example-video-thumbnail.jpg'),
           analysis: {
             accuracy: randomAccuracy,
             lineGraphValues: lineGraphValues,
             barChartValues: lineGraphValues,
             feedback: [
               {
-                imageURL: require('../../assets/tutorial/formai-example-feedback.png'),
+                imageURL: require('../../assets/tutorial/athli-example-feedback.png'),
                 flaws: [
                   'Right knee is caving inward compared to the left, showing knee valgus.',
                   'Right ankle angle suggests the heel may be lifting more than the left.',

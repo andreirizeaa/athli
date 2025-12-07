@@ -83,7 +83,7 @@ export function UpgradeAppModal({ isVisible, onClose, versionCheckResult }: Upgr
         {/* Image Container - takes up most of the space */}
         <View style={styles.photoContainer}>
           <Image
-            source={require('../../../../assets/formai-loading.png')}
+            source={require('../../../../assets/athli-loading.png')}
             style={styles.photo}
             resizeMode="contain"
           />

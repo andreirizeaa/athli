@@ -27,7 +27,6 @@ import { PermissionContainer } from '../../../../components/ui/PermissionContain
 import { VideoTooShortModal } from '../../../../components/ui/modals/VideoTooShortModal';
 import { BodyPart, gymMovements } from '../../../../constants/gymMovements';
 import { useLoadingLifts } from '../../../../context/LoadingLiftsContext';
-import { usePurchases } from '../../../../context/PurchasesContext';
 import { useSelectedDate } from '../../../../context/SelectedDateContext';
 import { showAlert } from '../../../../services/alertService';
 import {
@@ -54,7 +53,8 @@ interface RecordModalProps {
 export function RecordModal({ isVisible, onClose }: RecordModalProps) {
   const { addLoadingLift } = useLoadingLifts();
   const { selectedDate } = useSelectedDate();
-  const { hasHdVideos } = usePurchases();
+  // Always allow HD videos - no subscription check
+  const hasHdVideos = true;
   const [isRecording, setIsRecording] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);

@@ -15,7 +15,6 @@ import { getUserId } from '../services/storageService';
 import { useLiftData, extractObjectKeyFromUrl, signPath } from './LiftDataContext';
 import { useSelectedDate } from './SelectedDateContext';
 import { useUserCheckIns } from './UserCheckInsContext';
-import { usePurchases } from './PurchasesContext';
 import { useUserDetails } from './UserDetailsContext';
 import { loadLoadingLifts, saveLoadingLifts } from '../services/lifts/loadingLiftsStorage';
 import {
@@ -59,7 +58,8 @@ export function LoadingLiftsProvider({ children }: LoadingLiftsProviderProps) {
   } = useLiftData();
   const { selectedDate } = useSelectedDate();
   const { optimisticAddToday, invalidateAndRefetch: invalidateUserCheckIns } = useUserCheckIns();
-  const { hasHdVideos } = usePurchases();
+  // Always allow HD videos - no subscription check
+  const hasHdVideos = true;
   const { userDetails } = useUserDetails();
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appState = useRef(AppState.currentState);
