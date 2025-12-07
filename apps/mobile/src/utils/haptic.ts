@@ -8,7 +8,7 @@ export const hapticFeedback = {
     });
   },
 
-  // Heavy impact for important actions like Rate FormAI
+  // Heavy impact for important actions like Rate Athli
   important: () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {
       // Silently handle haptic errors to prevent blocking UI

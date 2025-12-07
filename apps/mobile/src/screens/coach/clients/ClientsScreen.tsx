@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../../context/ThemeContext';
+import i18n from '../../../utils/i18n';
 
 interface ClientsScreenProps {
   onClientPress?: (clientId: string) => void;
@@ -9,11 +11,14 @@ interface ClientsScreenProps {
 
 export function ClientsScreen(_props: ClientsScreenProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={styles.title}>Clients</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {i18n.t('screens.clients')}
+        </Text>
       </View>
     </View>
   );
@@ -22,6 +27,7 @@ export function ClientsScreen(_props: ClientsScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   header: {
     paddingHorizontal: 16,

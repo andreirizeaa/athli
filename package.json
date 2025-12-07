@@ -12,7 +12,9 @@
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",
-    "prepare": "node -e \"try { require('husky').install() } catch (e) {}\""
+    "prepare": "node -e \"try { require('husky').install() } catch (e) {}\"",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "husky": "^9.1.7",
@@ -20,6 +22,9 @@
     "turbo": "latest"
   },
   "dependencies": {
-    "ajv": "^8.17.1"
+    "ajv": "^8.17.1",
+    "expo": "~53.0.24",
+    "react": "19.0.0",
+    "react-native": "0.79.6"
   }
 }

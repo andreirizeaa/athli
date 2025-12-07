@@ -4,6 +4,12 @@
       "eas": {
         "projectId": "8f987e19-647f-4ea4-90c1-61d97d025f91"
       }
+    },
+    "android": {
+      "package": "com.andreirizea.oneninetymonorepo"
+    },
+    "ios": {
+      "bundleIdentifier": "com.andreirizea.oneninetymonorepo"
     }
   }
 }

@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../../context/ThemeContext';
+import i18n from '../../../utils/i18n';
 
 interface InboxScreenProps {
   onMessagePress?: (messageId: string) => void;
@@ -9,11 +11,14 @@ interface InboxScreenProps {
 
 export function InboxScreen(_props: InboxScreenProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={styles.title}>Inbox</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {i18n.t('screens.inbox')}
+        </Text>
       </View>
     </View>
   );
@@ -22,6 +27,7 @@ export function InboxScreen(_props: InboxScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   header: {
     paddingHorizontal: 16,

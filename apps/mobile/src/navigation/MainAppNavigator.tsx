@@ -1,5 +1,5 @@
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNavigationBar } from '../components/ui/BottomNavigationBar';
 import { TranslucentStatusBar } from '../components/ui/TranslucentStatusBar';
 import { useView } from '../context/ViewContext';
+import { useTheme } from '../context/ThemeContext';
 // Athlete screens
 import { HomeScreen } from '../screens/athlete/home/HomeScreen';
 import { PerformanceScreen } from '../screens/athlete/performance/PerformanceScreen';
@@ -16,6 +17,10 @@ import { ClientsScreen } from '../screens/coach/clients/ClientsScreen';
 import { CalendarScreen } from '../screens/coach/calendar/CalendarScreen';
 import { InboxScreen } from '../screens/coach/inbox/InboxScreen';
 import { SettingsScreen as CoachSettingsScreen } from '../screens/coach/settings/SettingsScreen';
+// Edit screens
+import { EditLanguageScreen } from '../screens/edit/EditLanguageScreen';
+import { EditUnitsScreen } from '../screens/edit/EditUnitsScreen';
+import { EditColorSchemeScreen } from '../screens/edit/EditColorSchemeScreen';
 
 // Types for navigation
 export type MainTabParamList = {
@@ -26,6 +31,9 @@ export type MainTabParamList = {
 
 export type MainStackParamList = {
   MainTabs: undefined;
+  EditLanguage: undefined;
+  EditUnits: undefined;
+  EditColorScheme: undefined;
 };
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -39,8 +47,26 @@ function AthletePerformanceScreenWrapper() {
   return <PerformanceScreen />;
 }
 
-function AthleteSettingsScreenWrapper() {
-  return <AthleteSettingsScreen />;
+function AthleteSettingsScreenWrapper({ navigation }: { navigation: NativeStackNavigationProp<MainStackParamList> }) {
+  const handleLanguagePress = () => {
+    navigation.navigate('EditLanguage');
+  };
+
+  const handleUnitsPress = () => {
+    navigation.navigate('EditUnits');
+  };
+
+  const handleColorSchemePress = () => {
+    navigation.navigate('EditColorScheme');
+  };
+
+  return (
+    <AthleteSettingsScreen
+      onLanguagePress={handleLanguagePress}
+      onUnitsPress={handleUnitsPress}
+      onColorSchemePress={handleColorSchemePress}
+    />
+  );
 }
 
 // Coach screen wrappers
@@ -56,13 +82,32 @@ function CoachInboxScreenWrapper() {
   return <InboxScreen />;
 }
 
-function CoachSettingsScreenWrapper() {
-  return <CoachSettingsScreen />;
+function CoachSettingsScreenWrapper({ navigation }: { navigation: NativeStackNavigationProp<MainStackParamList> }) {
+  const handleLanguagePress = () => {
+    navigation.navigate('EditLanguage');
+  };
+
+  const handleUnitsPress = () => {
+    navigation.navigate('EditUnits');
+  };
+
+  const handleColorSchemePress = () => {
+    navigation.navigate('EditColorScheme');
+  };
+
+  return (
+    <CoachSettingsScreen
+      onLanguagePress={handleLanguagePress}
+      onUnitsPress={handleUnitsPress}
+      onColorSchemePress={handleColorSchemePress}
+    />
+  );
 }
 
 // Main tabs navigator with custom bottom navigation
-function MainTabsNavigator() {
+function MainTabsNavigator({ navigation }: { navigation: NativeStackNavigationProp<MainStackParamList> }) {
   const { currentView } = useView();
+  const { colors, colorScheme } = useTheme();
 
   // Athlete tabs
   const [athleteActiveTab, setAthleteActiveTab] = React.useState<'home' | 'progress' | 'settings'>('home');
@@ -88,7 +133,7 @@ function MainTabsNavigator() {
       case 'progress':
         return <AthletePerformanceScreenWrapper />;
       case 'settings':
-        return <AthleteSettingsScreenWrapper />;
+        return <AthleteSettingsScreenWrapper navigation={navigation} />;
       default:
         return <AthleteHomeScreenWrapper />;
     }
@@ -103,7 +148,7 @@ function MainTabsNavigator() {
       case 'inbox':
         return <CoachInboxScreenWrapper />;
       case 'settings':
-        return <CoachSettingsScreenWrapper />;
+        return <CoachSettingsScreenWrapper navigation={navigation} />;
       default:
         return <CoachClientsScreenWrapper />;
     }
@@ -118,16 +163,24 @@ function MainTabsNavigator() {
     }
   }, [currentView]);
 
+  const gradientColors: [string, string] =
+    colorScheme === 'dark'
+      ? ['#2a2a2a', colors.background]
+      : [colors.primarySoft, '#ffffff'];
+
   return (
     <>
       <LinearGradient
-        colors={['#e2e8f0', '#ffffff']}
-        locations={[0, 0.9]}
+        colors={gradientColors}
+        locations={[0.05, 0.7]}
         style={styles.container}
-        start={{ x: 0.5, y: 0 }}
+        start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
-        <TranslucentStatusBar tint="light" />
+        <TranslucentStatusBar
+          tint={colorScheme === 'dark' ? 'dark' : 'light'}
+          backgroundColor="transparent"
+        />
         <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <View style={styles.content}>
             {currentView === 'athlete' ? renderAthleteScreenContent() : renderCoachScreenContent()}
@@ -158,7 +211,22 @@ export function MainAppNavigator() {
         }}
       >
         <Stack.Screen name="MainTabs">
-          {() => <MainTabsNavigator />}
+          {({ navigation }) => <MainTabsNavigator navigation={navigation} />}
+        </Stack.Screen>
+        <Stack.Screen name="EditLanguage">
+          {({ navigation }) => (
+            <EditLanguageScreen onBack={() => navigation.goBack()} />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="EditUnits">
+          {({ navigation }) => (
+            <EditUnitsScreen onBack={() => navigation.goBack()} />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="EditColorScheme">
+          {({ navigation }) => (
+            <EditColorSchemeScreen onBack={() => navigation.goBack()} />
+          )}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
@@ -174,6 +242,5 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingBottom: 100,
   },
 });

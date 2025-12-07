@@ -1,0 +1,746 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 54;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		06CEBDFD141A4E96BF225790 /* gradient-2-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 46E5BDA6219345CCB9320F40 /* gradient-2-Icon-60x60@3x.png */; };
+		0861C5D40FB74081A3A08043 /* red-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0DDF3F752B0541159DF88C89 /* red-Icon-60x60@3x.png */; };
+		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		17C520418A8044348D969099 /* orange-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C255217593594A13ACB55C79 /* orange-Icon-60x60@2x.png */; };
+		2109F9C8DBBE450BA0D31D97 /* gradient-8-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C214F377E365425E9248AC0D /* gradient-8-Icon-60x60@2x.png */; };
+		26D45C5A408545468FB6B22E /* gradient-3-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 516DE33C84A9430D81E3F6EB /* gradient-3-Icon-60x60@3x.png */; };
+		2C51ABFA50C646728F143FD8 /* gradient-3-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C401AA0E66DF4E6A8718F6C5 /* gradient-3-Icon-60x60@2x.png */; };
+		2D5F8737250A4165B8FC2D47 /* purple-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 831F2F8C21014E3CAFB0F44A /* purple-Icon-60x60@3x.png */; };
+		2FE035DDE0D14599A554839E /* gradient-7-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = E5D76AE1F5A94D57AE2C1866 /* gradient-7-Icon-60x60@3x.png */; };
+		37B0618AEDE448D1B66FE229 /* gradient-1-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D436B8A439994520B67BC224 /* gradient-1-Icon-60x60@2x.png */; };
+		3D56E97653AB4FB52944B5D4 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C6A2011F7034C4B3D8F2C330 /* PrivacyInfo.xcprivacy */; };
+		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		4857F1AE7D4D4993915618EF /* blue-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = E761C23816104AFE91291709 /* blue-Icon-60x60@2x.png */; };
+		48D9E0952B3A479D8828E11B /* gradient-7-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = FABBD8C3CF6B43038BCECAE0 /* gradient-7-Icon-60x60@2x.png */; };
+		5240E7E8CA3B43D6A0A26E91 /* gradient-4-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A872AD0A6F99440FAAF32090 /* gradient-4-Icon-60x60@2x.png */; };
+		6BB1954068BD48A88CCDB22E /* yellow-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 05A4810D9FB94EDE98D8F53D /* yellow-Icon-60x60@2x.png */; };
+		6DD89FB23A4D4006AE9E881F /* red-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 67949A8AB6594B0388DD5DF2 /* red-Icon-60x60@2x.png */; };
+		7D84CB12B3F343CD958F488E /* pink-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 498DCDF90FE643AEB9051CFD /* pink-Icon-60x60@3x.png */; };
+		82C14B3B22BE48928976045D /* gradient-8-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8886930AE6B04FAAA84B3D9F /* gradient-8-Icon-60x60@3x.png */; };
+		864A836FA25E405A8492C392 /* gradient-1-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = DF88610A1DF94C3AADA68245 /* gradient-1-Icon-60x60@3x.png */; };
+		8CB2EF402F814575B2E5B1F5 /* gradient-2-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = AF91A3D7E00E471BBD103440 /* gradient-2-Icon-60x60@2x.png */; };
+		8CC79A561BD4405EAD27DFF1 /* green-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = E49F11AA691F4193B6F84049 /* green-Icon-60x60@3x.png */; };
+		8F7634C2D498487F8E251C14 /* gradient-4-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 449251156A1748868F7857C8 /* gradient-4-Icon-60x60@3x.png */; };
+		90195604DA5B444B89BC37BA /* green-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9B2508D99D10488F806D2B0D /* green-Icon-60x60@2x.png */; };
+		90F7A7157218482490303AE3 /* gradient-6-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 24CB104F133045BEBBAB33E0 /* gradient-6-Icon-60x60@2x.png */; };
+		97FE8CC1C6E84D8B951A6CCB /* gradient-5-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 2D9A73E532F84236AAF81A58 /* gradient-5-Icon-60x60@2x.png */; };
+		9C54B6BD7C4E4225A60EF2B5 /* blue-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 974D021453504D34B1F3071A /* blue-Icon-60x60@3x.png */; };
+		A7313EED931A412095F904EE /* gradient-6-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1F6E38046655435BA1EA4328 /* gradient-6-Icon-60x60@3x.png */; };
+		A8C5CDA7624E42D4A61421FA /* black-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = EA8721A025624C0F9D146EF9 /* black-Icon-60x60@2x.png */; };
+		B24B3BA352EE45CCA1C2B1E5 /* pink-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7E41BC93817D4177B1A05E1E /* pink-Icon-60x60@2x.png */; };
+		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		C1133816F45045109EA5049E /* gradient-10-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 5C2CC87DEFF3428584ADDE6A /* gradient-10-Icon-60x60@3x.png */; };
+		C384AB52718245548144B206 /* gradient-9-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 3A035DD2A3EC46EC8FFF6FFC /* gradient-9-Icon-60x60@2x.png */; };
+		C6C04A3278D04151965642BF /* gradient-9-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8E9C2DBFCD0640AC8FCFF432 /* gradient-9-Icon-60x60@3x.png */; };
+		CB172FA8874A46CAA4E60593 /* gradient-10-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 89341D87FDA0410F99C521FE /* gradient-10-Icon-60x60@2x.png */; };
+		CB17CEAB59C747119B2FE3B5 /* yellow-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = E174D233481345719E515341 /* yellow-Icon-60x60@3x.png */; };
+		D5ACC8AB9AB49DB193EE6C1B /* libPods-Athli.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CDEB37005D0FC309B54B67B2 /* libPods-Athli.a */; };
+		DCAA6BB02CFA49D79118EBE2 /* default-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = AB37D6D62AC049B4B532D0B7 /* default-Icon-60x60@2x.png */; };
+		E214D83B048B415AB7361473 /* black-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = C478C92805AE4B95940CC2A0 /* black-Icon-60x60@3x.png */; };
+		E460CAED1B124EBA9BFAECA5 /* gradient-5-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 3F4F52EEEB6748AFBDB0FCC0 /* gradient-5-Icon-60x60@3x.png */; };
+		E5DED6ED169547539A69C3B9 /* orange-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D880493246134E2AAF318607 /* orange-Icon-60x60@3x.png */; };
+		E64BE9D711A0487182742B49 /* default-Icon-60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 7F5AC2529AA84642A42E2815 /* default-Icon-60x60@3x.png */; };
+		EB2F5951308D4364A84BC07A /* purple-Icon-60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F87269E14495483AAFDC6102 /* purple-Icon-60x60@2x.png */; };
+		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		FEE70C994F894E53A26C52CC /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62F29F1ED36027466DC0F6B0 /* ExpoModulesProvider.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		05A4810D9FB94EDE98D8F53D /* yellow-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "yellow-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/yellow-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		0DDF3F752B0541159DF88C89 /* red-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "red-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/red-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		13B07F961A680F5B00A75B9A /* Athli.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Athli.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Athli/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Athli/Info.plist; sourceTree = "<group>"; };
+		1F6E38046655435BA1EA4328 /* gradient-6-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-6-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-6-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		24CB104F133045BEBBAB33E0 /* gradient-6-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-6-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-6-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		2D9A73E532F84236AAF81A58 /* gradient-5-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-5-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-5-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		3A035DD2A3EC46EC8FFF6FFC /* gradient-9-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-9-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-9-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		3F4F52EEEB6748AFBDB0FCC0 /* gradient-5-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-5-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-5-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		449251156A1748868F7857C8 /* gradient-4-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-4-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-4-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		46E5BDA6219345CCB9320F40 /* gradient-2-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-2-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-2-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		498DCDF90FE643AEB9051CFD /* pink-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "pink-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/pink-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		516DE33C84A9430D81E3F6EB /* gradient-3-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-3-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-3-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		57D9EB05CEA95F570B92379C /* Pods-Athli.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Athli.debug.xcconfig"; path = "Target Support Files/Pods-Athli/Pods-Athli.debug.xcconfig"; sourceTree = "<group>"; };
+		5C2CC87DEFF3428584ADDE6A /* gradient-10-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-10-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-10-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		62F29F1ED36027466DC0F6B0 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Athli/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		67949A8AB6594B0388DD5DF2 /* red-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "red-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/red-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		7E41BC93817D4177B1A05E1E /* pink-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "pink-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/pink-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		7F5AC2529AA84642A42E2815 /* default-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "default-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/default-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		831F2F8C21014E3CAFB0F44A /* purple-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "purple-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/purple-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		8886930AE6B04FAAA84B3D9F /* gradient-8-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-8-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-8-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		89341D87FDA0410F99C521FE /* gradient-10-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-10-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-10-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		8E9C2DBFCD0640AC8FCFF432 /* gradient-9-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-9-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-9-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		974D021453504D34B1F3071A /* blue-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "blue-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/blue-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		9B2508D99D10488F806D2B0D /* green-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "green-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/green-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		A872AD0A6F99440FAAF32090 /* gradient-4-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-4-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-4-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Athli/SplashScreen.storyboard; sourceTree = "<group>"; };
+		AB37D6D62AC049B4B532D0B7 /* default-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "default-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/default-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		AF91A3D7E00E471BBD103440 /* gradient-2-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-2-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-2-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		C214F377E365425E9248AC0D /* gradient-8-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-8-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-8-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		C255217593594A13ACB55C79 /* orange-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "orange-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/orange-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		C401AA0E66DF4E6A8718F6C5 /* gradient-3-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-3-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-3-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		C478C92805AE4B95940CC2A0 /* black-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "black-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/black-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		C6A2011F7034C4B3D8F2C330 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Athli/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		CDEB37005D0FC309B54B67B2 /* libPods-Athli.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Athli.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D436B8A439994520B67BC224 /* gradient-1-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-1-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-1-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		D880493246134E2AAF318607 /* orange-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "orange-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/orange-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		DF88610A1DF94C3AADA68245 /* gradient-1-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-1-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-1-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		E174D233481345719E515341 /* yellow-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "yellow-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/yellow-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		E49F11AA691F4193B6F84049 /* green-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "green-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/green-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		E5D76AE1F5A94D57AE2C1866 /* gradient-7-Icon-60x60@3x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-7-Icon-60x60@3x.png"; path = "Athli/DynamicAppIcons/gradient-7-Icon-60x60@3x.png"; sourceTree = "<group>"; };
+		E761C23816104AFE91291709 /* blue-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "blue-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/blue-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		EA8721A025624C0F9D146EF9 /* black-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "black-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/black-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		EED33296FCA6A54F6FEE853C /* Pods-Athli.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Athli.release.xcconfig"; path = "Target Support Files/Pods-Athli/Pods-Athli.release.xcconfig"; sourceTree = "<group>"; };
+		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Athli/AppDelegate.swift; sourceTree = "<group>"; };
+		F11748442D0722820044C1D9 /* Athli-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Athli-Bridging-Header.h"; path = "Athli/Athli-Bridging-Header.h"; sourceTree = "<group>"; };
+		F87269E14495483AAFDC6102 /* purple-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "purple-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/purple-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+		FABBD8C3CF6B43038BCECAE0 /* gradient-7-Icon-60x60@2x.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "gradient-7-Icon-60x60@2x.png"; path = "Athli/DynamicAppIcons/gradient-7-Icon-60x60@2x.png"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		13B07F8C1A680F5B00A75B9A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5ACC8AB9AB49DB193EE6C1B /* libPods-Athli.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		13B07FAE1A68108700A75B9A /* Athli */ = {
+			isa = PBXGroup;
+			children = (
+				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
+				F11748442D0722820044C1D9 /* Athli-Bridging-Header.h */,
+				BB2F792B24A3F905000567C9 /* Supporting */,
+				13B07FB51A68108700A75B9A /* Images.xcassets */,
+				13B07FB61A68108700A75B9A /* Info.plist */,
+				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
+				76650B2B17C345069D9D44AE /* DynamicAppIcons */,
+				C6A2011F7034C4B3D8F2C330 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Athli;
+			sourceTree = "<group>";
+		};
+		2B9BA2364DDD556B51F8E773 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				57D9EB05CEA95F570B92379C /* Pods-Athli.debug.xcconfig */,
+				EED33296FCA6A54F6FEE853C /* Pods-Athli.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
+				CDEB37005D0FC309B54B67B2 /* libPods-Athli.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		76650B2B17C345069D9D44AE /* DynamicAppIcons */ = {
+			isa = PBXGroup;
+			children = (
+				AB37D6D62AC049B4B532D0B7 /* default-Icon-60x60@2x.png */,
+				7F5AC2529AA84642A42E2815 /* default-Icon-60x60@3x.png */,
+				EA8721A025624C0F9D146EF9 /* black-Icon-60x60@2x.png */,
+				C478C92805AE4B95940CC2A0 /* black-Icon-60x60@3x.png */,
+				E761C23816104AFE91291709 /* blue-Icon-60x60@2x.png */,
+				974D021453504D34B1F3071A /* blue-Icon-60x60@3x.png */,
+				9B2508D99D10488F806D2B0D /* green-Icon-60x60@2x.png */,
+				E49F11AA691F4193B6F84049 /* green-Icon-60x60@3x.png */,
+				C255217593594A13ACB55C79 /* orange-Icon-60x60@2x.png */,
+				D880493246134E2AAF318607 /* orange-Icon-60x60@3x.png */,
+				7E41BC93817D4177B1A05E1E /* pink-Icon-60x60@2x.png */,
+				498DCDF90FE643AEB9051CFD /* pink-Icon-60x60@3x.png */,
+				F87269E14495483AAFDC6102 /* purple-Icon-60x60@2x.png */,
+				831F2F8C21014E3CAFB0F44A /* purple-Icon-60x60@3x.png */,
+				67949A8AB6594B0388DD5DF2 /* red-Icon-60x60@2x.png */,
+				0DDF3F752B0541159DF88C89 /* red-Icon-60x60@3x.png */,
+				05A4810D9FB94EDE98D8F53D /* yellow-Icon-60x60@2x.png */,
+				E174D233481345719E515341 /* yellow-Icon-60x60@3x.png */,
+				D436B8A439994520B67BC224 /* gradient-1-Icon-60x60@2x.png */,
+				DF88610A1DF94C3AADA68245 /* gradient-1-Icon-60x60@3x.png */,
+				AF91A3D7E00E471BBD103440 /* gradient-2-Icon-60x60@2x.png */,
+				46E5BDA6219345CCB9320F40 /* gradient-2-Icon-60x60@3x.png */,
+				C401AA0E66DF4E6A8718F6C5 /* gradient-3-Icon-60x60@2x.png */,
+				516DE33C84A9430D81E3F6EB /* gradient-3-Icon-60x60@3x.png */,
+				A872AD0A6F99440FAAF32090 /* gradient-4-Icon-60x60@2x.png */,
+				449251156A1748868F7857C8 /* gradient-4-Icon-60x60@3x.png */,
+				2D9A73E532F84236AAF81A58 /* gradient-5-Icon-60x60@2x.png */,
+				3F4F52EEEB6748AFBDB0FCC0 /* gradient-5-Icon-60x60@3x.png */,
+				24CB104F133045BEBBAB33E0 /* gradient-6-Icon-60x60@2x.png */,
+				1F6E38046655435BA1EA4328 /* gradient-6-Icon-60x60@3x.png */,
+				FABBD8C3CF6B43038BCECAE0 /* gradient-7-Icon-60x60@2x.png */,
+				E5D76AE1F5A94D57AE2C1866 /* gradient-7-Icon-60x60@3x.png */,
+				C214F377E365425E9248AC0D /* gradient-8-Icon-60x60@2x.png */,
+				8886930AE6B04FAAA84B3D9F /* gradient-8-Icon-60x60@3x.png */,
+				3A035DD2A3EC46EC8FFF6FFC /* gradient-9-Icon-60x60@2x.png */,
+				8E9C2DBFCD0640AC8FCFF432 /* gradient-9-Icon-60x60@3x.png */,
+				89341D87FDA0410F99C521FE /* gradient-10-Icon-60x60@2x.png */,
+				5C2CC87DEFF3428584ADDE6A /* gradient-10-Icon-60x60@3x.png */,
+			);
+			name = DynamicAppIcons;
+			path = "";
+			sourceTree = "<group>";
+		};
+		7D8842D943D15F63226A363B /* Athli */ = {
+			isa = PBXGroup;
+			children = (
+				62F29F1ED36027466DC0F6B0 /* ExpoModulesProvider.swift */,
+			);
+			name = Athli;
+			sourceTree = "<group>";
+		};
+		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Libraries;
+			sourceTree = "<group>";
+		};
+		83CBB9F61A601CBA00E9B192 = {
+			isa = PBXGroup;
+			children = (
+				13B07FAE1A68108700A75B9A /* Athli */,
+				832341AE1AAA6A7D00B99B32 /* Libraries */,
+				83CBBA001A601CBA00E9B192 /* Products */,
+				2D16E6871FA4F8E400B85C8A /* Frameworks */,
+				2B9BA2364DDD556B51F8E773 /* Pods */,
+				E0987ACBFB44BD459462C145 /* ExpoModulesProviders */,
+			);
+			indentWidth = 2;
+			sourceTree = "<group>";
+			tabWidth = 2;
+			usesTabs = 0;
+		};
+		83CBBA001A601CBA00E9B192 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				13B07F961A680F5B00A75B9A /* Athli.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BB2F792B24A3F905000567C9 /* Supporting */ = {
+			isa = PBXGroup;
+			children = (
+				BB2F792C24A3F905000567C9 /* Expo.plist */,
+			);
+			name = Supporting;
+			path = Athli/Supporting;
+			sourceTree = "<group>";
+		};
+		E0987ACBFB44BD459462C145 /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				7D8842D943D15F63226A363B /* Athli */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		13B07F861A680F5B00A75B9A /* Athli */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Athli" */;
+			buildPhases = (
+				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
+				C0BF4F2056D5D6AD5D872379 /* [Expo] Configure project */,
+				13B07F871A680F5B00A75B9A /* Sources */,
+				13B07F8C1A680F5B00A75B9A /* Frameworks */,
+				13B07F8E1A680F5B00A75B9A /* Resources */,
+				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
+				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
+				6D35CA91CE74D0F99F2490B6 /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Athli;
+			productName = Athli;
+			productReference = 13B07F961A680F5B00A75B9A /* Athli.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		83CBB9F71A601CBA00E9B192 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1130;
+				TargetAttributes = {
+					13B07F861A680F5B00A75B9A = {
+						LastSwiftMigration = 1250;
+						DevelopmentTeam = "Z5FML96ZUF";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Athli" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 83CBB9F61A601CBA00E9B192;
+			productRefGroup = 83CBBA001A601CBA00E9B192 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				13B07F861A680F5B00A75B9A /* Athli */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		13B07F8E1A680F5B00A75B9A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
+				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
+				DCAA6BB02CFA49D79118EBE2 /* default-Icon-60x60@2x.png in Resources */,
+				E64BE9D711A0487182742B49 /* default-Icon-60x60@3x.png in Resources */,
+				A8C5CDA7624E42D4A61421FA /* black-Icon-60x60@2x.png in Resources */,
+				E214D83B048B415AB7361473 /* black-Icon-60x60@3x.png in Resources */,
+				4857F1AE7D4D4993915618EF /* blue-Icon-60x60@2x.png in Resources */,
+				9C54B6BD7C4E4225A60EF2B5 /* blue-Icon-60x60@3x.png in Resources */,
+				90195604DA5B444B89BC37BA /* green-Icon-60x60@2x.png in Resources */,
+				8CC79A561BD4405EAD27DFF1 /* green-Icon-60x60@3x.png in Resources */,
+				17C520418A8044348D969099 /* orange-Icon-60x60@2x.png in Resources */,
+				E5DED6ED169547539A69C3B9 /* orange-Icon-60x60@3x.png in Resources */,
+				B24B3BA352EE45CCA1C2B1E5 /* pink-Icon-60x60@2x.png in Resources */,
+				7D84CB12B3F343CD958F488E /* pink-Icon-60x60@3x.png in Resources */,
+				EB2F5951308D4364A84BC07A /* purple-Icon-60x60@2x.png in Resources */,
+				2D5F8737250A4165B8FC2D47 /* purple-Icon-60x60@3x.png in Resources */,
+				6DD89FB23A4D4006AE9E881F /* red-Icon-60x60@2x.png in Resources */,
+				0861C5D40FB74081A3A08043 /* red-Icon-60x60@3x.png in Resources */,
+				6BB1954068BD48A88CCDB22E /* yellow-Icon-60x60@2x.png in Resources */,
+				CB17CEAB59C747119B2FE3B5 /* yellow-Icon-60x60@3x.png in Resources */,
+				37B0618AEDE448D1B66FE229 /* gradient-1-Icon-60x60@2x.png in Resources */,
+				864A836FA25E405A8492C392 /* gradient-1-Icon-60x60@3x.png in Resources */,
+				8CB2EF402F814575B2E5B1F5 /* gradient-2-Icon-60x60@2x.png in Resources */,
+				06CEBDFD141A4E96BF225790 /* gradient-2-Icon-60x60@3x.png in Resources */,
+				2C51ABFA50C646728F143FD8 /* gradient-3-Icon-60x60@2x.png in Resources */,
+				26D45C5A408545468FB6B22E /* gradient-3-Icon-60x60@3x.png in Resources */,
+				5240E7E8CA3B43D6A0A26E91 /* gradient-4-Icon-60x60@2x.png in Resources */,
+				8F7634C2D498487F8E251C14 /* gradient-4-Icon-60x60@3x.png in Resources */,
+				97FE8CC1C6E84D8B951A6CCB /* gradient-5-Icon-60x60@2x.png in Resources */,
+				E460CAED1B124EBA9BFAECA5 /* gradient-5-Icon-60x60@3x.png in Resources */,
+				90F7A7157218482490303AE3 /* gradient-6-Icon-60x60@2x.png in Resources */,
+				A7313EED931A412095F904EE /* gradient-6-Icon-60x60@3x.png in Resources */,
+				48D9E0952B3A479D8828E11B /* gradient-7-Icon-60x60@2x.png in Resources */,
+				2FE035DDE0D14599A554839E /* gradient-7-Icon-60x60@3x.png in Resources */,
+				2109F9C8DBBE450BA0D31D97 /* gradient-8-Icon-60x60@2x.png in Resources */,
+				82C14B3B22BE48928976045D /* gradient-8-Icon-60x60@3x.png in Resources */,
+				C384AB52718245548144B206 /* gradient-9-Icon-60x60@2x.png in Resources */,
+				C6C04A3278D04151965642BF /* gradient-9-Icon-60x60@3x.png in Resources */,
+				CB172FA8874A46CAA4E60593 /* gradient-10-Icon-60x60@2x.png in Resources */,
+				C1133816F45045109EA5049E /* gradient-10-Icon-60x60@3x.png in Resources */,
+				3D56E97653AB4FB52944B5D4 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Bundle React Native code and images";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n# The project root by default is one level up from the ios directory\nexport PROJECT_ROOT=\"$PROJECT_DIR\"/..\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  export SKIP_BUNDLING=1\nfi\nif [[ -z \"$ENTRY_FILE\" ]]; then\n  # Set the entry JS file using the bundler's entry resolution.\n  export ENTRY_FILE=\"$(\"$NODE_BINARY\" -e \"require('expo/scripts/resolveAppEntry')\" \"$PROJECT_ROOT\" ios absolute | tail -n 1)\"\nfi\n\nif [[ -z \"$CLI_PATH\" ]]; then\n  # Use Expo CLI\n  export CLI_PATH=\"$(\"$NODE_BINARY\" --print \"require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })\")\"\nfi\nif [[ -z \"$BUNDLE_COMMAND\" ]]; then\n  # Default Expo CLI command for bundling\n  export BUNDLE_COMMAND=\"export:embed\"\nfi\n\n# Source .xcode.env.updates if it exists to allow\n# SKIP_BUNDLING to be unset if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.updates\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.updates\"\nfi\n# Source local changes to allow overrides\n# if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n`\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\"`\n\n";
+		};
+		08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Athli-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		6D35CA91CE74D0F99F2490B6 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Athli/Pods-Athli-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Athli/Pods-Athli-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Athli/Pods-Athli-resources.sh",
+				"${PODS_CONFIGURATION_BUILD_DIR}/AppAuth/AppAuthCore_Privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/EXApplication/ExpoApplication_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/EXNotifications/ExpoNotifications_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/EXTaskManager/ExpoTaskManager_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/EXUpdates/EXUpdates.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoDevice/ExpoDevice_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoLocalization/ExpoLocalization_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoMediaLibrary/ExpoMediaLibrary_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/GTMSessionFetcher/GTMSessionFetcher_Core_Privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/GoogleSignIn/GoogleSignIn.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RCT-Folly/RCT-Folly_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RNSVG/RNSVGFilters.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/ReachabilitySwift/ReachabilitySwift.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/boost/boost_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-launcher/EXDevLauncher.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-menu/EXDevMenu.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/glog/glog_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/lottie-ios/LottiePrivacyInfo.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/lottie-react-native/Lottie_React_Native_Privacy.bundle",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/AppAuthCore_Privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoApplication_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXConstants.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoConstants_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoNotifications_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoTaskManager_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXUpdates.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoDevice_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoLocalization_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoMediaLibrary_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GTMSessionFetcher_Core_Privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleSignIn.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RCT-Folly_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNSVGFilters.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ReachabilitySwift.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SDWebImage.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/boost_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevLauncher.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevMenu.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/glog_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/LottiePrivacyInfo.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Lottie_React_Native_Privacy.bundle",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Athli/Pods-Athli-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		C0BF4F2056D5D6AD5D872379 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Athli/expo-configure-project.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		13B07F871A680F5B00A75B9A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+				FEE70C994F894E53A26C52CC /* ExpoModulesProvider.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		13B07F941A680F5B00A75B9A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 57D9EB05CEA95F570B92379C /* Pods-Athli.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Athli/Athli.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"FB_SONARKIT_ENABLED=1",
+				);
+				INFOPLIST_FILE = Athli/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = com.athli.app;
+				PRODUCT_NAME = Athli;
+				SWIFT_OBJC_BRIDGING_HEADER = "Athli/Athli-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "Z5FML96ZUF";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+			};
+			name = Debug;
+		};
+		13B07F951A680F5B00A75B9A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EED33296FCA6A54F6FEE853C /* Pods-Athli.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Athli/Athli.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = Athli/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+					"-lc++",
+				);
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = com.athli.app;
+				PRODUCT_NAME = Athli;
+				SWIFT_OBJC_BRIDGING_HEADER = "Athli/Athli-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "Z5FML96ZUF";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+			};
+			name = Release;
+		};
+		83CBBA201A601CBA00E9B192 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					/usr/lib/swift,
+					"$(inherited)",
+				);
+				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../../node_modules/react-native";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				USE_HERMES = true;
+			};
+			name = Debug;
+		};
+		83CBBA211A601CBA00E9B192 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					/usr/lib/swift,
+					"$(inherited)",
+				);
+				LIBRARY_SEARCH_PATHS = "$(SDKROOT)/usr/lib/swift\"$(inherited)\"";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					" ",
+				);
+				REACT_NATIVE_PATH = "${PODS_ROOT}/../../../../node_modules/react-native";
+				SDKROOT = iphoneos;
+				USE_HERMES = true;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Athli" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				13B07F941A680F5B00A75B9A /* Debug */,
+				13B07F951A680F5B00A75B9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Athli" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				83CBBA201A601CBA00E9B192 /* Debug */,
+				83CBBA211A601CBA00E9B192 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
+}
