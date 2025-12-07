@@ -3,17 +3,17 @@ import { version } from "./package.json";
 
 // Replace these with your EAS project ID and project slug.
 // You can find them at https://expo.dev/accounts/[account]/projects/[project].
-const EAS_PROJECT_ID = "cbbfb6a7-e285-419f-af75-79337f5c77f9";
-const PROJECT_SLUG = "formai";
+const EAS_PROJECT_ID = "1aa7c6eb-3cf8-4795-95a6-9bc41714904c";
+const PROJECT_SLUG = "athli";
 const OWNER = "andreirizea";
 
 // App production config
-const APP_NAME = "Form AI";
-const BUNDLE_IDENTIFIER = "com.useformai.formai";
-const PACKAGE_NAME = "com.useformai.formai";
-const ICON = "./assets/appIcons/formai-ios-icon.png";
-const ADAPTIVE_ICON = "./assets/appIcons/formai-ios-icon.png";
-const SCHEME = "formai";
+const APP_NAME = "Athli";
+const BUNDLE_IDENTIFIER = "com.athli.app";
+const PACKAGE_NAME = "com.athli.app";
+const ICON = "./assets/appIcons/athli-ios-icon.png";
+const ADAPTIVE_ICON = "./assets/appIcons/athli-ios-icon.png";
+const SCHEME = "athli";
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const { name, bundleIdentifier, icon, adaptiveIcon, packageName, scheme } =
@@ -35,7 +35,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     scheme: scheme,
     backgroundColor: "#ffffff",
     splash: {
-      image: "./assets/formai-splash.png",
+      image: "./assets/athli-splash.png",
       backgroundColor: "#ffffff"
     },
     ios: {
@@ -43,7 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       bundleIdentifier: bundleIdentifier,
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
-          "Form AI may request your location to personalize experiences and support features that depend on your current region and also for usage analytics.",
+          "Athli may request your location to personalize experiences and support features that depend on your current region and also for usage analytics.",
         UIBackgroundModes: [
           "remote-notification",
           "fetch",
@@ -57,9 +57,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             ]
           }
         ],
-        NSCameraUsageDescription: "Form AI uses the camera to let you record workout videos so you can submit them for lift analysis to receive form feedback.",
-        NSPhotoLibraryUsageDescription: "Form AI accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
-        NSPhotoLibraryAddUsageDescription: "Form AI accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
+        NSCameraUsageDescription: "Athli uses the camera to let you record workout videos so you can submit them for lift analysis to receive form feedback.",
+        NSPhotoLibraryUsageDescription: "Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
+        NSPhotoLibraryAddUsageDescription: "Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
         NSUserTrackingUsageDescription: "We use this to ensure the app works for you and others that download it by reviewing usage logs.",
         ITSAppUsesNonExemptEncryption: false,
         SKIncludeConsumableInAppPurchaseHistory: true
@@ -106,79 +106,79 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-dynamic-app-icon",
         {
           default: {
-            image: "./assets/appIcons/formai-ios-icon.png",
+            image: "./assets/appIcons/athli-ios-icon.png",
             prerendered: true
           },
           black: {
-            image: "./assets/appIcons/form-ai-icon-black.png",
+            image: "./assets/appIcons/athli-icon-black.png",
             prerendered: true
           },
           blue: {
-            image: "./assets/appIcons/form-ai-icon-blue.png",
+            image: "./assets/appIcons/athli-icon-blue.png",
             prerendered: true
           },
           green: {
-            image: "./assets/appIcons/form-ai-icon-green.png",
+            image: "./assets/appIcons/athli-icon-green.png",
             prerendered: true
           },
           orange: {
-            image: "./assets/appIcons/form-ai-icon-orange.png",
+            image: "./assets/appIcons/athli-icon-orange.png",
             prerendered: true
           },
           pink: {
-            image: "./assets/appIcons/form-ai-icon-pink.png",
+            image: "./assets/appIcons/athli-icon-pink.png",
             prerendered: true
           },
           purple: {
-            image: "./assets/appIcons/form-ai-icon-purple.png",
+            image: "./assets/appIcons/athli-icon-purple.png",
             prerendered: true
           },
           red: {
-            image: "./assets/appIcons/form-ai-icon-red.png",
+            image: "./assets/appIcons/athli-icon-red.png",
             prerendered: true
           },
           yellow: {
-            image: "./assets/appIcons/form-ai-icon-yellow.png",
+            image: "./assets/appIcons/athli-icon-yellow.png",
             prerendered: true
           },
           "gradient-1": {
-            image: "./assets/appIcons/form-ai-icon-gradient-1.png",
+            image: "./assets/appIcons/athli-icon-gradient-1.png",
             prerendered: true
           },
           "gradient-2": {
-            image: "./assets/appIcons/form-ai-icon-gradient-2.png",
+            image: "./assets/appIcons/athli-icon-gradient-2.png",
             prerendered: true
           },
           "gradient-3": {
-            image: "./assets/appIcons/form-ai-icon-gradient-3.png",
+            image: "./assets/appIcons/athli-icon-gradient-3.png",
             prerendered: true
           },
           "gradient-4": {
-            image: "./assets/appIcons/form-ai-icon-gradient-4.png",
+            image: "./assets/appIcons/athli-icon-gradient-4.png",
             prerendered: true
           },
           "gradient-5": {
-            image: "./assets/appIcons/form-ai-icon-gradient-5.png",
+            image: "./assets/appIcons/athli-icon-gradient-5.png",
             prerendered: true
           },
           "gradient-6": {
-            image: "./assets/appIcons/form-ai-icon-gradient-6.png",
+            image: "./assets/appIcons/athli-icon-gradient-6.png",
             prerendered: true
           },
           "gradient-7": {
-            image: "./assets/appIcons/form-ai-icon-gradient-7.png",
+            image: "./assets/appIcons/athli-icon-gradient-7.png",
             prerendered: true
           },
           "gradient-8": {
-            image: "./assets/appIcons/form-ai-icon-gradient-8.png",
+            image: "./assets/appIcons/athli-icon-gradient-8.png",
             prerendered: true
           },
           "gradient-9": {
-            image: "./assets/appIcons/form-ai-icon-gradient-9.png",
+            image: "./assets/appIcons/athli-icon-gradient-9.png",
             prerendered: true
           },
           "gradient-10": {
-            image: "./assets/appIcons/form-ai-icon-gradient-10.png",
+            image: "./assets/appIcons/athli-icon-gradient-10.png",
             prerendered: true
           }
         }
@@ -198,15 +198,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "expo-splash-screen",
         {
           backgroundColor: "#ffffff",
-          image: "./assets/formai-splash.png",
+          image: "./assets/athli-splash.png",
           imageWidth: 200
         }
       ],
       [
         "expo-media-library",
         {
-          photosPermission: "Form AI accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
-          savePhotosPermission: "Form AI accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
+          photosPermission: "Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
+          savePhotosPermission: "Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.",
           isAccessMediaLocationEnabled: false,
           granularPermissions: ["video"]
         }
@@ -220,7 +220,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-image-picker",
         {
-          photosPermission: "Form AI accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features."
+          photosPermission: "Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features."
         }
       ],
       "react-native-compressor",
@@ -267,8 +267,8 @@ export const getDynamicAppConfig = (
       name: `${APP_NAME}`,
       bundleIdentifier: BUNDLE_IDENTIFIER, // Keep same bundle ID for RevenueCat compatibility
       packageName: PACKAGE_NAME, // Keep same package name for RevenueCat compatibility
-      icon: "./assets/appIcons/formai-ios-icon.png", // You can create separate preview icons
-      adaptiveIcon: "./assets/appIcons/formai-ios-icon.png", // You can create separate preview icons
+      icon: "./assets/appIcons/athli-ios-icon.png", // You can create separate preview icons
+      adaptiveIcon: "./assets/appIcons/athli-ios-icon.png", // You can create separate preview icons
       scheme: `${SCHEME}`,
     };
   }
@@ -277,8 +277,8 @@ export const getDynamicAppConfig = (
     name: `${APP_NAME}`,
     bundleIdentifier: BUNDLE_IDENTIFIER, // Keep same bundle ID for RevenueCat compatibility
     packageName: PACKAGE_NAME, // Keep same package name for RevenueCat compatibility
-    icon: "./assets/appIcons/formai-ios-icon.png", // You can create separate dev icons
-    adaptiveIcon: "./assets/appIcons/formai-ios-icon.png", // You can create separate dev icons
+    icon: "./assets/appIcons/athli-ios-icon.png", // You can create separate dev icons
+    adaptiveIcon: "./assets/appIcons/athli-ios-icon.png", // You can create separate dev icons
     scheme: `${SCHEME}`,
   };
 };
