@@ -53,7 +53,7 @@ async function getExpoPushTokenForUser(userId: string): Promise<string | null> {
   return (data as any)?.expo_push_notification ?? null
 }
 
-async function sendExpoPush(to: string, body: string, title = 'FormAI', data?: Record<string, unknown>) {
+async function sendExpoPush(to: string, body: string, title = 'Athli', data?: Record<string, unknown>) {
   const accessToken = Deno.env.get('EXPO_ACCESS_TOKEN')
   const payload = {
     to,

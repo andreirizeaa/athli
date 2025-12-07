@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { ViewProvider } from './src/context/ViewContext';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 export default function App() {
   useEffect(() => {
@@ -44,7 +45,9 @@ export default function App() {
       <SafeAreaProvider>
         <LanguageProvider>
           <ViewProvider>
-            <Layout />
+            <ThemeProvider>
+              <Layout />
+            </ThemeProvider>
           </ViewProvider>
         </LanguageProvider>
       </SafeAreaProvider>

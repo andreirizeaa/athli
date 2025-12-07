@@ -14,7 +14,7 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")
 async function sendExpoPush(
   to: string,
   body: string,
-  title = "FormAI",
+  title = "Athli",
   data?: Record<string, unknown>
 ) {
   const accessToken = Deno.env.get("EXPO_ACCESS_TOKEN")
@@ -53,8 +53,8 @@ async function sendEmail(to: string, subject: string, text: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Form AI <support@useformai.com>",
-      reply_to: "support@useformai.com",
+      from: "Athli <support@athli.com>",
+      reply_to: "support@athli.com",
       to: [to],
       subject,
       text,

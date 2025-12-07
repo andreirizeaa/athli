@@ -8,6 +8,7 @@ interface TranslucentStatusBarProps {
   blurIntensity?: number;
   tint?: 'light' | 'dark' | 'default';
   extraHeight?: number;
+  backgroundColor?: string;
 }
 
 export function TranslucentStatusBar({
@@ -15,6 +16,7 @@ export function TranslucentStatusBar({
   blurIntensity = Platform.OS === 'ios' ? 15 : 15,
   tint = 'light',
   extraHeight = 0,
+  backgroundColor,
 }: TranslucentStatusBarProps) {
   const insets = useSafeAreaInsets();
   const height = Math.max(0, insets.top) - extraHeight;
@@ -22,7 +24,13 @@ export function TranslucentStatusBar({
   if (!visible || height === 0) return null;
 
   return (
-    <View pointerEvents="none" style={[styles.container, { height }]}>
+    <View
+      pointerEvents="none"
+      style={[
+        styles.container,
+        { height, backgroundColor },
+      ]}
+    >
       <BlurView intensity={blurIntensity} tint={tint} style={StyleSheet.absoluteFill} />
     </View>
   );

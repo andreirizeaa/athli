@@ -11,6 +11,8 @@ import {
   Inbox,
 } from 'lucide-react-native';
 import type { ViewType } from '../../context/ViewContext';
+import { useTheme } from '../../context/ThemeContext';
+import i18n from '../../utils/i18n';
 
 interface BottomNavigationBarProps {
   viewType: ViewType;
@@ -25,16 +27,26 @@ interface AthleteTabIconProps {
   name: 'home' | 'progress' | 'settings';
   isActive: boolean;
   size?: number;
+  activeColor: string;
+  inactiveColor: string;
 }
 
 interface CoachTabIconProps {
   name: 'clients' | 'calendar' | 'inbox' | 'settings';
   isActive: boolean;
   size?: number;
+  activeColor: string;
+  inactiveColor: string;
 }
 
-function AthleteTabIcon({ name, isActive, size = 22 }: AthleteTabIconProps) {
-  const color = isActive ? '#000000' : '#8E8E93';
+function AthleteTabIcon({
+  name,
+  isActive,
+  size = 22,
+  activeColor,
+  inactiveColor,
+}: AthleteTabIconProps) {
+  const color = isActive ? activeColor : inactiveColor;
 
   const icons = {
     home: <House size={size} color={color} />,
@@ -45,8 +57,14 @@ function AthleteTabIcon({ name, isActive, size = 22 }: AthleteTabIconProps) {
   return icons[name];
 }
 
-function CoachTabIcon({ name, isActive, size = 22 }: CoachTabIconProps) {
-  const color = isActive ? '#000000' : '#8E8E93';
+function CoachTabIcon({
+  name,
+  isActive,
+  size = 22,
+  activeColor,
+  inactiveColor,
+}: CoachTabIconProps) {
+  const color = isActive ? activeColor : inactiveColor;
 
   const icons = {
     clients: <Users size={size} color={color} />,
@@ -62,9 +80,25 @@ interface AthleteNavigationProps {
   activeTab: 'home' | 'progress' | 'settings';
   onTabPress: (tab: 'home' | 'progress' | 'settings') => void;
   onAddPress: () => void;
+  activeColor: string;
+  inactiveColor: string;
+  labelActiveColor: string;
+  labelInactiveColor: string;
+   primaryColor: string;
+   primaryForegroundColor: string;
 }
 
-function AthleteNavigation({ activeTab, onTabPress, onAddPress }: AthleteNavigationProps) {
+function AthleteNavigation({
+  activeTab,
+  onTabPress,
+  onAddPress,
+  activeColor,
+  inactiveColor,
+  labelActiveColor,
+  labelInactiveColor,
+  primaryColor,
+  primaryForegroundColor,
+}: AthleteNavigationProps) {
   return (
     <>
       <View style={styles.tabsContainer}>
@@ -73,11 +107,22 @@ function AthleteNavigation({ activeTab, onTabPress, onAddPress }: AthleteNavigat
           onPress={() => onTabPress('home')}
           activeOpacity={0.7}
         >
-          <AthleteTabIcon name="home" isActive={activeTab === 'home'} />
+          <AthleteTabIcon
+            name="home"
+            isActive={activeTab === 'home'}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+          />
           <Text
-            style={[styles.tabText, { color: activeTab === 'home' ? '#000000' : '#8E8E93' }]}
+            style={[
+              styles.tabText,
+              {
+                color:
+                  activeTab === 'home' ? labelActiveColor : labelInactiveColor,
+              },
+            ]}
           >
-            Home
+            {i18n.t('navigation.home')}
           </Text>
         </TouchableOpacity>
 
@@ -86,14 +131,24 @@ function AthleteNavigation({ activeTab, onTabPress, onAddPress }: AthleteNavigat
           onPress={() => onTabPress('progress')}
           activeOpacity={0.7}
         >
-          <AthleteTabIcon name="progress" isActive={activeTab === 'progress'} />
+          <AthleteTabIcon
+            name="progress"
+            isActive={activeTab === 'progress'}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+          />
           <Text
             style={[
               styles.tabText,
-              { color: activeTab === 'progress' ? '#000000' : '#8E8E93' },
+              {
+                color:
+                  activeTab === 'progress'
+                    ? labelActiveColor
+                    : labelInactiveColor,
+              },
             ]}
           >
-            Progress
+            {i18n.t('navigation.progress')}
           </Text>
         </TouchableOpacity>
 
@@ -102,23 +157,36 @@ function AthleteNavigation({ activeTab, onTabPress, onAddPress }: AthleteNavigat
           onPress={() => onTabPress('settings')}
           activeOpacity={0.7}
         >
-          <AthleteTabIcon name="settings" isActive={activeTab === 'settings'} />
+          <AthleteTabIcon
+            name="settings"
+            isActive={activeTab === 'settings'}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+          />
           <Text
             style={[
               styles.tabText,
-              { color: activeTab === 'settings' ? '#000000' : '#8E8E93' },
+              {
+                color:
+                  activeTab === 'settings'
+                    ? labelActiveColor
+                    : labelInactiveColor,
+              },
             ]}
           >
-            Settings
+            {i18n.t('navigation.settings')}
           </Text>
         </TouchableOpacity>
       </View>
       <TouchableOpacity
-        style={[styles.addButton, { marginTop: -50 }]}
+        style={[
+          styles.addButton,
+          { marginTop: -50, backgroundColor: primaryColor },
+        ]}
         onPress={onAddPress}
         activeOpacity={0.7}
       >
-        <Plus size={22} color="#FFFFFF" />
+        <Plus size={22} color={primaryForegroundColor} />
       </TouchableOpacity>
     </>
   );
@@ -127,9 +195,20 @@ function AthleteNavigation({ activeTab, onTabPress, onAddPress }: AthleteNavigat
 interface CoachNavigationProps {
   activeTab: 'clients' | 'calendar' | 'inbox' | 'settings';
   onTabPress: (tab: 'clients' | 'calendar' | 'inbox' | 'settings') => void;
+  activeColor: string;
+  inactiveColor: string;
+  labelActiveColor: string;
+  labelInactiveColor: string;
 }
 
-function CoachNavigation({ activeTab, onTabPress }: CoachNavigationProps) {
+function CoachNavigation({
+  activeTab,
+  onTabPress,
+  activeColor,
+  inactiveColor,
+  labelActiveColor,
+  labelInactiveColor,
+}: CoachNavigationProps) {
   return (
     <View style={styles.coachTabsContainer}>
       <TouchableOpacity
@@ -137,11 +216,24 @@ function CoachNavigation({ activeTab, onTabPress }: CoachNavigationProps) {
         onPress={() => onTabPress('clients')}
         activeOpacity={0.7}
       >
-        <CoachTabIcon name="clients" isActive={activeTab === 'clients'} />
+        <CoachTabIcon
+          name="clients"
+          isActive={activeTab === 'clients'}
+          activeColor={activeColor}
+          inactiveColor={inactiveColor}
+        />
         <Text
-          style={[styles.tabText, { color: activeTab === 'clients' ? '#000000' : '#8E8E93' }]}
+          style={[
+            styles.tabText,
+            {
+              color:
+                activeTab === 'clients'
+                  ? labelActiveColor
+                  : labelInactiveColor,
+            },
+          ]}
         >
-          Clients
+          {i18n.t('navigation.clients')}
         </Text>
       </TouchableOpacity>
 
@@ -150,11 +242,24 @@ function CoachNavigation({ activeTab, onTabPress }: CoachNavigationProps) {
         onPress={() => onTabPress('calendar')}
         activeOpacity={0.7}
       >
-        <CoachTabIcon name="calendar" isActive={activeTab === 'calendar'} />
+        <CoachTabIcon
+          name="calendar"
+          isActive={activeTab === 'calendar'}
+          activeColor={activeColor}
+          inactiveColor={inactiveColor}
+        />
         <Text
-          style={[styles.tabText, { color: activeTab === 'calendar' ? '#000000' : '#8E8E93' }]}
+          style={[
+            styles.tabText,
+            {
+              color:
+                activeTab === 'calendar'
+                  ? labelActiveColor
+                  : labelInactiveColor,
+            },
+          ]}
         >
-          Calendar
+          {i18n.t('navigation.calendar')}
         </Text>
       </TouchableOpacity>
 
@@ -163,9 +268,24 @@ function CoachNavigation({ activeTab, onTabPress }: CoachNavigationProps) {
         onPress={() => onTabPress('inbox')}
         activeOpacity={0.7}
       >
-        <CoachTabIcon name="inbox" isActive={activeTab === 'inbox'} />
-        <Text style={[styles.tabText, { color: activeTab === 'inbox' ? '#000000' : '#8E8E93' }]}>
-          Inbox
+        <CoachTabIcon
+          name="inbox"
+          isActive={activeTab === 'inbox'}
+          activeColor={activeColor}
+          inactiveColor={inactiveColor}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            {
+              color:
+                activeTab === 'inbox'
+                  ? labelActiveColor
+                  : labelInactiveColor,
+            },
+          ]}
+        >
+          {i18n.t('navigation.inbox')}
         </Text>
       </TouchableOpacity>
 
@@ -174,11 +294,24 @@ function CoachNavigation({ activeTab, onTabPress }: CoachNavigationProps) {
         onPress={() => onTabPress('settings')}
         activeOpacity={0.7}
       >
-        <CoachTabIcon name="settings" isActive={activeTab === 'settings'} />
+        <CoachTabIcon
+          name="settings"
+          isActive={activeTab === 'settings'}
+          activeColor={activeColor}
+          inactiveColor={inactiveColor}
+        />
         <Text
-          style={[styles.tabText, { color: activeTab === 'settings' ? '#000000' : '#8E8E93' }]}
+          style={[
+            styles.tabText,
+            {
+              color:
+                activeTab === 'settings'
+                  ? labelActiveColor
+                  : labelInactiveColor,
+            },
+          ]}
         >
-          Settings
+          {i18n.t('navigation.settings')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -194,14 +327,37 @@ export function BottomNavigationBar({
   onAddPress,
 }: BottomNavigationBarProps) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+
+  const activeColor = colors.sidebarForeground;
+  const inactiveColor = colors.mutedText;
+  const labelActiveColor = colors.sidebarForeground;
+  const labelInactiveColor = colors.mutedText;
+  const primaryColor = colors.primary;
+  const primaryForegroundColor = colors.primaryForeground;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.separator} />
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.sidebar,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.separator,
+          {
+            backgroundColor: colors.border,
+          },
+        ]}
+      />
       <View
         style={[
           styles.navigationBar,
           {
+            backgroundColor: colors.sidebar,
             paddingBottom: insets.bottom + 8,
             paddingHorizontal: viewType === 'athlete' ? 40 : 0,
           },
@@ -212,9 +368,22 @@ export function BottomNavigationBar({
             activeTab={athleteActiveTab}
             onTabPress={onAthleteTabPress}
             onAddPress={onAddPress}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+            labelActiveColor={labelActiveColor}
+            labelInactiveColor={labelInactiveColor}
+            primaryColor={primaryColor}
+            primaryForegroundColor={primaryForegroundColor}
           />
         ) : (
-          <CoachNavigation activeTab={coachActiveTab} onTabPress={onCoachTabPress} />
+          <CoachNavigation
+            activeTab={coachActiveTab}
+            onTabPress={onCoachTabPress}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+            labelActiveColor={labelActiveColor}
+            labelInactiveColor={labelInactiveColor}
+          />
         )}
       </View>
     </View>
@@ -227,14 +396,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'transparent',
   },
   separator: {
     height: 0.5,
-    marginHorizontal: 16,
   },
   navigationBar: {
-    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 12,
@@ -287,7 +453,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',
