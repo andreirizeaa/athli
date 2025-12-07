@@ -7,6 +7,7 @@ import { Layout } from './layout';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LanguageProvider } from './src/context/LanguageContext';
+import { ViewProvider } from './src/context/ViewContext';
 
 export default function App() {
   useEffect(() => {
@@ -42,7 +43,9 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <LanguageProvider>
-          <Layout />
+          <ViewProvider>
+            <Layout />
+          </ViewProvider>
         </LanguageProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

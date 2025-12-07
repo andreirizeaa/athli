@@ -6,9 +6,16 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNavigationBar } from '../components/ui/BottomNavigationBar';
 import { TranslucentStatusBar } from '../components/ui/TranslucentStatusBar';
-import { HomeScreen } from '../screens/application/home/HomeScreen';
-import { PerformanceScreen } from '../screens/application/performance/PerformanceScreen';
-import { SettingsScreen } from '../screens/application/settings/SettingsScreen';
+import { useView } from '../context/ViewContext';
+// Athlete screens
+import { HomeScreen } from '../screens/athlete/home/HomeScreen';
+import { PerformanceScreen } from '../screens/athlete/performance/PerformanceScreen';
+import { SettingsScreen as AthleteSettingsScreen } from '../screens/athlete/settings/SettingsScreen';
+// Coach screens
+import { ClientsScreen } from '../screens/coach/clients/ClientsScreen';
+import { CalendarScreen } from '../screens/coach/calendar/CalendarScreen';
+import { InboxScreen } from '../screens/coach/inbox/InboxScreen';
+import { SettingsScreen as CoachSettingsScreen } from '../screens/coach/settings/SettingsScreen';
 
 // Types for navigation
 export type MainTabParamList = {
@@ -23,43 +30,93 @@ export type MainStackParamList = {
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
-// Wrapper components for screens
-function HomeScreenWrapper() {
+// Athlete screen wrappers
+function AthleteHomeScreenWrapper() {
   return <HomeScreen />;
 }
 
-function SettingsScreenWrapper() {
-  return <SettingsScreen />;
+function AthletePerformanceScreenWrapper() {
+  return <PerformanceScreen />;
 }
 
-function PerformanceScreenWrapper() {
-  return <PerformanceScreen />;
+function AthleteSettingsScreenWrapper() {
+  return <AthleteSettingsScreen />;
+}
+
+// Coach screen wrappers
+function CoachClientsScreenWrapper() {
+  return <ClientsScreen />;
+}
+
+function CoachCalendarScreenWrapper() {
+  return <CalendarScreen />;
+}
+
+function CoachInboxScreenWrapper() {
+  return <InboxScreen />;
+}
+
+function CoachSettingsScreenWrapper() {
+  return <CoachSettingsScreen />;
 }
 
 // Main tabs navigator with custom bottom navigation
 function MainTabsNavigator() {
-  const [activeTab, setActiveTab] = React.useState<'home' | 'progress' | 'settings'>('home');
+  const { currentView } = useView();
 
-  const handleTabPress = (tab: 'home' | 'progress' | 'settings') => {
-    setActiveTab(tab);
+  // Athlete tabs
+  const [athleteActiveTab, setAthleteActiveTab] = React.useState<'home' | 'progress' | 'settings'>('home');
+  // Coach tabs
+  const [coachActiveTab, setCoachActiveTab] = React.useState<'clients' | 'calendar' | 'inbox' | 'settings'>('clients');
+
+  const handleAthleteTabPress = (tab: 'home' | 'progress' | 'settings') => {
+    setAthleteActiveTab(tab);
+  };
+
+  const handleCoachTabPress = (tab: 'clients' | 'calendar' | 'inbox' | 'settings') => {
+    setCoachActiveTab(tab);
   };
 
   const handleAddPress = () => {
     // Empty handler for add button
   };
 
-  const renderScreenContent = () => {
-    switch (activeTab) {
+  const renderAthleteScreenContent = () => {
+    switch (athleteActiveTab) {
       case 'home':
-        return <HomeScreenWrapper />;
+        return <AthleteHomeScreenWrapper />;
       case 'progress':
-        return <PerformanceScreenWrapper />;
+        return <AthletePerformanceScreenWrapper />;
       case 'settings':
-        return <SettingsScreenWrapper />;
+        return <AthleteSettingsScreenWrapper />;
       default:
-        return <HomeScreenWrapper />;
+        return <AthleteHomeScreenWrapper />;
     }
   };
+
+  const renderCoachScreenContent = () => {
+    switch (coachActiveTab) {
+      case 'clients':
+        return <CoachClientsScreenWrapper />;
+      case 'calendar':
+        return <CoachCalendarScreenWrapper />;
+      case 'inbox':
+        return <CoachInboxScreenWrapper />;
+      case 'settings':
+        return <CoachSettingsScreenWrapper />;
+      default:
+        return <CoachClientsScreenWrapper />;
+    }
+  };
+
+  // Reset to first tab when switching views
+  React.useEffect(() => {
+    if (currentView === 'athlete') {
+      setAthleteActiveTab('home');
+    } else {
+      setCoachActiveTab('clients');
+    }
+  }, [currentView]);
 
   return (
     <>
@@ -72,11 +129,16 @@ function MainTabsNavigator() {
       >
         <TranslucentStatusBar tint="light" />
         <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-          <View style={styles.content}>{renderScreenContent()}</View>
+          <View style={styles.content}>
+            {currentView === 'athlete' ? renderAthleteScreenContent() : renderCoachScreenContent()}
+          </View>
 
           <BottomNavigationBar
-            activeTab={activeTab}
-            onTabPress={handleTabPress}
+            viewType={currentView}
+            athleteActiveTab={athleteActiveTab}
+            coachActiveTab={coachActiveTab}
+            onAthleteTabPress={handleAthleteTabPress}
+            onCoachTabPress={handleCoachTabPress}
             onAddPress={handleAddPress}
           />
         </SafeAreaView>

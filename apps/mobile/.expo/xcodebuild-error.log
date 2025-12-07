@@ -1,6 +1,0 @@
-2025-12-07 13:53:35.055 xcodebuild[64651:19849893] Writing error result bundle to /var/folders/wz/vwrw9dls1qx61ml7hp9zthsw0000gn/T/ResultBundle_2025-07-12_13-53-0035.xcresult
-xcodebuild: error: Unable to find a destination matching the provided destination specifier:
-		{ id:3F5F151B-B968-4133-B266-1446B35BF42B }
-
-	Ineligible destinations for the "FormAI" scheme:
-		{ platform:iOS, id:dvtdevice-DVTiPhonePlaceholder-iphoneos:placeholder, name:Any iOS Device, error:iOS 26.1 is not installed. Please download and install the platform from Xcode > Settings > Components. }
