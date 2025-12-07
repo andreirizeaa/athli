@@ -1,0 +1,6 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -workspace /Users/andreirizea/abc/athli/apps/mobile/ios/FormAI.xcworkspace -configuration Debug -scheme FormAI -destination id=3F5F151B-B968-4133-B266-1446B35BF42B DEVELOPMENT_TEAM=Z5FML96ZUF -allowProvisioningUpdates -allowProvisioningDeviceRegistration
+
+Build settings from command line:
+    DEVELOPMENT_TEAM = Z5FML96ZUF
+

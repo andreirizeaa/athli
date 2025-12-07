@@ -1,9 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import i18n from '../../utils/i18n';
-import { hapticFeedback } from '../../utils/haptic';
-import { useTutorialTarget, useTutorial } from '../../context/TutorialContext';
 import { ChartNoAxesColumn, House, Settings, Plus } from 'lucide-react-native';
 
 interface BottomNavigationBarProps {
@@ -36,80 +33,51 @@ export function BottomNavigationBar({
   onAddPress,
 }: BottomNavigationBarProps) {
   const insets = useSafeAreaInsets();
-  const { currentStepIndex } = useTutorial();
-  const { ref: addButtonRef } = useTutorialTarget('add_button');
-  const { ref: homePerformanceIcon } = useTutorialTarget('home_performance_icon');
 
   return (
     <View style={styles.container}>
-      {/* Top separator line */}
       <View style={styles.separator} />
-
-      {/* Navigation bar */}
       <View style={[styles.navigationBar, { paddingBottom: insets.bottom + 8 }]}>
-        {/* Left side - Tabs */}
         <View style={styles.tabsContainer}>
-          {/* Home Tab */}
           <TouchableOpacity
             style={styles.tab}
-            onPress={() => {
-              onTabPress('home');
-              hapticFeedback.selection();
-            }}
+            onPress={() => onTabPress('home')}
             activeOpacity={0.7}
           >
             <TabIcon name="home" isActive={activeTab === 'home'} />
             <Text style={[styles.tabText, { color: activeTab === 'home' ? '#000000' : '#8E8E93' }]}>
-              {i18n.t('tabs.home')}
+              Home
             </Text>
           </TouchableOpacity>
 
-          {/* Performance Tab */}
           <TouchableOpacity
-            ref={homePerformanceIcon}
             style={styles.tab}
-            onPress={() => {
-              onTabPress('progress');
-              hapticFeedback.selection();
-            }}
+            onPress={() => onTabPress('progress')}
             activeOpacity={0.7}
           >
             <TabIcon name="progress" isActive={activeTab === 'progress'} />
             <Text
               style={[styles.tabText, { color: activeTab === 'progress' ? '#000000' : '#8E8E93' }]}
             >
-              {i18n.t('tabs.progress')}
+              Progress
             </Text>
           </TouchableOpacity>
 
-          {/* Settings Tab */}
           <TouchableOpacity
             style={styles.tab}
-            onPress={() => {
-              onTabPress('settings');
-              hapticFeedback.selection();
-            }}
+            onPress={() => onTabPress('settings')}
             activeOpacity={0.7}
           >
             <TabIcon name="settings" isActive={activeTab === 'settings'} />
             <Text
               style={[styles.tabText, { color: activeTab === 'settings' ? '#000000' : '#8E8E93' }]}
             >
-              {i18n.t('tabs.settings')}
+              Settings
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Right side - Add button */}
-        <TouchableOpacity
-          ref={currentStepIndex === 0 ? addButtonRef : null}
-          style={styles.addButton}
-          onPress={() => {
-            onAddPress();
-            hapticFeedback.selection();
-          }}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={onAddPress} activeOpacity={0.7}>
           <Plus size={26} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -179,14 +147,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 50,
-    fontWeight: '300',
-    textAlign: 'center',
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    lineHeight: 50,
   },
 });
