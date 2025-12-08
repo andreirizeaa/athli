@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import i18n, { setLanguage } from '../utils/i18n';
-import { getSelectedLanguage } from '../services/storageService';
 
 interface LanguageContextType {
   currentLanguage: string;
@@ -16,41 +15,15 @@ interface LanguageProviderProps {
 export function LanguageProvider({ children }: LanguageProviderProps) {
   const [currentLanguage, setCurrentLanguage] = useState(i18n.locale);
 
-  // Initialize language from AsyncStorage
+  // Initialize language on mount
   useEffect(() => {
-    const initializeLanguage = async () => {
-      try {
-        // Try to get from AsyncStorage
-        const savedLanguage = await getSelectedLanguage();
-        if (savedLanguage) {
-          setLanguage(savedLanguage);
-          setCurrentLanguage(savedLanguage);
-          return;
-        }
-
-        // Final fallback to current i18n locale
-        setCurrentLanguage(i18n.locale);
-      } catch (error) {
-        console.warn('Error initializing language:', error);
-        setCurrentLanguage(i18n.locale);
-      }
-    };
-
-    initializeLanguage();
+    setCurrentLanguage(i18n.locale);
   }, []);
 
   const handleSetLanguage = async (languageCode: string) => {
     // Update i18n immediately
     setLanguage(languageCode);
     setCurrentLanguage(languageCode);
-
-    // Save to AsyncStorage
-    try {
-      const { setSelectedLanguage } = await import('../services/storageService');
-      await setSelectedLanguage(languageCode);
-    } catch (error) {
-      console.warn('Error saving language to AsyncStorage:', error);
-    }
   };
 
   return (
@@ -67,3 +40,4 @@ export function useLanguage() {
   }
   return context;
 }
+
