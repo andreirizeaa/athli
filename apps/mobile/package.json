@@ -53,6 +53,7 @@
     "expo-media-library": "~17.1.7",
     "expo-notifications": "~0.31.4",
     "expo-quick-actions": "^5.0.0",
+    "expo-router": "~3.5.23",
     "expo-sharing": "~13.1.5",
     "expo-splash-screen": "^31.0.10",
     "expo-status-bar": "~2.2.3",
