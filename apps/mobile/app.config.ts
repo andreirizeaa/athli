@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: name,
     version, // Automatically bump your project version with `npm version patch`, `npm version minor` or `npm version major`.
     slug: PROJECT_SLUG, // Must be consistent across all environments.
-    platforms: ["ios"], // iPhone-only
+    platforms: ["ios", "android"], // iPhone-only
     orientation: "portrait",
     userInterfaceStyle: "light",
     newArchEnabled: true,
@@ -104,7 +104,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-dynamic-app-icon",
         {
-          default: {
+          default_icon: {
             image: "./assets/appIcons/athli-ios-icon.png",
             prerendered: true
           },
@@ -140,43 +140,43 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             image: "./assets/appIcons/athli-icon-yellow.png",
             prerendered: true
           },
-          "gradient-1": {
+          gradient_1: {
             image: "./assets/appIcons/athli-icon-gradient-1.png",
             prerendered: true
           },
-          "gradient-2": {
+          gradient_2: {
             image: "./assets/appIcons/athli-icon-gradient-2.png",
             prerendered: true
           },
-          "gradient-3": {
+          gradient_3: {
             image: "./assets/appIcons/athli-icon-gradient-3.png",
             prerendered: true
           },
-          "gradient-4": {
+          gradient_4: {
             image: "./assets/appIcons/athli-icon-gradient-4.png",
             prerendered: true
           },
-          "gradient-5": {
+          gradient_5: {
             image: "./assets/appIcons/athli-icon-gradient-5.png",
             prerendered: true
           },
-          "gradient-6": {
+          gradient_6: {
             image: "./assets/appIcons/athli-icon-gradient-6.png",
             prerendered: true
           },
-          "gradient-7": {
+          gradient_7: {
             image: "./assets/appIcons/athli-icon-gradient-7.png",
             prerendered: true
           },
-          "gradient-8": {
+          gradient_8: {
             image: "./assets/appIcons/athli-icon-gradient-8.png",
             prerendered: true
           },
-          "gradient-9": {
+          gradient_9: {
             image: "./assets/appIcons/athli-icon-gradient-9.png",
             prerendered: true
           },
-          "gradient-10": {
+          gradient_10: {
             image: "./assets/appIcons/athli-icon-gradient-10.png",
             prerendered: true
           }
@@ -236,12 +236,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             }
           ]
         }
-      ],
-      "expo-router"
+      ]
     ],
-    experiments: {
-      typedRoutes: true,
-    },
     owner: OWNER,
   };
 };

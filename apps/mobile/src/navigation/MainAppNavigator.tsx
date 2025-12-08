@@ -1,6 +1,8 @@
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { StatusBar } from 'expo-status-bar';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import {
+  createNativeStackNavigator,
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -21,6 +23,7 @@ import { SettingsScreen as CoachSettingsScreen } from '../screens/coach/settings
 import { EditLanguageScreen } from '../screens/edit/EditLanguageScreen';
 import { EditUnitsScreen } from '../screens/edit/EditUnitsScreen';
 import { EditColorSchemeScreen } from '../screens/edit/EditColorSchemeScreen';
+import { TranslucentStatusBar } from '../components/ui/TranslucentStatusBar';
 
 // Types for navigation
 export type MainTabParamList = {
@@ -36,6 +39,8 @@ export type MainStackParamList = {
   EditColorScheme: undefined;
 };
 
+type MainStackNavigationProp = NativeStackNavigationProp<MainStackParamList>;
+
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
 // Athlete screen wrappers
@@ -47,7 +52,9 @@ function AthletePerformanceScreenWrapper() {
   return <PerformanceScreen />;
 }
 
-function AthleteSettingsScreenWrapper({ navigation }: { navigation: NativeStackNavigationProp<MainStackParamList> }) {
+function AthleteSettingsScreenWrapper() {
+  const navigation = useNavigation<MainStackNavigationProp>();
+
   const handleLanguagePress = () => {
     navigation.navigate('EditLanguage');
   };
@@ -82,7 +89,9 @@ function CoachInboxScreenWrapper() {
   return <InboxScreen />;
 }
 
-function CoachSettingsScreenWrapper({ navigation }: { navigation: NativeStackNavigationProp<MainStackParamList> }) {
+function CoachSettingsScreenWrapper() {
+  const navigation = useNavigation<MainStackNavigationProp>();
+
   const handleLanguagePress = () => {
     navigation.navigate('EditLanguage');
   };
@@ -104,8 +113,39 @@ function CoachSettingsScreenWrapper({ navigation }: { navigation: NativeStackNav
   );
 }
 
+// Edit screen wrappers
+function EditLanguageScreenWrapper() {
+  const navigation = useNavigation<MainStackNavigationProp>();
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  return <EditLanguageScreen onBack={handleBack} />;
+}
+
+function EditUnitsScreenWrapper() {
+  const navigation = useNavigation<MainStackNavigationProp>();
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  return <EditUnitsScreen onBack={handleBack} />;
+}
+
+function EditColorSchemeScreenWrapper() {
+  const navigation = useNavigation<MainStackNavigationProp>();
+
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
+  return <EditColorSchemeScreen onBack={handleBack} />;
+}
+
 // Main tabs navigator with custom bottom navigation
-function MainTabsNavigator({ navigation }: { navigation: NativeStackNavigationProp<MainStackParamList> }) {
+function MainTabsNavigator() {
   const { currentView } = useView();
   const { colors, colorScheme } = useTheme();
 
@@ -133,7 +173,7 @@ function MainTabsNavigator({ navigation }: { navigation: NativeStackNavigationPr
       case 'progress':
         return <AthletePerformanceScreenWrapper />;
       case 'settings':
-        return <AthleteSettingsScreenWrapper navigation={navigation} />;
+        return <AthleteSettingsScreenWrapper />;
       default:
         return <AthleteHomeScreenWrapper />;
     }
@@ -148,7 +188,7 @@ function MainTabsNavigator({ navigation }: { navigation: NativeStackNavigationPr
       case 'inbox':
         return <CoachInboxScreenWrapper />;
       case 'settings':
-        return <CoachSettingsScreenWrapper navigation={navigation} />;
+        return <CoachSettingsScreenWrapper />;
       default:
         return <CoachClientsScreenWrapper />;
     }
@@ -177,7 +217,10 @@ function MainTabsNavigator({ navigation }: { navigation: NativeStackNavigationPr
         start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <TranslucentStatusBar
+          tint={colorScheme === 'dark' ? 'dark' : 'light'}
+          backgroundColor="transparent"
+        />
         <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <View style={styles.content}>
             {currentView === 'athlete' ? renderAthleteScreenContent() : renderCoachScreenContent()}
@@ -208,23 +251,29 @@ export function MainAppNavigator() {
         }}
       >
         <Stack.Screen name="MainTabs">
-          {({ navigation }) => <MainTabsNavigator navigation={navigation} />}
+          {() => <MainTabsNavigator />}
         </Stack.Screen>
-        <Stack.Screen name="EditLanguage">
-          {({ navigation }) => (
-            <EditLanguageScreen onBack={() => navigation.goBack()} />
-          )}
-        </Stack.Screen>
-        <Stack.Screen name="EditUnits">
-          {({ navigation }) => (
-            <EditUnitsScreen onBack={() => navigation.goBack()} />
-          )}
-        </Stack.Screen>
-        <Stack.Screen name="EditColorScheme">
-          {({ navigation }) => (
-            <EditColorSchemeScreen onBack={() => navigation.goBack()} />
-          )}
-        </Stack.Screen>
+        <Stack.Screen
+          name="EditLanguage"
+          component={EditLanguageScreenWrapper}
+          options={{
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="EditUnits"
+          component={EditUnitsScreenWrapper}
+          options={{
+            presentation: 'card',
+          }}
+        />
+        <Stack.Screen
+          name="EditColorScheme"
+          component={EditColorSchemeScreenWrapper}
+          options={{
+            presentation: 'card',
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
