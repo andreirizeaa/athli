@@ -264,7 +264,7 @@ export function SettingsScreen({
           {/* View Switch Card */}
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <SettingsOption
-              icon={<Users size={iconSize} color={iconColor} />}
+              icon={<Users size={iconSize} />}
               title={currentView === 'athlete' ? i18n.t('settings.switchToCoachView') : i18n.t('settings.switchToAthleteView')}
               onPress={() => {
                 hapticFeedback.selection();
@@ -294,7 +294,7 @@ export function SettingsScreen({
                 </View>
               ) : (
                 <View style={[styles.fallbackAvatar, { backgroundColor: colors.primary }]}>
-                  <User size={24} color="#ffffff" />
+                  <User size={24} />
                 </View>
               )}
             </View>
@@ -303,7 +303,7 @@ export function SettingsScreen({
                 <Text style={[styles.profileNameText, { color: textColor }]} numberOfLines={1}>
                   {userName || i18n.t('settings.enterName')}
                 </Text>
-                {!userName && <Pencil size={16} color={colorScheme === 'dark' ? '#FFFFFF' : '#8E8E93'} />}
+                {!userName && <Pencil size={16} />}
               </View>
             </View>
           </TouchableOpacity>
@@ -315,7 +315,7 @@ export function SettingsScreen({
         </Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SettingsOption
-            icon={<IdCard size={iconSize} color={iconColor} />}
+            icon={<IdCard size={iconSize} />}
             title={i18n.t('settings.personalDetails')}
             onPress={handlePersonalDetailsPress}
             textColor={textColor}
@@ -323,7 +323,7 @@ export function SettingsScreen({
           />
           <View style={[styles.separator, { backgroundColor: dividerColor }]} />
           <SettingsOption
-            icon={<Languages size={iconSize} color={iconColor} />}
+            icon={<Languages size={iconSize} />}
             title={i18n.t('settings.language')}
             onPress={handleLanguagePress}
             textColor={textColor}
@@ -331,7 +331,7 @@ export function SettingsScreen({
           />
           <View style={[styles.separator, { backgroundColor: dividerColor }]} />
           <SettingsOption
-            icon={<Ruler size={iconSize} color={iconColor} />}
+            icon={<Ruler size={iconSize} />}
             title={i18n.t('settings.units')}
             onPress={handleUnitsPress}
             textColor={textColor}
@@ -356,7 +356,7 @@ export function SettingsScreen({
                     justifyContent: 'center',
                   }}
                 >
-                  <User size={20} color="#ffffff" />
+                  <User size={20} />
                 </View>
               )
             }
@@ -373,7 +373,7 @@ export function SettingsScreen({
         </Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SettingsOption
-            icon={<Palette size={iconSize} color={iconColor} />}
+            icon={<Palette size={iconSize} />}
             title={i18n.t('settings.theme')}
             subtitle={getOppositeThemeLabel()}
             onPress={handleThemePress}
@@ -406,7 +406,7 @@ export function SettingsScreen({
         </Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SettingsOption
-            icon={<MailPlus size={iconSize} color={iconColor} />}
+            icon={<MailPlus size={iconSize} />}
             title={i18n.t('settings.supportEmail')}
             onPress={handleSupportEmailPress}
             textColor={textColor}
@@ -414,7 +414,7 @@ export function SettingsScreen({
           />
           <View style={[styles.separator, { backgroundColor: dividerColor }]} />
           <SettingsOption
-            icon={<Megaphone size={iconSize} color={iconColor} />}
+            icon={<Megaphone size={iconSize} />}
             title={i18n.t('settings.featureRequests')}
             onPress={handleFeatureRequestsPress}
             textColor={textColor}
@@ -428,7 +428,7 @@ export function SettingsScreen({
         </Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <SettingsOption
-            icon={<FileText size={iconSize} color={iconColor} />}
+            icon={<FileText size={iconSize} />}
             title={i18n.t('settings.termsAndConditions')}
             onPress={handleTermsOfServicePress}
             textColor={textColor}
@@ -436,7 +436,7 @@ export function SettingsScreen({
           />
           <View style={[styles.separator, { backgroundColor: dividerColor }]} />
           <SettingsOption
-            icon={<ShieldCheck size={iconSize} color={iconColor} />}
+            icon={<ShieldCheck size={iconSize} />}
             title={i18n.t('settings.privacyPolicy')}
             onPress={handlePrivacyPolicyPress}
             textColor={textColor}

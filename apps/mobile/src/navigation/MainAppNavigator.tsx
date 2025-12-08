@@ -1,11 +1,11 @@
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottomNavigationBar } from '../components/ui/BottomNavigationBar';
-import { TranslucentStatusBar } from '../components/ui/TranslucentStatusBar';
 import { useView } from '../context/ViewContext';
 import { useTheme } from '../context/ThemeContext';
 // Athlete screens
@@ -177,10 +177,7 @@ function MainTabsNavigator({ navigation }: { navigation: NativeStackNavigationPr
         start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
       >
-        <TranslucentStatusBar
-          tint={colorScheme === 'dark' ? 'dark' : 'light'}
-          backgroundColor="transparent"
-        />
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <View style={styles.content}>
             {currentView === 'athlete' ? renderAthleteScreenContent() : renderCoachScreenContent()}

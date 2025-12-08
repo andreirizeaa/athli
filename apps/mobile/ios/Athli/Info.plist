@@ -463,6 +463,10 @@
     <string>Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Athli accesses your photo library so you can upload videos for analysis, save videos recorded in the app to your photo library, download videos and for searching features.</string>
+    <key>NSUserActivityTypes</key>
+    <array>
+      <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
+    </array>
     <key>NSUserTrackingUsageDescription</key>
     <string>We use this to ensure the app works for you and others that download it by reviewing usage logs.</string>
     <key>RCTNewArchEnabled</key>
