@@ -9,7 +9,10 @@
       "package": "com.andreirizea.oneninetymonorepo"
     },
     "ios": {
-      "bundleIdentifier": "com.andreirizea.oneninetymonorepo"
+      "bundleIdentifier": "com.andreirizea.oneninetymonorepo",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }

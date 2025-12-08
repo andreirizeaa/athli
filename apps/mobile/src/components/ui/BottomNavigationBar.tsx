@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import * as Device from 'expo-device';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChartNoAxesColumn,
@@ -13,6 +15,19 @@ import {
 import type { ViewType } from '../../context/ViewContext';
 import { useTheme } from '../../context/ThemeContext';
 import i18n from '../../utils/i18n';
+
+const isLiquidGlassSupported =
+  Platform.OS === 'ios' &&
+  typeof Device.osVersion === 'string' &&
+  (() => {
+    const majorVersion = parseInt(Device.osVersion.split('.')[0] ?? '', 10);
+    if (Number.isNaN(majorVersion)) {
+      return false;
+    }
+    return majorVersion >= 26;
+  })();
+
+  console.log('isLiquidGlassSupported', isLiquidGlassSupported);
 
 interface BottomNavigationBarProps {
   viewType: ViewType;
@@ -336,12 +351,68 @@ export function BottomNavigationBar({
   const primaryColor = colors.primary;
   const primaryForegroundColor = colors.primaryForeground;
 
+  const navigationContent =
+    viewType === 'athlete' ? (
+      <AthleteNavigation
+        activeTab={athleteActiveTab}
+        onTabPress={onAthleteTabPress}
+        onAddPress={onAddPress}
+        activeColor={activeColor}
+        inactiveColor={inactiveColor}
+        labelActiveColor={labelActiveColor}
+        labelInactiveColor={labelInactiveColor}
+        primaryColor={primaryColor}
+        primaryForegroundColor={primaryForegroundColor}
+      />
+    ) : (
+      <CoachNavigation
+        activeTab={coachActiveTab}
+        onTabPress={onCoachTabPress}
+        activeColor={activeColor}
+        inactiveColor={inactiveColor}
+        labelActiveColor={labelActiveColor}
+        labelInactiveColor={labelInactiveColor}
+      />
+    );
+
+  const navigationBarStyle = [
+    styles.navigationBar,
+    {
+      backgroundColor: isLiquidGlassSupported ? 'transparent' : colors.sidebar,
+      paddingBottom: insets.bottom + 8,
+      paddingHorizontal: viewType === 'athlete' ? 40 : 0,
+    },
+  ] as const;
+
+  if (!isLiquidGlassSupported) {
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.sidebar,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.separator,
+            {
+              backgroundColor: colors.border,
+            },
+          ]}
+        />
+        <View style={navigationBarStyle}>{navigationContent}</View>
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
         styles.container,
         {
-          backgroundColor: colors.sidebar,
+          backgroundColor: 'transparent',
         },
       ]}
     >
@@ -353,39 +424,9 @@ export function BottomNavigationBar({
           },
         ]}
       />
-      <View
-        style={[
-          styles.navigationBar,
-          {
-            backgroundColor: colors.sidebar,
-            paddingBottom: insets.bottom + 8,
-            paddingHorizontal: viewType === 'athlete' ? 40 : 0,
-          },
-        ]}
-      >
-        {viewType === 'athlete' ? (
-          <AthleteNavigation
-            activeTab={athleteActiveTab}
-            onTabPress={onAthleteTabPress}
-            onAddPress={onAddPress}
-            activeColor={activeColor}
-            inactiveColor={inactiveColor}
-            labelActiveColor={labelActiveColor}
-            labelInactiveColor={labelInactiveColor}
-            primaryColor={primaryColor}
-            primaryForegroundColor={primaryForegroundColor}
-          />
-        ) : (
-          <CoachNavigation
-            activeTab={coachActiveTab}
-            onTabPress={onCoachTabPress}
-            activeColor={activeColor}
-            inactiveColor={inactiveColor}
-            labelActiveColor={labelActiveColor}
-            labelInactiveColor={labelInactiveColor}
-          />
-        )}
-      </View>
+      <BlurView intensity={80} tint="systemMaterial" style={navigationBarStyle}>
+        {navigationContent}
+      </BlurView>
     </View>
   );
 }
