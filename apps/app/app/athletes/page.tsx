@@ -153,9 +153,9 @@ const AthletesPage = () => {
   const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false);
   const [filteredCount, setFilteredCount] = useState<number>(mockAthletes.length);
   const itemsPerPage = 25;
-  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const copyTimeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const inviteLinkCopyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const copyTimeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const inviteLinkCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleToggleAthlete = (athleteId: string) => {
     setSelectedAthletes((prev) => {
