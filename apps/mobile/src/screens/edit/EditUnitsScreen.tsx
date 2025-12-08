@@ -61,7 +61,7 @@ export function EditUnitsScreen({ onBack }: EditUnitsScreenProps) {
             onBack();
           }}
         >
-          <ChevronLeft size={24} color={textColor} />
+          <ChevronLeft size={24} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textColor }]}>{i18n.t('settings.units')}</Text>
         <View style={styles.placeholder} />

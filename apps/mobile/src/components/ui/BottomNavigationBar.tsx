@@ -1,7 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
-import * as Device from 'expo-device';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChartNoAxesColumn,
@@ -15,19 +13,6 @@ import {
 import type { ViewType } from '../../context/ViewContext';
 import { useTheme } from '../../context/ThemeContext';
 import i18n from '../../utils/i18n';
-
-const isLiquidGlassSupported =
-  Platform.OS === 'ios' &&
-  typeof Device.osVersion === 'string' &&
-  (() => {
-    const majorVersion = parseInt(Device.osVersion.split('.')[0] ?? '', 10);
-    if (Number.isNaN(majorVersion)) {
-      return false;
-    }
-    return majorVersion >= 26;
-  })();
-
-  console.log('isLiquidGlassSupported', isLiquidGlassSupported);
 
 interface BottomNavigationBarProps {
   viewType: ViewType;
@@ -64,9 +49,9 @@ function AthleteTabIcon({
   const color = isActive ? activeColor : inactiveColor;
 
   const icons = {
-    home: <House size={size} color={color} />,
-    progress: <ChartNoAxesColumn size={size} color={color} />,
-    settings: <Settings size={size} color={color} />,
+    home: <House size={size}/>,
+    progress: <ChartNoAxesColumn size={size}/>,
+    settings: <Settings size={size}/>,
   };
 
   return icons[name];
@@ -82,10 +67,10 @@ function CoachTabIcon({
   const color = isActive ? activeColor : inactiveColor;
 
   const icons = {
-    clients: <Users size={size} color={color} />,
-    calendar: <Calendar size={size} color={color} />,
-    inbox: <Inbox size={size} color={color} />,
-    settings: <Settings size={size} color={color} />,
+    clients: <Users size={size}/>,
+    calendar: <Calendar size={size}/>,
+    inbox: <Inbox size={size}/>,
+    settings: <Settings size={size}/>,
   };
 
   return icons[name];
@@ -201,7 +186,7 @@ function AthleteNavigation({
         onPress={onAddPress}
         activeOpacity={0.7}
       >
-        <Plus size={22} color={primaryForegroundColor} />
+        <Plus size={22} />
       </TouchableOpacity>
     </>
   );
@@ -351,68 +336,12 @@ export function BottomNavigationBar({
   const primaryColor = colors.primary;
   const primaryForegroundColor = colors.primaryForeground;
 
-  const navigationContent =
-    viewType === 'athlete' ? (
-      <AthleteNavigation
-        activeTab={athleteActiveTab}
-        onTabPress={onAthleteTabPress}
-        onAddPress={onAddPress}
-        activeColor={activeColor}
-        inactiveColor={inactiveColor}
-        labelActiveColor={labelActiveColor}
-        labelInactiveColor={labelInactiveColor}
-        primaryColor={primaryColor}
-        primaryForegroundColor={primaryForegroundColor}
-      />
-    ) : (
-      <CoachNavigation
-        activeTab={coachActiveTab}
-        onTabPress={onCoachTabPress}
-        activeColor={activeColor}
-        inactiveColor={inactiveColor}
-        labelActiveColor={labelActiveColor}
-        labelInactiveColor={labelInactiveColor}
-      />
-    );
-
-  const navigationBarStyle = [
-    styles.navigationBar,
-    {
-      backgroundColor: isLiquidGlassSupported ? 'transparent' : colors.sidebar,
-      paddingBottom: insets.bottom + 8,
-      paddingHorizontal: viewType === 'athlete' ? 40 : 0,
-    },
-  ] as const;
-
-  if (!isLiquidGlassSupported) {
-    return (
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: colors.sidebar,
-          },
-        ]}
-      >
-        <View
-          style={[
-            styles.separator,
-            {
-              backgroundColor: colors.border,
-            },
-          ]}
-        />
-        <View style={navigationBarStyle}>{navigationContent}</View>
-      </View>
-    );
-  }
-
   return (
     <View
       style={[
         styles.container,
         {
-          backgroundColor: 'transparent',
+          backgroundColor: colors.sidebar,
         },
       ]}
     >
@@ -424,9 +353,39 @@ export function BottomNavigationBar({
           },
         ]}
       />
-      <BlurView intensity={80} tint="systemMaterial" style={navigationBarStyle}>
-        {navigationContent}
-      </BlurView>
+      <View
+        style={[
+          styles.navigationBar,
+          {
+            backgroundColor: colors.sidebar,
+            paddingBottom: insets.bottom + 8,
+            paddingHorizontal: viewType === 'athlete' ? 40 : 0,
+          },
+        ]}
+      >
+        {viewType === 'athlete' ? (
+          <AthleteNavigation
+            activeTab={athleteActiveTab}
+            onTabPress={onAthleteTabPress}
+            onAddPress={onAddPress}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+            labelActiveColor={labelActiveColor}
+            labelInactiveColor={labelInactiveColor}
+            primaryColor={primaryColor}
+            primaryForegroundColor={primaryForegroundColor}
+          />
+        ) : (
+          <CoachNavigation
+            activeTab={coachActiveTab}
+            onTabPress={onCoachTabPress}
+            activeColor={activeColor}
+            inactiveColor={inactiveColor}
+            labelActiveColor={labelActiveColor}
+            labelInactiveColor={labelInactiveColor}
+          />
+        )}
+      </View>
     </View>
   );
 }

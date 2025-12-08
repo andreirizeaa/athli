@@ -88,7 +88,7 @@ export function EditColorSchemeScreen({ onBack }: EditColorSchemeScreenProps) {
             handleBack();
           }}
         >
-          <ChevronLeft size={24} color={textColor} />
+          <ChevronLeft size={24} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: textColor }]}>{i18n.t('settings.colorScheme')}</Text>
         <View style={styles.placeholder} />
@@ -124,7 +124,7 @@ export function EditColorSchemeScreen({ onBack }: EditColorSchemeScreenProps) {
                   isSelected
                     ? { backgroundColor: selectedButtonBackground }
                     : { backgroundColor: buttonBackground },
-                  isSaving && styles.disabledColorSchemeButton,
+                  ...(isSaving ? [styles.disabledColorSchemeButton] : []),
                 ]}
               >
                 <View style={styles.colorSchemeContent}>
@@ -140,7 +140,7 @@ export function EditColorSchemeScreen({ onBack }: EditColorSchemeScreenProps) {
                     style={[
                       styles.colorCircle,
                       { backgroundColor: themeColor },
-                      isSelected && styles.selectedColorCircle,
+                      ...(isSelected ? [styles.selectedColorCircle] : []),
                     ]}
                   />
                 </View>
