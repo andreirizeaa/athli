@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
-import './app/notificationsBackground';
-import { BACKGROUND_NOTIFICATION_TASK } from './app/notificationsBackground';
-import { initBackgroundFetch } from './app/backgroundFetch';
+import './src/lib/notificationsBackground';
+import { BACKGROUND_NOTIFICATION_TASK } from './src/lib/notificationsBackground';
+import { initBackgroundFetch } from './src/lib/backgroundFetch';
 import { Layout } from './layout';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';

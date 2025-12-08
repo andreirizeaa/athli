@@ -236,7 +236,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             }
           ]
         }
-      ]
+      ],
+      "expo-router"
     ],
     experiments: {
       typedRoutes: true,
