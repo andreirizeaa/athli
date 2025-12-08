@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { StatusBar } from 'expo-status-bar';
 import './src/lib/notificationsBackground';
 import { BACKGROUND_NOTIFICATION_TASK } from './src/lib/notificationsBackground';
 import { initBackgroundFetch } from './src/lib/backgroundFetch';
@@ -42,6 +44,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style="dark" translucent={Platform.OS === 'android'} backgroundColor="transparent" />
       <SafeAreaProvider>
         <LanguageProvider>
           <ViewProvider>
