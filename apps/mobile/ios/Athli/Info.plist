@@ -402,9 +402,7 @@
         <key>CFBundleURLName</key>
         <string>Google Sign-In</string>
         <key>CFBundleURLSchemes</key>
-        <array>
-          <string>com.googleusercontent.apps.351143754060-khg5jl9ul4or2qjbie625g309531qe86</string>
-        </array>
+        <array/>
       </dict>
       <dict>
         <key>CFBundleURLSchemes</key>
@@ -469,8 +467,6 @@
     </array>
     <key>NSUserTrackingUsageDescription</key>
     <string>We use this to ensure the app works for you and others that download it by reviewing usage logs.</string>
-    <key>RCTNewArchEnabled</key>
-    <true/>
     <key>SKIncludeConsumableInAppPurchaseHistory</key>
     <true/>
     <key>UIApplicationShortcutItems</key>
