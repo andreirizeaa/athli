@@ -6,13 +6,10 @@ import { WelcomeModal } from '../../screens/application/settings/WelcomeModal';
 import { TutorialProvider, useTutorial } from '../../context/TutorialContext';
 import { TutorialLiftSeeder } from '../../context/LiftDataContext';
 import { TutorialOverlay } from '../ui/overlays/TutorialOverlay';
-import { PaymentScreen } from '../../screens/payment/PaymentScreen';
-import { usePurchases } from '../../context/PurchasesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface MainAppLayoutProps {
   children?: React.ReactNode;
-  onLogout?: () => void;
   isNewUser?: boolean;
   isAppVisible?: boolean; // controls showing UI after splash
 }
@@ -26,17 +23,12 @@ export function MainAppLayout(props: MainAppLayoutProps) {
   );
 }
 
-function MainAppLayoutInner({ onLogout, isAppVisible = false }: MainAppLayoutProps) {
+function MainAppLayoutInner({ isAppVisible = false }: MainAppLayoutProps) {
   const { userDetails } = useUserDetails();
-  const { hasSubscription, customerInfo, refreshCustomerInfo, syncPurchases } = usePurchases();
   const tutorial = useTutorial();
 
   const [showWelcome, setShowWelcome] = React.useState(false);
-  const [showPaymentScreen, setShowPaymentScreen] = React.useState(false);
   const [isVersionCheckCleared, setIsVersionCheckCleared] = React.useState(false);
-  const [previousSubscriptionStatus, setPreviousSubscriptionStatus] = React.useState<
-    boolean | null
-  >(null);
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -71,44 +63,6 @@ function MainAppLayoutInner({ onLogout, isAppVisible = false }: MainAppLayoutPro
     setShowWelcome(shouldShow);
   }, [userDetails, isAppVisible]);
 
-  // 🔄 Monitor subscription changes and show paywall when subscription is lost
-  React.useEffect(() => {
-    // Skip if we don't have customer info yet or if this is the initial load
-    if (!customerInfo) return;
-
-    // Initialize previous subscription status on first load
-    if (previousSubscriptionStatus === null) {
-      setPreviousSubscriptionStatus(hasSubscription);
-      return;
-    }
-
-    // Check if subscription status changed from active to inactive
-    if (previousSubscriptionStatus === true && hasSubscription === false) {
-      // User lost their subscription, show paywall
-      setShowPaymentScreen(true);
-    }
-
-    // Update previous subscription status
-    setPreviousSubscriptionStatus(hasSubscription);
-  }, [hasSubscription, customerInfo, previousSubscriptionStatus]);
-
-  // 🔄 Refresh subscription status when app becomes active
-  React.useEffect(() => {
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active' && customerInfo && previousSubscriptionStatus !== null) {
-        try {
-          // Force sync with RevenueCat servers when app becomes active
-          await syncPurchases();
-          await refreshCustomerInfo();
-        } catch (error) {
-          // Silent fail - not critical if this fails
-        }
-      }
-    };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
-  }, [customerInfo, previousSubscriptionStatus, refreshCustomerInfo, syncPurchases]);
 
   // 🚀 Start tutorial ONLY when user taps "Get Started"
   const handleGetStarted = () => {
@@ -121,41 +75,10 @@ function MainAppLayoutInner({ onLogout, isAppVisible = false }: MainAppLayoutPro
   };
 
   const handleAddPress = () => {
-    // Check current subscription status immediately (non-blocking)
-    if (!hasSubscription) {
-      setShowPaymentScreen(true);
-      return true;
-    }
-
-    // If we have subscription, do background sync to ensure it's still valid
-    // This runs in the background without blocking the UI
-    syncPurchases()
-      .then(() => refreshCustomerInfo())
-      .then(() => {
-        // After background sync, check if subscription status changed
-        // If it changed to false, we'll catch it in the subscription change listener
-      })
-      .catch((error) => {
-        // Silent fail - not critical if background sync fails
-      });
-
+    // Always allow adding - no subscription check
     return false;
   };
 
-  const handlePaymentComplete = () => {
-    setShowPaymentScreen(false);
-    // Reset subscription tracking after payment completion
-    setPreviousSubscriptionStatus(hasSubscription);
-  };
-
-  const handlePaymentDismiss = () => {
-    setShowPaymentScreen(false);
-    // Don't reset subscription tracking on dismiss - user still needs to pay
-  };
-
-  if (showPaymentScreen) {
-    return <PaymentScreen onComplete={handlePaymentComplete} />;
-  }
 
   // Don't render MainAppNavigator until version check time is cleared
   if (!isVersionCheckCleared) {
@@ -168,7 +91,7 @@ function MainAppLayoutInner({ onLogout, isAppVisible = false }: MainAppLayoutPro
       <WelcomeModal isVisible={showWelcome} onGetStarted={handleGetStarted} />
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <MainAppNavigator onLogout={onLogout} onAddPress={handleAddPress} />
+        <MainAppNavigator onAddPress={handleAddPress} />
       </Animated.View>
 
       {/* Tutorial always available; it only starts when user taps Get Started */}

@@ -1,108 +1,58 @@
-import React, { useEffect } from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Platform } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withDelay,
-  runOnJS,
-  withSequence,
-} from 'react-native-reanimated';
-import { appColors } from '../../../constants/appColorScheme';
+import React, { useEffect, useRef } from 'react';
+import { Animated, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 
 interface AnimatedOptionButtonProps {
-  children: React.ReactNode;
-  onPress: () => void;
   isSelected: boolean;
-  delay: number;
-  style?: any;
-  activeOpacity?: number;
-  hasIcon?: boolean; // New prop to indicate if the button has an icon
-  disabled?: boolean; // New prop to disable the button
+  delay?: number;
+  onPress: () => void;
+  disabled?: boolean;
+  style?: ViewStyle | ViewStyle[];
+  children: React.ReactNode;
 }
 
 export function AnimatedOptionButton({
-  children,
-  onPress,
   isSelected,
-  delay,
+  delay = 0,
+  onPress,
+  disabled = false,
   style,
-  activeOpacity = 0.7,
-  hasIcon = false, // Default to false
-  disabled = false, // Default to false
+  children,
 }: AnimatedOptionButtonProps) {
-  const translateY = useSharedValue(delay === 0 ? 0 : 30);
-  const opacity = useSharedValue(delay === 0 ? 1 : 0);
-  const scale = useSharedValue(1);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   useEffect(() => {
-    // If delay is 0, don't animate - show immediately
-    if (delay === 0) return;
-
-    // Animate in with a staggered delay
-    translateY.value = withDelay(
-      delay,
-      withSpring(0, {
-        damping: 25,
-        stiffness: 200,
-        mass: 0.6,
-      })
-    );
-
-    opacity.value = withDelay(
-      delay,
-      withSpring(1, {
-        damping: 25,
-        stiffness: 200,
-      })
-    );
-  }, [delay]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }, { scale: scale.value }],
-      opacity: opacity.value,
-    };
-  });
-
-  const handlePress = () => {
-    // Don't handle press if disabled
-    if (disabled) return;
-
-    // Call the original onPress function immediately to update selection state
-    onPress();
-
-    // Bounce animation: scale down to 0.95, then back to 1 (slightly faster)
-    scale.value = withSequence(
-      withSpring(0.95, {
-        damping: 18,
-        stiffness: 250,
-        mass: 0.6,
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        delay,
+        useNativeDriver: true,
       }),
-      withSpring(1, {
-        damping: 18,
-        stiffness: 250,
-        mass: 0.6,
-      })
-    );
-  };
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        delay,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 7,
+      }),
+    ]).start();
+  }, [delay, fadeAnim, scaleAnim]);
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View
+      style={[
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
       <TouchableOpacity
-        style={[
-          styles.button,
-          {
-            backgroundColor: isSelected
-              ? appColors.onboarding.button.active.background
-              : appColors.onboarding.button.inactive.background,
-            paddingVertical: hasIcon ? 14 : 22, // Conditional padding
-          },
-          style,
-        ]}
-        onPress={handlePress}
-        activeOpacity={disabled ? 1 : activeOpacity}
+        onPress={onPress}
         disabled={disabled}
+        activeOpacity={0.7}
+        style={style}
       >
         {children}
       </TouchableOpacity>
@@ -110,10 +60,3 @@ export function AnimatedOptionButton({
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    // borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: 24,
-  },
-});

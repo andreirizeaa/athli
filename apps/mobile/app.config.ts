@@ -1,5 +1,6 @@
 import { ConfigContext, ExpoConfig } from "expo/config";
 import { version } from "./package.json";
+import 'dotenv/config';
 
 // Replace these with your EAS project ID and project slug.
 // You can find them at https://expo.dev/accounts/[account]/projects/[project].
@@ -84,9 +85,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       fallbackToCacheTimeout: 0,
       url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
     },
-    runtimeVersion: {
-      policy: "appVersion",
-    },
+    runtimeVersion: version,
     extra: {
       eas: {
         projectId: EAS_PROJECT_ID,
@@ -237,7 +236,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             }
           ]
         }
-      ]
+      ],
+      "expo-router"
     ],
     experiments: {
       typedRoutes: true,
