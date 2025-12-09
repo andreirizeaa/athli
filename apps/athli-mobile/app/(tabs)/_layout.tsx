@@ -21,43 +21,43 @@ export default function TabLayout() {
     // NativeTabs does not support an explicit initialRouteName prop, so we keep
     // the first trigger as "training" to make it the default.
     return (
-      <NativeTabs>
-        <NativeTabs.Trigger name="training">
-          <Icon sf="dumbbell.fill" />
-          <Label>Training</Label>
-        </NativeTabs.Trigger>
+        <NativeTabs>
+          <NativeTabs.Trigger name="training">
+            <Icon sf="dumbbell.fill" />
+            <Label>Training</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="progress">
-          <Icon sf="chart.bar.fill" />
-          <Label>Progress</Label>
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="progress">
+            <Icon sf="chart.bar.fill" />
+            <Label>Progress</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="inbox">
-          <Icon sf="envelope.fill" />
-          <Label>Inbox</Label>
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="inbox">
+            <Icon sf="envelope.fill" />
+            <Label>Inbox</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="profile">
-          <Icon sf="person.crop.circle.fill" />
-          <Label>Profile</Label>
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="profile">
+            <Icon sf="person.crop.circle.fill" />
+            <Label>Profile</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="add" role="search">
-          <Icon sf="plus" />
-          <Label>Add</Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
+          <NativeTabs.Trigger name="add" role="search">
+            <Icon sf="plus" />
+            <Label>Add</Label>
+          </NativeTabs.Trigger>
+        </NativeTabs>
     );
   }
 
   return (
-    <Tabs initialRouteName="training" tabBar={(props) => <FallbackTabBar {...props} />}>
-      <Tabs.Screen name="training" options={{ title: 'Training', headerShown: false }} />
-      <Tabs.Screen name="progress" options={{ title: 'Progress', headerShown: false }} />
-      <Tabs.Screen name="inbox" options={{ title: 'Inbox', headerShown: false }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', headerShown: false }} />
-      <Tabs.Screen name="add" options={{ title: 'Add', href: null }} />
-    </Tabs>
+      <Tabs initialRouteName="training" tabBar={(props) => <FallbackTabBar {...props} />}>
+        <Tabs.Screen name="training" options={{ title: 'Training', headerShown: false }} />
+        <Tabs.Screen name="progress" options={{ title: 'Progress', headerShown: false }} />
+        <Tabs.Screen name="inbox" options={{ title: 'Inbox', headerShown: false }} />
+        <Tabs.Screen name="profile" options={{ title: 'Profile', headerShown: false }} />
+        <Tabs.Screen name="add" options={{ title: 'Add', href: null }} />
+      </Tabs>
   );
 }
 
