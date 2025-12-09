@@ -1,7 +1,7 @@
 import React from 'react';
-import { View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Platform, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import * as NavigationBar from 'expo-navigation-bar';
 import { MainAppNavigator } from './src/navigation/MainAppNavigator';
 import { useTheme } from './src/context/ThemeContext';
 
@@ -22,16 +22,22 @@ export function Layout() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Configure Android navigation bar for edge-to-edge
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setPositionAsync('absolute');
+      NavigationBar.setBackgroundColorAsync('#00000000');
+    }
+  }, []);
+
   return (
-    <SafeAreaProvider>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.background,
-        }}
-      >
-        <MainAppNavigator />
-      </View>
-    </SafeAreaProvider>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+      }}
+    >
+      <MainAppNavigator />
+    </View>
   );
 }

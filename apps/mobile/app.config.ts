@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     name: name,
     version, // Automatically bump your project version with `npm version patch`, `npm version minor` or `npm version major`.
     slug: PROJECT_SLUG, // Must be consistent across all environments.
-    platforms: ["ios"], // iPhone-only
+    platforms: ["ios", "android"], // iPhone-only
     orientation: "portrait",
     userInterfaceStyle: "light",
     newArchEnabled: true,
@@ -77,10 +77,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.ACCESS_MEDIA_LOCATION"
-      ]
+      ],
+    },
+    androidStatusBar: {
+      translucent: true,
+      backgroundColor: "#00000000",
+      barStyle: "dark-content",
+    },
+    androidNavigationBar: {
+      backgroundColor: "#00000000",
     },
     updates: {
-      enabled: true,
+      enabled: process.env.APP_ENV === "production" || process.env.APP_ENV === "preview",
       checkAutomatically: "ON_LOAD",
       fallbackToCacheTimeout: 0,
       url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
@@ -101,92 +109,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "expo-notifications",
       "expo-task-manager",
       "react-native-vision-camera",
-      [
-        "expo-dynamic-app-icon",
-        {
-          default: {
-            image: "./assets/appIcons/athli-ios-icon.png",
-            prerendered: true
-          },
-          black: {
-            image: "./assets/appIcons/athli-icon-black.png",
-            prerendered: true
-          },
-          blue: {
-            image: "./assets/appIcons/athli-icon-blue.png",
-            prerendered: true
-          },
-          green: {
-            image: "./assets/appIcons/athli-icon-green.png",
-            prerendered: true
-          },
-          orange: {
-            image: "./assets/appIcons/athli-icon-orange.png",
-            prerendered: true
-          },
-          pink: {
-            image: "./assets/appIcons/athli-icon-pink.png",
-            prerendered: true
-          },
-          purple: {
-            image: "./assets/appIcons/athli-icon-purple.png",
-            prerendered: true
-          },
-          red: {
-            image: "./assets/appIcons/athli-icon-red.png",
-            prerendered: true
-          },
-          yellow: {
-            image: "./assets/appIcons/athli-icon-yellow.png",
-            prerendered: true
-          },
-          "gradient-1": {
-            image: "./assets/appIcons/athli-icon-gradient-1.png",
-            prerendered: true
-          },
-          "gradient-2": {
-            image: "./assets/appIcons/athli-icon-gradient-2.png",
-            prerendered: true
-          },
-          "gradient-3": {
-            image: "./assets/appIcons/athli-icon-gradient-3.png",
-            prerendered: true
-          },
-          "gradient-4": {
-            image: "./assets/appIcons/athli-icon-gradient-4.png",
-            prerendered: true
-          },
-          "gradient-5": {
-            image: "./assets/appIcons/athli-icon-gradient-5.png",
-            prerendered: true
-          },
-          "gradient-6": {
-            image: "./assets/appIcons/athli-icon-gradient-6.png",
-            prerendered: true
-          },
-          "gradient-7": {
-            image: "./assets/appIcons/athli-icon-gradient-7.png",
-            prerendered: true
-          },
-          "gradient-8": {
-            image: "./assets/appIcons/athli-icon-gradient-8.png",
-            prerendered: true
-          },
-          "gradient-9": {
-            image: "./assets/appIcons/athli-icon-gradient-9.png",
-            prerendered: true
-          },
-          "gradient-10": {
-            image: "./assets/appIcons/athli-icon-gradient-10.png",
-            prerendered: true
-          }
-        }
-      ],
+      "./plugins/withVisionCameraMonorepo",
+      "./plugins/withExpoUpdatesMonorepo",
       [
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 26
+            "minSdkVersion": 26,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "edgeToEdgeEnabled": true
           },
           "ios": {
               "deploymentTarget": "16.0"
@@ -236,12 +168,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             }
           ]
         }
-      ],
-      "expo-router"
+      ]
     ],
-    experiments: {
-      typedRoutes: true,
-    },
     owner: OWNER,
   };
 };

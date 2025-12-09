@@ -1,0 +1,27 @@
+# Ignore native directories in mobile app
+apps/mobile/ios
+apps/mobile/android
+
+# Ignore expo cache
+apps/mobile/.expo
+**/.expo
+
+# Ignore node_modules (EAS handles this)
+**/node_modules
+
+# Ignore build artifacts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Ignore IDE
+.idea
+.vscode
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+

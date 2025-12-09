@@ -1,5 +1,3 @@
-import { useFocusEffect } from '@react-navigation/native';
-import * as DynamicAppIcon from 'expo-dynamic-app-icon';
 import { Image } from 'expo-image';
 import * as Linking from 'expo-linking';
 import {
@@ -15,7 +13,7 @@ import {
   User,
   Users,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -41,7 +39,6 @@ interface SettingsScreenProps {
   onColorSchemePress?: () => void;
   onSharePress?: () => void;
   onEditNamePress?: () => void;
-  onAppIconPress?: () => void;
 }
 
 interface SettingsOptionProps {
@@ -91,43 +88,16 @@ export function SettingsScreen({
   onColorSchemePress,
   onSharePress,
   onEditNamePress,
-  onAppIconPress,
 }: SettingsScreenProps) {
   const insets = useSafeAreaInsets();
   const { colors, colorScheme, mode, setMode, theme } = useTheme();
   const { currentView, switchView } = useView();
-  const [currentAppIcon, setCurrentAppIcon] = useState<string>('default');
-  const [userName, setUserName] = useState<string>('');
-
-  // App icon mapping - placeholder paths, adjust as needed
-  // Note: These paths may need to be adjusted based on actual asset locations
-  const APP_ICONS: Record<string, any> = {
-    default: null, // Will be handled gracefully
-  };
-
-  const getAppIconSource = (iconName: string) => {
-    const icon = APP_ICONS[iconName] || APP_ICONS.default;
-    return icon || null;
-  };
+  const [userName, setUserName] = React.useState<string>('');
 
   const iconSize = 26;
   const iconColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
   const textColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
   const dividerColor = colorScheme === 'dark' ? colors.border : '#E5E5EA';
-
-
-  // Load current app icon on mount
-  useEffect(() => {
-    const loadCurrentAppIcon = async () => {
-      try {
-        const icon = await DynamicAppIcon.getAppIcon();
-        setCurrentAppIcon(icon || 'default');
-      } catch (error) {
-        setCurrentAppIcon('default');
-      }
-    };
-    loadCurrentAppIcon();
-  }, []);
 
   // Load user name
   useEffect(() => {
@@ -145,21 +115,6 @@ export function SettingsScreen({
     };
     loadUserName();
   }, []);
-
-  // Refresh app icon when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      const refreshData = async () => {
-        try {
-          const icon = await DynamicAppIcon.getAppIcon();
-          setCurrentAppIcon(icon || 'default');
-        } catch (error) {
-          // Silently handle error
-        }
-      };
-      refreshData();
-    }, []),
-  );
 
 
   const handleUnitsPress = () => {
@@ -219,10 +174,6 @@ export function SettingsScreen({
 
   const openEditName = () => {
     onEditNamePress?.();
-  };
-
-  const handleAppIconPress = () => {
-    onAppIconPress?.();
   };
 
   const handleThemePress = () => {
@@ -334,34 +285,6 @@ export function SettingsScreen({
             icon={<Ruler size={iconSize} />}
             title={i18n.t('settings.units')}
             onPress={handleUnitsPress}
-            textColor={textColor}
-            iconColor={iconColor}
-          />
-          <View style={[styles.separator, { backgroundColor: dividerColor }]} />
-          <SettingsOption
-            icon={
-              getAppIconSource(currentAppIcon) ? (
-                <Image
-                  source={getAppIconSource(currentAppIcon)}
-                  style={{ width: 36, height: 36, borderRadius: 23 * 0.4453125 }}
-                />
-              ) : (
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 23 * 0.4453125,
-                    backgroundColor: colors.primary,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <User size={20} />
-                </View>
-              )
-            }
-            title={i18n.t('settings.appIcon')}
-            onPress={handleAppIconPress}
             textColor={textColor}
             iconColor={iconColor}
           />
