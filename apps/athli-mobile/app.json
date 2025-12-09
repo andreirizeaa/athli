@@ -26,6 +26,11 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.andreirizea.athlimobile"
     },
+    "androidStatusBar": {
+      "translucent": true,
+      "backgroundColor": "transparent",
+      "barStyle": "dark-content"
+    },
     "web": {
       "bundler": "metro",
       "output": "static",
