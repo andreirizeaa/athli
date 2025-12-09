@@ -44,6 +44,8 @@ next-env.d.ts
 # turbo
 .turbo/
 
+.expo/
+
 # expo / react-native (athli-mobile)
 apps/athli-mobile/.expo/
 apps/athli-mobile/.expo-shared/
