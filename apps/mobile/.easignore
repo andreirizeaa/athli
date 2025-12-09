@@ -1,0 +1,24 @@
+# Ignore native directories - EAS will run prebuild to generate fresh ones
+ios
+android
+
+# Ignore local development files
+.expo
+node_modules
+*.local
+
+# Ignore build artifacts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Ignore IDE
+.idea
+.vscode
+
+# Ignore OS files
+.DS_Store
+Thumbs.db

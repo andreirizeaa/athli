@@ -43,3 +43,8 @@ next-env.d.ts
 
 # turbo
 .turbo/
+
+apps/mobile/.expo/
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/expo*
