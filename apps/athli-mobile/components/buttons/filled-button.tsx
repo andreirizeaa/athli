@@ -1,0 +1,61 @@
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+
+import { typography } from '@/constants/typography';
+import { useThemePreference } from '@/contexts/useColorScheme';
+
+type FilledButtonProps = {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  style?: ViewStyle;
+  textStyle?: TextStyle;
+};
+
+export const FilledButton = ({ label, onPress, disabled = false, style, textStyle }: FilledButtonProps) => {
+  const { colors: themeColors } = useThemePreference();
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.button,
+        {
+          backgroundColor: disabled ? themeColors.surfaceSecondary : themeColors.primary,
+          opacity: disabled ? 0.5 : 1,
+        },
+        style,
+      ]}
+      activeOpacity={0.8}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Text
+        style={[
+          styles.buttonText,
+          {
+            color: disabled ? themeColors.mutedText : themeColors.primaryForeground,
+          },
+          textStyle,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  button: {
+    flex: 1,
+    borderRadius: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    ...typography.p1,
+    fontWeight: '600',
+  },
+});
+

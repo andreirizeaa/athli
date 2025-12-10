@@ -14,6 +14,7 @@ import {
 } from '@/contexts/useColorScheme';
 import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
+import { View } from 'react-native';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -62,7 +63,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { primaryColor, colors } = useThemePreference();
+  const { primaryColor } = useThemePreference();
 
   const navigationTheme =
     colorScheme === 'dark'
@@ -71,6 +72,7 @@ function RootLayoutNav() {
           colors: {
             ...DarkTheme.colors,
             primary: primaryColor,
+            background: 'transparent',
           },
         }
       : {
@@ -78,6 +80,7 @@ function RootLayoutNav() {
           colors: {
             ...DefaultTheme.colors,
             primary: primaryColor,
+            background: 'transparent',
           },
         };
 
@@ -85,12 +88,20 @@ function RootLayoutNav() {
     <ThemeProvider value={navigationTheme}>
       <StatusBar
         style={colorScheme === 'dark' ? 'light' : 'dark'}
-        backgroundColor={colors.pageBackground}
+        translucent
+        backgroundColor="transparent"
       />
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="preferences" options={{ headerShown: false }} />
-        </Stack>
-      </ThemeProvider>
+      <Stack
+        screenOptions={{
+          contentStyle: {
+            backgroundColor: 'transparent',
+          },
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="preferences" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
+      </Stack>
+    </ThemeProvider>
   );
 }
