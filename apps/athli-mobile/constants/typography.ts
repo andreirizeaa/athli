@@ -23,7 +23,7 @@ export const typography: Record<TextVariant, TypographyStyle> = {
   h8: { fontSize: 14, fontWeight: '600', lineHeight: 20, fontFamily: headingFontFamily },
 
   // Paragraphs: body text scale (all with body font)
-  p1: { fontSize: 16, fontWeight: '500', lineHeight: 24, fontFamily: bodyFontFamily },
+  p1: { fontSize: 17, fontWeight: '500', lineHeight: 24, fontFamily: bodyFontFamily },
   p2: { fontSize: 16, fontWeight: '400', lineHeight: 22, fontFamily: bodyFontFamily },
   p3: { fontSize: 14, fontWeight: '400', lineHeight: 20, fontFamily: bodyFontFamily },
   p4: { fontSize: 13, fontWeight: '400', lineHeight: 18, fontFamily: bodyFontFamily },
@@ -40,7 +40,6 @@ export const getTypographyStyle = (variant: TextVariant): TypographyStyle => {
 export type IconSizeVariant =
   | 'tabBarIcons'
   | 'tabBarIconsIOS'
-  | 'settingsIcons'
   | 'listIcons'
   | 'modalIcons'
   | 'smallIcons'
@@ -52,8 +51,6 @@ export const iconSizes: Record<IconSizeVariant, number> = {
   tabBarIcons: 26,
   // Tab bar icons for iOS FallbackTabBar
   tabBarIconsIOS: 30,
-  // Main settings/profile icons
-  settingsIcons: 24,
   // List chevrons and navigation indicators
   listIcons: 20,
   // Modal buttons, checkmarks, appearance mode icons
