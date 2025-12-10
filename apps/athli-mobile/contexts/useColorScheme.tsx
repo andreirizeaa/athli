@@ -42,11 +42,15 @@ export const ThemePreferenceProvider = ({ children }: { children: ReactNode }) =
     [preset],
   );
 
-  const primaryColor = activePreset.colors[0];
   const colors = useMemo(
     () => createPresetPalette(preset, effectiveScheme),
     [preset, effectiveScheme],
   );
+  
+  // Use palette primary color which adapts to light/dark mode correctly
+  // For default theme: black (#000000) in light mode, white (#FFFFFF) in dark mode
+  // For other themes: uses the theme's color
+  const primaryColor = colors.primary;
   const primarySoftColor = colors.primarySoft;
 
   const value: ThemePreferenceContextValue = useMemo(
