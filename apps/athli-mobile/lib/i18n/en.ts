@@ -31,6 +31,7 @@ export const en = {
   profile: {
     title: 'Profile',
     coachView: 'Coach view',
+    viewCoachesArea: 'View Coaches Area',
     enterYourName: 'Enter your name',
     memberSince: 'Member since',
     account: 'Account',
@@ -62,6 +63,7 @@ export const en = {
   settings: {
     title: 'Settings',
     athleteView: 'Athlete view',
+    viewAthletesArea: 'View Athletes Area',
   },
   preferences: {
     title: 'Preferences',

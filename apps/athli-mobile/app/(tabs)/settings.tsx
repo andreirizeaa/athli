@@ -4,9 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import { MaterialIcons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import {
-  ChevronRight,
+  ArrowLeftRight,
   Cog,
   FileText,
   IdCard,
@@ -30,14 +31,19 @@ import { Separator } from '@/components/separator';
 
 type PlatformIconProps = {
   sf: string;
+  mdi?: string;
   IconComponent: LucideIcon;
   size?: number;
   color?: string;
 };
 
-const PlatformIcon = ({ sf, IconComponent, size = 24, color = '#000000' }: PlatformIconProps) => {
+const PlatformIcon = ({ sf, mdi, IconComponent, size = 24, color = '#000000' }: PlatformIconProps) => {
   if (Platform.OS === 'ios') {
     return <SymbolView name={sf as any} tintColor={color} size={size} type="monochrome" />;
+  }
+  // For Android, use MaterialIcons if mdi is provided, otherwise use Lucide
+  if (mdi && Platform.OS === 'android') {
+    return <MaterialIcons name={mdi as any} size={size} color={color} />;
   }
   return <IconComponent {...({ size, color } as any)} />;
 };
@@ -90,25 +96,25 @@ export default function SettingsScreen() {
             <Text style={[styles.title, { color: themeColors.text }]}>
               {isAthleteView ? t('profile.title') : t('settings.title')}
             </Text>
-            <TouchableOpacity
-              style={[
-                styles.viewToggleButton,
-                {
-                  backgroundColor: 'transparent',
-                  borderColor: themeColors.text,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={handleToggleView}
-            >
-              <View style={styles.viewToggleContent}>
-                <Text style={[styles.viewToggleText, { color: themeColors.text }]}>
-                  {isAthleteView ? t('profile.coachView') : t('settings.athleteView')}
-                </Text>
-                <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={iconSizes.extraSmallIcons} color={themeColors.text} />
-              </View>
-            </TouchableOpacity>
           </View>
+
+          {/* View Switching Card */}
+          <Card>
+            <SettingsOption
+              icon={
+                <PlatformIcon
+                  sf="arrow.left.arrow.right"
+                  mdi="swap-horiz"
+                  IconComponent={ArrowLeftRight}
+                  size={iconSize - 2}
+                  color={iconColor}
+                />
+              }
+              title={isAthleteView ? t('profile.viewCoachesArea') : t('settings.viewAthletesArea')}
+              showChevron
+              onPress={handleToggleView}
+            />
+          </Card>
 
           {/* Profile Card - Only shown in athlete view */}
           {isAthleteView && (
@@ -116,7 +122,7 @@ export default function SettingsScreen() {
               <TouchableOpacity style={styles.profileRow} activeOpacity={0.7}>
                 <View style={styles.profileAvatar}>
                   <View style={styles.fallbackAvatar}>
-                    <PlatformIcon sf="person.fill" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
+                    <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
                   </View>
                 </View>
                 <View style={styles.profileTextContainer}>
@@ -127,7 +133,7 @@ export default function SettingsScreen() {
                     >
                       {t('profile.enterYourName')}
                     </Text>
-                    <PlatformIcon sf="pencil" IconComponent={Pencil} size={iconSizes.smallIcons} color={themeColors.mutedText} />
+                    <PlatformIcon sf="pencil" mdi="edit" IconComponent={Pencil} size={iconSizes.smallIcons} color={themeColors.mutedText} />
                   </View>
                   <Text
                     style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
@@ -144,13 +150,13 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
           <Card>
             <SettingsOption
-              icon={<PlatformIcon sf="person.text.rectangle" IconComponent={IdCard} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="person.text.rectangle" mdi="badge" IconComponent={IdCard} size={iconSize} color={iconColor} />}
               title={t('profile.personalDetails')}
               showChevron
             />
             <Separator />
             <SettingsOption
-              icon={<PlatformIcon sf="gear" IconComponent={Cog} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />}
               title={t('profile.preferences')}
               showChevron
               onPress={handleOpenPreferences}
@@ -161,17 +167,17 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
           <Card>
             <SettingsOption
-              icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="envelope" mdi="email" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
               title={t('profile.supportEmail')}
             />
             <Separator />
             <SettingsOption
-              icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="megaphone" mdi="campaign" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
               title={t('profile.featureRequests')}
             />
             <Separator />
             <SettingsOption
-              icon={<PlatformIcon sf="arrow.clockwise" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="arrow.clockwise" mdi="refresh" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
               title={t('profile.syncData')}
               subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
               subtitleRight
@@ -182,12 +188,12 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.legal')}</Text>
           <Card>
             <SettingsOption
-              icon={<PlatformIcon sf="doc.text" IconComponent={FileText} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="doc.text" mdi="description" IconComponent={FileText} size={iconSize} color={iconColor} />}
               title={t('profile.termsAndConditions')}
             />
             <Separator />
             <SettingsOption
-              icon={<PlatformIcon sf="checkmark.shield" IconComponent={ShieldCheck} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="checkmark.shield" mdi="verified-user" IconComponent={ShieldCheck} size={iconSize} color={iconColor} />}
               title={t('profile.privacyPolicy')}
             />
           </Card>
@@ -196,12 +202,12 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
           <Card>
             <SettingsOption
-              icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" IconComponent={LogOut} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />}
               title={t('profile.logout')}
             />
             <Separator />
             <SettingsOption
-              icon={<PlatformIcon sf="person.badge.minus" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
               title={t('profile.deleteAccount')}
             />
           </Card>
@@ -231,29 +237,12 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 24,
   },
   title: {
     ...typography.h1,
     textAlign: 'left',
     flex: 1,
-  },
-  viewToggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignSelf: 'center',
-    marginTop: 2,
-  },
-  viewToggleContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  viewToggleText: {
-    ...typography.p5,
   },
   sectionTitle: {
     ...typography.p1,
