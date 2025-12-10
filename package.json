@@ -16,6 +16,11 @@
     "android": "cd apps/mobile && expo run:android",
     "ios": "cd apps/mobile && expo run:ios"
   },
+  "dependencies": {
+    "next": "16.0.7",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
