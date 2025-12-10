@@ -95,8 +95,12 @@ export default function TabLayout() {
 
     if (previousAppView.current !== appView) {
       previousAppView.current = appView;
-      const initialRoute = appView === 'coach' ? '/clients' : '/training';
-      router.replace(initialRoute);
+      // For liquid glass, navigate explicitly
+      // For non-liquid glass, the key prop on Tabs will handle remounting with correct initialRouteName
+      if (hasLiquidGlass) {
+        const initialRoute = appView === 'coach' ? '/clients' : '/training';
+        router.replace(initialRoute);
+      }
     }
   }, [appView, router]);
 
@@ -180,6 +184,7 @@ export default function TabLayout() {
   return (
     <>
       <Tabs
+        key={appView}
         initialRouteName={appView === 'coach' ? 'clients' : 'training'}
         tabBar={(props) => (
           <FallbackTabBar
@@ -379,12 +384,13 @@ function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTab
 
   const renderAddIcon = () => {
     const size = Platform.OS === 'ios' ? iconSizes.tabBarIconsIOS : iconSizes.tabBarIcons;
+    const iconColor = themeColors.primaryForeground;
 
     if (Platform.OS === 'ios') {
-      return <SymbolView name={'plus' as any} tintColor="#FFFFFF" size={size} type="monochrome" />;
+      return <SymbolView name={'plus' as any} tintColor={iconColor} size={size} type="monochrome" />;
     }
 
-    return <Ionicons name="add-outline" size={size + 14} color="#FFFFFF" />;
+    return <Ionicons name="add-outline" size={size + 14} color={iconColor} />;
   };
 
   return (
@@ -410,7 +416,7 @@ function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTab
           {/* Section 3: Add button */}
           <View style={[styles.tabSection, styles.addButtonSection]}>
             <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
+              style={[styles.addButton, { backgroundColor: primaryColor }]}
               onPress={handleAddPress}
               activeOpacity={0.7}
             >
@@ -492,7 +498,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000000',

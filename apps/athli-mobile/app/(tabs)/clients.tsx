@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -42,7 +42,6 @@ export default function ClientsScreen() {
   const { primarySoftColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const [clients, setClients] = useState<Client[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFiltersModalVisible, setIsFiltersModalVisible] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
@@ -54,20 +53,11 @@ export default function ClientsScreen() {
       : [primarySoftColor, themeColors.background];
 
   const loadClients = useCallback(async () => {
-    setIsLoading(true);
-    const startTime = Date.now();
     try {
       const data = await getClients();
       setClients(data);
     } catch (error) {
       console.error('Failed to load clients:', error);
-    } finally {
-      // Ensure minimum 2 seconds of loading time
-      const elapsed = Date.now() - startTime;
-      const remainingTime = Math.max(0, 2000 - elapsed);
-      setTimeout(() => {
-        setIsLoading(false);
-      }, remainingTime);
     }
   }, []);
 
@@ -205,55 +195,49 @@ export default function ClientsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={themeColors.primary} />
-            </View>
-          ) : (
-            <View style={styles.listContainer}>
-              {filteredClients.map((client, index) => {
-                const isLastItem = index === filteredClients.length - 1;
-                return (
-                  <View key={client.id} style={styles.cardWrapper}>
-                    <TouchableOpacity activeOpacity={0.7} onPress={() => handleClientPress(client.id)}>
-                      <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
-                        <View style={styles.cardContent}>
-                          {client.avatar ? (
-                            <Image
-                              source={{ uri: client.avatar }}
-                              style={[styles.avatar, { borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }]}
-                            />
-                          ) : (
-                            <View
-                              style={[
-                                styles.avatar,
-                                styles.avatarPlaceholder,
-                                { backgroundColor: themeColors.border, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 },
-                              ]}
-                            />
-                          )}
-                          <View style={styles.clientInfo}>
-                            <Text style={[styles.clientName, { color: themeColors.text }]}>{client.fullName}</Text>
-                            <Text style={[styles.clientSubtitle, { color: themeColors.mutedText }]}>
-                              {formatSubtitle(client)}
-                            </Text>
-                          </View>
-                          <View style={styles.chevronContainer}>
-                            <PlatformIcon
-                              sf="chevron.right"
-                              IconComponent={ChevronRight}
-                              size={iconSizes.navigationChevrons}
-                              color={themeColors.mutedText}
-                            />
-                          </View>
+          <View style={styles.listContainer}>
+            {filteredClients.map((client, index) => {
+              const isLastItem = index === filteredClients.length - 1;
+              return (
+                <View key={client.id} style={styles.cardWrapper}>
+                  <TouchableOpacity activeOpacity={0.7} onPress={() => handleClientPress(client.id)}>
+                    <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
+                      <View style={styles.cardContent}>
+                        {client.avatar ? (
+                          <Image
+                            source={{ uri: client.avatar }}
+                            style={[styles.avatar, { borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }]}
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.avatar,
+                              styles.avatarPlaceholder,
+                              { backgroundColor: themeColors.border, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 },
+                            ]}
+                          />
+                        )}
+                        <View style={styles.clientInfo}>
+                          <Text style={[styles.clientName, { color: themeColors.text }]}>{client.fullName}</Text>
+                          <Text style={[styles.clientSubtitle, { color: themeColors.mutedText }]}>
+                            {formatSubtitle(client)}
+                          </Text>
                         </View>
-                      </Card>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+                        <View style={styles.chevronContainer}>
+                          <PlatformIcon
+                            sf="chevron.right"
+                            IconComponent={ChevronRight}
+                            size={iconSizes.navigationChevrons}
+                            color={themeColors.mutedText}
+                          />
+                        </View>
+                      </View>
+                    </Card>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
         </ScrollView>
       </SafeAreaView>
       <ClientsFilterModal
@@ -283,11 +267,6 @@ const styles = StyleSheet.create({
   headerSection: {
     paddingHorizontal: 20,
     marginBottom: 16,
-  },
-  loadingContainer: {
-    minHeight: 400,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   listContainer: {
     paddingBottom: 16,

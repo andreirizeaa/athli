@@ -160,7 +160,7 @@ export const AddClientModal = ({ visible, onClose, onClientAdded }: AddClientMod
                     <Text
                       style={[
                         styles.categoryButtonText,
-                        { color: isSelected ? '#FFFFFF' : themeColors.text },
+                        { color: isSelected ? themeColors.primaryForeground : themeColors.text },
                       ]}
                     >
                       {getCategoryLabel(type)}

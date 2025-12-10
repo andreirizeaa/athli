@@ -33,7 +33,7 @@ export const FilledButton = ({ label, onPress, disabled = false, style, textStyl
         style={[
           styles.buttonText,
           {
-            color: disabled ? themeColors.mutedText : '#FFFFFF',
+            color: disabled ? themeColors.mutedText : themeColors.primaryForeground,
           },
           textStyle,
         ]}

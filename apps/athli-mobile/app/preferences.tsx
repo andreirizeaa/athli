@@ -186,6 +186,13 @@ export default function PreferencesScreen() {
         {/* Language, Units, and Color palette */}
         <Card style={{ paddingVertical: 12 }}>
           <SettingsOption
+            icon={<PlatformIcon sf="paintpalette" IconComponent={Palette} size={iconSize} color={iconColor} />}
+            title={t('preferences.colorPalette')}
+            showChevron
+            onPress={handleOpenPaletteModal}
+          />
+          <Separator />
+          <SettingsOption
             icon={<PlatformIcon sf="globe" IconComponent={Languages} size={iconSize} color={iconColor} />}
             title={t('preferences.language')}
             showChevron
@@ -197,13 +204,6 @@ export default function PreferencesScreen() {
             title={t('preferences.units')}
             showChevron
             onPress={handleOpenUnitsModal}
-          />
-          <Separator />
-          <SettingsOption
-            icon={<PlatformIcon sf="paintpalette" IconComponent={Palette} size={iconSize} color={iconColor} />}
-            title={t('preferences.colorPalette')}
-            showChevron
-            onPress={handleOpenPaletteModal}
           />
         </Card>
       </View>
