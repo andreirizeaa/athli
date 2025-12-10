@@ -13,7 +13,7 @@ export const bodyFontFamily = Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto';
 
 export const typography: Record<TextVariant, TypographyStyle> = {
   // Headings: descending sizes and weights (all with heading font)
-  h1: { fontSize: 34, fontWeight: '600', lineHeight: 40, fontFamily: headingFontFamily },
+  h1: { fontSize: 34, fontWeight: '700', lineHeight: 40, fontFamily: headingFontFamily },
   h2: { fontSize: 30, fontWeight: '600', lineHeight: 36, fontFamily: headingFontFamily },
   h3: { fontSize: 26, fontWeight: '600', lineHeight: 32, fontFamily: headingFontFamily },
   h4: { fontSize: 22, fontWeight: '600', lineHeight: 28, fontFamily: headingFontFamily },
@@ -39,15 +39,19 @@ export const getTypographyStyle = (variant: TextVariant): TypographyStyle => {
 
 export type IconSizeVariant =
   | 'tabBarIcons'
+  | 'tabBarIconsIOS'
   | 'settingsIcons'
   | 'listIcons'
   | 'modalIcons'
   | 'smallIcons'
-  | 'extraSmallIcons';
+  | 'extraSmallIcons'
+  | 'navigationChevrons';
 
 export const iconSizes: Record<IconSizeVariant, number> = {
   // Tab bar icons (bottom navigation)
   tabBarIcons: 26,
+  // Tab bar icons for iOS FallbackTabBar
+  tabBarIconsIOS: 30,
   // Main settings/profile icons
   settingsIcons: 24,
   // List chevrons and navigation indicators
@@ -58,6 +62,8 @@ export const iconSizes: Record<IconSizeVariant, number> = {
   smallIcons: 16,
   // Extra small decorative icons
   extraSmallIcons: 14,
+  // Navigation icons
+  navigationChevrons: 16,
 };
 
 export const getIconSize = (variant: IconSizeVariant): number => {

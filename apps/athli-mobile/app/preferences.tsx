@@ -14,17 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import {
-  CircleCheck,
-  ChevronLeft,
-  Languages,
-  Palette,
-  Ruler,
-  Settings,
-  Sun,
-  Moon,
-  X,
-} from 'lucide-react-native';
+import { SymbolView } from 'expo-symbols';
+import { MaterialIcons } from '@expo/vector-icons';
 import { typography, iconSizes } from '@/constants/typography';
 import { THEMES, type PresetValue } from '@/constants/theme';
 import {
@@ -36,6 +27,20 @@ import { useTranslations } from '@/contexts/useTranslations';
 
 import { SettingsOption } from './(tabs)/profile';
 import { LANGUAGES } from '@/constants/languages';
+
+type PlatformIconProps = {
+  sf: string;
+  mdi: string;
+  size?: number;
+  color?: string;
+};
+
+const PlatformIcon = ({ sf, mdi, size = 24, color = '#000000' }: PlatformIconProps) => {
+  if (Platform.OS === 'ios') {
+    return <SymbolView name={sf as any} tintColor={color} size={size} type="monochrome" />;
+  }
+  return <MaterialIcons name={mdi as any} size={size} color={color} />;
+};
 
 export default function PreferencesScreen() {
   const router = useRouter();
@@ -190,7 +195,12 @@ export default function PreferencesScreen() {
   const renderAppearanceModeCard = (label: string, mode: 'light' | 'dark' | 'system') => {
     const isSelected = preference === mode;
 
-    const IconComponent = mode === 'light' ? Sun : mode === 'dark' ? Moon : Settings;
+    const iconProps = mode === 'light' 
+      ? { sf: 'sun.max.fill', mdi: 'wb-sunny' }
+      : mode === 'dark' 
+      ? { sf: 'moon.fill', mdi: 'dark-mode' }
+      : { sf: 'gear', mdi: 'settings' };
+    
     const iconColor = isSelected ? themeColors.primary : secondaryTextColor;
     const highlightBorderColor =
       themeColors.pageBackground === '#000000' ? '#FFFFFF' : '#000000';
@@ -214,7 +224,7 @@ export default function PreferencesScreen() {
         onPress={handlePress}
       >
         <View style={styles.modeCardContent}>
-          <IconComponent size={iconSizes.modalIcons} color={iconColor} />
+          <PlatformIcon {...iconProps} size={iconSizes.modalIcons} color={iconColor} />
           <Text style={[styles.modeCardLabel, { color: themeColors.text }]}>
             {label}
           </Text>
@@ -237,7 +247,7 @@ export default function PreferencesScreen() {
           activeOpacity={0.7}
           onPress={handleBackPress}
         >
-          <ChevronLeft width={iconSizes.settingsIcons} height={iconSizes.settingsIcons} color={iconColor} />
+          <PlatformIcon sf="chevron.left" mdi="chevron-left" size={iconSizes.navigationChevrons} color={iconColor} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('preferences.title')}</Text>
         <View style={styles.headerRightPlaceholder} />
@@ -261,21 +271,21 @@ export default function PreferencesScreen() {
         {/* Language, Units, and Color palette */}
         <View style={[styles.card, { backgroundColor: surfaceColor, borderColor }]}>
           <SettingsOption
-            icon={<Languages size={iconSize} color={iconColor} />}
+            icon={<PlatformIcon sf="globe" mdi="language" size={iconSize} color={iconColor} />}
             title={t('preferences.language')}
             showChevron
             onPress={handleOpenLanguageModal}
           />
           <View style={[styles.separator, { backgroundColor: dividerColor }]} />
           <SettingsOption
-            icon={<Ruler size={iconSize} color={iconColor} />}
+            icon={<PlatformIcon sf="ruler" mdi="straighten" size={iconSize} color={iconColor} />}
             title={t('preferences.units')}
             showChevron
             onPress={handleOpenUnitsModal}
           />
           <View style={[styles.separator, { backgroundColor: dividerColor }]} />
           <SettingsOption
-            icon={<Palette size={iconSize} color={iconColor} />}
+            icon={<PlatformIcon sf="paintpalette.fill" mdi="palette" size={iconSize} color={iconColor} />}
             title={t('preferences.colorPalette')}
             showChevron
             onPress={handleOpenPaletteModal}
@@ -316,7 +326,7 @@ export default function PreferencesScreen() {
                 activeOpacity={0.7}
                 onPress={handleCloseLanguageModal}
               >
-                <X width={iconSizes.modalIcons} height={iconSizes.modalIcons} color={iconColor} />
+                <PlatformIcon sf="xmark" mdi="close" size={iconSizes.modalIcons} color={iconColor} />
               </TouchableOpacity>
             </View>
 
@@ -355,7 +365,7 @@ export default function PreferencesScreen() {
                       </View>
 
                       {isSelected && (
-                        <CircleCheck width={iconSizes.modalIcons} height={iconSizes.modalIcons} color={iconColor} />
+                        <PlatformIcon sf="checkmark.circle.fill" mdi="check-circle" size={iconSizes.modalIcons} color={iconColor} />
                       )}
                     </TouchableOpacity>
 
@@ -401,7 +411,7 @@ export default function PreferencesScreen() {
                 activeOpacity={0.7}
                 onPress={handleCloseUnitsModal}
               >
-                <X width={18} height={18} color={iconColor} />
+                <PlatformIcon sf="xmark" mdi="close" size={18} color={iconColor} />
               </TouchableOpacity>
             </View>
 
@@ -440,7 +450,7 @@ export default function PreferencesScreen() {
                       </View>
 
                       {isSelected && (
-                        <CircleCheck width={iconSizes.modalIcons} height={iconSizes.modalIcons} color={iconColor} />
+                        <PlatformIcon sf="checkmark.circle.fill" mdi="check-circle" size={iconSizes.modalIcons} color={iconColor} />
                       )}
                     </TouchableOpacity>
 
@@ -490,7 +500,7 @@ export default function PreferencesScreen() {
                 activeOpacity={0.7}
                 onPress={handleClosePaletteModal}
               >
-                <X width={18} height={18} color={iconColor} />
+                <PlatformIcon sf="xmark" mdi="close" size={18} color={iconColor} />
               </TouchableOpacity>
             </View>
 
@@ -535,7 +545,7 @@ export default function PreferencesScreen() {
                       </View>
 
                       {isSelected && (
-                        <CircleCheck width={iconSizes.modalIcons} height={iconSizes.modalIcons} color={iconColor} />
+                        <PlatformIcon sf="checkmark.circle.fill" mdi="check-circle" size={iconSizes.modalIcons} color={iconColor} />
                       )}
                     </TouchableOpacity>
 
