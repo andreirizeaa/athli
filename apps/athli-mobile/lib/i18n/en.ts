@@ -31,6 +31,7 @@ export const en = {
   profile: {
     title: 'Profile',
     coachView: 'Coach view',
+    viewCoachesArea: 'View Coaches Area',
     enterYourName: 'Enter your name',
     memberSince: 'Member since',
     account: 'Account',
@@ -52,6 +53,35 @@ export const en = {
   },
   clients: {
     title: 'Clients',
+    addClient: 'Add Client',
+    searchPlaceholder: 'Search clients...',
+    years: 'years',
+    addClientModal: {
+      title: 'Add Client',
+      firstName: 'First Name',
+      lastName: 'Last Name',
+      email: 'Email',
+      category: 'Category',
+      firstNamePlaceholder: 'Enter first name',
+      lastNamePlaceholder: 'Enter last name',
+      emailPlaceholder: 'Enter email',
+      emailError: 'Please enter a valid email address',
+      online: 'Online',
+      inPerson: 'In Person',
+      hybrid: 'Hybrid',
+      reset: 'Reset',
+      invite: 'Invite',
+      inviting: 'Inviting...',
+    },
+    filterModal: {
+      title: 'Filters',
+      category: 'Category',
+      online: 'Online',
+      inPerson: 'In Person',
+      hybrid: 'Hybrid',
+      reset: 'Reset',
+      apply: 'Apply',
+    },
   },
   calendar: {
     title: 'Calendar',
@@ -62,6 +92,7 @@ export const en = {
   settings: {
     title: 'Settings',
     athleteView: 'Athlete view',
+    viewAthletesArea: 'View Athletes Area',
   },
   preferences: {
     title: 'Preferences',

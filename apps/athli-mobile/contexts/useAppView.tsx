@@ -11,7 +11,7 @@ type AppViewContextValue = {
 const AppViewContext = createContext<AppViewContextValue | undefined>(undefined);
 
 export const AppViewProvider = ({ children }: { children: ReactNode }) => {
-  const [appView, setAppView] = useState<AppView>('athlete');
+  const [appView, setAppView] = useState<AppView>('coach');
 
   return (
     <AppViewContext.Provider value={{ appView, setAppView }}>
