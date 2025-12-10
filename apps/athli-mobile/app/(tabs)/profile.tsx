@@ -1,44 +1,42 @@
 import React from 'react';
 import type { JSX } from 'react';
 import type { GestureResponderEvent } from 'react-native';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import {
-  BellRing,
-  Cog,
-  ChevronRight,
-  FileText,
-  IdCard,
-  Languages,
-  LogOut,
-  MailPlus,
-  Megaphone,
-  Pencil,
-  RefreshCw,
-  Ruler,
-  School2,
-  ShieldCheck,
-  Star,
-  User,
-  UserMinus,
-} from 'lucide-react-native';
+import { SymbolView } from 'expo-symbols';
+import { MaterialIcons } from '@expo/vector-icons';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 
+type PlatformIconProps = {
+  sf: string;
+  mdi: string;
+  size?: number;
+  color?: string;
+};
+
+const PlatformIcon = ({ sf, mdi, size = 24, color = '#000000' }: PlatformIconProps) => {
+  if (Platform.OS === 'ios') {
+    return <SymbolView name={sf as any} tintColor={color} size={size} type="monochrome" />;
+  }
+  return <MaterialIcons name={mdi as any} size={size} color={color} />;
+};
+
 export interface SettingsOptionProps {
   icon: JSX.Element;
   title: string;
   subtitle?: string;
+  subtitleRight?: boolean;
   onPress?: (event: GestureResponderEvent) => void;
   showChevron?: boolean;
 }
 
-export function SettingsOption({ icon, title, subtitle, onPress, showChevron }: SettingsOptionProps) {
+export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, showChevron }: SettingsOptionProps) {
   const { colors: themeColors } = useThemePreference();
 
   const handleOptionPress = (event: GestureResponderEvent) => {
@@ -58,13 +56,18 @@ export function SettingsOption({ icon, title, subtitle, onPress, showChevron }: 
       <View style={styles.iconContainer}>{icon}</View>
       <View style={styles.textContainer}>
         <Text style={[styles.optionTitle, { color: themeColors.text }]}>{title}</Text>
-        {subtitle && (
+        {subtitle && !subtitleRight && (
           <Text style={[styles.optionSubtitle, { color: themeColors.mutedText }]}>{subtitle}</Text>
         )}
       </View>
+      {subtitle && subtitleRight && (
+        <View style={styles.subtitleRightContainer}>
+          <Text style={[styles.optionSubtitleRight, { color: themeColors.mutedText }]}>{subtitle}</Text>
+        </View>
+      )}
       {showChevron && (
         <View style={styles.chevronContainer}>
-          <ChevronRight size={iconSizes.listIcons} color={themeColors.mutedText} />
+          <PlatformIcon sf="chevron.right" mdi="chevron-right" size={iconSizes.navigationChevrons} color={themeColors.mutedText} />
         </View>
       )}
     </TouchableOpacity>
@@ -80,10 +83,12 @@ export default function ProfileScreen() {
   const iconSize = iconSizes.settingsIcons;
   const iconColor = themeColors.text;
 
+  const isAthleteView = appView === 'athlete';
+
   const gradientColors: [string, string] =
     colorScheme === 'dark'
-      ? ['#2a2a2a', themeColors.background]
-      : [primarySoftColor, themeColors.background];
+      ? ['#2a2a2a', isAthleteView ? themeColors.background : themeColors.pageBackground]
+      : [primarySoftColor, isAthleteView ? themeColors.background : themeColors.pageBackground];
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/preferences' });
@@ -110,7 +115,9 @@ export default function ProfileScreen() {
       >
         <View style={styles.content}>
           <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: themeColors.text }]}>{t('profile.title')}</Text>
+            <Text style={[styles.title, { color: themeColors.text }]}>
+              {isAthleteView ? t('profile.title') : t('settings.title')}
+            </Text>
             <TouchableOpacity
               style={[
                 styles.viewToggleButton,
@@ -124,52 +131,61 @@ export default function ProfileScreen() {
             >
               <View style={styles.viewToggleContent}>
                 <Text style={[styles.viewToggleText, { color: themeColors.text }]}>
-                  {t('profile.coachView')}
+                  {isAthleteView ? t('profile.coachView') : t('settings.athleteView')}
                 </Text>
-                <ChevronRight size={iconSizes.extraSmallIcons} color={themeColors.text} />
+                <PlatformIcon sf="chevron.right" mdi="chevron-right" size={iconSizes.extraSmallIcons} color={themeColors.text} />
               </View>
             </TouchableOpacity>
           </View>
 
-          {/* Profile Card */}
-          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-            <TouchableOpacity style={styles.profileRow} activeOpacity={0.7}>
-              <View style={styles.profileAvatar}>
-                <View style={styles.fallbackAvatar}>
-                  <User size={iconSizes.settingsIcons} color="#ffffff" />
+          {/* Profile Card - Only shown in athlete view */}
+          {isAthleteView && (
+            <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+              <TouchableOpacity style={styles.profileRow} activeOpacity={0.7}>
+                <View style={styles.profileAvatar}>
+                  <View style={styles.fallbackAvatar}>
+                    <PlatformIcon sf="person.fill" mdi="person" size={iconSizes.settingsIcons} color="#ffffff" />
+                  </View>
                 </View>
-              </View>
-              <View style={styles.profileTextContainer}>
-                <View style={styles.profileNameRow}>
+                <View style={styles.profileTextContainer}>
+                  <View style={styles.profileNameRow}>
+                    <Text
+                      style={[styles.profileNameText, { color: themeColors.text }]}
+                      numberOfLines={1}
+                    >
+                      {t('profile.enterYourName')}
+                    </Text>
+                    <PlatformIcon sf="pencil" mdi="edit" size={iconSizes.smallIcons} color={themeColors.mutedText} />
+                  </View>
                   <Text
-                    style={[styles.profileNameText, { color: themeColors.text }]}
+                    style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
                     numberOfLines={1}
                   >
-                    {t('profile.enterYourName')}
+                    {t('profile.memberSince')} 2024
                   </Text>
-                  <Pencil size={iconSizes.smallIcons} color={themeColors.mutedText} />
                 </View>
-                <Text
-                  style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
-                  numberOfLines={1}
-                >
-                  {t('profile.memberSince')} 2024
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Account */}
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
           <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
-              icon={<IdCard size={iconSize} color={iconColor} />}
+              icon={
+                <PlatformIcon
+                  sf="person.text.rectangle"
+                  mdi="badge"
+                  size={iconSize}
+                  color={iconColor}
+                />
+              }
               title={t('profile.personalDetails')}
               showChevron
             />
             <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
-              icon={<Cog size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="gear" mdi="settings" size={iconSize} color={iconColor} />}
               title={t('profile.preferences')}
               showChevron
               onPress={handleOpenPreferences}
@@ -180,24 +196,20 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
           <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
-              icon={<MailPlus size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="envelope.badge" mdi="mail-outline" size={iconSize} color={iconColor} />}
               title={t('profile.supportEmail')}
             />
             <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
-              icon={<Megaphone size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="megaphone" mdi="campaign" size={iconSize} color={iconColor} />}
               title={t('profile.featureRequests')}
             />
             <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
-              icon={<RefreshCw size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="arrow.clockwise" mdi="refresh" size={iconSize} color={iconColor} />}
               title={t('profile.syncData')}
               subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
-            />
-            <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
-            <SettingsOption
-              icon={<Star size={iconSize} color={iconColor} />}
-              title={t('profile.leaveRating')}
+              subtitleRight
             />
           </View>
 
@@ -205,12 +217,12 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.legal')}</Text>
           <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
-              icon={<FileText size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="doc.text" mdi="description" size={iconSize} color={iconColor} />}
               title={t('profile.termsAndConditions')}
             />
             <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
-              icon={<ShieldCheck size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="checkmark.shield" mdi="verified-user" size={iconSize} color={iconColor} />}
               title={t('profile.privacyPolicy')}
             />
           </View>
@@ -219,12 +231,12 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
           <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
-              icon={<LogOut size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" size={iconSize} color={iconColor} />}
               title={t('profile.logout')}
             />
             <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
-              icon={<UserMinus size={iconSize} color={iconColor} />}
+              icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" size={iconSize} color={iconColor} />}
               title={t('profile.deleteAccount')}
             />
           </View>
@@ -314,6 +326,9 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
+  subtitleRightContainer: {
+    marginRight: 4,
+  },
   chevronContainer: {
     marginLeft: 4,
   },
@@ -359,6 +374,9 @@ const styles = StyleSheet.create({
   optionSubtitle: {
     ...typography.p6,
     marginTop: 2,
+  },
+  optionSubtitleRight: {
+    ...typography.p6,
   },
   separator: {
     height: 1,
