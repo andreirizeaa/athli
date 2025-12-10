@@ -32,6 +32,47 @@ export const getClients = async (): Promise<Client[]> => {
   // return await response.json()
 };
 
+export interface AddClientData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  type: 'online' | 'in-person' | 'hybrid';
+}
+
+/**
+ * Service method to add a new client
+ * This will be connected to the backend in the future
+ */
+export const addClient = async (data: AddClientData): Promise<Client> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  // Create new client - in the future, this will be saved to the backend
+  const newClient: Client = {
+    id: `mock-${Date.now()}`,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    fullName: `${data.firstName} ${data.lastName}`,
+    email: data.email,
+    type: data.type,
+    age: 0, // Default values for required fields
+    gender: 'prefer-not-to-say',
+    phone: '',
+    country: '',
+  };
+
+  // In a real implementation, this would be:
+  // const response = await fetch('/api/clients', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(data),
+  // })
+  // if (!response.ok) throw new Error('Failed to add client')
+  // return await response.json()
+
+  return newClient;
+};
+
 // Mock clients data based on web app's mock athletes
 const mockClients: Client[] = [
   {

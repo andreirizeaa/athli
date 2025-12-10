@@ -10,11 +10,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { iconSizes } from '@/constants/typography';
-import { BottomSheetModal } from '@/components/bottom-sheet-modal';
+import { AddClientModal } from '@/components/clients/add-client-modal';
 import {
   Calendar,
   CalendarFold,
@@ -84,6 +84,7 @@ export default function TabLayout() {
   const previousAppView = useRef(appView);
   const isInitialMount = useRef(true);
   const [isAddClientModalVisible, setIsAddClientModalVisible] = useState(false);
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -135,10 +136,9 @@ export default function TabLayout() {
           </View>
 
           {/* Bottom sheet modal */}
-          <BottomSheetModal
+          <AddClientModal
             visible={isAddClientModalVisible}
             onClose={handleCloseAddClientModal}
-            title={t('clients.addClient')}
           />
         </>
       );
@@ -146,32 +146,34 @@ export default function TabLayout() {
 
     // Athlete view (default)
     return (
-      <NativeTabs tintColor={primaryColor}>
-        <NativeTabs.Trigger name="training">
-          <Icon sf="dumbbell.fill" />
-          <Label>Training</Label>
-        </NativeTabs.Trigger>
+      <>
+        <NativeTabs tintColor={primaryColor}>
+          <NativeTabs.Trigger name="training">
+            <Icon sf="dumbbell.fill" />
+            <Label>Training</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="progress">
-          <Icon sf="chart.bar.fill" />
-          <Label>Progress</Label>
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="progress">
+            <Icon sf="chart.bar.fill" />
+            <Label>Progress</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="inbox">
-          <Icon sf="envelope.fill" />
-          <Label>Inbox</Label>
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="inbox">
+            <Icon sf="envelope.fill" />
+            <Label>Inbox</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="settings">
-          <Icon sf="person.crop.circle.fill" />
-          <Label>Profile</Label>
-        </NativeTabs.Trigger>
+          <NativeTabs.Trigger name="settings">
+            <Icon sf="person.crop.circle.fill" />
+            <Label>Profile</Label>
+          </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="add-modal" role="search">
-          <Icon sf="plus" />
-          <Label>Add</Label>
-        </NativeTabs.Trigger>
-      </NativeTabs>
+          <NativeTabs.Trigger name="add-modal" role="search">
+            <Icon sf="plus" />
+            <Label>Add</Label>
+          </NativeTabs.Trigger>
+        </NativeTabs>
+      </>
     );
   }
 
@@ -239,10 +241,9 @@ export default function TabLayout() {
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="add-modal" options={{ href: null }} />
       </Tabs>
-      <BottomSheetModal
+      <AddClientModal
         visible={isAddClientModalVisible}
         onClose={handleCloseAddClientModal}
-        title={t('clients.addClient')}
       />
     </>
   );
@@ -258,6 +259,7 @@ function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTab
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { appView } = useAppView();
   const { t } = useTranslations();
+  const colorScheme = useColorScheme();
 
   const handleTabPress = (name: string) => {
     if (name === activeRouteName) {
@@ -408,7 +410,7 @@ function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTab
           {/* Section 3: Add button */}
           <View style={[styles.tabSection, styles.addButtonSection]}>
             <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: primaryColor }]}
+              style={[styles.addButton, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}
               onPress={handleAddPress}
               activeOpacity={0.7}
             >
@@ -503,4 +505,3 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 });
-
