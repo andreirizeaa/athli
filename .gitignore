@@ -44,7 +44,23 @@ next-env.d.ts
 # turbo
 .turbo/
 
-apps/mobile/.expo/
-apps/mobile/ios/
-apps/mobile/android/
-apps/mobile/expo*
+.expo/
+
+# expo / react-native (athli-mobile)
+apps/athli-mobile/.expo/
+apps/athli-mobile/.expo-shared/
+apps/athli-mobile/ios/
+apps/athli-mobile/android/
+apps/athli-mobile/web-build/
+apps/athli-mobile/expo-env.d.ts
+
+# native build artifacts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# metro bundler
+.metro-health-check*
