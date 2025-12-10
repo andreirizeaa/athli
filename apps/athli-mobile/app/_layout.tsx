@@ -3,10 +3,17 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
+import {
+  ThemePreferenceProvider,
+  useColorScheme,
+  useThemePreference,
+} from '@/contexts/useColorScheme';
+import { AppViewProvider } from '@/contexts/useAppView';
+import { TranslationProvider } from '@/contexts/useTranslations';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -42,18 +49,47 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <ThemePreferenceProvider>
+      <TranslationProvider>
+        <AppViewProvider>
+          <RootLayoutNav />
+        </AppViewProvider>
+      </TranslationProvider>
+    </ThemePreferenceProvider>
+  );
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { primaryColor, colors } = useThemePreference();
+
+  const navigationTheme =
+    colorScheme === 'dark'
+      ? {
+          ...DarkTheme,
+          colors: {
+            ...DarkTheme.colors,
+            primary: primaryColor,
+          },
+        }
+      : {
+          ...DefaultTheme,
+          colors: {
+            ...DefaultTheme.colors,
+            primary: primaryColor,
+          },
+        };
 
   return (
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navigationTheme}>
+      <StatusBar
+        style={colorScheme === 'dark' ? 'light' : 'dark'}
+        backgroundColor={colors.pageBackground}
+      />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="preferences" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="preferences" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
   );
