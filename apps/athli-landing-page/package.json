@@ -36,6 +36,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@radix-ui/react-alert-dialog": "^1.1.1",
     "@biomejs/biome": "^2.3.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
