@@ -1,15 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
-  Animated,
-  Modal,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,7 +20,6 @@ import {
   Ruler,
   Settings,
   Sun,
-  X,
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { THEMES, type PresetValue } from '@/constants/theme';
@@ -39,6 +33,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { Card } from '@/components/card';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
+import { BottomSheetModal } from '@/components/bottom-sheet-modal';
 import { LANGUAGES } from '@/constants/languages';
 
 type PlatformIconProps = {
@@ -73,13 +68,6 @@ export default function PreferencesScreen() {
   const [isPaletteModalVisible, setIsPaletteModalVisible] = useState(false);
   const [selectedLanguageCode, setSelectedLanguageCode] = useState<string>('en');
   const [selectedUnits, setSelectedUnits] = useState<'metric' | 'imperial'>('metric');
-  const { height: windowHeight } = useWindowDimensions();
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const sheetTranslateY = useRef(new Animated.Value(windowHeight)).current;
-  const unitsBackdropOpacity = useRef(new Animated.Value(0)).current;
-  const unitsSheetTranslateY = useRef(new Animated.Value(windowHeight)).current;
-  const paletteBackdropOpacity = useRef(new Animated.Value(0)).current;
-  const paletteSheetTranslateY = useRef(new Animated.Value(windowHeight)).current;
 
   const handleGoBack = () => {
     router.back();
@@ -99,110 +87,26 @@ export default function PreferencesScreen() {
 
   const handleOpenLanguageModal = () => {
     setIsLanguageModalVisible(true);
-
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetTranslateY, {
-        toValue: 0,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const handleCloseLanguageModal = () => {
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetTranslateY, {
-        toValue: windowHeight,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (finished) {
-        setIsLanguageModalVisible(false);
-      }
-    });
+    setIsLanguageModalVisible(false);
   };
 
   const handleOpenUnitsModal = () => {
     setIsUnitsModalVisible(true);
-
-    Animated.parallel([
-      Animated.timing(unitsBackdropOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(unitsSheetTranslateY, {
-        toValue: 0,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const handleCloseUnitsModal = () => {
-    Animated.parallel([
-      Animated.timing(unitsBackdropOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(unitsSheetTranslateY, {
-        toValue: windowHeight,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (finished) {
-        setIsUnitsModalVisible(false);
-      }
-    });
+    setIsUnitsModalVisible(false);
   };
 
   const handleOpenPaletteModal = () => {
     setIsPaletteModalVisible(true);
-
-    Animated.parallel([
-      Animated.timing(paletteBackdropOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(paletteSheetTranslateY, {
-        toValue: 0,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const handleClosePaletteModal = () => {
-    Animated.parallel([
-      Animated.timing(paletteBackdropOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(paletteSheetTranslateY, {
-        toValue: windowHeight,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (finished) {
-        setIsPaletteModalVisible(false);
-      }
-    });
+    setIsPaletteModalVisible(false);
   };
 
   const renderAppearanceModeCard = (label: string, mode: 'light' | 'dark' | 'system') => {
@@ -246,9 +150,7 @@ export default function PreferencesScreen() {
     );
   };
 
-  const surfaceColor = themeColors.surface;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
-  const borderColor = themeColors.border;
   const dividerColor = themeColors.border;
   const secondaryTextColor = themeColors.mutedText;
 
@@ -306,274 +208,158 @@ export default function PreferencesScreen() {
         </Card>
       </View>
 
-      <Modal
+      <BottomSheetModal
         visible={isLanguageModalVisible}
-        transparent
-        animationType="none"
-        statusBarTranslucent
-        onRequestClose={handleCloseLanguageModal}
+        onClose={handleCloseLanguageModal}
+        title={t('preferences.selectLanguage')}
       >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={handleCloseLanguageModal}>
-            <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]} />
-          </TouchableWithoutFeedback>
+        {LANGUAGES.map((language, index) => {
+          const isSelected = language.code === selectedLanguageCode;
 
-          <Animated.View
-            style={[
-              styles.modalSheet,
-              {
-                backgroundColor: surfaceColor,
-                transform: [{ translateY: sheetTranslateY }],
-              },
-            ]}
-          >
-            <View style={styles.modalHandleContainer}>
-              <View style={[styles.modalHandle, { backgroundColor: dividerColor }]} />
-            </View>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: themeColors.text }]}>
-                {t('preferences.selectLanguage')}
-              </Text>
+          const handleSelectLanguage = () => {
+            setSelectedLanguageCode(language.code);
+            handleCloseLanguageModal();
+          };
+
+          return (
+            <View key={language.code}>
               <TouchableOpacity
-                style={[styles.modalCloseButton, { backgroundColor: mutedSurfaceColor }]}
+                style={styles.languageRow}
                 activeOpacity={0.7}
-                onPress={handleCloseLanguageModal}
+                onPress={handleSelectLanguage}
               >
-                <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={iconColor} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.modalList}
-              contentContainerStyle={styles.modalListContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {LANGUAGES.map((language, index) => {
-                const isSelected = language.code === selectedLanguageCode;
-
-                const handleSelectLanguage = () => {
-                  setSelectedLanguageCode(language.code);
-                  handleCloseLanguageModal();
-                };
-
-                return (
-                  <View key={language.code}>
-                    <TouchableOpacity
-                      style={styles.languageRow}
-                      activeOpacity={0.7}
-                      onPress={handleSelectLanguage}
+                <View style={styles.languageInfo}>
+                  <Text style={styles.languageFlag}>{language.flag}</Text>
+                  <View style={styles.languageTextContainer}>
+                    <Text
+                      style={[
+                        styles.languageNativeName,
+                        { color: themeColors.text },
+                      ]}
                     >
-                      <View style={styles.languageInfo}>
-                        <Text style={styles.languageFlag}>{language.flag}</Text>
-                        <View style={styles.languageTextContainer}>
-                          <Text
-                            style={[
-                              styles.languageNativeName,
-                              { color: themeColors.text },
-                            ]}
-                          >
-                            {language.nativeName}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {isSelected && (
-                        <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
-                      )}
-                    </TouchableOpacity>
-
-                    {index !== LANGUAGES.length - 1 && (
-                      <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
-                    )}
+                      {language.nativeName}
+                    </Text>
                   </View>
-                );
-              })}
-            </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
+                </View>
 
-      <Modal
+                {isSelected && (
+                  <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
+                )}
+              </TouchableOpacity>
+
+              {index !== LANGUAGES.length - 1 && (
+                <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
+              )}
+            </View>
+          );
+        })}
+      </BottomSheetModal>
+
+      <BottomSheetModal
         visible={isUnitsModalVisible}
-        transparent
-        animationType="none"
-        statusBarTranslucent
-        onRequestClose={handleCloseUnitsModal}
+        onClose={handleCloseUnitsModal}
+        title={t('preferences.units')}
       >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={handleCloseUnitsModal}>
-            <Animated.View style={[styles.modalBackdrop, { opacity: unitsBackdropOpacity }]} />
-          </TouchableWithoutFeedback>
+        {(['metric', 'imperial'] as const).map((unitsType) => {
+          const isSelected = unitsType === selectedUnits;
 
-          <Animated.View
-            style={[
-              styles.modalSheet,
-              {
-                backgroundColor: surfaceColor,
-                transform: [{ translateY: unitsSheetTranslateY }],
-              },
-            ]}
-          >
-            <View style={styles.modalHandleContainer}>
-              <View style={[styles.modalHandle, { backgroundColor: dividerColor }]} />
-            </View>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: themeColors.text }]}>{t('preferences.units')}</Text>
+          const handleSelectUnits = () => {
+            setSelectedUnits(unitsType);
+            handleCloseUnitsModal();
+          };
+
+          const label = unitsType === 'metric' ? t('preferences.metric') : t('preferences.imperial');
+          const subtitle = unitsType === 'metric' ? t('preferences.metricUnits') : t('preferences.imperialUnits');
+
+          return (
+            <View key={unitsType}>
               <TouchableOpacity
-                style={[styles.modalCloseButton, { backgroundColor: mutedSurfaceColor }]}
+                style={styles.languageRow}
                 activeOpacity={0.7}
-                onPress={handleCloseUnitsModal}
+                onPress={handleSelectUnits}
               >
-                <PlatformIcon sf="xmark" IconComponent={X} size={18} color={iconColor} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.unitsList}>
-              {(['metric', 'imperial'] as const).map((unitsType) => {
-                const isSelected = unitsType === selectedUnits;
-
-                const handleSelectUnits = () => {
-                  setSelectedUnits(unitsType);
-                  handleCloseUnitsModal();
-                };
-
-                const label = unitsType === 'metric' ? t('preferences.metric') : t('preferences.imperial');
-                const subtitle = unitsType === 'metric' ? t('preferences.metricUnits') : t('preferences.imperialUnits');
-
-                return (
-                  <View key={unitsType}>
-                    <TouchableOpacity
-                      style={styles.languageRow}
-                      activeOpacity={0.7}
-                      onPress={handleSelectUnits}
+                <View style={styles.languageInfo}>
+                  <View style={styles.languageTextContainer}>
+                    <Text
+                      style={[styles.languageNativeName, { color: themeColors.text }]}
                     >
-                      <View style={styles.languageInfo}>
-                        <View style={styles.languageTextContainer}>
-                          <Text
-                            style={[styles.languageNativeName, { color: themeColors.text }]}
-                          >
-                            {label}
-                          </Text>
-                          <Text
-                            style={[styles.unitsSubtitle, { color: secondaryTextColor }]}
-                          >
-                            {subtitle}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {isSelected && (
-                        <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
-                      )}
-                    </TouchableOpacity>
-
-                    {unitsType !== 'imperial' && (
-                      <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
-                    )}
+                      {label}
+                    </Text>
+                    <Text
+                      style={[styles.unitsSubtitle, { color: secondaryTextColor }]}
+                    >
+                      {subtitle}
+                    </Text>
                   </View>
-                );
-              })}
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
+                </View>
 
-      <Modal
+                {isSelected && (
+                  <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
+                )}
+              </TouchableOpacity>
+
+              {unitsType !== 'imperial' && (
+                <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
+              )}
+            </View>
+          );
+        })}
+      </BottomSheetModal>
+
+      <BottomSheetModal
         visible={isPaletteModalVisible}
-        transparent
-        animationType="none"
-        statusBarTranslucent
-        onRequestClose={handleClosePaletteModal}
+        onClose={handleClosePaletteModal}
+        title={t('preferences.colorPalette')}
       >
-        <View style={styles.modalOverlay}>
-          <TouchableWithoutFeedback onPress={handleClosePaletteModal}>
-            <Animated.View
-              style={[styles.modalBackdrop, { opacity: paletteBackdropOpacity }]}
-            />
-          </TouchableWithoutFeedback>
+        {THEMES.map((theme, index) => {
+          const isSelected = theme.value === preset;
+          const accentColor = theme.colors[0];
 
-          <Animated.View
-            style={[
-              styles.modalSheet,
-              {
-                backgroundColor: surfaceColor,
-                transform: [{ translateY: paletteSheetTranslateY }],
-              },
-            ]}
-          >
-            <View style={styles.modalHandleContainer}>
-              <View style={[styles.modalHandle, { backgroundColor: dividerColor }]} />
-            </View>
-            <View className="flex-row items-center justify-between mb-3" style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: themeColors.text }]}>
-                {t('preferences.colorPalette')}
-              </Text>
+          const handleSelectPalette = () => {
+            handleSelectPreset(theme.value);
+            handleClosePaletteModal();
+          };
+
+          return (
+            <View key={theme.value}>
               <TouchableOpacity
-                style={[styles.modalCloseButton, { backgroundColor: mutedSurfaceColor }]}
+                style={styles.languageRow}
                 activeOpacity={0.7}
-                onPress={handleClosePaletteModal}
+                onPress={handleSelectPalette}
               >
-                <PlatformIcon sf="xmark" IconComponent={X} size={18} color={iconColor} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.modalList}
-              contentContainerStyle={styles.modalListContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {THEMES.map((theme, index) => {
-                const isSelected = theme.value === preset;
-                const accentColor = theme.colors[0];
-
-                const handleSelectPalette = () => {
-                  handleSelectPreset(theme.value);
-                  handleClosePaletteModal();
-                };
-
-                return (
-                  <View key={theme.value}>
-                    <TouchableOpacity
-                      style={styles.languageRow}
-                      activeOpacity={0.7}
-                      onPress={handleSelectPalette}
+                <View style={styles.languageInfo}>
+                  <View
+                    style={[
+                      styles.paletteCircle,
+                      { backgroundColor: accentColor, borderColor: dividerColor },
+                    ]}
+                  />
+                  <View style={styles.languageTextContainer}>
+                    <Text
+                      style={[
+                        styles.languageNativeName,
+                        { color: themeColors.text },
+                      ]}
                     >
-                      <View style={styles.languageInfo}>
-                        <View
-                          style={[
-                            styles.paletteCircle,
-                            { backgroundColor: accentColor, borderColor: dividerColor },
-                          ]}
-                        />
-                        <View style={styles.languageTextContainer}>
-                          <Text
-                            style={[
-                              styles.languageNativeName,
-                              { color: themeColors.text },
-                            ]}
-                          >
-                            {theme.name}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {isSelected && (
-                        <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
-                      )}
-                    </TouchableOpacity>
-
-                    {index !== THEMES.length - 1 && (
-                      <View
-                        style={[styles.modalDivider, { backgroundColor: dividerColor }]}
-                      />
-                    )}
+                      {theme.name}
+                    </Text>
                   </View>
-                );
-              })}
-            </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
+                </View>
+
+                {isSelected && (
+                  <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
+                )}
+              </TouchableOpacity>
+
+              {index !== THEMES.length - 1 && (
+                <View
+                  style={[styles.modalDivider, { backgroundColor: dividerColor }]}
+                />
+              )}
+            </View>
+          );
+        })}
+      </BottomSheetModal>
     </SafeAreaView>
   );
 }
@@ -637,54 +423,6 @@ const styles = StyleSheet.create({
   modeCardLabel: {
     ...typography.p5,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-  },
-  modalSheet: {
-    height: '90%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  modalHandleContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-  },
-  modalTitle: {
-    ...typography.h6,
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalList: {
-    maxHeight: '100%',
-  },
-  modalListContent: {
-    paddingBottom: 8,
-  },
   languageRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -710,17 +448,10 @@ const styles = StyleSheet.create({
   modalDivider: {
     height: 1,
   },
-  unitsList: {
-    paddingBottom: 8,
-  },
   unitsSubtitle: {
     fontSize: 14,
     fontWeight: '400',
     marginTop: 2,
-  },
-  paletteList: {
-    paddingTop: 4,
-    paddingBottom: 4,
   },
   paletteCircle: {
     width: 16,

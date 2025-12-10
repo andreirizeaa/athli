@@ -53,6 +53,7 @@ export const en = {
   },
   clients: {
     title: 'Clients',
+    addClient: 'Add Client',
   },
   calendar: {
     title: 'Calendar',
