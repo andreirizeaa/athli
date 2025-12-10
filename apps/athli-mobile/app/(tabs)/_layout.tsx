@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Tabs, useRouter } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { iconSizes } from '@/constants/typography';
+import { BottomSheetModal } from '@/components/bottom-sheet-modal';
 import {
   Calendar,
   CalendarFold,
@@ -28,6 +29,43 @@ import {
 } from 'lucide-react-native';
 
 const hasLiquidGlass = isLiquidGlassAvailable();
+
+type NativeTabsCoachViewProps = {
+  primaryColor: string;
+};
+
+// Pure layout component - no navigation interception
+const NativeTabsCoachView = ({ primaryColor }: NativeTabsCoachViewProps) => {
+  return (
+    <NativeTabs tintColor={primaryColor}>
+      <NativeTabs.Trigger name="clients">
+        <Icon sf="person.2.fill" />
+        <Label>Clients</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="calendar">
+        <Icon sf="calendar" />
+        <Label>Calendar</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="chats">
+        <Icon sf="bubble.left.and.text.bubble.right.fill" />
+        <Label>Chats</Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="settings">
+        <Icon sf="gear" />
+        <Label>Settings</Label>
+      </NativeTabs.Trigger>
+
+      {/* Keep this for layout - touch will be intercepted by overlay */}
+      <NativeTabs.Trigger name="add-modal" role="search">
+        <Icon sf="plus" />
+        <Label>Add</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
+};
 
 type TabDefinition = {
   name: string;
@@ -45,6 +83,7 @@ export default function TabLayout() {
   const router = useRouter();
   const previousAppView = useRef(appView);
   const isInitialMount = useRef(true);
+  const [isAddClientModalVisible, setIsAddClientModalVisible] = useState(false);
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -60,35 +99,48 @@ export default function TabLayout() {
     }
   }, [appView, router]);
 
+  const handleOpenAddClientModal = () => {
+    setIsAddClientModalVisible(true);
+  };
+
+  const handleCloseAddClientModal = () => {
+    setIsAddClientModalVisible(false);
+  };
+
+  const insets = useSafeAreaInsets();
+
   if (hasLiquidGlass) {
     if (appView === 'coach') {
       return (
-        <NativeTabs tintColor={primaryColor}>
-          <NativeTabs.Trigger name="clients">
-            <Icon sf="person.2.fill" />
-            <Label>Clients</Label>
-          </NativeTabs.Trigger>
+        <>
+          {/* Native iOS tab bar (full width, includes search pill) */}
+          <NativeTabsCoachView primaryColor={primaryColor} />
 
-          <NativeTabs.Trigger name="calendar">
-            <Icon sf="calendar" />
-            <Label>Calendar</Label>
-          </NativeTabs.Trigger>
+          {/* Overlay that intercepts touches on the search pill */}
+          <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+            <Pressable
+              onPress={handleOpenAddClientModal}
+              style={{
+                position: 'absolute',
+                // Position over the search pill (top-right area on iOS)
+                right: 16,
+                bottom: insets.bottom + 8,
+                width: 80,
+                height: 44,
+                borderRadius: 22,
+                // Transparent to keep native pill visible
+                backgroundColor: 'transparent',
+              }}
+            />
+          </View>
 
-          <NativeTabs.Trigger name="chats">
-            <Icon sf="bubble.left.and.text.bubble.right.fill" />
-            <Label>Chats</Label>
-          </NativeTabs.Trigger>
-
-          <NativeTabs.Trigger name="settings">
-            <Icon sf="gear" />
-            <Label>Settings</Label>
-          </NativeTabs.Trigger>
-
-          <NativeTabs.Trigger name="add" role="search">
-            <Icon sf="plus" />
-            <Label>Add</Label>
-          </NativeTabs.Trigger>
-        </NativeTabs>
+          {/* Bottom sheet modal */}
+          <BottomSheetModal
+            visible={isAddClientModalVisible}
+            onClose={handleCloseAddClientModal}
+            title={t('clients.addClient')}
+          />
+        </>
       );
     }
 
@@ -115,7 +167,7 @@ export default function TabLayout() {
           <Label>Profile</Label>
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="add" role="search">
+        <NativeTabs.Trigger name="add-modal" role="search">
           <Icon sf="plus" />
           <Label>Add</Label>
         </NativeTabs.Trigger>
@@ -124,67 +176,83 @@ export default function TabLayout() {
   }
 
   return (
-    <Tabs
-      initialRouteName={appView === 'coach' ? 'clients' : 'training'}
-      tabBar={(props) => <FallbackTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen
-        name="clients"
-        options={{
-          title: t('clients.title'),
-          href: appView === 'coach' ? '/clients' : null,
-        }}
+    <>
+      <Tabs
+        initialRouteName={appView === 'coach' ? 'clients' : 'training'}
+        tabBar={(props) => (
+          <FallbackTabBar
+            {...props}
+            onOpenAddClientModal={handleOpenAddClientModal}
+          />
+        )}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen
+          name="clients"
+          options={{
+            title: t('clients.title'),
+            href: appView === 'coach' ? '/clients' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="calendar"
+          options={{
+            title: t('calendar.title'),
+            href: appView === 'coach' ? '/calendar' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="chats"
+          options={{
+            title: t('chats.title'),
+            href: appView === 'coach' ? '/chats' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: appView === 'coach' ? t('settings.title') : t('profile.title'),
+            href: appView === 'coach' ? '/settings' : appView === 'athlete' ? '/settings' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="training"
+          options={{
+            title: t('training.title'),
+            href: appView === 'athlete' ? '/training' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="progress"
+          options={{
+            title: t('progress.title'),
+            href: appView === 'athlete' ? '/progress' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="inbox"
+          options={{
+            title: t('inbox.title'),
+            href: appView === 'athlete' ? '/inbox' : null,
+          }}
+        />
+        <Tabs.Screen name="index" options={{ href: null }} />
+        <Tabs.Screen name="add-modal" options={{ href: null }} />
+      </Tabs>
+      <BottomSheetModal
+        visible={isAddClientModalVisible}
+        onClose={handleCloseAddClientModal}
+        title={t('clients.addClient')}
       />
-      <Tabs.Screen
-        name="calendar"
-        options={{
-          title: t('calendar.title'),
-          href: appView === 'coach' ? '/calendar' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="chats"
-        options={{
-          title: t('chats.title'),
-          href: appView === 'coach' ? '/chats' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: appView === 'coach' ? t('settings.title') : t('profile.title'),
-          href: appView === 'coach' ? '/settings' : appView === 'athlete' ? '/settings' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="training"
-        options={{
-          title: t('training.title'),
-          href: appView === 'athlete' ? '/training' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="progress"
-        options={{
-          title: t('progress.title'),
-          href: appView === 'athlete' ? '/progress' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="inbox"
-        options={{
-          title: t('inbox.title'),
-          href: appView === 'athlete' ? '/inbox' : null,
-        }}
-      />
-      <Tabs.Screen name="add" options={{ title: t('general.add'), href: null }} />
-      <Tabs.Screen name="index" options={{ href: null }} />
-    </Tabs>
+    </>
   );
 }
 
-function FallbackTabBar({ state, navigation }: BottomTabBarProps) {
+type FallbackTabBarProps = BottomTabBarProps & {
+  onOpenAddClientModal: () => void;
+};
+
+function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTabBarProps) {
   const insets = useSafeAreaInsets();
   const activeRouteName = state.routes[state.index]?.name;
   const { primaryColor, colors: themeColors } = useThemePreference();
@@ -197,6 +265,13 @@ function FallbackTabBar({ state, navigation }: BottomTabBarProps) {
     }
 
     navigation.navigate(name as never);
+  };
+
+  const handleAddPress = () => {
+    // Only open modal when on clients screen in coach view
+    if (appView === 'coach' && activeRouteName === 'clients') {
+      onOpenAddClientModal();
+    }
   };
 
   const renderTab = (tab: TabDefinition) => {
@@ -334,9 +409,7 @@ function FallbackTabBar({ state, navigation }: BottomTabBarProps) {
           <View style={[styles.tabSection, styles.addButtonSection]}>
             <TouchableOpacity
               style={[styles.addButton, { backgroundColor: primaryColor }]}
-              onPress={() => {
-                // Add action; no-op for now
-              }}
+              onPress={handleAddPress}
               activeOpacity={0.7}
             >
               {renderAddIcon()}

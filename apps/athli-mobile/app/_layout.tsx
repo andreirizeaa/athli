@@ -90,6 +90,7 @@ function RootLayoutNav() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="preferences" options={{ headerShown: false }} />
+          <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
         </Stack>
       </ThemeProvider>
   );
