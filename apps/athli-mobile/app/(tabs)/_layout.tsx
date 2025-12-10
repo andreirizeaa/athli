@@ -110,7 +110,7 @@ export default function TabLayout() {
           <Label>Inbox</Label>
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger name="settings">
           <Icon sf="person.crop.circle.fill" />
           <Label>Profile</Label>
         </NativeTabs.Trigger>
@@ -153,8 +153,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: t('settings.title'),
-          href: appView === 'coach' ? '/settings' : null,
+          title: appView === 'coach' ? t('settings.title') : t('profile.title'),
+          href: appView === 'coach' ? '/settings' : appView === 'athlete' ? '/settings' : null,
         }}
       />
       <Tabs.Screen
@@ -176,13 +176,6 @@ export default function TabLayout() {
         options={{
           title: t('inbox.title'),
           href: appView === 'athlete' ? '/inbox' : null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t('profile.title'),
-          href: appView === 'athlete' ? '/profile' : null,
         }}
       />
       <Tabs.Screen name="add" options={{ title: t('general.add'), href: null }} />
@@ -296,9 +289,9 @@ function FallbackTabBar({ state, navigation }: BottomTabBarProps) {
       width: 60,
     },
     {
-      name: 'profile',
+      name: 'settings',
       label: t('profile.title'),
-      sf: 'person.crop.circle',
+      sf: 'person.crop.circle.fill',
       mdi: 'account-circle',
       IconComponent: User,
       width: 70,
