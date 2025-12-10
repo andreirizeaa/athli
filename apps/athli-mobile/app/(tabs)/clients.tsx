@@ -1,43 +1,28 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { FlashList } from '@shopify/flash-list';
-import { SymbolView } from 'expo-symbols';
-import { Search, ChevronRight } from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
+import { ChevronRight, Search, SlidersHorizontal } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { Card } from '@/components/card';
 import { getClients, type Client } from '@/services/client-service';
-
-type PlatformIconProps = {
-  sf: string;
-  IconComponent: LucideIcon;
-  size?: number;
-  color?: string;
-};
-
-const PlatformIcon = ({ sf, IconComponent, size = 24, color = '#000000' }: PlatformIconProps) => {
-  if (Platform.OS === 'ios') {
-    return <SymbolView name={sf as any} tintColor={color} size={size} type="monochrome" />;
-  }
-  return <IconComponent {...({ size, color } as any)} />;
-};
+import { ClientsFilterModal } from '@/components/clients/clients-filter-modal';
+import { PlatformIcon } from '@/components/platform-icon';
+import { Card } from '@/components/card';
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
 const fuzzyMatch = (text: string, query: string): boolean => {
   if (!query) return true;
-  
+
   const textLower = text.toLowerCase();
   const queryLower = query.toLowerCase();
-  
+
   // Exact match
   if (textLower.includes(queryLower)) return true;
-  
+
   // Fuzzy match: check if all query characters appear in order in the text
   let textIndex = 0;
   for (let i = 0; i < queryLower.length; i++) {
@@ -59,6 +44,9 @@ export default function ClientsScreen() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFiltersModalVisible, setIsFiltersModalVisible] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const gradientColors: [string, string] =
     colorScheme === 'dark'
@@ -89,85 +77,83 @@ export default function ClientsScreen() {
     }, [loadClients])
   );
 
-  // Filter clients based on search query using fuzzy search
+  // Filter clients based on search query and category filters
   const filteredClients = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return clients;
-    }
-    
-    return clients.filter((client) => {
-      const fullName = client.fullName.toLowerCase();
-      const firstName = client.firstName.toLowerCase();
-      const lastName = client.lastName.toLowerCase();
-      const query = searchQuery.toLowerCase();
-      
-      return (
-        fuzzyMatch(fullName, query) ||
-        fuzzyMatch(firstName, query) ||
-        fuzzyMatch(lastName, query)
-      );
-    });
-  }, [clients, searchQuery]);
+    let filtered = clients;
 
-  const formatSubtitle = (client: Client): string => {
-    const parts: string[] = [];
-    
-    if (client.age) {
-      parts.push(`${client.age} years`);
+    // Apply category filters
+    if (selectedCategories.size > 0) {
+      filtered = filtered.filter((client) => {
+        if (!client.type) return false;
+        return selectedCategories.has(client.type);
+      });
     }
-    
-    if (client.gender && client.gender !== 'prefer-not-to-say') {
-      parts.push(client.gender);
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((client) => {
+        const fullName = client.fullName.toLowerCase();
+        const firstName = client.firstName.toLowerCase();
+        const lastName = client.lastName.toLowerCase();
+        const query = searchQuery.toLowerCase();
+
+        return (
+          fuzzyMatch(fullName, query) ||
+          fuzzyMatch(firstName, query) ||
+          fuzzyMatch(lastName, query)
+        );
+      });
     }
-    
-    if (client.type) {
-      const typeLabel = client.type === 'in-person' ? 'In Person' : client.type === 'online' ? 'Online' : 'Hybrid';
-      parts.push(typeLabel);
-    }
-    
-    return parts.join(' · ');
-  };
+
+    return filtered;
+  }, [clients, searchQuery, selectedCategories]);
 
   const handleClientPress = (clientId: string) => {
     router.push(`/client/${clientId}`);
   };
 
-  const renderClientCard = ({ item, index }: { item: Client; index: number }) => {
-    const isLastItem = index === filteredClients.length - 1;
-    
-    return (
-      <View style={styles.cardWrapper}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => handleClientPress(item.id)}
-        >
-          <Card style={isLastItem ? { marginBottom: 60 } : undefined}>
-            <View style={styles.cardContent}>
-              {item.avatar ? (
-                <Image source={{ uri: item.avatar }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: themeColors.border }]} />
-              )}
-              <View style={styles.clientInfo}>
-                <Text style={[styles.clientName, { color: themeColors.text }]}>{item.fullName}</Text>
-                <Text style={[styles.clientSubtitle, { color: themeColors.mutedText }]}>
-                  {formatSubtitle(item)}
-                </Text>
-              </View>
-              <View style={styles.chevronContainer}>
-                <PlatformIcon
-                  sf="chevron.right"
-                  IconComponent={ChevronRight}
-                  size={iconSizes.navigationChevrons}
-                  color={themeColors.mutedText}
-                />
-              </View>
-            </View>
-          </Card>
-        </TouchableOpacity>
-      </View>
-    );
+  const handleOpenFiltersModal = () => {
+    setIsFiltersModalVisible(true);
   };
+
+  const handleCloseFiltersModal = () => {
+    setIsFiltersModalVisible(false);
+  };
+
+  const handleApplyFilters = (categories: Set<string>) => {
+    setSelectedCategories(categories);
+    // Scroll to top when filters are applied
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }, 100);
+  };
+
+  const formatSubtitle = (client: Client): string => {
+    const parts: string[] = [];
+
+    if (client.age) {
+      parts.push(`${client.age} ${t('clients.years')}`);
+    }
+
+    if (client.gender && client.gender !== 'prefer-not-to-say') {
+      parts.push(client.gender);
+    }
+
+    if (client.type) {
+      const typeLabel =
+        client.type === 'in-person'
+          ? t('clients.addClientModal.inPerson')
+          : client.type === 'online'
+            ? t('clients.addClientModal.online')
+            : t('clients.addClientModal.hybrid');
+      parts.push(typeLabel);
+    }
+
+    return parts.join(' · ');
+  };
+
+  // Check if any filters are applied
+  const hasAppliedFilters = selectedCategories.size > 0;
 
   return (
     <LinearGradient
@@ -178,10 +164,17 @@ export default function ClientsScreen() {
       end={{ x: 0, y: 1 }}
     >
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.headerSection}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
-            <View style={[styles.searchContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
+            <View
+              style={[styles.searchContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
+            >
               <View style={styles.searchIcon}>
                 <PlatformIcon
                   sf="magnifyingglass"
@@ -192,11 +185,24 @@ export default function ClientsScreen() {
               </View>
               <TextInput
                 style={[styles.searchInput, { color: themeColors.text }]}
-                placeholder="Search clients..."
+                placeholder={t('clients.searchPlaceholder')}
                 placeholderTextColor={themeColors.mutedText}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                textAlignVertical="center"
               />
+              <TouchableOpacity
+                style={styles.filterIcon}
+                activeOpacity={0.7}
+                onPress={handleOpenFiltersModal}
+              >
+                <PlatformIcon
+                  sf="slider.horizontal.3"
+                  IconComponent={SlidersHorizontal}
+                  size={20}
+                  color={hasAppliedFilters ? themeColors.primary : themeColors.mutedText}
+                />
+              </TouchableOpacity>
             </View>
           </View>
           {isLoading ? (
@@ -204,18 +210,58 @@ export default function ClientsScreen() {
               <ActivityIndicator size="large" color={themeColors.primary} />
             </View>
           ) : (
-            <FlashList<Client>
-              data={filteredClients}
-              renderItem={renderClientCard}
-              keyExtractor={(item: Client) => item.id}
-              // @ts-ignore - estimatedItemSize is a valid FlashList prop but types may be outdated
-              estimatedItemSize={88}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-            />
+            <View style={styles.listContainer}>
+              {filteredClients.map((client, index) => {
+                const isLastItem = index === filteredClients.length - 1;
+                return (
+                  <View key={client.id} style={styles.cardWrapper}>
+                    <TouchableOpacity activeOpacity={0.7} onPress={() => handleClientPress(client.id)}>
+                      <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
+                        <View style={styles.cardContent}>
+                          {client.avatar ? (
+                            <Image
+                              source={{ uri: client.avatar }}
+                              style={[styles.avatar, { borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }]}
+                            />
+                          ) : (
+                            <View
+                              style={[
+                                styles.avatar,
+                                styles.avatarPlaceholder,
+                                { backgroundColor: themeColors.border, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 },
+                              ]}
+                            />
+                          )}
+                          <View style={styles.clientInfo}>
+                            <Text style={[styles.clientName, { color: themeColors.text }]}>{client.fullName}</Text>
+                            <Text style={[styles.clientSubtitle, { color: themeColors.mutedText }]}>
+                              {formatSubtitle(client)}
+                            </Text>
+                          </View>
+                          <View style={styles.chevronContainer}>
+                            <PlatformIcon
+                              sf="chevron.right"
+                              IconComponent={ChevronRight}
+                              size={iconSizes.navigationChevrons}
+                              color={themeColors.mutedText}
+                            />
+                          </View>
+                        </View>
+                      </Card>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
           )}
-        </View>
+        </ScrollView>
       </SafeAreaView>
+      <ClientsFilterModal
+        visible={isFiltersModalVisible}
+        onClose={handleCloseFiltersModal}
+        selectedCategories={selectedCategories}
+        onApplyFilters={handleApplyFilters}
+      />
     </LinearGradient>
   );
 }
@@ -227,55 +273,46 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  container: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     paddingTop: 16,
+    paddingBottom: 16,
   },
   headerSection: {
     paddingHorizontal: 20,
     marginBottom: 16,
   },
-  title: {
-    ...typography.h1,
-    textAlign: 'left',
-    marginBottom: 16,
-  },
-  searchContainer: {
-    flexDirection: 'row',
+  loadingContainer: {
+    minHeight: 400,
+    justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.p2,
-    padding: 0,
+  listContainer: {
+    paddingBottom: 16,
   },
   cardWrapper: {
     paddingHorizontal: 20,
   },
-  listContent: {
-    paddingBottom: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  cardContainer: {
+    overflow: 'hidden',
+    paddingLeft: 0,
+    paddingRight: 16,
+    paddingTop: 0,
+    paddingBottom: 0,
+    height: 88,
   },
   cardContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
+    height: 88,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 80,
     marginRight: 12,
+    marginLeft: 0,
+    alignSelf: 'stretch',
   },
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',
@@ -294,7 +331,34 @@ const styles = StyleSheet.create({
   },
   chevronContainer: {
     marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    ...typography.h1,
+    textAlign: 'left',
+    marginBottom: 16,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 28,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    ...typography.p2,
+    padding: 0,
+    paddingBottom: 4,
+  },
+  filterIcon: {
+    marginLeft: 8,
+    padding: 4,
   },
 });
-
 

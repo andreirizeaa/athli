@@ -20,7 +20,7 @@ export type ThemeType = {
 };
 
 export const DEFAULT_THEME: ThemeType = {
-  preset: 'sunset-glow',
+  preset: 'default',
   radius: 'default',
   scale: 'none',
   contentLayout: 'full',
