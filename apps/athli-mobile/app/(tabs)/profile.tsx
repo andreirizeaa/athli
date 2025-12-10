@@ -1,7 +1,8 @@
 import React from 'react';
 import type { JSX } from 'react';
 import type { GestureResponderEvent } from 'react-native';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
@@ -24,6 +25,11 @@ import {
   UserMinus,
 } from 'lucide-react-native';
 
+import { typography, iconSizes } from '@/constants/typography';
+import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useAppView } from '@/contexts/useAppView';
+import { useTranslations } from '@/contexts/useTranslations';
+
 export interface SettingsOptionProps {
   icon: JSX.Element;
   title: string;
@@ -33,6 +39,8 @@ export interface SettingsOptionProps {
 }
 
 export function SettingsOption({ icon, title, subtitle, onPress, showChevron }: SettingsOptionProps) {
+  const { colors: themeColors } = useThemePreference();
+
   const handleOptionPress = (event: GestureResponderEvent) => {
     if (!onPress) {
       return;
@@ -49,12 +57,14 @@ export function SettingsOption({ icon, title, subtitle, onPress, showChevron }: 
     >
       <View style={styles.iconContainer}>{icon}</View>
       <View style={styles.textContainer}>
-        <Text style={styles.optionTitle}>{title}</Text>
-        {subtitle && <Text style={styles.optionSubtitle}>{subtitle}</Text>}
+        <Text style={[styles.optionTitle, { color: themeColors.text }]}>{title}</Text>
+        {subtitle && (
+          <Text style={[styles.optionSubtitle, { color: themeColors.mutedText }]}>{subtitle}</Text>
+        )}
       </View>
       {showChevron && (
         <View style={styles.chevronContainer}>
-          <ChevronRight size={20} color="#C7C7CC" />
+          <ChevronRight size={iconSizes.listIcons} color={themeColors.mutedText} />
         </View>
       )}
     </TouchableOpacity>
@@ -63,14 +73,34 @@ export function SettingsOption({ icon, title, subtitle, onPress, showChevron }: 
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const iconSize = 26;
-  const iconColor = '#000000';
+  const colorScheme = useColorScheme();
+  const { primarySoftColor, colors: themeColors } = useThemePreference();
+  const { appView, setAppView } = useAppView();
+  const { t } = useTranslations();
+  const iconSize = iconSizes.settingsIcons;
+  const iconColor = themeColors.text;
+
+  const gradientColors: [string, string] =
+    colorScheme === 'dark'
+      ? ['#2a2a2a', themeColors.background]
+      : [primarySoftColor, themeColors.background];
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/preferences' });
   };
 
+  const handleToggleView = () => {
+    setAppView(appView === 'athlete' ? 'coach' : 'athlete');
+  };
+
   return (
+    <LinearGradient
+      colors={gradientColors}
+      locations={[0.05, 0.7]}
+      style={styles.gradient}
+      start={{ x: 1, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={styles.container}
@@ -79,119 +109,138 @@ export default function ProfileScreen() {
         contentInsetAdjustmentBehavior="never"
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Settings</Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.title, { color: themeColors.text }]}>{t('profile.title')}</Text>
+            <TouchableOpacity
+              style={[
+                styles.viewToggleButton,
+                {
+                  backgroundColor: 'transparent',
+                  borderColor: themeColors.text,
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={handleToggleView}
+            >
+              <View style={styles.viewToggleContent}>
+                <Text style={[styles.viewToggleText, { color: themeColors.text }]}>
+                  {t('profile.coachView')}
+                </Text>
+                <ChevronRight size={iconSizes.extraSmallIcons} color={themeColors.text} />
+              </View>
+            </TouchableOpacity>
+          </View>
 
           {/* Profile Card */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <TouchableOpacity style={styles.profileRow} activeOpacity={0.7}>
               <View style={styles.profileAvatar}>
                 <View style={styles.fallbackAvatar}>
-                  <User size={24} color="#ffffff" />
+                  <User size={iconSizes.settingsIcons} color="#ffffff" />
                 </View>
               </View>
               <View style={styles.profileTextContainer}>
                 <View style={styles.profileNameRow}>
-                  <Text style={styles.profileNameText} numberOfLines={1}>
-                    Enter your name
+                  <Text
+                    style={[styles.profileNameText, { color: themeColors.text }]}
+                    numberOfLines={1}
+                  >
+                    {t('profile.enterYourName')}
                   </Text>
-                  <Pencil size={16} color="#8E8E93" />
+                  <Pencil size={iconSizes.smallIcons} color={themeColors.mutedText} />
                 </View>
-                <Text style={styles.profileSubtitleText} numberOfLines={1}>
-                  Member since 2024
+                <Text
+                  style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
+                  numberOfLines={1}
+                >
+                  {t('profile.memberSince')} 2024
                 </Text>
               </View>
             </TouchableOpacity>
           </View>
 
           {/* Account */}
-          <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
               icon={<IdCard size={iconSize} color={iconColor} />}
-              title="Personal Details"
+              title={t('profile.personalDetails')}
               showChevron
             />
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
               icon={<Cog size={iconSize} color={iconColor} />}
-              title="Preferences"
+              title={t('profile.preferences')}
               showChevron
               onPress={handleOpenPreferences}
             />
           </View>
 
           {/* Support */}
-          <Text style={styles.sectionTitle}>Support</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
               icon={<MailPlus size={iconSize} color={iconColor} />}
-              title="Support Email"
+              title={t('profile.supportEmail')}
             />
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
               icon={<Megaphone size={iconSize} color={iconColor} />}
-              title="Feature Requests"
+              title={t('profile.featureRequests')}
             />
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
               icon={<RefreshCw size={iconSize} color={iconColor} />}
-              title="Sync Data"
-              subtitle="Last synced: Never"
+              title={t('profile.syncData')}
+              subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
             />
-            <View style={styles.separator} />
-            <SettingsOption
-              icon={<School2 size={iconSize} color={iconColor} />}
-              title="Replay Tutorial"
-            />
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
               icon={<Star size={iconSize} color={iconColor} />}
-              title="Leave Rating"
-            />
-            <View style={styles.separator} />
-            <SettingsOption
-              icon={<BellRing size={iconSize} color={iconColor} />}
-              title="Turn on Notifications"
+              title={t('profile.leaveRating')}
             />
           </View>
 
           {/* Legal */}
-          <Text style={styles.sectionTitle}>Legal</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.legal')}</Text>
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
               icon={<FileText size={iconSize} color={iconColor} />}
-              title="Terms and Conditions"
+              title={t('profile.termsAndConditions')}
             />
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
               icon={<ShieldCheck size={iconSize} color={iconColor} />}
-              title="Privacy Policy"
+              title={t('profile.privacyPolicy')}
             />
           </View>
 
           {/* Account Actions */}
-          <Text style={styles.sectionTitle}>Account Actions</Text>
-          <View style={styles.card}>
+          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
+          <View style={[styles.card, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
             <SettingsOption
               icon={<LogOut size={iconSize} color={iconColor} />}
-              title="Logout"
+              title={t('profile.logout')}
             />
-            <View style={styles.separator} />
+            <View style={[styles.separator, { backgroundColor: themeColors.border }]} />
             <SettingsOption
               icon={<UserMinus size={iconSize} color={iconColor} />}
-              title="Delete Account"
+              title={t('profile.deleteAccount')}
             />
           </View>
         </View>
       </ScrollView>
     </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
@@ -202,27 +251,41 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
   },
-  title: {
-    fontSize: 30,
-    fontWeight: '600',
-    color: '#000000',
-    textAlign: 'left',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Display' : 'Roboto',
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 24,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#8E8E93',
+  title: {
+    ...typography.h1,
     textAlign: 'left',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Display' : 'Roboto',
+    flex: 1,
+  },
+  viewToggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignSelf: 'center',
+    marginTop: 2,
+  },
+  viewToggleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewToggleText: {
+    ...typography.p5,
+  },
+  sectionTitle: {
+    ...typography.p2,
+    textAlign: 'left',
     marginBottom: 12,
     marginTop: 8,
   },
   card: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 0.5,
-    borderColor: '#f0f0f0',
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -284,34 +347,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   profileNameText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000000',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto',
+    ...typography.h5,
   },
   profileSubtitleText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000000',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto',
+    ...typography.p3,
     marginTop: 2,
   },
   optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto',
+    ...typography.p1,
   },
   optionSubtitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#8E8E93',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto',
+    ...typography.p6,
     marginTop: 2,
   },
   separator: {
     height: 1,
-    backgroundColor: '#E5E5EA',
     marginVertical: 4,
   },
 });

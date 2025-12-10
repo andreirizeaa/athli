@@ -7,7 +7,7 @@ import { typography } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 
-export default function ProgressScreen() {
+export default function ChatsScreen() {
   const colorScheme = useColorScheme();
   const { primarySoftColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
@@ -25,11 +25,11 @@ export default function ProgressScreen() {
       start={{ x: 1, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('progress.title')}</Text>
-      </View>
-    </SafeAreaView>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
+        </View>
+      </SafeAreaView>
     </LinearGradient>
   );
 }
@@ -51,4 +51,5 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
 });
+
 
