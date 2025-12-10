@@ -1,5 +1,9 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "npm_config_target_platform",
+    "npm_config_target_arch"
+  ],
   "tasks": {
     "dev": {
       "cache": false,
