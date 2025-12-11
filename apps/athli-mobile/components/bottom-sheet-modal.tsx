@@ -38,6 +38,8 @@ type BottomSheetModalProps = {
   title: string;
   children?: React.ReactNode;
   height?: string;
+  skipScrollView?: boolean; // Skip ScrollView wrapper for custom scrollable components
+  headerRightButtons?: React.ReactNode; // Custom buttons to show to the left of the close button
 };
 
 export const BottomSheetModal = ({
@@ -46,6 +48,8 @@ export const BottomSheetModal = ({
   title,
   children,
   height = '90%',
+  skipScrollView = false,
+  headerRightButtons,
 }: BottomSheetModalProps) => {
   const { colors: themeColors } = useThemePreference();
   const { height: windowHeight } = useWindowDimensions();
@@ -126,23 +130,36 @@ export const BottomSheetModal = ({
           </View>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: themeColors.text }]}>{title}</Text>
-            <TouchableOpacity
-              style={[styles.modalCloseButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
-              onPress={handleClose}
-            >
-              <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={iconColor} />
-            </TouchableOpacity>
+            <View style={styles.modalHeaderRight}>
+              {headerRightButtons && (
+                <View style={styles.headerRightButtonsContainer}>
+                  {headerRightButtons}
+                </View>
+              )}
+              <TouchableOpacity
+                style={[styles.modalCloseButton, { backgroundColor: mutedSurfaceColor }]}
+                activeOpacity={0.7}
+                onPress={handleClose}
+              >
+                <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={iconColor} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {children && (
-            <ScrollView
-              style={styles.modalContent}
-              contentContainerStyle={styles.modalContentContainer}
-              showsVerticalScrollIndicator={false}
-            >
-              {children}
-            </ScrollView>
+            skipScrollView ? (
+              <View style={styles.modalContent}>
+                {children}
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.modalContent}
+                contentContainerStyle={styles.modalContentContainer}
+                showsVerticalScrollIndicator={false}
+              >
+                {children}
+              </ScrollView>
+            )
           )}
         </Animated.View>
       </View>
@@ -184,6 +201,16 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...typography.h6,
+  },
+  modalHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerRightButtonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   modalCloseButton: {
     width: 32,

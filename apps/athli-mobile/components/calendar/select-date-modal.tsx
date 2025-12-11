@@ -1,22 +1,11 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import {
-  Animated,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import { X } from 'lucide-react-native';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { PlatformIcon } from '@/components/platform-icon';
+import { BottomSheetModal } from '@/components/bottom-sheet-modal';
 
 export type MonthData = {
   year: number;
@@ -86,12 +75,12 @@ const generateCalendarGrid = (year: number, month: number): CalendarDay[] => {
   const firstDay = getFirstDayOfWeek(year, month);
   const daysInMonth = getDaysInMonth(year, month);
 
-  // Add empty cells for days before the 1st
+  // Add empty cells for days before the 1st (to align with Monday = column 0)
   for (let i = 0; i < firstDay; i++) {
     days.push({ day: null, date: null });
   }
 
-  // Add days of the month
+  // Add days of the current month
   for (let day = 1; day <= daysInMonth; day++) {
     days.push({
       day,
@@ -99,10 +88,10 @@ const generateCalendarGrid = (year: number, month: number): CalendarDay[] => {
     });
   }
 
-  // Add empty cells at the end to complete the last row (always 7 columns)
+  // Add empty cells to complete the last row if needed
   const totalCells = days.length;
   const remainingCells = totalCells % 7;
-  if (remainingCells !== 0) {
+  if (remainingCells > 0) {
     const cellsToAdd = 7 - remainingCells;
     for (let i = 0; i < cellsToAdd; i++) {
       days.push({ day: null, date: null });
@@ -112,14 +101,34 @@ const generateCalendarGrid = (year: number, month: number): CalendarDay[] => {
   return days;
 };
 
+// Normalize date to start of day for comparison
+const normalizeDate = (date: Date): Date => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
 // Check if a date is today
 const isToday = (date: Date | null): boolean => {
   if (!date) return false;
-  const today = new Date();
+  const today = normalizeDate(new Date());
+  const dateToCheck = normalizeDate(date);
   return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
+    dateToCheck.getDate() === today.getDate() &&
+    dateToCheck.getMonth() === today.getMonth() &&
+    dateToCheck.getFullYear() === today.getFullYear()
+  );
+};
+
+// Check if two dates are the same day
+const isSameDay = (date1: Date | null, date2: Date | null): boolean => {
+  if (!date1 || !date2) return false;
+  const d1 = normalizeDate(date1);
+  const d2 = normalizeDate(date2);
+  return (
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear()
   );
 };
 
@@ -134,21 +143,27 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
   const { width } = useWindowDimensions();
   const grid = useMemo(() => generateCalendarGrid(monthData.year, monthData.month), [monthData.year, monthData.month]);
   
-  // Calculate cell dimensions with proper spacing for 7 columns
+  // Calculate cell width: (container width - horizontal padding - gaps) / 7
+  // Container padding: 20 * 2 = 40, gaps between 7 cells: 4 * 6 = 24
   const containerPadding = 40;
+  const gapSize = 4; // Reduced spacing between cells
+  const gapsBetweenCells = gapSize * 6; // 6 gaps of 4px each between 7 cells
   const availableWidth = width - containerPadding;
-  const gapBetweenCells = 8; // Space between cells
-  const sideGapWidth = (availableWidth - (6 * gapBetweenCells)) / 14; // Equal gap on each side
-  const cellWidth = (availableWidth - (6 * gapBetweenCells) - (2 * sideGapWidth)) / 7;
+  const cellWidth = Math.floor((availableWidth - gapsBetweenCells) / 7);
+  const gridWidth = cellWidth * 7 + gapsBetweenCells; // Total width for 7 cells + 6 gaps
 
   const isDateSelected = (date: Date | null): boolean => {
-    if (!date || !selectedDate) return false;
-    return (
-      date.getDate() === selectedDate.getDate() &&
-      date.getMonth() === selectedDate.getMonth() &&
-      date.getFullYear() === selectedDate.getFullYear()
-    );
+    if (!date) return false;
+    // If no date is selected, default to today
+    const dateToCompare = selectedDate || normalizeDate(new Date());
+    return isSameDay(date, dateToCompare);
   };
+
+  // Group cells into rows of 7
+  const rows: CalendarDay[][] = [];
+  for (let i = 0; i < grid.length; i += 7) {
+    rows.push(grid.slice(i, i + 7));
+  }
 
   return (
     <View style={styles.monthContainer}>
@@ -157,55 +172,79 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
           {MONTH_NAMES[monthData.month]} {monthData.year}
         </Text>
       </View>
-      <View style={[styles.calendarGrid, { paddingLeft: sideGapWidth, paddingRight: sideGapWidth }]}>
-        {grid.map((cell, index) => {
-          const columnIndex = index % 7;
-          const isLastInRow = columnIndex === 6;
-          const isLastRow = index >= grid.length - 7;
-          
-          const cellStyle = [
-            styles.dayCell,
-            { 
-              width: cellWidth, 
-              height: cellWidth,
-              marginRight: isLastInRow ? 0 : gapBetweenCells,
-              marginBottom: isLastRow ? 0 : gapBetweenCells,
-            },
-          ];
+      <View style={styles.calendarContainer}>
+        <View style={[styles.calendarGrid, { width: gridWidth }]}>
+          {rows.map((row, rowIndex) => (
+            <View key={rowIndex} style={[styles.calendarRow, { width: gridWidth }]}>
+              {row.map((cell, cellIndex) => {
+                const index = rowIndex * 7 + cellIndex;
+                const isLastInRow = cellIndex === 6;
+                
+                if (cell.day === null) {
+                  return (
+                    <View 
+                      key={index} 
+                      style={[
+                        styles.dayCell, 
+                        { width: cellWidth, height: cellWidth },
+                        isLastInRow && styles.dayCellLastInRow,
+                      ]} 
+                    />
+                  );
+                }
 
-          if (cell.day === null) {
-            return <View key={index} style={cellStyle} />;
-          }
-
-          const isSelected = isDateSelected(cell.date);
-          const isTodayDate = isToday(cell.date);
-          const isTodayAndSelected = isSelected && isTodayDate;
-          
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                ...cellStyle,
-                isSelected && { backgroundColor: themeColors.primary },
-                isTodayDate && !isSelected && {
-                  borderWidth: 2,
-                  borderColor: themeColors.primary,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => cell.date && onDateSelect(cell.date)}
-            >
-              <Text
-                style={[
-                  styles.dayText,
-                  { color: isSelected ? '#FFFFFF' : themeColors.text },
-                ]}
-              >
-                {cell.day}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                const isSelected = isDateSelected(cell.date);
+                const isTodayDate = isToday(cell.date);
+                
+                // Calculate smaller circle size (70% of cell width)
+                const circleSize = Math.floor(cellWidth * 0.7);
+                
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.dayCell,
+                      { width: cellWidth, height: cellWidth },
+                      isLastInRow && styles.dayCellLastInRow,
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      if (cell.date) {
+                        const normalizedDate = normalizeDate(cell.date);
+                        onDateSelect(normalizedDate);
+                      }
+                    }}
+                  >
+                    <View
+                      style={[
+                        styles.circleIndicator,
+                        { 
+                          width: circleSize, 
+                          height: circleSize,
+                          borderRadius: circleSize / 2,
+                        },
+                        isSelected && { backgroundColor: themeColors.primary },
+                        isTodayDate && !isSelected && {
+                          borderWidth: 2,
+                          borderColor: themeColors.primary,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dayText,
+                          { color: isSelected ? '#FFFFFF' : themeColors.text },
+                        ]}
+                      >
+                        {cell.day}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
@@ -223,73 +262,43 @@ type SelectDateModalProps = {
 export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }: SelectDateModalProps) => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const { height: windowHeight } = useWindowDimensions();
   const months = useMemo(() => generateMonths(), []);
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const sheetTranslateY = useRef(new Animated.Value(windowHeight)).current;
+  const listRef = useRef<FlashListRef<MonthData> | null>(null);
 
-  const surfaceColor = themeColors.surface;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
-  const dividerColor = themeColors.border;
-  const iconColor = themeColors.text;
-  const sheetHeight = (windowHeight * 90) / 100;
-
-  // Find today's month index for initial scroll position
-  const initialScrollIndex = useMemo(() => {
-    const today = new Date();
-    const todayYear = today.getFullYear();
-    const todayMonth = today.getMonth();
+  // Find current month index for initial scroll position
+  const currentMonthIndex = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
     
     const index = months.findIndex(
-      (month) => month.year === todayYear && month.month === todayMonth
+      (month) => month.year === currentYear && month.month === currentMonth
     );
-    return index >= 0 ? index : 0;
+    return index >= 0 ? index : Math.floor(months.length / 2);
   }, [months]);
 
   useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(backdropOpacity, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sheetTranslateY, {
-          toValue: 0,
-          duration: 260,
-          useNativeDriver: true,
-        }),
-      ]).start();
+    if (visible && listRef.current && currentMonthIndex >= 0) {
+      // Scroll to current month after modal opens
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({ 
+          index: currentMonthIndex, 
+          animated: true 
+        });
+      }, 300);
     }
-  }, [visible, backdropOpacity, sheetTranslateY]);
-
-  const handleClose = () => {
-    Animated.parallel([
-      Animated.timing(backdropOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetTranslateY, {
-        toValue: windowHeight,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start(({ finished }) => {
-      if (finished) {
-        onClose();
-      }
-    });
-  };
+  }, [visible, currentMonthIndex]);
 
   const handleSelectToday = () => {
-    onDateSelect(new Date());
-    handleClose();
+    const today = normalizeDate(new Date());
+    onDateSelect(today);
+    onClose();
   };
 
   const handleDateSelect = (date: Date) => {
-    onDateSelect(date);
-    handleClose();
+    const normalizedDate = normalizeDate(date);
+    onDateSelect(normalizedDate);
+    onClose();
   };
 
   const renderMonth = ({ item }: { item: MonthData }) => (
@@ -304,111 +313,40 @@ export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }
   const getItemType = () => 'month';
 
   return (
-    <Modal
+    <BottomSheetModal
       visible={visible}
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      onRequestClose={handleClose}
-    >
-      <View style={styles.modalOverlay}>
-        <TouchableWithoutFeedback onPress={handleClose}>
-          <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]} />
-        </TouchableWithoutFeedback>
-
-        <Animated.View
-          style={[
-            styles.modalSheet,
-            {
-              height: sheetHeight,
-              backgroundColor: surfaceColor,
-              transform: [{ translateY: sheetTranslateY }],
-            },
-          ]}
+      onClose={onClose}
+      title={t('calendar.selectDate')}
+      height="90%"
+      skipScrollView={true}
+      headerRightButtons={
+        <TouchableOpacity
+          style={[styles.todayButton, { backgroundColor: themeColors.surfaceSecondary }]}
+          activeOpacity={0.7}
+          onPress={handleSelectToday}
         >
-          <View style={styles.modalHandleContainer}>
-            <View style={[styles.modalHandle, { backgroundColor: dividerColor }]} />
-          </View>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: themeColors.text }]}>{t('calendar.selectDate')}</Text>
-            <View style={styles.modalHeaderRight}>
-              <TouchableOpacity
-                style={[styles.todayButton, { backgroundColor: mutedSurfaceColor }]}
-                activeOpacity={0.7}
-                onPress={handleSelectToday}
-              >
-                <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalCloseButton, { backgroundColor: mutedSurfaceColor }]}
-                activeOpacity={0.7}
-                onPress={handleClose}
-              >
-                <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={iconColor} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.calendarListContainer}>
-            {/* @ts-ignore - estimatedItemSize and drawDistance are valid FlashList props but types may be outdated */}
-            <FlashList<MonthData>
-              data={months}
-              renderItem={renderMonth}
-              keyExtractor={(item) => item.id}
-              getItemType={getItemType}
-              showsVerticalScrollIndicator={false}
-              initialScrollIndex={initialScrollIndex}
-              // @ts-ignore
-              estimatedItemSize={300}
-              // @ts-ignore
-              drawDistance={1000}
-            />
-          </View>
-        </Animated.View>
+          <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
+        </TouchableOpacity>
+      }
+    >
+      <View style={styles.calendarListContainer}>
+        <FlashList
+          ref={listRef}
+          data={months}
+          renderItem={renderMonth}
+          keyExtractor={(item) => item.id}
+          getItemType={getItemType}
+          showsVerticalScrollIndicator={false}
+          initialScrollIndex={currentMonthIndex}
+          // @ts-ignore - estimatedItemSize is valid FlashList prop
+          estimatedItemSize={320}
+        />
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-  },
-  modalSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 12,
-    paddingHorizontal: 20,
-  },
-  modalHandleContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  modalTitle: {
-    ...typography.h6,
-  },
-  modalHeaderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   todayButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -418,13 +356,6 @@ const styles = StyleSheet.create({
     ...typography.p3,
     fontWeight: '600',
   },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   calendarListContainer: {
     flex: 1,
   },
@@ -433,21 +364,37 @@ const styles = StyleSheet.create({
   },
   monthTitleContainer: {
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 16,
   },
   monthTitle: {
     ...typography.h6,
     textAlign: 'center',
-    marginBottom: 6,
+  },
+  calendarContainer: {
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   calendarGrid: {
+    marginBottom: 8,
+    alignSelf: 'center',
+  },
+  calendarRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginBottom: 8,
   },
   dayCell: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 999, // Make it circular
+    marginRight: 4,
+    marginBottom: 4,
+  },
+  dayCellLastInRow: {
+    marginRight: 0,
+  },
+  circleIndicator: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dayText: {
     ...typography.p3,
