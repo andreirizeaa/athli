@@ -102,6 +102,21 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="preferences" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/goals-injuries" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="client/edit-client-details-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
         <Stack.Screen
           name="add-modal-content"
           options={{

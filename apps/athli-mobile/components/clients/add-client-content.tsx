@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, Vie
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { DualButtonPanel } from '@/components/buttons';
+import { FilledButton } from '@/components/buttons/filled-button';
 import { addClient } from '@/services/client-service';
 
 type AddClientContentProps = {
@@ -30,15 +30,11 @@ export const AddClientContent = ({ onClose, onClientAdded }: AddClientContentPro
   
   const isFormValid = firstName.trim() !== '' && lastName.trim() !== '' && isEmailValid;
 
-  const handleResetForm = () => {
+  const handleClose = () => {
     setFirstName('');
     setLastName('');
     setEmail('');
     setCategory('online');
-  };
-
-  const handleClose = () => {
-    handleResetForm();
     onClose();
   };
 
@@ -173,14 +169,13 @@ export const AddClientContent = ({ onClose, onClientAdded }: AddClientContentPro
         </View>
       </View>
 
-      <DualButtonPanel
-        primaryLabel={isSubmitting ? t('clients.addClientModal.inviting') : t('clients.addClientModal.invite')}
-        secondaryLabel={t('clients.addClientModal.reset')}
-        onPrimaryPress={handleSaveClient}
-        onSecondaryPress={handleResetForm}
-        primaryDisabled={!isFormValid || isSubmitting}
-        style={styles.buttonsContainer}
-      />
+      <View style={styles.buttonsContainer}>
+        <FilledButton
+          label={isSubmitting ? t('clients.addClientModal.inviting') : t('clients.addClientModal.invite')}
+          onPress={handleSaveClient}
+          disabled={!isFormValid || isSubmitting}
+        />
+      </View>
     </ScrollView>
   );
 };
@@ -233,7 +228,7 @@ const styles = StyleSheet.create({
     ...typography.p3,
   },
   buttonsContainer: {
-    marginTop: 16,
-    paddingBottom: 44,
+    paddingBottom: 30,
+    alignItems: 'center',
   },
 });
