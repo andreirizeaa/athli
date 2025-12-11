@@ -3,13 +3,12 @@ import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View }
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight, SlidersHorizontal } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
-import { ClientsFilterModal } from '@/components/clients/clients-filter-modal';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SearchBar } from '@/components/search-bar';
 import { Card } from '@/components/card';
@@ -44,8 +43,6 @@ export default function ClientsScreen() {
   const { t } = useTranslations();
   const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFiltersModalVisible, setIsFiltersModalVisible] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const scrollViewRef = useRef<ScrollView>(null);
 
   const gradientColors: [string, string] =
@@ -68,55 +65,28 @@ export default function ClientsScreen() {
     }, [loadClients])
   );
 
-  // Filter clients based on search query and category filters
+  // Filter clients based on search query
   const filteredClients = useMemo(() => {
-    let filtered = clients;
-
-    // Apply category filters
-    if (selectedCategories.size > 0) {
-      filtered = filtered.filter((client) => {
-        if (!client.type) return false;
-        return selectedCategories.has(client.type);
-      });
+    if (!searchQuery.trim()) {
+      return clients;
     }
 
-    // Apply search query
-    if (searchQuery.trim()) {
-      filtered = filtered.filter((client) => {
-        const fullName = client.fullName.toLowerCase();
-        const firstName = client.firstName.toLowerCase();
-        const lastName = client.lastName.toLowerCase();
-        const query = searchQuery.toLowerCase();
+    return clients.filter((client) => {
+      const fullName = client.fullName.toLowerCase();
+      const firstName = client.firstName.toLowerCase();
+      const lastName = client.lastName.toLowerCase();
+      const query = searchQuery.toLowerCase();
 
-        return (
-          fuzzyMatch(fullName, query) ||
-          fuzzyMatch(firstName, query) ||
-          fuzzyMatch(lastName, query)
-        );
-      });
-    }
-
-    return filtered;
-  }, [clients, searchQuery, selectedCategories]);
+      return (
+        fuzzyMatch(fullName, query) ||
+        fuzzyMatch(firstName, query) ||
+        fuzzyMatch(lastName, query)
+      );
+    });
+  }, [clients, searchQuery]);
 
   const handleClientPress = (clientId: string) => {
     router.push(`/client/${clientId}`);
-  };
-
-  const handleOpenFiltersModal = () => {
-    setIsFiltersModalVisible(true);
-  };
-
-  const handleCloseFiltersModal = () => {
-    setIsFiltersModalVisible(false);
-  };
-
-  const handleApplyFilters = (categories: Set<string>) => {
-    setSelectedCategories(categories);
-    // Scroll to top when filters are applied
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-    }, 100);
   };
 
   const formatSubtitle = (client: Client): string => {
@@ -143,9 +113,6 @@ export default function ClientsScreen() {
     return parts.join(' · ');
   };
 
-  // Check if any filters are applied
-  const hasAppliedFilters = selectedCategories.size > 0;
-
   return (
     <LinearGradient
       colors={gradientColors}
@@ -167,15 +134,6 @@ export default function ClientsScreen() {
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder={t('clients.searchPlaceholder')}
-              rightIcon={
-                <PlatformIcon
-                  sf="slider.horizontal.3"
-                  IconComponent={SlidersHorizontal}
-                  size={20}
-                  color={hasAppliedFilters ? themeColors.primary : themeColors.mutedText}
-                />
-              }
-              onRightIconPress={handleOpenFiltersModal}
             />
           </View>
           <View style={styles.listContainer}>
@@ -184,8 +142,9 @@ export default function ClientsScreen() {
               return (
                 <View key={client.id} style={styles.cardWrapper}>
                   <TouchableOpacity activeOpacity={0.7} onPress={() => handleClientPress(client.id)}>
-                    <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
-                      <View style={styles.cardContent}>
+                    <View style={[styles.cardShadowWrapper, { shadowColor: themeColors.shadowColor }]}>
+                      <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
+                        <View style={styles.cardContent}>
                         {client.avatar ? (
                           <Image
                             source={{ uri: client.avatar }}
@@ -216,6 +175,7 @@ export default function ClientsScreen() {
                         </View>
                       </View>
                     </Card>
+                    </View>
                   </TouchableOpacity>
                 </View>
               );
@@ -223,12 +183,6 @@ export default function ClientsScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-      <ClientsFilterModal
-        visible={isFiltersModalVisible}
-        onClose={handleCloseFiltersModal}
-        selectedCategories={selectedCategories}
-        onApplyFilters={handleApplyFilters}
-      />
     </LinearGradient>
   );
 }
@@ -257,6 +211,7 @@ const styles = StyleSheet.create({
   cardWrapper: {
     paddingHorizontal: 20,
   },
+  cardShadowWrapper: {},
   cardContainer: {
     overflow: 'hidden',
     paddingLeft: 0,

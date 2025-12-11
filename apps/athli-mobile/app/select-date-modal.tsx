@@ -1,11 +1,17 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, ScrollView, Platform } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { X } from 'lucide-react-native';
 
-import { typography } from '@/constants/typography';
+import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { BottomSheetModal } from '@/components/bottom-sheet-modal';
+import { PlatformIcon } from '@/components/platform-icon';
+
+const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
 export type MonthData = {
   year: number;
@@ -252,18 +258,25 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
 
 CalendarMonthItem.displayName = 'CalendarMonthItem';
 
-type SelectDateModalProps = {
-  visible: boolean;
-  onClose: () => void;
-  selectedDate: Date | null;
-  onDateSelect: (date: Date) => void;
-};
-
-export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }: SelectDateModalProps) => {
+export default function SelectDateModal() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ selectedDate?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
   const months = useMemo(() => generateMonths(), []);
   const listRef = useRef<FlashListRef<MonthData> | null>(null);
+
+  // Parse selected date from params
+  const selectedDate = useMemo(() => {
+    if (params.selectedDate) {
+      const date = new Date(params.selectedDate);
+      if (!isNaN(date.getTime())) {
+        return normalizeDate(date);
+      }
+    }
+    return normalizeDate(new Date());
+  }, [params.selectedDate]);
 
   // Find current month index for initial scroll position
   const currentMonthIndex = useMemo(() => {
@@ -278,7 +291,7 @@ export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }
   }, [months]);
 
   useEffect(() => {
-    if (visible && listRef.current && currentMonthIndex >= 0) {
+    if (listRef.current && currentMonthIndex >= 0) {
       // Scroll to current month after modal opens
       setTimeout(() => {
         listRef.current?.scrollToIndex({ 
@@ -287,18 +300,23 @@ export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }
         });
       }, 300);
     }
-  }, [visible, currentMonthIndex]);
+  }, [currentMonthIndex]);
+
+  const handleClose = () => {
+    router.back();
+  };
 
   const handleSelectToday = () => {
     const today = normalizeDate(new Date());
-    onDateSelect(today);
-    onClose();
+    handleDateSelect(today);
   };
 
-  const handleDateSelect = (date: Date) => {
+  const handleDateSelect = async (date: Date) => {
     const normalizedDate = normalizeDate(date);
-    onDateSelect(normalizedDate);
-    onClose();
+    // Store the selected date in AsyncStorage
+    await AsyncStorage.setItem(SELECTED_DATE_KEY, normalizedDate.toISOString());
+    // Navigate back
+    router.back();
   };
 
   const renderMonth = ({ item }: { item: MonthData }) => (
@@ -312,14 +330,20 @@ export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }
 
   const getItemType = () => 'month';
 
+  const iconColor = themeColors.text;
+
   return (
-    <BottomSheetModal
-      visible={visible}
-      onClose={onClose}
-      title={t('calendar.selectDate')}
-      height="90%"
-      skipScrollView={true}
-      headerRightButtons={
+    <View style={[styles.container, { backgroundColor: themeColors.background, borderTopWidth: 0, borderTopColor: 'transparent' }]}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background, borderTopWidth: 0 }]}>
+        <TouchableOpacity
+          style={[styles.closeButton, { backgroundColor: themeColors.surfaceSecondary }]}
+          activeOpacity={0.7}
+          onPress={handleClose}
+        >
+          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={iconColor} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">{t('calendar.selectDate')}</Text>
         <TouchableOpacity
           style={[styles.todayButton, { backgroundColor: themeColors.surfaceSecondary }]}
           activeOpacity={0.7}
@@ -327,9 +351,10 @@ export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }
         >
           <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
         </TouchableOpacity>
-      }
-    >
-      <View style={styles.calendarListContainer}>
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
         <FlashList
           ref={listRef}
           data={months}
@@ -342,21 +367,56 @@ export const SelectDateModal = ({ visible, onClose, selectedDate, onDateSelect }
           estimatedItemSize={320}
         />
       </View>
-    </BottomSheetModal>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    borderTopWidth: 0,
+    borderTopColor: 'transparent',
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    position: 'relative',
+  },
+  title: {
+    ...typography.h6,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    zIndex: 0,
+  },
+  closeButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
   todayButton: {
+    minWidth: 34,
+    height: 34,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
   todayButtonText: {
     ...typography.p3,
     fontWeight: '600',
   },
-  calendarListContainer: {
+  content: {
     flex: 1,
   },
   monthContainer: {

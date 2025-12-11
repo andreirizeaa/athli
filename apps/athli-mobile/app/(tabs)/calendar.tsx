@@ -1,25 +1,27 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronDown } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
-import { SelectDateModal } from '@/components/calendar/select-date-modal';
 import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
 import { TimeGrid } from '@/components/calendar/time-grid';
-import { NewSessionModal } from '@/components/calendar/new-session-modal';
 import { FilledButton } from '@/components/buttons/filled-button';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 
+const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
+
 export default function CalendarScreen() {
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const { primaryColor, primarySoftColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -36,12 +38,38 @@ export default function CalendarScreen() {
       : [primarySoftColor, themeColors.pageBackground];
 
   const handleOpenDatePicker = () => {
-    setIsDatePickerVisible(true);
+    const dateParam = selectedDate ? selectedDate.toISOString() : new Date().toISOString();
+    router.push({
+      pathname: '/select-date-modal',
+      params: { selectedDate: dateParam },
+    });
   };
 
-  const handleCloseDatePicker = () => {
-    setIsDatePickerVisible(false);
-  };
+  // Listen for when we return from the modal and check if date was updated
+  useFocusEffect(
+    useCallback(() => {
+      const checkSelectedDate = async () => {
+        try {
+          const storedDate = await AsyncStorage.getItem(SELECTED_DATE_KEY);
+          if (storedDate) {
+            const date = new Date(storedDate);
+            if (!isNaN(date.getTime())) {
+              date.setHours(0, 0, 0, 0);
+              setSelectedDate(date);
+              setHasSelectedDate(true);
+              setCurrentMonth(date.getMonth());
+              setCurrentYear(date.getFullYear());
+              // Clear the stored date after reading it
+              await AsyncStorage.removeItem(SELECTED_DATE_KEY);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to read selected date:', error);
+        }
+      };
+      checkSelectedDate();
+    }, [])
+  );
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
@@ -149,12 +177,6 @@ export default function CalendarScreen() {
           <TimeGrid selectedDate={selectedDate} />
         </View>
       </SafeAreaView>
-      <SelectDateModal
-        visible={isDatePickerVisible}
-        onClose={handleCloseDatePicker}
-        selectedDate={selectedDate}
-        onDateSelect={handleDateSelect}
-      />
     </LinearGradient>
   );
 }

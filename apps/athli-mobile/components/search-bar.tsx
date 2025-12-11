@@ -51,6 +51,8 @@ export const SearchBar = ({
         value={value}
         onChangeText={onChangeText}
         textAlignVertical="center"
+        multiline={false}
+        numberOfLines={1}
       />
       {value.length > 0 && (
         <TouchableOpacity
@@ -87,6 +89,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    minHeight: 44,
+    height: 44,
   },
   searchIcon: {
     marginRight: 8,
@@ -95,6 +99,8 @@ const styles = StyleSheet.create({
     flex: 1,
     ...typography.p2,
     padding: 0,
+    height: 24,
+    maxHeight: 24,
   },
   clearIcon: {
     marginLeft: 8,
