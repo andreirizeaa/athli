@@ -86,6 +86,7 @@ export type ThemeColors = {
   border: string;
   sidebar: string;
   sidebarForeground: string;
+  shadowColor: string;
 };
 
 export function resolveEffectiveScheme(
@@ -122,6 +123,7 @@ export function createPresetPalette(
         border: '#2F2F2F',
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
+        shadowColor: '#FFFFFF',
       };
     }
 
@@ -138,6 +140,7 @@ export function createPresetPalette(
       border: '#E5E7EB',
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
+      shadowColor: '#000000',
     };
   }
 
@@ -156,6 +159,7 @@ export function createPresetPalette(
         border: '#2F2F2F',
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
+        shadowColor: '#FFFFFF',
       };
     }
 
@@ -172,6 +176,7 @@ export function createPresetPalette(
       border: '#E5E7EB',
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
+      shadowColor: '#000000',
     };
   }
 
@@ -190,6 +195,7 @@ export function createPresetPalette(
         border: '#2F2F2F',
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
+        shadowColor: '#FFFFFF',
       };
     }
 
@@ -206,6 +212,7 @@ export function createPresetPalette(
       border: '#E5E7EB',
       sidebar: '#F9FAFB',
       sidebarForeground: '#0F172A',
+      shadowColor: '#000000',
     };
   }
 
@@ -224,6 +231,7 @@ export function createPresetPalette(
         border: '#2F2F2F',
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
+        shadowColor: '#FFFFFF',
       };
     }
 
@@ -240,6 +248,7 @@ export function createPresetPalette(
       border: '#E5E7EB',
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
+      shadowColor: '#000000',
     };
   }
 
@@ -258,6 +267,7 @@ export function createPresetPalette(
         border: '#2F2F2F',
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
+        shadowColor: '#FFFFFF',
       };
     }
 
@@ -274,6 +284,7 @@ export function createPresetPalette(
       border: '#E5E7EB',
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
+      shadowColor: '#000000',
     };
   }
 
@@ -292,6 +303,7 @@ export function createPresetPalette(
         border: '#2F2F2F',
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
+        shadowColor: '#FFFFFF',
       };
     }
 
@@ -308,6 +320,7 @@ export function createPresetPalette(
       border: '#E5E7EB',
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
+      shadowColor: '#000000',
     };
   }
 
@@ -326,6 +339,7 @@ export function createPresetPalette(
         border: '#2F2F2F',
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
+        shadowColor: '#FFFFFF',
       };
     }
 
@@ -342,6 +356,7 @@ export function createPresetPalette(
       border: '#E5E7EB',
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
+      shadowColor: '#000000',
     };
   }
 
@@ -359,6 +374,7 @@ export function createPresetPalette(
       border: '#2F2F2F',
       sidebar: '#1A1A1A',
       sidebarForeground: '#E5E7EB',
+      shadowColor: '#FFFFFF',
     };
   }
 
@@ -375,6 +391,7 @@ export function createPresetPalette(
     border: '#E5E7EB',
     sidebar: '#FFFFFF',
     sidebarForeground: '#020617',
+    shadowColor: '#000000',
   };
 }
 

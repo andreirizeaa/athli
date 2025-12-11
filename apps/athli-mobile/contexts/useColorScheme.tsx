@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import {
   type ColorSchemeName,
   useColorScheme as useNativeColorScheme,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   DEFAULT_THEME,
@@ -30,10 +31,57 @@ const ThemePreferenceContext = createContext<ThemePreferenceContextValue | undef
   undefined,
 );
 
+const THEME_PREFERENCE_KEY = '@athli:theme_preference';
+const COLOR_PALETTE_KEY = '@athli:color_palette';
+
 export const ThemePreferenceProvider = ({ children }: { children: ReactNode }) => {
-  const [preference, setPreference] = useState<ColorSchemePreference>('system');
-  const [preset, setPreset] = useState<PresetValue>(DEFAULT_THEME.preset);
+  const [preference, setPreferenceState] = useState<ColorSchemePreference>('system');
+  const [preset, setPresetState] = useState<PresetValue>(DEFAULT_THEME.preset);
   const systemScheme = useNativeColorScheme();
+
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const [savedPreference, savedPreset] = await Promise.all([
+          AsyncStorage.getItem(THEME_PREFERENCE_KEY),
+          AsyncStorage.getItem(COLOR_PALETTE_KEY),
+        ]);
+
+        if (savedPreference && (savedPreference === 'light' || savedPreference === 'dark' || savedPreference === 'system')) {
+          setPreferenceState(savedPreference as ColorSchemePreference);
+        }
+
+        if (savedPreset) {
+          const validPreset = THEMES.find((theme) => theme.value === savedPreset);
+          if (validPreset) {
+            setPresetState(savedPreset as PresetValue);
+          }
+        }
+      } catch (error) {
+        // Ignore errors and use defaults
+      }
+    };
+
+    loadPreferences();
+  }, []);
+
+  const setPreference = async (newPreference: ColorSchemePreference) => {
+    setPreferenceState(newPreference);
+    try {
+      await AsyncStorage.setItem(THEME_PREFERENCE_KEY, newPreference);
+    } catch (error) {
+      // Ignore errors
+    }
+  };
+
+  const setPreset = async (newPreset: PresetValue) => {
+    setPresetState(newPreset);
+    try {
+      await AsyncStorage.setItem(COLOR_PALETTE_KEY, newPreset);
+    } catch (error) {
+      // Ignore errors
+    }
+  };
 
   const effectiveScheme = resolveEffectiveScheme(preference, systemScheme);
 

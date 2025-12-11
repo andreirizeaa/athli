@@ -46,16 +46,14 @@ export const FilledButton = ({ label, onPress, disabled = false, style, textStyl
 
 const styles = StyleSheet.create({
   button: {
-    flex: 1,
     borderRadius: 28,
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
     ...typography.p1,
-    fontWeight: '600',
   },
 });
 

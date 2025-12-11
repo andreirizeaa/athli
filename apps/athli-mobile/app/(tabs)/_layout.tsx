@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Tabs, useRouter } from 'expo-router';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -14,7 +14,6 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { iconSizes } from '@/constants/typography';
-import { AddClientModal } from '@/components/clients/add-client-modal';
 import {
   Calendar,
   CalendarFold,
@@ -34,36 +33,47 @@ type NativeTabsCoachViewProps = {
   primaryColor: string;
 };
 
-// Pure layout component - no navigation interception
-const NativeTabsCoachView = ({ primaryColor }: NativeTabsCoachViewProps) => {
+// Pure layout component with overlay button
+const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
+  const insets = useSafeAreaInsets();
+  
   return (
-    <NativeTabs tintColor={primaryColor}>
-      <NativeTabs.Trigger name="clients">
-        <Icon sf="person.2.fill" />
-        <Label>Clients</Label>
-      </NativeTabs.Trigger>
+    <View style={{ flex: 1 }}>
+      <NativeTabs tintColor={primaryColor}>
+        <NativeTabs.Trigger name="clients">
+          <Icon sf="person.2.fill" />
+          <Label>Clients</Label>
+        </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="calendar">
-        <Icon sf="calendar" />
-        <Label>Calendar</Label>
-      </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="calendar">
+          <Icon sf="calendar" />
+          <Label>Calendar</Label>
+        </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="chats">
-        <Icon sf="bubble.left.and.text.bubble.right.fill" />
-        <Label>Chats</Label>
-      </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="chats">
+          <Icon sf="bubble.left.and.text.bubble.right.fill" />
+          <Label>Chats</Label>
+        </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="settings">
-        <Icon sf="gear" />
-        <Label>Settings</Label>
-      </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="settings">
+          <Icon sf="gear" />
+          <Label>Settings</Label>
+        </NativeTabs.Trigger>
 
-      {/* Keep this for layout - touch will be intercepted by overlay */}
-      <NativeTabs.Trigger name="add-modal" role="search">
-        <Icon sf="plus" />
-        <Label>Add</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+        {/* Keep this for layout - touch will be intercepted by overlay */}
+        <NativeTabs.Trigger name="add-modal" role="search">
+          <Icon sf="plus" />
+          <Label>Add</Label>
+        </NativeTabs.Trigger>
+      </NativeTabs>
+      
+      {/* Transparent overlay button on top of search pill */}
+      <TouchableOpacity
+        style={[styles.addButtonOverlay, { bottom: insets.bottom - 16 }]}
+        activeOpacity={1}
+        onPress={onAddPress}
+      />
+    </View>
   );
 };
 
@@ -81,18 +91,36 @@ export default function TabLayout() {
   const { appView } = useAppView();
   const { t } = useTranslations();
   const router = useRouter();
+  const pathname = usePathname();
   const previousAppView = useRef(appView);
   const isInitialMount = useRef(true);
-  const [isAddClientModalVisible, setIsAddClientModalVisible] = useState(false);
   const colorScheme = useColorScheme();
 
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      previousAppView.current = appView;
+  // Use useLayoutEffect for initial mount to prevent any flash of add-modal content
+  useLayoutEffect(() => {
+    if (!isInitialMount.current) {
       return;
     }
+    
+    isInitialMount.current = false;
+    previousAppView.current = appView;
+    // On initial mount with NativeTabs, ensure we navigate to the correct initial route
+    // This prevents add-modal from being shown on app load
+    if (hasLiquidGlass) {
+      const initialRoute = appView === 'coach' ? '/clients' : '/training';
+      // Navigate to initial route if we're on index or any unexpected route (but not on a valid tab)
+      if (
+        pathname === '/' ||
+        pathname === '/(tabs)' ||
+        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/calendar') && !pathname.startsWith('/chats') && !pathname.startsWith('/settings') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/add-modal'))
+      ) {
+        router.replace(initialRoute);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount - pathname and router are stable
 
+  useEffect(() => {
     if (previousAppView.current !== appView) {
       previousAppView.current = appView;
       // For liquid glass, navigate explicitly
@@ -104,46 +132,34 @@ export default function TabLayout() {
     }
   }, [appView, router]);
 
-  const handleOpenAddClientModal = () => {
-    setIsAddClientModalVisible(true);
-  };
-
-  const handleCloseAddClientModal = () => {
-    setIsAddClientModalVisible(false);
-  };
-
   const insets = useSafeAreaInsets();
+
+  const handleNativeTabsAddPress = () => {
+    if (appView === 'coach') {
+      // Get current route from pathname
+      let routeName: 'clients' | 'calendar' = 'clients';
+      if (pathname.includes('/calendar')) {
+        routeName = 'calendar';
+      } else if (pathname.includes('/clients')) {
+        routeName = 'clients';
+      }
+
+      // Navigate to add-modal-content with route param (same as FallbackTabBar)
+      if (routeName === 'calendar' || routeName === 'clients') {
+        router.push({
+          pathname: '/add-modal-content',
+          params: { route: routeName },
+        });
+      }
+    }
+  };
 
   if (hasLiquidGlass) {
     if (appView === 'coach') {
       return (
         <>
           {/* Native iOS tab bar (full width, includes search pill) */}
-          <NativeTabsCoachView primaryColor={primaryColor} />
-
-          {/* Overlay that intercepts touches on the search pill */}
-          <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-            <Pressable
-              onPress={handleOpenAddClientModal}
-              style={{
-                position: 'absolute',
-                // Position over the search pill (top-right area on iOS)
-                right: 16,
-                bottom: insets.bottom + 8,
-                width: 80,
-                height: 44,
-                borderRadius: 22,
-                // Transparent to keep native pill visible
-                backgroundColor: 'transparent',
-              }}
-            />
-          </View>
-
-          {/* Bottom sheet modal */}
-          <AddClientModal
-            visible={isAddClientModalVisible}
-            onClose={handleCloseAddClientModal}
-          />
+          <NativeTabsCoachView primaryColor={primaryColor} onAddPress={handleNativeTabsAddPress} />
         </>
       );
     }
@@ -186,12 +202,7 @@ export default function TabLayout() {
       <Tabs
         key={appView}
         initialRouteName={appView === 'coach' ? 'clients' : 'training'}
-        tabBar={(props) => (
-          <FallbackTabBar
-            {...props}
-            onOpenAddClientModal={handleOpenAddClientModal}
-          />
-        )}
+        tabBar={(props) => <FallbackTabBar {...props} />}
         screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen
@@ -246,25 +257,20 @@ export default function TabLayout() {
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="add-modal" options={{ href: null }} />
       </Tabs>
-      <AddClientModal
-        visible={isAddClientModalVisible}
-        onClose={handleCloseAddClientModal}
-      />
     </>
   );
 }
 
-type FallbackTabBarProps = BottomTabBarProps & {
-  onOpenAddClientModal: () => void;
-};
+type FallbackTabBarProps = BottomTabBarProps;
 
-function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTabBarProps) {
+function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const insets = useSafeAreaInsets();
   const activeRouteName = state.routes[state.index]?.name;
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { appView } = useAppView();
   const { t } = useTranslations();
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
   const handleTabPress = (name: string) => {
     if (name === activeRouteName) {
@@ -275,9 +281,14 @@ function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTab
   };
 
   const handleAddPress = () => {
-    // Only open modal when on clients screen in coach view
-    if (appView === 'coach' && activeRouteName === 'clients') {
-      onOpenAddClientModal();
+    if (appView === 'coach') {
+      // Navigate to add-modal-content with route param
+      if (activeRouteName === 'calendar' || activeRouteName === 'clients') {
+        router.push({
+          pathname: '/add-modal-content',
+          params: { route: activeRouteName },
+        });
+      }
     }
   };
 
@@ -508,5 +519,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
+  },
+  addButtonOverlay: {
+    position: 'absolute',
+    // Position over the search pill (top-right area on iOS)
+    right: 16,
+    bottom: 0, // Will be adjusted with insets.bottom - 16 in component
+    width: 66,
+    height: 66,
+    borderRadius: 40,
+    // Transparent to keep native pill visible
+    backgroundColor: 'transparent',
+    zIndex: 1000,
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -74,6 +74,36 @@ export default function SettingsScreen() {
     // Navigate to default page for the new view
     const defaultRoute = newView === 'coach' ? '/clients' : '/training';
     router.replace(defaultRoute);
+  };
+
+  const handleOpenWebURL = (url: string) => {
+    Linking.openURL(url).catch((err) => console.error('Failed to open URL:', err));
+  };
+
+  const handleOpenPersonalDetails = () => {
+    if (!isAthleteView) {
+      handleOpenWebURL('https://app.tryathli.com/');
+    }
+  };
+
+  const handleOpenDeleteAccount = () => {
+    if (!isAthleteView) {
+      handleOpenWebURL('https://app.tryathli.com/');
+    }
+  };
+
+  const handleOpenTermsOfService = () => {
+    handleOpenWebURL('https://app.tryathli.com/');
+  };
+
+  const handleOpenPrivacyPolicy = () => {
+    handleOpenWebURL('https://app.tryathli.com/');
+  };
+
+  const handleOpenSupportEmail = () => {
+    Linking.openURL('mailto:support@tryathli.com').catch((err) =>
+      console.error('Failed to open email:', err)
+    );
   };
 
   return (
@@ -153,6 +183,7 @@ export default function SettingsScreen() {
               icon={<PlatformIcon sf="person.text.rectangle" mdi="badge" IconComponent={IdCard} size={iconSize} color={iconColor} />}
               title={t('profile.personalDetails')}
               showChevron
+              onPress={handleOpenPersonalDetails}
             />
             <Separator />
             <SettingsOption
@@ -169,6 +200,7 @@ export default function SettingsScreen() {
             <SettingsOption
               icon={<PlatformIcon sf="envelope" mdi="email" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
               title={t('profile.supportEmail')}
+              onPress={handleOpenSupportEmail}
             />
             <Separator />
             <SettingsOption
@@ -190,11 +222,13 @@ export default function SettingsScreen() {
             <SettingsOption
               icon={<PlatformIcon sf="doc.text" mdi="description" IconComponent={FileText} size={iconSize} color={iconColor} />}
               title={t('profile.termsAndConditions')}
+              onPress={handleOpenTermsOfService}
             />
             <Separator />
             <SettingsOption
               icon={<PlatformIcon sf="checkmark.shield" mdi="verified-user" IconComponent={ShieldCheck} size={iconSize} color={iconColor} />}
               title={t('profile.privacyPolicy')}
+              onPress={handleOpenPrivacyPolicy}
             />
           </Card>
 
@@ -209,6 +243,7 @@ export default function SettingsScreen() {
             <SettingsOption
               icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
               title={t('profile.deleteAccount')}
+              onPress={handleOpenDeleteAccount}
             />
           </Card>
         </View>
