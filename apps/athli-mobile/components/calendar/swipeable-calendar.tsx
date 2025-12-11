@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { typography } from '@/constants/typography';
 import { generateWeeks, getWeekIndexForDate, getWeekMonthYear } from '@/lib/utils/calendar-utils';
 
 const { width: RAW_W } = Dimensions.get('window');
@@ -66,7 +67,7 @@ const WeekPage = React.memo(
                   style={[
                     styles.dayAcronym,
                     { color: day.isActive ? '#000000' : themeColors.mutedText },
-                    day.isActive ? { fontWeight: '700' } : { fontWeight: '600' },
+                    day.isActive && { fontWeight: '700' },
                   ]}
                 >
                   {day.dayName}
@@ -78,7 +79,6 @@ const WeekPage = React.memo(
                     style={[
                       styles.dayNumber,
                       { color: day.isActive ? '#000000' : themeColors.mutedText },
-                      { fontWeight: '600' },
                     ]}
                   >
                     {day.dayNumber}
@@ -375,8 +375,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   dayAcronym: {
-    fontSize: 14,
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto',
+    ...typography.h8,
     marginBottom: 8,
   },
   dayCircle: {
@@ -389,8 +388,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dayNumber: {
-    fontSize: 18,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'ios' ? 'SF Pro Text' : 'Roboto',
+    ...typography.h6,
   },
 });
