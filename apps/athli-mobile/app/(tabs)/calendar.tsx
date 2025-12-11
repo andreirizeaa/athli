@@ -1,21 +1,48 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronDown } from 'lucide-react-native';
 
-import { typography } from '@/constants/typography';
+import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { PlatformIcon } from '@/components/platform-icon';
+import { SelectDateModal } from '@/components/calendar/select-date-modal';
+import { formatDateDDMMYYYY, formatDateShort, formatDateMonthYearShort } from '@/lib/utils/date-formatters';
 
 export default function CalendarScreen() {
   const colorScheme = useColorScheme();
   const { primarySoftColor, colors: themeColors } = useThemePreference();
-  const { t } = useTranslations();
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [hasSelectedDate, setHasSelectedDate] = useState(false);
 
   const gradientColors: [string, string] =
     colorScheme === 'dark'
       ? ['#2a2a2a', themeColors.pageBackground]
-      : [primarySoftColor, themeColors.background];
+      : [primarySoftColor, themeColors.pageBackground];
+
+  const handleOpenDatePicker = () => {
+    setIsDatePickerVisible(true);
+  };
+
+  const handleCloseDatePicker = () => {
+    setIsDatePickerVisible(false);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    setHasSelectedDate(true);
+    // Save date in dd-mm-yyyy format (you can add AsyncStorage here if needed)
+    const formattedDate = formatDateDDMMYYYY(date);
+    console.log('Selected date:', formattedDate);
+    // TODO: Save to storage if needed
+  };
+
+  const displayText = hasSelectedDate && selectedDate
+    ? formatDateMonthYearShort(selectedDate)
+    : formatDateShort(new Date());
 
   return (
     <LinearGradient
@@ -27,9 +54,27 @@ export default function CalendarScreen() {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <Text style={[styles.title, { color: themeColors.text }]}>{t('calendar.title')}</Text>
+          <TouchableOpacity
+            style={styles.dateButton}
+            activeOpacity={0.7}
+            onPress={handleOpenDatePicker}
+          >
+            <Text style={[styles.dateButtonText, { color: themeColors.text }]}>{displayText}</Text>
+            <PlatformIcon
+              sf="chevron.down"
+              IconComponent={ChevronDown}
+              size={iconSizes.navigationChevrons}
+              color={themeColors.text}
+            />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
+      <SelectDateModal
+        visible={isDatePickerVisible}
+        onClose={handleCloseDatePicker}
+        selectedDate={selectedDate}
+        onDateSelect={handleDateSelect}
+      />
     </LinearGradient>
   );
 }
@@ -46,10 +91,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
-  title: {
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dateButtonText: {
     ...typography.h1,
     textAlign: 'left',
   },
 });
-
-
