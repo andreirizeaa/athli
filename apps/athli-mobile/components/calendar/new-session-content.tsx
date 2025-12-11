@@ -478,7 +478,6 @@ export const NewSessionContent = ({ onClose }: NewSessionContentProps) => {
             label={t('calendar.newSession.complete')}
             onPress={handleComplete}
             disabled={isSubmitting}
-            style={styles.completeButton}
           />
         </View>
       </View>
@@ -627,11 +626,8 @@ const styles = StyleSheet.create({
   },
   completeButtonContainer: {
     marginTop: 'auto',
-    paddingBottom: 44,
-    marginBottom: 20,
-  },
-  completeButton: {
-    width: '100%',
-    minHeight: 55,
+    paddingBottom: 60,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
 });
