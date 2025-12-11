@@ -13,7 +13,6 @@ import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
 import {
   ChevronLeft,
-  CircleCheck,
   Languages,
   Moon,
   Palette,
@@ -22,7 +21,6 @@ import {
   Sun,
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
-import { THEMES, type PresetValue } from '@/constants/theme';
 import {
   useColorScheme,
   useThemePreference,
@@ -33,8 +31,6 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { Card } from '@/components/card';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
-import { BottomSheetModal } from '@/components/bottom-sheet-modal';
-import { LANGUAGES } from '@/constants/languages';
 
 type PlatformIconProps = {
   sf: string;
@@ -55,19 +51,12 @@ export default function PreferencesScreen() {
   const {
     preference,
     setPreference,
-    preset,
-    setPreset,
     primaryColor,
     colors: themeColors,
   } = useThemePreference();
   const { t } = useTranslations();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
-  const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
-  const [isUnitsModalVisible, setIsUnitsModalVisible] = useState(false);
-  const [isPaletteModalVisible, setIsPaletteModalVisible] = useState(false);
-  const [selectedLanguageCode, setSelectedLanguageCode] = useState<string>('en');
-  const [selectedUnits, setSelectedUnits] = useState<'metric' | 'imperial'>('metric');
 
   const handleGoBack = () => {
     router.back();
@@ -81,32 +70,17 @@ export default function PreferencesScreen() {
     setPreference(mode);
   };
 
-  const handleSelectPreset = (value: PresetValue) => {
-    setPreset(value);
-  };
 
   const handleOpenLanguageModal = () => {
-    setIsLanguageModalVisible(true);
-  };
-
-  const handleCloseLanguageModal = () => {
-    setIsLanguageModalVisible(false);
+    router.push('/language-modal');
   };
 
   const handleOpenUnitsModal = () => {
-    setIsUnitsModalVisible(true);
-  };
-
-  const handleCloseUnitsModal = () => {
-    setIsUnitsModalVisible(false);
+    router.push('/units-modal');
   };
 
   const handleOpenPaletteModal = () => {
-    setIsPaletteModalVisible(true);
-  };
-
-  const handleClosePaletteModal = () => {
-    setIsPaletteModalVisible(false);
+    router.push('/palette-modal');
   };
 
   const renderAppearanceModeCard = (label: string, mode: 'light' | 'dark' | 'system') => {
@@ -207,159 +181,6 @@ export default function PreferencesScreen() {
           />
         </Card>
       </View>
-
-      <BottomSheetModal
-        visible={isLanguageModalVisible}
-        onClose={handleCloseLanguageModal}
-        title={t('preferences.selectLanguage')}
-      >
-        {LANGUAGES.map((language, index) => {
-          const isSelected = language.code === selectedLanguageCode;
-
-          const handleSelectLanguage = () => {
-            setSelectedLanguageCode(language.code);
-            handleCloseLanguageModal();
-          };
-
-          return (
-            <View key={language.code}>
-              <TouchableOpacity
-                style={styles.languageRow}
-                activeOpacity={0.7}
-                onPress={handleSelectLanguage}
-              >
-                <View style={styles.languageInfo}>
-                  <Text style={styles.languageFlag}>{language.flag}</Text>
-                  <View style={styles.languageTextContainer}>
-                    <Text
-                      style={[
-                        styles.languageNativeName,
-                        { color: themeColors.text },
-                      ]}
-                    >
-                      {language.nativeName}
-                    </Text>
-                  </View>
-                </View>
-
-                {isSelected && (
-                  <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
-                )}
-              </TouchableOpacity>
-
-              {index !== LANGUAGES.length - 1 && (
-                <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
-              )}
-            </View>
-          );
-        })}
-      </BottomSheetModal>
-
-      <BottomSheetModal
-        visible={isUnitsModalVisible}
-        onClose={handleCloseUnitsModal}
-        title={t('preferences.units')}
-      >
-        {(['metric', 'imperial'] as const).map((unitsType) => {
-          const isSelected = unitsType === selectedUnits;
-
-          const handleSelectUnits = () => {
-            setSelectedUnits(unitsType);
-            handleCloseUnitsModal();
-          };
-
-          const label = unitsType === 'metric' ? t('preferences.metric') : t('preferences.imperial');
-          const subtitle = unitsType === 'metric' ? t('preferences.metricUnits') : t('preferences.imperialUnits');
-
-          return (
-            <View key={unitsType}>
-              <TouchableOpacity
-                style={styles.languageRow}
-                activeOpacity={0.7}
-                onPress={handleSelectUnits}
-              >
-                <View style={styles.languageInfo}>
-                  <View style={styles.languageTextContainer}>
-                    <Text
-                      style={[styles.languageNativeName, { color: themeColors.text }]}
-                    >
-                      {label}
-                    </Text>
-                    <Text
-                      style={[styles.unitsSubtitle, { color: secondaryTextColor }]}
-                    >
-                      {subtitle}
-                    </Text>
-                  </View>
-                </View>
-
-                {isSelected && (
-                  <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
-                )}
-              </TouchableOpacity>
-
-              {unitsType !== 'imperial' && (
-                <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
-              )}
-            </View>
-          );
-        })}
-      </BottomSheetModal>
-
-      <BottomSheetModal
-        visible={isPaletteModalVisible}
-        onClose={handleClosePaletteModal}
-        title={t('preferences.colorPalette')}
-      >
-        {THEMES.map((theme, index) => {
-          const isSelected = theme.value === preset;
-          const accentColor = theme.colors[0];
-
-          const handleSelectPalette = () => {
-            handleSelectPreset(theme.value);
-            handleClosePaletteModal();
-          };
-
-          return (
-            <View key={theme.value}>
-              <TouchableOpacity
-                style={styles.languageRow}
-                activeOpacity={0.7}
-                onPress={handleSelectPalette}
-              >
-                <View style={styles.languageInfo}>
-                  <View
-                    style={[
-                      styles.paletteCircle,
-                      { backgroundColor: accentColor, borderColor: dividerColor },
-                    ]}
-                  />
-                  <View style={styles.languageTextContainer}>
-                    <Text
-                      style={[
-                        styles.languageNativeName,
-                        { color: themeColors.text },
-                      ]}
-                    >
-                      {theme.name}
-                    </Text>
-                  </View>
-                </View>
-
-                {isSelected && (
-                  <PlatformIcon sf="checkmark.circle.fill" IconComponent={CircleCheck} size={iconSizes.modalIcons} color={iconColor} />
-                )}
-              </TouchableOpacity>
-
-              {index !== THEMES.length - 1 && (
-                <View
-                  style={[styles.modalDivider, { backgroundColor: dividerColor }]}
-                />
-              )}
-            </View>
-          );
-        })}
-      </BottomSheetModal>
     </SafeAreaView>
   );
 }
@@ -422,44 +243,6 @@ const styles = StyleSheet.create({
   },
   modeCardLabel: {
     ...typography.p5,
-  },
-  languageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-  },
-  languageInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  languageFlag: {
-    ...typography.h6,
-    marginRight: 12,
-  },
-  languageTextContainer: {
-    flexShrink: 1,
-  },
-  languageNativeName: {
-    ...typography.p3,
-    marginTop: 2,
-  },
-  modalDivider: {
-    height: 1,
-  },
-  unitsSubtitle: {
-    fontSize: 14,
-    fontWeight: '400',
-    marginTop: 2,
-  },
-  paletteCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    marginTop: 3,
   },
 });
 

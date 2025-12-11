@@ -14,7 +14,6 @@ import { FlashList } from '@shopify/flash-list';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { BottomSheetModal } from '@/components/bottom-sheet-modal';
 import { FilledButton } from '@/components/buttons/filled-button';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
@@ -22,16 +21,13 @@ import { PlatformIcon } from '@/components/platform-icon';
 import { SearchBar } from '@/components/search-bar';
 import { getClients, scheduleSession, type Client } from '@/services/client-service';
 
-type NewSessionModalProps = {
-  visible: boolean;
+type NewSessionContentProps = {
   onClose: () => void;
 };
 
 type Page = 'client-selection' | 'session-details';
 
-
-
-export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
+export const NewSessionContent = ({ onClose }: NewSessionContentProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const { t } = useTranslations();
@@ -71,6 +67,7 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
     const monthName = t(`calendar.newSession.months.${monthKey}`);
     return `${day} ${monthName}`;
   };
+
   const [currentPage, setCurrentPage] = useState<Page>('client-selection');
   const [searchQuery, setSearchQuery] = useState('');
   const [clients, setClients] = useState<Client[]>([]);
@@ -83,46 +80,32 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
   const [showAndroidFromTimePicker, setShowAndroidFromTimePicker] = useState(false);
   const [showAndroidToTimePicker, setShowAndroidToTimePicker] = useState(false);
 
-  // Load clients when modal opens and initialize date
+  // Load clients when component mounts and initialize date
   useEffect(() => {
-    if (visible) {
-      const loadClients = async () => {
-        try {
-          const clientsData = await getClients();
-          setClients(clientsData);
-        } catch (error) {
-          console.error('Failed to load clients:', error);
-        }
-      };
-      loadClients();
-      // Initialize with today's date
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      setSelectedDate(today);
-      
-      // Initialize with default time range: next full hour to 30 minutes after
-      const now = new Date();
-      const nextHour = new Date(now);
-      nextHour.setHours(now.getHours() + 1, 0, 0, 0);
-      setFromTime(nextHour);
-      
-      const toTimeDefault = new Date(nextHour);
-      toTimeDefault.setMinutes(toTimeDefault.getMinutes() + 30);
-      setToTime(toTimeDefault);
-    }
-  }, [visible]);
-
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!visible) {
-      setCurrentPage('client-selection');
-      setSearchQuery('');
-      setSelectedClient(null);
-      setSelectedDate(null);
-      setFromTime(null);
-      setToTime(null);
-    }
-  }, [visible]);
+    const loadClients = async () => {
+      try {
+        const clientsData = await getClients();
+        setClients(clientsData);
+      } catch (error) {
+        console.error('Failed to load clients:', error);
+      }
+    };
+    loadClients();
+    // Initialize with today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setSelectedDate(today);
+    
+    // Initialize with default time range: next full hour to 30 minutes after
+    const now = new Date();
+    const nextHour = new Date(now);
+    nextHour.setHours(now.getHours() + 1, 0, 0, 0);
+    setFromTime(nextHour);
+    
+    const toTimeDefault = new Date(nextHour);
+    toTimeDefault.setMinutes(toTimeDefault.getMinutes() + 30);
+    setToTime(toTimeDefault);
+  }, []);
 
   // Filter clients based on search query
   const filteredClients = useMemo(() => {
@@ -222,7 +205,6 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
       setIsSubmitting(false);
     }
   };
-
 
   const formatSubtitle = (client: Client): string => {
     const parts: string[] = [];
@@ -368,19 +350,16 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
           <View style={styles.pickerContainer}>
             <Text style={[styles.inputLabel, { color: themeColors.text }]}>{t('calendar.newSession.labels.on')}</Text>
             {Platform.OS === 'ios' ? (
-              <View style={[styles.pickerWrapper, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-                <View style={styles.pickerInner}>
-                  <DateTimePicker
-                    value={selectedDate || new Date()}
-                    mode="date"
-                    display="compact"
-                    onChange={handleDateChange}
-                    minimumDate={new Date()}
-                    textColor={iosPickerTextColor}
-                    themeVariant={iosPickerThemeVariant}
-                  />
-                </View>
-              </View>
+              <DateTimePicker
+                value={selectedDate || new Date()}
+                mode="date"
+                display="compact"
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+                textColor={iosPickerTextColor}
+                themeVariant={iosPickerThemeVariant}
+                style={{ backgroundColor: 'transparent', marginLeft: -8 }}
+              />
             ) : (
               <>
                 <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.surfaceSecondary }]}>
@@ -411,20 +390,17 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
           <View style={styles.pickerContainer}>
             <Text style={[styles.inputLabel, { color: themeColors.text }]}>{t('calendar.newSession.labels.from')}</Text>
             {Platform.OS === 'ios' ? (
-              <View style={[styles.pickerWrapper, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-                <View style={styles.pickerInner}>
-                  <DateTimePicker
-                    value={fromTime || new Date()}
-                    mode="time"
-                    display="default"
-                    onChange={handleFromTimeChange}
-                    minuteInterval={15}
-                    is24Hour={false}
-                    textColor={iosPickerTextColor}
-                    themeVariant={iosPickerThemeVariant}
-                  />
-                </View>
-              </View>
+              <DateTimePicker
+                value={fromTime || new Date()}
+                mode="time"
+                display="default"
+                onChange={handleFromTimeChange}
+                minuteInterval={15}
+                is24Hour={false}
+                textColor={iosPickerTextColor}
+                themeVariant={iosPickerThemeVariant}
+                style={{ backgroundColor: 'transparent', marginLeft: -8 }}
+              />
             ) : (
               <>
                 <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.surfaceSecondary }]}>
@@ -455,22 +431,19 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
           {/* To Time Picker */}
           <View style={styles.pickerContainer}>
             <Text style={[styles.inputLabel, { color: themeColors.text }]}>{t('calendar.newSession.labels.till')}</Text>
-            {              Platform.OS === 'ios' ? (
-                <View style={[styles.pickerWrapper, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}>
-                  <View style={styles.pickerInner}>
-                    <DateTimePicker
-                      value={toTime || fromTime || new Date()}
-                      mode="time"
-                      display="compact"
-                      onChange={handleToTimeChange}
-                      minimumDate={fromTime || undefined}
-                      minuteInterval={15}
-                      textColor={iosPickerTextColor}
-                      themeVariant={iosPickerThemeVariant}
-                    />
-                  </View>
-                </View>
-              ) : (
+            {Platform.OS === 'ios' ? (
+              <DateTimePicker
+                value={toTime || fromTime || new Date()}
+                mode="time"
+                display="compact"
+                onChange={handleToTimeChange}
+                minimumDate={fromTime || undefined}
+                minuteInterval={15}
+                textColor={iosPickerTextColor}
+                themeVariant={iosPickerThemeVariant}
+                style={{ backgroundColor: 'transparent', marginLeft: -8 }}
+              />
+            ) : (
               <>
                 <View style={[styles.androidPickerWrapper, { backgroundColor: themeColors.surfaceSecondary }]}>
                   <TouchableOpacity
@@ -495,7 +468,7 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
                   />
                 )}
               </>
-              )}
+            )}
           </View>
         </View>
 
@@ -513,23 +486,16 @@ export const NewSessionModal = ({ visible, onClose }: NewSessionModalProps) => {
   };
 
   return (
-    <>
-      <BottomSheetModal
-        visible={visible}
-        onClose={onClose}
-        title={t('calendar.newSession.title')}
-        height="90%"
-        skipScrollView={true}
-      >
-        {currentPage === 'client-selection' ? renderClientSelectionPage() : renderSessionDetailsPage()}
-      </BottomSheetModal>
-
-    </>
+    <View style={styles.container}>
+      {currentPage === 'client-selection' ? renderClientSelectionPage() : renderSessionDetailsPage()}
+    </View>
   );
 };
 
-
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   pageContainer: {
     flex: 1,
   },
@@ -633,20 +599,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  pickerWrapper: {
-    borderRadius: 18,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 50,
-    width: '100%',
-    maxWidth: '100%',
-    marginLeft: Platform.OS === 'ios' ? -8 : 0,
-  },
-  pickerInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   androidPickerWrapper: {
     marginTop: 8,
     borderRadius: 12,
@@ -666,6 +618,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     textAlign: 'center',
+    marginBottom: 8,
   },
   disabledPickerText: {
     ...typography.p3,
@@ -674,7 +627,7 @@ const styles = StyleSheet.create({
   },
   completeButtonContainer: {
     marginTop: 'auto',
-    paddingBottom: 20,
+    paddingBottom: 44,
     marginBottom: 20,
   },
   completeButton: {
