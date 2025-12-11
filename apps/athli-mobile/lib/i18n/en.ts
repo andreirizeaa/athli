@@ -85,6 +85,8 @@ export const en = {
   },
   calendar: {
     title: 'Calendar',
+    selectDate: 'Select Date',
+    today: 'Today',
   },
   chats: {
     title: 'Chats',

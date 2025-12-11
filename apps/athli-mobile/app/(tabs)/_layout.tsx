@@ -129,10 +129,10 @@ export default function TabLayout() {
                 position: 'absolute',
                 // Position over the search pill (top-right area on iOS)
                 right: 16,
-                bottom: insets.bottom + 8,
-                width: 80,
-                height: 44,
-                borderRadius: 22,
+                bottom: insets.bottom - 16,
+                width: 66,
+                height: 66,
+                borderRadius: 40,
                 // Transparent to keep native pill visible
                 backgroundColor: 'transparent',
               }}
