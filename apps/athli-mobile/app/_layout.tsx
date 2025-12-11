@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import {
@@ -101,6 +102,79 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="preferences" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
+        <Stack.Screen name="client/[id]/goals-injuries" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="client/edit-client-details-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="add-modal-content"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="language-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="units-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="palette-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="select-date-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: 'transparent',
+            },
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
       </Stack>
     </ThemeProvider>
   );

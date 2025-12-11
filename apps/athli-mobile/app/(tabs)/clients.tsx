@@ -1,16 +1,16 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight, Search, SlidersHorizontal } from 'lucide-react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
-import { ClientsFilterModal } from '@/components/clients/clients-filter-modal';
 import { PlatformIcon } from '@/components/platform-icon';
+import { SearchBar } from '@/components/search-bar';
 import { Card } from '@/components/card';
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
@@ -43,8 +43,6 @@ export default function ClientsScreen() {
   const { t } = useTranslations();
   const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFiltersModalVisible, setIsFiltersModalVisible] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const scrollViewRef = useRef<ScrollView>(null);
 
   const gradientColors: [string, string] =
@@ -67,55 +65,28 @@ export default function ClientsScreen() {
     }, [loadClients])
   );
 
-  // Filter clients based on search query and category filters
+  // Filter clients based on search query
   const filteredClients = useMemo(() => {
-    let filtered = clients;
-
-    // Apply category filters
-    if (selectedCategories.size > 0) {
-      filtered = filtered.filter((client) => {
-        if (!client.type) return false;
-        return selectedCategories.has(client.type);
-      });
+    if (!searchQuery.trim()) {
+      return clients;
     }
 
-    // Apply search query
-    if (searchQuery.trim()) {
-      filtered = filtered.filter((client) => {
-        const fullName = client.fullName.toLowerCase();
-        const firstName = client.firstName.toLowerCase();
-        const lastName = client.lastName.toLowerCase();
-        const query = searchQuery.toLowerCase();
+    return clients.filter((client) => {
+      const fullName = client.fullName.toLowerCase();
+      const firstName = client.firstName.toLowerCase();
+      const lastName = client.lastName.toLowerCase();
+      const query = searchQuery.toLowerCase();
 
-        return (
-          fuzzyMatch(fullName, query) ||
-          fuzzyMatch(firstName, query) ||
-          fuzzyMatch(lastName, query)
-        );
-      });
-    }
-
-    return filtered;
-  }, [clients, searchQuery, selectedCategories]);
+      return (
+        fuzzyMatch(fullName, query) ||
+        fuzzyMatch(firstName, query) ||
+        fuzzyMatch(lastName, query)
+      );
+    });
+  }, [clients, searchQuery]);
 
   const handleClientPress = (clientId: string) => {
     router.push(`/client/${clientId}`);
-  };
-
-  const handleOpenFiltersModal = () => {
-    setIsFiltersModalVisible(true);
-  };
-
-  const handleCloseFiltersModal = () => {
-    setIsFiltersModalVisible(false);
-  };
-
-  const handleApplyFilters = (categories: Set<string>) => {
-    setSelectedCategories(categories);
-    // Scroll to top when filters are applied
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-    }, 100);
   };
 
   const formatSubtitle = (client: Client): string => {
@@ -142,9 +113,6 @@ export default function ClientsScreen() {
     return parts.join(' · ');
   };
 
-  // Check if any filters are applied
-  const hasAppliedFilters = selectedCategories.size > 0;
-
   return (
     <LinearGradient
       colors={gradientColors}
@@ -162,38 +130,11 @@ export default function ClientsScreen() {
         >
           <View style={styles.headerSection}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
-            <View
-              style={[styles.searchContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-            >
-              <View style={styles.searchIcon}>
-                <PlatformIcon
-                  sf="magnifyingglass"
-                  IconComponent={Search}
-                  size={20}
-                  color={themeColors.mutedText}
-                />
-              </View>
-              <TextInput
-                style={[styles.searchInput, { color: themeColors.text }]}
-                placeholder={t('clients.searchPlaceholder')}
-                placeholderTextColor={themeColors.mutedText}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                textAlignVertical="center"
-              />
-              <TouchableOpacity
-                style={styles.filterIcon}
-                activeOpacity={0.7}
-                onPress={handleOpenFiltersModal}
-              >
-                <PlatformIcon
-                  sf="slider.horizontal.3"
-                  IconComponent={SlidersHorizontal}
-                  size={20}
-                  color={hasAppliedFilters ? themeColors.primary : themeColors.mutedText}
-                />
-              </TouchableOpacity>
-            </View>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('clients.searchPlaceholder')}
+            />
           </View>
           <View style={styles.listContainer}>
             {filteredClients.map((client, index) => {
@@ -201,8 +142,9 @@ export default function ClientsScreen() {
               return (
                 <View key={client.id} style={styles.cardWrapper}>
                   <TouchableOpacity activeOpacity={0.7} onPress={() => handleClientPress(client.id)}>
-                    <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
-                      <View style={styles.cardContent}>
+                    <View style={[styles.cardShadowWrapper, { shadowColor: themeColors.shadowColor }]}>
+                      <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
+                        <View style={styles.cardContent}>
                         {client.avatar ? (
                           <Image
                             source={{ uri: client.avatar }}
@@ -233,6 +175,7 @@ export default function ClientsScreen() {
                         </View>
                       </View>
                     </Card>
+                    </View>
                   </TouchableOpacity>
                 </View>
               );
@@ -240,12 +183,6 @@ export default function ClientsScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-      <ClientsFilterModal
-        visible={isFiltersModalVisible}
-        onClose={handleCloseFiltersModal}
-        selectedCategories={selectedCategories}
-        onApplyFilters={handleApplyFilters}
-      />
     </LinearGradient>
   );
 }
@@ -274,6 +211,7 @@ const styles = StyleSheet.create({
   cardWrapper: {
     paddingHorizontal: 20,
   },
+  cardShadowWrapper: {},
   cardContainer: {
     overflow: 'hidden',
     paddingLeft: 0,
@@ -317,27 +255,6 @@ const styles = StyleSheet.create({
     ...typography.h1,
     textAlign: 'left',
     marginBottom: 16,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 28,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.p2,
-    padding: 0,
-    paddingBottom: 4,
-  },
-  filterIcon: {
-    marginLeft: 8,
-    padding: 4,
   },
 });
 
