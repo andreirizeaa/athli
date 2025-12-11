@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,6 +15,7 @@ import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { iconSizes } from '@/constants/typography';
 import { AddClientModal } from '@/components/clients/add-client-modal';
+import { NewSessionModal } from '@/components/calendar/new-session-modal';
 import {
   Calendar,
   CalendarFold,
@@ -84,7 +85,20 @@ export default function TabLayout() {
   const previousAppView = useRef(appView);
   const isInitialMount = useRef(true);
   const [isAddClientModalVisible, setIsAddClientModalVisible] = useState(false);
+  const [isNewSessionModalVisible, setIsNewSessionModalVisible] = useState(false);
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
+  
+  // Get current route name from pathname
+  const getCurrentRouteName = () => {
+    if (pathname.includes('/calendar')) {
+      return 'calendar';
+    }
+    if (pathname.includes('/clients')) {
+      return 'clients';
+    }
+    return appView === 'coach' ? 'clients' : 'training';
+  };
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -112,6 +126,25 @@ export default function TabLayout() {
     setIsAddClientModalVisible(false);
   };
 
+  const handleOpenNewSessionModal = () => {
+    setIsNewSessionModalVisible(true);
+  };
+
+  const handleCloseNewSessionModal = () => {
+    setIsNewSessionModalVisible(false);
+  };
+
+  const handleAddButtonPress = () => {
+    if (appView === 'coach') {
+      const routeName = getCurrentRouteName();
+      if (routeName === 'calendar') {
+        handleOpenNewSessionModal();
+      } else if (routeName === 'clients') {
+        handleOpenAddClientModal();
+      }
+    }
+  };
+
   const insets = useSafeAreaInsets();
 
   if (hasLiquidGlass) {
@@ -124,7 +157,7 @@ export default function TabLayout() {
           {/* Overlay that intercepts touches on the search pill */}
           <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
             <Pressable
-              onPress={handleOpenAddClientModal}
+              onPress={handleAddButtonPress}
               style={{
                 position: 'absolute',
                 // Position over the search pill (top-right area on iOS)
@@ -139,10 +172,14 @@ export default function TabLayout() {
             />
           </View>
 
-          {/* Bottom sheet modal */}
+          {/* Bottom sheet modals */}
           <AddClientModal
             visible={isAddClientModalVisible}
             onClose={handleCloseAddClientModal}
+          />
+          <NewSessionModal
+            visible={isNewSessionModalVisible}
+            onClose={handleCloseNewSessionModal}
           />
         </>
       );
@@ -190,6 +227,7 @@ export default function TabLayout() {
           <FallbackTabBar
             {...props}
             onOpenAddClientModal={handleOpenAddClientModal}
+            onOpenNewSessionModal={handleOpenNewSessionModal}
           />
         )}
         screenOptions={{ headerShown: false }}
@@ -250,15 +288,20 @@ export default function TabLayout() {
         visible={isAddClientModalVisible}
         onClose={handleCloseAddClientModal}
       />
+      <NewSessionModal
+        visible={isNewSessionModalVisible}
+        onClose={handleCloseNewSessionModal}
+      />
     </>
   );
 }
 
 type FallbackTabBarProps = BottomTabBarProps & {
   onOpenAddClientModal: () => void;
+  onOpenNewSessionModal: () => void;
 };
 
-function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTabBarProps) {
+function FallbackTabBar({ state, navigation, onOpenAddClientModal, onOpenNewSessionModal }: FallbackTabBarProps) {
   const insets = useSafeAreaInsets();
   const activeRouteName = state.routes[state.index]?.name;
   const { primaryColor, colors: themeColors } = useThemePreference();
@@ -275,9 +318,15 @@ function FallbackTabBar({ state, navigation, onOpenAddClientModal }: FallbackTab
   };
 
   const handleAddPress = () => {
-    // Only open modal when on clients screen in coach view
-    if (appView === 'coach' && activeRouteName === 'clients') {
-      onOpenAddClientModal();
+    if (appView === 'coach') {
+      // Open new session modal when on calendar screen
+      if (activeRouteName === 'calendar') {
+        onOpenNewSessionModal();
+      }
+      // Open add client modal when on clients screen
+      else if (activeRouteName === 'clients') {
+        onOpenAddClientModal();
+      }
     }
   };
 

@@ -10,6 +10,8 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SelectDateModal } from '@/components/calendar/select-date-modal';
 import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
+import { TimeGrid } from '@/components/calendar/time-grid';
+import { NewSessionModal } from '@/components/calendar/new-session-modal';
 import { FilledButton } from '@/components/buttons/filled-button';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 
@@ -99,6 +101,7 @@ export default function CalendarScreen() {
     return `${monthName} ${yearShort}`;
   }, [selectedDate, currentMonth, currentYear, t]);
 
+
   return (
     <LinearGradient
       colors={gradientColors}
@@ -141,6 +144,9 @@ export default function CalendarScreen() {
             />
           </View>
           <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
+          
+          {/* Time Grid - Scrollable */}
+          <TimeGrid selectedDate={selectedDate} />
         </View>
       </SafeAreaView>
       <SelectDateModal
@@ -163,8 +169,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 16,
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -181,7 +185,6 @@ const styles = StyleSheet.create({
   divider: {
     width: '100%',
     height: 1,
-    marginBottom: 0,
     alignSelf: 'stretch',
     marginTop: 4,
   },

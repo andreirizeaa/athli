@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight, Search, SlidersHorizontal } from 'lucide-react-native';
+import { ChevronRight, SlidersHorizontal } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
@@ -11,6 +11,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
 import { ClientsFilterModal } from '@/components/clients/clients-filter-modal';
 import { PlatformIcon } from '@/components/platform-icon';
+import { SearchBar } from '@/components/search-bar';
 import { Card } from '@/components/card';
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
@@ -162,38 +163,20 @@ export default function ClientsScreen() {
         >
           <View style={styles.headerSection}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
-            <View
-              style={[styles.searchContainer, { backgroundColor: themeColors.surface, borderColor: themeColors.border }]}
-            >
-              <View style={styles.searchIcon}>
-                <PlatformIcon
-                  sf="magnifyingglass"
-                  IconComponent={Search}
-                  size={20}
-                  color={themeColors.mutedText}
-                />
-              </View>
-              <TextInput
-                style={[styles.searchInput, { color: themeColors.text }]}
-                placeholder={t('clients.searchPlaceholder')}
-                placeholderTextColor={themeColors.mutedText}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                textAlignVertical="center"
-              />
-              <TouchableOpacity
-                style={styles.filterIcon}
-                activeOpacity={0.7}
-                onPress={handleOpenFiltersModal}
-              >
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder={t('clients.searchPlaceholder')}
+              rightIcon={
                 <PlatformIcon
                   sf="slider.horizontal.3"
                   IconComponent={SlidersHorizontal}
                   size={20}
                   color={hasAppliedFilters ? themeColors.primary : themeColors.mutedText}
                 />
-              </TouchableOpacity>
-            </View>
+              }
+              onRightIconPress={handleOpenFiltersModal}
+            />
           </View>
           <View style={styles.listContainer}>
             {filteredClients.map((client, index) => {
@@ -317,27 +300,6 @@ const styles = StyleSheet.create({
     ...typography.h1,
     textAlign: 'left',
     marginBottom: 16,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 28,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    ...typography.p2,
-    padding: 0,
-    paddingBottom: 4,
-  },
-  filterIcon: {
-    marginLeft: 8,
-    padding: 4,
   },
 });
 
