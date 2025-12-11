@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, MoreVertical, Pencil, Archive } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import * as ContextMenu from 'zeego/context-menu';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography, iconSizes, bodyFontFamily } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { getClients, type Client } from '@/services/client-service';
 
@@ -30,6 +31,7 @@ export default function ClientDetailScreen() {
   const { colors: themeColors } = useThemePreference();
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'options'>('overview');
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -56,6 +58,18 @@ export default function ClientDetailScreen() {
     router.back();
   };
 
+  const handleTabPress = (tab: 'overview' | 'options') => {
+    setActiveTab(tab);
+  };
+
+  const handleEditDetails = () => {
+    // TODO: Implement edit details action
+  };
+
+  const handleArchiveClient = () => {
+    // TODO: Implement archive client action
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
@@ -73,7 +87,7 @@ export default function ClientDetailScreen() {
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Loading...</Text>
-          <View style={styles.headerRightPlaceholder} />
+          <View style={styles.headerRightButton} />
         </View>
       </SafeAreaView>
     );
@@ -96,7 +110,7 @@ export default function ClientDetailScreen() {
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Client Not Found</Text>
-          <View style={styles.headerRightPlaceholder} />
+          <View style={styles.headerRightButton} />
         </View>
       </SafeAreaView>
     );
@@ -120,7 +134,78 @@ export default function ClientDetailScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
           {client.fullName}
         </Text>
-        <View style={styles.headerRightPlaceholder} />
+        <ContextMenu.Root>
+          <ContextMenu.Trigger>
+            <View style={[styles.headerRightButton, { backgroundColor: mutedSurfaceColor }]}>
+              <PlatformIcon
+                sf="ellipsis"
+                IconComponent={MoreVertical}
+                size={iconSizes.navigationChevrons}
+                color={iconColor}
+              />
+            </View>
+          </ContextMenu.Trigger>
+          <ContextMenu.Content>
+            <ContextMenu.Item key="edit" onSelect={handleEditDetails}>
+              <ContextMenu.ItemIcon
+                ios={{ name: 'pencil' }}
+                androidIconName="edit"
+              >
+                <Pencil size={16} />
+              </ContextMenu.ItemIcon>
+              <ContextMenu.ItemTitle>Edit details</ContextMenu.ItemTitle>
+            </ContextMenu.Item>
+            <ContextMenu.Item key="archive" onSelect={handleArchiveClient}>
+              <ContextMenu.ItemIcon
+                ios={{ name: 'archivebox' }}
+                androidIconName="archive"
+              >
+                <Archive size={16} />
+              </ContextMenu.ItemIcon>
+              <ContextMenu.ItemTitle>Archive client</ContextMenu.ItemTitle>
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Root>
+      </View>
+
+      {/* Tabs */}
+      <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.tab,
+            activeTab === 'overview' && styles.tabActive,
+            { opacity: pressed ? 0.7 : 1 },
+          ]}
+          onPress={() => handleTabPress('overview')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'overview' && styles.tabTextActive,
+              { color: activeTab === 'overview' ? themeColors.text : themeColors.mutedText },
+            ]}
+          >
+            Overview
+          </Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.tab,
+            activeTab === 'options' && styles.tabActive,
+            { opacity: pressed ? 0.7 : 1 },
+          ]}
+          onPress={() => handleTabPress('options')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'options' && styles.tabTextActive,
+              { color: activeTab === 'options' ? themeColors.text : themeColors.mutedText },
+            ]}
+          >
+            Options
+          </Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -151,8 +236,36 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 8,
   },
-  headerRightPlaceholder: {
+  headerRightButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
     width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 0,
+    borderBottomWidth: 1,
+    marginBottom: 16,
+    backgroundColor: 'transparent',
+  },
+  tab: {
+    flex: 1,
+    paddingBottom: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    // Removed borderBottomColor to eliminate underscore highlight
+  },
+  tabText: {
+    ...typography.h7,
+  },
+  tabTextActive: {
+    fontWeight: '600',
   },
 });
 
