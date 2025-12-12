@@ -87,6 +87,8 @@ export type ThemeColors = {
   sidebar: string;
   sidebarForeground: string;
   shadowColor: string;
+  searchBarBackground: string;
+  headerBackground: string;
 };
 
 export function resolveEffectiveScheme(
@@ -124,6 +126,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
+        searchBarBackground: '#2A2A2A',
+        headerBackground: '#1E1E1E',
       };
     }
 
@@ -141,6 +145,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
+      searchBarBackground: '#F3F4F6',
+      headerBackground: '#F9FAFB',
     };
   }
 
@@ -160,6 +166,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
+        searchBarBackground: '#2A2A2A',
+        headerBackground: '#1E1E1E',
       };
     }
 
@@ -177,6 +185,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
+      searchBarBackground: '#F3F4F6',
+      headerBackground: '#F9FAFB',
     };
   }
 
@@ -196,6 +206,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
+        searchBarBackground: '#2A2A2A',
+        headerBackground: '#1E1E1E',
       };
     }
 
@@ -213,6 +225,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#0F172A',
       shadowColor: '#000000',
+      searchBarBackground: '#F3F4F6',
+      headerBackground: '#F9FAFB',
     };
   }
 
@@ -232,6 +246,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
+        searchBarBackground: '#2A2A2A',
+        headerBackground: '#1E1E1E',
       };
     }
 
@@ -249,6 +265,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
+      searchBarBackground: '#F3F4F6',
+      headerBackground: '#F9FAFB',
     };
   }
 
@@ -268,6 +286,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
+        searchBarBackground: '#2A2A2A',
+        headerBackground: '#1E1E1E',
       };
     }
 
@@ -285,6 +305,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
+      searchBarBackground: '#F3F4F6',
+      headerBackground: '#F9FAFB',
     };
   }
 
@@ -304,6 +326,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
+        searchBarBackground: '#2A2A2A',
+        headerBackground: '#1E1E1E',
       };
     }
 
@@ -321,6 +345,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
+      searchBarBackground: '#F3F4F6',
+      headerBackground: '#F9FAFB',
     };
   }
 
@@ -340,6 +366,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
+        searchBarBackground: '#2A2A2A',
+        headerBackground: '#1E1E1E',
       };
     }
 
@@ -357,6 +385,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
+      searchBarBackground: '#F3F4F6',
+      headerBackground: '#F9FAFB',
     };
   }
 
@@ -375,6 +405,8 @@ export function createPresetPalette(
       sidebar: '#1A1A1A',
       sidebarForeground: '#E5E7EB',
       shadowColor: '#FFFFFF',
+      searchBarBackground: '#2A2A2A',
+      headerBackground: '#1E1E1E',
     };
   }
 
@@ -392,6 +424,8 @@ export function createPresetPalette(
     sidebar: '#FFFFFF',
     sidebarForeground: '#020617',
     shadowColor: '#000000',
+    searchBarBackground: '#F3F4F6',
+    headerBackground: '#F9FAFB',
   };
 }
 

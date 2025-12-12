@@ -24,7 +24,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.andreirizea.athlimobile"
+      "package": "com.andreirizea.athlimobile",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "androidStatusBar": {
       "translucent": true,

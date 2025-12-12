@@ -11,6 +11,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { typography, iconSizes } from '@/constants/typography';
 import { AddClientContent } from '@/components/clients/add-client-content';
 import { NewSessionContent } from '@/components/calendar/new-session-content';
+import { NewChatContent } from '@/components/chats/new-chat-content';
 import { PlatformIcon } from '@/components/platform-icon';
 
 export default function AddModalContent() {
@@ -23,9 +24,9 @@ export default function AddModalContent() {
   const insets = useSafeAreaInsets();
 
   // Determine which content to show based on route param or pathname
-  const getCurrentRoute = (): 'clients' | 'calendar' => {
+  const getCurrentRoute = (): 'clients' | 'calendar' | 'chats' => {
     // First check if route was passed as param
-    if (params.route === 'clients' || params.route === 'calendar') {
+    if (params.route === 'clients' || params.route === 'calendar' || params.route === 'chats') {
       return params.route;
     }
 
@@ -37,15 +38,21 @@ export default function AddModalContent() {
     if (pathname.includes('/calendar')) {
       return 'calendar';
     }
+    if (pathname.includes('/chats')) {
+      return 'chats';
+    }
 
     // Default to clients for coach view
     return appView === 'coach' ? 'clients' : 'clients';
   };
 
   const currentRoute = getCurrentRoute();
-  const title = currentRoute === 'clients' 
+  const title =
+    currentRoute === 'clients'
     ? t('clients.addClientModal.title')
-    : t('calendar.newSession.title');
+      : currentRoute === 'calendar'
+        ? t('calendar.newSession.title')
+        : t('chats.newChat.title');
 
   const handleClose = () => {
     // Simply go back once (used by fallback tab bar)
@@ -67,7 +74,7 @@ export default function AddModalContent() {
           activeOpacity={0.7}
           onPress={handleClose}
         >
-          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={themeColors.text} />
+          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={themeColors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
         <View style={styles.closeButton} />
@@ -77,10 +84,12 @@ export default function AddModalContent() {
       <View style={styles.content}>
         {currentRoute === 'clients' ? (
           <AddClientContent onClose={handleClose} />
-        ) : (
+        ) : currentRoute === 'calendar' ? (
           <View style={styles.sessionContentWrapper}>
             <NewSessionContent onClose={handleClose} />
           </View>
+        ) : (
+          <NewChatContent onClose={handleClose} />
         )}
       </View>
     </View>
@@ -105,9 +114,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   closeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

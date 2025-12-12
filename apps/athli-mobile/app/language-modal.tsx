@@ -41,7 +41,7 @@ export default function LanguageModal() {
           activeOpacity={0.7}
           onPress={handleClose}
         >
-          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={iconColor} />
+          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.selectLanguage')}</Text>
         <View style={styles.closeButton} />
@@ -112,9 +112,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   closeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   languageNativeName: {
-    ...typography.p3,
+    ...typography.p2,
     marginTop: 2,
   },
   modalDivider: {
