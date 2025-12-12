@@ -292,7 +292,13 @@ export default function ChatsScreen() {
                 <Text
                   style={[
                     styles.filterText,
-                    { color: activeFilter === 'all' ? themeColors.primary : themeColors.mutedText },
+                    {
+                      color: activeFilter === 'all'
+                        ? colorScheme === 'dark'
+                          ? themeColors.primaryForeground
+                          : themeColors.primary
+                        : themeColors.mutedText,
+                    },
                   ]}
                 >
                   {t('chats.filters.all')}
@@ -316,7 +322,13 @@ export default function ChatsScreen() {
                 <Text
                   style={[
                     styles.filterText,
-                    { color: activeFilter === 'unread' ? themeColors.primary : themeColors.mutedText },
+                    {
+                      color: activeFilter === 'unread'
+                        ? colorScheme === 'dark'
+                          ? themeColors.primaryForeground
+                          : themeColors.primary
+                        : themeColors.mutedText,
+                    },
                   ]}
                 >
                   Unread
@@ -340,7 +352,11 @@ export default function ChatsScreen() {
                   style={[
                     styles.filterText,
                     {
-                      color: activeFilter === 'favourites' ? themeColors.primary : themeColors.mutedText,
+                      color: activeFilter === 'favourites'
+                        ? colorScheme === 'dark'
+                          ? themeColors.primaryForeground
+                          : themeColors.primary
+                        : themeColors.mutedText,
                     },
                   ]}
                 >

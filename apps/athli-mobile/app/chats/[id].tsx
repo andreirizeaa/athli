@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send } from 'lucide-react-native';
 
@@ -12,6 +11,7 @@ import { PlatformIcon } from '@/components/platform-icon';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { MessageInputBar } from '@/components/message-input-bar';
 import { getChats, getArchivedChats, archiveChat, deleteChat, type Chat } from '@/services/chats-service';
+import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 
 export default function ChatDetailScreen() {
   const router = useRouter();
@@ -194,79 +194,78 @@ export default function ChatDetailScreen() {
         options={dropdownOptions}
         anchorPosition={buttonPosition}
       />
-      <ScrollView
-        style={[styles.content, { backgroundColor: themeColors.pageBackground }]}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Chat content will go here */}
-      </ScrollView>
-      <KeyboardAvoidingView
-        behavior="translate-with-padding"
-        keyboardVerticalOffset={0}
-      >
-        <View style={[styles.bottomSection, { backgroundColor: headerBackgroundColor, paddingBottom: insets.bottom }]}>
-          <View style={styles.bottomBar}>
+      <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Chat content will go here */}
+        </ScrollView>
+
+        {/* Bottom bar – anchored to screen bottom, grows upward */}
+        <KeyboardAwareToolbar
+          backgroundColor={headerBackgroundColor}
+        >
+          <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.7}
+          >
+            <PlatformIcon
+              sf="plus"
+              IconComponent={Plus}
+              size={iconSizes.tabBarIcons - 2}
+              color={iconColor}
+            />
+          </TouchableOpacity>
+          <View style={styles.searchBarContainer}>
+            <MessageInputBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder=""
+            />
+          </View>
+          {hasText ? (
             <TouchableOpacity
-              style={styles.iconButton}
+              style={styles.sendButton}
               activeOpacity={0.7}
             >
               <PlatformIcon
-                sf="plus"
-                IconComponent={Plus}
-                size={iconSizes.tabBarIcons - 2}
-                color={iconColor}
+                sf="paperplane.circle.fill"
+                IconComponent={Send}
+                size={iconSizes.tabBarIconsIOS + 2}
+                color={themeColors.primary}
               />
             </TouchableOpacity>
-            <View style={styles.searchBarContainer}>
-              <MessageInputBar
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder=""
-              />
-            </View>
-            {hasText ? (
+          ) : (
+            <>
               <TouchableOpacity
-                style={styles.sendButton}
+                style={styles.iconButton}
                 activeOpacity={0.7}
               >
                 <PlatformIcon
-                  sf="paperplane.circle.fill"
-                  IconComponent={Send}
-                  size={iconSizes.tabBarIconsIOS + 2}
-                  color={themeColors.primary}
+                  sf="camera"
+                  IconComponent={Camera}
+                  size={iconSizes.tabBarIcons - 2}
+                  color={iconColor}
                 />
               </TouchableOpacity>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  activeOpacity={0.7}
-                >
-                  <PlatformIcon
-                    sf="camera"
-                    IconComponent={Camera}
-                    size={iconSizes.tabBarIcons - 2}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  activeOpacity={0.7}
-                >
-                  <PlatformIcon
-                    sf="mic"
-                    IconComponent={Mic}
-                    size={iconSizes.tabBarIcons - 2}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-      </KeyboardAvoidingView>
+              <TouchableOpacity
+                style={styles.iconButton}
+                activeOpacity={0.7}
+              >
+                <PlatformIcon
+                  sf="mic"
+                  IconComponent={Mic}
+                  size={iconSizes.tabBarIcons - 2}
+                  color={iconColor}
+                />
+              </TouchableOpacity>
+            </>
+          )}
+        </KeyboardAwareToolbar>
+      </View>
     </View>
   );
 }
@@ -335,15 +334,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
-  },
-  bottomSection: {
     paddingHorizontal: 20,
-    paddingTop: 4,
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   iconButton: {
     alignItems: 'center',

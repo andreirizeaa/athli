@@ -18,6 +18,7 @@ export const en = {
     preferences: 'Preferences',
     profile: 'Profile',
     add: 'Add',
+    done: 'Done',
   },
   training: {
     title: 'Training',
