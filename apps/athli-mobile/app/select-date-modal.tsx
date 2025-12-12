@@ -341,7 +341,7 @@ export default function SelectDateModal() {
           activeOpacity={0.7}
           onPress={handleClose}
         >
-          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.modalIcons} color={iconColor} />
+          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">{t('calendar.selectDate')}</Text>
         <TouchableOpacity

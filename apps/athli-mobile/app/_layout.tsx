@@ -100,7 +100,7 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="preferences" options={{ headerShown: false }} />
+        <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]/activity" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]/metrics" options={{ headerShown: false }} />
@@ -175,6 +175,8 @@ function RootLayoutNav() {
             }),
           }}
         />
+        <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
+        <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

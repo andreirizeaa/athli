@@ -45,7 +45,7 @@ export default function EditClientDetailsModal() {
           <PlatformIcon
             sf="xmark"
             IconComponent={X}
-            size={iconSizes.modalIcons}
+            size={iconSizes.navigationChevrons}
             color={themeColors.text}
           />
         </TouchableOpacity>

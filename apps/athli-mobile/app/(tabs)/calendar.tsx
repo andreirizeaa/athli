@@ -134,9 +134,9 @@ export default function CalendarScreen() {
     return today.getDate();
   }, []);
 
-  // Determine button colors: white/black with contrasting icon
-  const buttonBackgroundColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
-  const buttonIconColor = colorScheme === 'dark' ? '#000000' : '#FFFFFF';
+  // Button colors: always white background with black icon
+  const buttonBackgroundColor = '#FFFFFF';
+  const buttonIconColor = '#000000';
 
 
   return (

@@ -1,12 +1,12 @@
 import React from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { Search, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
 
-type SearchBarProps = {
+type MessageInputBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
@@ -15,20 +15,20 @@ type SearchBarProps = {
   style?: object;
 };
 
-export const SearchBar = ({
+export const MessageInputBar = ({
   value,
   onChangeText,
   placeholder,
   rightIcon,
   onRightIconPress,
   style,
-}: SearchBarProps) => {
+}: MessageInputBarProps) => {
   const { colors: themeColors } = useThemePreference();
 
   return (
     <View
       style={[
-        styles.searchContainer,
+        styles.inputContainer,
         {
           backgroundColor: themeColors.searchBarBackground,
           borderColor: themeColors.border,
@@ -36,16 +36,8 @@ export const SearchBar = ({
         style,
       ]}
     >
-      <View style={styles.searchIcon}>
-        <PlatformIcon
-          sf="magnifyingglass"
-          IconComponent={Search}
-          size={20}
-          color={themeColors.mutedText}
-        />
-      </View>
       <TextInput
-        style={[styles.searchInput, { color: themeColors.text }]}
+        style={[styles.input, { color: themeColors.text }]}
         placeholder={placeholder}
         placeholderTextColor={themeColors.mutedText}
         value={value}
@@ -82,25 +74,21 @@ export const SearchBar = ({
 };
 
 const styles = StyleSheet.create({
-  searchContainer: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 28,
     borderWidth: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
-    height: 44,
+    minHeight: 30,
+    height: 30,
   },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
+  input: {
     flex: 1,
-    ...typography.p2,
+    ...typography.p4,
     padding: 0,
-    height: 24,
-    maxHeight: 24,
+    height: 18,
+    maxHeight: 18,
   },
   clearIcon: {
     marginLeft: 8,
