@@ -19,6 +19,8 @@ export const en = {
     profile: 'Profile',
     add: 'Add',
     done: 'Done',
+    reply: 'Reply',
+    copy: 'Copy',
   },
   training: {
     title: 'Training',

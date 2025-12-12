@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    ...typography.p4,
+    ...typography.p2,
     padding: 0,
     height: 18,
     maxHeight: 18,

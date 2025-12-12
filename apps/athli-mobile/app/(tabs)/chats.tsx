@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   },
   filterPill: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
   },
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterText: {
-    ...typography.p4,
+    ...typography.p3,
   },
   chatListContainer: {
   },

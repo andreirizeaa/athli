@@ -142,6 +142,26 @@ export default function ChatDetailScreen() {
     }
   };
 
+  const handleMessageReply = (message: ChatMessage) => {
+    // TODO: Implement reply functionality
+    // This could set a reply state and show the message being replied to in the input
+    console.log('Reply to message:', message);
+  };
+
+  const handleMessageEdit = (message: ChatMessage) => {
+    // TODO: Implement edit functionality
+    // This could set the message to edit mode and populate the input with the message text
+    console.log('Edit message:', message);
+    setSearchQuery(message.text);
+  };
+
+  const handleMessageDelete = async (message: ChatMessage) => {
+    // TODO: Implement delete message functionality
+    // This should remove the message from the messages array
+    console.log('Delete message:', message);
+    setMessages((prev) => prev.filter((m) => m.id !== message.id));
+  };
+
   const dropdownOptions: DropdownMenuOption[] = [
     {
       label: t('chats.archive'),
@@ -266,6 +286,9 @@ export default function ChatDetailScreen() {
           messages={messages}
           backgroundColor={themeColors.pageBackground}
           themeColors={themeColors}
+          onReply={handleMessageReply}
+          onEdit={handleMessageEdit}
+          onDelete={handleMessageDelete}
         />
       </View>
 
