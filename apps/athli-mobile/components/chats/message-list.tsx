@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   FlatList,
   Keyboard,
@@ -21,16 +21,10 @@ interface MessageListProps {
 
 export const MessageList = ({ messages, backgroundColor, themeColors }: MessageListProps) => {
   const listRef = useRef<FlatList<ChatMessage>>(null);
-
-  const didInitialScroll = useRef(false);
-
-  const contentHeightRef = useRef(0);
-  const layoutHeightRef = useRef(0);
   const offsetYRef = useRef(0);
 
-  // During keyboard animation: keep the same "bottom content coordinate" pinned.
-  const keyboardAnimatingRef = useRef(false);
-  const bottomAnchorRef = useRef<number | null>(null);
+  // NEWEST first for inverted list
+  const data = useMemo(() => [...messages].reverse(), [messages]);
 
   const formatTime = (date: Date): string => {
     const hours = date.getHours().toString().padStart(2, '0');
@@ -38,76 +32,38 @@ export const MessageList = ({ messages, backgroundColor, themeColors }: MessageL
     return `${hours}:${minutes}`;
   };
 
-  const initialScrollToBottom = () => {
-    if (didInitialScroll.current) return;
-    if (contentHeightRef.current <= 0) return;
-    if (layoutHeightRef.current <= 0) return;
-
-    didInitialScroll.current = true;
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({ animated: false });
-    });
-  };
-
-  // New messages: if user is near bottom, stay at bottom.
+  // If user is near "bottom" (offset ~ 0), keep them pinned to bottom as new messages arrive
   useEffect(() => {
-    if (!didInitialScroll.current) return;
-
-    const distanceFromBottom =
-      contentHeightRef.current - (offsetYRef.current + layoutHeightRef.current);
-
-    const nearBottom = distanceFromBottom <= 40;
-
-    if (nearBottom) {
+    if (offsetYRef.current <= 40) {
       requestAnimationFrame(() => {
-        listRef.current?.scrollToEnd({ animated: true });
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        offsetYRef.current = 0;
       });
     }
   }, [messages.length]);
 
-  // Capture bottom anchor when keyboard starts moving; keep it stable until it finishes.
+  // Optional: helps iOS keep content stable when keyboard changes insets
   useEffect(() => {
-    const captureAnchor = () => {
-      // anchor = "what content Y is currently at the bottom edge of the viewport"
-      bottomAnchorRef.current = offsetYRef.current + layoutHeightRef.current;
-      keyboardAnimatingRef.current = true;
-    };
-
-    const releaseAnchor = () => {
-      keyboardAnimatingRef.current = false;
-      bottomAnchorRef.current = null;
-    };
-
-    const subs = [
-      Keyboard.addListener('keyboardWillShow', captureAnchor),
-      Keyboard.addListener('keyboardWillHide', captureAnchor),
-      Keyboard.addListener('keyboardDidShow', releaseAnchor),
-      Keyboard.addListener('keyboardDidHide', releaseAnchor),
-    ];
-
-    return () => subs.forEach((s) => s.remove());
+    const subShow = Keyboard.addListener('keyboardDidShow', () => {
+      // If user is at bottom, keep them at bottom
+      if (offsetYRef.current <= 40) {
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({ offset: 0, animated: false });
+          offsetYRef.current = 0;
+        });
+      }
+    });
+    return () => subShow.remove();
   }, []);
 
-  const applyAnchorOffset = (newHeight: number) => {
-    // If keyboard is animating, use captured anchor; otherwise use simple prev/new delta.
-    if (keyboardAnimatingRef.current && bottomAnchorRef.current != null) {
-      const desiredOffset = Math.max(0, bottomAnchorRef.current - newHeight);
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({ offset: desiredOffset, animated: false });
-      });
-      return;
-    }
-  };
-
   const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
-    const isLastInSequence =
-      index === messages.length - 1 || messages[index + 1]?.isSent !== item.isSent;
+    // Because data is reversed, "previous" item in the list is actually newer (closer to bottom).
+    const isLastInSequence = index === 0 || data[index - 1]?.isSent !== item.isSent;
 
-    const isDifferentSender = index > 0 && messages[index - 1]?.isSent !== item.isSent;
+    const isDifferentSender = index > 0 && data[index - 1]?.isSent !== item.isSent;
 
     return (
       <View
-        key={item.id}
         style={[
           styles.messageWrapper,
           item.isSent ? styles.messageWrapperRight : styles.messageWrapperLeft,
@@ -151,41 +107,22 @@ export const MessageList = ({ messages, backgroundColor, themeColors }: MessageL
   };
 
   return (
-    <View
-      style={[styles.fill, { backgroundColor }]}
-      onLayout={(e) => {
-        const newH = e.nativeEvent.layout.height;
-        layoutHeightRef.current = newH;
-
-        // Keep viewport anchored during keyboard animation
-        applyAnchorOffset(newH);
-
-        // Initial boot
-        initialScrollToBottom();
-      }}
-    >
+    <View style={[styles.fill, { backgroundColor }]}>
       <FlatList
         ref={listRef}
-        data={messages}
+        data={data}
         keyExtractor={(m) => m.id}
         renderItem={renderItem}
+        inverted
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.contentContainer}
         onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
           offsetYRef.current = e.nativeEvent.contentOffset.y;
         }}
-        onScrollEndDrag={(e) => {
-          offsetYRef.current = e.nativeEvent.contentOffset.y;
-        }}
-        onMomentumScrollEnd={(e) => {
-          offsetYRef.current = e.nativeEvent.contentOffset.y;
-        }}
         scrollEventThrottle={16}
-        onContentSizeChange={(_, h) => {
-          contentHeightRef.current = h;
-          initialScrollToBottom();
-        }}
+        // This helps when new items are inserted at the "bottom" (index 0 in inverted list)
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
       />
     </View>
   );
