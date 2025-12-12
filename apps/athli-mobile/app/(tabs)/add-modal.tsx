@@ -6,3 +6,4 @@ export default function AddModal() {
   // Redirect back to clients tab (this should never be visible due to overlay)
   return <Redirect href="/clients" />;
 }
+

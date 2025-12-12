@@ -65,7 +65,7 @@ export default function SettingsScreen() {
       : [primarySoftColor, isAthleteView ? themeColors.background : themeColors.pageBackground];
 
   const handleOpenPreferences = () => {
-    router.push({ pathname: '/preferences' });
+    router.push({ pathname: '/settings/preferences' });
   };
 
   const handleToggleView = () => {

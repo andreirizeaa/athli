@@ -19,7 +19,8 @@ import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SearchBar } from '@/components/search-bar';
-import { getClients, scheduleSession, type Client } from '@/services/client-service';
+import { getClients, type Client } from '@/services/client-service';
+import { scheduleSession } from '@/services/calendar-service';
 
 type NewSessionContentProps = {
   onClose: () => void;

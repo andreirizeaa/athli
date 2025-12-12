@@ -45,7 +45,7 @@ export default function EditClientDetailsModal() {
           <PlatformIcon
             sf="xmark"
             IconComponent={X}
-            size={iconSizes.modalIcons}
+            size={iconSizes.navigationChevrons}
             color={themeColors.text}
           />
         </TouchableOpacity>
@@ -83,9 +83,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   closeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

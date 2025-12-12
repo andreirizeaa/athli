@@ -34,3 +34,4 @@ export const formatDateMonthYearShort = (date: Date): string => {
   const year = date.getFullYear().toString().slice(-2); // Last 2 digits
   return `${month} ${year}`;
 };
+
