@@ -16,6 +16,7 @@ import {
 import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
 import { View } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -52,13 +53,15 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemePreferenceProvider>
-      <TranslationProvider>
-        <AppViewProvider>
-          <RootLayoutNav />
-        </AppViewProvider>
-      </TranslationProvider>
-    </ThemePreferenceProvider>
+    <KeyboardProvider>
+      <ThemePreferenceProvider>
+        <TranslationProvider>
+          <AppViewProvider>
+            <RootLayoutNav />
+          </AppViewProvider>
+        </TranslationProvider>
+      </ThemePreferenceProvider>
+    </KeyboardProvider>
   );
 }
 
