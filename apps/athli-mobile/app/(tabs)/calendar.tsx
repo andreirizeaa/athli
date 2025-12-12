@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ChevronDown } from 'lucide-react-native';
+import { ChevronDown, CalendarCheck } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
@@ -12,7 +12,6 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
 import { TimeGrid } from '@/components/calendar/time-grid';
-import { FilledButton } from '@/components/buttons/filled-button';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
@@ -129,6 +128,16 @@ export default function CalendarScreen() {
     return `${monthName} ${yearShort}`;
   }, [selectedDate, currentMonth, currentYear, t]);
 
+  // Get current day number for SF Symbol
+  const currentDayNumber = useMemo(() => {
+    const today = new Date();
+    return today.getDate();
+  }, []);
+
+  // Determine button colors: white/black with contrasting icon
+  const buttonBackgroundColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
+  const buttonIconColor = colorScheme === 'dark' ? '#000000' : '#FFFFFF';
+
 
   return (
     <LinearGradient
@@ -155,12 +164,18 @@ export default function CalendarScreen() {
                 color={themeColors.text}
               />
             </TouchableOpacity>
-            <FilledButton
-              label={t('calendar.today')}
+            <TouchableOpacity
+              style={[styles.todayButton, { backgroundColor: buttonBackgroundColor }]}
+              activeOpacity={0.7}
               onPress={handleTodayPress}
-              style={styles.todayButton}
-              textStyle={styles.todayButtonText}
-            />
+            >
+              <PlatformIcon
+                sf={`calendar`}
+                IconComponent={CalendarCheck}
+                size={iconSizes.navigationChevrons + 4}
+                color={buttonIconColor}
+              />
+            </TouchableOpacity>
           </View>
           {/* Bottom row: Swipeable Calendar */}
           <View style={styles.headerBottomRow}>
@@ -220,12 +235,10 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   todayButton: {
-    flex: 0,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  todayButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
 });
