@@ -1,8 +1,8 @@
 export interface ChatMessage {
   id: string;
-  content: string;
+  text: string;
   timestamp: Date;
-  senderId: string;
+  isSent: boolean; // true for user messages, false for client messages
   isRead: boolean;
 }
 
@@ -218,7 +218,7 @@ const mockChats: Chat[] = [
     clientId: '1',
     clientName: 'John Smith',
     clientAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces',
-    lastMessage: 'Thanks for the workout plan!',
+    lastMessage: 'Thanks for the workout plan! ',
     lastMessageTime: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
     unreadCount: 2,
     isFavourite: true,
@@ -374,28 +374,221 @@ const mockArchivedChats: Chat[] = [
 const mockMessages: Record<string, ChatMessage[]> = {
   '1': [
     {
-      id: 'm1',
-      content: 'Thanks for the workout plan!',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      senderId: '1',
+      id: 'm1-1',
+      text: 'Hi! I wanted to check in about my progress.',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 30 * 60 * 1000), // 3.5 hours ago
+      isSent: false, // client message
+      isRead: true,
+    },
+    {
+      id: 'm1-2',
+      text: 'Great to hear from you! How are you feeling?',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 25 * 60 * 1000),
+      isSent: true, // user message
+      isRead: true,
+    },
+    {
+      id: 'm1-3',
+      text: 'I feel really good!',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 20 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-4',
+      text: 'The new exercises are working great',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 18 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-5',
+      text: 'I can already see some improvement',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 15 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-6',
+      text: 'That\'s fantastic! Keep up the great work.',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 - 10 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-7',
+      text: 'I\'ve been following the plan exactly as you suggested',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-8',
+      text: 'Perfect! Consistency is key.',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 40 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-9',
+      text: 'How many times per week are you training?',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 38 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-10',
+      text: 'I\'m doing 4 sessions per week',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 35 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-11',
+      text: 'Monday, Wednesday, Friday, and Saturday',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 33 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-12',
+      text: 'That\'s an excellent schedule!',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 30 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-13',
+      text: 'You\'re giving yourself good recovery time between sessions',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 28 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-14',
+      text: 'Yes, I make sure to rest on the days in between',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 25 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-15',
+      text: 'I also do some light stretching',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 23 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-16',
+      text: 'That\'s perfect! Active recovery is important.',
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000 - 50 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-17',
+      text: 'Keep up the great work and let me know if you have any questions',
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000 - 48 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-18',
+      text: 'Will do! Thanks for all your help',
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm1-19',
+      text: 'Thanks for the workout plan!',
+      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
+      isSent: false,
       isRead: false,
     },
   ],
   '2': [
     {
-      id: 'm2',
-      content: 'Can we schedule a session for next week?',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000),
-      senderId: '2',
+      id: 'm2-1',
+      text: 'Can we schedule a session for next week?',
+      timestamp: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm2-2',
+      text: 'Absolutely! What day works best for you?',
+      timestamp: new Date(Date.now() - 10 * 60 * 1000),
+      isSent: true,
       isRead: true,
     },
   ],
   '3': [
     {
-      id: 'm3',
-      content: 'The new exercises are working great!',
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-      senderId: '3',
+      id: 'm3-1',
+      text: 'The new exercises are working great!',
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
+      isSent: false,
+      isRead: false,
+    },
+    {
+      id: 'm3-2',
+      text: 'I\'m really happy to hear that',
+      timestamp: new Date(Date.now() - 55 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm3-3',
+      text: 'Keep pushing yourself',
+      timestamp: new Date(Date.now() - 54 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm3-4',
+      text: 'You\'re doing amazing',
+      timestamp: new Date(Date.now() - 53 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+  ],
+  '4': [
+    {
+      id: 'm4-1',
+      text: 'See you tomorrow at 10am',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+  ],
+  '5': [
+    {
+      id: 'm5-1',
+      text: 'I have a question about my nutrition plan',
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: false,
+    },
+    {
+      id: 'm5-2',
+      text: 'What would you like to know?',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 50 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm5-3',
+      text: 'I\'m not sure about the protein intake',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: false,
+      isRead: false,
+    },
+    {
+      id: 'm5-4',
+      text: 'Should I increase it?',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 - 44 * 60 * 1000),
+      isSent: false,
       isRead: false,
     },
   ],

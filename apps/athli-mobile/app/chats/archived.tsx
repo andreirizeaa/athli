@@ -10,7 +10,13 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { ChatListItem } from '@/components/chats/chat-list-item';
 import { Separator } from '@/components/separator';
-import { getArchivedChats, unarchiveChat, deleteChat, type Chat } from '@/services/chats-service';
+import {
+  getArchivedChats,
+  unarchiveChat,
+  deleteChat,
+  getChatMessages,
+  type Chat,
+} from '@/services/chats-service';
 
 export default function ArchivedChatsScreen() {
   const router = useRouter();
@@ -55,7 +61,7 @@ export default function ArchivedChatsScreen() {
     }
   };
 
-  const handleChatPress = (chatId: string) => {
+  const handleChatPress = async (chatId: string) => {
     if (isEditMode) {
       const newSelected = new Set(selectedChatIds);
       if (newSelected.has(chatId)) {
@@ -65,10 +71,26 @@ export default function ArchivedChatsScreen() {
       }
       setSelectedChatIds(newSelected);
     } else {
-      router.push({
-        pathname: '/chats/[id]',
-        params: { id: chatId },
-      });
+      // Find the chat object
+      const chat = archivedChats.find((c) => c.id === chatId);
+      if (chat) {
+        // Load messages before navigating
+        const messages = await getChatMessages(chatId);
+        router.push({
+          pathname: '/chats/[id]',
+          params: {
+            id: chatId,
+            chat: JSON.stringify(chat),
+            messages: JSON.stringify(messages),
+          },
+        });
+      } else {
+        // Fallback to just id if chat not found
+        router.push({
+          pathname: '/chats/[id]',
+          params: { id: chatId },
+        });
+      }
     }
   };
 

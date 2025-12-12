@@ -110,8 +110,8 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     position: 'absolute',
-    width: 200,
-    borderRadius: 24,
+    width: 160,
+    borderRadius: 22,
     borderWidth: 1,
     shadowOffset: {
       width: 0,
@@ -125,7 +125,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
     minHeight: 40,
   },
   menuItemText: {

@@ -1,32 +1,70 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { MessageInputBar } from '@/components/message-input-bar';
-import { getChats, getArchivedChats, archiveChat, deleteChat, type Chat } from '@/services/chats-service';
+import { MessageList } from '@/components/chats/message-list';
+import {
+  getChats,
+  getArchivedChats,
+  archiveChat,
+  deleteChat,
+  getChatMessages,
+  type Chat,
+  type ChatMessage,
+} from '@/services/chats-service';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 
 export default function ChatDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const colorScheme = useColorScheme();
+  const { id, chat: chatParam, messages: messagesParam } = useLocalSearchParams<{
+    id: string;
+    chat?: string;
+    messages?: string;
+  }>();
+
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
-  const [chat, setChat] = useState<Chat | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const [chat, setChat] = useState<Chat | null>(() => {
+    if (chatParam) {
+      try {
+        return JSON.parse(chatParam) as Chat;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (messagesParam) {
+      try {
+        const parsed = JSON.parse(messagesParam) as ChatMessage[];
+        return parsed.map((msg) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const [isLoading, setIsLoading] = useState(!chatParam || !messagesParam);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [searchQuery, setSearchQuery] = useState('');
-  const ellipsisButtonRef = useRef<View>(null);
   const actionButtonRef = useRef<View>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
 
   const headerBackgroundColor = themeColors.headerBackground;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -34,31 +72,42 @@ export default function ChatDetailScreen() {
   const hasText = searchQuery.trim().length > 0;
 
   useEffect(() => {
+    // Only load if not provided via params
+    if (chatParam && messagesParam) return;
+
+    let mounted = true;
+
     const loadChat = async () => {
       setIsLoading(true);
       try {
-        // Try to find chat in regular chats first
         const chats = await getChats();
         let foundChat = chats.find((c) => c.id === id);
 
-        // If not found, try archived chats
         if (!foundChat) {
           const archivedChats = await getArchivedChats();
           foundChat = archivedChats.find((c) => c.id === id);
         }
 
-        setChat(foundChat || null);
+        if (!foundChat) return;
+
+        const chatMessages = await getChatMessages(foundChat.id);
+        if (!mounted) return;
+
+        setChat(foundChat);
+        setMessages(chatMessages);
       } catch (error) {
         console.error('Failed to load chat:', error);
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
 
-    if (id) {
-      loadChat();
-    }
-  }, [id]);
+    if (id) loadChat();
+
+    return () => {
+      mounted = false;
+    };
+  }, [id, chatParam, messagesParam]);
 
   const handleBackPress = () => {
     router.back();
@@ -106,7 +155,7 @@ export default function ChatDetailScreen() {
     },
   ];
 
-  if (isLoading || !chat) {
+  if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -120,8 +169,23 @@ export default function ChatDetailScreen() {
     );
   }
 
+  if (!chat) {
+    return (
+      <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
+              {t('chats.chatNotFound')}
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: headerBackgroundColor }]}>
+      {/* ROW 1: HEADER */}
       <SafeAreaView style={[styles.safeArea, { backgroundColor: headerBackgroundColor }]} edges={['top']}>
         <View style={[styles.header, { backgroundColor: headerBackgroundColor }]}>
           <TouchableOpacity
@@ -172,8 +236,8 @@ export default function ChatDetailScreen() {
                 color={iconColor}
               />
             </TouchableOpacity>
+
             <TouchableOpacity
-              ref={ellipsisButtonRef}
               style={styles.nestedButton}
               activeOpacity={0.7}
               onPress={handleEllipsisPress}
@@ -188,84 +252,69 @@ export default function ChatDetailScreen() {
           </View>
         </View>
       </SafeAreaView>
+
       <DropdownMenu
         visible={dropdownVisible}
         onClose={() => setDropdownVisible(false)}
         options={dropdownOptions}
         anchorPosition={buttonPosition}
       />
-      <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Chat content will go here */}
-        </ScrollView>
 
-        {/* Bottom bar – anchored to screen bottom, grows upward */}
-        <KeyboardAwareToolbar
-          backgroundColor={headerBackgroundColor}
-        >
-          <TouchableOpacity
-            style={styles.iconButton}
-            activeOpacity={0.7}
-          >
+      {/* ROW 2: SCROLL WINDOW (ONLY between header + toolbar) */}
+      <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+        <MessageList
+          messages={messages}
+          backgroundColor={themeColors.pageBackground}
+          themeColors={themeColors}
+        />
+      </View>
+
+      {/* ROW 3: TOOLBAR — EXACT original wrapper context (no extra safe-area / KAV wrappers) */}
+      <KeyboardAwareToolbar backgroundColor={headerBackgroundColor}>
+        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+          <PlatformIcon
+            sf="plus"
+            IconComponent={Plus}
+            size={iconSizes.tabBarIcons - 2}
+            color={iconColor}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.searchBarContainer}>
+          <MessageInputBar value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
+        </View>
+
+        {hasText ? (
+          <TouchableOpacity style={styles.sendButton} activeOpacity={0.7}>
             <PlatformIcon
-              sf="plus"
-              IconComponent={Plus}
-              size={iconSizes.tabBarIcons - 2}
-              color={iconColor}
+              sf="paperplane.circle.fill"
+              IconComponent={Send}
+              size={iconSizes.tabBarIconsIOS + 2}
+              color={themeColors.primary}
             />
           </TouchableOpacity>
-          <View style={styles.searchBarContainer}>
-            <MessageInputBar
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder=""
-            />
-          </View>
-          {hasText ? (
-            <TouchableOpacity
-              style={styles.sendButton}
-              activeOpacity={0.7}
-            >
+        ) : (
+          <>
+            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
               <PlatformIcon
-                sf="paperplane.circle.fill"
-                IconComponent={Send}
-                size={iconSizes.tabBarIconsIOS + 2}
-                color={themeColors.primary}
+                sf="camera"
+                IconComponent={Camera}
+                size={iconSizes.tabBarIcons - 2}
+                color={iconColor}
               />
             </TouchableOpacity>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.iconButton}
-                activeOpacity={0.7}
-              >
-                <PlatformIcon
-                  sf="camera"
-                  IconComponent={Camera}
-                  size={iconSizes.tabBarIcons - 2}
-                  color={iconColor}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.iconButton}
-                activeOpacity={0.7}
-              >
-                <PlatformIcon
-                  sf="mic"
-                  IconComponent={Mic}
-                  size={iconSizes.tabBarIcons - 2}
-                  color={iconColor}
-                />
-              </TouchableOpacity>
-            </>
-          )}
-        </KeyboardAwareToolbar>
-      </View>
+
+            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+              <PlatformIcon
+                sf="mic"
+                IconComponent={Mic}
+                size={iconSizes.tabBarIcons - 2}
+                color={iconColor}
+              />
+            </TouchableOpacity>
+          </>
+        )}
+      </KeyboardAwareToolbar>
     </View>
   );
 }
@@ -329,13 +378,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
   },
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-  },
   iconButton: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -351,4 +393,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
