@@ -18,6 +18,7 @@ type KeyboardAwareToolbarProps = {
   backgroundColor?: string;
   contentStyle?: ViewStyle;
   containerStyle?: ViewStyle;
+  onLayout?: (event: { nativeEvent: { layout: { height: number } } }) => void;
 };
 
 export const KeyboardAwareToolbar = ({
@@ -27,6 +28,7 @@ export const KeyboardAwareToolbar = ({
   backgroundColor,
   contentStyle,
   containerStyle,
+  onLayout,
 }: KeyboardAwareToolbarProps) => {
   const insets = useSafeAreaInsets();
   const { height } = useGradualAnimation();
@@ -62,6 +64,7 @@ export const KeyboardAwareToolbar = ({
         backgroundColor && { backgroundColor },
         containerStyle,
       ]}
+      onLayout={onLayout}
     >
       <View style={[styles.content, contentStyle]}>
         {children}

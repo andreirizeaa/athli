@@ -19,6 +19,7 @@ import {
   archiveChat,
   deleteChat,
   markChatAsRead,
+  getChatMessages,
   type Chat,
 } from '@/services/chats-service';
 
@@ -96,7 +97,7 @@ export default function ChatsScreen() {
     });
   };
 
-  const handleChatPress = (chatId: string) => {
+  const handleChatPress = async (chatId: string) => {
     if (isEditMode) {
       const newSelected = new Set(selectedChatIds);
       if (newSelected.has(chatId)) {
@@ -106,10 +107,26 @@ export default function ChatsScreen() {
       }
       setSelectedChatIds(newSelected);
     } else {
-      router.push({
-        pathname: '/chats/[id]',
-        params: { id: chatId },
-      });
+      // Find the chat object
+      const chat = chats.find((c) => c.id === chatId);
+      if (chat) {
+        // Load messages before navigating
+        const messages = await getChatMessages(chatId);
+        router.push({
+          pathname: '/chats/[id]',
+          params: {
+            id: chatId,
+            chat: JSON.stringify(chat),
+            messages: JSON.stringify(messages),
+          },
+        });
+      } else {
+        // Fallback to just id if chat not found
+        router.push({
+          pathname: '/chats/[id]',
+          params: { id: chatId },
+        });
+      }
     }
   };
 

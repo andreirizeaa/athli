@@ -10,7 +10,7 @@ import type { Chat } from '@/services/chats-service';
 
 type ChatListItemProps = {
   chat: Chat;
-  onPress: (chatId: string) => void;
+  onPress: (chatId: string) => void | Promise<void>;
   isEditMode?: boolean;
   isSelected?: boolean;
   onArchive?: (chatId: string) => void;

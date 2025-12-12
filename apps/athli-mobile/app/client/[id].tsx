@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target } from 'lucide-react-native';
+import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target, Plus, Camera, Mic, Send } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -12,6 +12,8 @@ import { SettingsOption } from '@/components/settings-option';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
+import { MessageInputBar } from '@/components/message-input-bar';
+import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 
 export default function ClientDetailScreen() {
   const router = useRouter();
@@ -19,13 +21,16 @@ export default function ClientDetailScreen() {
   const { colors: themeColors } = useThemePreference();
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'options'>('overview');
+  const [activeTab, setActiveTab] = useState<'assistant' | 'overview' | 'more'>('assistant');
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
   const ellipsisButtonRef = useRef<View>(null);
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const headerBackgroundColor = themeColors.headerBackground;
+  const hasText = searchQuery.trim().length > 0;
 
   useEffect(() => {
     const loadClient = async () => {
@@ -49,7 +54,7 @@ export default function ClientDetailScreen() {
     router.back();
   };
 
-  const handleTabPress = (tab: 'overview' | 'options') => {
+  const handleTabPress = (tab: 'assistant' | 'overview' | 'more') => {
     setActiveTab(tab);
   };
 
@@ -156,38 +161,40 @@ export default function ClientDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
-      <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-          activeOpacity={0.7}
-          onPress={handleBackPress}
-        >
-          <PlatformIcon
-            sf="chevron.left"
-            IconComponent={ChevronLeft}
-            size={iconSizes.navigationChevrons}
-            color={iconColor}
-          />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
-          {client.fullName}
-        </Text>
-        <View ref={ellipsisButtonRef} collapsable={false}>
+    <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]} edges={['top']}>
+        <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
           <TouchableOpacity
-            style={[styles.headerRightButton, { backgroundColor: mutedSurfaceColor }]}
+            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
             activeOpacity={0.7}
-            onPress={handleEllipsisPress}
+            onPress={handleBackPress}
           >
             <PlatformIcon
-              sf="ellipsis"
-              IconComponent={MoreVertical}
+              sf="chevron.left"
+              IconComponent={ChevronLeft}
               size={iconSizes.navigationChevrons}
               color={iconColor}
             />
           </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
+            {client.fullName}
+          </Text>
+          <View ref={ellipsisButtonRef} collapsable={false}>
+            <TouchableOpacity
+              style={[styles.headerRightButton, { backgroundColor: mutedSurfaceColor }]}
+              activeOpacity={0.7}
+              onPress={handleEllipsisPress}
+            >
+              <PlatformIcon
+                sf="ellipsis"
+                IconComponent={MoreVertical}
+                size={iconSizes.navigationChevrons}
+                color={iconColor}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
 
       <DropdownMenu
         visible={dropdownVisible}
@@ -198,6 +205,24 @@ export default function ClientDetailScreen() {
 
       {/* Tabs */}
       <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.tab,
+            activeTab === 'assistant' && styles.tabActive,
+            { opacity: pressed ? 0.7 : 1 },
+          ]}
+          onPress={() => handleTabPress('assistant')}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'assistant' && styles.tabTextActive,
+              { color: activeTab === 'assistant' ? themeColors.text : themeColors.mutedText },
+            ]}
+          >
+            Assistant
+          </Text>
+        </Pressable>
         <Pressable
           style={({ pressed }) => [
             styles.tab,
@@ -219,104 +244,182 @@ export default function ClientDetailScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.tab,
-            activeTab === 'options' && styles.tabActive,
+            activeTab === 'more' && styles.tabActive,
             { opacity: pressed ? 0.7 : 1 },
           ]}
-          onPress={() => handleTabPress('options')}
+          onPress={() => handleTabPress('more')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'options' && styles.tabTextActive,
-              { color: activeTab === 'options' ? themeColors.text : themeColors.mutedText },
+              activeTab === 'more' && styles.tabTextActive,
+              { color: activeTab === 'more' ? themeColors.text : themeColors.mutedText },
             ]}
           >
-            View Options
+            More
           </Text>
         </Pressable>
       </View>
 
       {/* Tab Content */}
-      <ScrollView
-        style={styles.contentScrollView}
-        contentContainerStyle={styles.contentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {activeTab === 'overview' && (
-          <View>
-            {/* Overview content will go here */}
-          </View>
-        )}
+      {activeTab === 'assistant' ? (
+        <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Assistant content will go here */}
+          </ScrollView>
 
-        {activeTab === 'options' && (
-          <View style={styles.optionsContainer}>
-            <Card>
-              <SettingsOption
-                icon={
+          {/* Bottom bar – anchored to screen bottom, grows upward */}
+          <KeyboardAwareToolbar
+            backgroundColor={headerBackgroundColor}
+          >
+            <TouchableOpacity
+              style={styles.iconButton}
+              activeOpacity={0.7}
+            >
+              <PlatformIcon
+                sf="plus"
+                IconComponent={Plus}
+                size={iconSizes.tabBarIcons - 2}
+                color={iconColor}
+              />
+            </TouchableOpacity>
+            <View style={styles.searchBarContainer}>
+              <MessageInputBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder=""
+              />
+            </View>
+            {hasText ? (
+              <TouchableOpacity
+                style={styles.sendButton}
+                activeOpacity={0.7}
+              >
+                <PlatformIcon
+                  sf="paperplane.circle.fill"
+                  IconComponent={Send}
+                  size={iconSizes.tabBarIconsIOS + 2}
+                  color={themeColors.primary}
+                />
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  activeOpacity={0.7}
+                >
                   <PlatformIcon
-                    sf="figure.run"
-                    IconComponent={Activity}
-                    size={iconSizes.listIcons}
+                    sf="camera"
+                    IconComponent={Camera}
+                    size={iconSizes.tabBarIcons - 2}
                     color={iconColor}
                   />
-                }
-                title="Activity"
-                showChevron
-                onPress={() => router.push(`/client/${id}/activity`)}
-              />
-              <Separator />
-              <SettingsOption
-                icon={
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.iconButton}
+                  activeOpacity={0.7}
+                >
                   <PlatformIcon
-                    sf="chart.bar.fill"
-                    IconComponent={BarChart3}
-                    size={iconSizes.listIcons}
+                    sf="mic"
+                    IconComponent={Mic}
+                    size={iconSizes.tabBarIcons - 2}
                     color={iconColor}
                   />
-                }
-                title="Metrics"
-                showChevron
-                onPress={() => router.push(`/client/${id}/metrics`)}
-              />
-              <Separator />
-              <SettingsOption
-                icon={
-                  <PlatformIcon
-                    sf="calendar"
-                    IconComponent={Calendar}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title="Training Calendar"
-                showChevron
-                onPress={() => router.push(`/client/${id}/training-calendar`)}
-              />
-              <Separator />
-              <SettingsOption
-                icon={
-                  <PlatformIcon
-                    sf="target"
-                    IconComponent={Target}
-                    size={iconSizes.listIcons}
-                    color={iconColor}
-                  />
-                }
-                title="Goals & Injuries"
-                showChevron
-                onPress={() => router.push(`/client/${id}/goals-injuries`)}
-              />
-            </Card>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+                </TouchableOpacity>
+              </>
+            )}
+          </KeyboardAwareToolbar>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.contentScrollView}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {activeTab === 'overview' && (
+            <View>
+              {/* Overview content will go here */}
+            </View>
+          )}
+
+          {activeTab === 'more' && (
+            <View style={styles.optionsContainer}>
+              <Card>
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="figure.run"
+                      IconComponent={Activity}
+                      size={iconSizes.listIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title="Activity"
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/activity`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="chart.bar.fill"
+                      IconComponent={BarChart3}
+                      size={iconSizes.listIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title="Metrics"
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/metrics`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="calendar"
+                      IconComponent={Calendar}
+                      size={iconSizes.listIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title="Training Calendar"
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/training-calendar`)}
+                />
+                <Separator />
+                <SettingsOption
+                  icon={
+                    <PlatformIcon
+                      sf="target"
+                      IconComponent={Target}
+                      size={iconSizes.listIcons}
+                      color={iconColor}
+                    />
+                  }
+                  title="Goals & Injuries"
+                  showChevron
+                  onPress={() => router.push(`/client/${id}/goals-injuries`)}
+                />
+              </Card>
+            </View>
+          )}
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
+  },
+  safeArea: {
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
@@ -351,7 +454,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 0,
     borderBottomWidth: 1,
-    marginBottom: 16,
+    marginVertical: 16,
     backgroundColor: 'transparent',
   },
   tab: {
@@ -378,6 +481,20 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   optionsContainer: {
+    flex: 1,
+  },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 30,
+    height: 44,
+    borderRadius: 22,
+  },
+  sendButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchBarContainer: {
     flex: 1,
   },
 });
