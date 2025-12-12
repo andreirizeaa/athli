@@ -25,7 +25,7 @@ export const typography: Record<TextVariant, TypographyStyle> = {
   // Paragraphs: body text scale (all with body font)
   p1: { fontSize: 17, fontWeight: '500', fontFamily: bodyFontFamily },
   p2: { fontSize: 16, fontWeight: '400', fontFamily: bodyFontFamily },
-  p3: { fontSize: 14, fontWeight: '400', fontFamily: bodyFontFamily },
+  p3: { fontSize: 15, fontWeight: '400', fontFamily: bodyFontFamily },
   p4: { fontSize: 13, fontWeight: '400', fontFamily: bodyFontFamily },
   p5: { fontSize: 12, fontWeight: '400', fontFamily: bodyFontFamily },
   p6: { fontSize: 11, fontWeight: '400', fontFamily: bodyFontFamily },

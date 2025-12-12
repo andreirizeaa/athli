@@ -62,11 +62,25 @@ export const ChatListItem = ({
   const { t } = useTranslations();
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [isPressed, setIsPressed] = useState(false);
   const rowRef = useRef<View>(null);
 
   const handlePress = () => {
     if (!dropdownVisible) {
       onPress(chat.id);
+    }
+  };
+
+  const handlePressIn = () => {
+    if (!isEditMode) {
+      setIsPressed(true);
+    }
+  };
+
+  const handlePressOut = () => {
+    // Keep highlight visible if dropdown is open
+    if (!dropdownVisible) {
+      setIsPressed(false);
     }
   };
 
@@ -133,12 +147,17 @@ export const ChatListItem = ({
 
   return (
     <>
-      <Pressable onPress={handlePress} onLongPress={handleLongPress}>
+      <Pressable
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
         <View
           ref={rowRef}
           style={[
             styles.rowWrapper,
-            isSelected && {
+            (isSelected || isPressed) && {
               backgroundColor: themeColors.surfaceSecondary,
             },
           ]}
@@ -255,7 +274,10 @@ export const ChatListItem = ({
     {!isEditMode && dropdownOptions.length > 0 && (
       <DropdownMenu
         visible={dropdownVisible}
-        onClose={() => setDropdownVisible(false)}
+        onClose={() => {
+          setDropdownVisible(false);
+          setIsPressed(false);
+        }}
         options={dropdownOptions}
         anchorPosition={buttonPosition}
       />

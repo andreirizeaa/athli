@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   archivedText: {
-    ...typography.p4,
+    ...typography.p3,
     fontWeight: '700',
   },
   separatorContainer: {

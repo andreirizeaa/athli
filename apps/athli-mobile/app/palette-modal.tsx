@@ -117,9 +117,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   closeButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 16,
   },
   paletteInfo: {
     flexDirection: 'row',
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   paletteName: {
-    ...typography.p3,
+    ...typography.p2,
     marginTop: 2,
   },
   modalDivider: {
