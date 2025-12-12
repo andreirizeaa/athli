@@ -137,15 +137,17 @@ export default function TabLayout() {
   const handleNativeTabsAddPress = () => {
     if (appView === 'coach') {
       // Get current route from pathname
-      let routeName: 'clients' | 'calendar' = 'clients';
+      let routeName: 'clients' | 'calendar' | 'chats' = 'clients';
       if (pathname.includes('/calendar')) {
         routeName = 'calendar';
       } else if (pathname.includes('/clients')) {
         routeName = 'clients';
+      } else if (pathname.includes('/chats')) {
+        routeName = 'chats';
       }
 
-      // Navigate to add-modal-content with route param (same as FallbackTabBar)
-      if (routeName === 'calendar' || routeName === 'clients') {
+      // Navigate to add-modal-content with route param
+      if (routeName === 'calendar' || routeName === 'clients' || routeName === 'chats') {
         router.push({
           pathname: '/add-modal-content',
           params: { route: routeName },
@@ -282,11 +284,16 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
 
   const handleAddPress = () => {
     if (appView === 'coach') {
-      // Navigate to add-modal-content with route param
+      // Navigate to appropriate modal based on route
       if (activeRouteName === 'calendar' || activeRouteName === 'clients') {
         router.push({
           pathname: '/add-modal-content',
           params: { route: activeRouteName },
+        });
+      } else if (activeRouteName === 'chats') {
+        router.push({
+          pathname: '/add-modal-content',
+          params: { route: 'chats' },
         });
       }
     }
@@ -466,6 +473,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     paddingHorizontal: 24,
     paddingTop: 8,
+    marginBottom: Platform.OS === 'android' ? -8 : -12,
     borderTopLeftRadius: 0,
     borderTopRightRadius: 0,
     shadowColor: '#000000',
@@ -500,7 +508,6 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 4,
   },
   addButton: {
     alignSelf: 'center',

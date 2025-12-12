@@ -60,7 +60,7 @@ export const iconSizes: Record<IconSizeVariant, number> = {
   // Extra small decorative icons
   extraSmallIcons: 14,
   // Navigation icons
-  navigationChevrons: 16,
+  navigationChevrons: 18,
 };
 
 export const getIconSize = (variant: IconSizeVariant): number => {

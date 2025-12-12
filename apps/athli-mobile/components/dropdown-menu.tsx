@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -34,14 +34,31 @@ export const DropdownMenu = ({ visible, onClose, options, anchorPosition }: Drop
     return null;
   }
 
+  const screenHeight = Dimensions.get('window').height;
+  const screenWidth = Dimensions.get('window').width;
   const menuWidth = 200;
-  const menuTopOffset = 8;
+  const menuItemHeight = 48;
+  const menuHeight = options.length * menuItemHeight;
+  const menuOffset = 8;
+  const rightGap = 16; // Gap from right screen edge
 
-  const leftPosition = anchorPosition.x + anchorPosition.width - menuWidth;
-  const topPosition = anchorPosition.y + anchorPosition.height + menuTopOffset;
+  // Calculate available space below and above
+  const spaceBelow = screenHeight - anchorPosition.y - anchorPosition.height;
+  const spaceAbove = anchorPosition.y;
+
+  // Determine if menu should appear above or below
+  const showAbove = spaceBelow < menuHeight + menuOffset && spaceAbove > spaceBelow;
+
+  // Calculate horizontal position (right-aligned with gap)
+  const leftPosition = screenWidth - menuWidth - rightGap;
+
+  // Calculate vertical position
+  const topPosition = showAbove
+    ? anchorPosition.y - menuHeight - menuOffset
+    : anchorPosition.y + anchorPosition.height + menuOffset;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <View
           style={[
@@ -71,13 +88,13 @@ export const DropdownMenu = ({ visible, onClose, options, anchorPosition }: Drop
                 onClose();
               }}
             >
-              <Text style={[styles.menuItemText, { color: themeColors.text }]}>{option.label}</Text>
               <PlatformIcon
                 sf={option.icon.sf}
                 IconComponent={option.icon.IconComponent}
                 size={iconSizes.smallIcons}
                 color={themeColors.text}
               />
+              <Text style={[styles.menuItemText, { color: themeColors.text }]}>{option.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -94,22 +111,22 @@ const styles = StyleSheet.create({
   menuContainer: {
     position: 'absolute',
     width: 200,
-    borderRadius: 12,
+    borderRadius: 24,
     borderWidth: 1,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 1,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 3,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    minHeight: 48,
+    gap: 8,
+    paddingHorizontal: 20,
+    minHeight: 40,
   },
   menuItemText: {
     ...typography.p3,

@@ -145,6 +145,33 @@ export const en = {
   chats: {
     title: 'Chats',
     searchPlaceholder: 'Search chats...',
+    newChat: {
+      title: 'New Chat',
+      searchPlaceholder: 'Search clients...',
+    },
+    readAll: 'Read all',
+    markAsRead: 'Mark as read',
+    selectChats: 'Select chats',
+    archive: 'Archive',
+    delete: 'Delete',
+    filters: {
+      all: 'All',
+      unread: 'Unread',
+      favourites: 'Favourites',
+    },
+    empty: {
+      noChatsFound: 'No chats found',
+      noUnreadMessages: 'No unread messages',
+      noFavouriteChats: 'No favourite chats',
+      noChatsYet: 'No chats yet',
+    },
+    archived: {
+      title: 'Archived',
+      edit: 'Edit',
+      description: 'These chats remain archived when new messages are received. Tap edit to change.',
+      unarchive: 'Unarchive',
+      delete: 'Delete',
+    },
   },
   settings: {
     title: 'Settings',
