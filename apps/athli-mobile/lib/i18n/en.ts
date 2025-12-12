@@ -144,6 +144,7 @@ export const en = {
   },
   chats: {
     title: 'Chats',
+    searchPlaceholder: 'Search chats...',
   },
   settings: {
     title: 'Settings',
