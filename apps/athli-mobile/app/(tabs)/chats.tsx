@@ -23,8 +23,6 @@ import {
   type Chat,
 } from '@/services/chats-service';
 
-type FilterOption = 'all' | 'unread' | 'favourites';
-
 export default function ChatsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -32,7 +30,6 @@ export default function ChatsScreen() {
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -67,13 +64,6 @@ export default function ChatsScreen() {
   const filteredChats = useMemo(() => {
     let filtered = chats;
 
-    // Apply filter
-    if (activeFilter === 'unread') {
-      filtered = filtered.filter((chat) => chat.unreadCount > 0);
-    } else if (activeFilter === 'favourites') {
-      filtered = filtered.filter((chat) => chat.isFavourite);
-    }
-
     // Apply search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -88,7 +78,7 @@ export default function ChatsScreen() {
     return filtered.sort(
       (a, b) => b.lastMessageTime.getTime() - a.lastMessageTime.getTime(),
     );
-  }, [chats, activeFilter, searchQuery]);
+  }, [chats, searchQuery]);
 
   const handleArchivedPress = () => {
     router.push({
@@ -290,97 +280,6 @@ export default function ChatsScreen() {
             placeholder={t('chats.searchPlaceholder')}
             />
           </View>
-          <View style={styles.filterContainer}>
-              <Pressable
-                onPress={() => setActiveFilter('all')}
-                style={[
-                  styles.filterPill,
-                  styles.filterPillSpacing,
-                  activeFilter === 'all' && {
-                    backgroundColor: primarySoftColor,
-                    borderColor: themeColors.primary,
-                  },
-                  activeFilter !== 'all' && {
-                    borderColor:
-                      colorScheme === 'dark' ? themeColors.border : themeColors.mutedText,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    {
-                      color: activeFilter === 'all'
-                        ? colorScheme === 'dark'
-                          ? themeColors.primaryForeground
-                          : themeColors.primary
-                        : themeColors.mutedText,
-                    },
-                  ]}
-                >
-                  {t('chats.filters.all')}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setActiveFilter('unread')}
-                style={[
-                  styles.filterPill,
-                  styles.filterPillSpacing,
-                  activeFilter === 'unread' && {
-                    backgroundColor: primarySoftColor,
-                    borderColor: themeColors.primary,
-                  },
-                  activeFilter !== 'unread' && {
-                    borderColor:
-                      colorScheme === 'dark' ? themeColors.border : themeColors.mutedText,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    {
-                      color: activeFilter === 'unread'
-                        ? colorScheme === 'dark'
-                          ? themeColors.primaryForeground
-                          : themeColors.primary
-                        : themeColors.mutedText,
-                    },
-                  ]}
-                >
-                  Unread
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setActiveFilter('favourites')}
-                style={[
-                  styles.filterPill,
-                  activeFilter === 'favourites' && {
-                    backgroundColor: primarySoftColor,
-                    borderColor: themeColors.primary,
-                  },
-                  activeFilter !== 'favourites' && {
-                    borderColor:
-                      colorScheme === 'dark' ? themeColors.border : themeColors.mutedText,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    {
-                      color: activeFilter === 'favourites'
-                        ? colorScheme === 'dark'
-                          ? themeColors.primaryForeground
-                          : themeColors.primary
-                        : themeColors.mutedText,
-                    },
-                  ]}
-                >
-                  {t('chats.filters.favourites')}
-                </Text>
-              </Pressable>
-            </View>
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={themeColors.primary} />
@@ -390,16 +289,12 @@ export default function ChatsScreen() {
                 <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
                   {searchQuery.trim()
                     ? t('chats.empty.noChatsFound')
-                    : activeFilter === 'unread'
-                      ? t('chats.empty.noUnreadMessages')
-                      : activeFilter === 'favourites'
-                        ? t('chats.empty.noFavouriteChats')
-                        : t('chats.empty.noChatsYet')}
+                    : t('chats.empty.noChatsYet')}
                 </Text>
               </View>
             ) : (
               <View style={styles.chatListContainer}>
-                {activeFilter === 'all' && !searchQuery.trim() && (
+                {!searchQuery.trim() && (
                   <ArchivedItem onPress={handleArchivedPress} />
                 )}
                 {filteredChats.map((chat) => (
@@ -502,23 +397,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  filterPillSpacing: {
-    marginRight: 8,
-  },
-  filterText: {
-    ...typography.p3,
   },
   chatListContainer: {
   },
