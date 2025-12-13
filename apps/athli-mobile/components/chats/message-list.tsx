@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   reactionsContainer: {
-    marginTop: -4,
+    marginTop: -12,
   },
   reactionsContainerRight: {
     alignSelf: 'flex-end',
