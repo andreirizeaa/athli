@@ -4,6 +4,9 @@ export interface ChatMessage {
   timestamp: Date;
   isSent: boolean; // true for user messages, false for client messages
   isRead: boolean;
+  senderReaction?: string; // emoji string if sender has reacted
+  recipientReaction?: string; // emoji string if recipient has reacted
+  replyTo?: ChatMessage; // The message this is replying to
 }
 
 export interface Chat {
@@ -172,6 +175,53 @@ export const markChatAsRead = async (chatId: string): Promise<void> => {
   // return await response.json()
 
   console.log('Marking chat as read:', chatId);
+};
+
+/**
+ * Service method to react to a message
+ * This will be connected to the backend in the future
+ */
+export const reactTo = async (
+  messageId: string,
+  emoji: string,
+  isSender: boolean
+): Promise<void> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/messages/${messageId}/react`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ emoji, isSender }),
+  // })
+  // if (!response.ok) throw new Error('Failed to react to message')
+  // return await response.json()
+
+  console.log('Reacting to message:', messageId, emoji, isSender);
+};
+
+/**
+ * Service method to remove a reaction from a message
+ * This will be connected to the backend in the future
+ */
+export const removeReaction = async (
+  messageId: string,
+  isSender: boolean
+): Promise<void> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/messages/${messageId}/remove-reaction`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ isSender }),
+  // })
+  // if (!response.ok) throw new Error('Failed to remove reaction')
+  // return await response.json()
+
+  console.log('Removing reaction from message:', messageId, isSender);
 };
 
 /**
@@ -373,6 +423,82 @@ const mockArchivedChats: Chat[] = [
 // Mock messages data for each chat
 const mockMessages: Record<string, ChatMessage[]> = {
   '1': [
+    // Messages from 5 days ago
+    {
+      id: 'm1-0-1',
+      text: 'Hey! Just wanted to say hi and see how things are going.',
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000), // 5 days, 2 hours ago
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-0-2',
+      text: 'Hi! Things are going well, thanks for checking in.',
+      timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    // Messages from 4 days ago
+    {
+      id: 'm1-0-3',
+      text: 'How was your workout yesterday?',
+      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-0-4',
+      text: 'It was great! I felt really strong.',
+      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000 - 30 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    // Messages from 3 days ago
+    {
+      id: 'm1-0-5',
+      text: 'That\'s awesome to hear!',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-0-6',
+      text: 'I\'ve been really consistent with the program',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000 - 15 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    // Messages from 2 days ago
+    {
+      id: 'm1-0-7',
+      text: 'Consistency is the most important thing',
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-0-8',
+      text: 'I completely agree. I can already feel the difference',
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000 - 30 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    // Messages from yesterday
+    {
+      id: 'm1-0-9',
+      text: 'That\'s exactly what we want to see!',
+      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 6 * 60 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    {
+      id: 'm1-0-10',
+      text: 'Keep up the momentum!',
+      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    // Today's messages
     {
       id: 'm1-1',
       text: 'Hi! I wanted to check in about my progress.',
@@ -506,8 +632,67 @@ const mockMessages: Record<string, ChatMessage[]> = {
       isSent: false,
       isRead: false,
     },
+    {
+      id: 'm1-20',
+      text: 'You\'re welcome! Let me know how it goes.',
+      timestamp: new Date(Date.now() - 3 * 60 * 1000), // 3 minutes ago
+      isSent: true,
+      isRead: false,
+      replyTo: {
+        id: 'm1-19',
+        text: 'Thanks for the workout plan!',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000),
+        isSent: false,
+        isRead: false,
+      },
+    },
+    {
+      id: 'm1-21',
+      text: 'I have a question about the third exercise',
+      timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
+      isSent: false,
+      isRead: false,
+      replyTo: {
+        id: 'm1-20',
+        text: 'You\'re welcome! Let me know how it goes.',
+        timestamp: new Date(Date.now() - 3 * 60 * 1000),
+        isSent: true,
+        isRead: false,
+      },
+    },
   ],
   '2': [
+    // Messages from 3 days ago
+    {
+      id: 'm2-0-1',
+      text: 'Hi! I was wondering if we could set up a training session',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm2-0-2',
+      text: 'Of course! When were you thinking?',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    // Messages from yesterday
+    {
+      id: 'm2-0-3',
+      text: 'Maybe sometime next week?',
+      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm2-0-4',
+      text: 'Let me check my calendar and get back to you',
+      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000 - 30 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    // Today's messages
     {
       id: 'm2-1',
       text: 'Can we schedule a session for next week?',
@@ -524,6 +709,37 @@ const mockMessages: Record<string, ChatMessage[]> = {
     },
   ],
   '3': [
+    // Messages from 4 days ago
+    {
+      id: 'm3-0-1',
+      text: 'I started the new program you sent me',
+      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm3-0-2',
+      text: 'Great! How does it feel?',
+      timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000 - 30 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    // Messages from 2 days ago
+    {
+      id: 'm3-0-3',
+      text: 'It\'s challenging but I like it',
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm3-0-4',
+      text: 'That\'s the goal! Push yourself but stay safe',
+      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    // Today's messages
     {
       id: 'm3-1',
       text: 'The new exercises are working great!',
@@ -563,6 +779,37 @@ const mockMessages: Record<string, ChatMessage[]> = {
     },
   ],
   '5': [
+    // Messages from 6 days ago
+    {
+      id: 'm5-0-1',
+      text: 'I received the nutrition plan, thank you!',
+      timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000 - 2 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm5-0-2',
+      text: 'You\'re welcome! Let me know if you have any questions',
+      timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000 - 1 * 60 * 60 * 1000 - 30 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    // Messages from 3 days ago
+    {
+      id: 'm5-0-3',
+      text: 'I\'ve been following it for a few days now',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000),
+      isSent: false,
+      isRead: true,
+    },
+    {
+      id: 'm5-0-4',
+      text: 'How is it going?',
+      timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 3 * 60 * 60 * 1000 - 45 * 60 * 1000),
+      isSent: true,
+      isRead: true,
+    },
+    // Today's messages
     {
       id: 'm5-1',
       text: 'I have a question about my nutrition plan',
