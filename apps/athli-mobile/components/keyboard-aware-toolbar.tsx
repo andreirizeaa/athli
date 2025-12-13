@@ -19,6 +19,7 @@ type KeyboardAwareToolbarProps = {
   contentStyle?: ViewStyle;
   containerStyle?: ViewStyle;
   onLayout?: (event: { nativeEvent: { layout: { height: number } } }) => void;
+  replyPreview?: React.ReactNode;
 };
 
 export const KeyboardAwareToolbar = ({
@@ -29,9 +30,16 @@ export const KeyboardAwareToolbar = ({
   contentStyle,
   containerStyle,
   onLayout,
+  replyPreview,
 }: KeyboardAwareToolbarProps) => {
   const insets = useSafeAreaInsets();
   const { height } = useGradualAnimation();
+
+  // Adjust base heights when reply preview is shown
+  // Reply preview row adds approximately 54px (padding + 2 text lines + gap)
+  const REPLY_PREVIEW_HEIGHT = 54;
+  const adjustedClosedBaseHeight = replyPreview ? closedBaseHeight + REPLY_PREVIEW_HEIGHT : closedBaseHeight;
+  const adjustedOpenBaseHeight = replyPreview ? openBaseHeight + REPLY_PREVIEW_HEIGHT : openBaseHeight;
 
   const containerAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
@@ -47,14 +55,14 @@ export const KeyboardAwareToolbar = ({
     const baseHeight = interpolate(
       progress,
       [0, 1],
-      [closedBaseHeight, openBaseHeight],
+      [adjustedClosedBaseHeight, adjustedOpenBaseHeight],
       Extrapolate.CLAMP
     );
 
     return {
       height: baseHeight + height.value + insets.bottom,
     };
-  }, [closedBaseHeight, openBaseHeight, insets.bottom]);
+  }, [adjustedClosedBaseHeight, adjustedOpenBaseHeight, insets.bottom]);
 
   return (
     <Animated.View
@@ -66,6 +74,7 @@ export const KeyboardAwareToolbar = ({
       ]}
       onLayout={onLayout}
     >
+      {replyPreview}
       <View style={[styles.content, contentStyle]}>
         {children}
       </View>

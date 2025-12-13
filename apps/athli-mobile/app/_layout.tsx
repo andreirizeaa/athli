@@ -17,6 +17,7 @@ import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
 import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -53,15 +54,17 @@ export default function RootLayout() {
   }
 
   return (
-    <KeyboardProvider>
-      <ThemePreferenceProvider>
-        <TranslationProvider>
-          <AppViewProvider>
-            <RootLayoutNav />
-          </AppViewProvider>
-        </TranslationProvider>
-      </ThemePreferenceProvider>
-    </KeyboardProvider>
+    <SafeAreaProvider>
+      <KeyboardProvider>
+        <ThemePreferenceProvider>
+          <TranslationProvider>
+            <AppViewProvider>
+              <RootLayoutNav />
+            </AppViewProvider>
+          </TranslationProvider>
+        </ThemePreferenceProvider>
+      </KeyboardProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -178,8 +181,8 @@ function RootLayoutNav() {
             }),
           }}
         />
-        <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

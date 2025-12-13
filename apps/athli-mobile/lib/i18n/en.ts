@@ -21,6 +21,8 @@ export const en = {
     done: 'Done',
     reply: 'Reply',
     copy: 'Copy',
+    today: 'Today',
+    yesterday: 'Yesterday',
   },
   training: {
     title: 'Training',

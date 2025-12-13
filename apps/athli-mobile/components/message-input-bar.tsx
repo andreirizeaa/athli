@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { X } from 'lucide-react-native';
 
@@ -15,14 +15,8 @@ type MessageInputBarProps = {
   style?: object;
 };
 
-export const MessageInputBar = ({
-  value,
-  onChangeText,
-  placeholder,
-  rightIcon,
-  onRightIconPress,
-  style,
-}: MessageInputBarProps) => {
+export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
+  ({ value, onChangeText, placeholder, rightIcon, onRightIconPress, style }, ref) => {
   const { colors: themeColors } = useThemePreference();
 
   return (
@@ -37,6 +31,7 @@ export const MessageInputBar = ({
       ]}
     >
       <TextInput
+          ref={ref}
         style={[styles.input, { color: themeColors.text }]}
         placeholder={placeholder}
         placeholderTextColor={themeColors.mutedText}
@@ -71,7 +66,10 @@ export const MessageInputBar = ({
       )}
     </View>
   );
-};
+  }
+);
+
+MessageInputBar.displayName = 'MessageInputBar';
 
 const styles = StyleSheet.create({
   inputContainer: {
