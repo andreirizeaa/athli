@@ -43,8 +43,6 @@ export const MessageList = ({
   const offsetYRef = useRef(0);
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
-  const bottomAnchorRef = useRef<number | null>(null);
-  const keyboardAnimatingRef = useRef(false);
   const didInitialScroll = useRef(false);
   const initialScrollAttemptsRef = useRef(0);
   const [dropdownVisible, setDropdownVisible] = useState(false);
@@ -282,30 +280,6 @@ export const MessageList = ({
     }
   };
 
-  const captureAnchor = () => {
-    // Clamp anchor to the actual content bottom so non-overflow chats don't "anchor" past content.
-    const bottomEdge = offsetYRef.current + layoutHeightRef.current;
-    bottomAnchorRef.current = Math.min(contentHeightRef.current, bottomEdge);
-    keyboardAnimatingRef.current = true;
-  };
-
-  const applyAnchorOffset = (newHeight: number) => {
-    if (!(keyboardAnimatingRef.current && bottomAnchorRef.current != null)) return;
-
-    // Maximum scrollable offset given new viewport height
-    const maxOffset = Math.max(0, contentHeightRef.current - newHeight);
-
-    // Desired keeps the same content point at the bottom edge
-    const raw = bottomAnchorRef.current - newHeight;
-
-    // Clamp into valid scroll range
-    const desiredOffset = Math.min(maxOffset, Math.max(0, raw));
-
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: desiredOffset, animated: false });
-      offsetYRef.current = desiredOffset; // keep ref truthful even if onScroll doesn't fire
-    });
-  };
 
   // Track content and layout dimensions
   const handleContentSizeChange = (_width: number, height: number) => {
@@ -335,23 +309,21 @@ export const MessageList = ({
     }
   }, [messages.length]);
 
-  // Keyboard handling with anchoring
+  // Keyboard handling - no jump, just pin to bottom if already near bottom
   useEffect(() => {
-    const subShow = Keyboard.addListener('keyboardDidShow', (event) => {
-      captureAnchor();
-      applyAnchorOffset(event.endCoordinates.height);
-    });
-
-    const subHide = Keyboard.addListener('keyboardDidHide', () => {
-      if (keyboardAnimatingRef.current) {
-        keyboardAnimatingRef.current = false;
-        bottomAnchorRef.current = null;
+    const subShow = Keyboard.addListener('keyboardDidShow', () => {
+      // If user is at (or near) the bottom, keep them pinned there.
+      if (offsetYRef.current <= 40) {
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({ offset: 0, animated: false });
+          offsetYRef.current = 0;
+        });
       }
+      // If user is reading older messages, do nothing (no jump).
     });
 
     return () => {
       subShow.remove();
-      subHide.remove();
     };
   }, []);
 
