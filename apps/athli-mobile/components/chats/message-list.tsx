@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Reply, Copy, Pencil, Trash2 } from 'lucide-react-native';
+import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import { typography } from '@/constants/typography';
@@ -18,6 +18,7 @@ import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage } from '@/services/chats-service';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
+import { PlatformIcon } from '@/components/platform-icon';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -55,6 +56,9 @@ export const MessageList = ({
 
   // NEWEST first for inverted list
   const data = useMemo(() => [...messages].reverse(), [messages]);
+
+  const BASE_GAP = 6; // every message-to-message gap starts with this
+  const EXTRA_ON_SENDER_CHANGE = 14; // added when user <-> client switches
 
   const formatTime = (date: Date): string => {
     const hours = date.getHours().toString().padStart(2, '0');
@@ -255,24 +259,31 @@ export const MessageList = ({
   }, []);
 
   const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
-    // Because data is reversed, "previous" item in the list is actually newer (closer to bottom).
-    const isLastInSequence = index === 0 || data[index - 1]?.isSent !== item.isSent;
+    // index-1 is visually "below" (newer) because data is reversed + list inverted
+    const newer = index > 0 ? data[index - 1] : null;
 
-    const isDifferentSender = index > 0 && data[index - 1]?.isSent !== item.isSent;
+    const sameSenderAsNewer = !!newer && newer.isSent === item.isSent;
+
+    // Gap between THIS message and the one below it (newer)
+    const gap =
+      !newer
+        ? 0
+        : BASE_GAP + (sameSenderAsNewer ? 0 : EXTRA_ON_SENDER_CHANGE);
+
+    // This is the last message in its sender-run (so it gets the tail corner)
+    const isLastInSenderRun = !sameSenderAsNewer;
 
     return (
       <View
         style={[
           styles.messageWrapper,
           item.isSent ? styles.messageWrapperRight : styles.messageWrapperLeft,
-          isDifferentSender && styles.messageWrapperDifferentSender,
+          { marginBottom: gap },
         ]}
       >
         <Pressable
           ref={(ref: View | null) => {
-            if (ref) {
-              messageRefs.current[item.id] = ref;
-            }
+            if (ref) messageRefs.current[item.id] = ref;
           }}
           onPressIn={() => handlePressIn(item)}
           onPressOut={handlePressOut}
@@ -281,31 +292,58 @@ export const MessageList = ({
             item.isSent
               ? { backgroundColor: themeColors.primary }
               : { backgroundColor: themeColors.surfaceSecondary },
-            isLastInSequence && item.isSent && styles.messageBubbleLastRight,
-            isLastInSequence && !item.isSent && styles.messageBubbleLastLeft,
+
+            isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
+            isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
           ]}
         >
-          <Text
-            style={[
-              styles.messageText,
-              item.isSent
-                ? { color: themeColors.primaryForeground }
-                : { color: themeColors.text },
-            ]}
-          >
-            {item.text}
-          </Text>
-
-          <Text
-            style={[
-              styles.messageTime,
-              item.isSent
-                ? { color: themeColors.primaryForeground, opacity: 0.7 }
-                : { color: themeColors.mutedText },
-            ]}
-          >
-            {formatTime(item.timestamp)}
-          </Text>
+          <View style={styles.bubbleInner}>
+            <View style={styles.messageContainer}>
+              <View style={styles.textWrap}>
+                <Text
+                  style={[
+                    styles.messageText,
+                    item.isSent
+                      ? { color: themeColors.primaryForeground }
+                      : { color: themeColors.text },
+                  ]}
+                >
+                  {item.text}
+                </Text>
+              </View>
+              <View style={styles.timeRow}>
+                <Text
+                  style={[
+                    styles.timeText,
+                    item.isSent
+                      ? { color: themeColors.primaryForeground, opacity: 0.7 }
+                      : { color: themeColors.mutedText },
+                  ]}
+                >
+                  {formatTime(item.timestamp)}
+                </Text>
+                {item.isSent && (
+                  <View style={styles.readReceiptIcon}>
+                    {item.isRead ? (
+                      <PlatformIcon
+                        sf="checkmark.circle"
+                        IconComponent={CheckCircle}
+                        size={11}
+                        color={themeColors.primaryForeground}
+                      />
+                    ) : (
+                      <PlatformIcon
+                        sf="paperplane"
+                        IconComponent={Send}
+                        size={11}
+                        color={themeColors.primaryForeground}
+                      />
+                    )}
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
         </Pressable>
       </View>
     );
@@ -374,28 +412,51 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   messageWrapper: {
-    marginBottom: 12,
     maxWidth: '100%',
   },
   messageWrapperLeft: { alignSelf: 'flex-start' },
   messageWrapperRight: { alignSelf: 'flex-end' },
-  messageWrapperDifferentSender: { marginTop: 16 },
   messageBubble: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
     minWidth: 60,
-    maxWidth: '70%',
+    maxWidth: '80%',
   },
-  messageBubbleLastRight: { borderBottomRightRadius: 4 },
-  messageBubbleLastLeft: { borderBottomLeftRadius: 4 },
+  messageBubbleTailRight: { borderBottomRightRadius: 2 },
+  messageBubbleTailLeft: { borderBottomLeftRadius: 2 },
+  bubbleInner: {
+    width: '100%',
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    width: '100%',
+  },
+  textWrap: {
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
   messageText: {
     ...typography.p3,
-    marginBottom: 4,
+    fontSize: 14,
+    textAlign: 'left',
   },
-  messageTime: {
-    ...typography.p6,
-    fontSize: 11,
-    alignSelf: 'flex-end',
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  timeText: {
+    ...typography.p7,
+  },
+  readReceiptIcon: {
+    marginLeft: 4,
+    marginTop: 1,
   },
 });
