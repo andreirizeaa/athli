@@ -6,6 +6,7 @@ export interface ChatMessage {
   isRead: boolean;
   senderReaction?: string; // emoji string if sender has reacted
   recipientReaction?: string; // emoji string if recipient has reacted
+  replyTo?: ChatMessage; // The message this is replying to
 }
 
 export interface Chat {
@@ -630,6 +631,34 @@ const mockMessages: Record<string, ChatMessage[]> = {
       timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
       isSent: false,
       isRead: false,
+    },
+    {
+      id: 'm1-20',
+      text: 'You\'re welcome! Let me know how it goes.',
+      timestamp: new Date(Date.now() - 3 * 60 * 1000), // 3 minutes ago
+      isSent: true,
+      isRead: false,
+      replyTo: {
+        id: 'm1-19',
+        text: 'Thanks for the workout plan!',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000),
+        isSent: false,
+        isRead: false,
+      },
+    },
+    {
+      id: 'm1-21',
+      text: 'I have a question about the third exercise',
+      timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
+      isSent: false,
+      isRead: false,
+      replyTo: {
+        id: 'm1-20',
+        text: 'You\'re welcome! Let me know how it goes.',
+        timestamp: new Date(Date.now() - 3 * 60 * 1000),
+        isSent: true,
+        isRead: false,
+      },
     },
   ],
   '2': [
