@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -26,6 +26,7 @@ type DropdownMenuProps = {
     height: number;
   };
   alignRight?: boolean; // If true, aligns to right edge; if false, aligns to left edge
+  disableModal?: boolean; // When true, renders without Modal wrapper (for use inside another Modal)
 };
 
 export const DropdownMenu = ({
@@ -34,6 +35,7 @@ export const DropdownMenu = ({
   options,
   anchorPosition,
   alignRight = true,
+  disableModal = false,
 }: DropdownMenuProps) => {
   const { colors: themeColors } = useThemePreference();
 
@@ -74,7 +76,7 @@ export const DropdownMenu = ({
     ? anchorPosition.y - menuHeight - menuOffset
     : anchorPosition.y + anchorPosition.height + menuOffset;
 
-  return (
+  const menuContent = (
     <View
       style={[
         styles.menuContainer,
@@ -86,6 +88,7 @@ export const DropdownMenu = ({
           shadowColor: themeColors.shadowColor,
         },
       ]}
+      onStartShouldSetResponder={() => true}
     >
       {options.map((option, index) => (
         <TouchableOpacity
@@ -108,22 +111,38 @@ export const DropdownMenu = ({
       ))}
     </View>
   );
+
+  if (disableModal) {
+    return menuContent;
+  }
+
+  return (
+    <Modal visible={visible} transparent onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        {menuContent}
+      </Pressable>
+    </Modal>
+  );
 };
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
   menuContainer: {
     position: 'absolute',
     width: 200,
     borderRadius: 20,
     borderWidth: 1,
-    zIndex: 2,
+    zIndex: 30,
     shadowOffset: {
       width: 0,
       height: 1,
     },
     shadowOpacity: 0.1,
     shadowRadius: 1,
-    elevation: 3,
+    elevation: 30,
   },
   menuItem: {
     flexDirection: 'row',

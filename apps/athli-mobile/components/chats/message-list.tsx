@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { type EmojiType } from 'rn-emoji-keyboard';
 import {
   Animated,
   FlatList,
@@ -6,6 +7,7 @@ import {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  PanResponder,
   Pressable,
   StyleSheet,
   Text,
@@ -17,16 +19,19 @@ import * as Clipboard from 'expo-clipboard';
 
 import { typography } from '@/constants/typography';
 import { type ThemeColors } from '@/constants/theme';
-import { type ChatMessage } from '@/services/chats-service';
+import { type ChatMessage, reactTo } from '@/services/chats-service';
 import { type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
+import { MessageReplyPreview } from '@/components/chats/message-reply-preview';
+import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 
 interface MessageListProps {
   messages: ChatMessage[];
   backgroundColor: string;
   themeColors: ThemeColors;
+  clientName: string;
   onReply?: (message: ChatMessage) => void;
   onEdit?: (message: ChatMessage) => void;
   onDelete?: (message: ChatMessage) => void;
@@ -57,6 +62,15 @@ const softWrapText = (text: string) => {
     .join('');
 };
 
+// Helper function to find the original message in a reply chain
+const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+  if (!message.replyTo) {
+    return message;
+  }
+  // Traverse the reply chain to find the original message
+  return findOriginalMessage(message.replyTo);
+};
+
 const BubbleMeta = React.memo(function BubbleMeta({
   item,
   themeColors,
@@ -66,6 +80,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onPressIn,
   onPressOut,
   isLastInSenderRun,
+  clientName,
+  onReplyPreviewPress,
+  flashOpacity,
 }: {
   item: ChatMessage;
   themeColors: ThemeColors;
@@ -75,9 +92,15 @@ const BubbleMeta = React.memo(function BubbleMeta({
   onPressIn: () => void;
   onPressOut: () => void;
   isLastInSenderRun: boolean;
+  clientName: string;
+  onReplyPreviewPress?: (messageId: string) => void;
+  flashOpacity?: Animated.Value;
 }) {
   const [metaWidth, setMetaWidth] = useState(0);
   const [spaceWidth, setSpaceWidth] = useState(0);
+
+  // Find the original message if this is a reply
+  const originalMessage = item.replyTo ? findOriginalMessage(item.replyTo) : null;
 
   const timeLabel = useMemo(() => formatTime(item.timestamp), [item.timestamp, formatTime]);
 
@@ -104,88 +127,268 @@ const BubbleMeta = React.memo(function BubbleMeta({
     return NBSP + NBSP.repeat(Math.max(4, count));
   }, [metaWidth, spaceWidth]);
 
+  const bubbleStyle = [
+    styles.messageBubble,
+    item.isSent
+      ? { backgroundColor: themeColors.primary }
+      : { backgroundColor: themeColors.surfaceSecondary },
+    isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
+    isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
+  ];
+
+  const bubbleContent = (
+    <View style={styles.bubbleInner}>
+      {/* Hidden measurer for NBSP width (timestamp typography) */}
+      <Text
+        style={[styles.timeText, styles.hiddenMeasure]}
+        onLayout={onMeasureSpace}
+        pointerEvents="none"
+      >
+        {NBSP}
+      </Text>
+
+      {/* Reply preview if this message is a reply - show original message, not nested reply */}
+      {originalMessage && (
+        <MessageReplyPreview
+          replyTo={originalMessage}
+          clientName={clientName}
+          themeColors={themeColors}
+          parentBackgroundColor={
+            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+          }
+          isParentSent={item.isSent}
+          onPress={() => {
+            onReplyPreviewPress?.(originalMessage.id);
+          }}
+        />
+      )}
+
+      <Text
+        style={[
+          styles.messageText,
+          item.isSent
+            ? { color: themeColors.primaryForeground }
+            : { color: themeColors.text },
+        ]}
+      >
+        {softWrapText(item.text)}
+
+        {/* Reserve space at the end so meta never overlaps (single-line OR multi-line) */}
+        <Text style={styles.metaSpacer}>{metaSpacer}</Text>
+      </Text>
+
+      {/* Actual meta pinned bottom-right */}
+      <View
+        onLayout={onMeasureMeta}
+        style={[
+          styles.metaOverlay,
+          {
+            backgroundColor: item.isSent ? themeColors.primary : themeColors.surfaceSecondary,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <Text
+          style={[
+            styles.timeText,
+            item.isSent
+              ? { color: themeColors.primaryForeground, opacity: 0.7 }
+              : { color: themeColors.mutedText },
+          ]}
+        >
+          {timeLabel}
+        </Text>
+
+        {item.isSent && (
+          <View style={[styles.readReceiptIcon, { opacity: 0.7 }]}>
+            {item.isRead ? (
+              <PlatformIcon
+                sf="checkmark.circle"
+                IconComponent={CheckCircle}
+                size={11}
+                color={themeColors.primaryForeground}
+              />
+            ) : (
+              <PlatformIcon
+                sf="paperplane"
+                IconComponent={Send}
+                size={11}
+                color={themeColors.primaryForeground}
+              />
+            )}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  if (flashOpacity) {
+    return (
+      <Animated.View
+        style={[
+          bubbleStyle,
+          {
+            opacity: flashOpacity,
+          },
+        ]}
+      >
+        <Pressable
+          ref={registerRef}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          style={StyleSheet.absoluteFill}
+        >
+          {bubbleContent}
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
   return (
     <Pressable
       ref={registerRef}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
+      style={bubbleStyle}
+    >
+      {bubbleContent}
+    </Pressable>
+  );
+});
+
+const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
+  children,
+  themeColors,
+  onCancelLongPress,
+  alignRight,
+  onReply,
+  message,
+}: {
+  children: React.ReactNode;
+  themeColors: ThemeColors;
+  onCancelLongPress: () => void;
+  alignRight: boolean;
+  onReply?: (message: ChatMessage) => void;
+  message: ChatMessage;
+}) {
+  const MAX = 84;
+  const THRESHOLD = 50; // pixels to trigger reply
+  const translateX = useRef(new Animated.Value(0)).current;
+  const didCancelRef = useRef(false);
+  const currentDistanceRef = useRef(0);
+
+  const iconOpacity = useMemo(
+    () =>
+      translateX.interpolate({
+        inputRange: [0, 18, MAX],
+        outputRange: [0, 0.65, 1],
+        extrapolate: 'clamp',
+      }),
+    [translateX]
+  );
+
+  const iconScale = useMemo(
+    () =>
+      translateX.interpolate({
+        inputRange: [0, MAX],
+        outputRange: [0.9, 1],
+        extrapolate: 'clamp',
+      }),
+    [translateX]
+  );
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_evt, g) => {
+          const { dx, dy } = g;
+          if (Math.abs(dx) < 6) return false;
+          if (Math.abs(dx) < Math.abs(dy)) return false; // let vertical scroll win
+          if (dx <= 0) return false; // swipe-right only for now
+          return true;
+        },
+        onPanResponderGrant: () => {
+          translateX.stopAnimation();
+          didCancelRef.current = false;
+          currentDistanceRef.current = 0;
+        },
+        onPanResponderMove: (_evt, g) => {
+          if (!didCancelRef.current) {
+            onCancelLongPress();
+            didCancelRef.current = true;
+          }
+          const clamped = Math.min(MAX, Math.max(0, g.dx));
+          currentDistanceRef.current = clamped;
+          translateX.setValue(clamped);
+        },
+        onPanResponderRelease: () => {
+          const distance = currentDistanceRef.current;
+          const shouldReply = distance >= THRESHOLD && onReply;
+          
+          if (shouldReply) {
+            onReply(message);
+          }
+          
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+            velocity: 0,
+          }).start();
+          
+          currentDistanceRef.current = 0;
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+            velocity: 0,
+          }).start();
+          currentDistanceRef.current = 0;
+        },
+        onPanResponderTerminationRequest: () => false,
+      }),
+    [onCancelLongPress, translateX, onReply, message]
+  );
+
+  return (
+    <View
       style={[
-        styles.messageBubble,
-        item.isSent
-          ? { backgroundColor: themeColors.primary }
-          : { backgroundColor: themeColors.surfaceSecondary },
-        isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
-        isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
+        styles.swipeContainer,
+        alignRight ? styles.swipeContainerRight : styles.swipeContainerLeft,
       ]}
     >
-      <View style={styles.bubbleInner}>
-        {/* Hidden measurer for NBSP width (timestamp typography) */}
-        <Text
-          style={[styles.timeText, styles.hiddenMeasure]}
-          onLayout={onMeasureSpace}
-          pointerEvents="none"
-        >
-          {NBSP}
-        </Text>
+      {/* Underlay (revealed as bubble moves right) */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.replyUnderlay,
+          {
+            opacity: iconOpacity,
+            transform: [{ scale: iconScale }],
+          },
+        ]}
+      >
+        <PlatformIcon
+          sf="arrowshape.turn.up.left"
+          IconComponent={Reply}
+          size={18}
+          color={themeColors.mutedText}
+        />
+      </Animated.View>
 
-        <Text
-          style={[
-            styles.messageText,
-            item.isSent
-              ? { color: themeColors.primaryForeground }
-              : { color: themeColors.text },
-          ]}
-        >
-          {softWrapText(item.text)}
-
-          {/* Reserve space at the end so meta never overlaps (single-line OR multi-line) */}
-          <Text style={styles.metaSpacer}>{metaSpacer}</Text>
-        </Text>
-
-        {/* Actual meta pinned bottom-right */}
-        <View
-          onLayout={onMeasureMeta}
-          style={[
-            styles.metaOverlay,
-            {
-              backgroundColor: item.isSent ? themeColors.primary : themeColors.surfaceSecondary,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <Text
-            style={[
-              styles.timeText,
-              item.isSent
-                ? { color: themeColors.primaryForeground, opacity: 0.7 }
-                : { color: themeColors.mutedText },
-            ]}
-          >
-            {timeLabel}
-          </Text>
-
-          {item.isSent && (
-            <View style={styles.readReceiptIcon}>
-              {item.isRead ? (
-                <PlatformIcon
-                  sf="checkmark.circle"
-                  IconComponent={CheckCircle}
-                  size={11}
-                  color={themeColors.primaryForeground}
-                />
-              ) : (
-                <PlatformIcon
-                  sf="paperplane"
-                  IconComponent={Send}
-                  size={11}
-                  color={themeColors.primaryForeground}
-                />
-              )}
-            </View>
-          )}
-        </View>
-      </View>
-    </Pressable>
+      {/* Bubble */}
+      <Animated.View
+        style={[styles.swipeBubbleHost, { transform: [{ translateX }] }]}
+        {...panResponder.panHandlers}
+      >
+        {children}
+      </Animated.View>
+    </View>
   );
 });
 
@@ -193,6 +396,7 @@ export const MessageList = ({
   messages,
   backgroundColor,
   themeColors,
+  clientName,
   onReply,
   onEdit,
   onDelete,
@@ -211,9 +415,13 @@ export const MessageList = ({
   const [isLastInSenderRun, setIsLastInSenderRun] = useState(false);
   const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [containerPosition, setContainerPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
+  const colorScheme = useColorScheme();
+  const { colors: fullThemeColors } = useThemePreference();
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, View>>({});
   const containerRef = useRef<View>(null);
+  const flashAnimations = useRef<Record<string, Animated.Value>>({});
 
   // Update local messages when prop changes
   useEffect(() => {
@@ -237,8 +445,84 @@ export const MessageList = ({
     );
   };
 
+  const handleEmojiSelected = async (emojiObject: EmojiType) => {
+    console.log('Emoji selected in MessageList:', emojiObject, 'selectedMessage:', selectedMessage);
+    if (!selectedMessage) return;
+
+    const emoji = emojiObject.emoji;
+    const isSender = selectedMessage.isSent;
+
+    // Get current user's reaction
+    const currentReaction = isSender
+      ? selectedMessage.senderReaction
+      : selectedMessage.recipientReaction;
+
+    // If clicking the same emoji, remove reaction
+    const isRemoving = emoji === currentReaction;
+
+    if (isRemoving) {
+      // Remove reaction
+      await reactTo(selectedMessage.id, '', isSender);
+      handleReactionUpdate(selectedMessage.id, undefined, isSender);
+    } else {
+      // Add or update reaction
+      await reactTo(selectedMessage.id, emoji, isSender);
+      handleReactionUpdate(selectedMessage.id, emoji, isSender);
+    }
+
+    setEmojiPickerVisible(false);
+    // Close the popup after reaction
+    setDropdownVisible(false);
+    setSelectedMessage(null);
+    setIsLastInSenderRun(false);
+  };
+
+  const handleEmojiPickerClose = () => {
+    setEmojiPickerVisible(false);
+  };
+
   const handleReactionPress = (message: ChatMessage) => {
     onReactionPress?.(message);
+  };
+
+  const handleReplyPreviewPress = (messageId: string) => {
+    // Find the message index in the data array
+    const messageIndex = data.findIndex((m) => m.id === messageId);
+    if (messageIndex === -1) return;
+
+    // In an inverted list, we need to scroll to the correct position
+    // The list is inverted, so index 0 is at the bottom (newest)
+    // We want to scroll to make the message visible
+    
+    // Use scrollToIndex with the actual index (inverted list handles it)
+    setTimeout(() => {
+      listRef.current?.scrollToIndex({
+        index: messageIndex,
+        animated: true,
+        viewPosition: 0.5, // Center the message
+      });
+    }, 100);
+
+    // Flash the message
+    if (!flashAnimations.current[messageId]) {
+      flashAnimations.current[messageId] = new Animated.Value(1);
+    }
+
+    const flashAnim = flashAnimations.current[messageId];
+    
+    // Flash animation: quickly fade and fade back
+    Animated.sequence([
+      Animated.timing(flashAnim, {
+        toValue: 0.4,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(flashAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
   };
 
   const [stickyActive, setStickyActive] = useState(false);
@@ -276,7 +560,7 @@ export const MessageList = ({
   const data = useMemo(() => [...localMessages].reverse(), [localMessages]);
 
   const BASE_GAP = 6; // every message-to-message gap starts with this
-  const EXTRA_ON_SENDER_CHANGE = 14; // added when user <-> client switches
+  const EXTRA_ON_SENDER_CHANGE = 10; // added when user <-> client switches
 
   const isSameDay = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() &&
@@ -578,61 +862,73 @@ export const MessageList = ({
             { marginBottom: gap },
           ]}
         >
-          <BubbleMeta
-            item={item}
+          <SwipeToReplyBubble
             themeColors={themeColors}
-            formatTime={formatTime}
-            softWrapText={softWrapText}
-            registerRef={(ref) => {
-              if (ref) messageRefs.current[item.id] = ref;
-            }}
-            onPressIn={() => handlePressIn(item)}
-            onPressOut={handlePressOut}
-            isLastInSenderRun={isLastInSenderRun}
-          />
-        </View>
-        {/* Reactions container */}
-        {(item.senderReaction || item.recipientReaction) && (
-          <TouchableOpacity
-            style={[
-              styles.reactionsContainer,
-              item.isSent ? styles.reactionsContainerRight : styles.reactionsContainerLeft,
-            ]}
-            activeOpacity={0.7}
-            onPress={() => handleReactionPress(item)}
+            onCancelLongPress={handlePressOut}
+            alignRight={item.isSent}
+            onReply={onReply}
+            message={item}
           >
-            <View
+            <BubbleMeta
+              item={item}
+              themeColors={themeColors}
+              formatTime={formatTime}
+              softWrapText={softWrapText}
+              registerRef={(ref) => {
+                if (ref) messageRefs.current[item.id] = ref;
+              }}
+              onPressIn={() => handlePressIn(item)}
+              onPressOut={handlePressOut}
+              isLastInSenderRun={isLastInSenderRun}
+              clientName={clientName}
+              onReplyPreviewPress={handleReplyPreviewPress}
+              flashOpacity={flashAnimations.current[item.id]}
+            />
+          </SwipeToReplyBubble>
+
+          {/* Reactions container */}
+          {(item.senderReaction || item.recipientReaction) && (
+            <TouchableOpacity
               style={[
-                styles.reactionsInner,
-                {
-                  backgroundColor: themeColors.surface,
-                  shadowColor: themeColors.shadowColor,
-                  ...(item.isSent ? { marginRight: 6 } : { marginLeft: 6 }),
-                },
+                styles.reactionsContainer,
+                item.isSent ? styles.reactionsContainerRight : styles.reactionsContainerLeft,
               ]}
+              activeOpacity={0.7}
+              onPress={() => handleReactionPress(item)}
             >
-              {item.senderReaction && item.recipientReaction && item.senderReaction === item.recipientReaction ? (
-                <>
-                  <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
-                  <Text style={[styles.reactionCount, { color: themeColors.mutedText }]}>2</Text>
-                </>
-              ) : (
-                <>
-                  {item.senderReaction && (
-                    <View style={styles.reactionItem}>
-                      <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
-                    </View>
-                  )}
-                  {item.recipientReaction && (
-                    <View style={styles.reactionItem}>
-                      <Text style={styles.reactionEmoji}>{item.recipientReaction}</Text>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-          </TouchableOpacity>
-        )}
+              <View
+                style={[
+                  styles.reactionsInner,
+                  {
+                    backgroundColor: themeColors.surface,
+                    shadowColor: themeColors.shadowColor,
+                    ...(item.isSent ? { marginRight: 6 } : { marginLeft: 6 }),
+                  },
+                ]}
+              >
+                {item.senderReaction && item.recipientReaction && item.senderReaction === item.recipientReaction ? (
+                  <>
+                    <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                    <Text style={[styles.reactionCount, { color: themeColors.mutedText }]}>2</Text>
+                  </>
+                ) : (
+                  <>
+                    {item.senderReaction && (
+                      <View style={styles.reactionItem}>
+                        <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                      </View>
+                    )}
+                    {item.recipientReaction && (
+                      <View style={styles.reactionItem}>
+                        <Text style={styles.reactionEmoji}>{item.recipientReaction}</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
@@ -649,61 +945,70 @@ export const MessageList = ({
   }, []);
 
   return (
-    <View ref={containerRef} style={[styles.fill, { backgroundColor }]} onLayout={handleLayout}>
-      <FlatList
-        ref={listRef}
-        data={data}
-        keyExtractor={(m) => m.id}
-        renderItem={renderItem}
-        inverted
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.contentContainer}
-        onContentSizeChange={handleContentSizeChange}
-        onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-          offsetYRef.current = e.nativeEvent.contentOffset.y;
-        }}
-        scrollEventThrottle={16}
-        onScrollBeginDrag={() => showSticky()}
-        onScrollEndDrag={() => hideStickySoon()}
-        onMomentumScrollBegin={() => showSticky()}
-        onMomentumScrollEnd={() => hideStickySoon()}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        // This helps when new items are inserted at the "bottom" (index 0 in inverted list)
-        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-      />
-      {stickyActive && (
-        <Animated.View
-          style={[styles.stickyHeaderRow, { opacity: stickyOpacity }]}
-          pointerEvents="none"
-        >
-          <View style={[styles.datePill, { backgroundColor: themeColors.surfaceSecondary }]}>
-            <Text style={[styles.datePillText, { color: themeColors.text }]}>
-              {getDatePillLabel(stickyDateForLabel)}
-            </Text>
-          </View>
-        </Animated.View>
-      )}
-      {selectedMessage && (
-        <SelectedMessagePopups
-          visible={dropdownVisible}
-          onClose={() => {
-            setDropdownVisible(false);
-            setSelectedMessage(null);
-            setIsLastInSenderRun(false);
+    <>
+      <View ref={containerRef} style={[styles.fill, { backgroundColor }]} onLayout={handleLayout}>
+        <FlatList
+          ref={listRef}
+          data={data}
+          keyExtractor={(m) => m.id}
+          renderItem={renderItem}
+          inverted
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.contentContainer}
+          onContentSizeChange={handleContentSizeChange}
+          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            offsetYRef.current = e.nativeEvent.contentOffset.y;
           }}
-          selectedMessage={selectedMessage}
-          options={getDropdownOptions(selectedMessage)}
-          anchorPosition={anchorPosition}
-          alignRight={selectedMessage.isSent}
-          containerPosition={containerPosition}
-          themeColors={themeColors}
-          isLastInSenderRun={isLastInSenderRun}
-          onReactionUpdate={handleReactionUpdate}
+          scrollEventThrottle={16}
+          onScrollBeginDrag={() => showSticky()}
+          onScrollEndDrag={() => hideStickySoon()}
+          onMomentumScrollBegin={() => showSticky()}
+          onMomentumScrollEnd={() => hideStickySoon()}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          // This helps when new items are inserted at the "bottom" (index 0 in inverted list)
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         />
-      )}
-    </View>
+        {stickyActive && (
+          <Animated.View
+            style={[styles.stickyHeaderRow, { opacity: stickyOpacity }]}
+            pointerEvents="none"
+          >
+            <View style={[styles.datePill, { backgroundColor: themeColors.surfaceSecondary }]}>
+              <Text style={[styles.datePillText, { color: themeColors.text }]}>
+                {getDatePillLabel(stickyDateForLabel)}
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+        {selectedMessage && (
+          <SelectedMessagePopups
+            visible={dropdownVisible}
+            onClose={() => {
+              setDropdownVisible(false);
+              setSelectedMessage(null);
+              setIsLastInSenderRun(false);
+              setEmojiPickerVisible(false); // ensure picker closes too
+            }}
+            selectedMessage={selectedMessage}
+            options={getDropdownOptions(selectedMessage)}
+            anchorPosition={anchorPosition}
+            alignRight={selectedMessage.isSent}
+            containerPosition={containerPosition}
+            themeColors={themeColors}
+            isLastInSenderRun={isLastInSenderRun}
+            onReactionUpdate={handleReactionUpdate}
+            emojiPickerVisible={emojiPickerVisible}
+            onEmojiPickerOpenChange={setEmojiPickerVisible}
+            onEmojiSelected={handleEmojiSelected}
+            onEmojiPickerClose={handleEmojiPickerClose}
+            colorScheme={colorScheme}
+            fullThemeColors={fullThemeColors}
+          />
+        )}
+      </View>
+    </>
   );
 };
 
@@ -716,6 +1021,8 @@ const styles = StyleSheet.create({
   },
   messageWrapper: {
     maxWidth: '100%',
+    overflow: 'visible',
+    position: 'relative',
   },
   messageWrapperLeft: { alignSelf: 'flex-start' },
   messageWrapperRight: { alignSelf: 'flex-end' },
@@ -734,7 +1041,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     ...typography.p3,
-    fontSize: 14,
+    fontSize: 16,
     textAlign: 'left',
     includeFontPadding: false, // Android
   },
@@ -779,7 +1086,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   datePillText: {
-    ...typography.p5,
+    ...typography.p3,
     fontWeight: '600',
   },
   datePillHidden: {
@@ -797,13 +1104,17 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   reactionsContainer: {
-    marginTop: -12,
+    marginTop: -4,
+    marginBottom: 8,
+    zIndex: 15,
   },
   reactionsContainerRight: {
     alignSelf: 'flex-end',
+    marginRight: 12,
   },
   reactionsContainerLeft: {
     alignSelf: 'flex-start',
+    marginLeft: 12,
   },
   reactionsInner: {
     flexDirection: 'row',
@@ -830,5 +1141,30 @@ const styles = StyleSheet.create({
     ...typography.p7,
     fontSize: 12,
     marginLeft: 2,
+  },
+  swipeContainer: {
+    position: 'relative',
+    flexShrink: 1,
+    maxWidth: '100%',
+    overflow: 'visible',
+  },
+  swipeContainerLeft: {
+    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  swipeContainerRight: {
+    alignSelf: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  swipeBubbleHost: {
+    alignSelf: 'flex-start',
+  },
+  replyUnderlay: {
+    position: 'absolute',
+    left: 8,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

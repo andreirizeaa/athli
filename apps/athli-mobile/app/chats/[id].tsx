@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send } from 'lucide-react-native';
@@ -12,6 +12,7 @@ import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-men
 import { MessageInputBar } from '@/components/message-input-bar';
 import { MessageList } from '@/components/chats/message-list';
 import { MessageReactionsSheet } from '@/components/chats/message-reactions-sheet';
+import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
 import {
   getChats,
   getArchivedChats,
@@ -66,6 +67,8 @@ export default function ChatDetailScreen() {
   const actionButtonRef = useRef<View>(null);
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
   const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
+  const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -146,9 +149,53 @@ export default function ChatDetailScreen() {
   };
 
   const handleMessageReply = (message: ChatMessage) => {
-    // TODO: Implement reply functionality
-    // This could set a reply state and show the message being replied to in the input
-    console.log('Reply to message:', message);
+    setReplyingToMessage(message);
+    // Focus the input to open keyboard
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingToMessage(null);
+    Keyboard.dismiss();
+  };
+
+  // Helper function to find the original message in a reply chain
+  const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+    if (!message.replyTo) {
+      return message;
+    }
+    // Traverse the reply chain to find the original message
+    return findOriginalMessage(message.replyTo);
+  };
+
+  const handleSendMessage = () => {
+    const text = searchQuery.trim();
+    if (!text) return;
+
+    // If replying, find the original message (not the immediate reply)
+    const originalMessage = replyingToMessage
+      ? findOriginalMessage(replyingToMessage)
+      : null;
+
+    // Create new message
+    const newMessage: ChatMessage = {
+      id: `m-${Date.now()}`,
+      text: text,
+      timestamp: new Date(),
+      isSent: true,
+      isRead: false,
+      ...(originalMessage && { replyTo: originalMessage }),
+    };
+
+    // Add message to the list
+    setMessages((prev) => [...prev, newMessage]);
+
+    // Clear input and exit reply mode
+    setSearchQuery('');
+    setReplyingToMessage(null);
+    Keyboard.dismiss();
   };
 
   const handleMessageEdit = (message: ChatMessage) => {
@@ -308,6 +355,7 @@ export default function ChatDetailScreen() {
           messages={messages}
           backgroundColor={themeColors.pageBackground}
           themeColors={themeColors}
+          clientName={chat.clientName}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
@@ -316,7 +364,19 @@ export default function ChatDetailScreen() {
       </View>
 
       {/* ROW 3: TOOLBAR — EXACT original wrapper context (no extra safe-area / KAV wrappers) */}
-      <KeyboardAwareToolbar backgroundColor={headerBackgroundColor}>
+      <KeyboardAwareToolbar
+        backgroundColor={headerBackgroundColor}
+        replyPreview={
+          replyingToMessage ? (
+            <ReplyPreviewRow
+              message={replyingToMessage}
+              clientName={chat.clientName}
+              onClose={handleCancelReply}
+              backgroundColor={headerBackgroundColor}
+            />
+          ) : undefined
+        }
+      >
         <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
           <PlatformIcon
             sf="plus"
@@ -327,11 +387,11 @@ export default function ChatDetailScreen() {
         </TouchableOpacity>
 
         <View style={styles.searchBarContainer}>
-          <MessageInputBar value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
+          <MessageInputBar ref={inputRef} value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
         </View>
 
         {hasText ? (
-          <TouchableOpacity style={styles.sendButton} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.sendButton} activeOpacity={0.7} onPress={handleSendMessage}>
             <PlatformIcon
               sf="paperplane.circle.fill"
               IconComponent={Send}
