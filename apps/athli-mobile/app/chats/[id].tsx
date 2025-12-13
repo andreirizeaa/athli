@@ -11,6 +11,7 @@ import { PlatformIcon } from '@/components/platform-icon';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { MessageInputBar } from '@/components/message-input-bar';
 import { MessageList } from '@/components/chats/message-list';
+import { MessageReactionsSheet } from '@/components/chats/message-reactions-sheet';
 import {
   getChats,
   getArchivedChats,
@@ -63,6 +64,8 @@ export default function ChatDetailScreen() {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const actionButtonRef = useRef<View>(null);
+  const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
+  const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -160,6 +163,25 @@ export default function ChatDetailScreen() {
     // This should remove the message from the messages array
     console.log('Delete message:', message);
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
+  };
+
+  const handleReactionPress = (message: ChatMessage) => {
+    setSelectedMessageForReactions(message);
+    setReactionsSheetVisible(true);
+  };
+
+  const handleReactionRemoved = (messageId: string, isSender: boolean) => {
+    setMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id === messageId) {
+          return {
+            ...msg,
+            ...(isSender ? { senderReaction: undefined } : { recipientReaction: undefined }),
+          };
+        }
+        return msg;
+      })
+    );
   };
 
   const dropdownOptions: DropdownMenuOption[] = [
@@ -289,6 +311,7 @@ export default function ChatDetailScreen() {
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
+          onReactionPress={handleReactionPress}
         />
       </View>
 
@@ -338,6 +361,16 @@ export default function ChatDetailScreen() {
           </>
         )}
       </KeyboardAwareToolbar>
+
+      <MessageReactionsSheet
+        visible={reactionsSheetVisible}
+        onClose={() => {
+          setReactionsSheetVisible(false);
+          setSelectedMessageForReactions(null);
+        }}
+        message={selectedMessageForReactions}
+        onReactionRemoved={handleReactionRemoved}
+      />
     </View>
   );
 }

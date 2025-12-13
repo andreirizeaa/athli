@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
@@ -17,9 +18,10 @@ import * as Clipboard from 'expo-clipboard';
 import { typography } from '@/constants/typography';
 import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage } from '@/services/chats-service';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
+import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -28,7 +30,164 @@ interface MessageListProps {
   onReply?: (message: ChatMessage) => void;
   onEdit?: (message: ChatMessage) => void;
   onDelete?: (message: ChatMessage) => void;
+  onReactionPress?: (message: ChatMessage) => void;
 }
+
+const ZWSP = '\u200B';
+const NBSP = '\u00A0';
+
+// Inserts break opportunities into long "tokens" (urls/long words)
+const softWrapText = (text: string) => {
+  return text
+    .split(/(\s+)/) // keep whitespace tokens
+    .map((token) => {
+      // leave whitespace alone
+      if (/^\s+$/.test(token)) return token;
+
+      // add breaks after common URL/punctuation chars
+      let t = token.replace(/([\/._\-?=&%#:])/g, `$1${ZWSP}`);
+
+      // if still very long, insert a break every 18 chars
+      if (t.replace(/\u200B/g, '').length > 24) {
+        t = t.replace(/(.{18})/g, `$1${ZWSP}`);
+      }
+
+      return t;
+    })
+    .join('');
+};
+
+const BubbleMeta = React.memo(function BubbleMeta({
+  item,
+  themeColors,
+  formatTime,
+  softWrapText,
+  registerRef,
+  onPressIn,
+  onPressOut,
+  isLastInSenderRun,
+}: {
+  item: ChatMessage;
+  themeColors: ThemeColors;
+  formatTime: (d: Date) => string;
+  softWrapText: (t: string) => string;
+  registerRef: (ref: View | null) => void;
+  onPressIn: () => void;
+  onPressOut: () => void;
+  isLastInSenderRun: boolean;
+}) {
+  const [metaWidth, setMetaWidth] = useState(0);
+  const [spaceWidth, setSpaceWidth] = useState(0);
+
+  const timeLabel = useMemo(() => formatTime(item.timestamp), [item.timestamp, formatTime]);
+
+  // Measure ONE NBSP using the same typography as the timestamp
+  const onMeasureSpace = (e: any) => {
+    const w = e?.nativeEvent?.layout?.width ?? 0;
+    if (w > 0 && w !== spaceWidth) setSpaceWidth(w);
+  };
+
+  // Measure the actual meta (time + icon) width
+  const onMeasureMeta = (e: any) => {
+    const w = e?.nativeEvent?.layout?.width ?? 0;
+    if (w > 0 && w !== metaWidth) setMetaWidth(w);
+  };
+
+  // Build NBSP spacer to reserve exactly the meta overlay width (plus a tiny safety buffer)
+  const metaSpacer = useMemo(() => {
+    const effectiveMeta = Math.max(metaWidth, 44); // safe fallback until measured
+    const effectiveSpace = Math.max(spaceWidth, 3); // safe fallback until measured
+    const buffer = 4; // px for overlay padding/rounding
+    const count = Math.ceil((effectiveMeta + buffer) / effectiveSpace);
+
+    // prepend 1 extra NBSP so it never "sticks" to the last word
+    return NBSP + NBSP.repeat(Math.max(4, count));
+  }, [metaWidth, spaceWidth]);
+
+  return (
+    <Pressable
+      ref={registerRef}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[
+        styles.messageBubble,
+        item.isSent
+          ? { backgroundColor: themeColors.primary }
+          : { backgroundColor: themeColors.surfaceSecondary },
+        isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
+        isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
+      ]}
+    >
+      <View style={styles.bubbleInner}>
+        {/* Hidden measurer for NBSP width (timestamp typography) */}
+        <Text
+          style={[styles.timeText, styles.hiddenMeasure]}
+          onLayout={onMeasureSpace}
+          pointerEvents="none"
+        >
+          {NBSP}
+        </Text>
+
+        <Text
+          style={[
+            styles.messageText,
+            item.isSent
+              ? { color: themeColors.primaryForeground }
+              : { color: themeColors.text },
+          ]}
+        >
+          {softWrapText(item.text)}
+
+          {/* Reserve space at the end so meta never overlaps (single-line OR multi-line) */}
+          <Text style={styles.metaSpacer}>{metaSpacer}</Text>
+        </Text>
+
+        {/* Actual meta pinned bottom-right */}
+        <View
+          onLayout={onMeasureMeta}
+          style={[
+            styles.metaOverlay,
+            {
+              backgroundColor: item.isSent ? themeColors.primary : themeColors.surfaceSecondary,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <Text
+            style={[
+              styles.timeText,
+              item.isSent
+                ? { color: themeColors.primaryForeground, opacity: 0.7 }
+                : { color: themeColors.mutedText },
+            ]}
+          >
+            {timeLabel}
+          </Text>
+
+          {item.isSent && (
+            <View style={styles.readReceiptIcon}>
+              {item.isRead ? (
+                <PlatformIcon
+                  sf="checkmark.circle"
+                  IconComponent={CheckCircle}
+                  size={11}
+                  color={themeColors.primaryForeground}
+                />
+              ) : (
+                <PlatformIcon
+                  sf="paperplane"
+                  IconComponent={Send}
+                  size={11}
+                  color={themeColors.primaryForeground}
+                />
+              )}
+            </View>
+          )}
+        </View>
+      </View>
+    </Pressable>
+  );
+});
 
 export const MessageList = ({
   messages,
@@ -37,6 +196,7 @@ export const MessageList = ({
   onReply,
   onEdit,
   onDelete,
+  onReactionPress,
 }: MessageListProps) => {
   const { t } = useTranslations();
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -46,12 +206,40 @@ export const MessageList = ({
   const didInitialScroll = useRef(false);
   const initialScrollAttemptsRef = useRef(0);
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
+  const [isLastInSenderRun, setIsLastInSenderRun] = useState(false);
   const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [containerPosition, setContainerPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, View>>({});
   const containerRef = useRef<View>(null);
+
+  // Update local messages when prop changes
+  useEffect(() => {
+    setLocalMessages(messages);
+  }, [messages]);
+
+  const handleReactionUpdate = (messageId: string, emoji: string | undefined, isSender: boolean) => {
+    console.log('handleReactionUpdate called:', { messageId, emoji, isSender });
+    setLocalMessages((prev) =>
+      prev.map((msg) => {
+        if (msg.id === messageId) {
+          const updated = {
+            ...msg,
+            ...(isSender ? { senderReaction: emoji } : { recipientReaction: emoji }),
+          };
+          console.log('Updated message:', updated);
+          return updated;
+        }
+        return msg;
+      })
+    );
+  };
+
+  const handleReactionPress = (message: ChatMessage) => {
+    onReactionPress?.(message);
+  };
 
   const [stickyActive, setStickyActive] = useState(false);
   const stickyOpacity = useRef(new Animated.Value(0)).current;
@@ -85,7 +273,7 @@ export const MessageList = ({
   };
 
   // NEWEST first for inverted list
-  const data = useMemo(() => [...messages].reverse(), [messages]);
+  const data = useMemo(() => [...localMessages].reverse(), [localMessages]);
 
   const BASE_GAP = 6; // every message-to-message gap starts with this
   const EXTRA_ON_SENDER_CHANGE = 14; // added when user <-> client switches
@@ -166,8 +354,15 @@ export const MessageList = ({
     const messageRef = messageRefs.current[message.id];
     if (!messageRef) return;
 
+    // Find the message index in the data array to determine if it's last in sender run
+    const messageIndex = data.findIndex((m) => m.id === message.id);
+    const newer = messageIndex > 0 ? data[messageIndex - 1] : null;
+    const sameSenderAsNewer = !!newer && newer.isSent === message.isSent;
+    const isLast = !sameSenderAsNewer;
+
     messageRef.measureInWindow((x, y, width, height) => {
       setSelectedMessage(message);
+      setIsLastInSenderRun(isLast);
       setAnchorPosition({ x, y, width, height });
       
       // Measure the container to get its position for blur
@@ -198,6 +393,7 @@ export const MessageList = ({
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
+    setIsLastInSenderRun(false);
   };
 
   const handleCopy = async () => {
@@ -206,6 +402,7 @@ export const MessageList = ({
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
+    setIsLastInSenderRun(false);
   };
 
   const handleEdit = () => {
@@ -214,6 +411,7 @@ export const MessageList = ({
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
+    setIsLastInSenderRun(false);
   };
 
   const handleDelete = () => {
@@ -222,6 +420,7 @@ export const MessageList = ({
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
+    setIsLastInSenderRun(false);
   };
 
   const getDropdownOptions = (message: ChatMessage): DropdownMenuOption[] => {
@@ -379,71 +578,61 @@ export const MessageList = ({
             { marginBottom: gap },
           ]}
         >
-          <Pressable
-          ref={(ref: View | null) => {
-            if (ref) messageRefs.current[item.id] = ref;
-          }}
-          onPressIn={() => handlePressIn(item)}
-          onPressOut={handlePressOut}
-          style={[
-            styles.messageBubble,
-            item.isSent
-              ? { backgroundColor: themeColors.primary }
-              : { backgroundColor: themeColors.surfaceSecondary },
-
-            isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
-            isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
-          ]}
-        >
-          <View style={styles.bubbleInner}>
-            <View style={styles.messageContainer}>
-              <View style={styles.textWrap}>
-                <Text
-                  style={[
-                    styles.messageText,
-                    item.isSent
-                      ? { color: themeColors.primaryForeground }
-                      : { color: themeColors.text },
-                  ]}
-                >
-                  {item.text}
-                </Text>
-              </View>
-              <View style={styles.timeRow}>
-                <Text
-                  style={[
-                    styles.timeText,
-                    item.isSent
-                      ? { color: themeColors.primaryForeground, opacity: 0.7 }
-                      : { color: themeColors.mutedText },
-                  ]}
-                >
-                  {formatTime(item.timestamp)}
-                </Text>
-                {item.isSent && (
-                  <View style={styles.readReceiptIcon}>
-                    {item.isRead ? (
-                      <PlatformIcon
-                        sf="checkmark.circle"
-                        IconComponent={CheckCircle}
-                        size={11}
-                        color={themeColors.primaryForeground}
-                      />
-                    ) : (
-                      <PlatformIcon
-                        sf="paperplane"
-                        IconComponent={Send}
-                        size={11}
-                        color={themeColors.primaryForeground}
-                      />
-                    )}
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-        </Pressable>
+          <BubbleMeta
+            item={item}
+            themeColors={themeColors}
+            formatTime={formatTime}
+            softWrapText={softWrapText}
+            registerRef={(ref) => {
+              if (ref) messageRefs.current[item.id] = ref;
+            }}
+            onPressIn={() => handlePressIn(item)}
+            onPressOut={handlePressOut}
+            isLastInSenderRun={isLastInSenderRun}
+          />
         </View>
+        {/* Reactions container */}
+        {(item.senderReaction || item.recipientReaction) && (
+          <TouchableOpacity
+            style={[
+              styles.reactionsContainer,
+              item.isSent ? styles.reactionsContainerRight : styles.reactionsContainerLeft,
+            ]}
+            activeOpacity={0.7}
+            onPress={() => handleReactionPress(item)}
+          >
+            <View
+              style={[
+                styles.reactionsInner,
+                {
+                  backgroundColor: themeColors.surface,
+                  shadowColor: themeColors.shadowColor,
+                  ...(item.isSent ? { marginRight: 6 } : { marginLeft: 6 }),
+                },
+              ]}
+            >
+              {item.senderReaction && item.recipientReaction && item.senderReaction === item.recipientReaction ? (
+                <>
+                  <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                  <Text style={[styles.reactionCount, { color: themeColors.mutedText }]}>2</Text>
+                </>
+              ) : (
+                <>
+                  {item.senderReaction && (
+                    <View style={styles.reactionItem}>
+                      <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                    </View>
+                  )}
+                  {item.recipientReaction && (
+                    <View style={styles.reactionItem}>
+                      <Text style={styles.reactionEmoji}>{item.recipientReaction}</Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -497,28 +686,21 @@ export const MessageList = ({
         </Animated.View>
       )}
       {selectedMessage && (
-        <DropdownMenu
+        <SelectedMessagePopups
           visible={dropdownVisible}
           onClose={() => {
             setDropdownVisible(false);
             setSelectedMessage(null);
+            setIsLastInSenderRun(false);
           }}
+          selectedMessage={selectedMessage}
           options={getDropdownOptions(selectedMessage)}
           anchorPosition={anchorPosition}
           alignRight={selectedMessage.isSent}
           containerPosition={containerPosition}
-          messageData={{
-            text: selectedMessage.text,
-            timestamp: selectedMessage.timestamp,
-            isSent: selectedMessage.isSent,
-            themeColors: {
-              primary: themeColors.primary,
-              primaryForeground: themeColors.primaryForeground,
-              surfaceSecondary: themeColors.surfaceSecondary,
-              text: themeColors.text,
-              mutedText: themeColors.mutedText,
-            },
-          }}
+          themeColors={themeColors}
+          isLastInSenderRun={isLastInSenderRun}
+          onReactionUpdate={handleReactionUpdate}
         />
       )}
     </View>
@@ -547,34 +729,40 @@ const styles = StyleSheet.create({
   messageBubbleTailRight: { borderBottomRightRadius: 2 },
   messageBubbleTailLeft: { borderBottomLeftRadius: 2 },
   bubbleInner: {
+    position: 'relative',
     width: '100%',
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    width: '100%',
-  },
-  textWrap: {
-    flexGrow: 1,
-    flexShrink: 1,
-    minWidth: 0,
-    marginRight: 8,
   },
   messageText: {
     ...typography.p3,
     fontSize: 14,
     textAlign: 'left',
+    includeFontPadding: false, // Android
   },
-  timeRow: {
+  metaSpacer: {
+    ...typography.p7,      // must match timestamp typography
+    color: 'transparent',  // takes space, not visible
+    fontVariant: ['tabular-nums'],
+  },
+  metaOverlay: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 0,
-    marginTop: 2,
+    justifyContent: 'flex-end',
+    paddingLeft: 6,
+    paddingTop: 1,
+    borderRadius: 8,
   },
   timeText: {
     ...typography.p7,
+    fontVariant: ['tabular-nums'],
+  },
+  hiddenMeasure: {
+    position: 'absolute',
+    opacity: 0,
+    left: -9999,
+    top: -9999,
   },
   readReceiptIcon: {
     marginLeft: 4,
@@ -607,5 +795,40 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 6,
     zIndex: 10,
+  },
+  reactionsContainer: {
+    marginTop: -4,
+  },
+  reactionsContainerRight: {
+    alignSelf: 'flex-end',
+  },
+  reactionsContainerLeft: {
+    alignSelf: 'flex-start',
+  },
+  reactionsInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 16,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 3,
+  },
+  reactionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reactionEmoji: {
+    fontSize: 12,
+  },
+  reactionCount: {
+    ...typography.p7,
+    fontSize: 12,
+    marginLeft: 2,
   },
 });

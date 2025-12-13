@@ -4,6 +4,8 @@ export interface ChatMessage {
   timestamp: Date;
   isSent: boolean; // true for user messages, false for client messages
   isRead: boolean;
+  senderReaction?: string; // emoji string if sender has reacted
+  recipientReaction?: string; // emoji string if recipient has reacted
 }
 
 export interface Chat {
@@ -172,6 +174,53 @@ export const markChatAsRead = async (chatId: string): Promise<void> => {
   // return await response.json()
 
   console.log('Marking chat as read:', chatId);
+};
+
+/**
+ * Service method to react to a message
+ * This will be connected to the backend in the future
+ */
+export const reactTo = async (
+  messageId: string,
+  emoji: string,
+  isSender: boolean
+): Promise<void> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/messages/${messageId}/react`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ emoji, isSender }),
+  // })
+  // if (!response.ok) throw new Error('Failed to react to message')
+  // return await response.json()
+
+  console.log('Reacting to message:', messageId, emoji, isSender);
+};
+
+/**
+ * Service method to remove a reaction from a message
+ * This will be connected to the backend in the future
+ */
+export const removeReaction = async (
+  messageId: string,
+  isSender: boolean
+): Promise<void> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/messages/${messageId}/remove-reaction`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ isSender }),
+  // })
+  // if (!response.ok) throw new Error('Failed to remove reaction')
+  // return await response.json()
+
+  console.log('Removing reaction from message:', messageId, isSender);
 };
 
 /**
