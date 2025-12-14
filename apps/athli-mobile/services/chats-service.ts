@@ -303,6 +303,43 @@ export const sendImageMessage = async (
   });
 };
 
+/**
+ * Service method to send a video message
+ * This will be connected to the backend in the future
+ */
+export const sendVideoMessage = async (
+  chatId: string,
+  videoUri: string,
+  caption?: string
+): Promise<void> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const formData = new FormData();
+  // formData.append('chatId', chatId);
+  // formData.append('video', {
+  //   uri: videoUri,
+  //   type: 'video/mp4',
+  //   name: 'video.mp4',
+  // } as any);
+  // if (caption) {
+  //   formData.append('caption', caption);
+  // }
+  // const response = await fetch(`/api/chats/${chatId}/messages/video`, {
+  //   method: 'POST',
+  //   body: formData,
+  // })
+  // if (!response.ok) throw new Error('Failed to send video message')
+  // return await response.json()
+
+  console.log('Sending video message:', {
+    chatId,
+    videoUri,
+    caption,
+  });
+};
+
 // Mock chats data
 const mockChats: Chat[] = [
   {

@@ -11,7 +11,7 @@ import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { CameraPreviewScreen } from './camera-preview-screen';
-import { sendImageMessage } from '@/services/chats-service';
+import { sendImageMessage, sendVideoMessage } from '@/services/chats-service';
 
 export default function Camera() {
   const router = useRouter();
@@ -35,6 +35,7 @@ export default function Camera() {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [isAddingMore, setIsAddingMore] = useState(false);
   const [caption, setCaption] = useState('');
+  const [capturedVideo, setCapturedVideo] = useState<{ uri: string; duration: number; orientation: 'portrait' | 'landscape' } | null>(null);
   
   const device = cameraPosition === 'back' ? backDevice : frontDevice;
 
@@ -154,18 +155,26 @@ export default function Camera() {
   };
 
   const handleSend = async () => {
-    if (capturedPhotos.length === 0 || !params.chatId) {
+    if (!params.chatId) {
       return;
     }
 
     try {
-      const imageBytesArray = capturedPhotos.map((photo) => photo.bytes);
-      await sendImageMessage(params.chatId, imageBytesArray, caption.trim() || undefined);
-      setIsActive(false);
-      router.back();
+      if (capturedVideo) {
+        // Send video
+        await sendVideoMessage(params.chatId, capturedVideo.uri, caption.trim() || undefined);
+        setIsActive(false);
+        router.back();
+      } else if (capturedPhotos.length > 0) {
+        // Send images
+        const imageBytesArray = capturedPhotos.map((photo) => photo.bytes);
+        await sendImageMessage(params.chatId, imageBytesArray, caption.trim() || undefined);
+        setIsActive(false);
+        router.back();
+      }
     } catch (error) {
-      console.error('Error sending image message:', error);
-      Alert.alert('Error', 'Failed to send image message');
+      console.error('Error sending message:', error);
+      Alert.alert('Error', 'Failed to send message');
     }
   };
 
@@ -380,17 +389,64 @@ export default function Camera() {
   const handleButtonPress = async () => {
     if (isVideoMode && !isRecording) {
       // Start recording
-      setIsRecording(true);
-      setRecordingTime(0);
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
+      if (cameraRef.current && device) {
+        try {
+          setIsRecording(true);
+          setRecordingTime(0);
+          recordingIntervalRef.current = setInterval(() => {
+            setRecordingTime((prev) => prev + 1);
+          }, 1000);
+          
+          await cameraRef.current.startRecording({
+            flash: flashEnabled ? 'on' : 'off',
+            onRecordingFinished: (video) => {
+              const videoUri = `file://${video.path}`;
+              const duration = Math.floor(video.duration / 1000); // Convert ms to seconds
+              
+              // Determine orientation based on video dimensions
+              const isPortrait = video.width < video.height;
+              const orientation = isPortrait ? 'portrait' : 'landscape';
+              
+              setCapturedVideo({
+                uri: videoUri,
+                duration,
+                orientation,
+              });
+              setIsRecording(false);
+              if (recordingIntervalRef.current) {
+                clearInterval(recordingIntervalRef.current);
+                recordingIntervalRef.current = null;
+              }
+            },
+            onRecordingError: (error) => {
+              console.error('Recording error:', error);
+              setIsRecording(false);
+              if (recordingIntervalRef.current) {
+                clearInterval(recordingIntervalRef.current);
+                recordingIntervalRef.current = null;
+              }
+              Alert.alert('Error', 'Failed to record video');
+            },
+          });
+        } catch (error) {
+          console.error('Error starting recording:', error);
+          setIsRecording(false);
+          Alert.alert('Error', 'Failed to start recording');
+        }
+      }
     } else if (isVideoMode && isRecording) {
       // Stop recording
-      setIsRecording(false);
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
+      if (cameraRef.current) {
+        try {
+          await cameraRef.current.stopRecording();
+        } catch (error) {
+          console.error('Error stopping recording:', error);
+          setIsRecording(false);
+          if (recordingIntervalRef.current) {
+            clearInterval(recordingIntervalRef.current);
+            recordingIntervalRef.current = null;
+          }
+        }
       }
     } else if (!isVideoMode) {
       // Take photo
@@ -552,6 +608,20 @@ export default function Camera() {
     return null;
   }
 
+  // Show preview UI when video is captured
+  if (capturedVideo) {
+    return (
+      <CameraPreviewScreen
+        video={capturedVideo}
+        caption={caption}
+        onCaptionChange={setCaption}
+        clientName={params.clientName}
+        onClose={handleClose}
+        onSend={handleSend}
+      />
+    );
+  }
+
   // Show preview UI when photos are captured
   if (capturedPhotos.length > 0 && !isAddingMore) {
     const selectedPhoto = capturedPhotos.find((p) => p.id === selectedImageId) || capturedPhotos[0];
@@ -581,6 +651,7 @@ export default function Camera() {
           torch={flashEnabled ? 'on' : 'off'}
           zoom={zoom}
           photo={true}
+          video={true}
         />
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         {/* Top header */}
