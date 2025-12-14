@@ -386,6 +386,7 @@ export default function ChatDetailScreen() {
       {/* ROW 3: TOOLBAR — EXACT original wrapper context (no extra safe-area / KAV wrappers) */}
       <KeyboardAwareToolbar
         backgroundColor={headerBackgroundColor}
+        contentStyle={{ paddingHorizontal: 16 }}
         replyPreview={
           replyingToMessage ? (
             <ReplyPreviewRow
@@ -429,7 +430,16 @@ export default function ChatDetailScreen() {
             <TouchableOpacity
               style={styles.iconButton}
               activeOpacity={0.7}
-              onPress={() => router.push('/camera')}
+              onPress={() =>
+                router.push({
+                  pathname: '/camera',
+                  params: {
+                    chatId: chat.id,
+                    clientId: chat.clientId,
+                    clientName: chat.clientName,
+                  },
+                })
+              }
             >
               <PlatformIcon
                 sf="camera"
