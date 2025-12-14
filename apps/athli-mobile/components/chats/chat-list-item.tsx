@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Archive, Trash2, MailCheck, CheckCircle } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';

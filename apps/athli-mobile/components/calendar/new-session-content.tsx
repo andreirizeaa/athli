@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Image,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Calendar as CalendarIcon, ChevronRight, Pencil } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FlashList } from '@shopify/flash-list';
