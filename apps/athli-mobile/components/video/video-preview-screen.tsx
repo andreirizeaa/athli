@@ -37,27 +37,27 @@ export const VideoPreviewScreen = () => {
   const iconColor = themeColors.text;
   const [caption, setCaption] = useState('');
 
-  const video: VideoData | null = params.uri
-    ? {
-        uri: params.uri,
-        duration: params.duration ? parseInt(params.duration, 10) : 0,
-        orientation: (params.orientation as 'portrait' | 'landscape') || 'portrait',
-      }
-    : null;
+  if (!params.uri) {
+    return null;
+  }
+
+  const video: VideoData = {
+    uri: params.uri,
+    duration: params.duration ? parseInt(params.duration, 10) : 0,
+    orientation: (params.orientation as 'portrait' | 'landscape') || 'portrait',
+  };
 
   const fromMessage = params.fromMessage === 'true';
   const showToolbar = !fromMessage;
 
-  // Create video player (only if video exists)
-  const player = useVideoPlayer(video?.uri || '', (player) => {
+  // Create video player
+  const player = useVideoPlayer(video.uri, (player) => {
     // Pause video initially to show thumbnail
-    if (player) {
-      player.pause();
-    }
+    player.pause();
   });
 
   // Listen to playing state changes
-  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player?.playing ?? false });
+  const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -78,7 +78,7 @@ export const VideoPreviewScreen = () => {
   };
 
   const handleDownload = async () => {
-    if (!video?.uri) return;
+    if (!video.uri) return;
 
     try {
       const isAvailable = await Sharing.isAvailableAsync();
