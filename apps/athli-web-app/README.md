@@ -1,6 +1,6 @@
-# Athli Landing Page
+# Athli Web App
 
-The marketing landing page for Athli, built with Next.js.
+The main web application for Athli, built with Next.js.
 
 ## Tech Stack
 
@@ -9,6 +9,8 @@ The marketing landing page for Athli, built with Next.js.
 - **Tailwind CSS** - Styling
 - **shadcn/ui** - UI component library
 - **Clerk** - Authentication
+- **Convex** - Backend-as-a-Service
+- **Supabase** - Database and backend services
 - **next-intl** - Internationalization
 - **Biome** - Code formatting and linting
 
@@ -35,7 +37,7 @@ Start the development server:
 npm run dev
 ```
 
-The application will be available at **http://localhost:3000**
+The application will be available at **http://localhost:3001**
 
 ### Build
 
@@ -53,13 +55,13 @@ Start the production server:
 npm start
 ```
 
-The application will be available at **http://localhost:3000**
+The application will be available at **http://localhost:3001**
 
 ## Available Scripts
 
-- `npm run dev` - Start development server on port 3000
+- `npm run dev` - Start development server on port 3001
 - `npm run build` - Build for production
-- `npm start` - Start production server on port 3000
+- `npm start` - Start production server on port 3001
 - `npm run lint` - Run ESLint
 - `npm run format` - Format code with Biome
 - `npm run check` - Run Biome check and format
@@ -73,18 +75,25 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 NEXT_PUBLIC_WWW_URL=http://localhost:3000
 CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 CLERK_SECRET_KEY=your_clerk_secret_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+CONVEX_DEPLOYMENT=your_convex_deployment
 ```
 
 ## Project Structure
 
 ```
-athli-landing-page/
+athli-web-app/
 ├── app/              # Next.js App Router pages
 ├── components/       # React components
 │   └── ui/          # shadcn/ui components
-├── lib/             # Utilities and helpers
+├── lib/             # Utilities and services
+│   ├── api/         # API clients
+│   ├── athletes/    # Athlete services
+│   ├── calendar/    # Calendar services
 │   ├── i18n/        # Internationalization
-│   └── utils.ts     # Utility functions
+│   ├── library/     # Library services (exercises, programs, workouts)
+│   ├── messaging/   # Messaging services
+│   └── providers/   # React context providers
 ├── public/          # Static assets
 └── hooks/           # React hooks
 ```
