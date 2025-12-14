@@ -187,7 +187,6 @@ function RootLayoutNav() {
             presentation: 'card',
             headerShown: false,
             animation: 'slide_from_bottom',
-            gestureDirection: 'vertical',
             animationDuration: 200,
           }}
         />

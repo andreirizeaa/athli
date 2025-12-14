@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, View, Alert, Text, Animated, LayoutChangeEvent, Dimensions } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, Alert, Text, Animated, LayoutChangeEvent, Dimensions, PanResponder } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { X, Image, RotateCw, Zap, ZapOff } from 'lucide-react-native';
@@ -27,6 +27,71 @@ export default function Camera() {
 
   const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 
+  const neutralZoom = device?.neutralZoom ?? 1;
+
+  // We want 0.5x..10x in "display zoom" space, but must clamp to what the device supports.
+  const displayMin = device ? Math.max(0.5, device.minZoom / neutralZoom) : 1;
+  const displayMax = device ? Math.min(10, device.maxZoom / neutralZoom) : 1;
+
+  // Convert display zoom bounds back into VisionCamera's zoom numbers:
+  const minZoom = device ? displayMin * neutralZoom : 1;
+  const maxZoom = device ? displayMax * neutralZoom : 1;
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [isVideoMode, setIsVideoMode] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [isButtonPressed, setIsButtonPressed] = useState(false);
+  const [zoomLabel, setZoomLabel] = useState('1x');
+  const [zoom, setZoom] = useState(1);
+  const recordingIntervalRef = useRef<number | null>(null);
+  const buttonScale = useRef(new Animated.Value(1)).current;
+  const innerCircleScale = useRef(new Animated.Value(1)).current;
+  const videoTextWidth = useRef(0);
+  const photoTextWidth = useRef(0);
+  const screenWidth = useRef(0);
+  // Initial value will be calculated after measuring
+  const bottomBarTranslateX = useRef(new Animated.Value(0)).current;
+  const zoomButtonOpacity = useRef(new Animated.Value(1)).current;
+
+  // --- Zoom HUD (slider) ---
+  const SLIDER_WIDTH = 300;
+  const DOT_SIZE = 12;
+
+  const zoomStartRef = useRef(1);
+  const zoomHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zoomHudOpacity = useRef(new Animated.Value(0)).current;
+  const sliderDotX = useRef(new Animated.Value(0)).current;
+
+  const formatZoomLabel = (z: number) => {
+    // z is "display zoom" (0.5..10)
+    const rounded =
+      z < 1 ? Math.round(z * 10) / 10 :
+      z < 10 ? Math.round(z * 10) / 10 :
+      Math.round(z);
+
+    const str = Number.isInteger(rounded) ? `${rounded}` : `${rounded.toFixed(1)}`;
+    return `${str}x`;
+  };
+
+  const showZoomHud = () => {
+    if (zoomHideTimeoutRef.current) clearTimeout(zoomHideTimeoutRef.current);
+    Animated.timing(zoomHudOpacity, { toValue: 1, duration: 120, useNativeDriver: true }).start();
+  };
+
+  const hideZoomHudLater = () => {
+    if (zoomHideTimeoutRef.current) clearTimeout(zoomHideTimeoutRef.current);
+    zoomHideTimeoutRef.current = setTimeout(() => {
+      Animated.timing(zoomHudOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    }, 700);
+  };
+
+  const updateSliderDot = (displayZoom: number, displayMin: number, displayMax: number) => {
+    const denom = displayMax - displayMin || 1;
+    const t = Math.min(1, Math.max(0, (displayZoom - displayMin) / denom)); // 0..1
+    const x = t * SLIDER_WIDTH - SLIDER_WIDTH / 2; // center-origin
+    sliderDotX.setValue(x);
+  };
+
   const zoomSteps = useMemo(() => {
     if (!device) return [{ label: '1x' as const, value: 1 }];
 
@@ -44,21 +109,6 @@ export default function Camera() {
         value: clamp(neutral * f, min, max),
       }));
   }, [device]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isVideoMode, setIsVideoMode] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [isButtonPressed, setIsButtonPressed] = useState(false);
-  const [zoomLabel, setZoomLabel] = useState<'0.5x' | '1x' | '2x' | '3x'>('1x');
-  const [zoom, setZoom] = useState(1);
-  const recordingIntervalRef = useRef<number | null>(null);
-  const buttonScale = useRef(new Animated.Value(1)).current;
-  const innerCircleScale = useRef(new Animated.Value(1)).current;
-  const videoTextWidth = useRef(0);
-  const photoTextWidth = useRef(0);
-  const screenWidth = useRef(0);
-  // Initial value will be calculated after measuring
-  const bottomBarTranslateX = useRef(new Animated.Value(0)).current;
-  const zoomButtonOpacity = useRef(new Animated.Value(1)).current;
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -120,8 +170,17 @@ export default function Camera() {
     setCameraPosition(newPosition);
 
     // Reset zoom when switching cameras
-    setZoomLabel('1x');
-    setZoom(1);
+    const newDevice = newPosition === 'back' ? backDevice : frontDevice;
+    if (newDevice) {
+      const startZoom = clamp(newDevice.neutralZoom, minZoom, maxZoom);
+      setZoom(startZoom);
+      const display = startZoom / newDevice.neutralZoom;
+      setZoomLabel(formatZoomLabel(display));
+      updateSliderDot(display, displayMin, displayMax);
+    } else {
+      setZoomLabel('1x');
+      setZoom(1);
+    }
     
     // Animate zoom button opacity
     Animated.timing(zoomButtonOpacity, {
@@ -136,7 +195,75 @@ export default function Camera() {
     const next = zoomSteps[(idx + 1) % zoomSteps.length];
     setZoomLabel(next.label);
     setZoom(next.value);
+    
+    // Update slider dot position but don't show HUD when manually changing zoom
+    if (device) {
+      const display = next.value / device.neutralZoom;
+      updateSliderDot(display, displayMin, displayMax);
+    }
   };
+
+  const lastDistanceRef = useRef<number | null>(null);
+  const initialZoomRef = useRef<number>(1);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (evt) => {
+          // Only respond if we have 2 touches (pinch gesture)
+          return evt.nativeEvent.touches.length === 2;
+        },
+        onPanResponderGrant: () => {
+          if (!device) return;
+          initialZoomRef.current = zoom;
+          zoomStartRef.current = zoom;
+          lastDistanceRef.current = null;
+          showZoomHud();
+        },
+        onPanResponderMove: (evt) => {
+          if (!device || evt.nativeEvent.touches.length !== 2) return;
+
+          const touch1 = evt.nativeEvent.touches[0];
+          const touch2 = evt.nativeEvent.touches[1];
+
+          const distance = Math.sqrt(
+            Math.pow(touch2.pageX - touch1.pageX, 2) + Math.pow(touch2.pageY - touch1.pageY, 2)
+          );
+
+          if (lastDistanceRef.current === null) {
+            lastDistanceRef.current = distance;
+            return;
+          }
+
+          const scale = distance / lastDistanceRef.current;
+          // Use a slightly non-linear curve so it feels nicer
+          const scaled = Math.pow(scale, 1.6);
+
+          const nextZoom = clamp(zoomStartRef.current * scaled, minZoom, maxZoom);
+          setZoom(nextZoom);
+
+          const display = nextZoom / device.neutralZoom; // 0.5..10 (clamped)
+          setZoomLabel(formatZoomLabel(display));
+          updateSliderDot(display, displayMin, displayMax);
+
+          zoomStartRef.current = nextZoom;
+          lastDistanceRef.current = distance;
+
+          showZoomHud();
+          hideZoomHudLater();
+        },
+        onPanResponderRelease: () => {
+          lastDistanceRef.current = null;
+          hideZoomHudLater();
+        },
+        onPanResponderTerminate: () => {
+          lastDistanceRef.current = null;
+          hideZoomHudLater();
+        },
+      }),
+    [device, zoom, minZoom, maxZoom, displayMin, displayMax, formatZoomLabel, updateSliderDot, showZoomHud, hideZoomHudLater, clamp]
+  );
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -265,8 +392,14 @@ export default function Camera() {
 
   useEffect(() => {
     if (!device) return;
-    setZoomLabel('1x');
-    setZoom(device.neutralZoom);
+
+    // Start at 1x (neutral zoom)
+    const startZoom = clamp(device.neutralZoom, minZoom, maxZoom);
+    setZoom(startZoom);
+
+    const display = startZoom / device.neutralZoom;
+    setZoomLabel(formatZoomLabel(display));
+    updateSliderDot(display, displayMin, displayMax);
   }, [device?.id]);
 
   const updateTranslation = (animated = false) => {
@@ -314,15 +447,15 @@ export default function Camera() {
   }
 
   return (
-    <View style={styles.container}>
-      <VisionCamera
-        style={StyleSheet.absoluteFill}
-        device={device}
-        isActive={isActive}
-        torch={flashEnabled ? 'on' : 'off'}
-        zoom={zoom}
-      />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <View style={styles.container} {...panResponder.panHandlers}>
+        <VisionCamera
+          style={StyleSheet.absoluteFill}
+          device={device}
+          isActive={isActive}
+          torch={flashEnabled ? 'on' : 'off'}
+          zoom={zoom}
+        />
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         {/* Top header */}
         <View style={styles.topHeader}>
           <TouchableOpacity
@@ -385,6 +518,18 @@ export default function Camera() {
 
           {/* Record/Stop Button - Centered */}
           <View style={styles.recordButtonContainer}>
+            <Animated.View style={[styles.zoomHud, { opacity: zoomHudOpacity }]} pointerEvents="none">
+              <View style={styles.zoomHudTrack} />
+              <Animated.View
+                style={[
+                  styles.zoomHudDot,
+                  {
+                    backgroundColor: themeColors.primary,
+                    transform: [{ translateX: sliderDotX }],
+                  },
+                ]}
+              />
+            </Animated.View>
             <TouchableOpacity
               style={[styles.recordButton, isRecording && styles.stopButton]}
               onPress={handleButtonPress}
@@ -627,5 +772,25 @@ const styles = StyleSheet.create({
   },
   modeTextActive: {
     color: '#FFFFFF',
+  },
+  zoomHud: {
+    position: 'absolute',
+    top: -20,            // places it above the record button
+    width: 300,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomHudTrack: {
+    width: 300,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  zoomHudDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 });
