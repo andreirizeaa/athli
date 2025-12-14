@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, TouchableOpacity, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, Alert, ActivityIndicator, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Download } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
@@ -11,6 +11,7 @@ import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
+import { sendDocumentMessage } from '@/services/chats-service';
 
 const DocumentPreviewScreen = () => {
   const router = useRouter();
@@ -28,8 +29,12 @@ const DocumentPreviewScreen = () => {
   const { colors: themeColors } = useThemePreference();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
+  const insets = useSafeAreaInsets();
 
   const [caption, setCaption] = useState('');
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const documentUri = params.uri || '';
   const documentName = params.name || 'Document';
@@ -39,6 +44,85 @@ const DocumentPreviewScreen = () => {
 
   const isImage = mimeType.startsWith('image/');
   const isPdf = mimeType === 'application/pdf' || documentName.toLowerCase().endsWith('.pdf');
+  const isOfficeDoc = mimeType.includes('wordprocessingml') || 
+                      mimeType.includes('spreadsheetml') || 
+                      mimeType.includes('presentationml') ||
+                      mimeType.includes('msword') ||
+                      mimeType.includes('ms-excel') ||
+                      mimeType.includes('ms-powerpoint');
+
+  // Load PDF: For iOS, write base64 to cache directory and use file:// URI
+  // For Android, can use base64 data URI directly
+  useEffect(() => {
+    const loadPDF = async () => {
+      if (isImage || documentUri.startsWith('http://') || documentUri.startsWith('https://')) {
+        setPdfUri(documentUri);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(documentUri);
+        if (!fileInfo.exists) {
+          setError('Document file not found');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!isPdf) {
+          setError('This document type cannot be previewed. Please download it to view.');
+          setIsLoading(false);
+          return;
+        }
+
+        // Read the PDF file as base64
+        const base64 = await FileSystem.readAsStringAsync(documentUri, {
+          encoding: 'base64' as any,
+        });
+
+        if (Platform.OS === 'ios') {
+          // For iOS: Copy file to cache directory and use file:// URI
+          // This is safer than writing base64
+          const cacheDir = FileSystem.cacheDirectory;
+          if (!cacheDir) {
+            throw new Error('Cache directory not available');
+          }
+
+          const pdfPath = `${cacheDir}preview_${Date.now()}.pdf`;
+          
+          // Copy the file to cache directory
+          await FileSystem.copyAsync({
+            from: documentUri,
+            to: pdfPath,
+          });
+
+          setPdfUri(pdfPath);
+        } else {
+          // For Android: Use data URI directly
+          const dataUriString = `data:application/pdf;base64,${base64}`;
+          setPdfUri(dataUriString);
+        }
+      } catch (err) {
+        console.error('Error loading PDF:', err);
+        setError('Failed to load PDF. Please try downloading it instead.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (documentUri) {
+      loadPDF();
+    }
+
+    // Cleanup: Remove cached PDF file when component unmounts
+    return () => {
+      if (pdfUri && Platform.OS === 'ios' && pdfUri.startsWith(FileSystem.cacheDirectory || '')) {
+        FileSystem.deleteAsync(pdfUri, { idempotent: true }).catch(console.error);
+      }
+    };
+  }, [documentUri, mimeType, isImage, isPdf]);
 
   const handleClose = () => {
     router.back();
@@ -89,46 +173,157 @@ const DocumentPreviewScreen = () => {
         clientName: clientName,
       };
 
-      console.log('Document data to send:', documentData);
-      // TODO: Implement actual send logic
+      if (!params.chatId) {
+        console.error('No chatId provided');
+        return;
+      }
+
+      // Send document message
+      await sendDocumentMessage(
+        params.chatId,
+        bytes,
+        documentName,
+        mimeType,
+        caption.trim() || undefined
+      );
+
+      // Pass document message data back to chat screen via navigation params
+      // The chat screen will add it to the message list
+      router.back();
+      
+      // Set params to add document message to list and close attachment picker
+      setTimeout(() => {
+        if (params.chatId) {
+          router.setParams({
+            documentSent: 'true',
+            sentDocument: JSON.stringify({
+              name: documentName,
+              mimeType: mimeType,
+              size: params.size,
+              uri: documentUri,
+              caption: caption.trim() || '',
+            }),
+          } as any);
+        }
+      }, 200);
     } catch (error) {
       console.error('Error reading document:', error);
     }
   };
 
   const renderDocumentContent = () => {
+    const headerHeight = insets.top + 60; // Safe area + header content
+    
     if (isImage) {
       return (
         <RNImage
           source={{ uri: documentUri }}
-          style={StyleSheet.absoluteFill}
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              top: headerHeight,
+              bottom: 0,
+            },
+          ]}
           resizeMode="contain"
         />
       );
     }
 
-    if (isPdf) {
-      // For PDFs, use WebView
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+          <Text style={[styles.loadingText, { color: themeColors.text }]}>Loading document...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: themeColors.text }]}>{error}</Text>
+          <Text style={[styles.errorSubtext, { color: themeColors.mutedText }]}>
+            {!fromMessage && 'You can download the document to view it in another app'}
+          </Text>
+          {fromMessage && (
+            <TouchableOpacity
+              style={[styles.downloadButtonLarge, { backgroundColor: themeColors.primary }]}
+              activeOpacity={0.7}
+              onPress={handleDownload}
+            >
+              <PlatformIcon
+                sf="arrow.down.circle.fill"
+                IconComponent={Download}
+                size={24}
+                color={themeColors.primaryForeground}
+              />
+              <Text style={[styles.downloadButtonText, { color: themeColors.primaryForeground }]}>
+                Download PDF
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      );
+    }
+
+    if (isPdf && pdfUri) {
+      // For PDFs, use WebView with the prepared URI (file:// for iOS, data: for Android)
+      // Add top margin to account for header and bottom margin for toolbar
+      const headerHeight = insets.top + 60; // Safe area + header content
+      const toolbarHeight = 112; // AttachmentPreviewToolbar closedBaseHeight
+      const bottomMargin = !fromMessage ? toolbarHeight + insets.bottom : 0;
+      const paddingBottom = fromMessage ? 56 : 0;
       return (
         <WebView
-          source={{ uri: documentUri }}
-          style={styles.webView}
+          source={{ uri: pdfUri }}
+          style={[
+            styles.webView,
+            {
+              marginTop: headerHeight,
+              marginBottom: bottomMargin,
+              paddingBottom: paddingBottom,
+            },
+          ]}
           scalesPageToFit={true}
           startInLoadingState={true}
+          onError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            console.error('WebView error:', nativeEvent);
+            setError('Failed to display PDF. Please download it to view.');
+          }}
+          onHttpError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            console.error('WebView HTTP error:', nativeEvent);
+            setError('Failed to load PDF. Please download it to view.');
+          }}
+          originWhitelist={['*']}
+          allowFileAccess={Platform.OS === 'android'}
+          allowFileAccessFromFileURLs={Platform.OS === 'android'}
+          allowUniversalAccessFromFileURLs={Platform.OS === 'android'}
+          mixedContentMode={Platform.OS === 'android' ? 'always' : undefined}
+          javaScriptEnabled={false}
+          domStorageEnabled={false}
         />
       );
     }
 
-    // For other document types, try to display in WebView
-    // Some formats may not render, but we'll attempt it
-    return (
-      <WebView
-        source={{ uri: documentUri }}
-        style={styles.webView}
-        scalesPageToFit={true}
-        startInLoadingState={true}
-      />
-    );
+    // For Office documents and other types, WebView can't render them
+    // Show a message that they need to be opened in another app
+    if (isOfficeDoc || (!isPdf && !isImage)) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: themeColors.text }]}>
+            This document type cannot be previewed
+          </Text>
+          <Text style={[styles.errorSubtext, { color: themeColors.mutedText }]}>
+            Download the document to view it in another app
+          </Text>
+        </View>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -171,9 +366,9 @@ const DocumentPreviewScreen = () => {
                 onPress={handleDownload}
               >
                 <PlatformIcon
-                  sf="arrow.down.circle"
+                  sf="square.and.arrow.down"
                   IconComponent={Download}
-                  size={iconSizes.navigationChevrons}
+                  size={iconSizes.navigationChevrons + 2}
                   color={iconColor}
                 />
               </TouchableOpacity>
@@ -232,7 +427,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   titleText: {
-    ...typography.h3,
+    ...typography.h6,
     fontWeight: '600',
   },
   spacer: {
@@ -255,6 +450,46 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    ...typography.p2,
+    marginTop: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 8,
+  },
+  errorText: {
+    ...typography.h3,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    ...typography.p2,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  downloadButtonLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 16,
+  },
+  downloadButtonText: {
+    ...typography.p2,
+    fontWeight: '600',
   },
 });
 

@@ -19,6 +19,7 @@ export default function Camera() {
     chatId?: string;
     clientId?: string;
     clientName?: string;
+    selectedImages?: string; // JSON string of ImageData[]
   }>();
   const { colors: themeColors } = useThemePreference();
   const insets = useSafeAreaInsets();
@@ -35,7 +36,21 @@ export default function Camera() {
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [isAddingMore, setIsAddingMore] = useState(false);
   const [caption, setCaption] = useState('');
-  const [capturedVideo, setCapturedVideo] = useState<{ uri: string; duration: number; orientation: 'portrait' | 'landscape' } | null>(null);
+
+  // Handle pre-selected images from attachment picker
+  useEffect(() => {
+    if (params.selectedImages) {
+      try {
+        const images = JSON.parse(params.selectedImages);
+        if (Array.isArray(images) && images.length > 0) {
+          setCapturedPhotos(images);
+          setSelectedImageId(images[0].id);
+        }
+      } catch (error) {
+        console.error('Error parsing selected images:', error);
+      }
+    }
+  }, [params.selectedImages]);
   
   const device = cameraPosition === 'back' ? backDevice : frontDevice;
 
@@ -160,12 +175,7 @@ export default function Camera() {
     }
 
     try {
-      if (capturedVideo) {
-        // Send video
-        await sendVideoMessage(params.chatId, capturedVideo.uri, caption.trim() || undefined);
-        setIsActive(false);
-        router.back();
-      } else if (capturedPhotos.length > 0) {
+      if (capturedPhotos.length > 0) {
         // Send images
         const imageBytesArray = capturedPhotos.map((photo) => photo.bytes);
         await sendImageMessage(params.chatId, imageBytesArray, caption.trim() || undefined);
@@ -260,19 +270,74 @@ export default function Camera() {
         return;
       }
 
-      // Original behavior: Open image picker for both images and videos
+      // If video mode is on, allow video only and single select
+      if (isVideoMode) {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['videos'],
+          allowsMultipleSelection: false,
+          quality: 1,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const asset = result.assets[0];
+          if (!asset.uri) return;
+          // Navigate to video preview screen
+          router.push({
+            pathname: '/video-preview',
+            params: {
+              uri: asset.uri,
+              duration: (asset.duration || 0).toString(),
+              orientation: asset.width && asset.height && asset.width > asset.height ? 'landscape' : 'portrait',
+              chatId: params.chatId || '',
+              clientId: params.clientId || '',
+              clientName: params.clientName || '',
+            },
+          });
+        }
+        return;
+      }
+
+      // Photo mode: Open image picker with multi-select for images only
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images', 'videos'],
-        allowsMultipleSelection: false,
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
         quality: 1,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        // Item was selected - close camera page
-        setIsActive(false);
-        router.back();
-        // TODO: Handle selected image/video
-        console.log('Selected media:', result.assets[0]);
+        // Convert selected images to ImageData format
+        const imageDataArray = await Promise.all(
+          result.assets.map(async (asset, index) => {
+            if (!asset.uri) return null;
+
+            // Read the image file as bytes
+            const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+              encoding: 'base64' as any,
+            });
+
+            // Convert base64 to Uint8Array
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            return {
+              uri: asset.uri,
+              bytes,
+              id: `photo-${Date.now()}-${index}-${Math.random()}`,
+            };
+          })
+        );
+
+        // Filter out any null values
+        const validImages = imageDataArray.filter((img) => img !== null);
+
+        if (validImages.length > 0) {
+          // Set the captured photos and show preview
+          setCapturedPhotos(validImages);
+          setSelectedImageId(validImages[0].id);
+        }
       }
       // If canceled, do nothing - camera page stays open
     } catch (error) {
@@ -402,17 +467,24 @@ export default function Camera() {
             onRecordingFinished: (video) => {
               const videoUri = `file://${video.path}`;
               const duration = Math.floor(video.duration / 1000); // Convert ms to seconds
-              
+
               // Determine orientation based on video dimensions
               const isPortrait = video.width < video.height;
               const orientation = isPortrait ? 'portrait' : 'landscape';
-              
-              setCapturedVideo({
-                uri: videoUri,
-                duration,
-                orientation,
-              });
+
               setIsRecording(false);
+              // Navigate to video preview screen
+              router.push({
+                pathname: '/video-preview',
+                params: {
+                  uri: videoUri,
+                  duration: duration.toString(),
+                  orientation,
+                  chatId: params.chatId || '',
+                  clientId: params.clientId || '',
+                  clientName: params.clientName || '',
+                },
+              });
               if (recordingIntervalRef.current) {
                 clearInterval(recordingIntervalRef.current);
                 recordingIntervalRef.current = null;
@@ -608,19 +680,7 @@ export default function Camera() {
     return null;
   }
 
-  // Show preview UI when video is captured
-  if (capturedVideo) {
-    return (
-      <AttachmentPreviewScreen
-        video={capturedVideo}
-        caption={caption}
-        onCaptionChange={setCaption}
-        clientName={params.clientName}
-        onClose={handleClose}
-        onSend={handleSend}
-      />
-    );
-  }
+  // Video preview is now handled by separate route
 
   // Show preview UI when photos are captured
   if (capturedPhotos.length > 0 && !isAddingMore) {

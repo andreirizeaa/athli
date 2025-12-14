@@ -21,7 +21,7 @@ export const AttachmentPreviewToolbar = ({
   onChangeText,
   clientName,
   onSend,
-}: CameraPreviewToolbarProps) => {
+}: AttachmentPreviewToolbarProps) => {
   const { colors: themeColors } = useThemePreference();
   const insets = useSafeAreaInsets();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -29,7 +29,7 @@ export const AttachmentPreviewToolbar = ({
   return (
     <KeyboardAwareToolbar
       closedBaseHeight={110}
-      openBaseHeight={130}
+      openBaseHeight={80}
       contentStyle={{ flex: 1 }}
     >
       <View style={styles.wrapper}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { X } from 'lucide-react-native';
+import { X, Camera, Video, FileText } from 'lucide-react-native';
 import { useColorScheme } from '@/contexts/useColorScheme';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -26,6 +26,73 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
     ? themeColors.primary 
     : isDark ? '#A78BFA' : '#8B5CF6'; // Purple/violet that contrasts well with blue
 
+  // Determine preview content based on message type
+  const renderPreviewContent = () => {
+    // If there's text, show it
+    if (message.text && message.text.trim().length > 0) {
+      return (
+        <Text style={[styles.messagePreview, { color: themeColors.text }]} numberOfLines={1}>
+          {message.text}
+        </Text>
+      );
+    }
+
+    // Check for images
+    if (message.images && message.images.length > 0) {
+      const imageCount = message.images.length;
+      return (
+        <View style={styles.attachmentPreview}>
+          <PlatformIcon
+            sf="camera.fill"
+            IconComponent={Camera}
+            size={iconSizes.tabBarIcons - 8}
+            color={themeColors.text}
+          />
+          <Text style={[styles.attachmentText, { color: themeColors.text }]} numberOfLines={1}>
+            {imageCount} image{imageCount > 1 ? 's' : ''}
+          </Text>
+        </View>
+      );
+    }
+
+    // Check for video
+    if (message.video) {
+      return (
+        <View style={styles.attachmentPreview}>
+          <PlatformIcon
+            sf="video.fill"
+            IconComponent={Video}
+            size={iconSizes.tabBarIcons - 8}
+            color={themeColors.text}
+          />
+          <Text style={[styles.attachmentText, { color: themeColors.text }]} numberOfLines={1}>
+            1 video
+          </Text>
+        </View>
+      );
+    }
+
+    // Check for document
+    if (message.document) {
+      return (
+        <View style={styles.attachmentPreview}>
+          <PlatformIcon
+            sf="doc.text.fill"
+            IconComponent={FileText}
+            size={iconSizes.tabBarIcons - 8}
+            color={themeColors.text}
+          />
+          <Text style={[styles.attachmentText, { color: themeColors.text }]} numberOfLines={1}>
+            {message.document.name}
+          </Text>
+        </View>
+      );
+    }
+
+    // Fallback: show empty text
+    return null;
+  };
+
   return (
     <View
       style={[
@@ -41,9 +108,7 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
           <Text style={[styles.senderName, { color: stripColor }]} numberOfLines={1}>
             {senderName}
           </Text>
-          <Text style={[styles.messagePreview, { color: themeColors.text }]} numberOfLines={1}>
-            {message.text}
-          </Text>
+          {renderPreviewContent()}
         </View>
         <TouchableOpacity
           style={styles.closeButton}
@@ -91,6 +156,16 @@ const styles = StyleSheet.create({
   messagePreview: {
     ...typography.p3,
     fontSize: 13,
+  },
+  attachmentPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  attachmentText: {
+    ...typography.p3,
+    fontSize: 13,
+    flex: 1,
   },
   closeButton: {
     padding: 4,

@@ -1,12 +1,10 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Eye } from 'lucide-react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { useColorScheme } from '@/contexts/useColorScheme';
 import { type ThemeColors } from '@/constants/theme';
 import { type DocumentAttachment } from '@/services/chats-service';
 import { tintHex, shadeHex, isLightColor } from '@/utils/colorUtils';
-import { typography, iconSizes } from '@/constants/typography';
-import { PlatformIcon } from '@/components/platform-icon';
+import { typography } from '@/constants/typography';
 
 type MessageDocumentPreviewProps = {
   document: DocumentAttachment;
@@ -16,18 +14,16 @@ type MessageDocumentPreviewProps = {
   onPress: () => void;
 };
 
-const getFileTypeFromMime = (mimeType: string, fileName: string): string => {
-  if (mimeType === 'application/pdf') return 'PDF';
-  if (mimeType.includes('wordprocessingml') || mimeType.includes('msword')) return 'DOCX';
-  if (mimeType.includes('spreadsheetml') || mimeType.includes('ms-excel')) return 'XLSX';
-  if (mimeType.includes('presentationml') || mimeType.includes('ms-powerpoint')) return 'PPTX';
-  if (mimeType === 'text/plain') return 'TXT';
-  if (mimeType === 'text/csv') return 'CSV';
-  if (mimeType === 'application/rtf') return 'RTF';
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes) return '';
   
-  // Fallback to file extension
-  const ext = fileName.split('.').pop()?.toUpperCase();
-  return ext || 'FILE';
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  } else if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  } else {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
 };
 
 export const MessageDocumentPreview = ({
@@ -47,9 +43,9 @@ export const MessageDocumentPreview = ({
 
   // Use the same text color as the parent message
   const textColor = isParentSent ? themeColors.primaryForeground : themeColors.text;
-  const iconColor = isParentSent ? themeColors.primaryForeground : themeColors.text;
+  const subtitleColor = isParentSent ? themeColors.primaryForeground : themeColors.mutedText;
 
-  const fileType = getFileTypeFromMime(document.mimeType, document.name);
+  const fileSize = formatFileSize(document.size);
 
   return (
     <TouchableOpacity
@@ -59,20 +55,21 @@ export const MessageDocumentPreview = ({
       accessibilityLabel={`Open document ${document.name}`}
       accessibilityRole="button"
     >
-      <View style={styles.content}>
-        <Text style={[styles.fileName, { color: textColor }]} numberOfLines={1}>
-          {document.name}
-        </Text>
-        <View style={styles.rightSection}>
-          <View style={[styles.fileTypeBadge, { backgroundColor: adjustedBackground }]}>
-            <Text style={[styles.fileTypeText, { color: textColor }]}>{fileType}</Text>
-          </View>
-          <PlatformIcon
-            sf="eye"
-            IconComponent={Eye}
-            size={iconSizes.tabBarIcons - 4}
-            color={iconColor}
-          />
+      <View style={styles.contentRow}>
+        <Image
+          source={require('@/assets/icons/pdf.png')}
+          style={styles.pdfIcon}
+          resizeMode="contain"
+        />
+        <View style={styles.textContainer}>
+          <Text style={[styles.fileName, { color: textColor }]}>
+            {document.name}
+          </Text>
+          {fileSize ? (
+            <Text style={[styles.fileSize, { color: subtitleColor }]}>
+              {fileSize}
+            </Text>
+          ) : null}
         </View>
       </View>
     </TouchableOpacity>
@@ -81,39 +78,35 @@ export const MessageDocumentPreview = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    width: '100%',
+    alignSelf: 'stretch',
     marginBottom: 6,
     borderRadius: 8,
     padding: 8,
     overflow: 'hidden',
   },
-  content: {
-    flex: 1,
+  contentRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     gap: 8,
+    width: '100%',
+  },
+  pdfIcon: {
+    width: 32,
+    height: 32,
+    flexShrink: 0,
+  },
+  textContainer: {
+    flex: 1,
+    minWidth: 0,
   },
   fileName: {
     ...typography.p2,
-    flex: 1,
     fontWeight: '500',
+    marginBottom: 4,
   },
-  rightSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fileTypeBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    minWidth: 32,
-    alignItems: 'center',
-  },
-  fileTypeText: {
+  fileSize: {
     ...typography.p3,
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
   },
 });
