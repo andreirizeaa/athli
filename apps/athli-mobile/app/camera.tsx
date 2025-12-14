@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, View, Alert, Text, Animated, LayoutChangeEvent, Dimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,13 +15,41 @@ export default function Camera() {
   const { colors: themeColors } = useThemePreference();
   const insets = useSafeAreaInsets();
   const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice('back');
+  const backDevice = useCameraDevice('back', {
+    physicalDevices: ['ultra-wide-angle-camera', 'wide-angle-camera', 'telephoto-camera'],
+  });
+  const frontDevice = useCameraDevice('front');
   const [isActive, setIsActive] = useState(true);
   const [flashEnabled, setFlashEnabled] = useState(false);
+  const [cameraPosition, setCameraPosition] = useState<'back' | 'front'>('back');
+  
+  const device = cameraPosition === 'back' ? backDevice : frontDevice;
+
+  const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+
+  const zoomSteps = useMemo(() => {
+    if (!device) return [{ label: '1x' as const, value: 1 }];
+
+    const min = device.minZoom;          // always 1
+    const max = device.maxZoom;
+    const neutral = device.neutralZoom;  // 1x reference (can be > 1 on ultra-wide multi-cams)
+
+    const factors = [0.5, 1, 2, 3] as const;
+
+    return factors
+      // only include steps that are actually reachable on this device
+      .filter(f => neutral * f >= min && neutral * f <= max)
+      .map(f => ({
+        label: (f === 0.5 ? '0.5x' : `${f}x`) as '0.5x' | '1x' | '2x' | '3x',
+        value: clamp(neutral * f, min, max),
+      }));
+  }, [device]);
   const [isRecording, setIsRecording] = useState(false);
   const [isVideoMode, setIsVideoMode] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [isButtonPressed, setIsButtonPressed] = useState(false);
+  const [zoomLabel, setZoomLabel] = useState<'0.5x' | '1x' | '2x' | '3x'>('1x');
+  const [zoom, setZoom] = useState(1);
   const recordingIntervalRef = useRef<number | null>(null);
   const buttonScale = useRef(new Animated.Value(1)).current;
   const innerCircleScale = useRef(new Animated.Value(1)).current;
@@ -30,6 +58,7 @@ export default function Camera() {
   const screenWidth = useRef(0);
   // Initial value will be calculated after measuring
   const bottomBarTranslateX = useRef(new Animated.Value(0)).current;
+  const zoomButtonOpacity = useRef(new Animated.Value(1)).current;
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -87,7 +116,26 @@ export default function Camera() {
   };
 
   const handleRotatePress = () => {
-    // TODO: Implement camera rotation
+    const newPosition = cameraPosition === 'back' ? 'front' : 'back';
+    setCameraPosition(newPosition);
+
+    // Reset zoom when switching cameras
+    setZoomLabel('1x');
+    setZoom(1);
+    
+    // Animate zoom button opacity
+    Animated.timing(zoomButtonOpacity, {
+      toValue: newPosition === 'back' ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleZoomPress = () => {
+    const idx = zoomSteps.findIndex(s => s.label === zoomLabel);
+    const next = zoomSteps[(idx + 1) % zoomSteps.length];
+    setZoomLabel(next.label);
+    setZoom(next.value);
   };
 
   const formatTime = (seconds: number): string => {
@@ -215,6 +263,12 @@ export default function Camera() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!device) return;
+    setZoomLabel('1x');
+    setZoom(device.neutralZoom);
+  }, [device?.id]);
+
   const updateTranslation = (animated = false) => {
     if (screenWidth.current > 0 && videoTextWidth.current > 0 && photoTextWidth.current > 0) {
       const translation = calculateTranslation(isVideoMode);
@@ -251,6 +305,10 @@ export default function Camera() {
     return null;
   }
 
+  if (!backDevice && !frontDevice) {
+    return null;
+  }
+
   if (!device) {
     return null;
   }
@@ -261,6 +319,8 @@ export default function Camera() {
         style={StyleSheet.absoluteFill}
         device={device}
         isActive={isActive}
+        torch={flashEnabled ? 'on' : 'off'}
+        zoom={zoom}
       />
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         {/* Top header */}
@@ -307,13 +367,14 @@ export default function Camera() {
               sf={flashEnabled ? 'bolt.fill' : 'bolt.slash.fill'}
               IconComponent={flashEnabled ? Zap : ZapOff}
               size={iconSizes.tabBarIcons}
-              color={flashEnabled ? '#FFFFFF' : iconColor}
+              color={flashEnabled ? themeColors.primaryForeground : iconColor}
             />
           </TouchableOpacity>
         </View>
 
         {/* Bottom controls */}
         <View style={[styles.bottomControls, { paddingBottom: insets.bottom + 36 }]}>
+          {/* Photo button - bottom left */}
           <TouchableOpacity
             style={[styles.bottomButton, { backgroundColor: mutedSurfaceColor }]}
             activeOpacity={0.7}
@@ -322,50 +383,66 @@ export default function Camera() {
             <PlatformIcon sf="photo" IconComponent={Image} size={iconSizes.tabBarIcons} color={iconColor} />
           </TouchableOpacity>
 
-          {/* Record/Stop Button */}
-          <TouchableOpacity
-            style={[styles.recordButton, isRecording && styles.stopButton]}
-            onPress={handleButtonPress}
-            onPressIn={handleButtonPressIn}
-            onPressOut={handleButtonPressOut}
-            activeOpacity={0.8}
-          >
-            <Animated.View
-              style={[
-                styles.recordButtonInner,
-                {
-                  transform: [{ scale: buttonScale }],
-                },
-              ]}
+          {/* Record/Stop Button - Centered */}
+          <View style={styles.recordButtonContainer}>
+            <TouchableOpacity
+              style={[styles.recordButton, isRecording && styles.stopButton]}
+              onPress={handleButtonPress}
+              onPressIn={handleButtonPressIn}
+              onPressOut={handleButtonPressOut}
+              activeOpacity={0.8}
             >
-              {isRecording && isVideoMode ? (
-                <View style={styles.recordSquare} />
-              ) : (
-                <Animated.View
-                  style={[
-                    styles.recordIcon,
-                    {
-                      backgroundColor: isVideoMode || isButtonPressed ? '#FF3B30' : '#FFFFFF',
-                      transform: [{ scale: innerCircleScale }],
-                    },
-                  ]}
-                />
-              )}
-            </Animated.View>
-          </TouchableOpacity>
+              <Animated.View
+                style={[
+                  styles.recordButtonInner,
+                  {
+                    transform: [{ scale: buttonScale }],
+                  },
+                ]}
+              >
+                {isRecording && isVideoMode ? (
+                  <View style={styles.recordSquare} />
+                ) : (
+                  <Animated.View
+                    style={[
+                      styles.recordIcon,
+                      {
+                        backgroundColor: isVideoMode || isButtonPressed ? '#FF3B30' : '#FFFFFF',
+                        transform: [{ scale: innerCircleScale }],
+                      },
+                    ]}
+                  />
+                )}
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
-            style={[styles.bottomButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
-            onPress={handleRotatePress}
-          >
-            <PlatformIcon
-              sf="arrow.trianglehead.2.clockwise"
-              IconComponent={RotateCw}
-              size={iconSizes.tabBarIcons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+          {/* Right side: Zoom button + Rotate button */}
+          <View style={styles.rightControls}>
+            <Animated.View style={{ opacity: zoomButtonOpacity }}>
+              <TouchableOpacity
+                style={[styles.zoomButton, { backgroundColor: mutedSurfaceColor }]}
+                activeOpacity={0.7}
+                onPress={handleZoomPress}
+                disabled={cameraPosition === 'front'}
+              >
+                <Text style={[styles.zoomText, { color: themeColors.primary }]}>{zoomLabel}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+
+            <TouchableOpacity
+              style={[styles.bottomButton, { backgroundColor: mutedSurfaceColor }]}
+              activeOpacity={0.7}
+              onPress={handleRotatePress}
+            >
+              <PlatformIcon
+                sf="arrow.trianglehead.2.clockwise"
+                IconComponent={RotateCw}
+                size={iconSizes.tabBarIcons}
+                color={iconColor}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Bottom bar with VIDEO/PHOTO text */}
@@ -443,11 +520,38 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 8,
+    position: 'relative',
+  },
+  rightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  zoomButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomText: {
+    ...typography.p3,
+    fontSize: 12,
+    fontWeight: '600',
   },
   bottomButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recordButtonContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: -68,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },

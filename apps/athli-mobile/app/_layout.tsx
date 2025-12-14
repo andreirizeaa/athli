@@ -188,7 +188,7 @@ function RootLayoutNav() {
             headerShown: false,
             animation: 'slide_from_bottom',
             gestureDirection: 'vertical',
-            animationDuration: 250,
+            animationDuration: 200,
           }}
         />
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
