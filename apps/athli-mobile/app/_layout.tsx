@@ -181,6 +181,42 @@ function RootLayoutNav() {
             }),
           }}
         />
+        <Stack.Screen
+          name="camera"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            animationDuration: 200,
+          }}
+        />
+        <Stack.Screen
+          name="document-preview"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            animationDuration: 200,
+          }}
+        />
+        <Stack.Screen
+          name="message-image-preview"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            animationDuration: 200,
+          }}
+        />
+        <Stack.Screen
+          name="video-preview"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            animationDuration: 200,
+          }}
+        />
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
       </Stack>

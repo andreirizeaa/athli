@@ -46,7 +46,15 @@ export default function ChatsScreen() {
       setIsLoading(true);
       try {
         const fetchedChats = await getChats();
-        setChats(fetchedChats);
+        // Filter to only show chats that have message mock data
+        const chatsWithMessages = await Promise.all(
+          fetchedChats.map(async (chat) => {
+            const messages = await getChatMessages(chat.id);
+            return messages.length > 0 ? chat : null;
+          }),
+        );
+        const filtered = chatsWithMessages.filter((chat) => chat !== null) as Chat[];
+        setChats(filtered);
       } catch (error) {
         console.error('Failed to load chats:', error);
       } finally {

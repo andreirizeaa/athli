@@ -25,6 +25,9 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
 import { MessageReplyPreview } from '@/components/chats/message-reply-preview';
+import { MessageDocumentPreview } from '@/components/chats/message-document-preview';
+import { MessageImagePreview } from '@/components/chats/message-image-preview';
+import { MessageVideoPreview } from '@/components/chats/message-video-preview';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 
 interface MessageListProps {
@@ -36,6 +39,9 @@ interface MessageListProps {
   onEdit?: (message: ChatMessage) => void;
   onDelete?: (message: ChatMessage) => void;
   onReactionPress?: (message: ChatMessage) => void;
+  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
+  onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
+  onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
 }
 
 const ZWSP = '\u200B';
@@ -82,6 +88,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
   isLastInSenderRun,
   clientName,
   onReplyPreviewPress,
+  onDocumentPress,
+  onImagePress,
+  onVideoPress,
   flashOpacity,
 }: {
   item: ChatMessage;
@@ -94,6 +103,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
   isLastInSenderRun: boolean;
   clientName: string;
   onReplyPreviewPress?: (messageId: string) => void;
+  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
+  onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
+  onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
   flashOpacity?: Animated.Value;
 }) {
   const [metaWidth, setMetaWidth] = useState(0);
@@ -134,6 +146,8 @@ const BubbleMeta = React.memo(function BubbleMeta({
       : { backgroundColor: themeColors.surfaceSecondary },
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
+    // Make bubble full width when it contains a document
+    ...(item.document ? [styles.messageBubbleFullWidth] : []),
   ];
 
   const bubbleContent = (
@@ -159,6 +173,57 @@ const BubbleMeta = React.memo(function BubbleMeta({
           isParentSent={item.isSent}
           onPress={() => {
             onReplyPreviewPress?.(originalMessage.id);
+          }}
+        />
+      )}
+
+      {/* Image preview if this message has images */}
+      {item.images && item.images.length > 0 && onImagePress && (
+        <MessageImagePreview
+          images={item.images}
+          themeColors={themeColors}
+          parentBackgroundColor={
+            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+          }
+          isParentSent={item.isSent}
+          onPress={() => {
+            if (item.images) {
+              onImagePress(item.images, clientName, item.isSent, item.timestamp);
+            }
+          }}
+        />
+      )}
+
+      {/* Video preview if this message has a video */}
+      {item.video && onVideoPress && (
+        <MessageVideoPreview
+          video={item.video}
+          themeColors={themeColors}
+          parentBackgroundColor={
+            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+          }
+          isParentSent={item.isSent}
+          onPress={() => {
+            if (item.video) {
+              onVideoPress(item.video, clientName, item.isSent, item.timestamp);
+            }
+          }}
+        />
+      )}
+
+      {/* Document preview if this message has a document */}
+      {item.document && onDocumentPress && (
+        <MessageDocumentPreview
+          document={item.document}
+          themeColors={themeColors}
+          parentBackgroundColor={
+            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+          }
+          isParentSent={item.isSent}
+          onPress={() => {
+            if (item.document) {
+              onDocumentPress(item.document);
+            }
           }}
         />
       )}
@@ -401,6 +466,9 @@ export const MessageList = ({
   onEdit,
   onDelete,
   onReactionPress,
+  onDocumentPress,
+  onImagePress,
+  onVideoPress,
 }: MessageListProps) => {
   const { t } = useTranslations();
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -882,6 +950,9 @@ export const MessageList = ({
               isLastInSenderRun={isLastInSenderRun}
               clientName={clientName}
               onReplyPreviewPress={handleReplyPreviewPress}
+              onDocumentPress={onDocumentPress}
+              onImagePress={onImagePress}
+              onVideoPress={onVideoPress}
               flashOpacity={flashAnimations.current[item.id]}
             />
           </SwipeToReplyBubble>
@@ -1032,6 +1103,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 60,
     maxWidth: '80%',
+  },
+  messageBubbleFullWidth: {
+    width: '80%',
   },
   messageBubbleTailRight: { borderBottomRightRadius: 2 },
   messageBubbleTailLeft: { borderBottomLeftRadius: 2 },

@@ -74,13 +74,13 @@ const styles = StyleSheet.create({
   },
   archivedText: {
     ...typography.p3,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   separatorContainer: {
     paddingLeft: 84, // 16 (content paddingHorizontal) + 56 (icon width) + 12 (marginRight)
     paddingRight: 16,
   },
   separator: {
-    height: 1,
+    height: 0.5,
   },
 });

@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Athli
+
+A comprehensive monorepo for the Athli platform, featuring web applications, mobile apps, and backend services.
+
+## Project Structure
+
+This is a monorepo managed with [Turborepo](https://turbo.build/) and npm workspaces. The project is organized into the following applications:
+
+### Applications
+
+- **`apps/athli-landing-page`** - Marketing landing page (Next.js)
+- **`apps/athli-web-app`** - Main web application (Next.js)
+- **`apps/athli-mobile`** - Mobile application (React Native/Expo)
+- **`apps/athli-web-api`** - Web API backend (Express.js/TypeScript)
+- **`apps/athli-mobile-api`** - Mobile API backend (FastAPI/Python)
+
+### Packages
+
+- **`packages/auth`** - Shared authentication utilities
+- **`packages/ui`** - Shared UI components
+- **`packages/utils`** - Shared utility functions
+
+## Tech Stack
+
+### Frontend
+- **Next.js 16** - React framework with App Router
+- **React 19** - UI library
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **shadcn/ui** - UI component library
+- **Clerk** - Authentication
+- **Convex** - Backend-as-a-Service
+- **Supabase** - Database and backend services
+- **next-intl** - Internationalization
+
+### Mobile
+- **React Native** - Mobile framework
+- **Expo** - React Native tooling
+- **Expo Router** - File-based routing
+
+### Backend
+- **Express.js** - Web API framework (TypeScript)
+- **FastAPI** - Mobile API framework (Python)
+- **Celery** - Background task processing
+- **Redis** - Caching and task queue
+- **Supabase** - Database and authentication
+
+### Development Tools
+- **Turborepo** - Monorepo build system
+- **TypeScript** - Type safety across the stack
+- **Biome** - Code formatting and linting
+- **Husky** - Git hooks
+- **lint-staged** - Pre-commit linting
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- **Node.js** 22.x or higher
+- **npm** 10.0.0 or higher
+- **Python** 3.12+ (for mobile API)
+- **Redis** (for mobile API background tasks)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd athli
+```
+
+2. Install all dependencies:
+```bash
+npm install
+```
+
+That's it! The installation will handle all dependencies for all applications and packages in the monorepo.
+
+### Development
+
+To start all applications in development mode:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This will start all apps in parallel using Turborepo. For specific application setup and ports, see the individual README files in each app directory:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- [`apps/athli-landing-page/README.md`](./apps/athli-landing-page/README.md)
+- [`apps/athli-web-app/README.md`](./apps/athli-web-app/README.md)
+- [`apps/athli-mobile/README.md`](./apps/athli-mobile/README.md)
+- [`apps/athli-web-api/README.md`](./apps/athli-web-api/README.md)
+- [`apps/athli-mobile-api/README.md`](./apps/athli-mobile-api/README.md)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Available Scripts
 
-## Learn More
+- `npm run dev` - Start all applications in development mode
+- `npm run build` - Build all applications
+- `npm run start` - Start all applications in production mode
+- `npm run lint` - Lint all applications
 
-To learn more about Next.js, take a look at the following resources:
+## Project Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The monorepo uses:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Turborepo** for task orchestration and caching
+- **npm workspaces** for dependency management
+- **Shared packages** for code reuse across applications
+- **TypeScript** for type safety across the entire codebase
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Each application is independently deployable and can be developed in isolation while sharing common utilities and components from the `packages/` directory.

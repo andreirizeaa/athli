@@ -38,7 +38,17 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "react-native-vision-camera",
+      "expo-notifications",
+      "expo-secure-store",
+      "expo-tracking-transparency",
+      "expo-localization",
+      "expo-background-task",
+      "expo-mail-composer",
+      "expo-build-properties",
+      "expo-dynamic-app-icon",
+      "expo-quick-actions"
     ],
     "experiments": {
       "typedRoutes": true
