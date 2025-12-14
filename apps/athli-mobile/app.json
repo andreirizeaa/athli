@@ -40,7 +40,6 @@
     "plugins": [
       "expo-router",
       "react-native-vision-camera",
-      "expo-av",
       "expo-notifications",
       "expo-secure-store",
       "expo-tracking-transparency",
