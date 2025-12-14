@@ -181,6 +181,16 @@ function RootLayoutNav() {
             }),
           }}
         />
+        <Stack.Screen
+          name="camera"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            gestureDirection: 'vertical',
+            animationDuration: 250,
+          }}
+        />
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
       </Stack>

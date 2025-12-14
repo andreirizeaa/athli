@@ -118,15 +118,6 @@ export default function ChatDetailScreen() {
     };
   }, [id, chatParam, messagesParam]);
 
-  useEffect(() => {
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setShowAttachmentPicker(false);
-    });
-
-    return () => {
-      keyboardDidHideListener.remove();
-    };
-  }, []);
 
   const handleBackPress = () => {
     router.back();
@@ -435,7 +426,11 @@ export default function ChatDetailScreen() {
           </TouchableOpacity>
         ) : (
           <>
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              activeOpacity={0.7}
+              onPress={() => router.push('/camera')}
+            >
               <PlatformIcon
                 sf="camera"
                 IconComponent={Camera}

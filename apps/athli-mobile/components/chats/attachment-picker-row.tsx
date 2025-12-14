@@ -1,6 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Image, Video, FileText, Camera } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -13,22 +16,79 @@ type AttachmentPickerRowProps = {
 };
 
 export const AttachmentPickerRow = ({ backgroundColor, hideVideos = false, hideCamera = false }: AttachmentPickerRowProps) => {
+  const router = useRouter();
   const { colors: themeColors } = useThemePreference();
 
-  const handlePhotoPress = () => {
-    // TODO: Implement photo selection
+  const handlePhotoPress = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant permission to access your photos.');
+        return;
+      }
+
+      // Open image picker for photos
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        // TODO: Handle selected photo
+        console.log('Selected photo:', result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error picking photo:', error);
+    }
   };
 
-  const handleVideoPress = () => {
-    // TODO: Implement video selection
+  const handleVideoPress = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant permission to access your videos.');
+        return;
+      }
+
+      // Open image picker for videos
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        // TODO: Handle selected video
+        console.log('Selected video:', result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error picking video:', error);
+    }
   };
 
-  const handleDocumentPress = () => {
-    // TODO: Implement document selection
+  const handleDocumentPress = async () => {
+    try {
+      // Open document picker
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (!result.canceled) {
+        // TODO: Handle selected document
+        console.log('Selected document:', result.assets[0]);
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+    }
   };
 
   const handleCameraPress = () => {
-    // TODO: Implement camera capture
+    router.push('/camera');
   };
 
   return (

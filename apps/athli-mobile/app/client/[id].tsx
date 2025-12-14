@@ -128,15 +128,6 @@ export default function ClientDetailScreen() {
     }
   };
 
-  useEffect(() => {
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setShowAttachmentPicker(false);
-    });
-
-    return () => {
-      keyboardDidHideListener.remove();
-    };
-  }, []);
 
   const dropdownOptions: DropdownMenuOption[] = [
     {
@@ -465,30 +456,17 @@ export default function ClientDetailScreen() {
                 />
               </TouchableOpacity>
             ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  activeOpacity={0.7}
-                >
-                  <PlatformIcon
-                    sf="camera"
-                    IconComponent={Camera}
-                    size={iconSizes.tabBarIcons - 2}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  activeOpacity={0.7}
-                >
-                  <PlatformIcon
-                    sf="mic"
-                    IconComponent={Mic}
-                    size={iconSizes.tabBarIcons - 2}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
-              </>
+              <TouchableOpacity
+                style={styles.iconButton}
+                activeOpacity={0.7}
+              >
+                <PlatformIcon
+                  sf="mic"
+                  IconComponent={Mic}
+                  size={iconSizes.tabBarIcons - 2}
+                  color={iconColor}
+                />
+              </TouchableOpacity>
             )}
           </KeyboardAwareToolbar>
         </View>
