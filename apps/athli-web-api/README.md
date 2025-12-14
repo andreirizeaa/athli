@@ -1,4 +1,4 @@
-# API Backend
+# Athli Web API
 
 A scalable, production-ready Express.js API built with TypeScript, following best practices for performance, security, and maintainability.
 
@@ -42,11 +42,12 @@ api/
 ### Prerequisites
 
 - Node.js 20 LTS or higher
-- npm
+- npm 10.0.0 or higher
 
 ### Installation
 
-1. Install dependencies:
+Dependencies are installed at the root level. If you need to install dependencies for this app specifically:
+
 ```bash
 npm install
 ```
@@ -70,7 +71,7 @@ Run the development server with hot reload:
 npm run dev
 ```
 
-The API will be available at `http://localhost:3000`
+The API will be available at **http://localhost:3000**
 
 ### Build
 

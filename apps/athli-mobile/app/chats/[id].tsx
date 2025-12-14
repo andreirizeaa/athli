@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send, X } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -13,6 +14,7 @@ import { MessageInputBar } from '@/components/message-input-bar';
 import { MessageList } from '@/components/chats/message-list';
 import { MessageReactionsSheet } from '@/components/chats/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
+import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 import {
   getChats,
   getArchivedChats,
@@ -26,10 +28,17 @@ import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 
 export default function ChatDetailScreen() {
   const router = useRouter();
-  const { id, chat: chatParam, messages: messagesParam } = useLocalSearchParams<{
+  const { id, chat: chatParam, messages: messagesParam, documentSent, sentDocument, imagesSent, sentImages, sentImagesCaption, videoSent, sentVideo } = useLocalSearchParams<{
     id: string;
     chat?: string;
     messages?: string;
+    documentSent?: string;
+    sentDocument?: string;
+    imagesSent?: string;
+    sentImages?: string;
+    sentImagesCaption?: string;
+    videoSent?: string;
+    sentVideo?: string;
   }>();
 
   const { colors: themeColors } = useThemePreference();
@@ -68,9 +77,118 @@ export default function ChatDetailScreen() {
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
   const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
+  const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Handle document sent - add to message list and close attachment picker
+  useEffect(() => {
+    if (documentSent === 'true' && sentDocument) {
+      try {
+        const documentData = JSON.parse(sentDocument);
+        
+        // Create new message with document attachment
+        const newMessage: ChatMessage = {
+          id: `m-${Date.now()}`,
+          text: documentData.caption || '',
+          timestamp: new Date(),
+          isSent: true,
+          isRead: false,
+          document: {
+            uri: documentData.uri,
+            name: documentData.name,
+            mimeType: documentData.mimeType,
+            size: documentData.size ? parseInt(documentData.size) : undefined,
+          },
+        };
+
+        // Add message to the list
+        setMessages((prev) => [...prev, newMessage]);
+        
+        // Close attachment picker
+        setShowAttachmentPicker(false);
+        
+        // Clear the params
+        router.setParams({ documentSent: undefined, sentDocument: undefined } as any);
+      } catch (error) {
+        console.error('Error parsing sent document:', error);
+        // Still close the picker even if parsing fails
+        setShowAttachmentPicker(false);
+        router.setParams({ documentSent: undefined, sentDocument: undefined } as any);
+      }
+    }
+  }, [documentSent, sentDocument, router]);
+
+  // Handle images sent - add to message list and close attachment picker
+  useEffect(() => {
+    if (imagesSent === 'true' && sentImages) {
+      try {
+        const imageAttachments = JSON.parse(sentImages);
+        
+        // Create new message with image attachments
+        const newMessage: ChatMessage = {
+          id: `m-${Date.now()}`,
+          text: sentImagesCaption || '',
+          timestamp: new Date(),
+          isSent: true,
+          isRead: false,
+          images: imageAttachments,
+        };
+
+        // Add message to the list
+        setMessages((prev) => [...prev, newMessage]);
+        
+        // Close attachment picker
+        setShowAttachmentPicker(false);
+        
+        // Clear the params
+        router.setParams({ imagesSent: undefined, sentImages: undefined, sentImagesCaption: undefined } as any);
+      } catch (error) {
+        console.error('Error parsing sent images:', error);
+        // Still close the picker even if parsing fails
+        setShowAttachmentPicker(false);
+        router.setParams({ imagesSent: undefined, sentImages: undefined, sentImagesCaption: undefined } as any);
+      }
+    }
+  }, [imagesSent, sentImages, sentImagesCaption, router]);
+
+  // Handle video sent - add to message list and close attachment picker
+  useEffect(() => {
+    if (videoSent === 'true' && sentVideo) {
+      try {
+        const videoData = JSON.parse(sentVideo);
+        
+        // Create new message with video attachment
+        const newMessage: ChatMessage = {
+          id: `m-${Date.now()}`,
+          text: videoData.caption || '',
+          timestamp: new Date(),
+          isSent: true,
+          isRead: false,
+          video: {
+            uri: videoData.uri,
+            duration: videoData.duration,
+            orientation: videoData.orientation,
+          },
+        };
+
+        // Add message to the list
+        setMessages((prev) => [...prev, newMessage]);
+        
+        // Close attachment picker
+        setShowAttachmentPicker(false);
+        
+        // Clear the params
+        router.setParams({ videoSent: undefined, sentVideo: undefined } as any);
+      } catch (error) {
+        console.error('Error parsing sent video:', error);
+        // Still close the picker even if parsing fails
+        setShowAttachmentPicker(false);
+        router.setParams({ videoSent: undefined, sentVideo: undefined } as any);
+      }
+    }
+  }, [videoSent, sentVideo, router]);
 
   const headerBackgroundColor = themeColors.headerBackground;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -114,6 +232,7 @@ export default function ChatDetailScreen() {
       mounted = false;
     };
   }, [id, chatParam, messagesParam]);
+
 
   const handleBackPress = () => {
     router.back();
@@ -159,6 +278,22 @@ export default function ChatDetailScreen() {
   const handleCancelReply = () => {
     setReplyingToMessage(null);
     Keyboard.dismiss();
+  };
+
+  const handlePlusPress = () => {
+    if (showAttachmentPicker) {
+      // Close attachment picker (keep keyboard open)
+      setShowAttachmentPicker(false);
+    } else {
+      // Open keyboard if not already open
+      inputRef.current?.focus();
+      // Show attachment picker
+      setShowAttachmentPicker(true);
+    }
+  };
+
+  const handleCloseAttachmentPicker = () => {
+    setShowAttachmentPicker(false);
   };
 
   // Helper function to find the original message in a reply chain
@@ -215,6 +350,57 @@ export default function ChatDetailScreen() {
   const handleReactionPress = (message: ChatMessage) => {
     setSelectedMessageForReactions(message);
     setReactionsSheetVisible(true);
+  };
+
+  const handleDocumentPress = (document: import('@/services/chats-service').DocumentAttachment) => {
+    router.push({
+      pathname: '/document-preview',
+      params: {
+        uri: document.uri,
+        name: document.name,
+        mimeType: document.mimeType,
+        size: document.size?.toString() || '',
+        chatId: chat?.id || '',
+        clientId: chat?.clientId || '',
+        clientName: chat?.clientName || '',
+        fromMessage: 'true', // Flag to show download icon
+      },
+    });
+  };
+
+  const handleImagePress = (
+    images: import('@/services/chats-service').ImageAttachment[],
+    senderName: string,
+    isSent: boolean,
+    messageTimestamp?: Date
+  ) => {
+    router.push({
+      pathname: '/message-image-preview',
+      params: {
+        images: JSON.stringify(images),
+        senderName: senderName,
+        isSent: isSent.toString(),
+        messageTimestamp: messageTimestamp?.toISOString() || '',
+      },
+    });
+  };
+
+  const handleVideoPress = (
+    video: import('@/services/chats-service').VideoAttachment,
+    senderName: string,
+    isSent: boolean,
+    messageTimestamp?: Date
+  ) => {
+    router.push({
+      pathname: '/video-preview',
+      params: {
+        uri: video.uri,
+        duration: video.duration.toString(),
+        orientation: video.orientation,
+        fromMessage: 'true',
+        messageTimestamp: messageTimestamp?.toISOString() || '',
+      },
+    });
   };
 
   const handleReactionRemoved = (messageId: string, isSender: boolean) => {
@@ -360,12 +546,16 @@ export default function ChatDetailScreen() {
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
           onReactionPress={handleReactionPress}
+          onDocumentPress={handleDocumentPress}
+          onImagePress={handleImagePress}
+          onVideoPress={handleVideoPress}
         />
       </View>
 
       {/* ROW 3: TOOLBAR — EXACT original wrapper context (no extra safe-area / KAV wrappers) */}
       <KeyboardAwareToolbar
         backgroundColor={headerBackgroundColor}
+        contentStyle={{ paddingHorizontal: 16 }}
         replyPreview={
           replyingToMessage ? (
             <ReplyPreviewRow
@@ -376,11 +566,21 @@ export default function ChatDetailScreen() {
             />
           ) : undefined
         }
+        attachmentPicker={
+          showAttachmentPicker ? (
+            <AttachmentPickerRow
+              backgroundColor={headerBackgroundColor}
+              chatId={chat?.id}
+              clientId={chat?.clientId}
+              clientName={chat?.clientName}
+            />
+          ) : undefined
+        }
       >
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={handlePlusPress}>
           <PlatformIcon
-            sf="plus"
-            IconComponent={Plus}
+            sf={showAttachmentPicker ? "xmark.circle" : "plus"}
+            IconComponent={showAttachmentPicker ? X : Plus}
             size={iconSizes.tabBarIcons - 2}
             color={iconColor}
           />
@@ -401,7 +601,20 @@ export default function ChatDetailScreen() {
           </TouchableOpacity>
         ) : (
           <>
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              activeOpacity={0.7}
+              onPress={() =>
+                router.push({
+                  pathname: '/camera',
+                  params: {
+                    chatId: chat.id,
+                    clientId: chat.clientId,
+                    clientName: chat.clientName,
+                  },
+                })
+              }
+            >
               <PlatformIcon
                 sf="camera"
                 IconComponent={Camera}

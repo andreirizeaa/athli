@@ -1,12 +1,14 @@
-import React, { useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Archive, Trash2, MailCheck } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Archive, Trash2, MailCheck, CheckCircle } from 'lucide-react-native';
 
-import { typography } from '@/constants/typography';
+import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
-import type { Chat } from '@/services/chats-service';
+import { PlatformIcon } from '@/components/platform-icon';
+import { getChatMessages, type Chat, type ChatMessage } from '@/services/chats-service';
 
 type ChatListItemProps = {
   chat: Chat;
@@ -63,7 +65,22 @@ export const ChatListItem = ({
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isPressed, setIsPressed] = useState(false);
+  const [lastMessage, setLastMessage] = useState<ChatMessage | null>(null);
   const rowRef = useRef<View>(null);
+
+  useEffect(() => {
+    const loadLastMessage = async () => {
+      const messages = await getChatMessages(chat.id);
+      if (messages.length > 0) {
+        // Get the last message (most recent)
+        const sortedMessages = [...messages].sort(
+          (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+        );
+        setLastMessage(sortedMessages[0]);
+      }
+    };
+    loadLastMessage();
+  }, [chat.id]);
 
   const handlePress = () => {
     if (!dropdownVisible) {
@@ -222,15 +239,31 @@ export const ChatListItem = ({
               </View>
             </View>
             <View style={styles.messageFooter}>
-              <Text
-                style={[
-                  styles.lastMessage,
-                  { color: themeColors.mutedText },
-                ]}
-                numberOfLines={1}
-              >
-                {chat.lastMessage}
-              </Text>
+              <View style={styles.lastMessageContainer}>
+                {lastMessage?.isSent && (
+                  <View style={styles.readReceiptContainer}>
+                    <PlatformIcon
+                      sf="checkmark.circle"
+                      IconComponent={CheckCircle}
+                      size={iconSizes.extraSmallIcons}
+                      color={
+                        lastMessage.isRead
+                          ? themeColors.primary
+                          : themeColors.mutedText
+                      }
+                    />
+                  </View>
+                )}
+                <Text
+                  style={[
+                    styles.lastMessage,
+                    { color: themeColors.mutedText },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {lastMessage?.text || chat.lastMessage}
+                </Text>
+              </View>
               <View style={styles.rightColumn}>
                 {chat.unreadCount > 0 && (
                   <View
@@ -297,7 +330,7 @@ const styles = StyleSheet.create({
   },
   checkboxContainer: {
     width: 20,
-    height: 56,
+    height: 54,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -322,9 +355,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',
@@ -358,10 +391,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  lastMessageContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  readReceiptContainer: {
+    marginRight: 4,
+  },
   lastMessage: {
     ...typography.p3,
     flex: 1,
-    marginRight: 8,
   },
   rightColumn: {
     width: 60,
@@ -381,14 +422,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   separatorContainer: {
-    paddingLeft: 84, // 16 (content paddingHorizontal) + 56 (avatar) + 12 (marginRight)
+    paddingLeft: 82, // 16 (content paddingHorizontal) + 54 (avatar) + 12 (marginRight)
     paddingRight: 16,
   },
   separatorContainerEdit: {
-    paddingLeft: 116, // 16 (content paddingHorizontal) + 20 (checkbox) + 12 (marginRight) + 56 (avatar) + 12 (marginRight)
+    paddingLeft: 114, // 16 (content paddingHorizontal) + 20 (checkbox) + 12 (marginRight) + 54 (avatar) + 12 (marginRight)
     paddingRight: 16,
   },
   separator: {
-    height: 1,
+    height: 0.75,
   },
 });

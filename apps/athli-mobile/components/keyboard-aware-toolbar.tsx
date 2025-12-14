@@ -20,6 +20,7 @@ type KeyboardAwareToolbarProps = {
   containerStyle?: ViewStyle;
   onLayout?: (event: { nativeEvent: { layout: { height: number } } }) => void;
   replyPreview?: React.ReactNode;
+  attachmentPicker?: React.ReactNode;
 };
 
 export const KeyboardAwareToolbar = ({
@@ -31,6 +32,7 @@ export const KeyboardAwareToolbar = ({
   containerStyle,
   onLayout,
   replyPreview,
+  attachmentPicker,
 }: KeyboardAwareToolbarProps) => {
   const insets = useSafeAreaInsets();
   const { height } = useGradualAnimation();
@@ -38,8 +40,15 @@ export const KeyboardAwareToolbar = ({
   // Adjust base heights when reply preview is shown
   // Reply preview row adds approximately 54px (padding + 2 text lines + gap)
   const REPLY_PREVIEW_HEIGHT = 54;
-  const adjustedClosedBaseHeight = replyPreview ? closedBaseHeight + REPLY_PREVIEW_HEIGHT : closedBaseHeight;
-  const adjustedOpenBaseHeight = replyPreview ? openBaseHeight + REPLY_PREVIEW_HEIGHT : openBaseHeight;
+  // Attachment picker row adds approximately 112px (paddingVertical 32px + icon circle 56px + gap 8px + text ~16px)
+  const ATTACHMENT_PICKER_HEIGHT = 112;
+  
+  let heightAdjustment = 0;
+  if (replyPreview) heightAdjustment += REPLY_PREVIEW_HEIGHT;
+  if (attachmentPicker) heightAdjustment += ATTACHMENT_PICKER_HEIGHT;
+  
+  const adjustedClosedBaseHeight = closedBaseHeight + heightAdjustment;
+  const adjustedOpenBaseHeight = openBaseHeight + heightAdjustment;
 
   const containerAnimatedStyle = useAnimatedStyle(() => {
     'worklet';
@@ -78,6 +87,7 @@ export const KeyboardAwareToolbar = ({
       <View style={[styles.content, contentStyle]}>
         {children}
       </View>
+      {attachmentPicker}
     </Animated.View>
   );
 };
@@ -90,7 +100,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   content: {
-    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
