@@ -417,6 +417,7 @@ export default function ClientDetailScreen() {
           {/* Bottom bar – anchored to screen bottom, grows upward */}
           <KeyboardAwareToolbar
             backgroundColor={headerBackgroundColor}
+            contentStyle={{ paddingHorizontal: 16 }}
             attachmentPicker={
               showAttachmentPicker ? (
                 <AttachmentPickerRow backgroundColor={headerBackgroundColor} hideVideos hideCamera />

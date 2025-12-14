@@ -261,6 +261,48 @@ export const createNewChat = async (
   return newChat;
 };
 
+/**
+ * Service method to send an image message
+ * This will be connected to the backend in the future
+ */
+export const sendImageMessage = async (
+  chatId: string,
+  imageBytes: Uint8Array | Uint8Array[],
+  caption?: string
+): Promise<void> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const formData = new FormData();
+  // formData.append('chatId', chatId);
+  // const images = Array.isArray(imageBytes) ? imageBytes : [imageBytes];
+  // images.forEach((bytes, index) => {
+  //   formData.append(`image${index}`, {
+  //     uri: imageUri,
+  //     type: 'image/jpeg',
+  //     name: `photo${index}.jpg`,
+  //   } as any);
+  // });
+  // if (caption) {
+  //   formData.append('caption', caption);
+  // }
+  // const response = await fetch(`/api/chats/${chatId}/messages/image`, {
+  //   method: 'POST',
+  //   body: formData,
+  // })
+  // if (!response.ok) throw new Error('Failed to send image message')
+  // return await response.json()
+
+  const images = Array.isArray(imageBytes) ? imageBytes : [imageBytes];
+  console.log('Sending image message:', {
+    chatId,
+    imageCount: images.length,
+    totalSize: images.reduce((sum, bytes) => sum + bytes.length, 0),
+    caption,
+  });
+};
+
 // Mock chats data
 const mockChats: Chat[] = [
   {

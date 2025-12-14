@@ -100,7 +100,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   content: {
-    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
