@@ -1,3 +1,10 @@
+export interface DocumentAttachment {
+  uri: string;
+  name: string;
+  mimeType: string;
+  size?: number;
+}
+
 export interface ChatMessage {
   id: string;
   text: string;
@@ -7,6 +14,7 @@ export interface ChatMessage {
   senderReaction?: string; // emoji string if sender has reacted
   recipientReaction?: string; // emoji string if recipient has reacted
   replyTo?: ChatMessage; // The message this is replying to
+  document?: DocumentAttachment; // Document attachment if this message has a document
 }
 
 export interface Chat {

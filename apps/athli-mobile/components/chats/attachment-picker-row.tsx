@@ -13,9 +13,19 @@ type AttachmentPickerRowProps = {
   backgroundColor?: string;
   hideVideos?: boolean;
   hideCamera?: boolean;
+  chatId?: string;
+  clientId?: string;
+  clientName?: string;
 };
 
-export const AttachmentPickerRow = ({ backgroundColor, hideVideos = false, hideCamera = false }: AttachmentPickerRowProps) => {
+export const AttachmentPickerRow = ({
+  backgroundColor,
+  hideVideos = false,
+  hideCamera = false,
+  chatId,
+  clientId,
+  clientName,
+}: AttachmentPickerRowProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
 
@@ -71,16 +81,40 @@ export const AttachmentPickerRow = ({ backgroundColor, hideVideos = false, hideC
 
   const handleDocumentPress = async () => {
     try {
-      // Open document picker
+      // Open document picker - exclude images and videos (MP4)
       const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
+        type: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+          'text/plain',
+          'text/csv',
+          'application/rtf',
+        ],
         copyToCacheDirectory: true,
         multiple: false,
       });
 
-      if (!result.canceled) {
-        // TODO: Handle selected document
-        console.log('Selected document:', result.assets[0]);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        
+        // Navigate to document preview screen
+        router.push({
+          pathname: '/document-preview',
+          params: {
+            uri: asset.uri,
+            name: asset.name || 'Document',
+            mimeType: asset.mimeType || '',
+            size: asset.size?.toString() || '',
+            chatId: chatId || '',
+            clientId: clientId || '',
+            clientName: clientName || '',
+          },
+        });
       }
     } catch (error) {
       console.error('Error picking document:', error);

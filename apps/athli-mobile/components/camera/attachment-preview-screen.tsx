@@ -7,7 +7,7 @@ import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
-import { CameraPreviewToolbar } from '@/components/camera/camera-preview-toolbar';
+import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 
 type ImageData = {
   uri: string;
@@ -21,7 +21,7 @@ type VideoData = {
   orientation: 'portrait' | 'landscape';
 };
 
-type CameraPreviewScreenProps = {
+type AttachmentPreviewScreenProps = {
   images?: ImageData[];
   selectedImageId?: string;
   video?: VideoData;
@@ -35,7 +35,7 @@ type CameraPreviewScreenProps = {
   onDeleteImage?: (imageId: string) => void;
 };
 
-export const CameraPreviewScreen = ({
+export const AttachmentPreviewScreen = ({
   images,
   selectedImageId,
   video,
@@ -149,7 +149,7 @@ export const CameraPreviewScreen = ({
 
             {/* Bottom section with toolbar */}
             <View style={styles.toolbarWrapper} pointerEvents="box-none">
-              <CameraPreviewToolbar
+              <AttachmentPreviewToolbar
                 value={caption}
                 onChangeText={onCaptionChange}
                 clientName={clientName}
@@ -249,7 +249,7 @@ export const CameraPreviewScreen = ({
         </View>
 
         {/* Bottom section with toolbar */}
-        <CameraPreviewToolbar
+        <AttachmentPreviewToolbar
           value={caption}
           onChangeText={onCaptionChange}
           clientName={clientName}

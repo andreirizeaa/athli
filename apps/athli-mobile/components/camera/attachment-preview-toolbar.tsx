@@ -9,14 +9,14 @@ import { PlatformIcon } from '@/components/platform-icon';
 import { MessageInputBar } from '@/components/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 
-type CameraPreviewToolbarProps = {
+type AttachmentPreviewToolbarProps = {
   value: string;
   onChangeText: (text: string) => void;
   clientName?: string;
   onSend: () => void;
 };
 
-export const CameraPreviewToolbar = ({
+export const AttachmentPreviewToolbar = ({
   value,
   onChangeText,
   clientName,

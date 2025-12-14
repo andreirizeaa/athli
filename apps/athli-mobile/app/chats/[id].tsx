@@ -237,6 +237,22 @@ export default function ChatDetailScreen() {
     setReactionsSheetVisible(true);
   };
 
+  const handleDocumentPress = (document: import('@/services/chats-service').DocumentAttachment) => {
+    router.push({
+      pathname: '/document-preview',
+      params: {
+        uri: document.uri,
+        name: document.name,
+        mimeType: document.mimeType,
+        size: document.size?.toString() || '',
+        chatId: chat?.id || '',
+        clientId: chat?.clientId || '',
+        clientName: chat?.clientName || '',
+        fromMessage: 'true', // Flag to show download icon
+      },
+    });
+  };
+
   const handleReactionRemoved = (messageId: string, isSender: boolean) => {
     setMessages((prev) =>
       prev.map((msg) => {
@@ -380,6 +396,7 @@ export default function ChatDetailScreen() {
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
           onReactionPress={handleReactionPress}
+          onDocumentPress={handleDocumentPress}
         />
       </View>
 
@@ -399,7 +416,12 @@ export default function ChatDetailScreen() {
         }
         attachmentPicker={
           showAttachmentPicker ? (
-            <AttachmentPickerRow backgroundColor={headerBackgroundColor} />
+            <AttachmentPickerRow
+              backgroundColor={headerBackgroundColor}
+              chatId={chat?.id}
+              clientId={chat?.clientId}
+              clientName={chat?.clientName}
+            />
           ) : undefined
         }
       >

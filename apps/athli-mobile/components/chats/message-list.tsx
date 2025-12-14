@@ -25,6 +25,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
 import { MessageReplyPreview } from '@/components/chats/message-reply-preview';
+import { MessageDocumentPreview } from '@/components/chats/message-document-preview';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 
 interface MessageListProps {
@@ -36,6 +37,7 @@ interface MessageListProps {
   onEdit?: (message: ChatMessage) => void;
   onDelete?: (message: ChatMessage) => void;
   onReactionPress?: (message: ChatMessage) => void;
+  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
 }
 
 const ZWSP = '\u200B';
@@ -82,6 +84,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   isLastInSenderRun,
   clientName,
   onReplyPreviewPress,
+  onDocumentPress,
   flashOpacity,
 }: {
   item: ChatMessage;
@@ -94,6 +97,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   isLastInSenderRun: boolean;
   clientName: string;
   onReplyPreviewPress?: (messageId: string) => void;
+  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
   flashOpacity?: Animated.Value;
 }) {
   const [metaWidth, setMetaWidth] = useState(0);
@@ -159,6 +163,23 @@ const BubbleMeta = React.memo(function BubbleMeta({
           isParentSent={item.isSent}
           onPress={() => {
             onReplyPreviewPress?.(originalMessage.id);
+          }}
+        />
+      )}
+
+      {/* Document preview if this message has a document */}
+      {item.document && onDocumentPress && (
+        <MessageDocumentPreview
+          document={item.document}
+          themeColors={themeColors}
+          parentBackgroundColor={
+            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+          }
+          isParentSent={item.isSent}
+          onPress={() => {
+            if (item.document) {
+              onDocumentPress(item.document);
+            }
           }}
         />
       )}
@@ -401,6 +422,7 @@ export const MessageList = ({
   onEdit,
   onDelete,
   onReactionPress,
+  onDocumentPress,
 }: MessageListProps) => {
   const { t } = useTranslations();
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -882,6 +904,7 @@ export const MessageList = ({
               isLastInSenderRun={isLastInSenderRun}
               clientName={clientName}
               onReplyPreviewPress={handleReplyPreviewPress}
+              onDocumentPress={onDocumentPress}
               flashOpacity={flashAnimations.current[item.id]}
             />
           </SwipeToReplyBubble>

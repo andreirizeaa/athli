@@ -10,7 +10,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
-import { CameraPreviewScreen } from './camera-preview-screen';
+import { AttachmentPreviewScreen } from './attachment-preview-screen';
 import { sendImageMessage, sendVideoMessage } from '@/services/chats-service';
 
 export default function Camera() {
@@ -611,7 +611,7 @@ export default function Camera() {
   // Show preview UI when video is captured
   if (capturedVideo) {
     return (
-      <CameraPreviewScreen
+      <AttachmentPreviewScreen
         video={capturedVideo}
         caption={caption}
         onCaptionChange={setCaption}
@@ -626,7 +626,7 @@ export default function Camera() {
   if (capturedPhotos.length > 0 && !isAddingMore) {
     const selectedPhoto = capturedPhotos.find((p) => p.id === selectedImageId) || capturedPhotos[0];
     return (
-      <CameraPreviewScreen
+      <AttachmentPreviewScreen
         images={capturedPhotos}
         selectedImageId={selectedImageId || capturedPhotos[0].id}
         caption={caption}
