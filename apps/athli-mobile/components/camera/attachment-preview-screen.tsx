@@ -47,7 +47,7 @@ export const AttachmentPreviewScreen = ({
   onAddMore,
   onImageSelected,
   onDeleteImage,
-}: CameraPreviewScreenProps) => {
+}: AttachmentPreviewScreenProps) => {
   const { colors: themeColors } = useThemePreference();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
@@ -71,7 +71,7 @@ export const AttachmentPreviewScreen = ({
   const gap = 8;
   const scrollableWidth = screenWidth - addButtonWidth - horizontalPadding - gap;
 
-  const selectedImage = images?.find((img) => img.id === selectedImageId) || images?.[0];
+  const selectedImage = images?.find((img: ImageData) => img.id === selectedImageId) || images?.[0];
   const inactiveBorderColor = '#FFFFFF';
 
   const formatTime = (seconds: number): string => {
@@ -193,7 +193,7 @@ export const AttachmentPreviewScreen = ({
             contentContainerStyle={styles.galleryScrollContent}
             style={styles.galleryScroll}
           >
-            {images.map((image) => {
+            {images.map((image: ImageData) => {
               const isSelected = selectedImageId === image.id;
               return (
                 <TouchableOpacity

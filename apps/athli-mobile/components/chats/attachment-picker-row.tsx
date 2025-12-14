@@ -4,6 +4,7 @@ import { Image, Video, FileText, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -38,19 +39,42 @@ export const AttachmentPickerRow = ({
         return;
       }
 
-      // Open image picker for photos
+      // Open image picker for photos with multi-select enabled
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsMultipleSelection: false,
+        allowsMultipleSelection: true,
         quality: 1,
       });
 
-      if (!result.canceled) {
-        // TODO: Handle selected photo
-        console.log('Selected photo:', result.assets[0]);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Convert selected images to ImageAttachment format
+        const imageAttachments = result.assets
+          .map((asset, index) => {
+            if (!asset.uri) return null;
+            return {
+              uri: asset.uri,
+              id: `photo-${Date.now()}-${index}-${Math.random()}`,
+            };
+          })
+          .filter((img) => img !== null);
+
+        if (imageAttachments.length > 0) {
+          // Navigate to message-image-preview screen
+          router.push({
+            pathname: '/message-image-preview',
+            params: {
+              images: JSON.stringify(imageAttachments),
+              chatId: chatId || '',
+              clientId: clientId || '',
+              clientName: clientName || '',
+              fromPicker: 'true', // Flag to indicate this is from the picker, not viewing a message
+            },
+          });
+        }
       }
     } catch (error) {
       console.error('Error picking photo:', error);
+      Alert.alert('Error', 'Failed to load photos. Please try again.');
     }
   };
 
@@ -70,9 +94,22 @@ export const AttachmentPickerRow = ({
         quality: 1,
       });
 
-      if (!result.canceled) {
-        // TODO: Handle selected video
-        console.log('Selected video:', result.assets[0]);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (asset.uri) {
+          // Navigate to video preview screen
+          router.push({
+            pathname: '/video-preview',
+            params: {
+              uri: asset.uri,
+              duration: (asset.duration || 0).toString(),
+              orientation: asset.width && asset.height && asset.width > asset.height ? 'landscape' : 'portrait',
+              chatId: chatId || '',
+              clientId: clientId || '',
+              clientName: clientName || '',
+            },
+          });
+        }
       }
     } catch (error) {
       console.error('Error picking video:', error);
@@ -81,20 +118,9 @@ export const AttachmentPickerRow = ({
 
   const handleDocumentPress = async () => {
     try {
-      // Open document picker - exclude images and videos (MP4)
+      // Open document picker - only allow PDFs
       const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-          'application/vnd.ms-excel',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-          'application/vnd.ms-powerpoint',
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
-          'text/plain',
-          'text/csv',
-          'application/rtf',
-        ],
+        type: 'application/pdf',
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -177,7 +203,7 @@ export const AttachmentPickerRow = ({
           style={styles.attachmentButton}
           activeOpacity={0.7}
           onPress={handleDocumentPress}
-          accessibilityLabel="Select document"
+          accessibilityLabel="Select PDF"
           accessibilityRole="button"
         >
           <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
@@ -188,7 +214,7 @@ export const AttachmentPickerRow = ({
               color={themeColors.primary}
             />
           </View>
-          <Text style={[styles.subtitle, { color: themeColors.text }]}>Documents</Text>
+          <Text style={[styles.subtitle, { color: themeColors.text }]}>PDFs</Text>
         </TouchableOpacity>
 
         {!hideCamera && (

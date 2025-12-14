@@ -5,6 +5,17 @@ export interface DocumentAttachment {
   size?: number;
 }
 
+export interface ImageAttachment {
+  uri: string;
+  id: string;
+}
+
+export interface VideoAttachment {
+  uri: string;
+  duration: number;
+  orientation: 'portrait' | 'landscape';
+}
+
 export interface ChatMessage {
   id: string;
   text: string;
@@ -15,6 +26,8 @@ export interface ChatMessage {
   recipientReaction?: string; // emoji string if recipient has reacted
   replyTo?: ChatMessage; // The message this is replying to
   document?: DocumentAttachment; // Document attachment if this message has a document
+  images?: ImageAttachment[]; // Image attachments if this message has images
+  video?: VideoAttachment; // Video attachment if this message has a video
 }
 
 export interface Chat {
@@ -307,6 +320,47 @@ export const sendImageMessage = async (
     chatId,
     imageCount: images.length,
     totalSize: images.reduce((sum, bytes) => sum + bytes.length, 0),
+    caption,
+  });
+};
+
+/**
+ * Service method to send a document message
+ * This will be connected to the backend in the future
+ */
+export const sendDocumentMessage = async (
+  chatId: string,
+  documentBytes: Uint8Array,
+  documentName: string,
+  mimeType: string,
+  caption?: string
+): Promise<void> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const formData = new FormData();
+  // formData.append('chatId', chatId);
+  // formData.append('document', {
+  //   uri: documentUri,
+  //   type: mimeType,
+  //   name: documentName,
+  // } as any);
+  // if (caption) {
+  //   formData.append('caption', caption);
+  // }
+  // const response = await fetch(`/api/chats/${chatId}/messages/document`, {
+  //   method: 'POST',
+  //   body: formData,
+  // })
+  // if (!response.ok) throw new Error('Failed to send document message')
+  // return await response.json()
+
+  console.log('Sending document message:', {
+    chatId,
+    documentName,
+    mimeType,
+    size: documentBytes.length,
     caption,
   });
 };
