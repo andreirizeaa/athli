@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send } from 'lucide-react-native';
+import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send, X } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -13,6 +14,7 @@ import { MessageInputBar } from '@/components/message-input-bar';
 import { MessageList } from '@/components/chats/message-list';
 import { MessageReactionsSheet } from '@/components/chats/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
+import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 import {
   getChats,
   getArchivedChats,
@@ -68,6 +70,7 @@ export default function ChatDetailScreen() {
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
   const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
+  const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -115,6 +118,16 @@ export default function ChatDetailScreen() {
     };
   }, [id, chatParam, messagesParam]);
 
+  useEffect(() => {
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setShowAttachmentPicker(false);
+    });
+
+    return () => {
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
   const handleBackPress = () => {
     router.back();
   };
@@ -159,6 +172,22 @@ export default function ChatDetailScreen() {
   const handleCancelReply = () => {
     setReplyingToMessage(null);
     Keyboard.dismiss();
+  };
+
+  const handlePlusPress = () => {
+    if (showAttachmentPicker) {
+      // Close attachment picker (keep keyboard open)
+      setShowAttachmentPicker(false);
+    } else {
+      // Open keyboard if not already open
+      inputRef.current?.focus();
+      // Show attachment picker
+      setShowAttachmentPicker(true);
+    }
+  };
+
+  const handleCloseAttachmentPicker = () => {
+    setShowAttachmentPicker(false);
   };
 
   // Helper function to find the original message in a reply chain
@@ -376,11 +405,16 @@ export default function ChatDetailScreen() {
             />
           ) : undefined
         }
+        attachmentPicker={
+          showAttachmentPicker ? (
+            <AttachmentPickerRow backgroundColor={headerBackgroundColor} />
+          ) : undefined
+        }
       >
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={handlePlusPress}>
           <PlatformIcon
-            sf="plus"
-            IconComponent={Plus}
+            sf={showAttachmentPicker ? "xmark.circle" : "plus"}
+            IconComponent={showAttachmentPicker ? X : Plus}
             size={iconSizes.tabBarIcons - 2}
             color={iconColor}
           />

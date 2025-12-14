@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target, Plus, Camera, Mic, Send, MessageCircle } from 'lucide-react-native';
+import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target, Plus, Camera, Mic, Send, MessageCircle, X } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -20,6 +21,7 @@ import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
 import { MessageInputBar } from '@/components/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
+import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 
 export default function ClientDetailScreen() {
   const router = useRouter();
@@ -31,7 +33,9 @@ export default function ClientDetailScreen() {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const actionButtonRef = useRef<View>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -112,6 +116,28 @@ export default function ClientDetailScreen() {
     // TODO: Implement archive client action
   };
 
+  const handlePlusPress = () => {
+    if (showAttachmentPicker) {
+      // Close attachment picker (keep keyboard open)
+      setShowAttachmentPicker(false);
+    } else {
+      // Open keyboard if not already open
+      inputRef.current?.focus();
+      // Show attachment picker
+      setShowAttachmentPicker(true);
+    }
+  };
+
+  useEffect(() => {
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setShowAttachmentPicker(false);
+    });
+
+    return () => {
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
   const dropdownOptions: DropdownMenuOption[] = [
     {
       label: 'Edit details',
@@ -147,6 +173,15 @@ export default function ClientDetailScreen() {
               color={iconColor}
             />
           </TouchableOpacity>
+          <View style={styles.avatarContainer}>
+            <View
+              style={[
+                styles.avatar,
+                styles.avatarPlaceholder,
+                { backgroundColor: themeColors.border },
+              ]}
+            />
+          </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Loading...</Text>
           <View
             ref={actionButtonRef}
@@ -199,6 +234,15 @@ export default function ClientDetailScreen() {
               color={iconColor}
             />
           </TouchableOpacity>
+          <View style={styles.avatarContainer}>
+            <View
+              style={[
+                styles.avatar,
+                styles.avatarPlaceholder,
+                { backgroundColor: themeColors.border },
+              ]}
+            />
+          </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Client Not Found</Text>
           <View
             ref={actionButtonRef}
@@ -251,6 +295,21 @@ export default function ClientDetailScreen() {
               color={iconColor}
             />
           </TouchableOpacity>
+
+          <View style={styles.avatarContainer}>
+            {client.avatar ? (
+              <Image source={{ uri: client.avatar }} style={styles.avatar} />
+            ) : (
+              <View
+                style={[
+                  styles.avatar,
+                  styles.avatarPlaceholder,
+                  { backgroundColor: themeColors.border },
+                ]}
+              />
+            )}
+          </View>
+
           <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
             {client.fullName}
           </Text>
@@ -367,20 +426,27 @@ export default function ClientDetailScreen() {
           {/* Bottom bar – anchored to screen bottom, grows upward */}
           <KeyboardAwareToolbar
             backgroundColor={headerBackgroundColor}
+            attachmentPicker={
+              showAttachmentPicker ? (
+                <AttachmentPickerRow backgroundColor={headerBackgroundColor} hideVideos hideCamera />
+              ) : undefined
+            }
           >
             <TouchableOpacity
               style={styles.iconButton}
               activeOpacity={0.7}
+              onPress={handlePlusPress}
             >
               <PlatformIcon
-                sf="plus"
-                IconComponent={Plus}
+                sf={showAttachmentPicker ? "xmark.circle" : "plus"}
+                IconComponent={showAttachmentPicker ? X : Plus}
                 size={iconSizes.tabBarIcons - 2}
                 color={iconColor}
               />
             </TouchableOpacity>
             <View style={styles.searchBarContainer}>
               <MessageInputBar
+                ref={inputRef}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder=""
@@ -526,12 +592,23 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    marginRight: 12,
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 22,
+  },
+  avatarPlaceholder: {
+    backgroundColor: '#e0e0e0',
   },
   headerTitle: {
     ...typography.h5,
     flex: 1,
-    textAlign: 'left',
-    marginLeft: 12,
+    marginRight: 12,
   },
   actionButtonContainer: {
     flexDirection: 'row',
