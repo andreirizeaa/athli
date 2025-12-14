@@ -1,1 +1,5 @@
-export { default } from '@/components/camera/camera';
+import Camera from '@/components/camera/camera';
+
+export default function CameraPage() {
+  return <Camera />;
+}
