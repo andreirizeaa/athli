@@ -290,48 +290,13 @@ export default function Camera() {
   };
 
   const handleButtonPressIn = () => {
-    if (!isVideoMode) {
-      setIsButtonPressed(true);
-      setRecordingTime(0);
-      setIsRecording(true);
-      // Start timer
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-      Animated.parallel([
-        Animated.spring(buttonScale, {
-          toValue: 1.2,
-          useNativeDriver: true,
-        }),
-        Animated.spring(innerCircleScale, {
-          toValue: 1.2,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+    // Only handle press in for video mode
+    // Photo mode uses simple tap (handleButtonPress)
   };
 
   const handleButtonPressOut = () => {
-    if (!isVideoMode) {
-      setIsButtonPressed(false);
-      setIsRecording(false);
-      // Stop timer
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
-      setRecordingTime(0);
-      Animated.parallel([
-        Animated.spring(buttonScale, {
-          toValue: 1,
-          useNativeDriver: true,
-        }),
-        Animated.spring(innerCircleScale, {
-          toValue: 1,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+    // Only handle press out for video mode
+    // Photo mode uses simple tap (handleButtonPress)
   };
 
   const calculateTranslation = (isVideo: boolean) => {
