@@ -8,8 +8,9 @@ import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
-import { MessageInputBar } from '@/components/message-input-bar';
+import { MessageInputBar } from '@/components/chats/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
+import { useDarkModeTheme } from '../dark-mode-wrapper';
 
 type AttachmentPreviewToolbarProps = {
   value: string;
@@ -24,10 +25,10 @@ export const AttachmentPreviewToolbar = ({
   clientName,
   onSend,
 }: AttachmentPreviewToolbarProps) => {
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = true; // Always dark mode
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   
   // Create translucent background color for frosted glass effect (60% opacity)
