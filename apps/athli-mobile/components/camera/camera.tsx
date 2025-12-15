@@ -13,6 +13,7 @@ import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { AttachmentPreviewScreen } from './attachment-preview-screen';
 import { sendImageMessage, sendVideoMessage } from '@/services/chats-service';
 import { useDarkModeTheme } from '../dark-mode-wrapper';
@@ -756,13 +757,13 @@ export default function Camera() {
         >
         {/* Top header */}
         <View style={styles.topHeader}>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'xmark', IconComponent: X }}
             onPress={handleClose}
-          >
-            <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
           {(isVideoMode || isRecording) && (
             <View
               style={[
@@ -784,35 +785,28 @@ export default function Camera() {
               </Text>
             </View>
           )}
-          <TouchableOpacity
-            style={[
-              styles.flashButton,
-              {
-                backgroundColor: flashEnabled ? themeColors.primary : mutedSurfaceColor,
-              },
-            ]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{
+              sf: flashEnabled ? 'bolt.fill' : 'bolt.slash.fill',
+              IconComponent: flashEnabled ? Zap : ZapOff,
+            }}
             onPress={handleFlashToggle}
-          >
-            <PlatformIcon
-              sf={flashEnabled ? 'bolt.fill' : 'bolt.slash.fill'}
-              IconComponent={flashEnabled ? Zap : ZapOff}
-              size={iconSizes.tabBarIcons}
-              color={flashEnabled ? themeColors.primaryForeground : iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={flashEnabled ? themeColors.primaryForeground : iconColor}
+            backgroundColor={flashEnabled ? themeColors.primary : mutedSurfaceColor}
+          />
         </View>
 
         {/* Bottom controls */}
         <View style={[styles.bottomControls, { paddingBottom: insets.bottom + 36 }]}>
           {/* Photo button - bottom left */}
-          <TouchableOpacity
-            style={[styles.bottomButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'photo', IconComponent: Image }}
             onPress={handlePhotoPress}
-          >
-            <PlatformIcon sf="photo" IconComponent={Image} size={iconSizes.tabBarIcons} color={iconColor} />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
 
           {/* Record/Stop Button - Centered */}
           <View style={styles.recordButtonContainer}>
@@ -873,18 +867,13 @@ export default function Camera() {
               </TouchableOpacity>
             </Animated.View>
 
-            <TouchableOpacity
-              style={[styles.bottomButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'arrow.trianglehead.2.clockwise', IconComponent: RotateCw }}
               onPress={handleRotatePress}
-            >
-              <PlatformIcon
-                sf="arrow.trianglehead.2.clockwise"
-                IconComponent={RotateCw}
-                size={iconSizes.tabBarIcons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
           </View>
         </View>
 

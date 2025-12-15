@@ -12,6 +12,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton, DoubleIconButton } from '@/components/icon-button';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { MessageInputBar } from '@/components/chats/message-input-bar';
 import { MessageList } from '@/components/chats/message-list';
@@ -508,18 +509,13 @@ export default function ChatDetailScreen() {
           style={[styles.headerBlur, { paddingTop: insets.top, backgroundColor: translucentHeaderBg }]}
         >
           <View style={styles.header}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
-          >
-            <PlatformIcon
-              sf="chevron.left"
-              IconComponent={ChevronLeft}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
 
           <View style={styles.avatarContainer}>
             {chat.clientAvatar ? (
@@ -539,37 +535,16 @@ export default function ChatDetailScreen() {
             {chat.clientName}
           </Text>
 
-          <View
+          <DoubleIconButton
             ref={actionButtonRef}
-            collapsable={false}
-            style={[styles.actionButtonContainer, { backgroundColor: mutedSurfaceColor }]}
-          >
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleUserProfilePress}
-            >
-              <PlatformIcon
-                sf="person"
-                IconComponent={User}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleEllipsisPress}
-            >
-              <PlatformIcon
-                sf="ellipsis"
-                IconComponent={Ellipsis}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </View>
+            leftIcon={{ sf: 'person', IconComponent: User }}
+            rightIcon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
+            onLeftPress={handleUserProfilePress}
+            onRightPress={handleEllipsisPress}
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
         </View>
         </BlurView>
       </View>

@@ -11,6 +11,7 @@ import { X, Play, Download } from 'lucide-react-native';
 import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendVideoMessage } from '@/services/chats-service';
 import { useDarkModeTheme } from '@/components/dark-mode-wrapper';
@@ -198,13 +199,13 @@ export const VideoPreviewScreen = () => {
         {/* Top header */}
         <View style={styles.topHeader} pointerEvents="box-none">
           <View style={styles.leftHeaderContainer}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
               onPress={handleClose}
-            >
-              <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
           </View>
 
           {/* Center: Title - absolutely positioned to stay centered */}

@@ -7,6 +7,7 @@ import { X, Plus, Trash2 } from 'lucide-react-native';
 import { iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { useDarkModeTheme } from '../dark-mode-wrapper';
 
@@ -108,13 +109,13 @@ export const AttachmentPreviewScreen = ({
         >
           {/* Top header - only X button */}
           <View style={styles.topHeader}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
               onPress={onClose}
-            >
-              <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
           </View>
         </View>
 
