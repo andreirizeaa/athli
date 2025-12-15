@@ -907,10 +907,12 @@ export const MessageList = ({
   // When keyboard appears, make sure the latest messages are visible
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      if (!pinnedToBottomRef.current) return;
       requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-        offsetYRef.current = 0;
-        pinnedToBottomRef.current = true;
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({ offset: 0, animated: false });
+          offsetYRef.current = 0;
+        });
       });
     });
 
@@ -930,9 +932,9 @@ export const MessageList = ({
     prevToolbarHeightRef.current = toolbarHeight;
     if (!pinnedToBottomRef.current) return;
 
-    // Smoothly scroll to accommodate toolbar height change
+    // Instantly scroll to accommodate toolbar height change without extra animation
     requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
       offsetYRef.current = 0;
     });
   }, [toolbarHeight]);
