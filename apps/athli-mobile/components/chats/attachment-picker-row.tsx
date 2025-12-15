@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Image, Video, FileText, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -32,9 +32,19 @@ export const AttachmentPickerRow = ({
 }: AttachmentPickerRowProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
+  const slideAnim = useRef(new Animated.Value(0)).current;
   
   // Create translucent background color - more transparent since parent already has BlurView
   const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [slideAnim]);
 
   const handlePhotoPress = async () => {
     try {
@@ -169,10 +179,21 @@ export const AttachmentPickerRow = ({
     });
   };
 
+  const translateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [16, 0],
+  });
+
   return (
-    <View
-      style={[styles.container, { backgroundColor: translucentBg }]}
+    <Animated.View
+      style={{
+        opacity: slideAnim,
+        transform: [{ translateY }],
+      }}
     >
+      <View
+        style={[styles.container, { backgroundColor: translucentBg }]}
+      >
       <View style={styles.content}>
         <TouchableOpacity
           style={styles.attachmentButton}
@@ -250,7 +271,8 @@ export const AttachmentPickerRow = ({
           </TouchableOpacity>
         )}
       </View>
-    </View>
+      </View>
+    </Animated.View>
   );
 };
 
