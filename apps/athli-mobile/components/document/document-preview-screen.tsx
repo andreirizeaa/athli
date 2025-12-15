@@ -8,11 +8,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendDocumentMessage } from '@/services/chats-service';
+import { useDarkModeTheme } from '@/components/dark-mode-wrapper';
+import { StatusBar } from 'expo-status-bar';
 
 const DocumentPreviewScreen = () => {
   const router = useRouter();
@@ -25,14 +26,15 @@ const DocumentPreviewScreen = () => {
     clientId?: string;
     clientName?: string;
     fromMessage?: string;
+    caption?: string; // Initial caption text from chat input
   }>();
 
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const insets = useSafeAreaInsets();
 
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(params.caption || '');
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,7 @@ const DocumentPreviewScreen = () => {
   const mimeType = params.mimeType || '';
   const clientName = params.clientName;
   const fromMessage = params.fromMessage === 'true';
+  const showToolbar = !fromMessage;
 
   const isImage = mimeType.startsWith('image/');
   const isPdf = mimeType === 'application/pdf' || documentName.toLowerCase().endsWith('.pdf');
@@ -330,6 +333,7 @@ const DocumentPreviewScreen = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        {showToolbar && <StatusBar hidden />}
         {renderDocumentContent()}
 
         <View

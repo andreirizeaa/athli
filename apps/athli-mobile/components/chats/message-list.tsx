@@ -332,6 +332,8 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   alignRight,
   onReply,
   message,
+  onHorizontalDragStart,
+  onHorizontalDragEnd,
 }: {
   children: React.ReactNode;
   themeColors: ThemeColors;
@@ -339,12 +341,15 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   alignRight: boolean;
   onReply?: (message: ChatMessage) => void;
   message: ChatMessage;
+  onHorizontalDragStart?: () => void;
+  onHorizontalDragEnd?: () => void;
 }) {
   const MAX = 84;
   const THRESHOLD = 50; // pixels to trigger reply
   const translateX = useRef(new Animated.Value(0)).current;
   const didCancelRef = useRef(false);
   const currentDistanceRef = useRef(0);
+  const isDraggingRef = useRef(false);
 
   const iconOpacity = useMemo(
     () =>
@@ -381,6 +386,10 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           translateX.stopAnimation();
           didCancelRef.current = false;
           currentDistanceRef.current = 0;
+          if (!isDraggingRef.current) {
+            isDraggingRef.current = true;
+            onHorizontalDragStart?.();
+          }
         },
         onPanResponderMove: (_evt, g) => {
           if (!didCancelRef.current) {
@@ -408,6 +417,10 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           }).start();
           
           currentDistanceRef.current = 0;
+          if (isDraggingRef.current) {
+            isDraggingRef.current = false;
+            onHorizontalDragEnd?.();
+          }
         },
         onPanResponderTerminate: () => {
           Animated.spring(translateX, {
@@ -418,10 +431,14 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
             velocity: 0,
           }).start();
           currentDistanceRef.current = 0;
+          if (isDraggingRef.current) {
+            isDraggingRef.current = false;
+            onHorizontalDragEnd?.();
+          }
         },
         onPanResponderTerminationRequest: () => false,
       }),
-    [onCancelLongPress, translateX, onReply, message]
+    [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd]
   );
 
   return (
@@ -481,8 +498,11 @@ export const MessageList = ({
   const offsetYRef = useRef(0);
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
+  const prevMessagesLengthRef = useRef(messages.length);
   const didInitialScroll = useRef(false);
   const initialScrollAttemptsRef = useRef(0);
+  const pinnedToBottomRef = useRef(true);
+  const prevToolbarHeightRef = useRef<number | null>(null);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
@@ -490,6 +510,7 @@ export const MessageList = ({
   const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [containerPosition, setContainerPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
+  const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
   const colorScheme = useColorScheme();
   const isLightMode = colorScheme === 'light';
   const recipientBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfaceSecondary;
@@ -860,31 +881,62 @@ export const MessageList = ({
 
   // If user is near "bottom" (offset ~ 0), keep them pinned to bottom as new messages arrive
   useEffect(() => {
-    if (offsetYRef.current <= 40) {
+    if (!pinnedToBottomRef.current) return;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+      offsetYRef.current = 0;
+    });
+  }, [messages.length]);
+
+  // When the local user sends a new message, always scroll it into view
+  useEffect(() => {
+    const previousLength = prevMessagesLengthRef.current;
+    if (messages.length > previousLength) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.isSent) {
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+          offsetYRef.current = 0;
+          pinnedToBottomRef.current = true;
+        });
+      }
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages]);
+
+  // When keyboard appears, make sure the latest messages are visible
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
       requestAnimationFrame(() => {
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
         offsetYRef.current = 0;
+        pinnedToBottomRef.current = true;
       });
-    }
-  }, [messages.length]);
-
-  // Keyboard handling - no jump, just pin to bottom if already near bottom
-  useEffect(() => {
-    const subShow = Keyboard.addListener('keyboardDidShow', () => {
-      // If user is at (or near) the bottom, keep them pinned there.
-      if (offsetYRef.current <= 40) {
-        requestAnimationFrame(() => {
-          listRef.current?.scrollToOffset({ offset: 0, animated: false });
-          offsetYRef.current = 0;
-        });
-      }
-      // If user is reading older messages, do nothing (no jump).
     });
 
     return () => {
-      subShow.remove();
+      showSub.remove();
     };
   }, []);
+
+  // Auto-scroll to bottom when toolbar height changes (if user is already pinned)
+  useEffect(() => {
+    // Skip very first run to prevent "load flicker"
+    if (prevToolbarHeightRef.current === null) {
+      prevToolbarHeightRef.current = toolbarHeight;
+      return;
+    }
+
+    prevToolbarHeightRef.current = toolbarHeight;
+    if (!pinnedToBottomRef.current) return;
+
+    // Smoothly scroll to accommodate toolbar height change
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      offsetYRef.current = 0;
+    });
+  }, [toolbarHeight]);
+
 
   const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
     // index-1 is visually "below" (newer) because data is reversed + list inverted
@@ -944,6 +996,8 @@ export const MessageList = ({
             alignRight={item.isSent}
             onReply={onReply}
             message={item}
+            onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
+            onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
           >
             <BubbleMeta
               item={item}
@@ -1035,16 +1089,22 @@ export const MessageList = ({
           inverted
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={!isHorizontalDragActive}
           contentContainerStyle={[
             styles.contentContainer,
             {
-              paddingTop: headerHeight + 16,
-              paddingBottom: toolbarHeight + 16,
+              // In inverted FlatList: paddingTop = visual bottom (newest messages), paddingBottom = visual top (under header)
+              // VISUAL BOTTOM (newest message) — reserve space for toolbar
+              paddingTop: toolbarHeight + 16,
+              // VISUAL TOP — reserve space for header + sticky pill room
+              paddingBottom: headerHeight + 16 + STICKY_EXTRA,
             },
           ]}
           onContentSizeChange={handleContentSizeChange}
           onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            offsetYRef.current = e.nativeEvent.contentOffset.y;
+            const y = e.nativeEvent.contentOffset.y;
+            offsetYRef.current = y;
+            pinnedToBottomRef.current = y <= 40; // same threshold for "pinned to bottom"
           }}
           scrollEventThrottle={16}
           onScrollBeginDrag={() => showSticky()}
@@ -1054,7 +1114,9 @@ export const MessageList = ({
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
           // This helps when new items are inserted at the "bottom" (index 0 in inverted list)
-          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+          }}
         />
         {stickyActive && (
           <Animated.View
@@ -1098,12 +1160,13 @@ export const MessageList = ({
   );
 };
 
+const STICKY_EXTRA = 32; // Extra space for sticky header pill height
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   contentContainer: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    paddingTop: 16 + 32, // extra padding for sticky header (16 base + ~32 for pill height)
   },
   messageWrapper: {
     maxWidth: '100%',

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -9,13 +9,14 @@ import * as Sharing from 'expo-sharing';
 import Share from 'react-native-share';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
 import { type ImageAttachment } from '@/components/chats/message-image-preview';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendImageMessage } from '@/services/chats-service';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { useDarkModeTheme } from '@/components/dark-mode-wrapper';
+import { StatusBar } from 'expo-status-bar';
 
 const ImagePreviewScreen = () => {
   const router = useRouter();
@@ -28,19 +29,28 @@ const ImagePreviewScreen = () => {
     clientName?: string;
     fromPicker?: string; // Flag to indicate this is from the picker
     messageTimestamp?: string; // ISO timestamp string for checking if within 1 hour
+    caption?: string; // Initial caption text from chat input
   }>();
 
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const insets = useSafeAreaInsets();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
+  const showToolbar = fromPicker;
 
   const initialImages: ImageAttachment[] = params.images ? JSON.parse(params.images) : [];
   const senderName = params.senderName || 'Unknown';
   const isSent = params.isSent === 'true';
   const displayName = isSent ? 'You' : senderName;
   const fromPicker = params.fromPicker === 'true';
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(params.caption || '');
+
+  // Update caption when params change (for hydration)
+  useEffect(() => {
+    if (params.caption !== undefined) {
+      setCaption(params.caption);
+    }
+  }, [params.caption]);
   const [images, setImages] = useState<ImageAttachment[]>(initialImages);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImages[0]?.id || null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -61,7 +71,12 @@ const ImagePreviewScreen = () => {
   const inactiveBorderColor = '#FFFFFF';
 
   const handleClose = () => {
-    router.back();
+    if (fromPicker && params.chatId) {
+      // If coming from attachment picker, go back to chat screen
+      router.back();
+    } else {
+      router.back();
+    }
   };
 
   const handleDownload = async () => {
@@ -351,8 +366,12 @@ const ImagePreviewScreen = () => {
         caption.trim() || undefined
       );
 
-      // Pass image message data back to chat screen via navigation params
-      router.back();
+      // Navigate back to chat screen - use back() to maintain slide animation
+      if (fromPicker && params.chatId) {
+        router.back();
+      } else {
+        router.back();
+      }
 
       // Set params to add image message to list and close attachment picker
       setTimeout(() => {
@@ -591,6 +610,7 @@ const ImagePreviewScreen = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        {showToolbar && <StatusBar hidden />}
         <View style={styles.imagePreviewContainer}>
           <RNImage source={{ uri: selectedImage.uri }} style={styles.previewImage} resizeMode="contain" />
         </View>

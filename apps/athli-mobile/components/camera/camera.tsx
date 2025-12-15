@@ -25,6 +25,7 @@ export default function Camera() {
     clientId?: string;
     clientName?: string;
     selectedImages?: string; // JSON string of ImageData[]
+    caption?: string; // Initial caption text from chat input
   }>();
   const { colors: themeColors } = useDarkModeTheme();
   const colorScheme = useColorScheme();
@@ -42,7 +43,7 @@ export default function Camera() {
   const [capturedPhotos, setCapturedPhotos] = useState<Array<{ uri: string; bytes: Uint8Array; id: string }>>([]);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [isAddingMore, setIsAddingMore] = useState(false);
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(() => (params.caption as string) || '');
 
   // Handle pre-selected images from attachment picker
   useEffect(() => {
@@ -302,13 +303,13 @@ export default function Camera() {
 
       // If video mode is on, allow video only and single select
       if (isVideoMode) {
-      const result = await ImagePicker.launchImageLibraryAsync({
+        const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['videos'],
-        allowsMultipleSelection: false,
-        quality: 1,
-      });
+          allowsMultipleSelection: false,
+          quality: 1,
+        });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+        if (!result.canceled && result.assets && result.assets.length > 0) {
           const asset = result.assets[0];
           if (!asset.uri) return;
           // Navigate to video preview screen
@@ -321,6 +322,8 @@ export default function Camera() {
               chatId: params.chatId || '',
               clientId: params.clientId || '',
               clientName: params.clientName || '',
+              caption: caption || '',
+              fromCamera: 'true',
             },
           });
         }
@@ -507,12 +510,14 @@ export default function Camera() {
               router.push({
                 pathname: '/video-preview',
                 params: {
-                uri: videoUri,
+                  uri: videoUri,
                   duration: duration.toString(),
-                orientation,
+                  orientation,
                   chatId: params.chatId || '',
                   clientId: params.clientId || '',
                   clientName: params.clientName || '',
+                  caption: caption || '',
+                  fromCamera: 'true',
                 },
               });
               if (recordingIntervalRef.current) {
