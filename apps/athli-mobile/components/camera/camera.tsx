@@ -88,7 +88,13 @@ export default function Camera() {
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [zoomLabel, setZoomLabel] = useState('1x');
   const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(zoom);
   const recordingIntervalRef = useRef<number | null>(null);
+  
+  // Keep zoomRef in sync with zoom state
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
   const buttonScale = useRef(new Animated.Value(1)).current;
   const innerCircleScale = useRef(new Animated.Value(1)).current;
   const videoTextWidth = useRef(0);
@@ -417,55 +423,58 @@ export default function Camera() {
   };
 
   const lastDistanceRef = useRef<number | null>(null);
-  const initialZoomRef = useRef<number>(1);
+  const pinchBaseZoomRef = useRef<number>(1);
 
-  const panResponder = useMemo(
+  const pinchPanResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => false,
         onMoveShouldSetPanResponder: (evt) => {
-          // Only respond if we have 2 touches (pinch gesture)
+          // Only respond to 2-finger gestures on move
           return evt.nativeEvent.touches.length === 2;
         },
-        onPanResponderGrant: () => {
-          if (!device) return;
-          initialZoomRef.current = zoom;
-          zoomStartRef.current = zoom;
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponderCapture: (evt) => {
+          // Capture 2-finger gestures to prevent other handlers from interfering
+          return evt.nativeEvent.touches.length === 2;
+        },
+        onPanResponderTerminationRequest: () => false, // Don't allow termination
+
+        onPanResponderGrant: (evt) => {
+          if (!device || evt.nativeEvent.touches.length !== 2) return;
+          pinchBaseZoomRef.current = zoomRef.current;
           lastDistanceRef.current = null;
           showZoomHud();
         },
+
         onPanResponderMove: (evt) => {
           if (!device || evt.nativeEvent.touches.length !== 2) return;
 
-          const touch1 = evt.nativeEvent.touches[0];
-          const touch2 = evt.nativeEvent.touches[1];
+          const [t1, t2] = evt.nativeEvent.touches;
+          const distance = Math.hypot(t2.pageX - t1.pageX, t2.pageY - t1.pageY);
 
-          const distance = Math.sqrt(
-            Math.pow(touch2.pageX - touch1.pageX, 2) + Math.pow(touch2.pageY - touch1.pageY, 2)
-          );
-
-          if (lastDistanceRef.current === null) {
+          if (lastDistanceRef.current == null) {
             lastDistanceRef.current = distance;
             return;
           }
 
           const scale = distance / lastDistanceRef.current;
-          // Use a slightly non-linear curve so it feels nicer
           const scaled = Math.pow(scale, 1.6);
 
-          const nextZoom = clamp(zoomStartRef.current * scaled, minZoom, maxZoom);
+          const nextZoom = clamp(pinchBaseZoomRef.current * scaled, minZoom, maxZoom);
           setZoom(nextZoom);
 
-          const display = nextZoom / device.neutralZoom; // 0.5..10 (clamped)
+          const display = nextZoom / device.neutralZoom;
           setZoomLabel(formatZoomLabel(display));
           updateSliderDot(display, displayMin, displayMax);
 
-          zoomStartRef.current = nextZoom;
+          pinchBaseZoomRef.current = nextZoom;
           lastDistanceRef.current = distance;
 
           showZoomHud();
           hideZoomHudLater();
         },
+
         onPanResponderRelease: () => {
           lastDistanceRef.current = null;
           hideZoomHudLater();
@@ -475,7 +484,7 @@ export default function Camera() {
           hideZoomHudLater();
         },
       }),
-    [device, zoom, minZoom, maxZoom, displayMin, displayMax, formatZoomLabel, updateSliderDot, showZoomHud, hideZoomHudLater, clamp]
+    [device, minZoom, maxZoom, displayMin, displayMax, clamp, showZoomHud, hideZoomHudLater, formatZoomLabel, updateSliderDot]
   );
 
   const formatTime = (seconds: number): string => {
@@ -737,7 +746,7 @@ export default function Camera() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]} {...panResponder.panHandlers}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <StatusBar hidden />
         <VisionCamera
           ref={cameraRef}
@@ -748,6 +757,7 @@ export default function Camera() {
           zoom={zoom}
           photo={true}
           video={true}
+          pointerEvents="none"
         />
         <View
           style={[
@@ -759,6 +769,7 @@ export default function Camera() {
               paddingRight: 0,
             },
           ]}
+          {...pinchPanResponder.panHandlers}
         >
         {/* Top header */}
         <View style={styles.topHeader}>
