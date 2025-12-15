@@ -150,9 +150,21 @@ const BubbleMeta = React.memo(function BubbleMeta({
       : { backgroundColor: recipientBackgroundColor },
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
-    // Make bubble full width when it contains a document
-    ...(item.document ? [styles.messageBubbleFullWidth] : []),
+    // Make bubble full width when it contains a document or is a reply
+    ...(item.document || item.replyTo ? [styles.messageBubbleFullWidth] : []),
   ];
+
+  const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
+
+  // Use a subtle flash color based on existing palette (no extra ThemeColors field)
+  const flashTextColor = item.isSent ? themeColors.surface : themeColors.primary;
+
+  const animatedTextColor =
+    flashOpacity &&
+    flashOpacity.interpolate({
+      inputRange: [0, 1],
+      outputRange: [baseTextColor, flashTextColor],
+    });
 
   const bubbleContent = (
     <View style={styles.bubbleInner}>
@@ -232,19 +244,17 @@ const BubbleMeta = React.memo(function BubbleMeta({
         />
       )}
 
-      <Text
+      <Animated.Text
         style={[
           styles.messageText,
-          item.isSent
-            ? { color: themeColors.primaryForeground }
-            : { color: themeColors.text },
+          { color: (animatedTextColor as any) || baseTextColor },
         ]}
       >
         {softWrapText(item.text)}
 
         {/* Reserve space at the end so meta never overlaps (single-line OR multi-line) */}
         <Text style={styles.metaSpacer}>{metaSpacer}</Text>
-      </Text>
+      </Animated.Text>
 
       {/* Actual meta pinned bottom-right */}
       <View
@@ -290,28 +300,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
       </View>
     </View>
   );
-
-  if (flashOpacity) {
-    return (
-      <Animated.View
-        style={[
-          bubbleStyle,
-          {
-            opacity: flashOpacity,
-          },
-        ]}
-      >
-        <Pressable
-          ref={registerRef}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-          style={StyleSheet.absoluteFill}
-        >
-          {bubbleContent}
-        </Pressable>
-      </Animated.View>
-    );
-  }
 
   return (
     <Pressable
@@ -596,28 +584,29 @@ export const MessageList = ({
       listRef.current?.scrollToIndex({
         index: messageIndex,
         animated: true,
-        viewPosition: 0.5, // Center the message
+        // Slightly center the message, leaving some space above
+        viewPosition: 0.5,
+        viewOffset: 40,
       });
     }, 100);
 
-    // Flash the message
+    // Flash the message by briefly changing its text color
     if (!flashAnimations.current[messageId]) {
-      flashAnimations.current[messageId] = new Animated.Value(1);
+      flashAnimations.current[messageId] = new Animated.Value(0);
     }
 
     const flashAnim = flashAnimations.current[messageId];
-    
-    // Flash animation: quickly fade and fade back
+
     Animated.sequence([
       Animated.timing(flashAnim, {
-        toValue: 0.4,
-        duration: 200,
-        useNativeDriver: true,
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: false,
       }),
       Animated.timing(flashAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
+        toValue: 0,
+        duration: 320,
+        useNativeDriver: false,
       }),
     ]).start();
   };
