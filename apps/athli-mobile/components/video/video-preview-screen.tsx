@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, Alert } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, TouchableOpacity, View, Text, Alert, Keyboard } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEvent } from 'expo';
@@ -30,12 +31,15 @@ export const VideoPreviewScreen = () => {
     clientId?: string;
     clientName?: string;
     fromMessage?: string; // 'true' if viewing from message bubble
+    senderName?: string;
+    isSent?: string;
   }>();
 
   const { colors: themeColors } = useThemePreference();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const [caption, setCaption] = useState('');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   if (!params.uri) {
     return null;
@@ -49,6 +53,9 @@ export const VideoPreviewScreen = () => {
 
   const fromMessage = params.fromMessage === 'true';
   const showToolbar = !fromMessage;
+  const senderName = params.senderName || 'Unknown';
+  const isSent = params.isSent === 'true';
+  const displayName = isSent ? 'You' : senderName;
 
   // Create video player
   const player = useVideoPlayer(video.uri, (player) => {
@@ -66,12 +73,25 @@ export const VideoPreviewScreen = () => {
   };
 
   const handleVideoPress = () => {
+    if (isKeyboardVisible) {
+      Keyboard.dismiss();
+      return;
+    }
     if (isPlaying) {
       player.pause();
     } else {
       player.play();
     }
   };
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleClose = () => {
     router.back();
@@ -101,36 +121,43 @@ export const VideoPreviewScreen = () => {
 
     try {
       await sendVideoMessage(params.chatId, video.uri, caption.trim() || undefined);
+      
+      // Navigate back to chat screen - go back twice if coming from camera (video-preview -> camera -> chat)
       router.back();
+      
+      // Set params after a delay to ensure navigation completes
       setTimeout(() => {
-        if (params.chatId) {
-          router.setParams({
-            videoSent: 'true',
-            sentVideo: JSON.stringify({
-              uri: video.uri,
-              duration: video.duration,
-              orientation: video.orientation,
-              caption: caption.trim() || '',
-            }),
-          } as any);
+        // If we're still not at chat screen (camera might still be open), go back again
+        if (router.canGoBack()) {
+          router.back();
         }
-      }, 200);
+        
+        // Set params to add video message to list
+        setTimeout(() => {
+          if (params.chatId) {
+            router.setParams({
+              videoSent: 'true',
+              sentVideo: JSON.stringify({
+                uri: video.uri,
+                duration: video.duration,
+                orientation: video.orientation,
+                caption: caption.trim() || '',
+              }),
+            } as any);
+          }
+        }, 200);
+      }, 100);
     } catch (error) {
       console.error('Error sending video:', error);
       Alert.alert('Error', 'Failed to send video');
     }
   };
 
-  const headerHeight = insets.top + 60; // Safe area + header content
-  const toolbarHeight = showToolbar ? 112 : 0; // AttachmentPreviewToolbar closedBaseHeight
-  const bottomMargin = showToolbar ? toolbarHeight + insets.bottom : 0;
-  const paddingBottom = fromMessage ? 56 : 0;
-
-  // For portrait videos, start underneath the header
-  const videoMarginTop = video.orientation === 'portrait' ? headerHeight : 0;
+  const videoMarginTop = 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+    <View style={styles.container}>
+      <StatusBar hidden />
       <VideoView
         player={player}
         style={[
@@ -138,8 +165,8 @@ export const VideoPreviewScreen = () => {
           video.orientation === 'portrait' ? styles.videoPortrait : styles.videoLandscape,
           {
             marginTop: videoMarginTop,
-            marginBottom: bottomMargin,
-            paddingBottom: paddingBottom,
+            marginBottom: 0,
+            paddingBottom: 0,
           },
         ]}
         contentFit="contain"
@@ -147,36 +174,67 @@ export const VideoPreviewScreen = () => {
         allowsPictureInPicture={false}
       />
 
-      <SafeAreaView style={styles.safeArea} edges={['top']} pointerEvents="box-none">
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: 0,
+            paddingRight: 0,
+          },
+        ]}
+        pointerEvents="box-none"
+      >
         {/* Top header */}
         <View style={styles.topHeader} pointerEvents="box-none">
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
-            onPress={handleClose}
-          >
-            <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-          </TouchableOpacity>
-
-          {fromMessage && (
+          <View style={styles.leftHeaderContainer}>
             <TouchableOpacity
-              style={[styles.downloadButton, { backgroundColor: mutedSurfaceColor }]}
+              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
               activeOpacity={0.7}
-              onPress={handleDownload}
+              onPress={handleClose}
             >
-              <PlatformIcon
-                sf="square.and.arrow.down"
-                IconComponent={Download}
-                size={iconSizes.navigationChevrons + 2}
-                color={iconColor}
-              />
+              <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
             </TouchableOpacity>
-          )}
+          </View>
+
+          {/* Center: Title - absolutely positioned to stay centered */}
+          <View style={styles.titleContainer}>
+            {fromMessage ? (
+              <>
+                <Text style={[styles.titleText, { color: themeColors.text }]} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <Text style={[styles.subtitleText, { color: themeColors.mutedText }]}>
+                  1 video
+                </Text>
+              </>
+            ) : null}
+          </View>
+
+          <View style={styles.rightHeaderContainer}>
+            {fromMessage ? (
+              <TouchableOpacity
+                style={[styles.downloadButton, { backgroundColor: mutedSurfaceColor }]}
+                activeOpacity={0.7}
+                onPress={handleDownload}
+              >
+                <PlatformIcon
+                  sf="square.and.arrow.down"
+                  IconComponent={Download}
+                  size={iconSizes.navigationChevrons + 2}
+                  color={iconColor}
+                />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.spacer} />
+            )}
+          </View>
         </View>
-      </SafeAreaView>
+      </View>
 
       {/* Play button overlay - centered */}
-      {!isPlaying && (
+      {!isPlaying && !isKeyboardVisible && (
         <View style={styles.playButtonOverlay} pointerEvents="none">
           <View style={[styles.playButton, { backgroundColor: mutedSurfaceColor }]}>
             <PlatformIcon sf="play.fill" IconComponent={Play} size={32} color={iconColor} />
@@ -197,11 +255,13 @@ export const VideoPreviewScreen = () => {
       )}
 
       {/* Video tap area */}
-      <TouchableOpacity
-        style={StyleSheet.absoluteFill}
-        activeOpacity={1}
-        onPress={handleVideoPress}
-      />
+      {!isKeyboardVisible && (
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={handleVideoPress}
+        />
+      )}
     </View>
   );
 };
@@ -221,9 +281,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
+  },
+  leftHeaderContainer: {
+    width: 120,
+    alignItems: 'flex-start',
+  },
+  rightHeaderContainer: {
+    width: 120,
+    alignItems: 'flex-end',
+  },
+  titleContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  titleText: {
+    ...typography.h5,
+    fontWeight: '600',
+  },
+  subtitleText: {
+    ...typography.p3,
+    marginTop: 2,
+  },
+  spacer: {
+    width: 44,
   },
   closeButton: {
     width: 44,

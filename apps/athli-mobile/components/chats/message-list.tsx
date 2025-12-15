@@ -35,6 +35,8 @@ interface MessageListProps {
   backgroundColor: string;
   themeColors: ThemeColors;
   clientName: string;
+  headerHeight?: number;
+  toolbarHeight?: number;
   onReply?: (message: ChatMessage) => void;
   onEdit?: (message: ChatMessage) => void;
   onDelete?: (message: ChatMessage) => void;
@@ -80,6 +82,7 @@ const findOriginalMessage = (message: ChatMessage): ChatMessage => {
 const BubbleMeta = React.memo(function BubbleMeta({
   item,
   themeColors,
+  recipientBackgroundColor,
   formatTime,
   softWrapText,
   registerRef,
@@ -95,6 +98,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
 }: {
   item: ChatMessage;
   themeColors: ThemeColors;
+  recipientBackgroundColor: string;
   formatTime: (d: Date) => string;
   softWrapText: (t: string) => string;
   registerRef: (ref: View | null) => void;
@@ -143,7 +147,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
     styles.messageBubble,
     item.isSent
       ? { backgroundColor: themeColors.primary }
-      : { backgroundColor: themeColors.surfaceSecondary },
+      : { backgroundColor: recipientBackgroundColor },
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
     // Make bubble full width when it contains a document
@@ -168,7 +172,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           clientName={clientName}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
@@ -183,7 +187,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           images={item.images}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
@@ -200,7 +204,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           video={item.video}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
@@ -217,7 +221,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           document={item.document}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
@@ -248,7 +252,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
         style={[
           styles.metaOverlay,
           {
-            backgroundColor: item.isSent ? themeColors.primary : themeColors.surfaceSecondary,
+            backgroundColor: item.isSent ? themeColors.primary : recipientBackgroundColor,
           },
         ]}
         pointerEvents="none"
@@ -462,6 +466,8 @@ export const MessageList = ({
   backgroundColor,
   themeColors,
   clientName,
+  headerHeight = 0,
+  toolbarHeight = 0,
   onReply,
   onEdit,
   onDelete,
@@ -485,6 +491,8 @@ export const MessageList = ({
   const [containerPosition, setContainerPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
   const colorScheme = useColorScheme();
+  const isLightMode = colorScheme === 'light';
+  const recipientBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfaceSecondary;
   const { colors: fullThemeColors } = useThemePreference();
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, View>>({});
@@ -940,6 +948,7 @@ export const MessageList = ({
             <BubbleMeta
               item={item}
               themeColors={themeColors}
+              recipientBackgroundColor={recipientBackgroundColor}
               formatTime={formatTime}
               softWrapText={softWrapText}
               registerRef={(ref) => {
@@ -1026,7 +1035,13 @@ export const MessageList = ({
           inverted
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.contentContainer}
+          contentContainerStyle={[
+            styles.contentContainer,
+            {
+              paddingTop: headerHeight + 16,
+              paddingBottom: toolbarHeight + 16,
+            },
+          ]}
           onContentSizeChange={handleContentSizeChange}
           onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
             offsetYRef.current = e.nativeEvent.contentOffset.y;
@@ -1086,7 +1101,7 @@ export const MessageList = ({
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   contentContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
     paddingTop: 16 + 32, // extra padding for sticky header (16 base + ~32 for pill height)
   },

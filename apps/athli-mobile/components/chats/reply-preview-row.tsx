@@ -5,6 +5,7 @@ import { useColorScheme } from '@/contexts/useColorScheme';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 import { type ChatMessage } from '@/services/chats-service';
 
@@ -19,6 +20,9 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  
+  // Create translucent background color - more transparent since parent already has BlurView
+  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
 
   const senderName = message.isSent ? 'You' : clientName;
   // Use primary color for sender, and a distinct purple/violet for recipient
@@ -95,12 +99,7 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
 
   return (
     <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: backgroundColor || themeColors.surfaceSecondary,
-        },
-      ]}
+      style={[styles.container, { backgroundColor: translucentBg }]}
     >
       <View style={[styles.colorStrip, { backgroundColor: stripColor }]} />
       <View style={styles.content}>

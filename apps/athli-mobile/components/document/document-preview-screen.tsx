@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, Alert, ActivityIndicator, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Download } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
@@ -331,7 +331,17 @@ const DocumentPreviewScreen = () => {
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         {renderDocumentContent()}
 
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           {/* Top header */}
           <View style={styles.topHeader}>
             <TouchableOpacity
@@ -376,7 +386,7 @@ const DocumentPreviewScreen = () => {
               <View style={styles.spacer} />
             )}
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Bottom section with toolbar - only show when not from message */}
         {!fromMessage && (
@@ -409,7 +419,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },

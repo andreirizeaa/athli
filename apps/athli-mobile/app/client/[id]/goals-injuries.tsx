@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 
@@ -12,6 +12,7 @@ export default function GoalsInjuriesScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
+  const insets = useSafeAreaInsets();
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -21,7 +22,18 @@ export default function GoalsInjuriesScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
+    <View
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor: themeColors.pageBackground,
+          paddingTop: insets.top,
+          paddingBottom: 0,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
         <TouchableOpacity
           style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
@@ -38,7 +50,7 @@ export default function GoalsInjuriesScreen() {
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>Goals & Injuries</Text>
         <View style={styles.headerRightPlaceholder} />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -50,7 +62,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },

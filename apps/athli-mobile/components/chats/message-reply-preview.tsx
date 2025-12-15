@@ -70,17 +70,9 @@ export const MessageReplyPreview = ({
     // Check for video
     if (replyTo.video) {
       return (
-        <View style={styles.attachmentPreview}>
-          <PlatformIcon
-            sf="video.fill"
-            IconComponent={Video}
-            size={iconSizes.tabBarIcons - 8}
-            color={messageTextColor}
-          />
-          <Text style={[styles.attachmentText, { color: messageTextColor }]} numberOfLines={1}>
-            1 video
-          </Text>
-        </View>
+        <Text style={[styles.messagePreview, { color: messageTextColor }]} numberOfLines={1}>
+          1 video
+        </Text>
       );
     }
 
