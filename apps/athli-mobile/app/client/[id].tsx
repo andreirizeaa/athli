@@ -20,7 +20,7 @@ import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton, DoubleIconButton } from '@/components/icon-button';
-import { MessageInputBar } from '@/components/chats/message-input-bar';
+import { MessageInputBar } from '@/components/message/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 

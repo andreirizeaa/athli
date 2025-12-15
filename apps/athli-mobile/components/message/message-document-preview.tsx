@@ -12,6 +12,9 @@ type MessageDocumentPreviewProps = {
   parentBackgroundColor: string;
   isParentSent: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 };
 
 const formatFileSize = (bytes?: number): string => {
@@ -32,6 +35,9 @@ export const MessageDocumentPreview = ({
   parentBackgroundColor,
   isParentSent,
   onPress,
+  onLongPress,
+  onPressIn,
+  onPressOut,
 }: MessageDocumentPreviewProps) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -52,6 +58,9 @@ export const MessageDocumentPreview = ({
       style={[styles.container, { backgroundColor: adjustedBackground }]}
       activeOpacity={0.7}
       onPress={onPress}
+      onLongPress={onLongPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityLabel={`Open document ${document.name}`}
       accessibilityRole="button"
     >

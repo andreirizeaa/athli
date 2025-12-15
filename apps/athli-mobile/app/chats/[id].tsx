@@ -10,25 +10,23 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send, X } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Archive, Trash2 } from 'lucide-react-native';
 
-import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { hexToRgba } from '@/utils/colorUtils';
-import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton, DoubleIconButton } from '@/components/icon-button';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { MessageInputBar } from '@/components/chats/message-input-bar';
-import { MessageList } from '@/components/chats/message-list';
-import { MessageReactionsSheet } from '@/components/chats/message-reactions-sheet';
+import { MessageList } from '@/components/message/message-list';
+import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
+import { VoiceNoteRecordingContainer } from '@/components/chats/voice-note-recording-container';
+import { ChatHeader } from '@/components/chats/chat-header';
+import { ChatToolbar } from '@/components/chats/chat-toolbar';
+import { ChatLoadingState } from '@/components/chats/chat-loading-state';
 import {
   getChats,
   getArchivedChats,
@@ -95,6 +93,8 @@ export default function ChatDetailScreen() {
   const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
   const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
+  const [isMicrophoneMode, setIsMicrophoneMode] = useState(false);
+  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -172,12 +172,18 @@ export default function ChatDetailScreen() {
         setShowAttachmentPicker(false);
         
         // Clear the params
-        router.setParams({ documentSent: undefined, sentDocument: undefined } as any);
+        router.setParams({
+          documentSent: '',
+          sentDocument: '',
+        });
       } catch (error) {
         console.error('Error parsing sent document:', error);
         // Still close the picker even if parsing fails
         setShowAttachmentPicker(false);
-        router.setParams({ documentSent: undefined, sentDocument: undefined } as any);
+        router.setParams({
+          documentSent: '',
+          sentDocument: '',
+        });
       }
     }
   }, [documentSent, sentDocument, router]);
@@ -208,12 +214,20 @@ export default function ChatDetailScreen() {
         setShowAttachmentPicker(false);
         
         // Clear the params
-        router.setParams({ imagesSent: undefined, sentImages: undefined, sentImagesCaption: undefined } as any);
+        router.setParams({
+          imagesSent: '',
+          sentImages: '',
+          sentImagesCaption: '',
+        });
       } catch (error) {
         console.error('Error parsing sent images:', error);
         // Still close the picker even if parsing fails
         setShowAttachmentPicker(false);
-        router.setParams({ imagesSent: undefined, sentImages: undefined, sentImagesCaption: undefined } as any);
+        router.setParams({
+          imagesSent: '',
+          sentImages: '',
+          sentImagesCaption: '',
+        });
       }
     }
   }, [imagesSent, sentImages, sentImagesCaption, router]);
@@ -248,23 +262,23 @@ export default function ChatDetailScreen() {
         setShowAttachmentPicker(false);
         
         // Clear the params
-        router.setParams({ videoSent: undefined, sentVideo: undefined } as any);
+        router.setParams({
+          videoSent: '',
+          sentVideo: '',
+        });
       } catch (error) {
         console.error('Error parsing sent video:', error);
         // Still close the picker even if parsing fails
         setShowAttachmentPicker(false);
-        router.setParams({ videoSent: undefined, sentVideo: undefined } as any);
+        router.setParams({
+          videoSent: '',
+          sentVideo: '',
+        });
       }
     }
   }, [videoSent, sentVideo, router]);
 
-  const headerBackgroundColor = themeColors.headerBackground;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
-  const iconColor = themeColors.text;
   const hasText = searchQuery.trim().length > 0;
-  
-  // Create translucent background color for frosted glass effect (60% opacity)
-  const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
 
   useEffect(() => {
     // Only load if not provided via params
@@ -370,6 +384,24 @@ export default function ChatDetailScreen() {
     setShowAttachmentPicker(false);
   };
 
+  const handleMicrophonePress = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsMicrophoneMode(true);
+  };
+
+  const handleTrashPress = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsMicrophoneMode(false);
+  };
+
+  const handleSendPress = () => {
+    handleSendMessage();
+  };
+
+  const handlePauseToggle = () => {
+    setIsRecordingPaused((prev) => !prev);
+  };
+
   // Helper function to find the original message in a reply chain
   const findOriginalMessage = (message: ChatMessage): ChatMessage => {
     if (!message.replyTo) {
@@ -414,9 +446,6 @@ export default function ChatDetailScreen() {
   };
 
   const handleMessageDelete = async (message: ChatMessage) => {
-    // TODO: Implement delete message functionality
-    // This should remove the message from the messages array
-    console.log('Delete message:', message);
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
   };
 
@@ -506,51 +535,11 @@ export default function ChatDetailScreen() {
   ];
 
   if (isLoading) {
-    return (
-      <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
-        <View
-          style={[
-            styles.safeArea,
-            {
-              paddingTop: insets.top,
-              paddingBottom: 0,
-              paddingLeft: 0,
-              paddingRight: 0,
-            },
-          ]}
-        >
-          <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
-              {t('general.loading')}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
+    return <ChatLoadingState />;
   }
 
   if (!chat) {
-    return (
-      <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
-        <View
-          style={[
-            styles.safeArea,
-            {
-              paddingTop: insets.top,
-              paddingBottom: 0,
-              paddingLeft: 0,
-              paddingRight: 0,
-            },
-          ]}
-        >
-          <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
-              {t('chats.chatNotFound')}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
+    return <ChatLoadingState message={t('chats.chatNotFound')} />;
   }
 
   return (
@@ -565,52 +554,13 @@ export default function ChatDetailScreen() {
       />
       
       {/* ROW 1: HEADER - Absolutely positioned with blur (extends into status bar area) */}
-      <View style={[styles.headerSafeArea, { paddingTop: 0 }]} pointerEvents="box-none">
-        <BlurView
-          intensity={100}
-          tint={isDark ? 'dark' : 'light'}
-          style={[styles.headerBlur, { paddingTop: insets.top, backgroundColor: translucentHeaderBg }]}
-        >
-          <View style={styles.header}>
-          <IconButton
-            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-            onPress={handleBackPress}
-            size="md"
-            color={iconColor}
-            backgroundColor={mutedSurfaceColor}
-          />
-
-          <View style={styles.avatarContainer}>
-            {chat.clientAvatar ? (
-              <Image source={{ uri: chat.clientAvatar }} style={styles.avatar} />
-            ) : (
-              <View
-                style={[
-                  styles.avatar,
-                  styles.avatarPlaceholder,
-                  { backgroundColor: themeColors.border },
-                ]}
-              />
-            )}
-          </View>
-
-          <Text style={[styles.clientName, { color: themeColors.text }]} numberOfLines={1}>
-            {chat.clientName}
-          </Text>
-
-          <DoubleIconButton
-            ref={actionButtonRef}
-            leftIcon={{ sf: 'person', IconComponent: User }}
-            rightIcon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-            onLeftPress={handleUserProfilePress}
-            onRightPress={handleEllipsisPress}
-            size="md"
-            color={iconColor}
-            backgroundColor={mutedSurfaceColor}
-          />
-        </View>
-        </BlurView>
-      </View>
+      <ChatHeader
+        chat={chat}
+        onBackPress={handleBackPress}
+        onUserProfilePress={handleUserProfilePress}
+        onEllipsisPress={handleEllipsisPress}
+        actionButtonRef={actionButtonRef}
+      />
 
       <DropdownMenu
         visible={dropdownVisible}
@@ -639,6 +589,7 @@ export default function ChatDetailScreen() {
           toolbarHeight={
             (replyingToMessage ? 54 : 0) + // Reply preview height
             (showAttachmentPicker ? 112 : 0) + // Attachment picker height
+            (isMicrophoneMode ? 52 : 0) + // Microphone mode height
             40 + // closedBaseHeight
             insets.bottom // Safe area bottom
           }
@@ -646,97 +597,24 @@ export default function ChatDetailScreen() {
       </Animated.View>
 
       {/* ROW 3: TOOLBAR — Absolutely positioned with blur */}
-      <View style={styles.toolbarContainer} pointerEvents="box-none">
-        <BlurView
-          intensity={100}
-          tint={isDark ? 'dark' : 'light'}
-          style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
-        >
-          <KeyboardAwareToolbar
-            backgroundColor="transparent"
-        contentStyle={{ paddingHorizontal: 16 }}
-        replyPreview={
-          replyingToMessage ? (
-            <ReplyPreviewRow
-              message={replyingToMessage}
-              clientName={chat.clientName}
-              onClose={handleCancelReply}
-              backgroundColor={translucentHeaderBg}
-            />
-          ) : undefined
-        }
-        attachmentPicker={
-          showAttachmentPicker ? (
-            <AttachmentPickerRow
-              backgroundColor={translucentHeaderBg}
-              chatId={chat?.id}
-              clientId={chat?.clientId}
-              clientName={chat?.clientName}
-              caption={searchQuery}
-            />
-          ) : undefined
-        }
-      >
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={handlePlusPress}>
-          <PlatformIcon
-            sf={showAttachmentPicker ? "xmark.circle" : "plus"}
-            IconComponent={showAttachmentPicker ? X : Plus}
-            size={iconSizes.tabBarIcons - 2}
-            color={iconColor}
-          />
-        </TouchableOpacity>
-
-        <View style={styles.searchBarContainer}>
-          <MessageInputBar ref={inputRef} value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
-        </View>
-
-        {hasText ? (
-          <TouchableOpacity style={styles.sendButton} activeOpacity={0.7} onPress={handleSendMessage}>
-            <PlatformIcon
-              sf="paperplane.circle.fill"
-              IconComponent={Send}
-              size={iconSizes.tabBarIconsIOS + 2}
-              color={themeColors.primary}
-            />
-          </TouchableOpacity>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={styles.iconButton}
-              activeOpacity={0.7}
-              onPress={() =>
-                router.push({
-                  pathname: '/camera',
-                  params: {
-                    chatId: chat.id,
-                    clientId: chat.clientId,
-                    clientName: chat.clientName,
-                    caption: searchQuery,
-                  },
-                })
-              }
-            >
-              <PlatformIcon
-                sf="camera"
-                IconComponent={Camera}
-                size={iconSizes.tabBarIcons - 2}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-              <PlatformIcon
-                sf="mic"
-                IconComponent={Mic}
-                size={iconSizes.tabBarIcons - 2}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </>
-        )}
-          </KeyboardAwareToolbar>
-        </BlurView>
-      </View>
+      <ChatToolbar
+        chat={chat}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        inputRef={inputRef}
+        hasText={hasText}
+        isMicrophoneMode={isMicrophoneMode}
+        isRecordingPaused={isRecordingPaused}
+        showAttachmentPicker={showAttachmentPicker}
+        replyingToMessage={replyingToMessage}
+        onPlusPress={handlePlusPress}
+        onMicrophonePress={handleMicrophonePress}
+        onSendMessage={handleSendMessage}
+        onTrashPress={handleTrashPress}
+        onPauseToggle={handlePauseToggle}
+        onSendPress={handleSendPress}
+        onCancelReply={handleCancelReply}
+      />
 
       <MessageReactionsSheet
         visible={reactionsSheetVisible}
@@ -757,92 +635,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     backgroundColor: 'transparent',
-  },
-  headerSafeArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  headerBlur: {
-    width: '100%',
-  },
-  toolbarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  toolbarBlur: {
-    width: '100%',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...typography.p2,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 8,
-  },
-  backButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    width: 44,
-    borderRadius: 22,
-    marginRight: 12,
-  },
-  avatarContainer: {
-    marginRight: 12,
-  },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 22,
-  },
-  avatarPlaceholder: {
-    backgroundColor: '#e0e0e0',
-  },
-  clientName: {
-    ...typography.h5,
-    flex: 1,
-    marginRight: 12,
-  },
-  actionButtonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 22,
-    overflow: 'hidden',
-    minHeight: 44,
-  },
-  nestedButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 44,
-    height: 44,
-  },
-  iconButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 30,
-    height: 44,
-    borderRadius: 22,
-  },
-  sendButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchBarContainer: {
-    flex: 1,
   },
   fullScreenBackgroundImage: {
     position: 'absolute',

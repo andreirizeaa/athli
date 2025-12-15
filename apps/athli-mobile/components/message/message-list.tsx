@@ -24,10 +24,10 @@ import { type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
-import { MessageReplyPreview } from '@/components/chats/message-reply-preview';
-import { MessageDocumentPreview } from '@/components/chats/message-document-preview';
-import { MessageImagePreview } from '@/components/chats/message-image-preview';
-import { MessageVideoPreview } from '@/components/chats/message-video-preview';
+import { MessageReplyPreview } from '@/components/message/message-reply-preview';
+import { MessageDocumentPreview } from '@/components/message/message-document-preview';
+import { MessageImagePreview } from '@/components/message/message-image-preview';
+import { MessageVideoPreview } from '@/components/message/message-video-preview';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 
 interface MessageListProps {
@@ -88,6 +88,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   registerRef,
   onPressIn,
   onPressOut,
+  onLongPress,
   isLastInSenderRun,
   clientName,
   onReplyPreviewPress,
@@ -104,6 +105,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
   registerRef: (ref: View | null) => void;
   onPressIn: () => void;
   onPressOut: () => void;
+  onLongPress?: () => void;
   isLastInSenderRun: boolean;
   clientName: string;
   onReplyPreviewPress?: (messageId: string) => void;
@@ -190,6 +192,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
           onPress={() => {
             onReplyPreviewPress?.(originalMessage.id);
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
@@ -207,6 +212,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onImagePress(item.images, clientName, item.isSent, item.timestamp);
             }
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
@@ -224,6 +232,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onVideoPress(item.video, clientName, item.isSent, item.timestamp);
             }
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
@@ -241,6 +252,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onDocumentPress(item.document);
             }
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
@@ -721,6 +735,12 @@ export const MessageList = ({
   };
 
   const handleLongPress = (message: ChatMessage) => {
+    // Cancel the timer if it's still running to prevent double-triggering
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
     const messageRef = messageRefs.current[message.id];
     if (!messageRef) return;
 
@@ -1001,6 +1021,7 @@ export const MessageList = ({
               }}
               onPressIn={() => handlePressIn(item)}
               onPressOut={handlePressOut}
+              onLongPress={() => handleLongPress(item)}
               isLastInSenderRun={isLastInSenderRun}
               clientName={clientName}
               onReplyPreviewPress={handleReplyPreviewPress}
@@ -1144,6 +1165,8 @@ export const MessageList = ({
             onEmojiPickerClose={handleEmojiPickerClose}
             colorScheme={colorScheme}
             fullThemeColors={fullThemeColors}
+            clientName={clientName}
+            recipientBackgroundColor={recipientBackgroundColor}
           />
         )}
       </View>

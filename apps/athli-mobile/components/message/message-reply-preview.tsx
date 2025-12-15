@@ -15,6 +15,9 @@ type MessageReplyPreviewProps = {
   parentBackgroundColor: string;
   isParentSent: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 };
 
 export const MessageReplyPreview = ({
@@ -24,6 +27,9 @@ export const MessageReplyPreview = ({
   parentBackgroundColor,
   isParentSent,
   onPress,
+  onLongPress,
+  onPressIn,
+  onPressOut,
 }: MessageReplyPreviewProps) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -112,6 +118,9 @@ export const MessageReplyPreview = ({
       style={[styles.container, { backgroundColor: adjustedBackground }]}
       activeOpacity={0.7}
       onPress={onPress}
+      onLongPress={onLongPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityLabel={`Reply to ${senderName}`}
       accessibilityRole="button"
     >

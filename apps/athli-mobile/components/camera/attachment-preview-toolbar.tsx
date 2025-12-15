@@ -8,7 +8,7 @@ import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
-import { MessageInputBar } from '@/components/chats/message-input-bar';
+import { MessageInputBar } from '@/components/message/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { useDarkModeTheme } from '../dark-mode-wrapper';
 
