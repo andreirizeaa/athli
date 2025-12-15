@@ -78,19 +78,15 @@ export default function ArchivedChatsScreen() {
         // Load messages before navigating
         const messages = await getChatMessages(chatId);
         router.push({
-          pathname: '/chats/[id]',
+          pathname: `/chats/${chatId}`,
           params: {
-            id: chatId,
             chat: JSON.stringify(chat),
             messages: JSON.stringify(messages),
           },
         });
       } else {
         // Fallback to just id if chat not found
-        router.push({
-          pathname: '/chats/[id]',
-          params: { id: chatId },
-        });
+        router.push(`/chats/${chatId}`);
       }
     }
   };
