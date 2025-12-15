@@ -128,6 +128,7 @@ export const MessageReplyPreview = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     flexDirection: 'row',
     marginBottom: 6,
     borderRadius: 8,
