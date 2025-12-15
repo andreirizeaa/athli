@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View, Keyboard, TouchableWithoutFeedback, Image as RNImage, ScrollView, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +8,7 @@ import { iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
+import { useDarkModeTheme } from '../dark-mode-wrapper';
 
 type ImageData = {
   uri: string;
@@ -40,11 +41,21 @@ export const AttachmentPreviewScreen = ({
   onImageSelected,
   onDeleteImage,
 }: AttachmentPreviewScreenProps) => {
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const insets = useSafeAreaInsets();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const scrollViewRef = useRef<ScrollView>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const screenWidth = Dimensions.get('window').width;
   const thumbnailSize = 45;
@@ -72,9 +83,18 @@ export const AttachmentPreviewScreen = ({
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <StatusBar hidden />
         <RNImage source={{ uri: selectedImage.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        
+        {/* Keyboard overlay - blocks image interaction when keyboard is open */}
+        {isKeyboardVisible && (
+          <TouchableOpacity
+            style={styles.keyboardOverlay}
+            activeOpacity={1}
+            onPress={Keyboard.dismiss}
+          />
+        )}
         <View
           style={[
             styles.safeArea,
@@ -260,6 +280,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+  },
+  keyboardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+    zIndex: 15, // Above image but below toolbar
   },
 });
 

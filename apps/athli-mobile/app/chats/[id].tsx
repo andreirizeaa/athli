@@ -13,7 +13,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { MessageInputBar } from '@/components/message-input-bar';
+import { MessageInputBar } from '@/components/chats/message-input-bar';
 import { MessageList } from '@/components/chats/message-list';
 import { MessageReactionsSheet } from '@/components/chats/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';

@@ -13,6 +13,7 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendVideoMessage } from '@/services/chats-service';
+import { useDarkModeTheme } from '@/components/dark-mode-wrapper';
 
 type VideoData = {
   uri: string;
@@ -35,7 +36,7 @@ export const VideoPreviewScreen = () => {
     isSent?: string;
   }>();
 
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const [caption, setCaption] = useState('');
@@ -94,7 +95,15 @@ export const VideoPreviewScreen = () => {
   }, []);
 
   const handleClose = () => {
-    router.back();
+    if (fromMessage) {
+      // If viewing from message, just go back once
+      router.back();
+    } else {
+      // Navigate back twice in one go: close preview and camera
+      // React Navigation queues these calls, so both will execute
+      router.back();
+      router.back();
+    }
   };
 
   const handleDownload = async () => {
@@ -156,7 +165,7 @@ export const VideoPreviewScreen = () => {
   const videoMarginTop = 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <StatusBar hidden />
       <VideoView
         player={player}
@@ -252,6 +261,15 @@ export const VideoPreviewScreen = () => {
             onSend={handleSend}
           />
         </View>
+      )}
+
+      {/* Keyboard overlay - blocks video interaction when keyboard is open */}
+      {isKeyboardVisible && (
+        <TouchableOpacity
+          style={styles.keyboardOverlay}
+          activeOpacity={1}
+          onPress={Keyboard.dismiss}
+        />
       )}
 
       {/* Video tap area */}
@@ -366,5 +384,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
+  },
+  keyboardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+    zIndex: 15, // Above video but below toolbar
   },
 });

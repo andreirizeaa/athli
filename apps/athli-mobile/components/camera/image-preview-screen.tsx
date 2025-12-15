@@ -16,7 +16,7 @@ import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview
 import { sendImageMessage } from '@/services/chats-service';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 
-const MessageImagePreviewScreen = () => {
+const ImagePreviewScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{
     images?: string; // JSON string of ImageAttachment[]
@@ -933,5 +933,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MessageImagePreviewScreen;
-
+export default ImagePreviewScreen;

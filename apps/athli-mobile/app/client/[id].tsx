@@ -19,7 +19,7 @@ import { SettingsOption } from '@/components/settings-option';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
-import { MessageInputBar } from '@/components/message-input-bar';
+import { MessageInputBar } from '@/components/chats/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 

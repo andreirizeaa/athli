@@ -15,6 +15,7 @@ import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 import { AttachmentPreviewScreen } from './attachment-preview-screen';
 import { sendImageMessage, sendVideoMessage } from '@/services/chats-service';
+import { useDarkModeTheme } from '../dark-mode-wrapper';
 
 export default function Camera() {
   const router = useRouter();
@@ -24,9 +25,9 @@ export default function Camera() {
     clientName?: string;
     selectedImages?: string; // JSON string of ImageData[]
   }>();
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = true; // Always dark mode in camera
   const insets = useSafeAreaInsets();
   const { hasPermission, requestPermission } = useCameraPermission();
   const backDevice = useCameraDevice('back', {
@@ -730,7 +731,7 @@ export default function Camera() {
   }
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]} {...panResponder.panHandlers}>
       <StatusBar hidden />
         <VisionCamera
           ref={cameraRef}

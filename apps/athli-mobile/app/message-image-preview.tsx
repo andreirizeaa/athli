@@ -1,11 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import MessageImagePreviewScreen from '@/components/message-image-preview/message-image-preview-screen';
+import ImagePreviewScreen from '@/components/camera/image-preview-screen';
 
 export default function MessageImagePreviewPage() {
   return (
     <>
       <StatusBar hidden />
-      <MessageImagePreviewScreen />
+      <ImagePreviewScreen />
     </>
   );
 }
