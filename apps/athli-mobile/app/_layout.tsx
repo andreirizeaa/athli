@@ -73,16 +73,15 @@ function RootLayoutNav() {
   const { primaryColor } = useThemePreference();
   const segments = useSegments();
 
-  // Hide status bar only for camera and preview screens
+  // Hide status bar only for camera and preview screens (not message-image-preview since it's from a message)
   const shouldHideStatusBar = useMemo(() => {
     const currentRoute = segments[segments.length - 1] || '';
-    const cameraAndPreviewRoutes = [
+    const hideStatusBarRoutes = [
       'camera',
       'document-preview',
-      'message-image-preview',
       'video-preview',
     ];
-    return cameraAndPreviewRoutes.includes(currentRoute);
+    return hideStatusBarRoutes.includes(currentRoute);
   }, [segments]);
 
   const navigationTheme =
@@ -106,13 +105,12 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      {!shouldHideStatusBar && (
-        <StatusBar
-          style={colorScheme === 'dark' ? 'light' : 'dark'}
-          translucent
-          backgroundColor="transparent"
-        />
-      )}
+      <StatusBar
+        style={colorScheme === 'dark' ? 'light' : 'dark'}
+        translucent
+        backgroundColor="transparent"
+        hidden={shouldHideStatusBar}
+      />
       <Stack
         screenOptions={{
           contentStyle: {
