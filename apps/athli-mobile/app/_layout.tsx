@@ -1,10 +1,10 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
@@ -71,6 +71,19 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { primaryColor } = useThemePreference();
+  const segments = useSegments();
+
+  // Hide status bar only for camera and preview screens
+  const shouldHideStatusBar = useMemo(() => {
+    const currentRoute = segments[segments.length - 1] || '';
+    const cameraAndPreviewRoutes = [
+      'camera',
+      'document-preview',
+      'message-image-preview',
+      'video-preview',
+    ];
+    return cameraAndPreviewRoutes.includes(currentRoute);
+  }, [segments]);
 
   const navigationTheme =
     colorScheme === 'dark'
@@ -93,11 +106,13 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={navigationTheme}>
-      <StatusBar
-        style={colorScheme === 'dark' ? 'light' : 'dark'}
-        translucent
-        backgroundColor="transparent"
-      />
+      {!shouldHideStatusBar && (
+        <StatusBar
+          style={colorScheme === 'dark' ? 'light' : 'dark'}
+          translucent
+          backgroundColor="transparent"
+        />
+      )}
       <Stack
         screenOptions={{
           contentStyle: {

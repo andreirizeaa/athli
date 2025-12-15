@@ -113,6 +113,9 @@ export default function ChatDetailScreen() {
         // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
         
+        // Clear draft text in input bar
+        setSearchQuery('');
+        
         // Close attachment picker
         setShowAttachmentPicker(false);
         
@@ -145,6 +148,9 @@ export default function ChatDetailScreen() {
 
         // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
+        
+        // Clear draft text in input bar
+        setSearchQuery('');
         
         // Close attachment picker
         setShowAttachmentPicker(false);
@@ -182,6 +188,9 @@ export default function ChatDetailScreen() {
 
         // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
+        
+        // Clear draft text in input bar
+        setSearchQuery('');
         
         // Close attachment picker
         setShowAttachmentPicker(false);
@@ -292,14 +301,13 @@ export default function ChatDetailScreen() {
 
   const handlePlusPress = () => {
     if (showAttachmentPicker) {
-      // Close attachment picker (keep keyboard open)
+      // Close attachment picker (keep current keyboard state)
       setShowAttachmentPicker(false);
-    } else {
-      // Open keyboard if not already open
-      inputRef.current?.focus();
-      // Show attachment picker
-      setShowAttachmentPicker(true);
+      return;
     }
+
+    // Open attachment picker row without changing keyboard state
+    setShowAttachmentPicker(true);
   };
 
   const handleCloseAttachmentPicker = () => {
@@ -340,7 +348,6 @@ export default function ChatDetailScreen() {
     // Clear input and exit reply mode
     setSearchQuery('');
     setReplyingToMessage(null);
-    Keyboard.dismiss();
   };
 
   const handleMessageEdit = (message: ChatMessage) => {
@@ -607,6 +614,7 @@ export default function ChatDetailScreen() {
               chatId={chat?.id}
               clientId={chat?.clientId}
               clientName={chat?.clientName}
+              caption={searchQuery}
             />
           ) : undefined
         }
@@ -645,6 +653,7 @@ export default function ChatDetailScreen() {
                     chatId: chat.id,
                     clientId: chat.clientId,
                     clientName: chat.clientName,
+                    caption: searchQuery,
                   },
                 })
               }

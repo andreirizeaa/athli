@@ -43,6 +43,7 @@ export const AttachmentPreviewToolbar = ({
           onChangeText={onChangeText}
           placeholder="Add a caption..."
           style={[styles.messageInputBar, { backgroundColor: mutedSurfaceColor, borderColor: 'transparent' }]}
+          textColor="#FFFFFF"
         />
       </View>
 

@@ -18,6 +18,7 @@ type AttachmentPickerRowProps = {
   chatId?: string;
   clientId?: string;
   clientName?: string;
+  caption?: string;
 };
 
 export const AttachmentPickerRow = ({
@@ -27,6 +28,7 @@ export const AttachmentPickerRow = ({
   chatId,
   clientId,
   clientName,
+  caption = '',
 }: AttachmentPickerRowProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
@@ -72,6 +74,7 @@ export const AttachmentPickerRow = ({
               clientId: clientId || '',
               clientName: clientName || '',
               fromPicker: 'true', // Flag to indicate this is from the picker, not viewing a message
+              caption: caption || '',
             },
           });
         }
@@ -111,6 +114,8 @@ export const AttachmentPickerRow = ({
               chatId: chatId || '',
               clientId: clientId || '',
               clientName: clientName || '',
+              caption: caption || '',
+              fromCamera: 'false',
             },
           });
         }
@@ -143,6 +148,7 @@ export const AttachmentPickerRow = ({
             chatId: chatId || '',
             clientId: clientId || '',
             clientName: clientName || '',
+            caption: caption || '',
           },
         });
       }
@@ -152,7 +158,15 @@ export const AttachmentPickerRow = ({
   };
 
   const handleCameraPress = () => {
-    router.push('/camera');
+    router.push({
+      pathname: '/camera',
+      params: {
+        chatId: chatId || '',
+        clientId: clientId || '',
+        clientName: clientName || '',
+        caption: caption || '',
+      },
+    });
   };
 
   return (

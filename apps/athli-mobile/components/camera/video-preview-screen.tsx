@@ -33,14 +33,16 @@ export const VideoPreviewScreen = () => {
     clientId?: string;
     clientName?: string;
     fromMessage?: string; // 'true' if viewing from message bubble
+    fromCamera?: string; // 'true' if coming from in-app camera
     senderName?: string;
     isSent?: string;
+    caption?: string; // Initial caption text from chat input
   }>();
 
   const { colors: themeColors } = useDarkModeTheme();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(params.caption || '');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   if (!params.uri) {
@@ -54,6 +56,7 @@ export const VideoPreviewScreen = () => {
   };
 
   const fromMessage = params.fromMessage === 'true';
+  const fromCamera = params.fromCamera === 'true';
   const showToolbar = !fromMessage;
   const senderName = params.senderName || 'Unknown';
   const isSent = params.isSent === 'true';
@@ -96,15 +99,21 @@ export const VideoPreviewScreen = () => {
   }, []);
 
   const handleClose = () => {
-    if (fromMessage) {
-      // If viewing from message, just go back once
+    if (fromMessage || !params.chatId) {
+      // Viewing from message or no chat context: just close preview
       router.back();
-    } else {
-      // Navigate back twice in one go: close preview and camera
-      // React Navigation queues these calls, so both will execute
-      router.back();
-      router.back();
+      return;
     }
+
+    if (fromCamera) {
+      // Came from in-app camera: close preview and camera, return to chat
+      router.back();
+      router.back();
+      return;
+    }
+
+    // Came from attachment picker: only close preview and return to chat
+    router.back();
   };
 
   const handleDownload = async () => {
@@ -132,31 +141,33 @@ export const VideoPreviewScreen = () => {
     try {
       await sendVideoMessage(params.chatId, video.uri, caption.trim() || undefined);
       
-      // Navigate back to chat screen - go back twice if coming from camera (video-preview -> camera -> chat)
-      router.back();
+      // Navigate back after sending
+      if (!params.chatId) {
+        // No chat context, just close preview
+        router.back();
+      } else if (fromCamera) {
+        // From in-app camera: close preview and camera, return to chat
+        router.back();
+        router.back();
+      } else {
+        // From attachment picker: just close preview and return to chat
+        router.back();
+      }
       
       // Set params after a delay to ensure navigation completes
       setTimeout(() => {
-        // If we're still not at chat screen (camera might still be open), go back again
-        if (router.canGoBack()) {
-          router.back();
+        if (params.chatId) {
+          router.setParams({
+            videoSent: 'true',
+            sentVideo: JSON.stringify({
+              uri: video.uri,
+              duration: video.duration,
+              orientation: video.orientation,
+              caption: caption.trim() || '',
+            }),
+          } as any);
         }
-        
-        // Set params to add video message to list
-        setTimeout(() => {
-          if (params.chatId) {
-            router.setParams({
-              videoSent: 'true',
-              sentVideo: JSON.stringify({
-                uri: video.uri,
-                duration: video.duration,
-                orientation: video.orientation,
-                caption: caption.trim() || '',
-              }),
-            } as any);
-          }
-        }, 200);
-      }, 100);
+      }, 200);
     } catch (error) {
       console.error('Error sending video:', error);
       Alert.alert('Error', 'Failed to send video');
@@ -167,7 +178,7 @@ export const VideoPreviewScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <StatusBar hidden />
+      {showToolbar && <StatusBar hidden />}
       <VideoView
         player={player}
         style={[
@@ -180,7 +191,6 @@ export const VideoPreviewScreen = () => {
           },
         ]}
         contentFit="contain"
-        allowsFullscreen={false}
         allowsPictureInPicture={false}
       />
 
