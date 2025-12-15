@@ -13,6 +13,7 @@ import { AddClientContent } from '@/components/clients/add-client-content';
 import { NewSessionContent } from '@/components/calendar/new-session-content';
 import { NewChatContent } from '@/components/chats/new-chat-content';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 
 export default function AddModalContent() {
   const router = useRouter();
@@ -69,13 +70,13 @@ export default function AddModalContent() {
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background }]}>
-        <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: themeColors.surfaceSecondary }]}
-          activeOpacity={0.7}
+        <IconButton
+          icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}
-        >
-          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={themeColors.text} />
-        </TouchableOpacity>
+          size="md"
+          color={themeColors.text}
+          backgroundColor={themeColors.surfaceSecondary}
+        />
         <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
         <View style={styles.closeButton} />
       </View>

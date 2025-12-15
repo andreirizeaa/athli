@@ -336,13 +336,13 @@ export default function SelectDateModal() {
     <View style={[styles.container, { backgroundColor: themeColors.background, borderTopWidth: 0, borderTopColor: 'transparent' }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background, borderTopWidth: 0 }]}>
-        <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: themeColors.surfaceSecondary }]}
-          activeOpacity={0.7}
+        <IconButton
+          icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}
-        >
-          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-        </TouchableOpacity>
+          size="md"
+          color={iconColor}
+          backgroundColor={themeColors.surfaceSecondary}
+        />
         <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">{t('calendar.selectDate')}</Text>
         <TouchableOpacity
           style={[styles.todayButton, { backgroundColor: themeColors.surfaceSecondary }]}

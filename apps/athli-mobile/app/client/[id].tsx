@@ -19,6 +19,7 @@ import { SettingsOption } from '@/components/settings-option';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton, DoubleIconButton } from '@/components/icon-button';
 import { MessageInputBar } from '@/components/chats/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
@@ -164,18 +165,14 @@ export default function ClientDetailScreen() {
         ]}
       >
         <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
-          >
-            <PlatformIcon
-              sf="chevron.left"
-              IconComponent={ChevronLeft}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+            style={{ marginRight: 12 }}
+          />
           <View style={styles.avatarContainer}>
             <View
               style={[
@@ -186,36 +183,16 @@ export default function ClientDetailScreen() {
             />
           </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Loading...</Text>
-          <View
+          <DoubleIconButton
             ref={actionButtonRef}
-            collapsable={false}
-            style={[styles.actionButtonContainer, { backgroundColor: mutedSurfaceColor }]}
-          >
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleChatPress}
-            >
-              <PlatformIcon
-                sf="message"
-                IconComponent={MessageCircle}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleEllipsisPress}
-            >
-              <PlatformIcon
-                sf="ellipsis"
-                IconComponent={MoreVertical}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </View>
+            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
+            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+            onLeftPress={handleChatPress}
+            onRightPress={handleEllipsisPress}
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
         </View>
       </View>
     );
@@ -236,18 +213,14 @@ export default function ClientDetailScreen() {
         ]}
       >
         <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
-          >
-            <PlatformIcon
-              sf="chevron.left"
-              IconComponent={ChevronLeft}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+            style={{ marginRight: 12 }}
+          />
           <View style={styles.avatarContainer}>
             <View
               style={[
@@ -258,36 +231,16 @@ export default function ClientDetailScreen() {
             />
           </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Client Not Found</Text>
-          <View
+          <DoubleIconButton
             ref={actionButtonRef}
-            collapsable={false}
-            style={[styles.actionButtonContainer, { backgroundColor: mutedSurfaceColor }]}
-          >
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleChatPress}
-            >
-              <PlatformIcon
-                sf="message"
-                IconComponent={MessageCircle}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleEllipsisPress}
-            >
-              <PlatformIcon
-                sf="ellipsis"
-                IconComponent={MoreVertical}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </View>
+            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
+            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+            onLeftPress={handleChatPress}
+            onRightPress={handleEllipsisPress}
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
         </View>
       </View>
     );
@@ -308,18 +261,14 @@ export default function ClientDetailScreen() {
         ]}
       >
         <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
-          >
-            <PlatformIcon
-              sf="chevron.left"
-              IconComponent={ChevronLeft}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+            style={{ marginRight: 12 }}
+          />
 
           <View style={styles.avatarContainer}>
             {client.avatar ? (
@@ -338,36 +287,16 @@ export default function ClientDetailScreen() {
           <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
             {client.fullName}
           </Text>
-          <View
+          <DoubleIconButton
             ref={actionButtonRef}
-            collapsable={false}
-            style={[styles.actionButtonContainer, { backgroundColor: mutedSurfaceColor }]}
-          >
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleChatPress}
-            >
-              <PlatformIcon
-                sf="message"
-                IconComponent={MessageCircle}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleEllipsisPress}
-            >
-              <PlatformIcon
-                sf="ellipsis"
-                IconComponent={MoreVertical}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </View>
+            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
+            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+            onLeftPress={handleChatPress}
+            onRightPress={handleEllipsisPress}
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
         </View>
       </View>
 
@@ -491,10 +420,7 @@ export default function ClientDetailScreen() {
                 />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={styles.iconButton}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
                 <PlatformIcon
                   sf="mic"
                   IconComponent={Mic}

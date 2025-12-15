@@ -143,13 +143,13 @@ export default function PreferencesScreen() {
       ]}
     >
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-          activeOpacity={0.7}
+        <IconButton
+          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
-        >
-          <PlatformIcon sf="chevron.left" IconComponent={ChevronLeft} size={iconSizes.navigationChevrons} color={iconColor} />
-        </TouchableOpacity>
+          size="md"
+          color={iconColor}
+          backgroundColor={mutedSurfaceColor}
+        />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('preferences.title')}</Text>
         <View style={styles.headerRightPlaceholder} />
       </View>

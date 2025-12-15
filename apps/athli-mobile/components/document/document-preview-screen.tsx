@@ -10,6 +10,7 @@ import * as Sharing from 'expo-sharing';
 import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendDocumentMessage } from '@/services/chats-service';
 
@@ -344,18 +345,13 @@ const DocumentPreviewScreen = () => {
         >
           {/* Top header */}
           <View style={styles.topHeader}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
               onPress={handleClose}
-            >
-              <PlatformIcon
-                sf="xmark"
-                IconComponent={X}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
 
             {/* Document name in center */}
             <View style={styles.titleContainer}>

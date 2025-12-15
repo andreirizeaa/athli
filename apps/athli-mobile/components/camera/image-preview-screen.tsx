@@ -11,6 +11,7 @@ import Share from 'react-native-share';
 import { iconSizes, typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { type ImageAttachment } from '@/components/chats/message-image-preview';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendImageMessage } from '@/services/chats-service';
@@ -398,18 +399,13 @@ const ImagePreviewScreen = () => {
                   </Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity
-                  style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-                  activeOpacity={0.7}
+                <IconButton
+                  icon={{ sf: 'xmark', IconComponent: X }}
                   onPress={handleClose}
-                >
-                  <PlatformIcon
-                    sf="xmark"
-                    IconComponent={X}
-                    size={iconSizes.navigationChevrons}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
+                  size="md"
+                  color={iconColor}
+                  backgroundColor={mutedSurfaceColor}
+                />
               )}
             </View>
 
@@ -425,18 +421,13 @@ const ImagePreviewScreen = () => {
 
             <View style={styles.rightHeaderContainer}>
               {isSelectionMode ? (
-                <TouchableOpacity
-                  style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-                  activeOpacity={0.7}
+                <IconButton
+                  icon={{ sf: 'checkmark', IconComponent: Check }}
                   onPress={handleExitSelectionMode}
-                >
-                  <PlatformIcon
-                    sf="checkmark"
-                    IconComponent={Check}
-                    size={iconSizes.navigationChevrons}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
+                  size="md"
+                  color={iconColor}
+                  backgroundColor={mutedSurfaceColor}
+                />
               ) : (
                 <>
                   {/* Download button - only show when there's a single image */}
@@ -547,18 +538,13 @@ const ImagePreviewScreen = () => {
             ]}
           >
             {/* Download button */}
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'square.and.arrow.down', IconComponent: Download }}
               onPress={handleDownloadSelected}
-            >
-              <PlatformIcon
-                sf="square.and.arrow.down"
-                IconComponent={Download}
-                size={iconSizes.navigationChevrons + 2}
-                color={iconColor}
-              />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
 
             {/* Selected count (centered, not clickable) */}
             <View style={[styles.selectedCountButton, { backgroundColor: mutedSurfaceColor }]}>
@@ -621,13 +607,13 @@ const ImagePreviewScreen = () => {
         >
           {/* Top header - only X button */}
           <View style={styles.topHeader}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
               onPress={handleClose}
-            >
-              <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
           </View>
         </View>
 
