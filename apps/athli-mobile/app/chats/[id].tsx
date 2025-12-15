@@ -4,6 +4,8 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send, X } from 'lucide-react-native';
 
@@ -88,6 +90,33 @@ export default function ChatDetailScreen() {
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  const keyboardHeight = useSharedValue(0);
+
+  useKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        keyboardHeight.value = Math.max(event.height, 0);
+      },
+      onEnd: (event) => {
+        'worklet';
+        keyboardHeight.value = Math.max(event.height, 0);
+      },
+    },
+    []
+  );
+
+  const scrollWindowAnimatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [
+        {
+          translateY: -keyboardHeight.value,
+        },
+      ],
+    };
+  });
 
   // Handle document sent - add to message list and close attachment picker
   useEffect(() => {
@@ -564,7 +593,9 @@ export default function ChatDetailScreen() {
       />
 
       {/* ROW 2: SCROLL WINDOW - Content scrolls through header and toolbar */}
-      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <Animated.View
+        style={[{ flex: 1, backgroundColor: 'transparent' }, scrollWindowAnimatedStyle]}
+      >
         <MessageList
           messages={messages}
           backgroundColor="transparent"
@@ -585,7 +616,7 @@ export default function ChatDetailScreen() {
             insets.bottom // Safe area bottom
           }
         />
-      </View>
+      </Animated.View>
 
       {/* ROW 3: TOOLBAR — Absolutely positioned with blur */}
       <View style={styles.toolbarContainer} pointerEvents="box-none">
