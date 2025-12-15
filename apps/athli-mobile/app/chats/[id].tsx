@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
+import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ChevronLeft, Ellipsis, Archive, Trash2, User, Plus, Camera, Mic, Send, X } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { MessageInputBar } from '@/components/message-input-bar';
@@ -43,6 +46,9 @@ export default function ChatDetailScreen() {
 
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
   const [chat, setChat] = useState<Chat | null>(() => {
     if (chatParam) {
@@ -194,6 +200,9 @@ export default function ChatDetailScreen() {
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const hasText = searchQuery.trim().length > 0;
+  
+  // Create translucent background color for frosted glass effect (60% opacity)
+  const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
 
   useEffect(() => {
     // Only load if not provided via params
@@ -398,6 +407,8 @@ export default function ChatDetailScreen() {
         duration: video.duration.toString(),
         orientation: video.orientation,
         fromMessage: 'true',
+        senderName: senderName,
+        isSent: isSent.toString(),
         messageTimestamp: messageTimestamp?.toISOString() || '',
       },
     });
@@ -433,13 +444,23 @@ export default function ChatDetailScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
               {t('general.loading')}
             </Text>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
@@ -447,22 +468,46 @@ export default function ChatDetailScreen() {
   if (!chat) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: themeColors.mutedText }]}>
               {t('chats.chatNotFound')}
             </Text>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: headerBackgroundColor }]}>
-      {/* ROW 1: HEADER */}
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: headerBackgroundColor }]} edges={['top']}>
-        <View style={[styles.header, { backgroundColor: headerBackgroundColor }]}>
+    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+      
+      {/* Background image covering entire screen */}
+      <Image
+        source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
+        style={styles.fullScreenBackgroundImage}
+        contentFit="cover"
+      />
+      
+      {/* ROW 1: HEADER - Absolutely positioned with blur (extends into status bar area) */}
+      <View style={[styles.headerSafeArea, { paddingTop: 0 }]} pointerEvents="box-none">
+        <BlurView
+          intensity={100}
+          tint={isDark ? 'dark' : 'light'}
+          style={[styles.headerBlur, { paddingTop: insets.top, backgroundColor: translucentHeaderBg }]}
+        >
+          <View style={styles.header}>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
             activeOpacity={0.7}
@@ -526,7 +571,8 @@ export default function ChatDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+        </BlurView>
+      </View>
 
       <DropdownMenu
         visible={dropdownVisible}
@@ -535,11 +581,11 @@ export default function ChatDetailScreen() {
         anchorPosition={buttonPosition}
       />
 
-      {/* ROW 2: SCROLL WINDOW (ONLY between header + toolbar) */}
-      <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+      {/* ROW 2: SCROLL WINDOW - Content scrolls through header and toolbar */}
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
           messages={messages}
-          backgroundColor={themeColors.pageBackground}
+          backgroundColor="transparent"
           themeColors={themeColors}
           clientName={chat.clientName}
           onReply={handleMessageReply}
@@ -549,12 +595,25 @@ export default function ChatDetailScreen() {
           onDocumentPress={handleDocumentPress}
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
+          headerHeight={insets.top + 60} // Safe area + header content (~60px)
+          toolbarHeight={
+            (replyingToMessage ? 54 : 0) + // Reply preview height
+            (showAttachmentPicker ? 112 : 0) + // Attachment picker height
+            40 + // closedBaseHeight
+            insets.bottom // Safe area bottom
+          }
         />
       </View>
 
-      {/* ROW 3: TOOLBAR — EXACT original wrapper context (no extra safe-area / KAV wrappers) */}
-      <KeyboardAwareToolbar
-        backgroundColor={headerBackgroundColor}
+      {/* ROW 3: TOOLBAR — Absolutely positioned with blur */}
+      <View style={styles.toolbarContainer} pointerEvents="box-none">
+        <BlurView
+          intensity={100}
+          tint={isDark ? 'dark' : 'light'}
+          style={[styles.toolbarBlur, { backgroundColor: translucentHeaderBg }]}
+        >
+          <KeyboardAwareToolbar
+            backgroundColor="transparent"
         contentStyle={{ paddingHorizontal: 16 }}
         replyPreview={
           replyingToMessage ? (
@@ -562,14 +621,14 @@ export default function ChatDetailScreen() {
               message={replyingToMessage}
               clientName={chat.clientName}
               onClose={handleCancelReply}
-              backgroundColor={headerBackgroundColor}
+              backgroundColor={translucentHeaderBg}
             />
           ) : undefined
         }
         attachmentPicker={
           showAttachmentPicker ? (
             <AttachmentPickerRow
-              backgroundColor={headerBackgroundColor}
+              backgroundColor={translucentHeaderBg}
               chatId={chat?.id}
               clientId={chat?.clientId}
               clientName={chat?.clientName}
@@ -633,7 +692,9 @@ export default function ChatDetailScreen() {
             </TouchableOpacity>
           </>
         )}
-      </KeyboardAwareToolbar>
+          </KeyboardAwareToolbar>
+        </BlurView>
+      </View>
 
       <MessageReactionsSheet
         visible={reactionsSheetVisible}
@@ -655,6 +716,26 @@ const styles = StyleSheet.create({
   safeArea: {
     backgroundColor: 'transparent',
   },
+  headerSafeArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  headerBlur: {
+    width: '100%',
+  },
+  toolbarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  toolbarBlur: {
+    width: '100%',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -666,7 +747,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
@@ -720,5 +801,13 @@ const styles = StyleSheet.create({
   },
   searchBarContainer: {
     flex: 1,
+  },
+  fullScreenBackgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
   },
 });

@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 12,
     position: 'relative',
   },
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   calendarContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
   calendarGrid: {

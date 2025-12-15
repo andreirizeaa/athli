@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { StyleSheet, TouchableOpacity, View, Keyboard, TouchableWithoutFeedback, Image as RNImage, ScrollView, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { X, Plus, Trash2 } from 'lucide-react-native';
 
 import { iconSizes } from '@/constants/typography';
@@ -40,6 +41,7 @@ export const AttachmentPreviewScreen = ({
   onDeleteImage,
 }: AttachmentPreviewScreenProps) => {
   const { colors: themeColors } = useThemePreference();
+  const insets = useSafeAreaInsets();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const scrollViewRef = useRef<ScrollView>(null);
@@ -71,8 +73,19 @@ export const AttachmentPreviewScreen = ({
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        <StatusBar hidden />
         <RNImage source={{ uri: selectedImage.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           {/* Top header - only X button */}
           <View style={styles.topHeader}>
             <TouchableOpacity
@@ -83,7 +96,7 @@ export const AttachmentPreviewScreen = ({
               <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Image gallery row above toolbar */}
         <View style={styles.galleryContainer}>
@@ -102,7 +115,7 @@ export const AttachmentPreviewScreen = ({
                   style={[
                     styles.thumbnailContainer,
                     {
-                      borderColor: isSelected ? themeColors.primary : inactiveBorderColor,
+                      borderColor: '#FFFFFF',
                       borderWidth: 2,
                     },
                   ]}
@@ -121,7 +134,7 @@ export const AttachmentPreviewScreen = ({
                         sf="trash"
                         IconComponent={Trash2}
                         size={18}
-                        color={iconColor}
+                        color="#FFFFFF"
                       />
                     </TouchableOpacity>
                   </View>
@@ -173,7 +186,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },

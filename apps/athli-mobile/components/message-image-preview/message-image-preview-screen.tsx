@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Download, Plus, Trash2, MoreHorizontal, CheckCircle2, Check } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -373,7 +373,17 @@ const MessageImagePreviewScreen = () => {
   if (!fromPicker) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           {/* Top header */}
           <View style={styles.topHeader}>
             <View style={styles.leftHeaderContainer}>
@@ -465,7 +475,7 @@ const MessageImagePreviewScreen = () => {
               )}
             </View>
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Scrollable images */}
         <ScrollView
@@ -598,7 +608,17 @@ const MessageImagePreviewScreen = () => {
         <View style={styles.imagePreviewContainer}>
           <RNImage source={{ uri: selectedImage.uri }} style={styles.previewImage} resizeMode="contain" />
         </View>
-        <SafeAreaView style={styles.safeAreaPreview} edges={['top']}>
+        <View
+          style={[
+            styles.safeAreaPreview,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           {/* Top header - only X button */}
           <View style={styles.topHeader}>
             <TouchableOpacity
@@ -609,7 +629,7 @@ const MessageImagePreviewScreen = () => {
               <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Image gallery row above toolbar */}
         <View style={styles.galleryContainer}>
@@ -628,7 +648,7 @@ const MessageImagePreviewScreen = () => {
                   style={[
                     styles.thumbnailContainer,
                     {
-                      borderColor: isSelected ? themeColors.primary : inactiveBorderColor,
+                      borderColor: '#FFFFFF',
                       borderWidth: 2,
                     },
                   ]}
@@ -647,7 +667,7 @@ const MessageImagePreviewScreen = () => {
                           sf="trash"
                           IconComponent={Trash2}
                           size={18}
-                          color={iconColor}
+                          color="#FFFFFF"
                         />
                       </TouchableOpacity>
                     </View>
@@ -661,14 +681,14 @@ const MessageImagePreviewScreen = () => {
               style={[
                 styles.addButtonContainer,
                 {
-                  borderColor: inactiveBorderColor,
+                  borderColor: '#FFFFFF',
                   borderWidth: 2,
                 },
               ]}
               activeOpacity={0.7}
               onPress={handleAddMore}
             >
-              <PlatformIcon sf="photo.badge.plus" IconComponent={Plus} size={24} color={inactiveBorderColor} />
+              <PlatformIcon sf="photo.badge.plus" IconComponent={Plus} size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -704,7 +724,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
@@ -818,7 +838,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     gap: 8,
     zIndex: 20,

@@ -8,6 +8,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 
 type AttachmentPickerRowProps = {
@@ -29,6 +30,9 @@ export const AttachmentPickerRow = ({
 }: AttachmentPickerRowProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
+  
+  // Create translucent background color - more transparent since parent already has BlurView
+  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
 
   const handlePhotoPress = async () => {
     try {
@@ -153,12 +157,7 @@ export const AttachmentPickerRow = ({
 
   return (
     <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: backgroundColor || themeColors.surfaceSecondary,
-        },
-      ]}
+      style={[styles.container, { backgroundColor: translucentBg }]}
     >
       <View style={styles.content}>
         <TouchableOpacity
