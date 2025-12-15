@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Keyboard,
+  LayoutAnimation,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -117,6 +125,21 @@ export default function ChatDetailScreen() {
       ],
     };
   });
+
+  useEffect(() => {
+    const handleKeyboardHide = () => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setShowAttachmentPicker(false);
+    };
+
+    const willHideSub = Keyboard.addListener('keyboardWillHide', handleKeyboardHide);
+    const didHideSub = Keyboard.addListener('keyboardDidHide', handleKeyboardHide);
+
+    return () => {
+      willHideSub.remove();
+      didHideSub.remove();
+    };
+  }, []);
 
   // Handle document sent - add to message list and close attachment picker
   useEffect(() => {
@@ -316,6 +339,7 @@ export default function ChatDetailScreen() {
   };
 
   const handleMessageReply = (message: ChatMessage) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(message);
     // Focus the input to open keyboard
     setTimeout(() => {
@@ -324,6 +348,7 @@ export default function ChatDetailScreen() {
   };
 
   const handleCancelReply = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(null);
     Keyboard.dismiss();
   };
@@ -331,11 +356,13 @@ export default function ChatDetailScreen() {
   const handlePlusPress = () => {
     if (showAttachmentPicker) {
       // Close attachment picker (keep current keyboard state)
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
       return;
     }
 
     // Open attachment picker row without changing keyboard state
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowAttachmentPicker(true);
   };
 
