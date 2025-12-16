@@ -78,8 +78,9 @@ export default function ArchivedChatsScreen() {
         // Load messages before navigating
         const messages = await getChatMessages(chatId);
         router.push({
-          pathname: `/chats/${chatId}`,
+          pathname: `/chats/[id]`,
           params: {
+            id: chatId,
             chat: JSON.stringify(chat),
             messages: JSON.stringify(messages),
           },

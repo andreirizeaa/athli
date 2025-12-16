@@ -240,7 +240,7 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
                       <Text
                         style={[
                           styles.dayText,
-                          { color: isSelected ? '#FFFFFF' : themeColors.text },
+                          { color: isSelected ? themeColors.primaryForeground : themeColors.text },
                         ]}
                       >
                         {cell.day}
@@ -331,8 +331,6 @@ export default function SelectDateModal() {
 
   const getItemType = () => 'month';
 
-  const iconColor = themeColors.text;
-
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background, borderTopWidth: 0, borderTopColor: 'transparent' }]}>
       {/* Header */}
@@ -341,11 +339,10 @@ export default function SelectDateModal() {
           icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}
           size="md"
-          color={iconColor}
         />
         <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">{t('calendar.selectDate')}</Text>
         <TouchableOpacity
-          style={[styles.todayButton, { backgroundColor: themeColors.surfaceSecondary }]}
+          style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
           activeOpacity={0.7}
           onPress={handleSelectToday}
         >

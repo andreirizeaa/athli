@@ -7,6 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import type { LucideIcon } from 'lucide-react-native';
 import {
   ArrowLeftRight,
+  ChevronLeft,
   Cog,
   FileText,
   IdCard,
@@ -27,6 +28,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { Card } from '@/components/card';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
+import { IconButton } from '@/components/icon-button';
 
 type PlatformIconProps = {
   sf: string;
@@ -47,7 +49,7 @@ const PlatformIcon = ({ sf, mdi, IconComponent, size = 24, color = '#000000' }: 
   return <IconComponent {...({ size, color } as any)} />;
 };
 
-export default function SettingsScreen() {
+export default function ProfileScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
@@ -100,12 +102,16 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleBackPress = () => {
+    router.back();
+  };
+
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
     <View
       style={[
         styles.safeArea,
         {
+          backgroundColor: themeColors.pageBackground,
           paddingTop: insets.top,
           paddingBottom: 0,
           paddingLeft: insets.left,
@@ -115,16 +121,22 @@ export default function SettingsScreen() {
     >
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
       >
+        <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+            onPress={handleBackPress}
+            size="md"
+            color={iconColor}
+          />
+          <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('profile.title')}</Text>
+          <View style={styles.headerRightPlaceholder} />
+        </View>
+
         <View style={styles.content}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: themeColors.text }]}>
-              {isAthleteView ? t('profile.title') : t('settings.title')}
-            </Text>
-          </View>
 
           {/* View Switching Card */}
           <Card>
@@ -138,41 +150,39 @@ export default function SettingsScreen() {
                   color={iconColor}
                 />
               }
-              title={isAthleteView ? t('profile.viewCoachesArea') : t('settings.viewAthletesArea')}
+              title={t('profile.viewCoachesArea')}
               showChevron
               onPress={handleToggleView}
             />
           </Card>
 
           {/* Profile Card - Only shown in athlete view */}
-          {isAthleteView && (
-            <Card>
-              <TouchableOpacity style={styles.profileRow} activeOpacity={0.7}>
-                <View style={styles.profileAvatar}>
-                  <View style={styles.fallbackAvatar}>
-                    <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
-                  </View>
+          <Card>
+            <TouchableOpacity style={styles.profileRow} activeOpacity={0.7}>
+              <View style={styles.profileAvatar}>
+                <View style={styles.fallbackAvatar}>
+                  <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
                 </View>
-                <View style={styles.profileTextContainer}>
-                  <View style={styles.profileNameRow}>
-                    <Text
-                      style={[styles.profileNameText, { color: themeColors.text }]}
-                      numberOfLines={1}
-                    >
-                      {t('profile.enterYourName')}
-                    </Text>
-                    <PlatformIcon sf="pencil" mdi="edit" IconComponent={Pencil} size={iconSizes.smallIcons} color={themeColors.mutedText} />
-                  </View>
+              </View>
+              <View style={styles.profileTextContainer}>
+                <View style={styles.profileNameRow}>
                   <Text
-                    style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
+                    style={[styles.profileNameText, { color: themeColors.text }]}
                     numberOfLines={1}
                   >
-                    {t('profile.memberSince')} 2024
+                    {t('profile.enterYourName')}
                   </Text>
+                  <PlatformIcon sf="pencil" mdi="edit" IconComponent={Pencil} size={iconSizes.smallIcons} color={themeColors.mutedText} />
                 </View>
-              </TouchableOpacity>
-            </Card>
-          )}
+                <Text
+                  style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
+                  numberOfLines={1}
+                >
+                  {t('profile.memberSince')} 2024
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </Card>
 
           {/* Account */}
           <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
@@ -247,35 +257,37 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </View>
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
   safeArea: {
     flex: 1,
   },
   container: {
     flex: 1,
-    paddingTop: 20,
-    marginBottom: 44,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
+  scrollContent: {
+    paddingBottom: 32,
   },
-  titleRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+    marginTop: 4,
   },
-  title: {
-    ...typography.h1,
-    textAlign: 'left',
-    flex: 1,
+  headerTitle: {
+    ...typography.h5,
+  },
+  headerRightPlaceholder: {
+    width: 44,
+  },
+  content: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   sectionTitle: {
     ...typography.p1,

@@ -72,6 +72,10 @@ const WeekPage = React.memo(
                   style={[
                     styles.dayCircle,
                     day.isActive && { backgroundColor: primaryColor },
+                    day.isToday && !day.isActive && {
+                      borderWidth: 1.5,
+                      borderColor: primaryColor,
+                    },
                   ]}
                 >
                   {/* Day number inside the circle */}
@@ -80,9 +84,7 @@ const WeekPage = React.memo(
                       styles.dayNumber,
                       day.isActive
                         ? { color: themeColors.primaryForeground }
-                        : day.isToday
-                          ? { color: primaryColor }
-                          : { color: themeColors.mutedText },
+                        : { color: themeColors.mutedText },
                     ]}
                   >
                     {day.dayNumber}
