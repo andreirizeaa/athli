@@ -111,7 +111,10 @@ export default function ClientDetailScreen() {
   };
 
   const handleEditDetails = () => {
-    router.push(`/client/edit-client-details-modal`);
+    router.push({
+      pathname: '/client/edit-client-details-modal',
+      params: { id: client?.id },
+    });
   };
 
   const handleArchiveClient = () => {
