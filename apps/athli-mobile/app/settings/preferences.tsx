@@ -58,7 +58,7 @@ export default function PreferencesScreen() {
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
 
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const mutedSurfaceColor = themeColors.iconButton;
   const dividerColor = themeColors.border;
   const secondaryTextColor = themeColors.mutedText;
 
@@ -87,46 +87,6 @@ export default function PreferencesScreen() {
     router.push('/palette-modal');
   };
 
-  const renderAppearanceModeCard = (label: string, mode: 'light' | 'dark' | 'system') => {
-    const isSelected = preference === mode;
-
-    const iconProps = mode === 'light' 
-      ? { sf: 'sun.max.fill', IconComponent: Sun }
-      : mode === 'dark' 
-      ? { sf: 'moon.fill', IconComponent: Moon }
-      : { sf: 'gear', IconComponent: Settings };
-    
-    const iconColor = isSelected ? themeColors.primary : secondaryTextColor;
-    const highlightBorderColor =
-      themeColors.pageBackground === '#000000' ? '#FFFFFF' : '#000000';
-
-    const handlePress = () => {
-      handleAppearanceModePress(mode);
-    };
-
-    return (
-      <TouchableOpacity
-        key={mode}
-        style={[
-          styles.modeCard,
-          {
-            backgroundColor: mutedSurfaceColor,
-            borderColor: isSelected ? highlightBorderColor : dividerColor,
-            borderWidth: 1,
-          },
-        ]}
-        activeOpacity={0.7}
-        onPress={handlePress}
-      >
-        <View style={styles.modeCardContent}>
-          <PlatformIcon {...iconProps} size={iconSizes.modalIcons} color={iconColor} />
-          <Text style={[styles.modeCardLabel, { color: themeColors.text }]}>
-            {label}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
 
   return (
     <View
@@ -160,10 +120,70 @@ export default function PreferencesScreen() {
             {t('preferences.chooseAppearance')}
           </Text>
 
-          <View style={styles.modeRow}>
-            {renderAppearanceModeCard(t('preferences.light'), 'light')}
-            {renderAppearanceModeCard(t('preferences.dark'), 'dark')}
-            {renderAppearanceModeCard(t('preferences.system'), 'system')}
+          <View style={[styles.buttonGroup, { backgroundColor: mutedSurfaceColor }]}>
+            <TouchableOpacity
+              style={[
+                styles.buttonGroupButton,
+                preference === 'light' && [
+                  styles.buttonGroupButtonActive,
+                  { backgroundColor: themeColors.background },
+                ],
+              ]}
+              onPress={() => handleAppearanceModePress('light')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.buttonGroupText,
+                  { color: preference === 'light' ? themeColors.text : themeColors.mutedText },
+                  preference === 'light' && styles.buttonGroupTextActive,
+                ]}
+              >
+                {t('preferences.light')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.buttonGroupButton,
+                preference === 'dark' && [
+                  styles.buttonGroupButtonActive,
+                  { backgroundColor: themeColors.background },
+                ],
+              ]}
+              onPress={() => handleAppearanceModePress('dark')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.buttonGroupText,
+                  { color: preference === 'dark' ? themeColors.text : themeColors.mutedText },
+                  preference === 'dark' && styles.buttonGroupTextActive,
+                ]}
+              >
+                {t('preferences.dark')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.buttonGroupButton,
+                preference === 'system' && [
+                  styles.buttonGroupButtonActive,
+                  { backgroundColor: themeColors.background },
+                ],
+              ]}
+              onPress={() => handleAppearanceModePress('system')}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.buttonGroupText,
+                  { color: preference === 'system' ? themeColors.text : themeColors.mutedText },
+                  preference === 'system' && styles.buttonGroupTextActive,
+                ]}
+              >
+                {t('preferences.system')}
+              </Text>
+            </TouchableOpacity>
           </View>
         </Card>
 
@@ -233,26 +253,37 @@ const styles = StyleSheet.create({
     ...typography.p5,
     marginBottom: 12,
   },
-  modeRow: {
+  buttonGroup: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
+    borderRadius: 28,
+    padding: 4,
+    gap: 4,
+    marginTop: 12,
   },
-  modeCard: {
+  buttonGroupButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 0.5,
+    paddingHorizontal: 16,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modeCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  buttonGroupButtonActive: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  modeCardLabel: {
-    ...typography.p5,
+  buttonGroupText: {
+    ...typography.p2,
+    fontWeight: '600',
+  },
+  buttonGroupTextActive: {
+    fontWeight: '700',
   },
 });
 

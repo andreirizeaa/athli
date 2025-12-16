@@ -26,9 +26,21 @@ export const en = {
   },
   training: {
     title: 'Training',
+    addOptions: {
+      addFromLibrary: 'Add from library',
+      createSession: 'Create a session',
+      oneOffSession: 'One-off session',
+    },
+    addSessionFromLibrary: {
+      title: 'Add session',
+      searchPlaceholder: 'Search for sessions',
+    },
   },
   progress: {
     title: 'Progress',
+  },
+  library: {
+    title: 'Library',
   },
   inbox: {
     title: 'Inbox',

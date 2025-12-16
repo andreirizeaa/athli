@@ -16,6 +16,7 @@ import {
 import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
 import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
+import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
 import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -61,7 +62,9 @@ export default function RootLayout() {
           <TranslationProvider>
             <AppViewProvider>
               <ModalCallbacksProvider>
-                <RootLayoutNav />
+                <TrainingOverlayProvider>
+                  <RootLayoutNav />
+                </TrainingOverlayProvider>
               </ModalCallbacksProvider>
             </AppViewProvider>
           </TranslationProvider>
@@ -239,6 +242,26 @@ function RootLayoutNav() {
               animation: 'slide_from_bottom',
               gestureDirection: 'vertical',
             }),
+          }}
+        />
+        <Stack.Screen
+          name="add-session-from-library-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="profile"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 300,
           }}
         />
         <Stack.Screen

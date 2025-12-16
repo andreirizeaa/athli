@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
-import { CircleCheck, X } from 'lucide-react-native';
+import { Check, X } from 'lucide-react-native';
 import { Platform } from 'react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -75,10 +75,10 @@ export default function LanguageModal() {
 
                 {isSelected && (
                   <PlatformIcon
-                    sf="checkmark.circle.fill"
-                    IconComponent={CircleCheck}
+                    sf="checkmark"
+                    IconComponent={Check}
                     size={iconSizes.modalIcons}
-                    color={iconColor}
+                    color={themeColors.primary}
                   />
                 )}
               </TouchableOpacity>
