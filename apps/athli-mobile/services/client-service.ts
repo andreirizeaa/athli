@@ -39,6 +39,50 @@ export interface AddClientData {
   type: 'online' | 'in-person' | 'hybrid';
 }
 
+export interface UpdateClientData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  type: 'online' | 'in-person' | 'hybrid';
+}
+
+/**
+ * Service method to update an existing client
+ * This will be connected to the backend in the future
+ */
+export const updateClient = async (clientId: string, data: UpdateClientData): Promise<Client> => {
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  // Find and update client in mock data
+  const clientIndex = mockClients.findIndex((c) => c.id === clientId);
+  if (clientIndex === -1) {
+    throw new Error('Client not found');
+  }
+
+  const updatedClient: Client = {
+    ...mockClients[clientIndex],
+    firstName: data.firstName,
+    lastName: data.lastName,
+    fullName: `${data.firstName} ${data.lastName}`,
+    email: data.email,
+    type: data.type,
+  };
+
+  mockClients[clientIndex] = updatedClient;
+
+  // In a real implementation, this would be:
+  // const response = await fetch(`/api/clients/${clientId}`, {
+  //   method: 'PUT',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(data),
+  // })
+  // if (!response.ok) throw new Error('Failed to update client')
+  // return await response.json()
+
+  return updatedClient;
+};
+
 /**
  * Service method to add a new client
  * This will be connected to the backend in the future

@@ -260,10 +260,17 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
     try {
       await scheduleSession({
         clientId: selectedClient.id,
+        type: selectedType,
         date: selectedDate,
         fromTime,
         toTime,
+        meetingInfo: meetingInfo.trim() || undefined,
+        repeat: repeatData || undefined,
       });
+      // Clear repeat data after successful save
+      if (repeatData) {
+        clearStoredRepeatData(null);
+      }
       onClose();
     } catch (error) {
       console.error('Failed to schedule session:', error);
