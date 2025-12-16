@@ -43,7 +43,6 @@ export default function EditClientDetailsModal() {
           onPress={handleClose}
           size="md"
           color={themeColors.text}
-          backgroundColor={themeColors.surfaceSecondary}
         />
         <Text style={[styles.title, { color: themeColors.text }]}>Edit details</Text>
         <View style={styles.closeButton} />

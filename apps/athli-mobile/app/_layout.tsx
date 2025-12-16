@@ -15,6 +15,7 @@ import {
 } from '@/contexts/useColorScheme';
 import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
+import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
 import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -59,7 +60,9 @@ export default function RootLayout() {
         <ThemePreferenceProvider>
           <TranslationProvider>
             <AppViewProvider>
-              <RootLayoutNav />
+              <ModalCallbacksProvider>
+                <RootLayoutNav />
+              </ModalCallbacksProvider>
             </AppViewProvider>
           </TranslationProvider>
         </ThemePreferenceProvider>
@@ -188,6 +191,50 @@ function RootLayoutNav() {
             contentStyle: {
               backgroundColor: 'transparent',
             },
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="search-client-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="session-type-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="repeat-options-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="number-select-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
             ...(Platform.OS === 'android' && {
               animation: 'slide_from_bottom',
               gestureDirection: 'vertical',

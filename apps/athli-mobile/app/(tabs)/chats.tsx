@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { SearchBar } from '@/components/search-bar';
 import { ChatListItem } from '@/components/chats/chat-list-item';
@@ -25,8 +24,7 @@ import {
 
 export default function ChatsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const { primarySoftColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,15 +109,16 @@ export default function ChatsScreen() {
         // Load messages before navigating
         const messages = await getChatMessages(chatId);
         router.push({
-          pathname: `/chats/${chatId}`,
+          pathname: '/chats/[id]',
           params: {
+            id: chatId,
             chat: JSON.stringify(chat),
             messages: JSON.stringify(messages),
           },
         });
       } else {
         // Fallback to just id if chat not found
-        router.push(`/chats/${chatId}`);
+        router.push({ pathname: '/chats/[id]', params: { id: chatId } });
       }
     }
   };
@@ -227,19 +226,8 @@ export default function ChatsScreen() {
         
       ];
 
-  const gradientColors: [string, string] =
-    colorScheme === 'dark'
-      ? ['#2a2a2a', themeColors.pageBackground]
-      : [primarySoftColor, themeColors.background];
-
   return (
-    <LinearGradient
-      colors={gradientColors}
-      locations={[0.05, 0.7]}
-      style={styles.gradient}
-      start={{ x: 1, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
       <View
         style={[
           styles.safeArea,
@@ -266,7 +254,7 @@ export default function ChatsScreen() {
                 style={styles.headerButtonContainer}
               >
                 <TouchableOpacity
-                  style={[styles.headerButton, { backgroundColor: '#FFFFFF' }]}
+                  style={[styles.headerButton, { backgroundColor: themeColors.searchBarBackground }]}
                   activeOpacity={0.7}
                   onPress={handleEllipsisPress}
                 >
@@ -275,14 +263,14 @@ export default function ChatsScreen() {
                       sf="checkmark"
                       IconComponent={Check}
                       size={iconSizes.navigationChevrons}
-                      color="#000000"
+                      color={themeColors.text}
                     />
                   ) : (
                     <PlatformIcon
                       sf="ellipsis"
                       IconComponent={Ellipsis}
                       size={iconSizes.navigationChevrons}
-                      color="#000000"
+                      color={themeColors.text}
                     />
                   )}
                 </TouchableOpacity>
@@ -367,12 +355,12 @@ export default function ChatsScreen() {
           />
         )}
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  screen: {
     flex: 1,
   },
   safeArea: {

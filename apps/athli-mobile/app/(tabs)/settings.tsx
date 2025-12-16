@@ -1,6 +1,5 @@
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -22,7 +21,7 @@ import {
 } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { Card } from '@/components/card';
@@ -50,8 +49,7 @@ const PlatformIcon = ({ sf, mdi, IconComponent, size = 24, color = '#000000' }: 
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const { primarySoftColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
@@ -59,11 +57,6 @@ export default function SettingsScreen() {
   const iconColor = themeColors.text;
 
   const isAthleteView = appView === 'athlete';
-
-  const gradientColors: [string, string] =
-    colorScheme === 'dark'
-      ? ['#2a2a2a', isAthleteView ? themeColors.background : themeColors.pageBackground]
-      : [primarySoftColor, isAthleteView ? themeColors.background : themeColors.pageBackground];
 
   const handleOpenPreferences = () => {
     router.push({ pathname: '/settings/preferences' });
@@ -108,13 +101,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={gradientColors}
-      locations={[0.05, 0.7]}
-      style={styles.gradient}
-      start={{ x: 1, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <View style={[styles.screen, { backgroundColor: isAthleteView ? themeColors.background : themeColors.pageBackground }]}>
     <View
       style={[
         styles.safeArea,
@@ -260,12 +247,12 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
     </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  screen: {
     flex: 1,
   },
   safeArea: {

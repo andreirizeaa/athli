@@ -41,7 +41,6 @@ export default function TrainingCalendarScreen() {
           onPress={handleBackPress}
           size="md"
           color={iconColor}
-          backgroundColor={mutedSurfaceColor}
         />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>Training Calendar</Text>
         <View style={styles.headerRightPlaceholder} />

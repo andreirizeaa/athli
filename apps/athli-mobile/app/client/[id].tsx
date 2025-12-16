@@ -170,7 +170,6 @@ export default function ClientDetailScreen() {
             onPress={handleBackPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
             style={{ marginRight: 12 }}
           />
           <View style={styles.avatarContainer}>
@@ -191,7 +190,6 @@ export default function ClientDetailScreen() {
             onRightPress={handleEllipsisPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
           />
         </View>
       </View>
@@ -218,7 +216,6 @@ export default function ClientDetailScreen() {
             onPress={handleBackPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
             style={{ marginRight: 12 }}
           />
           <View style={styles.avatarContainer}>
@@ -239,7 +236,6 @@ export default function ClientDetailScreen() {
             onRightPress={handleEllipsisPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
           />
         </View>
       </View>
@@ -266,7 +262,6 @@ export default function ClientDetailScreen() {
             onPress={handleBackPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
             style={{ marginRight: 12 }}
           />
 
@@ -295,7 +290,6 @@ export default function ClientDetailScreen() {
             onRightPress={handleEllipsisPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
           />
         </View>
       </View>

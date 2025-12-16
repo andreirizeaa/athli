@@ -11,11 +11,6 @@ const { width: RAW_W } = Dimensions.get('window');
 const SCREEN_WIDTH = Math.round(RAW_W);
 const ITEM_WIDTH = SCREEN_WIDTH; // page width
 const WEEK_HEIGHT = 80;
-// Account for visual spacing (20px on each side = 40px total)
-const CONTAINER_PADDING = 40;
-// Calculate available width accounting for padding
-// Use a bit less to ensure all 7 days fit comfortably
-const WEEK_WIDTH = SCREEN_WIDTH - CONTAINER_PADDING;
 
 interface SwipeableCalendarProps {
   onDateSelect?: (date: Date) => void;
@@ -39,11 +34,13 @@ const WeekPage = React.memo(
     onPressDay,
     shouldRender,
     themeColors,
+    primaryColor,
   }: {
     days: DayData[];
     onPressDay: (d: DayData) => void;
     shouldRender: boolean;
     themeColors: any;
+    primaryColor: string;
   }) {
     return (
       <View style={styles.weekPage} renderToHardwareTextureAndroid shouldRasterizeIOS>
@@ -58,27 +55,34 @@ const WeekPage = React.memo(
               <View
                 style={[
                   styles.dayWrapper,
-                  day.isActive && { backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 7, borderWidth: 1, borderColor: themeColors.border },
-                  day.isToday && !day.isActive && { backgroundColor: themeColors.surfaceSecondary, borderRadius: 20, paddingHorizontal: 7, borderWidth: 1, borderColor: themeColors.border },
                 ]}
               >
                 {/* Day acronym above the circle */}
                 <Text
                   style={[
                     styles.dayAcronym,
-                    { color: day.isActive ? '#000000' : themeColors.mutedText },
+                    { color: day.isActive ? themeColors.text : themeColors.mutedText },
                     day.isActive && { fontWeight: '700' },
                   ]}
                 >
                   {day.dayName}
                 </Text>
 
-                <View style={styles.dayCircle}>
+                <View
+                  style={[
+                    styles.dayCircle,
+                    day.isActive && { backgroundColor: primaryColor },
+                  ]}
+                >
                   {/* Day number inside the circle */}
                   <Text
                     style={[
                       styles.dayNumber,
-                      { color: day.isActive ? '#000000' : themeColors.mutedText },
+                      day.isActive
+                        ? { color: themeColors.primaryForeground }
+                        : day.isToday
+                          ? { color: primaryColor }
+                          : { color: themeColors.mutedText },
                     ]}
                   >
                     {day.dayNumber}
@@ -116,7 +120,7 @@ export const SwipeableCalendar = ({
   onSwipe,
   initialSelectedDate,
 }: SwipeableCalendarProps) => {
-  const { colors: themeColors } = useThemePreference();
+  const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   
   // Normalize initial date
@@ -162,7 +166,7 @@ export const SwipeableCalendar = ({
     t('calendar.days.friday'),
     t('calendar.days.saturday'),
     t('calendar.days.sunday'),
-  ];
+  ].map((d) => d?.trim()?.[0] ?? '');
 
   const generateWeekData = useCallback(
     (weekDates: Date[]): DayData[] => {
@@ -288,10 +292,11 @@ export const SwipeableCalendar = ({
           onPressDay={handleDatePress}
           shouldRender={shouldRenderIndex(index)}
           themeColors={themeColors}
+          primaryColor={primaryColor}
         />
       </View>
     ),
-    [shouldRenderIndex, themeColors]
+    [shouldRenderIndex, themeColors, primaryColor]
   );
 
   return (
@@ -335,7 +340,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'transparent',
     marginTop: 4,
-    alignItems: 'center',
+    width: '100%',
   },
   list: {
     height: WEEK_HEIGHT,
@@ -347,32 +352,34 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   weekPage: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: WEEK_HEIGHT,
     justifyContent: 'flex-start',
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingTop: 0,
+    paddingHorizontal: 0,
+    marginHorizontal: 0,
   },
   weekContent: {
-    width: WEEK_WIDTH,
-    maxWidth: WEEK_WIDTH,
+    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 0,
+    marginHorizontal: 0,
   },
   dayContainer: {
     alignItems: 'center',
     flex: 1,
     minWidth: 0, // Allow flex items to shrink
     overflow: 'visible',
+    paddingHorizontal: 0,
+    marginHorizontal: 0,
   },
   dayWrapper: {
     alignItems: 'center',
     paddingTop: 6,
     paddingBottom: 2,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
   dayAcronym: {
     ...typography.h8,

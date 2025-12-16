@@ -41,7 +41,6 @@ export default function ActivityScreen() {
           onPress={handleBackPress}
           size="md"
           color={iconColor}
-          backgroundColor={mutedSurfaceColor}
         />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>Activity</Text>
         <View style={styles.headerRightPlaceholder} />

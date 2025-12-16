@@ -423,7 +423,6 @@ const ImagePreviewScreen = () => {
                   onPress={handleClose}
                   size="md"
                   color={iconColor}
-                  backgroundColor={mutedSurfaceColor}
                 />
               )}
             </View>
@@ -445,7 +444,6 @@ const ImagePreviewScreen = () => {
                   onPress={handleExitSelectionMode}
                   size="md"
                   color={iconColor}
-                  backgroundColor={mutedSurfaceColor}
                 />
               ) : (
                 <>
@@ -562,7 +560,6 @@ const ImagePreviewScreen = () => {
               onPress={handleDownloadSelected}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
 
             {/* Selected count (centered, not clickable) */}
@@ -632,7 +629,6 @@ const ImagePreviewScreen = () => {
               onPress={handleClose}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
           </View>
         </View>
