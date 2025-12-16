@@ -35,6 +35,9 @@ export const en = {
       title: 'Add session',
       searchPlaceholder: 'Search for sessions',
     },
+    beginSession: 'Begin session',
+    addExercise: 'Add exercise',
+    addCircuit: 'Add circuit',
   },
   progress: {
     title: 'Progress',
