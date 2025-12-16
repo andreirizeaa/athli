@@ -28,6 +28,7 @@ import { MessageReplyPreview } from '@/components/message/message-reply-preview'
 import { MessageDocumentPreview } from '@/components/message/message-document-preview';
 import { MessageImagePreview } from '@/components/message/message-image-preview';
 import { MessageVideoPreview } from '@/components/message/message-video-preview';
+import { MessageAudioPreview } from '@/components/message/message-audio-preview';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 
 interface MessageListProps {
@@ -153,7 +154,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
     // Make bubble full width when it contains a document or is a reply
-    ...(item.document || item.replyTo ? [styles.messageBubbleFullWidth] : []),
+    ...(item.document || item.replyTo || item.audio ? [styles.messageBubbleFullWidth] : []),
   ];
 
   const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
@@ -252,6 +253,21 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onDocumentPress(item.document);
             }
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+        />
+      )}
+
+      {/* Audio preview if this message has audio */}
+      {item.audio && (
+        <MessageAudioPreview
+          audio={item.audio}
+          themeColors={themeColors}
+          parentBackgroundColor={
+            item.isSent ? themeColors.primary : recipientBackgroundColor
+          }
+          isParentSent={item.isSent}
           onLongPress={onLongPress}
           onPressIn={onPressIn}
           onPressOut={onPressOut}
@@ -687,12 +703,14 @@ export const MessageList = ({
       .replace(',', '');
   };
 
+  const [stickyTimestamp, setStickyTimestamp] = useState<Date>(() => data[0]?.timestamp ?? new Date());
   const [stickyDayKey, setStickyDayKey] = useState(() => {
     const first = data[0];
     return first ? dayKey(first.timestamp) : dayKey(new Date());
   });
+  const stickyLabelOpacity = useRef(new Animated.Value(1)).current;
 
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 5 }).current;
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<{ item: ChatMessage; index: number | null }> }) => {
@@ -707,18 +725,29 @@ export const MessageList = ({
           topMost = v;
         }
       }
+      if (!topMost) return;
 
-      if (topMost) {
-        const nextKey = dayKey(topMost.item.timestamp);
-        setStickyDayKey((prev) => (prev === nextKey ? prev : nextKey));
-      }
+      const nextTs = topMost.item.timestamp;
+      const nextKey = dayKey(nextTs);
+
+      setStickyTimestamp((prevTs) => {
+        const prevKey = dayKey(prevTs);
+        if (prevKey === nextKey) return prevTs;
+
+        // animate label swap (WhatsApp-ish)
+        Animated.sequence([
+          Animated.timing(stickyLabelOpacity, { toValue: 0, duration: 80, useNativeDriver: true }),
+          Animated.timing(stickyLabelOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+        ]).start();
+
+        return nextTs;
+      });
+
+      setStickyDayKey((prev) => (prev === nextKey ? prev : nextKey));
     }
   ).current;
 
-  const stickyDateForLabel = useMemo(() => {
-    const msg = data.find((m) => dayKey(m.timestamp) === stickyDayKey);
-    return msg?.timestamp ?? new Date();
-  }, [data, stickyDayKey]);
+  const stickyDateForLabel = stickyTimestamp;
 
   const formatTime = (date: Date): string => {
     const hours = date.getHours().toString().padStart(2, '0');
@@ -884,7 +913,9 @@ export const MessageList = ({
   // Update sticky day key when messages change
   useEffect(() => {
     if (data.length > 0) {
-      setStickyDayKey(dayKey(data[0].timestamp));
+      const newTimestamp = data[0].timestamp;
+      setStickyTimestamp(newTimestamp);
+      setStickyDayKey(dayKey(newTimestamp));
     }
   }, [data.length]);
 
@@ -1132,7 +1163,10 @@ export const MessageList = ({
         />
         {stickyActive && (
           <Animated.View
-            style={[styles.stickyHeaderRow, { opacity: stickyOpacity }]}
+            style={[
+              styles.stickyHeaderRow,
+              { opacity: Animated.multiply(stickyOpacity, stickyLabelOpacity) },
+            ]}
             pointerEvents="none"
           >
             <View style={[styles.datePill, { backgroundColor: themeColors.surfaceSecondary }]}>

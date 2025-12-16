@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
   Platform,
@@ -22,13 +22,13 @@ import {
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import {
-  useColorScheme,
   useThemePreference,
   type ColorSchemePreference,
 } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 
 import { Card } from '@/components/card';
+import { IconButton } from '@/components/icon-button';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
 
@@ -51,13 +51,16 @@ export default function PreferencesScreen() {
   const {
     preference,
     setPreference,
-    primaryColor,
     colors: themeColors,
   } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
+
+  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const dividerColor = themeColors.border;
+  const secondaryTextColor = themeColors.mutedText;
 
   const handleGoBack = () => {
     router.back();
@@ -124,10 +127,6 @@ export default function PreferencesScreen() {
       </TouchableOpacity>
     );
   };
-
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
-  const dividerColor = themeColors.border;
-  const secondaryTextColor = themeColors.mutedText;
 
   return (
     <View

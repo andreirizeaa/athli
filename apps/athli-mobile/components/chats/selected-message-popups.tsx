@@ -14,6 +14,7 @@ import { MessageReplyPreview } from '@/components/message/message-reply-preview'
 import { MessageDocumentPreview } from '@/components/message/message-document-preview';
 import { MessageImagePreview } from '@/components/message/message-image-preview';
 import { MessageVideoPreview } from '@/components/message/message-video-preview';
+import { MessageAudioPreview } from '@/components/message/message-audio-preview';
 import { useColorScheme } from '@/contexts/useColorScheme';
 
 interface SelectedMessagePopupsProps {
@@ -119,6 +120,17 @@ export const SelectedMessagePopups = ({
   }, [selectedMessage?.replyTo]);
 
   const baseTextColor = selectedMessage?.isSent ? themeColors.primaryForeground : themeColors.text;
+
+  const filteredOptions = useMemo(() => {
+    if (!selectedMessage) return options;
+    if (!selectedMessage.audio) return options;
+
+    return options.filter((o) => {
+      const l = (o.label || '').toLowerCase();
+      // remove Copy + Edit for voice notes
+      return !(l.includes('copy') || l.includes('edit'));
+    });
+  }, [options, selectedMessage]);
 
   if (!visible || !selectedMessage) {
     return null;
@@ -257,7 +269,7 @@ export const SelectedMessagePopups = ({
               isLastInSenderRun && !selectedMessage.isSent && styles.messageBubbleTailLeft,
             ]}
           >
-            <View style={styles.bubbleInner}>
+            <View style={[styles.bubbleInner, selectedMessage.audio ? { paddingBottom: 4 } : null]}>
               {/* Reply preview if this message is a reply */}
               {originalMessage && (
                 <MessageReplyPreview
@@ -295,6 +307,18 @@ export const SelectedMessagePopups = ({
                   }
                   isParentSent={selectedMessage.isSent}
                   onPress={() => {}}
+                />
+              )}
+
+              {/* Audio preview if this message has audio */}
+              {selectedMessage.audio && (
+                <MessageAudioPreview
+                  audio={selectedMessage.audio}
+                  themeColors={themeColors}
+                  parentBackgroundColor={
+                    selectedMessage.isSent ? themeColors.primary : effectiveRecipientBackgroundColor
+                  }
+                  isParentSent={selectedMessage.isSent}
                 />
               )}
 
@@ -371,7 +395,7 @@ export const SelectedMessagePopups = ({
         <DropdownMenu
           visible={visible}
           onClose={onClose}
-          options={options}
+          options={filteredOptions}
           anchorPosition={{
             ...anchorPosition,
             y: adjustedMessageTop,
