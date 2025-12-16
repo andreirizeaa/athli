@@ -7,6 +7,7 @@ import { X } from 'lucide-react-native';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { typography, iconSizes } from '@/constants/typography';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { FilledButton } from '@/components/buttons/filled-button';
 
 export default function EditClientDetailsModal() {
@@ -37,18 +38,13 @@ export default function EditClientDetailsModal() {
           },
         ]}
       >
-        <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: themeColors.surfaceSecondary }]}
-          activeOpacity={0.7}
+        <IconButton
+          icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}
-        >
-          <PlatformIcon
-            sf="xmark"
-            IconComponent={X}
-            size={iconSizes.navigationChevrons}
-            color={themeColors.text}
-          />
-        </TouchableOpacity>
+          size="md"
+          color={themeColors.text}
+          backgroundColor={themeColors.surfaceSecondary}
+        />
         <Text style={[styles.title, { color: themeColors.text }]}>Edit details</Text>
         <View style={styles.closeButton} />
       </View>
@@ -74,7 +70,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 12,
   },
   title: {
@@ -93,7 +89,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttonContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 60,
     alignItems: 'center',
   },

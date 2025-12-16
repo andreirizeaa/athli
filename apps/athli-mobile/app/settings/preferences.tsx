@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
   Platform,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
@@ -22,13 +22,13 @@ import {
 } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import {
-  useColorScheme,
   useThemePreference,
   type ColorSchemePreference,
 } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 
 import { Card } from '@/components/card';
+import { IconButton } from '@/components/icon-button';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
 
@@ -51,12 +51,16 @@ export default function PreferencesScreen() {
   const {
     preference,
     setPreference,
-    primaryColor,
     colors: themeColors,
   } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
+
+  const mutedSurfaceColor = themeColors.surfaceSecondary;
+  const dividerColor = themeColors.border;
+  const secondaryTextColor = themeColors.mutedText;
 
   const handleGoBack = () => {
     router.back();
@@ -124,20 +128,27 @@ export default function PreferencesScreen() {
     );
   };
 
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
-  const dividerColor = themeColors.border;
-  const secondaryTextColor = themeColors.mutedText;
-
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
+    <View
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor: themeColors.pageBackground,
+          paddingTop: insets.top,
+          paddingBottom: 0,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-          activeOpacity={0.7}
+        <IconButton
+          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
-        >
-          <PlatformIcon sf="chevron.left" IconComponent={ChevronLeft} size={iconSizes.navigationChevrons} color={iconColor} />
-        </TouchableOpacity>
+          size="md"
+          color={iconColor}
+          backgroundColor={mutedSurfaceColor}
+        />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('preferences.title')}</Text>
         <View style={styles.headerRightPlaceholder} />
       </View>
@@ -181,7 +192,7 @@ export default function PreferencesScreen() {
           />
         </Card>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -193,7 +204,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
@@ -212,7 +223,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
   },

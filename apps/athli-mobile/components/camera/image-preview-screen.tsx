@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Download, Plus, Trash2, MoreHorizontal, CheckCircle2, Check } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -9,14 +9,16 @@ import * as Sharing from 'expo-sharing';
 import Share from 'react-native-share';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { type ImageAttachment } from '@/components/chats/message-image-preview';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendImageMessage } from '@/services/chats-service';
 import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { useDarkModeTheme } from '@/components/dark-mode-wrapper';
+import { StatusBar } from 'expo-status-bar';
 
-const MessageImagePreviewScreen = () => {
+const ImagePreviewScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{
     images?: string; // JSON string of ImageAttachment[]
@@ -27,19 +29,28 @@ const MessageImagePreviewScreen = () => {
     clientName?: string;
     fromPicker?: string; // Flag to indicate this is from the picker
     messageTimestamp?: string; // ISO timestamp string for checking if within 1 hour
+    caption?: string; // Initial caption text from chat input
   }>();
 
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const insets = useSafeAreaInsets();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
+  const showToolbar = fromPicker;
 
   const initialImages: ImageAttachment[] = params.images ? JSON.parse(params.images) : [];
   const senderName = params.senderName || 'Unknown';
   const isSent = params.isSent === 'true';
   const displayName = isSent ? 'You' : senderName;
   const fromPicker = params.fromPicker === 'true';
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(params.caption || '');
+
+  // Update caption when params change (for hydration)
+  useEffect(() => {
+    if (params.caption !== undefined) {
+      setCaption(params.caption);
+    }
+  }, [params.caption]);
   const [images, setImages] = useState<ImageAttachment[]>(initialImages);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImages[0]?.id || null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -60,7 +71,12 @@ const MessageImagePreviewScreen = () => {
   const inactiveBorderColor = '#FFFFFF';
 
   const handleClose = () => {
-    router.back();
+    if (fromPicker && params.chatId) {
+      // If coming from attachment picker, go back to chat screen
+      router.back();
+    } else {
+      router.back();
+    }
   };
 
   const handleDownload = async () => {
@@ -350,8 +366,12 @@ const MessageImagePreviewScreen = () => {
         caption.trim() || undefined
       );
 
-      // Pass image message data back to chat screen via navigation params
-      router.back();
+      // Navigate back to chat screen - use back() to maintain slide animation
+      if (fromPicker && params.chatId) {
+        router.back();
+      } else {
+        router.back();
+      }
 
       // Set params to add image message to list and close attachment picker
       setTimeout(() => {
@@ -373,7 +393,17 @@ const MessageImagePreviewScreen = () => {
   if (!fromPicker) {
     return (
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           {/* Top header */}
           <View style={styles.topHeader}>
             <View style={styles.leftHeaderContainer}>
@@ -388,18 +418,13 @@ const MessageImagePreviewScreen = () => {
                   </Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity
-                  style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-                  activeOpacity={0.7}
+                <IconButton
+                  icon={{ sf: 'xmark', IconComponent: X }}
                   onPress={handleClose}
-                >
-                  <PlatformIcon
-                    sf="xmark"
-                    IconComponent={X}
-                    size={iconSizes.navigationChevrons}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
+                  size="md"
+                  color={iconColor}
+                  backgroundColor={mutedSurfaceColor}
+                />
               )}
             </View>
 
@@ -415,18 +440,13 @@ const MessageImagePreviewScreen = () => {
 
             <View style={styles.rightHeaderContainer}>
               {isSelectionMode ? (
-                <TouchableOpacity
-                  style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-                  activeOpacity={0.7}
+                <IconButton
+                  icon={{ sf: 'checkmark', IconComponent: Check }}
                   onPress={handleExitSelectionMode}
-                >
-                  <PlatformIcon
-                    sf="checkmark"
-                    IconComponent={Check}
-                    size={iconSizes.navigationChevrons}
-                    color={iconColor}
-                  />
-                </TouchableOpacity>
+                  size="md"
+                  color={iconColor}
+                  backgroundColor={mutedSurfaceColor}
+                />
               ) : (
                 <>
                   {/* Download button - only show when there's a single image */}
@@ -465,7 +485,7 @@ const MessageImagePreviewScreen = () => {
               )}
             </View>
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Scrollable images */}
         <ScrollView
@@ -537,18 +557,13 @@ const MessageImagePreviewScreen = () => {
             ]}
           >
             {/* Download button */}
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'square.and.arrow.down', IconComponent: Download }}
               onPress={handleDownloadSelected}
-            >
-              <PlatformIcon
-                sf="square.and.arrow.down"
-                IconComponent={Download}
-                size={iconSizes.navigationChevrons + 2}
-                color={iconColor}
-              />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
 
             {/* Selected count (centered, not clickable) */}
             <View style={[styles.selectedCountButton, { backgroundColor: mutedSurfaceColor }]}>
@@ -595,21 +610,32 @@ const MessageImagePreviewScreen = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
+        {showToolbar && <StatusBar hidden />}
         <View style={styles.imagePreviewContainer}>
           <RNImage source={{ uri: selectedImage.uri }} style={styles.previewImage} resizeMode="contain" />
         </View>
-        <SafeAreaView style={styles.safeAreaPreview} edges={['top']}>
+        <View
+          style={[
+            styles.safeAreaPreview,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           {/* Top header - only X button */}
           <View style={styles.topHeader}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
               onPress={handleClose}
-            >
-              <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Image gallery row above toolbar */}
         <View style={styles.galleryContainer}>
@@ -628,7 +654,7 @@ const MessageImagePreviewScreen = () => {
                   style={[
                     styles.thumbnailContainer,
                     {
-                      borderColor: isSelected ? themeColors.primary : inactiveBorderColor,
+                      borderColor: '#FFFFFF',
                       borderWidth: 2,
                     },
                   ]}
@@ -647,7 +673,7 @@ const MessageImagePreviewScreen = () => {
                           sf="trash"
                           IconComponent={Trash2}
                           size={18}
-                          color={iconColor}
+                          color="#FFFFFF"
                         />
                       </TouchableOpacity>
                     </View>
@@ -661,14 +687,14 @@ const MessageImagePreviewScreen = () => {
               style={[
                 styles.addButtonContainer,
                 {
-                  borderColor: inactiveBorderColor,
+                  borderColor: '#FFFFFF',
                   borderWidth: 2,
                 },
               ]}
               activeOpacity={0.7}
               onPress={handleAddMore}
             >
-              <PlatformIcon sf="photo.badge.plus" IconComponent={Plus} size={24} color={inactiveBorderColor} />
+              <PlatformIcon sf="photo.badge.plus" IconComponent={Plus} size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -704,7 +730,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
@@ -818,7 +844,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     gap: 8,
     zIndex: 20,
@@ -913,5 +939,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default MessageImagePreviewScreen;
-
+export default ImagePreviewScreen;

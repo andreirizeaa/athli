@@ -13,10 +13,11 @@ type MessageInputBarProps = {
   rightIcon?: React.ReactNode;
   onRightIconPress?: () => void;
   style?: object;
+  textColor?: string;
 };
 
 export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
-  ({ value, onChangeText, placeholder, rightIcon, onRightIconPress, style }, ref) => {
+  ({ value, onChangeText, placeholder, rightIcon, onRightIconPress, style, textColor }, ref) => {
   const { colors: themeColors } = useThemePreference();
 
   return (
@@ -32,7 +33,7 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
     >
       <TextInput
           ref={ref}
-        style={[styles.input, { color: themeColors.text }]}
+        style={[styles.input, { color: textColor || themeColors.text }]}
         placeholder={placeholder}
         placeholderTextColor={themeColors.mutedText}
         value={value}

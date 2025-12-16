@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, Alert, ActivityIndicator, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Download } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
@@ -8,10 +8,12 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendDocumentMessage } from '@/services/chats-service';
+import { useDarkModeTheme } from '@/components/dark-mode-wrapper';
+import { StatusBar } from 'expo-status-bar';
 
 const DocumentPreviewScreen = () => {
   const router = useRouter();
@@ -24,14 +26,15 @@ const DocumentPreviewScreen = () => {
     clientId?: string;
     clientName?: string;
     fromMessage?: string;
+    caption?: string; // Initial caption text from chat input
   }>();
 
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const insets = useSafeAreaInsets();
 
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(params.caption || '');
   const [pdfUri, setPdfUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,7 @@ const DocumentPreviewScreen = () => {
   const mimeType = params.mimeType || '';
   const clientName = params.clientName;
   const fromMessage = params.fromMessage === 'true';
+  const showToolbar = !fromMessage;
 
   const isImage = mimeType.startsWith('image/');
   const isPdf = mimeType === 'application/pdf' || documentName.toLowerCase().endsWith('.pdf');
@@ -329,23 +333,29 @@ const DocumentPreviewScreen = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        {showToolbar && <StatusBar hidden />}
         {renderDocumentContent()}
 
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+        >
           {/* Top header */}
           <View style={styles.topHeader}>
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
               onPress={handleClose}
-            >
-              <PlatformIcon
-                sf="xmark"
-                IconComponent={X}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
 
             {/* Document name in center */}
             <View style={styles.titleContainer}>
@@ -376,7 +386,7 @@ const DocumentPreviewScreen = () => {
               <View style={styles.spacer} />
             )}
           </View>
-        </SafeAreaView>
+        </View>
 
         {/* Bottom section with toolbar - only show when not from message */}
         {!fromMessage && (
@@ -409,7 +419,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },

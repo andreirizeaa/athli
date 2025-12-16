@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Check } from 'lucide-react-native';
 
@@ -23,6 +23,7 @@ export default function ArchivedChatsScreen() {
   const { unreadCount } = useLocalSearchParams<{ unreadCount?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
   const [archivedChats, setArchivedChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -77,19 +78,15 @@ export default function ArchivedChatsScreen() {
         // Load messages before navigating
         const messages = await getChatMessages(chatId);
         router.push({
-          pathname: '/chats/[id]',
+          pathname: `/chats/${chatId}`,
           params: {
-            id: chatId,
             chat: JSON.stringify(chat),
             messages: JSON.stringify(messages),
           },
         });
       } else {
         // Fallback to just id if chat not found
-        router.push({
-          pathname: '/chats/[id]',
-          params: { id: chatId },
-        });
+        router.push(`/chats/${chatId}`);
       }
     }
   };
@@ -111,7 +108,18 @@ export default function ArchivedChatsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
+    <View
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor: themeColors.pageBackground,
+          paddingTop: insets.top,
+          paddingBottom: 0,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
         <TouchableOpacity
           style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
@@ -234,7 +242,7 @@ export default function ArchivedChatsScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -246,7 +254,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
@@ -291,7 +299,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   descriptionContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 8,
     alignItems: 'center',
@@ -330,7 +338,7 @@ const styles = StyleSheet.create({
   },
   bottomActions: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
     justifyContent: 'space-between',
   },

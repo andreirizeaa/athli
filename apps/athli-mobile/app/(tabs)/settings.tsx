@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -54,6 +54,7 @@ export default function SettingsScreen() {
   const { primarySoftColor, colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
 
@@ -114,7 +115,17 @@ export default function SettingsScreen() {
       start={{ x: 1, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-    <SafeAreaView style={styles.safeArea}>
+    <View
+      style={[
+        styles.safeArea,
+        {
+          paddingTop: insets.top,
+          paddingBottom: 0,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -248,7 +259,7 @@ export default function SettingsScreen() {
           </Card>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
     </LinearGradient>
   );
 }
@@ -267,7 +278,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   titleRow: {
     flexDirection: 'row',

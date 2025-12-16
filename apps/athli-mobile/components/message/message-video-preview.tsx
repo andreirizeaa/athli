@@ -19,6 +19,9 @@ type MessageVideoPreviewProps = {
   parentBackgroundColor: string;
   isParentSent: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 };
 
 const screenWidth = Dimensions.get('window').width;
@@ -33,6 +36,9 @@ export const MessageVideoPreview = ({
   parentBackgroundColor,
   isParentSent,
   onPress,
+  onLongPress,
+  onPressIn,
+  onPressOut,
 }: MessageVideoPreviewProps) => {
   const [thumbnailUri, setThumbnailUri] = useState<string | null>(video.thumbnailUri || null);
 
@@ -70,6 +76,9 @@ export const MessageVideoPreview = ({
           pressed && styles.pressed,
         ]}
         onPress={onPress}
+        onLongPress={onLongPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
       >
         {thumbnailUri && (
           <RNImage

@@ -1,17 +1,22 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { StyleSheet, TouchableOpacity, View, Alert, Text, Animated, LayoutChangeEvent, Dimensions, PanResponder } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { BlurView } from 'expo-blur';
 import { X, Image, RotateCw, Zap, ZapOff } from 'lucide-react-native';
 import { Camera as VisionCamera, useCameraDevice, useCameraPermission, type Camera as CameraType } from 'react-native-vision-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { AttachmentPreviewScreen } from './attachment-preview-screen';
 import { sendImageMessage, sendVideoMessage } from '@/services/chats-service';
+import { useDarkModeTheme } from '../dark-mode-wrapper';
 
 export default function Camera() {
   const router = useRouter();
@@ -20,8 +25,11 @@ export default function Camera() {
     clientId?: string;
     clientName?: string;
     selectedImages?: string; // JSON string of ImageData[]
+    caption?: string; // Initial caption text from chat input
   }>();
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
+  const colorScheme = useColorScheme();
+  const isDark = true; // Always dark mode in camera
   const insets = useSafeAreaInsets();
   const { hasPermission, requestPermission } = useCameraPermission();
   const backDevice = useCameraDevice('back', {
@@ -35,7 +43,7 @@ export default function Camera() {
   const [capturedPhotos, setCapturedPhotos] = useState<Array<{ uri: string; bytes: Uint8Array; id: string }>>([]);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [isAddingMore, setIsAddingMore] = useState(false);
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(() => (params.caption as string) || '');
 
   // Handle pre-selected images from attachment picker
   useEffect(() => {
@@ -80,7 +88,13 @@ export default function Camera() {
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [zoomLabel, setZoomLabel] = useState('1x');
   const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(zoom);
   const recordingIntervalRef = useRef<number | null>(null);
+  
+  // Keep zoomRef in sync with zoom state
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
   const buttonScale = useRef(new Animated.Value(1)).current;
   const innerCircleScale = useRef(new Animated.Value(1)).current;
   const videoTextWidth = useRef(0);
@@ -149,6 +163,10 @@ export default function Camera() {
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
+  
+  // Create translucent background color for frosted glass effect (60% opacity)
+  const headerBackgroundColor = themeColors.headerBackground;
+  const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
 
   useEffect(() => {
     const checkPermission = async () => {
@@ -176,11 +194,30 @@ export default function Camera() {
 
     try {
       if (capturedPhotos.length > 0) {
+        // Convert images to ImageAttachment format
+        const imageAttachments = capturedPhotos.map((photo) => ({
+          uri: photo.uri,
+          id: photo.id,
+        }));
+
         // Send images
         const imageBytesArray = capturedPhotos.map((photo) => photo.bytes);
         await sendImageMessage(params.chatId, imageBytesArray, caption.trim() || undefined);
+        
+        // Close camera and navigate back
         setIsActive(false);
         router.back();
+        
+        // Set params to add image message to list and close attachment picker
+        setTimeout(() => {
+          if (params.chatId) {
+            router.setParams({
+              imagesSent: 'true',
+              sentImages: JSON.stringify(imageAttachments),
+              sentImagesCaption: caption.trim() || '',
+            } as any);
+          }
+        }, 200);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -291,6 +328,8 @@ export default function Camera() {
               chatId: params.chatId || '',
               clientId: params.clientId || '',
               clientName: params.clientName || '',
+              caption: caption || '',
+              fromCamera: 'true',
             },
           });
         }
@@ -384,55 +423,58 @@ export default function Camera() {
   };
 
   const lastDistanceRef = useRef<number | null>(null);
-  const initialZoomRef = useRef<number>(1);
+  const pinchBaseZoomRef = useRef<number>(1);
 
-  const panResponder = useMemo(
+  const pinchPanResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => false,
         onMoveShouldSetPanResponder: (evt) => {
-          // Only respond if we have 2 touches (pinch gesture)
+          // Only respond to 2-finger gestures on move
           return evt.nativeEvent.touches.length === 2;
         },
-        onPanResponderGrant: () => {
-          if (!device) return;
-          initialZoomRef.current = zoom;
-          zoomStartRef.current = zoom;
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponderCapture: (evt) => {
+          // Capture 2-finger gestures to prevent other handlers from interfering
+          return evt.nativeEvent.touches.length === 2;
+        },
+        onPanResponderTerminationRequest: () => false, // Don't allow termination
+
+        onPanResponderGrant: (evt) => {
+          if (!device || evt.nativeEvent.touches.length !== 2) return;
+          pinchBaseZoomRef.current = zoomRef.current;
           lastDistanceRef.current = null;
           showZoomHud();
         },
+
         onPanResponderMove: (evt) => {
           if (!device || evt.nativeEvent.touches.length !== 2) return;
 
-          const touch1 = evt.nativeEvent.touches[0];
-          const touch2 = evt.nativeEvent.touches[1];
+          const [t1, t2] = evt.nativeEvent.touches;
+          const distance = Math.hypot(t2.pageX - t1.pageX, t2.pageY - t1.pageY);
 
-          const distance = Math.sqrt(
-            Math.pow(touch2.pageX - touch1.pageX, 2) + Math.pow(touch2.pageY - touch1.pageY, 2)
-          );
-
-          if (lastDistanceRef.current === null) {
+          if (lastDistanceRef.current == null) {
             lastDistanceRef.current = distance;
             return;
           }
 
           const scale = distance / lastDistanceRef.current;
-          // Use a slightly non-linear curve so it feels nicer
           const scaled = Math.pow(scale, 1.6);
 
-          const nextZoom = clamp(zoomStartRef.current * scaled, minZoom, maxZoom);
+          const nextZoom = clamp(pinchBaseZoomRef.current * scaled, minZoom, maxZoom);
           setZoom(nextZoom);
 
-          const display = nextZoom / device.neutralZoom; // 0.5..10 (clamped)
+          const display = nextZoom / device.neutralZoom;
           setZoomLabel(formatZoomLabel(display));
           updateSliderDot(display, displayMin, displayMax);
 
-          zoomStartRef.current = nextZoom;
+          pinchBaseZoomRef.current = nextZoom;
           lastDistanceRef.current = distance;
 
           showZoomHud();
           hideZoomHudLater();
         },
+
         onPanResponderRelease: () => {
           lastDistanceRef.current = null;
           hideZoomHudLater();
@@ -442,7 +484,7 @@ export default function Camera() {
           hideZoomHudLater();
         },
       }),
-    [device, zoom, minZoom, maxZoom, displayMin, displayMax, formatZoomLabel, updateSliderDot, showZoomHud, hideZoomHudLater, clamp]
+    [device, minZoom, maxZoom, displayMin, displayMax, clamp, showZoomHud, hideZoomHudLater, formatZoomLabel, updateSliderDot]
   );
 
   const formatTime = (seconds: number): string => {
@@ -467,11 +509,11 @@ export default function Camera() {
             onRecordingFinished: (video) => {
               const videoUri = `file://${video.path}`;
               const duration = Math.floor(video.duration / 1000); // Convert ms to seconds
-
+              
               // Determine orientation based on video dimensions
               const isPortrait = video.width < video.height;
               const orientation = isPortrait ? 'portrait' : 'landscape';
-
+              
               setIsRecording(false);
               // Navigate to video preview screen
               router.push({
@@ -483,6 +525,8 @@ export default function Camera() {
                   chatId: params.chatId || '',
                   clientId: params.clientId || '',
                   clientName: params.clientName || '',
+                  caption: caption || '',
+                  fromCamera: 'true',
                 },
               });
               if (recordingIntervalRef.current) {
@@ -702,7 +746,8 @@ export default function Camera() {
   }
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <StatusBar hidden />
         <VisionCamera
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
@@ -712,17 +757,29 @@ export default function Camera() {
           zoom={zoom}
           photo={true}
           video={true}
+          pointerEvents="none"
         />
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <View
+          style={[
+            styles.safeArea,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+              paddingLeft: 0,
+              paddingRight: 0,
+            },
+          ]}
+          {...pinchPanResponder.panHandlers}
+        >
         {/* Top header */}
         <View style={styles.topHeader}>
-          <TouchableOpacity
-            style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'xmark', IconComponent: X }}
             onPress={handleClose}
-          >
-            <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
           {(isVideoMode || isRecording) && (
             <View
               style={[
@@ -744,35 +801,28 @@ export default function Camera() {
               </Text>
             </View>
           )}
-          <TouchableOpacity
-            style={[
-              styles.flashButton,
-              {
-                backgroundColor: flashEnabled ? themeColors.primary : mutedSurfaceColor,
-              },
-            ]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{
+              sf: flashEnabled ? 'bolt.fill' : 'bolt.slash.fill',
+              IconComponent: flashEnabled ? Zap : ZapOff,
+            }}
             onPress={handleFlashToggle}
-          >
-            <PlatformIcon
-              sf={flashEnabled ? 'bolt.fill' : 'bolt.slash.fill'}
-              IconComponent={flashEnabled ? Zap : ZapOff}
-              size={iconSizes.tabBarIcons}
-              color={flashEnabled ? themeColors.primaryForeground : iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={flashEnabled ? themeColors.primaryForeground : iconColor}
+            backgroundColor={flashEnabled ? themeColors.primary : mutedSurfaceColor}
+          />
         </View>
 
         {/* Bottom controls */}
         <View style={[styles.bottomControls, { paddingBottom: insets.bottom + 36 }]}>
           {/* Photo button - bottom left */}
-          <TouchableOpacity
-            style={[styles.bottomButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'photo', IconComponent: Image }}
             onPress={handlePhotoPress}
-          >
-            <PlatformIcon sf="photo" IconComponent={Image} size={iconSizes.tabBarIcons} color={iconColor} />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
 
           {/* Record/Stop Button - Centered */}
           <View style={styles.recordButtonContainer}>
@@ -833,45 +883,46 @@ export default function Camera() {
               </TouchableOpacity>
             </Animated.View>
 
-            <TouchableOpacity
-              style={[styles.bottomButton, { backgroundColor: mutedSurfaceColor }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'arrow.trianglehead.2.clockwise', IconComponent: RotateCw }}
               onPress={handleRotatePress}
-            >
-              <PlatformIcon
-                sf="arrow.trianglehead.2.clockwise"
-                IconComponent={RotateCw}
-                size={iconSizes.tabBarIcons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={mutedSurfaceColor}
+            />
           </View>
         </View>
 
         {/* Bottom bar with VIDEO/PHOTO text - hide when adding more */}
         {!isAddingMore && (
-          <View style={[styles.bottomBar, { paddingBottom: insets.bottom }]}>
-            <View style={styles.bottomBarWrapper}>
-              <Animated.View
-                style={[
-                  styles.bottomBarContent,
-                  {
-                    transform: [{ translateX: bottomBarTranslateX }],
-                  },
-                ]}
-              >
-                <TouchableOpacity onPress={handleVideoTextPress} style={styles.textButton} onLayout={handleVideoTextLayout}>
-                  <Text style={[styles.modeText, isVideoMode && styles.modeTextActive]}>VIDEO</Text>
-                </TouchableOpacity>
-                <View style={styles.textGap} />
-                <TouchableOpacity onPress={handlePhotoTextPress} style={styles.textButton} onLayout={handlePhotoTextLayout}>
-                  <Text style={[styles.modeText, !isVideoMode && styles.modeTextActive]}>PHOTO</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
+          <View style={styles.bottomBarContainer} pointerEvents="box-none">
+            <BlurView
+              intensity={100}
+              tint="dark"
+              style={[styles.bottomBarBlur, { backgroundColor: translucentHeaderBg, paddingBottom: insets.bottom }]}
+            >
+              <View style={styles.bottomBarWrapper}>
+                <Animated.View
+                  style={[
+                    styles.bottomBarContent,
+                    {
+                      transform: [{ translateX: bottomBarTranslateX }],
+                    },
+                  ]}
+                >
+                  <TouchableOpacity onPress={handleVideoTextPress} style={styles.textButton} onLayout={handleVideoTextLayout}>
+                    <Text style={[styles.modeText, isVideoMode && styles.modeTextActive]}>VIDEO</Text>
+                  </TouchableOpacity>
+                  <View style={styles.textGap} />
+                  <TouchableOpacity onPress={handlePhotoTextPress} style={styles.textButton} onLayout={handlePhotoTextLayout}>
+                    <Text style={[styles.modeText, !isVideoMode && styles.modeTextActive]}>PHOTO</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+            </BlurView>
           </View>
         )}
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -888,7 +939,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
@@ -923,7 +974,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 8,
     position: 'relative',
   },
@@ -996,14 +1047,16 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#FF3B30',
   },
-  bottomBar: {
+  bottomBarContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingTop: 8,
-    backgroundColor: '#000000',
     width: '100%',
+  },
+  bottomBarBlur: {
+    width: '100%',
+    paddingTop: 8,
   },
   bottomBarWrapper: {
     width: '100%',

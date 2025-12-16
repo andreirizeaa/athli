@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, MoreVertical, Pencil, Archive, Activity, BarChart3, Calendar, Target, Plus, Camera, Mic, Send, MessageCircle, X } from 'lucide-react-native';
 
@@ -19,7 +19,8 @@ import { SettingsOption } from '@/components/settings-option';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
-import { MessageInputBar } from '@/components/message-input-bar';
+import { IconButton, DoubleIconButton } from '@/components/icon-button';
+import { MessageInputBar } from '@/components/message/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 
@@ -27,6 +28,7 @@ export default function ClientDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
+  const insets = useSafeAreaInsets();
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'assistant' | 'overview' | 'more'>('assistant');
@@ -150,20 +152,27 @@ export default function ClientDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor: themeColors.pageBackground,
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
-          >
-            <PlatformIcon
-              sf="chevron.left"
-              IconComponent={ChevronLeft}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+            style={{ marginRight: 12 }}
+          />
           <View style={styles.avatarContainer}>
             <View
               style={[
@@ -174,57 +183,44 @@ export default function ClientDetailScreen() {
             />
           </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Loading...</Text>
-          <View
+          <DoubleIconButton
             ref={actionButtonRef}
-            collapsable={false}
-            style={[styles.actionButtonContainer, { backgroundColor: mutedSurfaceColor }]}
-          >
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleChatPress}
-            >
-              <PlatformIcon
-                sf="message"
-                IconComponent={MessageCircle}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleEllipsisPress}
-            >
-              <PlatformIcon
-                sf="ellipsis"
-                IconComponent={MoreVertical}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </View>
+            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
+            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+            onLeftPress={handleChatPress}
+            onRightPress={handleEllipsisPress}
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!client) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor: themeColors.pageBackground,
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
-          >
-            <PlatformIcon
-              sf="chevron.left"
-              IconComponent={ChevronLeft}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+            style={{ marginRight: 12 }}
+          />
           <View style={styles.avatarContainer}>
             <View
               style={[
@@ -235,57 +231,44 @@ export default function ClientDetailScreen() {
             />
           </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Client Not Found</Text>
-          <View
+          <DoubleIconButton
             ref={actionButtonRef}
-            collapsable={false}
-            style={[styles.actionButtonContainer, { backgroundColor: mutedSurfaceColor }]}
-          >
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleChatPress}
-            >
-              <PlatformIcon
-                sf="message"
-                IconComponent={MessageCircle}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleEllipsisPress}
-            >
-              <PlatformIcon
-                sf="ellipsis"
-                IconComponent={MoreVertical}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </View>
+            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
+            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+            onLeftPress={handleChatPress}
+            onRightPress={handleEllipsisPress}
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.pageBackground }]}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]} edges={['top']}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            backgroundColor: themeColors.pageBackground,
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: 0,
+            paddingRight: 0,
+          },
+        ]}
+      >
         <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-          <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-            activeOpacity={0.7}
+          <IconButton
+            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
             onPress={handleBackPress}
-          >
-            <PlatformIcon
-              sf="chevron.left"
-              IconComponent={ChevronLeft}
-              size={iconSizes.navigationChevrons}
-              color={iconColor}
-            />
-          </TouchableOpacity>
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+            style={{ marginRight: 12 }}
+          />
 
           <View style={styles.avatarContainer}>
             {client.avatar ? (
@@ -304,38 +287,18 @@ export default function ClientDetailScreen() {
           <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
             {client.fullName}
           </Text>
-          <View
+          <DoubleIconButton
             ref={actionButtonRef}
-            collapsable={false}
-            style={[styles.actionButtonContainer, { backgroundColor: mutedSurfaceColor }]}
-          >
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleChatPress}
-            >
-              <PlatformIcon
-                sf="message"
-                IconComponent={MessageCircle}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.nestedButton}
-              activeOpacity={0.7}
-              onPress={handleEllipsisPress}
-            >
-              <PlatformIcon
-                sf="ellipsis"
-                IconComponent={MoreVertical}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
-          </View>
+            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
+            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+            onLeftPress={handleChatPress}
+            onRightPress={handleEllipsisPress}
+            size="md"
+            color={iconColor}
+            backgroundColor={mutedSurfaceColor}
+          />
         </View>
-      </SafeAreaView>
+      </View>
 
       <DropdownMenu
         visible={dropdownVisible}
@@ -457,10 +420,7 @@ export default function ClientDetailScreen() {
                 />
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity
-                style={styles.iconButton}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
                 <PlatformIcon
                   sf="mic"
                   IconComponent={Mic}
@@ -561,7 +521,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },
@@ -604,7 +564,7 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     gap: 0,
     borderBottomWidth: 1,
     marginVertical: 16,

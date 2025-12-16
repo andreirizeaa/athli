@@ -9,6 +9,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 
 export default function UnitsModal() {
   const router = useRouter();
@@ -35,13 +36,13 @@ export default function UnitsModal() {
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background }]}>
-        <TouchableOpacity
-          style={[styles.closeButton, { backgroundColor: themeColors.surfaceSecondary }]}
-          activeOpacity={0.7}
+        <IconButton
+          icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}
-        >
-          <PlatformIcon sf="xmark" IconComponent={X} size={iconSizes.navigationChevrons} color={iconColor} />
-        </TouchableOpacity>
+          size="md"
+          color={iconColor}
+          backgroundColor={themeColors.surfaceSecondary}
+        />
         <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.units')}</Text>
         <View style={styles.closeButton} />
       </View>
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 12,
   },
   title: {
@@ -123,7 +124,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 8,
   },
   unitsRow: {

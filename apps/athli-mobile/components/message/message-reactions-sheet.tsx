@@ -17,6 +17,7 @@ import { X } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { type ChatMessage, removeReaction } from '@/services/chats-service';
 
 interface MessageReactionsSheetProps {
@@ -147,18 +148,13 @@ export const MessageReactionsSheet = ({
               },
             ]}
           >
-            <TouchableOpacity
-              style={[styles.closeButton, { backgroundColor: themeColors.surfaceSecondary }]}
-              activeOpacity={0.7}
+            <IconButton
+              icon={{ sf: 'xmark', IconComponent: X }}
               onPress={onClose}
-            >
-              <PlatformIcon
-                sf="xmark"
-                IconComponent={X}
-                size={iconSizes.navigationChevrons}
-                color={iconColor}
-              />
-            </TouchableOpacity>
+              size="md"
+              color={iconColor}
+              backgroundColor={themeColors.surfaceSecondary}
+            />
             <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
             <View style={styles.closeButton} />
           </View>
@@ -234,7 +230,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 12,
   },
   title: {
@@ -251,7 +247,7 @@ const styles = StyleSheet.create({
   },
   reactionsList: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 8,
   },
   reactionRow: {

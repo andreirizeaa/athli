@@ -259,7 +259,7 @@ export const ChatListItem = ({
                     styles.lastMessage,
                     { color: themeColors.mutedText },
                   ]}
-                  numberOfLines={1}
+                  numberOfLines={2}
                 >
                   {lastMessage?.text || chat.lastMessage}
                 </Text>
@@ -325,7 +325,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
   checkboxContainer: {
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   messageHeader: {
     flexDirection: 'row',
@@ -384,7 +385,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   timestamp: {
-    ...typography.p5,
+    ...typography.p3,
   },
   messageFooter: {
     flexDirection: 'row',
@@ -394,11 +395,12 @@ const styles = StyleSheet.create({
   lastMessageContainer: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginRight: 8,
   },
   readReceiptContainer: {
     marginRight: 4,
+    marginTop: 2,
   },
   lastMessage: {
     ...typography.p3,

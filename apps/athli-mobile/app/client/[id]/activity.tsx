@@ -1,17 +1,19 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 
 export default function ActivityScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors: themeColors } = useThemePreference();
+  const insets = useSafeAreaInsets();
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
@@ -21,24 +23,30 @@ export default function ActivityScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.pageBackground }]}>
+    <View
+      style={[
+        styles.safeArea,
+        {
+          backgroundColor: themeColors.pageBackground,
+          paddingTop: insets.top,
+          paddingBottom: 0,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-        <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
-          activeOpacity={0.7}
+        <IconButton
+          icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
           onPress={handleBackPress}
-        >
-          <PlatformIcon
-            sf="chevron.left"
-            IconComponent={ChevronLeft}
-            size={iconSizes.navigationChevrons}
-            color={iconColor}
-          />
-        </TouchableOpacity>
+          size="md"
+          color={iconColor}
+          backgroundColor={mutedSurfaceColor}
+        />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>Activity</Text>
         <View style={styles.headerRightPlaceholder} />
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -50,7 +58,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 8,
   },

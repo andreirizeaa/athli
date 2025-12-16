@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
 
@@ -111,19 +111,15 @@ export default function ChatsScreen() {
         // Load messages before navigating
         const messages = await getChatMessages(chatId);
         router.push({
-          pathname: '/chats/[id]',
+          pathname: `/chats/${chatId}`,
           params: {
-            id: chatId,
             chat: JSON.stringify(chat),
             messages: JSON.stringify(messages),
           },
         });
       } else {
         // Fallback to just id if chat not found
-        router.push({
-          pathname: '/chats/[id]',
-          params: { id: chatId },
-        });
+        router.push(`/chats/${chatId}`);
       }
     }
   };
@@ -244,7 +240,17 @@ export default function ChatsScreen() {
       start={{ x: 1, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
@@ -360,7 +366,7 @@ export default function ChatsScreen() {
             anchorPosition={buttonPosition}
           />
         )}
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }
@@ -382,7 +388,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   headerSection: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     marginBottom: 16,
   },
   titleRow: {
@@ -429,7 +435,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 16,
     justifyContent: 'space-between',
   },

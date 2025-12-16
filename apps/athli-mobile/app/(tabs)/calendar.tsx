@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronDown, CalendarCheck } from 'lucide-react-native';
@@ -21,6 +21,7 @@ export default function CalendarScreen() {
   const colorScheme = useColorScheme();
   const { primaryColor, primarySoftColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -147,7 +148,17 @@ export default function CalendarScreen() {
       start={{ x: 1, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <View style={styles.container}>
           {/* Top row: Date picker and Today button */}
           <View style={styles.headerTopRow}>
@@ -191,7 +202,7 @@ export default function CalendarScreen() {
           {/* Time Grid - Scrollable */}
           <TimeGrid selectedDate={selectedDate} />
         </View>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }
@@ -211,7 +222,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     marginBottom: 0,
     width: '100%',
   },
