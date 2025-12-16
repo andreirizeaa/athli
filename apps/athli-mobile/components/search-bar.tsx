@@ -31,7 +31,6 @@ export const SearchBar = ({
         styles.searchContainer,
         {
           backgroundColor: themeColors.searchBarBackground,
-          borderColor: themeColors.border,
         },
         style,
       ]}
@@ -86,7 +85,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 28,
-    borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
     minHeight: 44,

@@ -2,8 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CircleCheck } from 'lucide-react-native';
-import { X } from 'lucide-react-native';
+import { Check, X } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { THEMES, type PresetValue } from '@/constants/theme';
@@ -39,7 +38,6 @@ export default function PaletteModal() {
           onPress={handleClose}
           size="md"
           color={iconColor}
-          backgroundColor={themeColors.surfaceSecondary}
         />
         <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.colorPalette')}</Text>
         <View style={styles.closeButton} />
@@ -79,10 +77,10 @@ export default function PaletteModal() {
 
                 {isSelected && (
                   <PlatformIcon
-                    sf="checkmark.circle.fill"
-                    IconComponent={CircleCheck}
+                    sf="checkmark"
+                    IconComponent={Check}
                     size={iconSizes.modalIcons}
-                    color={iconColor}
+                    color={themeColors.primary}
                   />
                 )}
               </TouchableOpacity>

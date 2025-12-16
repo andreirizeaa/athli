@@ -1,18 +1,16 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SearchBar } from '@/components/search-bar';
-import { Card } from '@/components/card';
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -39,18 +37,12 @@ const fuzzyMatch = (text: string, query: string): boolean => {
 
 export default function ClientsScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const { primarySoftColor, colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
-
-  const gradientColors: [string, string] =
-    colorScheme === 'dark'
-      ? ['#2a2a2a', themeColors.pageBackground]
-      : [primarySoftColor, themeColors.background];
 
   const loadClients = useCallback(async () => {
     try {
@@ -116,13 +108,7 @@ export default function ClientsScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={gradientColors}
-      locations={[0.05, 0.7]}
-      style={styles.gradient}
-      start={{ x: 1, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
       <View
         style={[
           styles.safeArea,
@@ -152,55 +138,73 @@ export default function ClientsScreen() {
             {filteredClients.map((client, index) => {
               const isLastItem = index === filteredClients.length - 1;
               return (
-                <View key={client.id} style={styles.cardWrapper}>
-                  <TouchableOpacity activeOpacity={0.7} onPress={() => handleClientPress(client.id)}>
-                    <View style={[styles.cardShadowWrapper, { shadowColor: themeColors.shadowColor }]}>
-                      <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
-                        <View style={styles.cardContent}>
+                <View key={client.id}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => handleClientPress(client.id)}
+                    style={styles.rowWrapper}
+                  >
+                    <View style={styles.rowContent}>
+                      <View style={styles.avatarContainer}>
                         {client.avatar ? (
-                          <Image
-                            source={{ uri: client.avatar }}
-                            style={[styles.avatar, { borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }]}
-                          />
+                          <Image source={{ uri: client.avatar }} style={styles.avatar} />
                         ) : (
                           <View
                             style={[
                               styles.avatar,
                               styles.avatarPlaceholder,
-                              { backgroundColor: themeColors.border, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 },
+                              { backgroundColor: themeColors.border },
                             ]}
                           />
                         )}
-                        <View style={styles.clientInfo}>
-                          <Text style={[styles.clientName, { color: themeColors.text }]}>{client.fullName}</Text>
-                          <Text style={[styles.clientSubtitle, { color: themeColors.mutedText }]}>
-                            {formatSubtitle(client)}
-                          </Text>
-                        </View>
-                        <View style={styles.chevronContainer}>
-                          <PlatformIcon
-                            sf="chevron.right"
-                            IconComponent={ChevronRight}
-                            size={iconSizes.navigationChevrons}
-                            color={themeColors.mutedText}
-                          />
-                        </View>
                       </View>
-                    </Card>
+                      <View style={styles.clientInfo}>
+                        <View style={styles.clientHeaderRow}>
+                          <Text
+                            style={[styles.clientName, { color: themeColors.text }]}
+                            numberOfLines={1}
+                          >
+                            {client.fullName}
+                          </Text>
+                          <View style={styles.chevronContainer}>
+                            <PlatformIcon
+                              sf="chevron.right"
+                              IconComponent={ChevronRight}
+                              size={iconSizes.extraSmallIcons}
+                              color={themeColors.mutedText}
+                            />
+                          </View>
+                        </View>
+                        <Text
+                          style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
+                          numberOfLines={2}
+                        >
+                          {formatSubtitle(client)}
+                        </Text>
+                      </View>
                     </View>
                   </TouchableOpacity>
+                  <View style={styles.separatorContainer}>
+                    <View
+                      style={[
+                        styles.separator,
+                        { backgroundColor: themeColors.mutedText, opacity: 0.3 },
+                      ]}
+                    />
+                  </View>
+                  {isLastItem && <View style={{ height: 60 }} />}
                 </View>
               );
             })}
           </View>
         </ScrollView>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  screen: {
     flex: 1,
   },
   safeArea: {
@@ -220,48 +224,57 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingBottom: 16,
   },
-  cardWrapper: {
+  rowWrapper: {
+    width: '100%',
+  },
+  rowContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
     paddingHorizontal: 16,
   },
-  cardShadowWrapper: {},
-  cardContainer: {
-    overflow: 'hidden',
-    paddingLeft: 0,
-    paddingRight: 16,
-    paddingTop: 0,
-    paddingBottom: 0,
-    height: 88,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    height: 88,
+  avatarContainer: {
+    marginRight: 12,
   },
   avatar: {
-    width: 80,
-    marginRight: 12,
-    marginLeft: 0,
-    alignSelf: 'stretch',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',
   },
   clientInfo: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
-  clientName: {
-    ...typography.p1,
-    fontWeight: '600',
+  clientHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 4,
   },
+  clientName: {
+    ...typography.h7,
+    fontWeight: '600',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
+  },
   clientSubtitle: {
-    ...typography.p4,
+    ...typography.p3,
   },
   chevronContainer: {
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  separatorContainer: {
+    paddingLeft: 82,
+    paddingRight: 16,
+  },
+  separator: {
+    height: 0.75,
   },
   title: {
     ...typography.h1,

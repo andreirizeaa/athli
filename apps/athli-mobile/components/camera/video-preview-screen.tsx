@@ -214,7 +214,6 @@ export const VideoPreviewScreen = () => {
               onPress={handleClose}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
           </View>
 

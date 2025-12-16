@@ -354,7 +354,6 @@ const DocumentPreviewScreen = () => {
               onPress={handleClose}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
 
             {/* Document name in center */}

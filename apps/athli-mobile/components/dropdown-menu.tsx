@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -8,7 +8,7 @@ import { PlatformIcon } from '@/components/platform-icon';
 
 export type DropdownMenuOption = {
   label: string;
-  icon: {
+  icon?: {
     sf: string;
     IconComponent: LucideIcon;
   };
@@ -46,43 +46,70 @@ export const DropdownMenu = ({
   const screenHeight = Dimensions.get('window').height;
   const screenWidth = Dimensions.get('window').width;
   const menuWidth = 200;
-  const menuItemHeight = 48;
-  const menuHeight = options.length * menuItemHeight;
-  const menuOffset = 8;
+  const menuItemHeight = 44;
+  const maxMenuHeight = 300; // Max height before scrolling
+  const menuOffset = 16; // Spacing from anchor (increased to prevent overlap)
   const edgeGap = 16; // Gap from screen edge
 
+  // Calculate actual menu height (capped at max)
+  const fullMenuHeight = options.length * menuItemHeight;
+  const actualMenuHeight = Math.min(fullMenuHeight, maxMenuHeight);
+  const needsScrolling = fullMenuHeight > maxMenuHeight;
+
   // Calculate available space below and above
-  const spaceBelow = screenHeight - anchorPosition.y - anchorPosition.height;
+  // anchorPosition.y is the top of the element, anchorPosition.height is its height
+  const anchorBottom = anchorPosition.y + anchorPosition.height;
+  const spaceBelow = screenHeight - anchorBottom;
   const spaceAbove = anchorPosition.y;
 
   // Determine if menu should appear above or below
-  const showAbove = spaceBelow < menuHeight + menuOffset && spaceAbove > spaceBelow;
+  // Prefer showing below, only show above if there's not enough space below
+  const showAbove = spaceBelow < actualMenuHeight + menuOffset && spaceAbove > spaceBelow;
 
   // Calculate horizontal position
-  // If alignRight is true (user messages), align to right edge of message
-  // If alignRight is false (client messages), align to left edge of message
-  const leftPosition = alignRight
-    ? Math.min(
-        anchorPosition.x + anchorPosition.width - menuWidth,
-        screenWidth - menuWidth - edgeGap
-      )
-    : Math.max(
-        anchorPosition.x,
-        edgeGap
-      );
+  // For alignRight: position right edge at screen edge - gap
+  // For alignLeft: align to left edge of anchor
+  const finalLeftPosition = alignRight
+    ? screenWidth - menuWidth - edgeGap
+    : Math.max(anchorPosition.x, edgeGap);
 
   // Calculate vertical position
+  // If showing below: position starts right after the anchor bottom with offset
+  // If showing above: position ends right before the anchor top
   const topPosition = showAbove
-    ? anchorPosition.y - menuHeight - menuOffset
-    : anchorPosition.y + anchorPosition.height + menuOffset;
+    ? Math.max(edgeGap, anchorPosition.y - actualMenuHeight - menuOffset)
+    : anchorBottom + menuOffset;
+
+  const menuItems = options.map((option, index) => (
+    <TouchableOpacity
+      key={index}
+      style={styles.menuItem}
+      activeOpacity={0.7}
+      onPress={() => {
+        option.onPress();
+        onClose();
+      }}
+    >
+      {option.icon && (
+        <PlatformIcon
+          sf={option.icon.sf}
+          IconComponent={option.icon.IconComponent}
+          size={iconSizes.listIcons}
+          color={themeColors.text}
+        />
+      )}
+      <Text style={[styles.menuItemText, { color: themeColors.text, marginLeft: option.icon ? 4 : 0 }]}>{option.label}</Text>
+    </TouchableOpacity>
+  ));
 
   const menuContent = (
     <View
       style={[
         styles.menuContainer,
         {
-          left: leftPosition,
+          left: finalLeftPosition,
           top: topPosition,
+          height: actualMenuHeight,
           backgroundColor: themeColors.surface,
           borderColor: themeColors.border,
           shadowColor: themeColors.shadowColor,
@@ -90,25 +117,17 @@ export const DropdownMenu = ({
       ]}
       onStartShouldSetResponder={() => true}
     >
-      {options.map((option, index) => (
-        <TouchableOpacity
-          key={index}
-          style={styles.menuItem}
-          activeOpacity={0.7}
-          onPress={() => {
-            option.onPress();
-            onClose();
-          }}
+      {needsScrolling ? (
+        <ScrollView
+          style={styles.menuScrollView}
+          contentContainerStyle={styles.menuScrollContent}
+          showsVerticalScrollIndicator={true}
         >
-          <PlatformIcon
-            sf={option.icon.sf}
-            IconComponent={option.icon.IconComponent}
-            size={iconSizes.listIcons}
-            color={themeColors.text}
-          />
-          <Text style={[styles.menuItemText, { color: themeColors.text }]}>{option.label}</Text>
-        </TouchableOpacity>
-      ))}
+          {menuItems}
+        </ScrollView>
+      ) : (
+        menuItems
+      )}
     </View>
   );
 
@@ -118,7 +137,11 @@ export const DropdownMenu = ({
 
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable 
+        style={styles.overlay} 
+        onPress={onClose}
+        onStartShouldSetResponder={() => true}
+      >
         {menuContent}
       </Pressable>
     </Modal>
@@ -135,6 +158,7 @@ const styles = StyleSheet.create({
     width: 200,
     borderRadius: 20,
     borderWidth: 1,
+    overflow: 'hidden',
     zIndex: 30,
     shadowOffset: {
       width: 0,
@@ -144,16 +168,22 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     elevation: 30,
   },
+  menuScrollView: {
+    flex: 1,
+  },
+  menuScrollContent: {
+    paddingVertical: 4,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 16,
-    minHeight: 40,
+    minHeight: 44,
+    justifyContent: 'flex-start',
   },
   menuItemText: {
     ...typography.p2,
-    marginLeft: 4,
     flex: 1,
   },
 });

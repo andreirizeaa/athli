@@ -13,8 +13,10 @@ import type { ComponentType } from 'react';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
+import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
 import { iconSizes } from '@/constants/typography';
 import {
+  BookOpen,
   Calendar,
   CalendarFold,
   ChartNoAxesColumn,
@@ -77,6 +79,50 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
   );
 };
 
+// Pure layout component with overlay button for athlete view
+const NativeTabsAthleteView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <View style={{ flex: 1 }}>
+      <NativeTabs tintColor={primaryColor}>
+        <NativeTabs.Trigger name="training">
+          <Icon sf="dumbbell.fill" />
+          <Label>Training</Label>
+        </NativeTabs.Trigger>
+
+        <NativeTabs.Trigger name="progress">
+          <Icon sf="chart.bar.fill" />
+          <Label>Progress</Label>
+        </NativeTabs.Trigger>
+
+        <NativeTabs.Trigger name="inbox">
+          <Icon sf="envelope.fill" />
+          <Label>Inbox</Label>
+        </NativeTabs.Trigger>
+
+        <NativeTabs.Trigger name="library">
+          <Icon sf="book.fill" />
+          <Label>Library</Label>
+        </NativeTabs.Trigger>
+
+        {/* Keep this for layout - touch will be intercepted by overlay */}
+        <NativeTabs.Trigger name="add-modal" role="search">
+          <Icon sf="plus" />
+          <Label>Add</Label>
+        </NativeTabs.Trigger>
+      </NativeTabs>
+      
+      {/* Transparent overlay button on top of search pill */}
+      <TouchableOpacity
+        style={[styles.addButtonOverlay, { bottom: insets.bottom - 16 }]}
+        activeOpacity={1}
+        onPress={onAddPress}
+      />
+    </View>
+  );
+};
+
 type TabDefinition = {
   name: string;
   label: string;
@@ -95,6 +141,7 @@ export default function TabLayout() {
   const previousAppView = useRef(appView);
   const isInitialMount = useRef(true);
   const colorScheme = useColorScheme();
+  const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
 
   // Use useLayoutEffect for initial mount to prevent any flash of add-modal content
   useLayoutEffect(() => {
@@ -107,12 +154,12 @@ export default function TabLayout() {
     // On initial mount with NativeTabs, ensure we navigate to the correct initial route
     // This prevents add-modal from being shown on app load
     if (hasLiquidGlass) {
-      const initialRoute = appView === 'coach' ? '/clients' : '/training';
+      const initialRoute = '/training';
       // Navigate to initial route if we're on index or any unexpected route (but not on a valid tab)
       if (
         pathname === '/' ||
         pathname === '/(tabs)' ||
-        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/calendar') && !pathname.startsWith('/chats') && !pathname.startsWith('/settings') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/add-modal'))
+        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/calendar') && !pathname.startsWith('/chats') && !pathname.startsWith('/settings') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/library') && !pathname.startsWith('/add-modal'))
       ) {
         router.replace(initialRoute);
       }
@@ -126,7 +173,7 @@ export default function TabLayout() {
       // For liquid glass, navigate explicitly
       // For non-liquid glass, the key prop on Tabs will handle remounting with correct initialRouteName
       if (hasLiquidGlass) {
-        const initialRoute = appView === 'coach' ? '/clients' : '/training';
+        const initialRoute = '/training';
         router.replace(initialRoute);
       }
     }
@@ -153,6 +200,11 @@ export default function TabLayout() {
           params: { route: routeName },
         });
       }
+    } else if (appView === 'athlete') {
+      // Show training overlay if on training tab
+      if (pathname.includes('/training')) {
+        showTrainingOverlay();
+      }
     }
   };
 
@@ -169,32 +221,7 @@ export default function TabLayout() {
     // Athlete view (default)
     return (
       <>
-        <NativeTabs tintColor={primaryColor}>
-          <NativeTabs.Trigger name="training">
-            <Icon sf="dumbbell.fill" />
-            <Label>Training</Label>
-          </NativeTabs.Trigger>
-
-          <NativeTabs.Trigger name="progress">
-            <Icon sf="chart.bar.fill" />
-            <Label>Progress</Label>
-          </NativeTabs.Trigger>
-
-          <NativeTabs.Trigger name="inbox">
-            <Icon sf="envelope.fill" />
-            <Label>Inbox</Label>
-          </NativeTabs.Trigger>
-
-          <NativeTabs.Trigger name="settings">
-            <Icon sf="person.crop.circle.fill" />
-            <Label>Profile</Label>
-          </NativeTabs.Trigger>
-
-          <NativeTabs.Trigger name="add-modal" role="search">
-            <Icon sf="plus" />
-            <Label>Add</Label>
-          </NativeTabs.Trigger>
-        </NativeTabs>
+        <NativeTabsAthleteView primaryColor={primaryColor} onAddPress={handleNativeTabsAddPress} />
       </>
     );
   }
@@ -203,7 +230,7 @@ export default function TabLayout() {
     <>
       <Tabs
         key={appView}
-        initialRouteName={appView === 'coach' ? 'clients' : 'training'}
+        initialRouteName="training"
         tabBar={(props) => <FallbackTabBar {...props} />}
         screenOptions={{ headerShown: false }}
       >
@@ -231,8 +258,15 @@ export default function TabLayout() {
         <Tabs.Screen
           name="settings"
           options={{
-            title: appView === 'coach' ? t('settings.title') : t('profile.title'),
+            title: t('settings.title'),
             href: appView === 'coach' ? '/settings' : appView === 'athlete' ? '/settings' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="library"
+          options={{
+            title: t('library.title'),
+            href: appView === 'athlete' ? '/library' : null,
           }}
         />
         <Tabs.Screen
@@ -273,6 +307,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const { t } = useTranslations();
   const colorScheme = useColorScheme();
   const router = useRouter();
+  const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
 
   const handleTabPress = (name: string) => {
     if (name === activeRouteName) {
@@ -295,6 +330,11 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
           pathname: '/add-modal-content',
           params: { route: 'chats' },
         });
+      }
+    } else if (appView === 'athlete') {
+      // Show training overlay if on training tab
+      if (activeRouteName === 'training') {
+        showTrainingOverlay();
       }
     }
   };
@@ -389,11 +429,11 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       width: 60,
     },
     {
-      name: 'settings',
-      label: t('profile.title'),
-      sf: 'person.crop.circle.fill',
-      mdi: 'account-circle',
-      IconComponent: User,
+      name: 'library',
+      label: t('library.title'),
+      sf: 'book.fill',
+      mdi: 'menu-book',
+      IconComponent: BookOpen,
       width: 70,
     },
   ];

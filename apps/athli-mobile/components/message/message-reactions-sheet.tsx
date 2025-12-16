@@ -153,7 +153,6 @@ export const MessageReactionsSheet = ({
               onPress={onClose}
               size="md"
               color={iconColor}
-              backgroundColor={themeColors.surfaceSecondary}
             />
             <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
             <View style={styles.closeButton} />

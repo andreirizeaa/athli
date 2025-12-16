@@ -78,8 +78,9 @@ export default function ArchivedChatsScreen() {
         // Load messages before navigating
         const messages = await getChatMessages(chatId);
         router.push({
-          pathname: `/chats/${chatId}`,
+          pathname: `/chats/[id]`,
           params: {
+            id: chatId,
             chat: JSON.stringify(chat),
             messages: JSON.stringify(messages),
           },
@@ -122,7 +123,7 @@ export default function ArchivedChatsScreen() {
     >
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
         <TouchableOpacity
-          style={[styles.backButton, { backgroundColor: mutedSurfaceColor }]}
+          style={[styles.backButton, { backgroundColor: themeColors.iconButton }]}
           activeOpacity={0.7}
           onPress={handleBackPress}
         >
@@ -147,7 +148,7 @@ export default function ArchivedChatsScreen() {
           {t('chats.archived.title')}
         </Text>
         <TouchableOpacity
-          style={[styles.editButton, { backgroundColor: mutedSurfaceColor }]}
+          style={[styles.editButton, { backgroundColor: themeColors.iconButton }]}
           activeOpacity={0.7}
           onPress={handleEditPress}
         >
@@ -223,7 +224,7 @@ export default function ArchivedChatsScreen() {
           ]}
         >
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: mutedSurfaceColor }]}
+            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
             activeOpacity={0.7}
             onPress={handleUnarchivePress}
           >
@@ -232,7 +233,7 @@ export default function ArchivedChatsScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: mutedSurfaceColor }]}
+            style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
             activeOpacity={0.7}
             onPress={handleDeletePress}
           >
@@ -339,7 +340,8 @@ const styles = StyleSheet.create({
   bottomActions: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 60,
     justifyContent: 'space-between',
   },
   actionButton: {
