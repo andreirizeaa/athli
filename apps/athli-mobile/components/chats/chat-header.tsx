@@ -50,6 +50,7 @@ export const ChatHeader = ({
             size="md"
             color={iconColor}
             backgroundColor={mutedSurfaceColor}
+            style={{ marginRight: 12 }}
           />
 
           <View style={styles.avatarContainer}>

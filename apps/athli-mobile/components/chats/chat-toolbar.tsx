@@ -23,15 +23,22 @@ type ChatToolbarProps = {
   inputRef: RefObject<TextInput | null>;
   hasText: boolean;
   isMicrophoneMode: boolean;
-  isRecordingPaused: boolean;
+  isStopped: boolean;
   showAttachmentPicker: boolean;
   replyingToMessage: ChatMessage | null;
+  durationLabel: string;
+  waveform: number[];
+  previewPath: string | null;
+  previewPlayerState: import('@/components/audio').PlayerState;
+  onPlayerStateChange: (state: import('@/components/audio').PlayerState) => void;
+  onTogglePreviewPlay: () => void;
+  previewWaveRef: React.RefObject<import('@/components/audio').IWaveformRef | null>;
   onPlusPress: () => void;
   onMicrophonePress: () => void;
   onSendMessage: () => void;
   onTrashPress: () => void;
-  onPauseToggle: () => void;
-  onSendPress: () => void;
+  onStopToggle: () => Promise<string | null | void>;
+  onSendPress: (pathOverride?: string | null) => void;
   onCancelReply: () => void;
 };
 
@@ -42,14 +49,21 @@ export const ChatToolbar = ({
   inputRef,
   hasText,
   isMicrophoneMode,
-  isRecordingPaused,
+  isStopped,
   showAttachmentPicker,
   replyingToMessage,
+  durationLabel,
+  waveform,
+  previewPath,
+  previewPlayerState,
+  onPlayerStateChange,
+  onTogglePreviewPlay,
+  previewWaveRef,
   onPlusPress,
   onMicrophonePress,
   onSendMessage,
   onTrashPress,
-  onPauseToggle,
+  onStopToggle,
   onSendPress,
   onCancelReply,
 }: ChatToolbarProps) => {
@@ -71,8 +85,8 @@ export const ChatToolbar = ({
       >
         <KeyboardAwareToolbar
           backgroundColor="transparent"
-          closedBaseHeight={isMicrophoneMode ? 92 : 40}
-          openBaseHeight={isMicrophoneMode ? 64 : 12}
+          closedBaseHeight={isMicrophoneMode ? 108 : 40}
+          openBaseHeight={isMicrophoneMode ? 80 : 12}
           contentStyle={{ paddingHorizontal: 16 }}
           replyPreview={
             replyingToMessage ? (
@@ -98,9 +112,16 @@ export const ChatToolbar = ({
         >
           {isMicrophoneMode ? (
             <VoiceNoteRecordingContainer
-              isRecordingPaused={isRecordingPaused}
+              isStopped={isStopped}
+              durationLabel={durationLabel}
+              waveform={waveform}
+              previewPath={previewPath}
+              previewPlayerState={previewPlayerState}
+              onPlayerStateChange={onPlayerStateChange}
+              onTogglePreviewPlay={onTogglePreviewPlay}
+              previewWaveRef={previewWaveRef}
               onTrashPress={onTrashPress}
-              onPauseToggle={onPauseToggle}
+              onStopToggle={onStopToggle}
               onSendPress={onSendPress}
             />
           ) : (

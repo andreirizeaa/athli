@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Dimensions,
   Keyboard,
   LayoutAnimation,
   StyleSheet,
@@ -15,6 +16,15 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Archive, Trash2 } from 'lucide-react-native';
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  AudioModule,
+  setAudioModeAsync,
+} from 'expo-audio';
+import * as FileSystem from 'expo-file-system/legacy';
+import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
@@ -27,6 +37,7 @@ import { VoiceNoteRecordingContainer } from '@/components/chats/voice-note-recor
 import { ChatHeader } from '@/components/chats/chat-header';
 import { ChatToolbar } from '@/components/chats/chat-toolbar';
 import { ChatLoadingState } from '@/components/chats/chat-loading-state';
+import { stopAllWaveformPlayers } from '@/components/message/message-audio-preview';
 import {
   getChats,
   getArchivedChats,
@@ -37,6 +48,53 @@ import {
   type ChatMessage,
 } from '@/services/chats-service';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
+
+const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
+const { width: SCREEN_W } = Dimensions.get('window');
+
+// rough: (barWidth 3 + gap 2) => ~5px per bar. subtract ~110px for timer area + padding
+const MAX_BARS = Math.max(40, Math.floor((SCREEN_W - 110) / 5));
+
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
+/** maps dBFS-ish metering into 0..1 with a noise gate */
+const meterToNorm = (db: number) => {
+  const noiseFloorDb = -55;
+  const peakDb = -5;
+  if (db <= noiseFloorDb) return 0;
+  return clamp01((db - noiseFloorDb) / (peakDb - noiseFloorDb));
+};
+
+// Convert Expo file URI to native file path
+const toNativeFilePath = (uri: string) => {
+  if (!uri) return uri;
+  // "file:///var/..." -> "/var/..."
+  if (uri.startsWith('file://')) return uri.replace('file://', '');
+  return uri;
+};
+
+// Helper to wait for file to be ready
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const ensureFileReady = async (uri: string) => {
+  for (let i = 0; i < 20; i++) {
+    const info = await FileSystem.getInfoAsync(uri);
+    if (info.exists && (info.size ?? 0) > 1024) return; // >1KB
+    await sleep(30);
+  }
+};
+
+const copyToCacheWithExtension = async (uri: string) => {
+  // keep extension if present; fallback to .m4a
+  const ext = uri.split('.').pop();
+  const safeExt = ext && ext.length <= 4 ? ext : 'm4a';
+  const dest = `${FileSystem.cacheDirectory}voice-${Date.now()}.${safeExt}`;
+  await FileSystem.copyAsync({ from: uri, to: dest });
+  return dest;
+};
+
+// The waveform lib often prefers raw paths (no file://) on iOS.
+const toWaveformPath = (uri: string) => uri.startsWith('file://') ? uri.replace('file://', '') : uri;
 
 export default function ChatDetailScreen() {
   const router = useRouter();
@@ -94,10 +152,48 @@ export default function ChatDetailScreen() {
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
   const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const [isMicrophoneMode, setIsMicrophoneMode] = useState(false);
-  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  const formatMmSs = (ms: number) => {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
+  const recorderOptions = useMemo(() => {
+    const base = RecordingPresets.HIGH_QUALITY;
+    return {
+      ...base,
+      ios: {
+        ...base.ios,
+        isMeteringEnabled: true,
+      },
+    };
+  }, []);
+
+  const audioRecorder = useAudioRecorder(recorderOptions);
+
+  // faster polling for better metering fidelity
+  const recorderState = useAudioRecorderState(audioRecorder, 50);
+
+  const [waveform, setWaveform] = useState<number[]>([]);
+  const waveformRef = useRef<number[]>([]);
+  const lastBarAtRef = useRef(0);
+  const bucketMaxRef = useRef(0);
+  const smoothRef = useRef(0);
+
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [previewPlayerState, setPreviewPlayerState] = useState<PlayerState>(PlayerState.stopped);
+  const previewWaveRef = React.useRef<IWaveformRef | null>(null);
+  const [isStopped, setIsStopped] = useState(false);
+
+  // Voice note duration
+  const [durationLabel, setDurationLabel] = useState('0:00');
+  const lastVoiceNoteDurationMsRef = useRef(0);
+  const recordingStartedAtMsRef = useRef<number | null>(null);
 
   const keyboardHeight = useSharedValue(0);
 
@@ -140,6 +236,117 @@ export default function ChatDetailScreen() {
       didHideSub.remove();
     };
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      if (!status.granted) return;
+
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+    })();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopAllWaveformPlayers();
+    };
+  }, []);
+
+  const resetWaveformCompletely = () => {
+    waveformRef.current = [];
+    setWaveform([]);
+    smoothRef.current = 0;
+    bucketMaxRef.current = 0;
+    lastBarAtRef.current = Date.now();
+  };
+
+
+  const startRecording = async () => {
+    setIsStopped(false);
+    setPreviewPath(null);
+    resetWaveformCompletely();
+
+    lastVoiceNoteDurationMsRef.current = 0;
+    recordingStartedAtMsRef.current = Date.now();
+
+    await audioRecorder.prepareToRecordAsync();
+    audioRecorder.record();
+  };
+
+  const stopAndDiscard = async () => {
+    try {
+      await audioRecorder.stop();
+    } catch {}
+    setIsStopped(false);
+    waveformRef.current = [];
+    setWaveform([]);
+    await previewWaveRef.current?.stopPlayer();
+    setPreviewPlayerState(PlayerState.stopped);
+    setPreviewPath(null);
+  };
+
+  // stop+discard when microphone UI closes (start is handled in handleMicrophonePress)
+  useEffect(() => {
+    if (!isMicrophoneMode) {
+      stopAndDiscard();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMicrophoneMode]);
+
+  // Update timer continuously while recording
+  useEffect(() => {
+    if (!isMicrophoneMode) return;
+
+    const fromRecorder = recorderState.durationMillis ?? 0;
+    const fromWallClock = recordingStartedAtMsRef.current
+      ? Date.now() - recordingStartedAtMsRef.current
+      : 0;
+
+    const durationMs = fromRecorder > 0 ? fromRecorder : fromWallClock;
+    lastVoiceNoteDurationMsRef.current = durationMs;
+
+    if (!isStopped) {
+      setDurationLabel(formatMmSs(durationMs));
+    }
+  }, [recorderState.durationMillis, isMicrophoneMode, isStopped]);
+
+  // ✅ conveyor-belt waveform values, emitted ~10/sec, derived from metering
+  useEffect(() => {
+    if (!recorderState.isRecording) return;
+    if (isStopped) return;
+
+    const metering = recorderState.metering;
+    if (typeof metering !== 'number') return;
+
+    // 1) real input level
+    const v = meterToNorm(metering);
+
+    // 2) smoothing (fast attack, slow decay)
+    const prev = smoothRef.current;
+    const alpha = v > prev ? 0.45 : 0.12;
+    const smoothed = prev + (v - prev) * alpha;
+    smoothRef.current = smoothed;
+
+    // 3) bucket max over 100ms => 10 bars/sec
+    bucketMaxRef.current = Math.max(bucketMaxRef.current, smoothed);
+
+    const now = Date.now();
+    if (now - lastBarAtRef.current >= BAR_INTERVAL_MS) {
+      lastBarAtRef.current = now;
+
+      const nextVal = bucketMaxRef.current;
+      bucketMaxRef.current = 0;
+
+      const arr = waveformRef.current;
+      arr.push(nextVal);
+      if (arr.length > MAX_BARS) arr.splice(0, arr.length - MAX_BARS);
+
+      setWaveform([...arr]);
+    }
+  }, [recorderState.metering, recorderState.isRecording, isStopped]);
 
   // Handle document sent - add to message list and close attachment picker
   useEffect(() => {
@@ -384,22 +591,148 @@ export default function ChatDetailScreen() {
     setShowAttachmentPicker(false);
   };
 
-  const handleMicrophonePress = () => {
+  const handleMicrophonePress = async () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
     setIsMicrophoneMode(true);
+    
+    // Start recording immediately (resets accumulatedMs inside startRecording)
+    try {
+      await startRecording();
+    } catch (e) {
+      console.warn('Failed to start recording:', e);
+      setIsMicrophoneMode(false);
+    }
   };
 
-  const handleTrashPress = () => {
+  const handleTrashPress = async () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+    // tear down + reset
+    try {
+      await audioRecorder.stop();
+    } catch {}
+    previewWaveRef.current?.stopPlayer?.();
+
+    setPreviewPath(null);
+    setIsStopped(false);
+    resetWaveformCompletely();
+
     setIsMicrophoneMode(false);
   };
 
-  const handleSendPress = () => {
-    handleSendMessage();
+  const handleSendPress = async (pathOverride?: string | null) => {
+    const pathToSend = pathOverride ?? previewPath;
+    if (!isMicrophoneMode || !pathToSend) return;
+
+    try {
+      // Stop preview player and close microphone mode
+      previewWaveRef.current?.stopPlayer?.();
+      setIsMicrophoneMode(false);
+
+      // Use captured duration (recorderState can be 0 depending on platform)
+      const duration = lastVoiceNoteDurationMsRef.current;
+      const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
+
+      // Create and send the message
+      const newMessage: ChatMessage = {
+        id: `m-${Date.now()}`,
+        text: '',
+        timestamp: new Date(),
+        isSent: true,
+        isRead: false,
+        audio: {
+          uri: audioUri,
+          duration: duration,
+        },
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+    } catch (e) {
+      console.warn('Failed to send voice note:', e);
+      setIsMicrophoneMode(false);
+    }
   };
 
-  const handlePauseToggle = () => {
-    setIsRecordingPaused((prev) => !prev);
+  // stop/redo toggle (center button)
+  const handleStopToggle = async (): Promise<string | null | void> => {
+    if (!isMicrophoneMode) return;
+
+    // RECORDING -> STOP (show preview)
+    if (!isStopped) {
+      // capture duration BEFORE stopping (recorderState can be 0 depending on platform)
+      {
+        const fromRecorder = recorderState.durationMillis ?? 0;
+        const fromWallClock = recordingStartedAtMsRef.current
+          ? Date.now() - recordingStartedAtMsRef.current
+          : 0;
+        lastVoiceNoteDurationMsRef.current = fromRecorder > 0 ? fromRecorder : fromWallClock;
+      }
+
+      setIsStopped(true);
+      setPreviewPlayerState(PlayerState.stopped);
+
+      try {
+        await audioRecorder.stop();
+
+        const uri = audioRecorder.uri;
+        if (!uri) {
+          setPreviewPath(null);
+          return null;
+        }
+
+        await ensureFileReady(uri);
+        const info = await FileSystem.getInfoAsync(uri);
+        if (!info.exists || (info.size ?? 0) < 1024) {
+          console.warn('Empty recording after stop, skipping');
+          setPreviewPath(null);
+          return null;
+        }
+
+        // copy to stable cache location
+        const cachedUri = await copyToCacheWithExtension(uri);
+        const waveformPath = toWaveformPath(cachedUri);
+        setPreviewPath(waveformPath);
+        return waveformPath;
+      } catch (e) {
+        console.warn('Stop failed:', e);
+        setPreviewPath(null);
+        return null;
+      }
+
+      return;
+    }
+
+    // STOPPED -> REDO (restart from fresh)
+    setIsStopped(false);
+    setPreviewPath(null);
+    previewWaveRef.current?.stopPlayer?.();
+    resetWaveformCompletely();
+
+    try {
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+    } catch (e) {
+      console.warn('Redo failed:', e);
+    }
+  };
+
+  // Play/pause preview using library's ref methods
+  const handleTogglePreviewPlay = async () => {
+    const ref = previewWaveRef.current;
+    if (!ref || !previewPath) return;
+
+    try {
+      if (previewPlayerState === PlayerState.playing) {
+        await ref.pausePlayer();
+      } else if (previewPlayerState === PlayerState.paused) {
+        await ref.resumePlayer();
+      } else {
+        await ref.startPlayer({ finishMode: FinishMode.stop as any });
+      }
+    } catch (e) {
+      console.warn('Failed to toggle preview playback:', e);
+    }
   };
 
   // Helper function to find the original message in a reply chain
@@ -589,7 +922,7 @@ export default function ChatDetailScreen() {
           toolbarHeight={
             (replyingToMessage ? 54 : 0) + // Reply preview height
             (showAttachmentPicker ? 112 : 0) + // Attachment picker height
-            (isMicrophoneMode ? 52 : 0) + // Microphone mode height
+            (isMicrophoneMode ? 68 : 0) + // Microphone mode height
             40 + // closedBaseHeight
             insets.bottom // Safe area bottom
           }
@@ -604,14 +937,21 @@ export default function ChatDetailScreen() {
         inputRef={inputRef}
         hasText={hasText}
         isMicrophoneMode={isMicrophoneMode}
-        isRecordingPaused={isRecordingPaused}
+        isStopped={isStopped}
         showAttachmentPicker={showAttachmentPicker}
         replyingToMessage={replyingToMessage}
+        durationLabel={durationLabel}
+        waveform={waveform}
+        previewPath={previewPath}
+        previewPlayerState={previewPlayerState}
+        onPlayerStateChange={setPreviewPlayerState}
+        onTogglePreviewPlay={handleTogglePreviewPlay}
+        previewWaveRef={previewWaveRef}
         onPlusPress={handlePlusPress}
         onMicrophonePress={handleMicrophonePress}
         onSendMessage={handleSendMessage}
         onTrashPress={handleTrashPress}
-        onPauseToggle={handlePauseToggle}
+        onStopToggle={handleStopToggle}
         onSendPress={handleSendPress}
         onCancelReply={handleCancelReply}
       />
