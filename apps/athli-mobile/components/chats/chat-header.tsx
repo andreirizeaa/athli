@@ -49,7 +49,7 @@ export const ChatHeader = ({
             onPress={onBackPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
+            scheme={isDark ? 'dark' : 'light'}
             style={{ marginRight: 12 }}
           />
 
@@ -79,7 +79,7 @@ export const ChatHeader = ({
             onRightPress={onEllipsisPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
+            scheme={isDark ? 'dark' : 'light'}
           />
         </View>
       </BlurView>

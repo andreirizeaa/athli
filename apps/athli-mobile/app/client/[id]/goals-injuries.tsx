@@ -41,7 +41,6 @@ export default function GoalsInjuriesScreen() {
           onPress={handleBackPress}
           size="md"
           color={iconColor}
-          backgroundColor={mutedSurfaceColor}
         />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>Goals & Injuries</Text>
         <View style={styles.headerRightPlaceholder} />

@@ -41,7 +41,6 @@ export default function UnitsModal() {
           onPress={handleClose}
           size="md"
           color={iconColor}
-          backgroundColor={themeColors.surfaceSecondary}
         />
         <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.units')}</Text>
         <View style={styles.closeButton} />

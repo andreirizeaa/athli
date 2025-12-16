@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,28 +6,51 @@ import { CircleCheck } from 'lucide-react-native';
 import { X } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
-import { THEMES, type PresetValue } from '@/constants/theme';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
 
-export default function PaletteModal() {
+type SessionType = {
+  id: string;
+  label: string;
+};
+
+const SESSION_TYPES: SessionType[] = [
+  { id: '30-online', label: '30 Mins - Online' },
+  { id: '30-in-person', label: '30 Mins - In person' },
+  { id: '45-online', label: '45 Mins - Online' },
+  { id: '45-in-person', label: '45 Mins - In person' },
+  { id: '60-online', label: '60 Mins - Online' },
+  { id: '60-in-person', label: '60 Mins - In person' },
+  { id: '90-online', label: '90 Mins - Online' },
+  { id: '90-in-person', label: '90 Mins - In person' },
+];
+
+export default function SessionTypeModal() {
   const router = useRouter();
-  const { colors: themeColors, preset, setPreset } = useThemePreference();
+  const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
+  const { triggerTypeSelect } = useModalCallbacks();
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
   const dividerColor = themeColors.border;
   const iconColor = themeColors.text;
+  const secondaryTextColor = themeColors.mutedText;
 
   const handleClose = () => {
     router.back();
   };
 
-  const handleSelectPalette = (value: PresetValue) => {
-    setPreset(value);
-    handleClose();
+  const handleSelectType = (typeId: string) => {
+    const type = SESSION_TYPES.find((t) => t.id === typeId);
+    if (type) {
+      setSelectedType(typeId);
+      triggerTypeSelect(type.label);
+      handleClose();
+    }
   };
 
   return (
@@ -40,38 +63,28 @@ export default function PaletteModal() {
           size="md"
           color={iconColor}
         />
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.colorPalette')}</Text>
+        <Text style={[styles.title, { color: themeColors.text }]}>{t('calendar.newSession.selectType')}</Text>
         <View style={styles.closeButton} />
       </View>
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {THEMES.map((theme, index) => {
-          const isSelected = theme.value === preset;
-          const accentColor = theme.colors[0];
+        {SESSION_TYPES.map((sessionType, index) => {
+          const isSelected = sessionType.id === selectedType;
 
           return (
-            <View key={theme.value}>
+            <View key={sessionType.id}>
               <TouchableOpacity
-                style={styles.paletteRow}
+                style={styles.typeRow}
                 activeOpacity={0.7}
-                onPress={() => handleSelectPalette(theme.value)}
+                onPress={() => handleSelectType(sessionType.id)}
               >
-                <View style={styles.paletteInfo}>
-                  <View
-                    style={[
-                      styles.paletteCircle,
-                      { backgroundColor: accentColor, borderColor: dividerColor },
-                    ]}
-                  />
-                  <View style={styles.paletteTextContainer}>
+                <View style={styles.typeInfo}>
+                  <View style={styles.typeTextContainer}>
                     <Text
-                      style={[
-                        styles.paletteName,
-                        { color: themeColors.text },
-                      ]}
+                      style={[styles.typeLabel, { color: themeColors.text }]}
                     >
-                      {theme.name}
+                      {sessionType.label}
                     </Text>
                   </View>
                 </View>
@@ -86,10 +99,8 @@ export default function PaletteModal() {
                 )}
               </TouchableOpacity>
 
-              {index !== THEMES.length - 1 && (
-                <View
-                  style={[styles.modalDivider, { backgroundColor: dividerColor }]}
-                />
+              {index !== SESSION_TYPES.length - 1 && (
+                <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
               )}
             </View>
           );
@@ -128,29 +139,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
   },
-  paletteRow: {
+  typeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 16,
+    paddingVertical: 10,
   },
-  paletteInfo: {
+  typeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 1,
   },
-  paletteCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 12,
-    marginRight: 12,
-    borderWidth: 1,
-    marginTop: 3,
-  },
-  paletteTextContainer: {
+  typeTextContainer: {
     flexShrink: 1,
   },
-  paletteName: {
+  typeLabel: {
     ...typography.p2,
     marginTop: 2,
   },

@@ -147,7 +147,6 @@ export default function PreferencesScreen() {
           onPress={handleBackPress}
           size="md"
           color={iconColor}
-          backgroundColor={mutedSurfaceColor}
         />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>{t('preferences.title')}</Text>
         <View style={styles.headerRightPlaceholder} />

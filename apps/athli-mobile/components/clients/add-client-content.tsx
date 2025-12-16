@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View, ScrollView } from 'react-native';
+import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 
-import { typography } from '@/constants/typography';
+import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { FilledButton } from '@/components/buttons/filled-button';
+import { Card } from '@/components/card';
+import { Separator } from '@/components/separator';
 import { addClient } from '@/services/client-service';
 
 type AddClientContentProps = {
@@ -12,223 +13,217 @@ type AddClientContentProps = {
   onClientAdded?: () => void;
 };
 
-export const AddClientContent = ({ onClose, onClientAdded }: AddClientContentProps) => {
-  const { colors: themeColors } = useThemePreference();
-  const { t } = useTranslations();
-  const { height: windowHeight } = useWindowDimensions();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [category, setCategory] = useState<'online' | 'in-person' | 'hybrid'>('online');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const modalContentMinHeight = (windowHeight * 0.8) - 100;
-  
-  // Email validation regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isEmailValid = email.trim() !== '' && emailRegex.test(email.trim());
-  
-  const isFormValid = firstName.trim() !== '' && lastName.trim() !== '' && isEmailValid;
-
-  const handleClose = () => {
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setCategory('online');
-    onClose();
-  };
-
-  const handleSaveClient = async () => {
-    if (!isFormValid || isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      await addClient({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        type: category,
-      });
-      handleClose();
-      onClientAdded?.();
-    } catch (error) {
-      console.error('Failed to add client:', error);
-      // Handle error (show toast, etc.)
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const getCategoryLabel = (type: 'online' | 'in-person' | 'hybrid'): string => {
-    if (type === 'in-person') return t('clients.addClientModal.inPerson');
-    if (type === 'online') return t('clients.addClientModal.online');
-    return t('clients.addClientModal.hybrid');
-  };
-
-  return (
-    <ScrollView
-      style={styles.scrollView}
-      contentContainerStyle={[styles.modalContent, { minHeight: modalContentMinHeight }]}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.formContainer}>
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: themeColors.text }]}>{t('clients.addClientModal.firstName')}</Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: themeColors.surface,
-                borderColor: themeColors.border,
-                color: themeColors.text,
-              },
-            ]}
-            placeholder={t('clients.addClientModal.firstNamePlaceholder')}
-            placeholderTextColor={themeColors.mutedText}
-            value={firstName}
-            onChangeText={setFirstName}
-            textAlignVertical="center"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: themeColors.text }]}>{t('clients.addClientModal.lastName')}</Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: themeColors.surface,
-                borderColor: themeColors.border,
-                color: themeColors.text,
-              },
-            ]}
-            placeholder={t('clients.addClientModal.lastNamePlaceholder')}
-            placeholderTextColor={themeColors.mutedText}
-            value={lastName}
-            onChangeText={setLastName}
-            textAlignVertical="center"
-          />
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: themeColors.text }]}>{t('clients.addClientModal.email')}</Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: themeColors.surface,
-                borderColor: email.trim() !== '' && !isEmailValid ? '#ef4444' : themeColors.border,
-                color: themeColors.text,
-              },
-            ]}
-            placeholder={t('clients.addClientModal.emailPlaceholder')}
-            placeholderTextColor={themeColors.mutedText}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            textAlignVertical="center"
-          />
-          {email.trim() !== '' && !isEmailValid && (
-            <Text style={[styles.errorText, { color: '#ef4444' }]}>
-              {t('clients.addClientModal.emailError')}
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: themeColors.text }]}>{t('clients.addClientModal.category')}</Text>
-          <View style={styles.buttonGroup}>
-            {(['online', 'in-person', 'hybrid'] as const).map((type) => {
-              const isSelected = category === type;
-              return (
-                <TouchableOpacity
-                  key={type}
-                  style={[
-                    styles.categoryButton,
-                    {
-                      backgroundColor: isSelected ? themeColors.primary : themeColors.surface,
-                      borderColor: isSelected ? themeColors.primary : themeColors.border,
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => setCategory(type)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryButtonText,
-                      { color: isSelected ? themeColors.primaryForeground : themeColors.text },
-                    ]}
-                  >
-                    {getCategoryLabel(type)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.buttonsContainer}>
-        <FilledButton
-          label={isSubmitting ? t('clients.addClientModal.inviting') : t('clients.addClientModal.invite')}
-          onPress={handleSaveClient}
-          disabled={!isFormValid || isSubmitting}
-        />
-      </View>
-    </ScrollView>
-  );
+export type AddClientContentRef = {
+  canComplete: boolean;
+  handleComplete: () => Promise<void>;
 };
+
+export const AddClientContent = forwardRef<AddClientContentRef, AddClientContentProps>(
+  ({ onClose, onClientAdded }, ref) => {
+    const { colors: themeColors } = useThemePreference();
+    const { t } = useTranslations();
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [category, setCategory] = useState<'online' | 'in-person' | 'hybrid'>('online');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmailValid = email.trim() !== '' && emailRegex.test(email.trim());
+
+    const canComplete = firstName.trim() !== '' && lastName.trim() !== '' && isEmailValid;
+
+    const handleComplete = async () => {
+      if (!canComplete || isSubmitting) return;
+
+      setIsSubmitting(true);
+      try {
+        await addClient({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
+          type: category,
+        });
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setCategory('online');
+        onClose();
+        onClientAdded?.();
+      } catch (error) {
+        console.error('Failed to add client:', error);
+        // Handle error (show toast, etc.)
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    useImperativeHandle(ref, () => ({
+      canComplete,
+      handleComplete,
+    }), [canComplete, isSubmitting]);
+
+    const getCategoryLabel = (type: 'online' | 'in-person' | 'hybrid'): string => {
+      if (type === 'in-person') return t('clients.addClientModal.inPerson');
+      if (type === 'online') return t('clients.addClientModal.online');
+      return t('clients.addClientModal.hybrid');
+    };
+
+    return (
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Card with First Name, Last Name, Email */}
+        <Card style={[styles.inputCard, { paddingHorizontal: 16 }]}>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, { color: themeColors.text }]}
+              placeholder={t('clients.addClientModal.firstNamePlaceholder')}
+              placeholderTextColor={themeColors.mutedText}
+              value={firstName}
+              onChangeText={setFirstName}
+              textAlignVertical="center"
+            />
+            <Text style={[styles.inputLabel, { color: themeColors.mutedText }]}>
+              {t('clients.addClientModal.firstName')}
+            </Text>
+          </View>
+          <Separator />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[styles.input, { color: themeColors.text }]}
+              placeholder={t('clients.addClientModal.lastNamePlaceholder')}
+              placeholderTextColor={themeColors.mutedText}
+              value={lastName}
+              onChangeText={setLastName}
+              textAlignVertical="center"
+            />
+            <Text style={[styles.inputLabel, { color: themeColors.mutedText }]}>
+              {t('clients.addClientModal.lastName')}
+            </Text>
+          </View>
+          <Separator />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  color: themeColors.text,
+                  borderColor: email.trim() !== '' && !isEmailValid ? '#ef4444' : 'transparent',
+                },
+              ]}
+              placeholder={t('clients.addClientModal.emailPlaceholder')}
+              placeholderTextColor={themeColors.mutedText}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              textAlignVertical="center"
+            />
+            <Text style={[styles.inputLabel, { color: themeColors.mutedText }]}>
+              {t('clients.addClientModal.email')}
+            </Text>
+          </View>
+        </Card>
+
+        {/* Toggle Group */}
+        <View style={[styles.buttonGroup, { backgroundColor: themeColors.surfaceSecondary }]}>
+          {(['online', 'in-person', 'hybrid'] as const).map((type) => {
+            const isSelected = category === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.buttonGroupButton,
+                  isSelected && [
+                    styles.buttonGroupButtonActive,
+                    { backgroundColor: themeColors.background },
+                  ],
+                ]}
+                onPress={() => setCategory(type)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.buttonGroupText,
+                    { color: isSelected ? themeColors.text : themeColors.mutedText },
+                    isSelected && styles.buttonGroupTextActive,
+                  ]}
+                >
+                  {getCategoryLabel(type)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  modalContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-    padding: 20,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  formContainer: {
-    flex: 1,
+  inputCard: {
+    marginBottom: 16,
   },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    ...typography.p4,
-    marginBottom: 8,
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    minHeight: 44,
   },
   input: {
-    ...typography.p3,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 14,
-    minHeight: 48,
+    ...typography.p2,
+    flex: 1,
+    padding: 0,
+    marginRight: 12,
+    flexShrink: 1,
   },
-  errorText: {
+  inputLabel: {
     ...typography.p4,
-    marginTop: 4,
+    minWidth: 80,
+    textAlign: 'right',
+    flexShrink: 0,
   },
   buttonGroup: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  categoryButton: {
-    flex: 1,
     borderRadius: 28,
-    borderWidth: 1,
-    paddingVertical: 8,
+    padding: 4,
+    gap: 4,
+    marginBottom: 16,
+  },
+  buttonGroupButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  categoryButtonText: {
-    ...typography.p3,
+  buttonGroupButtonActive: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  buttonsContainer: {
-    paddingBottom: 30,
-    alignItems: 'center',
+  buttonGroupText: {
+    ...typography.p2,
+    fontWeight: '600',
+  },
+  buttonGroupTextActive: {
+    fontWeight: '700',
   },
 });

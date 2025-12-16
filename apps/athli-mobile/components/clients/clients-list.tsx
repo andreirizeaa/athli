@@ -7,7 +7,6 @@ import { ChevronRight } from 'lucide-react-native';
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { Card } from '@/components/card';
 import { PlatformIcon } from '@/components/platform-icon';
 import type { Client } from '@/services/client-service';
 
@@ -15,6 +14,7 @@ type ClientsListProps = {
   clients: Client[];
   isLoading: boolean;
   onClientPress: (clientId: string) => void;
+  showChevron?: boolean;
 };
 
 export type ClientsListRef = {
@@ -22,7 +22,7 @@ export type ClientsListRef = {
 };
 
 export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
-  ({ clients, isLoading, onClientPress }, ref) => {
+  ({ clients, isLoading, onClientPress, showChevron = true }, ref) => {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const listRef = useRef<any>(null);
@@ -64,41 +64,63 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
     const isLastItem = index === clients.length - 1;
 
     return (
-      <View style={styles.cardWrapper}>
-        <TouchableOpacity activeOpacity={0.7} onPress={() => onClientPress(item.id)}>
-          <Card style={[isLastItem ? { marginBottom: 60 } : undefined, styles.cardContainer]}>
-            <View style={styles.cardContent}>
+      <View>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => onClientPress(item.id)}
+          style={styles.rowWrapper}
+        >
+          <View style={styles.rowContent}>
+            <View style={styles.avatarContainer}>
               {item.avatar ? (
-                <Image
-                  source={{ uri: item.avatar }}
-                  style={[styles.avatar, { borderTopLeftRadius: 18, borderBottomLeftRadius: 18 }]}
-                />
+                <Image source={{ uri: item.avatar }} style={styles.avatar} />
               ) : (
                 <View
                   style={[
                     styles.avatar,
                     styles.avatarPlaceholder,
-                    { backgroundColor: themeColors.border, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 },
+                    { backgroundColor: themeColors.border },
                   ]}
                 />
               )}
-              <View style={styles.clientInfo}>
-                <Text style={[styles.clientName, { color: themeColors.text }]}>{item.fullName}</Text>
-                <Text style={[styles.clientSubtitle, { color: themeColors.mutedText }]}>
-                  {formatSubtitle(item)}
-                </Text>
-              </View>
-              <View style={styles.chevronContainer}>
-                <PlatformIcon
-                  sf="chevron.right"
-                  IconComponent={ChevronRight}
-                  size={iconSizes.navigationChevrons}
-                  color={themeColors.mutedText}
-                />
-              </View>
             </View>
-          </Card>
+            <View style={styles.clientInfo}>
+              <View style={styles.clientHeaderRow}>
+                <Text
+                  style={[styles.clientName, { color: themeColors.text }]}
+                  numberOfLines={1}
+                >
+                  {item.fullName}
+                </Text>
+                {showChevron && (
+                  <View style={styles.chevronContainer}>
+                    <PlatformIcon
+                      sf="chevron.right"
+                      IconComponent={ChevronRight}
+                      size={iconSizes.extraSmallIcons}
+                      color={themeColors.mutedText}
+                    />
+                  </View>
+                )}
+              </View>
+              <Text
+                style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
+                numberOfLines={2}
+              >
+                {formatSubtitle(item)}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
+        <View style={styles.separatorContainer}>
+          <View
+            style={[
+              styles.separator,
+              { backgroundColor: themeColors.mutedText, opacity: 0.3 },
+            ]}
+          />
+        </View>
+        {isLastItem && <View style={{ height: 60 }} />}
       </View>
     );
   };
@@ -127,9 +149,6 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
 );
 
 const styles = StyleSheet.create({
-  cardWrapper: {
-    paddingHorizontal: 16,
-  },
   listContent: {
     paddingBottom: 32,
   },
@@ -138,44 +157,57 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cardContainer: {
-    overflow: 'hidden',
-    paddingLeft: 0,
-    paddingRight: 16,
-    paddingTop: 0,
-    paddingBottom: 0,
-    height: 88,
+  rowWrapper: {
+    width: '100%',
   },
-  cardContent: {
+  rowContent: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    height: 88,
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  avatarContainer: {
+    marginRight: 12,
   },
   avatar: {
-    width: 80,
-    marginRight: 12,
-    marginLeft: 0,
-    alignSelf: 'stretch',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',
   },
   clientInfo: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
-  clientName: {
-    ...typography.p1,
-    fontWeight: '600',
+  clientHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 4,
   },
+  clientName: {
+    ...typography.h7,
+    fontWeight: '600',
+    flex: 1,
+    flexShrink: 1,
+    marginRight: 8,
+  },
   clientSubtitle: {
-    ...typography.p4,
+    ...typography.p3,
   },
   chevronContainer: {
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  separatorContainer: {
+    paddingLeft: 82,
+    paddingRight: 16,
+  },
+  separator: {
+    height: 0.75,
   },
 });
 

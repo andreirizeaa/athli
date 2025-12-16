@@ -11,6 +11,7 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { LANGUAGES } from '@/constants/languages';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 
 export default function LanguageModal() {
   const router = useRouter();
@@ -41,7 +42,6 @@ export default function LanguageModal() {
           onPress={handleClose}
           size="md"
           color={iconColor}
-          backgroundColor={themeColors.surfaceSecondary}
         />
         <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.selectLanguage')}</Text>
         <View style={styles.closeButton} />

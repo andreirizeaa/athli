@@ -41,7 +41,6 @@ export default function MetricsScreen() {
           onPress={handleBackPress}
           size="md"
           color={iconColor}
-          backgroundColor={mutedSurfaceColor}
         />
         <Text style={[styles.headerTitle, { color: themeColors.text }]}>Metrics</Text>
         <View style={styles.headerRightPlaceholder} />

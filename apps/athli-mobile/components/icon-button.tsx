@@ -3,8 +3,14 @@ import { StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { PlatformIcon } from './platform-icon';
 import { iconSizes } from '@/constants/typography';
+import { createPresetPalette } from '@/constants/theme';
+import { useThemePreference } from '@/contexts/useColorScheme';
 
 type IconButtonSize = 'sm' | 'md' | 'lg';
+
+type IconButtonScheme = 'auto' | 'light' | 'dark';
+
+type IconButtonVariant = 'default' | 'primary';
 
 type IconConfig = {
   sf: string;
@@ -16,7 +22,8 @@ type IconButtonProps = {
   onPress: () => void;
   size?: IconButtonSize;
   color?: string;
-  backgroundColor?: string;
+  scheme?: IconButtonScheme;
+  variant?: IconButtonVariant;
   disabled?: boolean;
   style?: ViewStyle;
   activeOpacity?: number;
@@ -29,7 +36,8 @@ type DoubleIconButtonProps = {
   onRightPress: () => void;
   size?: IconButtonSize;
   color?: string;
-  backgroundColor?: string;
+  scheme?: IconButtonScheme;
+  variant?: IconButtonVariant;
   disabled?: boolean;
   style?: ViewStyle;
   activeOpacity?: number;
@@ -55,13 +63,22 @@ export const IconButton = ({
   onPress,
   size = 'md',
   color,
-  backgroundColor,
+  scheme = 'auto',
+  variant = 'default',
   disabled = false,
   style,
   activeOpacity = 0.7,
 }: IconButtonProps) => {
+  const { preset, colors: themeColors } = useThemePreference();
   const { buttonSize, iconSize } = SIZE_CONFIG[size];
   const borderRadius = buttonSize / 2;
+
+  const resolvedColors =
+    scheme === 'auto' ? themeColors : createPresetPalette(preset, scheme);
+
+  const background = variant === 'primary' ? resolvedColors.primary : resolvedColors.iconButton;
+  const iconColor =
+    color ?? (variant === 'primary' ? resolvedColors.primaryForeground : resolvedColors.text);
 
   return (
     <TouchableOpacity
@@ -71,7 +88,7 @@ export const IconButton = ({
           width: buttonSize,
           height: buttonSize,
           borderRadius,
-          backgroundColor,
+          backgroundColor: background,
         },
         style,
       ]}
@@ -79,7 +96,7 @@ export const IconButton = ({
       onPress={onPress}
       disabled={disabled}
     >
-      <PlatformIcon sf={icon.sf} IconComponent={icon.IconComponent} size={iconSize} color={color} />
+      <PlatformIcon sf={icon.sf} IconComponent={icon.IconComponent} size={iconSize} color={iconColor} />
     </TouchableOpacity>
   );
 };
@@ -93,15 +110,24 @@ export const DoubleIconButton = React.forwardRef<View, DoubleIconButtonProps>(
       onRightPress,
       size = 'md',
       color,
-      backgroundColor,
+      scheme = 'auto',
+      variant = 'default',
       disabled = false,
       style,
       activeOpacity = 0.7,
     },
     ref
   ) => {
+    const { preset, colors: themeColors } = useThemePreference();
     const { buttonSize, iconSize } = SIZE_CONFIG[size];
     const borderRadius = buttonSize / 2;
+
+    const resolvedColors =
+      scheme === 'auto' ? themeColors : createPresetPalette(preset, scheme);
+
+    const background = variant === 'primary' ? resolvedColors.primary : resolvedColors.iconButton;
+    const iconColor =
+      color ?? (variant === 'primary' ? resolvedColors.primaryForeground : resolvedColors.text);
 
     return (
       <View
@@ -111,7 +137,7 @@ export const DoubleIconButton = React.forwardRef<View, DoubleIconButtonProps>(
           styles.doubleButtonContainer,
           {
             borderRadius,
-            backgroundColor,
+            backgroundColor: background,
             minHeight: buttonSize,
           },
           style,
@@ -129,7 +155,7 @@ export const DoubleIconButton = React.forwardRef<View, DoubleIconButtonProps>(
           onPress={onLeftPress}
           disabled={disabled}
         >
-          <PlatformIcon sf={leftIcon.sf} IconComponent={leftIcon.IconComponent} size={iconSize} color={color} />
+          <PlatformIcon sf={leftIcon.sf} IconComponent={leftIcon.IconComponent} size={iconSize} color={iconColor} />
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -143,7 +169,7 @@ export const DoubleIconButton = React.forwardRef<View, DoubleIconButtonProps>(
           onPress={onRightPress}
           disabled={disabled}
         >
-          <PlatformIcon sf={rightIcon.sf} IconComponent={rightIcon.IconComponent} size={iconSize} color={color} />
+          <PlatformIcon sf={rightIcon.sf} IconComponent={rightIcon.IconComponent} size={iconSize} color={iconColor} />
         </TouchableOpacity>
       </View>
     );

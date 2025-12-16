@@ -778,7 +778,6 @@ export default function Camera() {
             onPress={handleClose}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
           />
           {(isVideoMode || isRecording) && (
             <View
@@ -809,7 +808,7 @@ export default function Camera() {
             onPress={handleFlashToggle}
             size="md"
             color={flashEnabled ? themeColors.primaryForeground : iconColor}
-            backgroundColor={flashEnabled ? themeColors.primary : mutedSurfaceColor}
+            variant={flashEnabled ? 'primary' : 'default'}
           />
         </View>
 
@@ -821,7 +820,6 @@ export default function Camera() {
             onPress={handlePhotoPress}
             size="md"
             color={iconColor}
-            backgroundColor={mutedSurfaceColor}
           />
 
           {/* Record/Stop Button - Centered */}
@@ -888,7 +886,6 @@ export default function Camera() {
               onPress={handleRotatePress}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
           </View>
         </View>
