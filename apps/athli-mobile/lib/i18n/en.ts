@@ -32,6 +32,12 @@ export const en = {
   },
   inbox: {
     title: 'Inbox',
+    searchPlaceholder: 'Search coaches...',
+    coachNotFound: 'Coach not found',
+    empty: {
+      noCoachesFound: 'No coaches found',
+      noCoachesYet: 'No coaches yet',
+    },
   },
   profile: {
     title: 'Profile',

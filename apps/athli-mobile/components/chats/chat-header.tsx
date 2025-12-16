@@ -9,18 +9,24 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { hexToRgba } from '@/utils/colorUtils';
 import { IconButton, DoubleIconButton } from '@/components/icon-button';
 import { type Chat } from '@/services/chats-service';
+import { type Coach } from '@/services/inbox-service';
 import { typography } from '@/constants/typography';
 
 type ChatHeaderProps = {
-  chat: Chat;
-  onBackPress: () => void;
-  onUserProfilePress: () => void;
-  onEllipsisPress: () => void;
-  actionButtonRef: React.RefObject<View | null>;
+  // Support both Chat and Coach types
+  chat?: Chat;
+  coach?: Coach;
+  // Optional back button
+  onBackPress?: () => void;
+  // Optional action buttons (for coach view)
+  onUserProfilePress?: () => void;
+  onEllipsisPress?: () => void;
+  actionButtonRef?: React.RefObject<View | null>;
 };
 
 export const ChatHeader = ({
   chat,
+  coach,
   onBackPress,
   onUserProfilePress,
   onEllipsisPress,
@@ -32,9 +38,14 @@ export const ChatHeader = ({
   const insets = useSafeAreaInsets();
 
   const headerBackgroundColor = themeColors.headerBackground;
-  const mutedSurfaceColor = themeColors.surfaceSecondary;
   const iconColor = themeColors.text;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
+
+  // Determine avatar and name from either chat or coach
+  const avatar = chat?.clientAvatar || coach?.avatar;
+  const name = chat?.clientName || coach?.name || '';
+  const showBackButton = !!onBackPress;
+  const showActionButtons = !!onUserProfilePress && !!onEllipsisPress && !!actionButtonRef;
 
   return (
     <View style={[styles.headerSafeArea, { paddingTop: 0 }]} pointerEvents="box-none">
@@ -44,18 +55,20 @@ export const ChatHeader = ({
         style={[styles.headerBlur, { paddingTop: insets.top, backgroundColor: translucentHeaderBg }]}
       >
         <View style={styles.header}>
-          <IconButton
-            icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-            onPress={onBackPress}
-            size="md"
-            color={iconColor}
-            scheme={isDark ? 'dark' : 'light'}
-            style={{ marginRight: 12 }}
-          />
+          {showBackButton && (
+            <IconButton
+              icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+              onPress={onBackPress}
+              size="md"
+              color={iconColor}
+              scheme={isDark ? 'dark' : 'light'}
+              style={{ marginRight: 12 }}
+            />
+          )}
 
           <View style={styles.avatarContainer}>
-            {chat.clientAvatar ? (
-              <Image source={{ uri: chat.clientAvatar }} style={styles.avatar} />
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatar} />
             ) : (
               <View
                 style={[
@@ -67,20 +80,22 @@ export const ChatHeader = ({
             )}
           </View>
 
-          <Text style={[styles.clientName, { color: themeColors.text }]} numberOfLines={1}>
-            {chat.clientName}
+          <Text style={[styles.name, { color: themeColors.text }]} numberOfLines={1}>
+            {name}
           </Text>
 
-          <DoubleIconButton
-            ref={actionButtonRef as React.RefObject<View>}
-            leftIcon={{ sf: 'person', IconComponent: User }}
-            rightIcon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
-            onLeftPress={onUserProfilePress}
-            onRightPress={onEllipsisPress}
-            size="md"
-            color={iconColor}
-            scheme={isDark ? 'dark' : 'light'}
-          />
+          {showActionButtons && (
+            <DoubleIconButton
+              ref={actionButtonRef as React.RefObject<View>}
+              leftIcon={{ sf: 'person', IconComponent: User }}
+              rightIcon={{ sf: 'ellipsis', IconComponent: Ellipsis }}
+              onLeftPress={onUserProfilePress}
+              onRightPress={onEllipsisPress}
+              size="md"
+              color={iconColor}
+              scheme={isDark ? 'dark' : 'light'}
+            />
+          )}
         </View>
       </BlurView>
     </View>
@@ -116,7 +131,7 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     backgroundColor: '#e0e0e0',
   },
-  clientName: {
+  name: {
     ...typography.h5,
     flex: 1,
     marginRight: 12,

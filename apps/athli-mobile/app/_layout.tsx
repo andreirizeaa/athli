@@ -279,6 +279,7 @@ function RootLayoutNav() {
         />
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
+        <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
