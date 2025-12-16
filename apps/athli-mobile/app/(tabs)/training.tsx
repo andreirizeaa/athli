@@ -14,6 +14,7 @@ import { PlatformIcon } from '@/components/platform-icon';
 import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 import { TrainingAddOptions } from '@/components/training/training-add-options';
+import { TrainingContent } from '@/components/training/training-content';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
@@ -23,6 +24,8 @@ export default function TrainingScreen() {
   const { t } = useTranslations();
   const { isVisible: isOverlayVisible, hideOverlay } = useTrainingOverlay();
   const insets = useSafeAreaInsets();
+  // Track which dates have one-off sessions (stored as ISO date strings for comparison)
+  const [oneOffSessionDates, setOneOffSessionDates] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -119,6 +122,13 @@ export default function TrainingScreen() {
     // TODO: Save to storage if needed
   };
 
+  // Check if current selected date has a one-off session
+  const hasOneOffSessionForCurrentDate = useMemo(() => {
+    if (!selectedDate) return false;
+    const dateKey = selectedDate.toISOString();
+    return oneOffSessionDates.has(dateKey);
+  }, [selectedDate, oneOffSessionDates]);
+
   const handleCalendarSwipe = (month: number, year: number) => {
     setCurrentMonth(month);
     setCurrentYear(year);
@@ -189,7 +199,10 @@ export default function TrainingScreen() {
 
   const handleOneOffSession = () => {
     hideOverlay();
-    // TODO: Implement one-off session functionality
+    if (selectedDate) {
+      const dateKey = selectedDate.toISOString();
+      setOneOffSessionDates((prev) => new Set(prev).add(dateKey));
+    }
   };
 
   return (
@@ -256,6 +269,11 @@ export default function TrainingScreen() {
           <View style={styles.staticHeader}>
             <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
           </View>
+
+          {/* Training Content - appears under calendar divider only when current date has one-off session */}
+          {hasOneOffSessionForCurrentDate && selectedDate && (
+            <TrainingContent date={selectedDate} />
+          )}
         </View>
       </View>
 

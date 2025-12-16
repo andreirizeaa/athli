@@ -256,6 +256,28 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="add-exercise-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="add-circuit-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
           name="profile"
           options={{
             presentation: 'card',
