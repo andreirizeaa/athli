@@ -254,7 +254,7 @@ export default function ChatsScreen() {
                 style={styles.headerButtonContainer}
               >
                 <TouchableOpacity
-                  style={[styles.headerButton, { backgroundColor: themeColors.searchBarBackground }]}
+                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
                   activeOpacity={0.7}
                   onPress={handleEllipsisPress}
                 >
@@ -326,20 +326,20 @@ export default function ChatsScreen() {
             ]}
           >
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#FFFFFF' }]}
+              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
               activeOpacity={0.7}
               onPress={handleArchivePress}
             >
-              <Text style={[styles.actionButtonText, { color: '#000000' }]}>
+              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.archive')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: '#FFFFFF' }]}
+              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
               activeOpacity={0.7}
               onPress={handleDeletePress}
             >
-              <Text style={[styles.actionButtonText, { color: '#000000' }]}>
+              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.delete')}
               </Text>
             </TouchableOpacity>

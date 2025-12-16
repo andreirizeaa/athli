@@ -15,9 +15,21 @@ import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
 import { VoiceNoteRecordingContainer } from '@/components/chats/voice-note-recording-container';
 import { type Chat, type ChatMessage } from '@/services/chats-service';
+import { type InboxMessage } from '@/services/inbox-service';
+
+// Generic participant type that works for both Chat and Coach
+type ParticipantInfo = {
+  chatId: string;
+  participantId: string;
+  participantName: string;
+};
 
 type ChatToolbarProps = {
-  chat: Chat;
+  // Support both Chat and Coach via participant info
+  chat?: Chat;
+  coach?: { id: string; name: string };
+  // Message can be either ChatMessage or InboxMessage
+  replyingToMessage?: ChatMessage | InboxMessage | null;
   searchQuery: string;
   setSearchQuery: (text: string) => void;
   inputRef: RefObject<TextInput | null>;
@@ -25,7 +37,6 @@ type ChatToolbarProps = {
   isMicrophoneMode: boolean;
   isStopped: boolean;
   showAttachmentPicker: boolean;
-  replyingToMessage: ChatMessage | null;
   durationLabel: string;
   waveform: number[];
   previewPath: string | null;
@@ -44,6 +55,8 @@ type ChatToolbarProps = {
 
 export const ChatToolbar = ({
   chat,
+  coach,
+  replyingToMessage,
   searchQuery,
   setSearchQuery,
   inputRef,
@@ -51,7 +64,6 @@ export const ChatToolbar = ({
   isMicrophoneMode,
   isStopped,
   showAttachmentPicker,
-  replyingToMessage,
   durationLabel,
   waveform,
   previewPath,
@@ -76,6 +88,25 @@ export const ChatToolbar = ({
   const iconColor = themeColors.text;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
 
+  // Determine participant info from either chat or coach
+  const participantInfo: ParticipantInfo = chat
+    ? {
+        chatId: chat.id,
+        participantId: chat.clientId,
+        participantName: chat.clientName,
+      }
+    : coach
+      ? {
+          chatId: 'inbox',
+          participantId: coach.id,
+          participantName: coach.name,
+        }
+      : {
+          chatId: '',
+          participantId: '',
+          participantName: '',
+        };
+
   return (
     <View style={styles.toolbarContainer} pointerEvents="box-none">
       <BlurView
@@ -92,7 +123,7 @@ export const ChatToolbar = ({
             replyingToMessage ? (
               <ReplyPreviewRow
                 message={replyingToMessage}
-                clientName={chat.clientName}
+                clientName={participantInfo.participantName}
                 onClose={onCancelReply}
                 backgroundColor={translucentHeaderBg}
               />
@@ -102,9 +133,9 @@ export const ChatToolbar = ({
             showAttachmentPicker ? (
               <AttachmentPickerRow
                 backgroundColor={translucentHeaderBg}
-                chatId={chat?.id}
-                clientId={chat?.clientId}
-                clientName={chat?.clientName}
+                chatId={participantInfo.chatId}
+                clientId={participantInfo.participantId}
+                clientName={participantInfo.participantName}
                 caption={searchQuery}
               />
             ) : undefined
@@ -157,9 +188,9 @@ export const ChatToolbar = ({
                       router.push({
                         pathname: '/camera',
                         params: {
-                          chatId: chat.id,
-                          clientId: chat.clientId,
-                          clientName: chat.clientName,
+                          chatId: participantInfo.chatId,
+                          clientId: participantInfo.participantId,
+                          clientName: participantInfo.participantName,
                           caption: searchQuery,
                         },
                       })

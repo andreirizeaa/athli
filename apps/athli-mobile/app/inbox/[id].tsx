@@ -4,9 +4,7 @@ import {
   Keyboard,
   LayoutAnimation,
   StyleSheet,
-  Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -15,7 +13,6 @@ import { StatusBar } from 'expo-status-bar';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Archive, Trash2 } from 'lucide-react-native';
 import {
   useAudioRecorder,
   useAudioRecorderState,
@@ -28,36 +25,27 @@ import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { MessageList } from '@/components/message/message-list';
 import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
-import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
-import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
-import { VoiceNoteRecordingContainer } from '@/components/chats/voice-note-recording-container';
 import { ChatHeader } from '@/components/chats/chat-header';
 import { ChatToolbar } from '@/components/chats/chat-toolbar';
 import { ChatLoadingState } from '@/components/chats/chat-loading-state';
 import { stopAllWaveformPlayers } from '@/components/message/message-audio-preview';
 import {
-  getChats,
-  getArchivedChats,
-  archiveChat,
-  deleteChat,
-  getChatMessages,
-  type Chat,
-  type ChatMessage,
-} from '@/services/chats-service';
-import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
+  getCoach,
+  getCoaches,
+  getInboxMessages,
+  sendInboxMessage,
+  type Coach,
+  type InboxMessage,
+} from '@/services/inbox-service';
 
-const BAR_INTERVAL_MS = 100; // ✅ 10 bars/sec
+const BAR_INTERVAL_MS = 100;
 const { width: SCREEN_W } = Dimensions.get('window');
-
-// rough: (barWidth 3 + gap 2) => ~5px per bar. subtract ~110px for timer area + padding
 const MAX_BARS = Math.max(40, Math.floor((SCREEN_W - 110) / 5));
 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
-/** maps dBFS-ish metering into 0..1 with a noise gate */
 const meterToNorm = (db: number) => {
   const noiseFloorDb = -55;
   const peakDb = -5;
@@ -65,27 +53,23 @@ const meterToNorm = (db: number) => {
   return clamp01((db - noiseFloorDb) / (peakDb - noiseFloorDb));
 };
 
-// Convert Expo file URI to native file path
 const toNativeFilePath = (uri: string) => {
   if (!uri) return uri;
-  // "file:///var/..." -> "/var/..."
   if (uri.startsWith('file://')) return uri.replace('file://', '');
   return uri;
 };
 
-// Helper to wait for file to be ready
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const ensureFileReady = async (uri: string) => {
   for (let i = 0; i < 20; i++) {
     const info = await FileSystem.getInfoAsync(uri);
-    if (info.exists && (info.size ?? 0) > 1024) return; // >1KB
+    if (info.exists && (info.size ?? 0) > 1024) return;
     await sleep(30);
   }
 };
 
 const copyToCacheWithExtension = async (uri: string) => {
-  // keep extension if present; fallback to .m4a
   const ext = uri.split('.').pop();
   const safeExt = ext && ext.length <= 4 ? ext : 'm4a';
   const dest = `${FileSystem.cacheDirectory}voice-${Date.now()}.${safeExt}`;
@@ -93,14 +77,13 @@ const copyToCacheWithExtension = async (uri: string) => {
   return dest;
 };
 
-// The waveform lib often prefers raw paths (no file://) on iOS.
 const toWaveformPath = (uri: string) => uri.startsWith('file://') ? uri.replace('file://', '') : uri;
 
-export default function ChatDetailScreen() {
+export default function InboxDetailScreen() {
   const router = useRouter();
-  const { id, chat: chatParam, messages: messagesParam, documentSent, sentDocument, imagesSent, sentImages, sentImagesCaption, videoSent, sentVideo } = useLocalSearchParams<{
+  const { id, coach: coachParam, messages: messagesParam, documentSent, sentDocument, imagesSent, sentImages, sentImagesCaption, videoSent, sentVideo } = useLocalSearchParams<{
     id: string;
-    chat?: string;
+    coach?: string;
     messages?: string;
     documentSent?: string;
     sentDocument?: string;
@@ -117,10 +100,10 @@ export default function ChatDetailScreen() {
   const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
-  const [chat, setChat] = useState<Chat | null>(() => {
-    if (chatParam) {
+  const [coach, setCoach] = useState<Coach | null>(() => {
+    if (coachParam) {
       try {
-        return JSON.parse(chatParam) as Chat;
+        return JSON.parse(coachParam) as Coach;
       } catch {
         return null;
       }
@@ -128,10 +111,10 @@ export default function ChatDetailScreen() {
     return null;
   });
 
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+  const [messages, setMessages] = useState<InboxMessage[]>(() => {
     if (messagesParam) {
       try {
-        const parsed = JSON.parse(messagesParam) as ChatMessage[];
+        const parsed = JSON.parse(messagesParam) as InboxMessage[];
         return parsed.map((msg) => ({
           ...msg,
           timestamp: new Date(msg.timestamp),
@@ -143,13 +126,10 @@ export default function ChatDetailScreen() {
     return [];
   });
 
-  const [isLoading, setIsLoading] = useState(!chatParam || !messagesParam);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const actionButtonRef = useRef<View>(null);
+  const [isLoading, setIsLoading] = useState(!coachParam || !messagesParam);
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
-  const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
-  const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
+  const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<InboxMessage | null>(null);
+  const [replyingToMessage, setReplyingToMessage] = useState<InboxMessage | null>(null);
   const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
   const [isMicrophoneMode, setIsMicrophoneMode] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -175,8 +155,6 @@ export default function ChatDetailScreen() {
   }, []);
 
   const audioRecorder = useAudioRecorder(recorderOptions);
-
-  // faster polling for better metering fidelity
   const recorderState = useAudioRecorderState(audioRecorder, 50);
 
   const [waveform, setWaveform] = useState<number[]>([]);
@@ -190,7 +168,6 @@ export default function ChatDetailScreen() {
   const previewWaveRef = React.useRef<IWaveformRef | null>(null);
   const [isStopped, setIsStopped] = useState(false);
 
-  // Voice note duration
   const [durationLabel, setDurationLabel] = useState('0:00');
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
@@ -263,7 +240,6 @@ export default function ChatDetailScreen() {
     lastBarAtRef.current = Date.now();
   };
 
-
   const startRecording = async () => {
     setIsStopped(false);
     setPreviewPath(null);
@@ -288,7 +264,6 @@ export default function ChatDetailScreen() {
     setPreviewPath(null);
   };
 
-  // stop+discard when microphone UI closes (start is handled in handleMicrophonePress)
   useEffect(() => {
     if (!isMicrophoneMode) {
       stopAndDiscard();
@@ -296,7 +271,6 @@ export default function ChatDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMicrophoneMode]);
 
-  // Update timer continuously while recording
   useEffect(() => {
     if (!isMicrophoneMode) return;
 
@@ -313,7 +287,6 @@ export default function ChatDetailScreen() {
     }
   }, [recorderState.durationMillis, isMicrophoneMode, isStopped]);
 
-  // ✅ conveyor-belt waveform values, emitted ~10/sec, derived from metering
   useEffect(() => {
     if (!recorderState.isRecording) return;
     if (isStopped) return;
@@ -321,16 +294,13 @@ export default function ChatDetailScreen() {
     const metering = recorderState.metering;
     if (typeof metering !== 'number') return;
 
-    // 1) real input level
     const v = meterToNorm(metering);
 
-    // 2) smoothing (fast attack, slow decay)
     const prev = smoothRef.current;
     const alpha = v > prev ? 0.45 : 0.12;
     const smoothed = prev + (v - prev) * alpha;
     smoothRef.current = smoothed;
 
-    // 3) bucket max over 100ms => 10 bars/sec
     bucketMaxRef.current = Math.max(bucketMaxRef.current, smoothed);
 
     const now = Date.now();
@@ -348,15 +318,13 @@ export default function ChatDetailScreen() {
     }
   }, [recorderState.metering, recorderState.isRecording, isStopped]);
 
-  // Handle document sent - add to message list and close attachment picker
   useEffect(() => {
     if (documentSent === 'true' && sentDocument) {
       try {
         const documentData = JSON.parse(sentDocument);
         
-        // Create new message with document attachment
-        const newMessage: ChatMessage = {
-          id: `m-${Date.now()}`,
+        const newMessage: InboxMessage = {
+          id: `inbox-${Date.now()}`,
           text: documentData.caption || '',
           timestamp: new Date(),
           isSent: true,
@@ -369,23 +337,15 @@ export default function ChatDetailScreen() {
           },
         };
 
-        // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
-        
-        // Clear draft text in input bar
         setSearchQuery('');
-        
-        // Close attachment picker
         setShowAttachmentPicker(false);
-        
-        // Clear the params
         router.setParams({
           documentSent: '',
           sentDocument: '',
         });
       } catch (error) {
         console.error('Error parsing sent document:', error);
-        // Still close the picker even if parsing fails
         setShowAttachmentPicker(false);
         router.setParams({
           documentSent: '',
@@ -395,15 +355,13 @@ export default function ChatDetailScreen() {
     }
   }, [documentSent, sentDocument, router]);
 
-  // Handle images sent - add to message list and close attachment picker
   useEffect(() => {
     if (imagesSent === 'true' && sentImages) {
       try {
         const imageAttachments = JSON.parse(sentImages);
         
-        // Create new message with image attachments
-        const newMessage: ChatMessage = {
-          id: `m-${Date.now()}`,
+        const newMessage: InboxMessage = {
+          id: `inbox-${Date.now()}`,
           text: sentImagesCaption || '',
           timestamp: new Date(),
           isSent: true,
@@ -411,16 +369,9 @@ export default function ChatDetailScreen() {
           images: imageAttachments,
         };
 
-        // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
-        
-        // Clear draft text in input bar
         setSearchQuery('');
-        
-        // Close attachment picker
         setShowAttachmentPicker(false);
-        
-        // Clear the params
         router.setParams({
           imagesSent: '',
           sentImages: '',
@@ -428,7 +379,6 @@ export default function ChatDetailScreen() {
         });
       } catch (error) {
         console.error('Error parsing sent images:', error);
-        // Still close the picker even if parsing fails
         setShowAttachmentPicker(false);
         router.setParams({
           imagesSent: '',
@@ -439,15 +389,13 @@ export default function ChatDetailScreen() {
     }
   }, [imagesSent, sentImages, sentImagesCaption, router]);
 
-  // Handle video sent - add to message list and close attachment picker
   useEffect(() => {
     if (videoSent === 'true' && sentVideo) {
       try {
         const videoData = JSON.parse(sentVideo);
         
-        // Create new message with video attachment
-        const newMessage: ChatMessage = {
-          id: `m-${Date.now()}`,
+        const newMessage: InboxMessage = {
+          id: `inbox-${Date.now()}`,
           text: videoData.caption || '',
           timestamp: new Date(),
           isSent: true,
@@ -459,23 +407,15 @@ export default function ChatDetailScreen() {
           },
         };
 
-        // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
-        
-        // Clear draft text in input bar
         setSearchQuery('');
-        
-        // Close attachment picker
         setShowAttachmentPicker(false);
-        
-        // Clear the params
         router.setParams({
           videoSent: '',
           sentVideo: '',
         });
       } catch (error) {
         console.error('Error parsing sent video:', error);
-        // Still close the picker even if parsing fails
         setShowAttachmentPicker(false);
         router.setParams({
           videoSent: '',
@@ -488,81 +428,51 @@ export default function ChatDetailScreen() {
   const hasText = searchQuery.trim().length > 0;
 
   useEffect(() => {
-    // Only load if not provided via params
-    if (chatParam && messagesParam) return;
+    if (coachParam && messagesParam) return;
 
     let mounted = true;
 
-    const loadChat = async () => {
+    const loadInbox = async () => {
       setIsLoading(true);
       try {
-        const chats = await getChats();
-        let foundChat = chats.find((c) => c.id === id);
+        const coaches = await getCoaches();
+        let foundCoach = coaches.find((c) => c.id === id);
 
-        if (!foundChat) {
-          const archivedChats = await getArchivedChats();
-          foundChat = archivedChats.find((c) => c.id === id);
+        if (!foundCoach) {
+          foundCoach = await getCoach(id);
         }
 
-        if (!foundChat) return;
+        if (!foundCoach) return;
 
-        const chatMessages = await getChatMessages(foundChat.id);
+        const inboxMessages = await getInboxMessages(foundCoach.id);
         if (!mounted) return;
 
-        setChat(foundChat);
-        setMessages(chatMessages);
+        setCoach(foundCoach);
+        setMessages(inboxMessages.map((msg) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        })));
       } catch (error) {
-        console.error('Failed to load chat:', error);
+        console.error('Failed to load inbox:', error);
       } finally {
         if (mounted) setIsLoading(false);
       }
     };
 
-    if (id) loadChat();
+    if (id) loadInbox();
 
     return () => {
       mounted = false;
     };
-  }, [id, chatParam, messagesParam]);
-
+  }, [id, coachParam, messagesParam]);
 
   const handleBackPress = () => {
     router.back();
   };
 
-  const handleUserProfilePress = () => {
-    if (chat?.clientId) {
-      router.push(`/client/${chat.clientId}`);
-    }
-  };
-
-  const handleEllipsisPress = () => {
-    actionButtonRef.current?.measureInWindow((x, y, width, height) => {
-      setButtonPosition({ x, y, width, height });
-      setDropdownVisible(true);
-    });
-  };
-
-  const handleArchivePress = async () => {
-    if (chat?.id) {
-      await archiveChat(chat.id);
-      setDropdownVisible(false);
-      router.back();
-    }
-  };
-
-  const handleDeletePress = async () => {
-    if (chat?.id) {
-      await deleteChat(chat.id);
-      setDropdownVisible(false);
-      router.back();
-    }
-  };
-
-  const handleMessageReply = (message: ChatMessage) => {
+  const handleMessageReply = (message: InboxMessage) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(message);
-    // Focus the input to open keyboard
     setTimeout(() => {
       inputRef.current?.focus();
     }, 100);
@@ -576,19 +486,13 @@ export default function ChatDetailScreen() {
 
   const handlePlusPress = () => {
     if (showAttachmentPicker) {
-      // Close attachment picker (keep current keyboard state)
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
       return;
     }
 
-    // Open attachment picker row without changing keyboard state
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowAttachmentPicker(true);
-  };
-
-  const handleCloseAttachmentPicker = () => {
-    setShowAttachmentPicker(false);
   };
 
   const handleMicrophonePress = async () => {
@@ -596,7 +500,6 @@ export default function ChatDetailScreen() {
 
     setIsMicrophoneMode(true);
     
-    // Start recording immediately (resets accumulatedMs inside startRecording)
     try {
       await startRecording();
     } catch (e) {
@@ -608,7 +511,6 @@ export default function ChatDetailScreen() {
   const handleTrashPress = async () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-    // tear down + reset
     try {
       await audioRecorder.stop();
     } catch {}
@@ -626,17 +528,14 @@ export default function ChatDetailScreen() {
     if (!isMicrophoneMode || !pathToSend) return;
 
     try {
-      // Stop preview player and close microphone mode
       previewWaveRef.current?.stopPlayer?.();
       setIsMicrophoneMode(false);
 
-      // Use captured duration (recorderState can be 0 depending on platform)
       const duration = lastVoiceNoteDurationMsRef.current;
       const audioUri = pathToSend.startsWith('file://') ? pathToSend : `file://${pathToSend}`;
 
-      // Create and send the message
-      const newMessage: ChatMessage = {
-        id: `m-${Date.now()}`,
+      const newMessage: InboxMessage = {
+        id: `inbox-${Date.now()}`,
         text: '',
         timestamp: new Date(),
         isSent: true,
@@ -654,13 +553,10 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // stop/redo toggle (center button)
   const handleStopToggle = async (): Promise<string | null | void> => {
     if (!isMicrophoneMode) return;
 
-    // RECORDING -> STOP (show preview)
     if (!isStopped) {
-      // capture duration BEFORE stopping (recorderState can be 0 depending on platform)
       {
         const fromRecorder = recorderState.durationMillis ?? 0;
         const fromWallClock = recordingStartedAtMsRef.current
@@ -689,7 +585,6 @@ export default function ChatDetailScreen() {
           return null;
         }
 
-        // copy to stable cache location
         const cachedUri = await copyToCacheWithExtension(uri);
         const waveformPath = toWaveformPath(cachedUri);
         setPreviewPath(waveformPath);
@@ -703,7 +598,6 @@ export default function ChatDetailScreen() {
       return;
     }
 
-    // STOPPED -> REDO (restart from fresh)
     setIsStopped(false);
     setPreviewPath(null);
     previewWaveRef.current?.stopPlayer?.();
@@ -717,7 +611,6 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // Play/pause preview using library's ref methods
   const handleTogglePreviewPlay = async () => {
     const ref = previewWaveRef.current;
     if (!ref || !previewPath) return;
@@ -735,54 +628,44 @@ export default function ChatDetailScreen() {
     }
   };
 
-  // Helper function to find the original message in a reply chain
-  const findOriginalMessage = (message: ChatMessage): ChatMessage => {
+  const findOriginalMessage = (message: InboxMessage): InboxMessage => {
     if (!message.replyTo) {
       return message;
     }
-    // Traverse the reply chain to find the original message
     return findOriginalMessage(message.replyTo);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     const text = searchQuery.trim();
     if (!text) return;
 
-    // If replying, find the original message (not the immediate reply)
     const originalMessage = replyingToMessage
       ? findOriginalMessage(replyingToMessage)
       : null;
 
-    // Create new message
-    const newMessage: ChatMessage = {
-      id: `m-${Date.now()}`,
-      text: text,
-      timestamp: new Date(),
-      isSent: true,
-      isRead: false,
-      ...(originalMessage && { replyTo: originalMessage }),
-    };
+    try {
+      const newMessage = await sendInboxMessage(text, {
+        ...(originalMessage && { replyTo: originalMessage }),
+      });
 
-    // Add message to the list
-    setMessages((prev) => [...prev, newMessage]);
-
-    // Clear input and exit reply mode
-    setSearchQuery('');
-    setReplyingToMessage(null);
+      setMessages((prev) => [...prev, newMessage]);
+      setSearchQuery('');
+      setReplyingToMessage(null);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
   };
 
-  const handleMessageEdit = (message: ChatMessage) => {
-    // TODO: Implement edit functionality
-    // This could set the message to edit mode and populate the input with the message text
+  const handleMessageEdit = (message: InboxMessage) => {
     console.log('Edit message:', message);
     setSearchQuery(message.text);
   };
 
-  const handleMessageDelete = async (message: ChatMessage) => {
+  const handleMessageDelete = async (message: InboxMessage) => {
     setMessages((prev) => prev.filter((m) => m.id !== message.id));
   };
 
-  const handleReactionPress = (message: ChatMessage) => {
+  const handleReactionPress = (message: InboxMessage) => {
     setSelectedMessageForReactions(message);
     setReactionsSheetVisible(true);
   };
@@ -795,10 +678,10 @@ export default function ChatDetailScreen() {
         name: document.name,
         mimeType: document.mimeType,
         size: document.size?.toString() || '',
-        chatId: chat?.id || '',
-        clientId: chat?.clientId || '',
-        clientName: chat?.clientName || '',
-        fromMessage: 'true', // Flag to show download icon
+        chatId: 'inbox',
+        clientId: coach?.id || '',
+        clientName: coach?.name || '',
+        fromMessage: 'true',
       },
     });
   };
@@ -854,55 +737,29 @@ export default function ChatDetailScreen() {
     );
   };
 
-  const dropdownOptions: DropdownMenuOption[] = [
-    {
-      label: t('chats.archive'),
-      icon: { sf: 'archivebox', IconComponent: Archive },
-      onPress: handleArchivePress,
-    },
-    {
-      label: t('chats.delete'),
-      icon: { sf: 'trash', IconComponent: Trash2 },
-      onPress: handleDeletePress,
-    },
-  ];
-
   if (isLoading) {
     return <ChatLoadingState />;
   }
 
-  if (!chat) {
-    return <ChatLoadingState message={t('chats.chatNotFound')} />;
+  if (!coach) {
+    return <ChatLoadingState message={t('inbox.coachNotFound')} />;
   }
 
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
       
-      {/* Background image covering entire screen */}
       <Image
         source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
         style={styles.fullScreenBackgroundImage}
         contentFit="cover"
       />
       
-      {/* ROW 1: HEADER - Absolutely positioned with blur (extends into status bar area) */}
       <ChatHeader
-        chat={chat}
+        coach={coach}
         onBackPress={handleBackPress}
-        onUserProfilePress={handleUserProfilePress}
-        onEllipsisPress={handleEllipsisPress}
-        actionButtonRef={actionButtonRef}
       />
 
-      <DropdownMenu
-        visible={dropdownVisible}
-        onClose={() => setDropdownVisible(false)}
-        options={dropdownOptions}
-        anchorPosition={buttonPosition}
-      />
-
-      {/* ROW 2: SCROLL WINDOW - Content scrolls through header and toolbar */}
       <Animated.View
         style={[{ flex: 1, backgroundColor: 'transparent' }, scrollWindowAnimatedStyle]}
       >
@@ -910,7 +767,7 @@ export default function ChatDetailScreen() {
           messages={messages}
           backgroundColor="transparent"
           themeColors={themeColors}
-          clientName={chat.clientName}
+          clientName={coach.name}
           onReply={handleMessageReply}
           onEdit={handleMessageEdit}
           onDelete={handleMessageDelete}
@@ -918,20 +775,19 @@ export default function ChatDetailScreen() {
           onDocumentPress={handleDocumentPress}
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
-          headerHeight={insets.top + 60} // Safe area + header content (~60px)
+          headerHeight={insets.top + 60}
           toolbarHeight={
-            (replyingToMessage ? 54 : 0) + // Reply preview height
-            (showAttachmentPicker ? 112 : 0) + // Attachment picker height
-            (isMicrophoneMode ? 68 : 0) + // Microphone mode height
-            40 + // closedBaseHeight
-            insets.bottom // Safe area bottom
+            (replyingToMessage ? 54 : 0) +
+            (showAttachmentPicker ? 112 : 0) +
+            (isMicrophoneMode ? 68 : 0) +
+            40 +
+            insets.bottom
           }
         />
       </Animated.View>
 
-      {/* ROW 3: TOOLBAR — Absolutely positioned with blur */}
       <ChatToolbar
-        chat={chat}
+        coach={coach}
         replyingToMessage={replyingToMessage}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
