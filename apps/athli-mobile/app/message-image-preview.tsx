@@ -1,6 +1,11 @@
-import MessageImagePreviewScreen from '@/components/message-image-preview/message-image-preview-screen';
+import ImagePreviewScreen from '@/components/camera/image-preview-screen';
+import { DarkModeWrapper } from '@/components/dark-mode-wrapper';
 
 export default function MessageImagePreviewPage() {
-  return <MessageImagePreviewScreen />;
+  return (
+    <DarkModeWrapper>
+      <ImagePreviewScreen />
+    </DarkModeWrapper>
+  );
 }
 

@@ -5,6 +5,7 @@ import { useColorScheme } from '@/contexts/useColorScheme';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 import { type ChatMessage } from '@/services/chats-service';
 
@@ -15,10 +16,34 @@ type ReplyPreviewRowProps = {
   backgroundColor?: string;
 };
 
+const formatAudioReplyStamp = (date: Date) => {
+  const d = new Date(date);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfThatDay.getTime()) / 86400000);
+
+  if (diffDays === 0) {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  if (diffDays === 1) return 'Yesterday';
+
+  const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(d);
+  const day = new Intl.DateTimeFormat('en-GB', { day: '2-digit' }).format(d);
+  const month = new Intl.DateTimeFormat('en-GB', { month: 'short' }).format(d);
+  return `${weekday} ${day} ${month}`;
+};
+
 export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor }: ReplyPreviewRowProps) => {
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  
+  // Create translucent background color - more transparent since parent already has BlurView
+  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
 
   const senderName = message.isSent ? 'You' : clientName;
   // Use primary color for sender, and a distinct purple/violet for recipient
@@ -89,18 +114,22 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
       );
     }
 
+    // Check for audio
+    if (message.audio) {
+      return (
+        <Text style={[styles.messagePreview, { color: themeColors.text }]} numberOfLines={1}>
+          {`Audio message • ${formatAudioReplyStamp(message.timestamp)}`}
+        </Text>
+      );
+    }
+
     // Fallback: show empty text
     return null;
   };
 
   return (
     <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: backgroundColor || themeColors.surfaceSecondary,
-        },
-      ]}
+      style={[styles.container, { backgroundColor: translucentBg }]}
     >
       <View style={[styles.colorStrip, { backgroundColor: stripColor }]} />
       <View style={styles.content}>

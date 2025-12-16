@@ -24,10 +24,11 @@ import { type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
-import { MessageReplyPreview } from '@/components/chats/message-reply-preview';
-import { MessageDocumentPreview } from '@/components/chats/message-document-preview';
-import { MessageImagePreview } from '@/components/chats/message-image-preview';
-import { MessageVideoPreview } from '@/components/chats/message-video-preview';
+import { MessageReplyPreview } from '@/components/message/message-reply-preview';
+import { MessageDocumentPreview } from '@/components/message/message-document-preview';
+import { MessageImagePreview } from '@/components/message/message-image-preview';
+import { MessageVideoPreview } from '@/components/message/message-video-preview';
+import { MessageAudioPreview } from '@/components/message/message-audio-preview';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 
 interface MessageListProps {
@@ -35,6 +36,8 @@ interface MessageListProps {
   backgroundColor: string;
   themeColors: ThemeColors;
   clientName: string;
+  headerHeight?: number;
+  toolbarHeight?: number;
   onReply?: (message: ChatMessage) => void;
   onEdit?: (message: ChatMessage) => void;
   onDelete?: (message: ChatMessage) => void;
@@ -80,11 +83,13 @@ const findOriginalMessage = (message: ChatMessage): ChatMessage => {
 const BubbleMeta = React.memo(function BubbleMeta({
   item,
   themeColors,
+  recipientBackgroundColor,
   formatTime,
   softWrapText,
   registerRef,
   onPressIn,
   onPressOut,
+  onLongPress,
   isLastInSenderRun,
   clientName,
   onReplyPreviewPress,
@@ -95,11 +100,13 @@ const BubbleMeta = React.memo(function BubbleMeta({
 }: {
   item: ChatMessage;
   themeColors: ThemeColors;
+  recipientBackgroundColor: string;
   formatTime: (d: Date) => string;
   softWrapText: (t: string) => string;
   registerRef: (ref: View | null) => void;
   onPressIn: () => void;
   onPressOut: () => void;
+  onLongPress?: () => void;
   isLastInSenderRun: boolean;
   clientName: string;
   onReplyPreviewPress?: (messageId: string) => void;
@@ -143,12 +150,24 @@ const BubbleMeta = React.memo(function BubbleMeta({
     styles.messageBubble,
     item.isSent
       ? { backgroundColor: themeColors.primary }
-      : { backgroundColor: themeColors.surfaceSecondary },
+      : { backgroundColor: recipientBackgroundColor },
     isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
     isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
-    // Make bubble full width when it contains a document
-    ...(item.document ? [styles.messageBubbleFullWidth] : []),
+    // Make bubble full width when it contains a document or is a reply
+    ...(item.document || item.replyTo || item.audio ? [styles.messageBubbleFullWidth] : []),
   ];
+
+  const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
+
+  // Use a subtle flash color based on existing palette (no extra ThemeColors field)
+  const flashTextColor = item.isSent ? themeColors.surface : themeColors.primary;
+
+  const animatedTextColor =
+    flashOpacity &&
+    flashOpacity.interpolate({
+      inputRange: [0, 1],
+      outputRange: [baseTextColor, flashTextColor],
+    });
 
   const bubbleContent = (
     <View style={styles.bubbleInner}>
@@ -168,12 +187,15 @@ const BubbleMeta = React.memo(function BubbleMeta({
           clientName={clientName}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
             onReplyPreviewPress?.(originalMessage.id);
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
@@ -183,7 +205,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           images={item.images}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
@@ -191,6 +213,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onImagePress(item.images, clientName, item.isSent, item.timestamp);
             }
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
@@ -200,7 +225,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           video={item.video}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
@@ -208,6 +233,9 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onVideoPress(item.video, clientName, item.isSent, item.timestamp);
             }
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
@@ -217,7 +245,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
           document={item.document}
           themeColors={themeColors}
           parentBackgroundColor={
-            item.isSent ? themeColors.primary : themeColors.surfaceSecondary
+            item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
           onPress={() => {
@@ -225,22 +253,38 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onDocumentPress(item.document);
             }
           }}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         />
       )}
 
-      <Text
+      {/* Audio preview if this message has audio */}
+      {item.audio && (
+        <MessageAudioPreview
+          audio={item.audio}
+          themeColors={themeColors}
+          parentBackgroundColor={
+            item.isSent ? themeColors.primary : recipientBackgroundColor
+          }
+          isParentSent={item.isSent}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+        />
+      )}
+
+      <Animated.Text
         style={[
           styles.messageText,
-          item.isSent
-            ? { color: themeColors.primaryForeground }
-            : { color: themeColors.text },
+          { color: (animatedTextColor as any) || baseTextColor },
         ]}
       >
         {softWrapText(item.text)}
 
         {/* Reserve space at the end so meta never overlaps (single-line OR multi-line) */}
         <Text style={styles.metaSpacer}>{metaSpacer}</Text>
-      </Text>
+      </Animated.Text>
 
       {/* Actual meta pinned bottom-right */}
       <View
@@ -248,7 +292,7 @@ const BubbleMeta = React.memo(function BubbleMeta({
         style={[
           styles.metaOverlay,
           {
-            backgroundColor: item.isSent ? themeColors.primary : themeColors.surfaceSecondary,
+            backgroundColor: item.isSent ? themeColors.primary : recipientBackgroundColor,
           },
         ]}
         pointerEvents="none"
@@ -287,28 +331,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
     </View>
   );
 
-  if (flashOpacity) {
-    return (
-      <Animated.View
-        style={[
-          bubbleStyle,
-          {
-            opacity: flashOpacity,
-          },
-        ]}
-      >
-        <Pressable
-          ref={registerRef}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
-          style={StyleSheet.absoluteFill}
-        >
-          {bubbleContent}
-        </Pressable>
-      </Animated.View>
-    );
-  }
-
   return (
     <Pressable
       ref={registerRef}
@@ -328,6 +350,8 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   alignRight,
   onReply,
   message,
+  onHorizontalDragStart,
+  onHorizontalDragEnd,
 }: {
   children: React.ReactNode;
   themeColors: ThemeColors;
@@ -335,12 +359,15 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
   alignRight: boolean;
   onReply?: (message: ChatMessage) => void;
   message: ChatMessage;
+  onHorizontalDragStart?: () => void;
+  onHorizontalDragEnd?: () => void;
 }) {
   const MAX = 84;
   const THRESHOLD = 50; // pixels to trigger reply
   const translateX = useRef(new Animated.Value(0)).current;
   const didCancelRef = useRef(false);
   const currentDistanceRef = useRef(0);
+  const isDraggingRef = useRef(false);
 
   const iconOpacity = useMemo(
     () =>
@@ -377,6 +404,10 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           translateX.stopAnimation();
           didCancelRef.current = false;
           currentDistanceRef.current = 0;
+          if (!isDraggingRef.current) {
+            isDraggingRef.current = true;
+            onHorizontalDragStart?.();
+          }
         },
         onPanResponderMove: (_evt, g) => {
           if (!didCancelRef.current) {
@@ -404,6 +435,10 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
           }).start();
           
           currentDistanceRef.current = 0;
+          if (isDraggingRef.current) {
+            isDraggingRef.current = false;
+            onHorizontalDragEnd?.();
+          }
         },
         onPanResponderTerminate: () => {
           Animated.spring(translateX, {
@@ -414,10 +449,14 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
             velocity: 0,
           }).start();
           currentDistanceRef.current = 0;
+          if (isDraggingRef.current) {
+            isDraggingRef.current = false;
+            onHorizontalDragEnd?.();
+          }
         },
         onPanResponderTerminationRequest: () => false,
       }),
-    [onCancelLongPress, translateX, onReply, message]
+    [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd]
   );
 
   return (
@@ -462,6 +501,8 @@ export const MessageList = ({
   backgroundColor,
   themeColors,
   clientName,
+  headerHeight = 0,
+  toolbarHeight = 0,
   onReply,
   onEdit,
   onDelete,
@@ -475,8 +516,11 @@ export const MessageList = ({
   const offsetYRef = useRef(0);
   const contentHeightRef = useRef(0);
   const layoutHeightRef = useRef(0);
+  const prevMessagesLengthRef = useRef(messages.length);
   const didInitialScroll = useRef(false);
   const initialScrollAttemptsRef = useRef(0);
+  const pinnedToBottomRef = useRef(true);
+  const prevToolbarHeightRef = useRef<number | null>(null);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
   const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
@@ -484,7 +528,10 @@ export const MessageList = ({
   const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [containerPosition, setContainerPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
+  const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
   const colorScheme = useColorScheme();
+  const isLightMode = colorScheme === 'light';
+  const recipientBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfaceSecondary;
   const { colors: fullThemeColors } = useThemePreference();
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, View>>({});
@@ -567,28 +614,29 @@ export const MessageList = ({
       listRef.current?.scrollToIndex({
         index: messageIndex,
         animated: true,
-        viewPosition: 0.5, // Center the message
+        // Slightly center the message, leaving some space above
+        viewPosition: 0.5,
+        viewOffset: 40,
       });
     }, 100);
 
-    // Flash the message
+    // Flash the message by briefly changing its text color
     if (!flashAnimations.current[messageId]) {
-      flashAnimations.current[messageId] = new Animated.Value(1);
+      flashAnimations.current[messageId] = new Animated.Value(0);
     }
 
     const flashAnim = flashAnimations.current[messageId];
-    
-    // Flash animation: quickly fade and fade back
+
     Animated.sequence([
       Animated.timing(flashAnim, {
-        toValue: 0.4,
-        duration: 200,
-        useNativeDriver: true,
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: false,
       }),
       Animated.timing(flashAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
+        toValue: 0,
+        duration: 320,
+        useNativeDriver: false,
       }),
     ]).start();
   };
@@ -655,12 +703,14 @@ export const MessageList = ({
       .replace(',', '');
   };
 
+  const [stickyTimestamp, setStickyTimestamp] = useState<Date>(() => data[0]?.timestamp ?? new Date());
   const [stickyDayKey, setStickyDayKey] = useState(() => {
     const first = data[0];
     return first ? dayKey(first.timestamp) : dayKey(new Date());
   });
+  const stickyLabelOpacity = useRef(new Animated.Value(1)).current;
 
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 5 }).current;
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<{ item: ChatMessage; index: number | null }> }) => {
@@ -675,18 +725,29 @@ export const MessageList = ({
           topMost = v;
         }
       }
+      if (!topMost) return;
 
-      if (topMost) {
-        const nextKey = dayKey(topMost.item.timestamp);
-        setStickyDayKey((prev) => (prev === nextKey ? prev : nextKey));
-      }
+      const nextTs = topMost.item.timestamp;
+      const nextKey = dayKey(nextTs);
+
+      setStickyTimestamp((prevTs) => {
+        const prevKey = dayKey(prevTs);
+        if (prevKey === nextKey) return prevTs;
+
+        // animate label swap (WhatsApp-ish)
+        Animated.sequence([
+          Animated.timing(stickyLabelOpacity, { toValue: 0, duration: 80, useNativeDriver: true }),
+          Animated.timing(stickyLabelOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+        ]).start();
+
+        return nextTs;
+      });
+
+      setStickyDayKey((prev) => (prev === nextKey ? prev : nextKey));
     }
   ).current;
 
-  const stickyDateForLabel = useMemo(() => {
-    const msg = data.find((m) => dayKey(m.timestamp) === stickyDayKey);
-    return msg?.timestamp ?? new Date();
-  }, [data, stickyDayKey]);
+  const stickyDateForLabel = stickyTimestamp;
 
   const formatTime = (date: Date): string => {
     const hours = date.getHours().toString().padStart(2, '0');
@@ -703,6 +764,12 @@ export const MessageList = ({
   };
 
   const handleLongPress = (message: ChatMessage) => {
+    // Cancel the timer if it's still running to prevent double-triggering
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
     const messageRef = messageRefs.current[message.id];
     if (!messageRef) return;
 
@@ -846,37 +913,72 @@ export const MessageList = ({
   // Update sticky day key when messages change
   useEffect(() => {
     if (data.length > 0) {
-      setStickyDayKey(dayKey(data[0].timestamp));
+      const newTimestamp = data[0].timestamp;
+      setStickyTimestamp(newTimestamp);
+      setStickyDayKey(dayKey(newTimestamp));
     }
   }, [data.length]);
 
   // If user is near "bottom" (offset ~ 0), keep them pinned to bottom as new messages arrive
   useEffect(() => {
-    if (offsetYRef.current <= 40) {
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
-        offsetYRef.current = 0;
-      });
-    }
+    if (!pinnedToBottomRef.current) return;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+      offsetYRef.current = 0;
+    });
   }, [messages.length]);
 
-  // Keyboard handling - no jump, just pin to bottom if already near bottom
+  // When the local user sends a new message, always scroll it into view
   useEffect(() => {
-    const subShow = Keyboard.addListener('keyboardDidShow', () => {
-      // If user is at (or near) the bottom, keep them pinned there.
-      if (offsetYRef.current <= 40) {
+    const previousLength = prevMessagesLengthRef.current;
+    if (messages.length > previousLength) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.isSent) {
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+          offsetYRef.current = 0;
+          pinnedToBottomRef.current = true;
+        });
+      }
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages]);
+
+  // When keyboard appears, make sure the latest messages are visible
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      if (!pinnedToBottomRef.current) return;
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           listRef.current?.scrollToOffset({ offset: 0, animated: false });
           offsetYRef.current = 0;
         });
-      }
-      // If user is reading older messages, do nothing (no jump).
+      });
     });
 
     return () => {
-      subShow.remove();
+      showSub.remove();
     };
   }, []);
+
+  // Auto-scroll to bottom when toolbar height changes (if user is already pinned)
+  useEffect(() => {
+    // Skip very first run to prevent "load flicker"
+    if (prevToolbarHeightRef.current === null) {
+      prevToolbarHeightRef.current = toolbarHeight;
+      return;
+    }
+
+    prevToolbarHeightRef.current = toolbarHeight;
+    if (!pinnedToBottomRef.current) return;
+
+    // Instantly scroll to accommodate toolbar height change without extra animation
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+      offsetYRef.current = 0;
+    });
+  }, [toolbarHeight]);
+
 
   const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
     // index-1 is visually "below" (newer) because data is reversed + list inverted
@@ -936,10 +1038,13 @@ export const MessageList = ({
             alignRight={item.isSent}
             onReply={onReply}
             message={item}
+            onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
+            onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
           >
             <BubbleMeta
               item={item}
               themeColors={themeColors}
+              recipientBackgroundColor={recipientBackgroundColor}
               formatTime={formatTime}
               softWrapText={softWrapText}
               registerRef={(ref) => {
@@ -947,6 +1052,7 @@ export const MessageList = ({
               }}
               onPressIn={() => handlePressIn(item)}
               onPressOut={handlePressOut}
+              onLongPress={() => handleLongPress(item)}
               isLastInSenderRun={isLastInSenderRun}
               clientName={clientName}
               onReplyPreviewPress={handleReplyPreviewPress}
@@ -1026,10 +1132,22 @@ export const MessageList = ({
           inverted
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.contentContainer}
+          scrollEnabled={!isHorizontalDragActive}
+          contentContainerStyle={[
+            styles.contentContainer,
+            {
+              // In inverted FlatList: paddingTop = visual bottom (newest messages), paddingBottom = visual top (under header)
+              // VISUAL BOTTOM (newest message) — reserve space for toolbar
+              paddingTop: toolbarHeight + 16,
+              // VISUAL TOP — reserve space for header + sticky pill room
+              paddingBottom: headerHeight + 16 + STICKY_EXTRA,
+            },
+          ]}
           onContentSizeChange={handleContentSizeChange}
           onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            offsetYRef.current = e.nativeEvent.contentOffset.y;
+            const y = e.nativeEvent.contentOffset.y;
+            offsetYRef.current = y;
+            pinnedToBottomRef.current = y <= 40; // same threshold for "pinned to bottom"
           }}
           scrollEventThrottle={16}
           onScrollBeginDrag={() => showSticky()}
@@ -1039,11 +1157,16 @@ export const MessageList = ({
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
           // This helps when new items are inserted at the "bottom" (index 0 in inverted list)
-          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+          }}
         />
         {stickyActive && (
           <Animated.View
-            style={[styles.stickyHeaderRow, { opacity: stickyOpacity }]}
+            style={[
+              styles.stickyHeaderRow,
+              { opacity: Animated.multiply(stickyOpacity, stickyLabelOpacity) },
+            ]}
             pointerEvents="none"
           >
             <View style={[styles.datePill, { backgroundColor: themeColors.surfaceSecondary }]}>
@@ -1076,6 +1199,8 @@ export const MessageList = ({
             onEmojiPickerClose={handleEmojiPickerClose}
             colorScheme={colorScheme}
             fullThemeColors={fullThemeColors}
+            clientName={clientName}
+            recipientBackgroundColor={recipientBackgroundColor}
           />
         )}
       </View>
@@ -1083,12 +1208,13 @@ export const MessageList = ({
   );
 };
 
+const STICKY_EXTRA = 32; // Extra space for sticky header pill height
+
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   contentContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 16,
-    paddingTop: 16 + 32, // extra padding for sticky header (16 base + ~32 for pill height)
   },
   messageWrapper: {
     maxWidth: '100%',

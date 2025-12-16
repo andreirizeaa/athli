@@ -2,12 +2,15 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 
 import { iconSizes, typography } from '@/constants/typography';
-import { useThemePreference } from '@/contexts/useColorScheme';
+import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
+import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
-import { MessageInputBar } from '@/components/message-input-bar';
+import { MessageInputBar } from '@/components/message/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
+import { useDarkModeTheme } from '../dark-mode-wrapper';
 
 type AttachmentPreviewToolbarProps = {
   value: string;
@@ -22,68 +25,81 @@ export const AttachmentPreviewToolbar = ({
   clientName,
   onSend,
 }: AttachmentPreviewToolbarProps) => {
-  const { colors: themeColors } = useThemePreference();
+  const { colors: themeColors } = useDarkModeTheme();
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const isDark = true; // Always dark mode
   const mutedSurfaceColor = themeColors.surfaceSecondary;
+  
+  // Create translucent background color for frosted glass effect (60% opacity)
+  const translucentHeaderBg = hexToRgba(themeColors.headerBackground, 0.6);
 
   return (
-    <KeyboardAwareToolbar
-      closedBaseHeight={110}
-      openBaseHeight={80}
-      contentStyle={{ flex: 1 }}
-    >
-      <View style={styles.wrapper}>
-        <View style={[styles.inputContainer]}>
-          <MessageInputBar
-            value={value}
-            onChangeText={onChangeText}
-            placeholder="Add a caption..."
-            style={styles.messageInputBar}
-          />
-        </View>
-
-        <View
-          style={[
-            styles.container,
-            {
-              backgroundColor: themeColors.headerBackground,
-              paddingBottom: insets.bottom,
-            },
-          ]}
-        >
-          <View style={styles.content}>
-            {clientName && (
-              <View style={[styles.clientNameContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
-                <Text style={[styles.clientNameText, { color: themeColors.text }]} numberOfLines={1}>
-                  {clientName}
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
-              activeOpacity={0.7}
-              onPress={onSend}
-            >
-              <PlatformIcon
-                sf="paperplane.fill"
-                IconComponent={Send}
-                size={iconSizes.navigationChevrons}
-                color={themeColors.primaryForeground}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+    <>
+      {/* Caption input bar - transparent, above the bottom bar */}
+      <View style={styles.inputContainer}>
+        <MessageInputBar
+          value={value}
+          onChangeText={onChangeText}
+          placeholder="Add a caption..."
+          style={[styles.messageInputBar, { backgroundColor: mutedSurfaceColor, borderColor: 'transparent' }]}
+          textColor="#FFFFFF"
+        />
       </View>
-    </KeyboardAwareToolbar>
+
+      {/* Bottom bar with frosted glass effect */}
+      <BlurView
+        intensity={100}
+        tint="dark"
+        style={[styles.blurContainer, { backgroundColor: translucentHeaderBg }]}
+      >
+        <KeyboardAwareToolbar
+          closedBaseHeight={66}
+          openBaseHeight={20}
+          contentStyle={{ paddingHorizontal: 16 }}
+          backgroundColor="transparent"
+        >
+          <View
+            style={[
+              styles.container,
+              {
+                backgroundColor: 'transparent',
+                paddingBottom: insets.bottom,
+              },
+            ]}
+          >
+            <View style={styles.content}>
+              {clientName && (
+                <View style={[styles.clientNameContainer, { backgroundColor: themeColors.surfaceSecondary }]}>
+                  <Text style={[styles.clientNameText, { color: themeColors.text }]} numberOfLines={1}>
+                    {clientName}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
+                activeOpacity={0.7}
+                onPress={onSend}
+              >
+                <PlatformIcon
+                  sf="paperplane.fill"
+                  IconComponent={Send}
+                  size={iconSizes.navigationChevrons + 2}
+                  color={themeColors.primaryForeground}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAwareToolbar>
+      </BlurView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
+  blurContainer: {
     width: '100%',
-    flex: 1,
-    flexDirection: 'column',
   },
   inputContainer: {
     width: '100%',
@@ -97,10 +113,8 @@ const styles = StyleSheet.create({
   },
   container: {
     width: '100%',
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    minHeight: 0,
+    paddingTop: 8,
+    minHeight: 54, // Ensure minimum height for content visibility
   },
   content: {
     flexDirection: 'row',
@@ -118,9 +132,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },

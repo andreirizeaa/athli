@@ -89,8 +89,9 @@ export const EmojiPickerContainer = ({
   const screenWidth = Dimensions.get('window').width;
   const emojiPickerHeight = 44;
   const emojiPickerGap = 8; // Gap between emoji picker and message
+  const emojiPickerTopGap = 80; // Minimum gap from top of screen (to avoid status bar)
   const emojiPickerTop = Math.max(
-    16,
+    emojiPickerTopGap,
     adjustedMessageTop - emojiPickerHeight - emojiPickerGap
   );
   const emojiPickerWidth = 340; // Width of the emoji container

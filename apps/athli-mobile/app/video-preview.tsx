@@ -1,5 +1,10 @@
-import { VideoPreviewScreen } from '@/components/video/video-preview-screen';
+import { VideoPreviewScreen } from '@/components/camera/video-preview-screen';
+import { DarkModeWrapper } from '@/components/dark-mode-wrapper';
 
 export default function VideoPreviewPage() {
-  return <VideoPreviewScreen />;
+  return (
+    <DarkModeWrapper>
+      <VideoPreviewScreen />
+    </DarkModeWrapper>
+  );
 }

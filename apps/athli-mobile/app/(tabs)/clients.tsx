@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 
@@ -42,6 +42,7 @@ export default function ClientsScreen() {
   const colorScheme = useColorScheme();
   const { primarySoftColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
+  const insets = useSafeAreaInsets();
   const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
@@ -122,7 +123,17 @@ export default function ClientsScreen() {
       start={{ x: 1, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <SafeAreaView style={styles.safeArea}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <ScrollView
           ref={scrollViewRef}
           style={styles.scrollView}
@@ -183,7 +194,7 @@ export default function ClientsScreen() {
             })}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }
@@ -203,14 +214,14 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerSection: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     marginBottom: 16,
   },
   listContainer: {
     paddingBottom: 16,
   },
   cardWrapper: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   cardShadowWrapper: {},
   cardContainer: {

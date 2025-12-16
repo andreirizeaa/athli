@@ -16,6 +16,11 @@ export interface VideoAttachment {
   orientation: 'portrait' | 'landscape';
 }
 
+export interface AudioAttachment {
+  uri: string;
+  duration: number; // duration in milliseconds
+}
+
 export interface ChatMessage {
   id: string;
   text: string;
@@ -28,6 +33,7 @@ export interface ChatMessage {
   document?: DocumentAttachment; // Document attachment if this message has a document
   images?: ImageAttachment[]; // Image attachments if this message has images
   video?: VideoAttachment; // Video attachment if this message has a video
+  audio?: AudioAttachment; // Audio attachment if this message has audio
 }
 
 export interface Chat {

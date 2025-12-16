@@ -17,6 +17,9 @@ type MessageImagePreviewProps = {
   parentBackgroundColor: string;
   isParentSent: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
 };
 
 const screenWidth = Dimensions.get('window').width;
@@ -32,6 +35,9 @@ export const MessageImagePreview = ({
   parentBackgroundColor,
   isParentSent,
   onPress,
+  onLongPress,
+  onPressIn,
+  onPressOut,
 }: MessageImagePreviewProps) => {
   const imageCount = images.length;
   const hasMoreThanFour = imageCount > 4;
@@ -52,6 +58,9 @@ export const MessageImagePreview = ({
             pressed && styles.pressed,
           ]}
           onPress={onPress}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         >
           <RNImage source={{ uri: images[0].uri }} style={styles.singleImage} resizeMode="cover" />
         </Pressable>
@@ -68,6 +77,9 @@ export const MessageImagePreview = ({
             pressed && styles.pressed,
           ]}
           onPress={onPress}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         >
           <View style={[styles.twoImageRow, { height: (IMAGE_SIZE - GAP_SIZE) / 2, marginBottom: GAP_SIZE }]}>
             <RNImage source={{ uri: images[0].uri }} style={styles.gridImage} resizeMode="cover" />
@@ -89,6 +101,9 @@ export const MessageImagePreview = ({
             pressed && styles.pressed,
           ]}
           onPress={onPress}
+          onLongPress={onLongPress}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
         >
           <View style={[styles.threeImageFirstRow, { height: (IMAGE_SIZE - GAP_SIZE) / 2, marginBottom: GAP_SIZE }]}>
             <RNImage source={{ uri: images[0].uri }} style={styles.gridImage} resizeMode="cover" />
@@ -114,6 +129,9 @@ export const MessageImagePreview = ({
           pressed && styles.pressed,
         ]}
         onPress={onPress}
+        onLongPress={onLongPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
       >
         <View style={[styles.fourImageRow, { marginBottom: GAP_SIZE }]}>
           <View style={[styles.fourImageItem, { height: (IMAGE_SIZE - GAP_SIZE) / 2, marginRight: GAP_SIZE }]}>

@@ -128,7 +128,7 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   listContent: {
     paddingBottom: 32,

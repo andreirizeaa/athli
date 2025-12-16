@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   inputsContainer: {
     marginBottom: 24,
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   pickerContainer: {
     marginBottom: 24,
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   completeButtonContainer: {
     marginTop: 'auto',
     paddingBottom: 60,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
 });

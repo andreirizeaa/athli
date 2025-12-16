@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Image, Video, FileText, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -8,6 +8,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
+import { hexToRgba } from '@/utils/colorUtils';
 import { PlatformIcon } from '@/components/platform-icon';
 
 type AttachmentPickerRowProps = {
@@ -17,6 +18,7 @@ type AttachmentPickerRowProps = {
   chatId?: string;
   clientId?: string;
   clientName?: string;
+  caption?: string;
 };
 
 export const AttachmentPickerRow = ({
@@ -26,9 +28,23 @@ export const AttachmentPickerRow = ({
   chatId,
   clientId,
   clientName,
+  caption = '',
 }: AttachmentPickerRowProps) => {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  
+  // Create translucent background color - more transparent since parent already has BlurView
+  const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [slideAnim]);
 
   const handlePhotoPress = async () => {
     try {
@@ -68,6 +84,7 @@ export const AttachmentPickerRow = ({
               clientId: clientId || '',
               clientName: clientName || '',
               fromPicker: 'true', // Flag to indicate this is from the picker, not viewing a message
+              caption: caption || '',
             },
           });
         }
@@ -107,6 +124,8 @@ export const AttachmentPickerRow = ({
               chatId: chatId || '',
               clientId: clientId || '',
               clientName: clientName || '',
+              caption: caption || '',
+              fromCamera: 'false',
             },
           });
         }
@@ -139,6 +158,7 @@ export const AttachmentPickerRow = ({
             chatId: chatId || '',
             clientId: clientId || '',
             clientName: clientName || '',
+            caption: caption || '',
           },
         });
       }
@@ -148,18 +168,32 @@ export const AttachmentPickerRow = ({
   };
 
   const handleCameraPress = () => {
-    router.push('/camera');
+    router.push({
+      pathname: '/camera',
+      params: {
+        chatId: chatId || '',
+        clientId: clientId || '',
+        clientName: clientName || '',
+        caption: caption || '',
+      },
+    });
   };
 
+  const translateY = slideAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [16, 0],
+  });
+
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: backgroundColor || themeColors.surfaceSecondary,
-        },
-      ]}
+    <Animated.View
+      style={{
+        opacity: slideAnim,
+        transform: [{ translateY }],
+      }}
     >
+      <View
+        style={[styles.container, { backgroundColor: translucentBg }]}
+      >
       <View style={styles.content}>
         <TouchableOpacity
           style={styles.attachmentButton}
@@ -237,7 +271,8 @@ export const AttachmentPickerRow = ({
           </TouchableOpacity>
         )}
       </View>
-    </View>
+      </View>
+    </Animated.View>
   );
 };
 

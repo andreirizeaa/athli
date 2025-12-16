@@ -15,6 +15,30 @@ type MessageReplyPreviewProps = {
   parentBackgroundColor: string;
   isParentSent: boolean;
   onPress: () => void;
+  onLongPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
+};
+
+const formatAudioReplyStamp = (date: Date) => {
+  const d = new Date(date);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfThatDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((startOfToday.getTime() - startOfThatDay.getTime()) / 86400000);
+
+  if (diffDays === 0) {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  if (diffDays === 1) return 'Yesterday';
+
+  const weekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short' }).format(d);
+  const day = new Intl.DateTimeFormat('en-GB', { day: '2-digit' }).format(d);
+  const month = new Intl.DateTimeFormat('en-GB', { month: 'short' }).format(d);
+  return `${weekday} ${day} ${month}`;
 };
 
 export const MessageReplyPreview = ({
@@ -24,6 +48,9 @@ export const MessageReplyPreview = ({
   parentBackgroundColor,
   isParentSent,
   onPress,
+  onLongPress,
+  onPressIn,
+  onPressOut,
 }: MessageReplyPreviewProps) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -70,17 +97,9 @@ export const MessageReplyPreview = ({
     // Check for video
     if (replyTo.video) {
       return (
-        <View style={styles.attachmentPreview}>
-          <PlatformIcon
-            sf="video.fill"
-            IconComponent={Video}
-            size={iconSizes.tabBarIcons - 8}
-            color={messageTextColor}
-          />
-          <Text style={[styles.attachmentText, { color: messageTextColor }]} numberOfLines={1}>
-            1 video
-          </Text>
-        </View>
+        <Text style={[styles.messagePreview, { color: messageTextColor }]} numberOfLines={1}>
+          1 video
+        </Text>
       );
     }
 
@@ -98,6 +117,15 @@ export const MessageReplyPreview = ({
             {replyTo.document.name}
           </Text>
         </View>
+      );
+    }
+
+    // Check for audio
+    if (replyTo.audio) {
+      return (
+        <Text style={[styles.messagePreview, { color: messageTextColor }]} numberOfLines={1}>
+          {`Audio message • ${formatAudioReplyStamp(replyTo.timestamp)}`}
+        </Text>
       );
     }
 
@@ -120,6 +148,9 @@ export const MessageReplyPreview = ({
       style={[styles.container, { backgroundColor: adjustedBackground }]}
       activeOpacity={0.7}
       onPress={onPress}
+      onLongPress={onLongPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
       accessibilityLabel={`Reply to ${senderName}`}
       accessibilityRole="button"
     >
@@ -136,6 +167,7 @@ export const MessageReplyPreview = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     flexDirection: 'row',
     marginBottom: 6,
     borderRadius: 8,
