@@ -114,7 +114,6 @@ export const AttachmentPreviewScreen = ({
               onPress={onClose}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
           </View>
         </View>

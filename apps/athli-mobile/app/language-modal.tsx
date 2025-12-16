@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
-import { CircleCheck, X } from 'lucide-react-native';
+import { Check, X } from 'lucide-react-native';
 import { Platform } from 'react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -11,6 +11,7 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { LANGUAGES } from '@/constants/languages';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 
 export default function LanguageModal() {
   const router = useRouter();
@@ -41,7 +42,6 @@ export default function LanguageModal() {
           onPress={handleClose}
           size="md"
           color={iconColor}
-          backgroundColor={themeColors.surfaceSecondary}
         />
         <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.selectLanguage')}</Text>
         <View style={styles.closeButton} />
@@ -75,10 +75,10 @@ export default function LanguageModal() {
 
                 {isSelected && (
                   <PlatformIcon
-                    sf="checkmark.circle.fill"
-                    IconComponent={CircleCheck}
+                    sf="checkmark"
+                    IconComponent={Check}
                     size={iconSizes.modalIcons}
-                    color={iconColor}
+                    color={themeColors.primary}
                   />
                 )}
               </TouchableOpacity>

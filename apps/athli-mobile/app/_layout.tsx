@@ -15,6 +15,8 @@ import {
 } from '@/contexts/useColorScheme';
 import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
+import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
+import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
 import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -59,7 +61,11 @@ export default function RootLayout() {
         <ThemePreferenceProvider>
           <TranslationProvider>
             <AppViewProvider>
-              <RootLayoutNav />
+              <ModalCallbacksProvider>
+                <TrainingOverlayProvider>
+                  <RootLayoutNav />
+                </TrainingOverlayProvider>
+              </ModalCallbacksProvider>
             </AppViewProvider>
           </TranslationProvider>
         </ThemePreferenceProvider>
@@ -195,6 +201,92 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="search-client-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="session-type-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="repeat-options-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="number-select-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="add-session-from-library-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="add-exercise-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="add-circuit-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="profile"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        />
+        <Stack.Screen
           name="camera"
           options={{
             presentation: 'card',
@@ -232,6 +324,7 @@ function RootLayoutNav() {
         />
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
+        <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

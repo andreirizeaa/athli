@@ -1,13 +1,12 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronDown, CalendarCheck } from 'lucide-react-native';
 
-import { typography, iconSizes } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { typography, iconSizes, headingFontFamily } from '@/constants/typography';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
@@ -15,11 +14,11 @@ import { TimeGrid } from '@/components/calendar/time-grid';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function CalendarScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const { primaryColor, primarySoftColor, colors: themeColors } = useThemePreference();
+  const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
@@ -32,10 +31,42 @@ export default function CalendarScreen() {
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
   const [calendarKey, setCalendarKey] = useState(0); // Key to force calendar reset
 
-  const gradientColors: [string, string] =
-    colorScheme === 'dark'
-      ? ['#2a2a2a', themeColors.pageBackground]
-      : [primarySoftColor, themeColors.pageBackground];
+  const [timeGridKey, setTimeGridKey] = useState(0);
+  const [displayedDate, setDisplayedDate] = useState<Date | null>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
+  const [incomingDate, setIncomingDate] = useState<Date | null>(null);
+
+  const animateCalendarForDateChange = useCallback(
+    (nextDate: Date) => {
+      const prevDate = displayedDate;
+      if (!prevDate) {
+        setDisplayedDate(nextDate);
+        setIncomingDate(null);
+        return;
+      }
+
+      const prevTime = prevDate.getTime();
+      const nextTime = nextDate.getTime();
+      if (prevTime === nextTime) {
+        // Still commit + reset, so the UI updates and TimeGrid can refresh
+        const committed = new Date(nextDate);
+        committed.setHours(0, 0, 0, 0);
+        
+        setDisplayedDate(committed);
+        setIncomingDate(null);
+        setTimeGridKey(k => k + 1);
+        return;
+      }
+
+      // Simply update the displayed date without animation
+      setDisplayedDate(nextDate);
+      setIncomingDate(null);
+    },
+    [displayedDate]
+  );
 
   const handleOpenDatePicker = () => {
     const dateParam = selectedDate ? selectedDate.toISOString() : new Date().toISOString();
@@ -55,6 +86,7 @@ export default function CalendarScreen() {
             const date = new Date(storedDate);
             if (!isNaN(date.getTime())) {
               date.setHours(0, 0, 0, 0);
+              animateCalendarForDateChange(date);
               setSelectedDate(date);
               setHasSelectedDate(true);
               setCurrentMonth(date.getMonth());
@@ -68,17 +100,21 @@ export default function CalendarScreen() {
         }
       };
       checkSelectedDate();
-    }, [])
+    }, [animateCalendarForDateChange])
   );
 
   const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
+    const newDate = new Date(date);
+    newDate.setHours(0, 0, 0, 0);
+    
+    animateCalendarForDateChange(newDate);
+    setSelectedDate(newDate);
     setHasSelectedDate(true);
     // Update month and year to reflect the selected date
-    setCurrentMonth(date.getMonth());
-    setCurrentYear(date.getFullYear());
+    setCurrentMonth(newDate.getMonth());
+    setCurrentYear(newDate.getFullYear());
     // Save date in dd-mm-yyyy format (you can add AsyncStorage here if needed)
-    const formattedDate = formatDateDDMMYYYY(date);
+    const formattedDate = formatDateDDMMYYYY(newDate);
     console.log('Selected date:', formattedDate);
     // TODO: Save to storage if needed
   };
@@ -91,10 +127,17 @@ export default function CalendarScreen() {
   const handleTodayPress = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    setSelectedDate(today);
+    
+    // Update displayedDate immediately for today's date
+    setDisplayedDate(new Date(today));
+    setIncomingDate(null);
+    
+    // Update other states
+    setSelectedDate(new Date(today));
     setHasSelectedDate(true);
     setCurrentMonth(today.getMonth());
     setCurrentYear(today.getFullYear());
+    
     // Force calendar to reset by updating key
     setCalendarKey((prev) => prev + 1);
   };
@@ -135,19 +178,25 @@ export default function CalendarScreen() {
     return today.getDate();
   }, []);
 
+  const getDateLabel = useCallback((d: Date | null) => {
+    if (!d) return '';
+    const weekday = d.toLocaleDateString(undefined, { weekday: 'long' });
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = d.toLocaleDateString(undefined, { month: 'short' });
+    const year = d.getFullYear();
+    return `${weekday} - ${day} ${month} ${year}`;
+  }, []);
+
+  const displayedDateLabel = useMemo(() => getDateLabel(displayedDate), [displayedDate, getDateLabel]);
+  const incomingDateLabel = useMemo(() => getDateLabel(incomingDate), [incomingDate, getDateLabel]);
+
   // Button colors: always white background with black icon
-  const buttonBackgroundColor = '#FFFFFF';
-  const buttonIconColor = '#000000';
+  const buttonBackgroundColor = themeColors.searchBarBackground;
+  const buttonIconColor = themeColors.text;
 
 
   return (
-    <LinearGradient
-      colors={gradientColors}
-      locations={[0.05, 0.7]}
-      style={styles.gradient}
-      start={{ x: 1, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
       <View
         style={[
           styles.safeArea,
@@ -197,18 +246,28 @@ export default function CalendarScreen() {
               onSwipe={handleCalendarSwipe}
             />
           </View>
-          <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
+
+          <View style={styles.staticHeader}>
+            <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
+            <View style={styles.selectedDateRow}>
+              <Text style={[styles.selectedDateText, { color: themeColors.text }]}>{displayedDateLabel}</Text>
+            </View>
+            <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
+          </View>
           
-          {/* Time Grid - Scrollable */}
-          <TimeGrid selectedDate={selectedDate} />
+          <View style={styles.timeAreaViewport}>
+            <View style={styles.timeAreaPane}>
+              <TimeGrid key={`${timeGridKey}-${displayedDate?.toISOString()}`} selectedDate={displayedDate} />
+            </View>
+          </View>
         </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  screen: {
     flex: 1,
   },
   safeArea: {
@@ -229,6 +288,30 @@ const styles = StyleSheet.create({
   headerBottomRow: {
     width: '100%',
     alignSelf: 'stretch',
+  },
+  staticHeader: {
+    width: '100%',
+  },
+  timeAreaViewport: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  timeAreaPane: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  selectedDateRow: {
+    width: '100%',
+    alignSelf: 'stretch',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  selectedDateText: {
+    ...typography.p3,
+    width: '100%',
+    textAlign: 'center',
+    fontWeight: '700',
+    fontFamily: headingFontFamily,
   },
   divider: {
     width: '100%',

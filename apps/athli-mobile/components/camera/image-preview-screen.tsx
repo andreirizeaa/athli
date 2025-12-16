@@ -423,7 +423,6 @@ const ImagePreviewScreen = () => {
                   onPress={handleClose}
                   size="md"
                   color={iconColor}
-                  backgroundColor={mutedSurfaceColor}
                 />
               )}
             </View>
@@ -445,14 +444,13 @@ const ImagePreviewScreen = () => {
                   onPress={handleExitSelectionMode}
                   size="md"
                   color={iconColor}
-                  backgroundColor={mutedSurfaceColor}
                 />
               ) : (
                 <>
                   {/* Download button - only show when there's a single image */}
                   {images.length === 1 && (
                     <TouchableOpacity
-                      style={[styles.downloadButton, { backgroundColor: mutedSurfaceColor }]}
+                      style={[styles.downloadButton, { backgroundColor: themeColors.iconButton }]}
                       activeOpacity={0.7}
                       onPress={handleDownload}
                     >
@@ -468,7 +466,7 @@ const ImagePreviewScreen = () => {
                   {images.length > 1 && (
                     <View ref={ellipsisButtonRef}>
                       <TouchableOpacity
-                        style={[styles.downloadButton, { backgroundColor: mutedSurfaceColor }]}
+                        style={[styles.downloadButton, { backgroundColor: themeColors.iconButton }]}
                         activeOpacity={0.7}
                         onPress={handleEllipsisPress}
                       >
@@ -562,11 +560,10 @@ const ImagePreviewScreen = () => {
               onPress={handleDownloadSelected}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
 
             {/* Selected count (centered, not clickable) */}
-            <View style={[styles.selectedCountButton, { backgroundColor: mutedSurfaceColor }]}>
+            <View style={[styles.selectedCountButton, { backgroundColor: themeColors.iconButton }]}>
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {selectedImageIds.size} item{selectedImageIds.size !== 1 ? 's' : ''} selected
               </Text>
@@ -575,7 +572,7 @@ const ImagePreviewScreen = () => {
             {/* Trash button (only for sent messages within 1 hour) */}
             {canShowDelete && (
               <TouchableOpacity
-                style={[styles.closeButton, { backgroundColor: mutedSurfaceColor }]}
+                style={[styles.closeButton, { backgroundColor: themeColors.iconButton }]}
                 activeOpacity={0.7}
                 onPress={handleDeleteSelected}
               >
@@ -632,7 +629,6 @@ const ImagePreviewScreen = () => {
               onPress={handleClose}
               size="md"
               color={iconColor}
-              backgroundColor={mutedSurfaceColor}
             />
           </View>
         </View>

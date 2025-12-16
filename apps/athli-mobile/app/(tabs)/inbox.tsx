@@ -1,66 +1,422 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Check, Ellipsis, MailCheck, CheckCircle2, Archive } from 'lucide-react-native';
 
-import { typography } from '@/constants/typography';
-import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
+import { typography, iconSizes } from '@/constants/typography';
+import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { SearchBar } from '@/components/search-bar';
+import { CoachListItem } from '@/components/inbox/coach-list-item';
+import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { PlatformIcon } from '@/components/platform-icon';
+import {
+  getCoaches,
+  getInboxMessages,
+  readAllInbox,
+  archiveCoach,
+  markCoachAsRead,
+  type Coach,
+} from '@/services/inbox-service';
 
 export default function InboxScreen() {
-  const colorScheme = useColorScheme();
-  const { primarySoftColor, colors: themeColors } = useThemePreference();
+  const router = useRouter();
+  const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedCoachIds, setSelectedCoachIds] = useState<Set<string>>(new Set());
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const ellipsisButtonRef = useRef<View>(null);
 
-  const gradientColors: [string, string] =
-    colorScheme === 'dark'
-      ? ['#2a2a2a', themeColors.pageBackground]
-      : [primarySoftColor, themeColors.background];
+  useEffect(() => {
+    const loadCoaches = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedCoaches = await getCoaches();
+        // Filter to only show coaches that have messages
+        const coachesWithMessages = await Promise.all(
+          fetchedCoaches.map(async (coach) => {
+            const messages = await getInboxMessages(coach.id);
+            return messages.length > 0 ? coach : null;
+          }),
+        );
+        const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
+        setCoaches(filtered);
+      } catch (error) {
+        console.error('Failed to load coaches:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCoaches();
+  }, []);
+
+  const filteredCoaches = useMemo(() => {
+    let filtered = coaches;
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (coach) =>
+          coach.name.toLowerCase().includes(query) ||
+          (coach.lastMessage?.toLowerCase().includes(query) ?? false),
+      );
+    }
+
+    // Sort by last message time (most recent first)
+    return filtered.sort((a, b) => {
+      const timeA = a.lastMessageTime?.getTime() ?? 0;
+      const timeB = b.lastMessageTime?.getTime() ?? 0;
+      return timeB - timeA;
+    });
+  }, [coaches, searchQuery]);
+
+  const totalUnreadCount = useMemo(() => {
+    return coaches.reduce((sum, coach) => sum + (coach.unreadCount ?? 0), 0);
+  }, [coaches]);
+
+  const handleCoachPress = async (coachId: string) => {
+    if (isEditMode) {
+      const newSelected = new Set(selectedCoachIds);
+      if (newSelected.has(coachId)) {
+        newSelected.delete(coachId);
+      } else {
+        newSelected.add(coachId);
+      }
+      setSelectedCoachIds(newSelected);
+    } else {
+      // Find the coach object
+      const coach = coaches.find((c) => c.id === coachId);
+      if (coach) {
+        // Load messages before navigating
+        const messages = await getInboxMessages(coachId);
+        router.push({
+          pathname: '/inbox/[id]',
+          params: {
+            id: coachId,
+            coach: JSON.stringify(coach),
+            messages: JSON.stringify(messages),
+          },
+        });
+      } else {
+        // Fallback to just id if coach not found
+        router.push({ pathname: '/inbox/[id]', params: { id: coachId } });
+      }
+    }
+  };
+
+  const handleEllipsisPress = () => {
+    if (isEditMode) {
+      setIsEditMode(false);
+      setSelectedCoachIds(new Set());
+    } else {
+      ellipsisButtonRef.current?.measureInWindow((x, y, width, height) => {
+        setButtonPosition({ x, y, width, height });
+        setDropdownVisible(true);
+      });
+    }
+  };
+
+  const handleReadAllPress = async () => {
+    await readAllInbox();
+    // Reload coaches to update unread counts
+    const fetchedCoaches = await getCoaches();
+    const coachesWithMessages = await Promise.all(
+      fetchedCoaches.map(async (coach) => {
+        const messages = await getInboxMessages(coach.id);
+        return messages.length > 0 ? coach : null;
+      }),
+    );
+    const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
+    setCoaches(filtered);
+  };
+
+  const handleSelectChatsPress = () => {
+    setIsEditMode(true);
+    setDropdownVisible(false);
+  };
+
+  const handleArchivePress = async () => {
+    for (const coachId of selectedCoachIds) {
+      await archiveCoach(coachId);
+    }
+    setIsEditMode(false);
+    setSelectedCoachIds(new Set());
+    // Reload coaches
+    const fetchedCoaches = await getCoaches();
+    const coachesWithMessages = await Promise.all(
+      fetchedCoaches.map(async (coach) => {
+        const messages = await getInboxMessages(coach.id);
+        return messages.length > 0 ? coach : null;
+      }),
+    );
+    const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
+    setCoaches(filtered);
+  };
+
+  const handleCoachArchive = async (coachId: string) => {
+    await archiveCoach(coachId);
+    const fetchedCoaches = await getCoaches();
+    const coachesWithMessages = await Promise.all(
+      fetchedCoaches.map(async (coach) => {
+        const messages = await getInboxMessages(coach.id);
+        return messages.length > 0 ? coach : null;
+      }),
+    );
+    const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
+    setCoaches(filtered);
+  };
+
+  const handleCoachMarkAsRead = async (coachId: string) => {
+    await markCoachAsRead(coachId);
+    const fetchedCoaches = await getCoaches();
+    const coachesWithMessages = await Promise.all(
+      fetchedCoaches.map(async (coach) => {
+        const messages = await getInboxMessages(coach.id);
+        return messages.length > 0 ? coach : null;
+      }),
+    );
+    const filtered = coachesWithMessages.filter((coach) => coach !== null) as Coach[];
+    setCoaches(filtered);
+  };
+
+  const dropdownOptions: DropdownMenuOption[] = isEditMode
+    ? [
+        {
+          label: t('chats.archive'),
+          icon: {
+            sf: 'archivebox',
+            IconComponent: Archive,
+          },
+          onPress: handleArchivePress,
+        },
+      ]
+    : [
+        {
+          label: t('chats.selectChats'),
+          icon: {
+            sf: 'checkmark.circle',
+            IconComponent: CheckCircle2,
+          },
+          onPress: handleSelectChatsPress,
+        },
+        {
+          label: t('chats.readAll'),
+          icon: {
+            sf: 'checkmark.message',
+            IconComponent: MailCheck,
+          },
+          onPress: handleReadAllPress,
+        },
+      ];
 
   return (
-    <LinearGradient
-      colors={gradientColors}
-      locations={[0.05, 0.7]}
-      style={styles.gradient}
-      start={{ x: 1, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
-    <View
-      style={[
-        styles.safeArea,
-        {
-          paddingTop: insets.top,
-          paddingBottom: 0,
-          paddingLeft: insets.left,
-          paddingRight: insets.right,
-        },
-      ]}
-    >
-      <View style={styles.container}>
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('inbox.title')}</Text>
+    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>
+            <View style={styles.headerSection}>
+              <View style={styles.titleRow}>
+                <Text style={[styles.title, { color: themeColors.text }]}>
+                  {t('inbox.title')}
+                </Text>
+                <View
+                  ref={ellipsisButtonRef}
+                  collapsable={false}
+                  style={styles.headerButtonContainer}
+                >
+                  <TouchableOpacity
+                    style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                    activeOpacity={0.7}
+                    onPress={handleEllipsisPress}
+                  >
+                    {isEditMode ? (
+                      <PlatformIcon
+                        sf="checkmark"
+                        IconComponent={Check}
+                        size={iconSizes.navigationChevrons}
+                        color={themeColors.text}
+                      />
+                    ) : (
+                      <PlatformIcon
+                        sf="ellipsis"
+                        IconComponent={Ellipsis}
+                        size={iconSizes.navigationChevrons}
+                        color={themeColors.text}
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t('inbox.searchPlaceholder')}
+              />
+            </View>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={themeColors.primary} />
+              </View>
+            ) : filteredCoaches.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                  {searchQuery.trim()
+                    ? t('inbox.empty.noCoachesFound')
+                    : t('inbox.empty.noCoachesYet')}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.coachListContainer}>
+                {filteredCoaches.map((coach) => (
+                  <CoachListItem
+                    key={coach.id}
+                    coach={coach}
+                    onPress={handleCoachPress}
+                    isEditMode={isEditMode}
+                    isSelected={selectedCoachIds.has(coach.id)}
+                    onArchive={handleCoachArchive}
+                    onMarkAsRead={handleCoachMarkAsRead}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        {isEditMode && (
+          <View
+            style={[
+              styles.bottomActions,
+              {
+                paddingBottom: insets.bottom + 60, // Tab bar height (49px) + safe area
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
+              activeOpacity={0.7}
+              onPress={handleArchivePress}
+            >
+              <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
+                {t('chats.archive')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!isEditMode && (
+          <DropdownMenu
+            visible={dropdownVisible}
+            onClose={() => setDropdownVisible(false)}
+            options={dropdownOptions}
+            anchorPosition={buttonPosition}
+          />
+        )}
       </View>
     </View>
-    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: {
+  screen: {
     flex: 1,
   },
   safeArea: {
     flex: 1,
   },
-  container: {
+  scrollView: {
     flex: 1,
-    paddingHorizontal: 16,
+  },
+  scrollViewContent: {
+    paddingBottom: 40,
+  },
+  container: {
     paddingTop: 16,
+  },
+  headerSection: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  titleRow: {
+    position: 'relative',
+    marginBottom: 16,
   },
   title: {
     ...typography.h1,
     textAlign: 'left',
+    paddingRight: 52, // Space for the button (44px width + 8px margin)
+  },
+  headerButtonContainer: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  headerButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  coachListContainer: {
+  },
+  loadingContainer: {
+    minHeight: 400,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyContainer: {
+    minHeight: 400,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    ...typography.p2,
+  },
+  bottomActions: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    justifyContent: 'center',
+  },
+  actionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    ...typography.p2,
+    fontWeight: '500',
   },
 });
-
-

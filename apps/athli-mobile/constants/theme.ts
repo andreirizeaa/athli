@@ -88,6 +88,7 @@ export type ThemeColors = {
   sidebarForeground: string;
   shadowColor: string;
   searchBarBackground: string;
+  iconButton: string;
   headerBackground: string;
 };
 
@@ -113,7 +114,7 @@ export function createPresetPalette(
   if (preset === 'underground') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
+        pageBackground: '#0a0a0a',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -126,7 +127,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#2A2A2A',
+        searchBarBackground: '#18181b',
+        iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
     }
@@ -145,7 +147,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: '#F3F4F6',
+      searchBarBackground: '#f5f5f4',
+      iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
   }
@@ -153,7 +156,7 @@ export function createPresetPalette(
   if (preset === 'rose-garden') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
+        pageBackground: '#0a0a0a',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -166,7 +169,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#2A2A2A',
+        searchBarBackground: '#18181b',
+        iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
     }
@@ -185,7 +189,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: '#F3F4F6',
+      searchBarBackground: '#f5f5f4',
+      iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
   }
@@ -193,7 +198,7 @@ export function createPresetPalette(
   if (preset === 'lake-view') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
+        pageBackground: '#0a0a0a',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -206,7 +211,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#2A2A2A',
+        searchBarBackground: '#18181b',
+        iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
     }
@@ -225,7 +231,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#0F172A',
       shadowColor: '#000000',
-      searchBarBackground: '#F3F4F6',
+      searchBarBackground: '#f5f5f4',
+      iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
   }
@@ -233,7 +240,7 @@ export function createPresetPalette(
   if (preset === 'sunset-glow') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
+        pageBackground: '#0a0a0a',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -246,7 +253,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#2A2A2A',
+        searchBarBackground: '#18181b',
+        iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
     }
@@ -265,7 +273,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: '#F3F4F6',
+      searchBarBackground: '#f5f5f4',
+      iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
   }
@@ -273,7 +282,7 @@ export function createPresetPalette(
   if (preset === 'forest-whisper') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
+        pageBackground: '#0a0a0a',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -286,7 +295,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#2A2A2A',
+        searchBarBackground: '#18181b',
+        iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
     }
@@ -305,7 +315,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: '#F3F4F6',
+      searchBarBackground: '#f5f5f4',
+      iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
   }
@@ -313,7 +324,7 @@ export function createPresetPalette(
   if (preset === 'ocean-breeze') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
+        pageBackground: '#0a0a0a',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -326,7 +337,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#2A2A2A',
+        searchBarBackground: '#18181b',
+        iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
     }
@@ -345,7 +357,8 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: '#F3F4F6',
+      searchBarBackground: '#f5f5f4',
+      iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
   }
@@ -353,7 +366,7 @@ export function createPresetPalette(
   if (preset === 'lavender-dream') {
     if (scheme === 'dark') {
       return {
-        pageBackground: '#000000',
+        pageBackground: '#0a0a0a',
         background: '#121212',
         surface: '#1E1E1E',
         surfaceSecondary: '#2A2A2A',
@@ -366,7 +379,8 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#2A2A2A',
+        searchBarBackground: '#18181b',
+        iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
     }
@@ -385,14 +399,15 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: '#F3F4F6',
+      searchBarBackground: '#f5f5f4',
+      iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
   }
 
   if (scheme === 'dark') {
     return {
-      pageBackground: '#000000',
+      pageBackground: '#0a0a0a',
       background: '#121212',
       surface: '#1E1E1E',
       surfaceSecondary: '#2A2A2A',
@@ -405,7 +420,8 @@ export function createPresetPalette(
       sidebar: '#1A1A1A',
       sidebarForeground: '#E5E7EB',
       shadowColor: '#FFFFFF',
-      searchBarBackground: '#2A2A2A',
+      searchBarBackground: '#18181b',
+      iconButton: '#18181b',
       headerBackground: '#1E1E1E',
     };
   }
@@ -424,7 +440,8 @@ export function createPresetPalette(
     sidebar: '#FFFFFF',
     sidebarForeground: '#020617',
     shadowColor: '#000000',
-    searchBarBackground: '#F3F4F6',
+    searchBarBackground: '#f5f5f4',
+    iconButton: '#f5f5f4',
     headerBackground: '#F9FAFB',
   };
 }

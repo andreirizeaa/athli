@@ -2,20 +2,39 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, X } from 'lucide-react-native';
+import { CircleCheck } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
+import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { PlatformIcon } from '@/components/platform-icon';
 import { IconButton } from '@/components/icon-button';
 
-export default function UnitsModal() {
+type SessionType = {
+  id: string;
+  label: string;
+};
+
+const SESSION_TYPES: SessionType[] = [
+  { id: '30-online', label: '30 Mins - Online' },
+  { id: '30-in-person', label: '30 Mins - In person' },
+  { id: '45-online', label: '45 Mins - Online' },
+  { id: '45-in-person', label: '45 Mins - In person' },
+  { id: '60-online', label: '60 Mins - Online' },
+  { id: '60-in-person', label: '60 Mins - In person' },
+  { id: '90-online', label: '90 Mins - Online' },
+  { id: '90-in-person', label: '90 Mins - In person' },
+];
+
+export default function SessionTypeModal() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
-  const [selectedUnits, setSelectedUnits] = useState<'metric' | 'imperial'>('metric');
+  const { triggerTypeSelect } = useModalCallbacks();
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
   const dividerColor = themeColors.border;
   const iconColor = themeColors.text;
@@ -25,10 +44,13 @@ export default function UnitsModal() {
     router.back();
   };
 
-  const handleSelectUnits = (unitsType: 'metric' | 'imperial') => {
-    setSelectedUnits(unitsType);
-    // TODO: Implement units change logic
-    handleClose();
+  const handleSelectType = (typeId: string) => {
+    const type = SESSION_TYPES.find((t) => t.id === typeId);
+    if (type) {
+      setSelectedType(typeId);
+      triggerTypeSelect(type.label);
+      handleClose();
+    }
   };
 
   return (
@@ -41,51 +63,43 @@ export default function UnitsModal() {
           size="md"
           color={iconColor}
         />
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('preferences.units')}</Text>
+        <Text style={[styles.title, { color: themeColors.text }]}>{t('calendar.newSession.selectType')}</Text>
         <View style={styles.closeButton} />
       </View>
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {(['metric', 'imperial'] as const).map((unitsType) => {
-          const isSelected = unitsType === selectedUnits;
-
-          const label = unitsType === 'metric' ? t('preferences.metric') : t('preferences.imperial');
-          const subtitle = unitsType === 'metric' ? t('preferences.metricUnits') : t('preferences.imperialUnits');
+        {SESSION_TYPES.map((sessionType, index) => {
+          const isSelected = sessionType.id === selectedType;
 
           return (
-            <View key={unitsType}>
+            <View key={sessionType.id}>
               <TouchableOpacity
-                style={styles.unitsRow}
+                style={styles.typeRow}
                 activeOpacity={0.7}
-                onPress={() => handleSelectUnits(unitsType)}
+                onPress={() => handleSelectType(sessionType.id)}
               >
-                <View style={styles.unitsInfo}>
-                  <View style={styles.unitsTextContainer}>
+                <View style={styles.typeInfo}>
+                  <View style={styles.typeTextContainer}>
                     <Text
-                      style={[styles.unitsLabel, { color: themeColors.text }]}
+                      style={[styles.typeLabel, { color: themeColors.text }]}
                     >
-                      {label}
-                    </Text>
-                    <Text
-                      style={[styles.unitsSubtitle, { color: secondaryTextColor }]}
-                    >
-                      {subtitle}
+                      {sessionType.label}
                     </Text>
                   </View>
                 </View>
 
                 {isSelected && (
                   <PlatformIcon
-                    sf="checkmark"
-                    IconComponent={Check}
+                    sf="checkmark.circle.fill"
+                    IconComponent={CircleCheck}
                     size={iconSizes.modalIcons}
-                    color={themeColors.primary}
+                    color={iconColor}
                   />
                 )}
               </TouchableOpacity>
 
-              {unitsType !== 'imperial' && (
+              {index !== SESSION_TYPES.length - 1 && (
                 <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />
               )}
             </View>
@@ -125,27 +139,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
   },
-  unitsRow: {
+  typeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 10,
   },
-  unitsInfo: {
+  typeInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 1,
   },
-  unitsTextContainer: {
+  typeTextContainer: {
     flexShrink: 1,
   },
-  unitsLabel: {
+  typeLabel: {
     ...typography.p2,
-    marginTop: 2,
-  },
-  unitsSubtitle: {
-    fontSize: 14,
-    fontWeight: '400',
     marginTop: 2,
   },
   modalDivider: {

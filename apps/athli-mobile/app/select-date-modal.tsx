@@ -10,6 +10,7 @@ import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
@@ -239,7 +240,7 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
                       <Text
                         style={[
                           styles.dayText,
-                          { color: isSelected ? '#FFFFFF' : themeColors.text },
+                          { color: isSelected ? themeColors.primaryForeground : themeColors.text },
                         ]}
                       >
                         {cell.day}
@@ -330,8 +331,6 @@ export default function SelectDateModal() {
 
   const getItemType = () => 'month';
 
-  const iconColor = themeColors.text;
-
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background, borderTopWidth: 0, borderTopColor: 'transparent' }]}>
       {/* Header */}
@@ -340,12 +339,10 @@ export default function SelectDateModal() {
           icon={{ sf: 'xmark', IconComponent: X }}
           onPress={handleClose}
           size="md"
-          color={iconColor}
-          backgroundColor={themeColors.surfaceSecondary}
         />
         <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">{t('calendar.selectDate')}</Text>
         <TouchableOpacity
-          style={[styles.todayButton, { backgroundColor: themeColors.surfaceSecondary }]}
+          style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
           activeOpacity={0.7}
           onPress={handleSelectToday}
         >
