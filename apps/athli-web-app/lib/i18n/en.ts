@@ -329,6 +329,7 @@ export const enMessages = {
       calendar: 'Calendar',
       home: 'Home',
       library: 'Library',
+      profile: 'Profile',
     },
     actions: {
       keepMenuOpen: 'Keep menu open',

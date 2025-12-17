@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ChevronDown, User } from 'lucide-react-native';
+import { ChevronDown } from 'lucide-react-native';
 
 import { typography, iconSizes, headingFontFamily } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -134,10 +133,6 @@ export default function TrainingScreen() {
     setCurrentYear(year);
   };
 
-  const handleProfilePress = () => {
-    router.push('/profile/profile');
-  };
-
   const displayText = useMemo(() => {
     const monthKeys = [
       'january',
@@ -180,18 +175,6 @@ export default function TrainingScreen() {
   const displayedDateLabel = useMemo(() => getDateLabel(displayedDate), [displayedDate, getDateLabel]);
   const incomingDateLabel = useMemo(() => getDateLabel(incomingDate), [incomingDate, getDateLabel]);
 
-  // Button colors: always white background with black icon
-  const buttonBackgroundColor = themeColors.searchBarBackground;
-  const buttonIconColor = themeColors.text;
-
-  // Mock user avatar - in the future, this will come from user service/context
-  const userAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces';
-
-  const handleAddFromLibrary = () => {
-    hideOverlay();
-    router.push('/modals/library/add-session-from-library-modal');
-  };
-
   const handleCreateSession = () => {
     hideOverlay();
     // TODO: Implement create session functionality
@@ -219,10 +202,9 @@ export default function TrainingScreen() {
         ]}
       >
         <View style={styles.container}>
-          {/* Top row: Title on left, Date picker and Today button on right */}
+          {/* Top row: Title on left, Date picker on right */}
           <View style={styles.headerTopRow}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('training.title')}</Text>
-            <View style={styles.headerRightButtons}>
               <TouchableOpacity
                 style={styles.dateButton}
                 activeOpacity={0.7}
@@ -236,25 +218,6 @@ export default function TrainingScreen() {
                   color={themeColors.text}
                 />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.profileButton}
-                activeOpacity={0.7}
-                onPress={handleProfilePress}
-              >
-                {userAvatar ? (
-                  <Image source={{ uri: userAvatar }} style={styles.profileAvatarImage} />
-                ) : (
-                  <View style={[styles.profileAvatar, { backgroundColor: buttonBackgroundColor }]}>
-                    <PlatformIcon
-                      sf="person.fill"
-                      IconComponent={User}
-                      size={iconSizes.navigationChevrons}
-                      color={buttonIconColor}
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
           </View>
           {/* Bottom row: Swipeable Calendar */}
           <View style={styles.headerBottomRow}>
@@ -279,7 +242,6 @@ export default function TrainingScreen() {
 
       <TrainingAddOptions
         isVisible={isOverlayVisible}
-        onAddFromLibraryPress={handleAddFromLibrary}
         onCreateSessionPress={handleCreateSession}
         onOneOffSessionPress={handleOneOffSession}
         onClose={hideOverlay}
@@ -307,11 +269,6 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     width: '100%',
   },
-  headerRightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
   headerBottomRow: {
     width: '100%',
     alignSelf: 'stretch',
@@ -337,24 +294,6 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
-  },
-  profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
-  profileAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileAvatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
   },
 });
 

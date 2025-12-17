@@ -17,7 +17,6 @@ import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
 import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
 import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
-import { LibraryTabProvider } from '@/contexts/useLibraryTab';
 import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -62,13 +61,11 @@ export default function RootLayout() {
         <ThemePreferenceProvider>
           <TranslationProvider>
             <AppViewProvider>
-              <LibraryTabProvider>
                 <ModalCallbacksProvider>
                   <TrainingOverlayProvider>
                     <RootLayoutNav />
                   </TrainingOverlayProvider>
                 </ModalCallbacksProvider>
-              </LibraryTabProvider>
             </AppViewProvider>
           </TranslationProvider>
         </ThemePreferenceProvider>
@@ -248,7 +245,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="modals/library/add-session-from-library-modal"
+          name="modals/files/add-file-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -258,35 +255,34 @@ function RootLayoutNav() {
             }),
           }}
         />
-        <Stack.Screen
-          name="modals/library/add-exercise-modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
-          }}
-        />
-        <Stack.Screen
-          name="modals/library/add-circuit-modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
-          }}
-        />
-        <Stack.Screen
+        {/* Profile is now a tab, so profile/profile route is no longer needed */}
+        {/* <Stack.Screen
           name="profile/profile"
           options={{
             presentation: 'card',
             headerShown: false,
             animation: 'slide_from_right',
             animationDuration: 300,
+          }}
+        /> */}
+        <Stack.Screen
+          name="personal-details"
+          options={{
+            presentation: 'card',
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        />
+        <Stack.Screen
+          name="modals/personal-details/edit-personal-details-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
           }}
         />
         <Stack.Screen
@@ -328,41 +324,6 @@ function RootLayoutNav() {
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
         <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="modals/library/create-workout-modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
-          }}
-        />
-        <Stack.Screen
-          name="modals/library/create-program-modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
-          }}
-        />
-        <Stack.Screen
-          name="modals/library/create-exercise-modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
-          }}
-        />
-        <Stack.Screen name="library/create-workout" options={{ headerShown: false }} />
-        <Stack.Screen name="library/create-program" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
