@@ -14,6 +14,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
+import { useLibraryTab } from '@/contexts/useLibraryTab';
 import { iconSizes } from '@/constants/typography';
 import {
   BookOpen,
@@ -181,6 +182,8 @@ export default function TabLayout() {
 
   const insets = useSafeAreaInsets();
 
+  const { activeTab } = useLibraryTab();
+
   const handleNativeTabsAddPress = () => {
     if (appView === 'coach') {
       // Get current route from pathname
@@ -204,6 +207,15 @@ export default function TabLayout() {
       // Show training overlay if on training tab
       if (pathname.includes('/training')) {
         showTrainingOverlay();
+      } else if (pathname.includes('/library')) {
+        // Open appropriate modal based on active library tab
+        if (activeTab === 'workouts') {
+          router.push('/modals/library/create-workout-modal');
+        } else if (activeTab === 'programs') {
+          router.push('/modals/library/create-program-modal');
+        } else if (activeTab === 'exercises') {
+          router.push('/modals/library/create-exercise-modal');
+        }
       }
     }
   };
@@ -308,6 +320,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
+  const { activeTab } = useLibraryTab();
 
   const handleTabPress = (name: string) => {
     if (name === activeRouteName) {
@@ -335,6 +348,15 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       // Show training overlay if on training tab
       if (activeRouteName === 'training') {
         showTrainingOverlay();
+      } else if (activeRouteName === 'library') {
+        // Open appropriate modal based on active library tab
+        if (activeTab === 'workouts') {
+          router.push('/modals/library/create-workout-modal');
+        } else if (activeTab === 'programs') {
+          router.push('/modals/library/create-program-modal');
+        } else if (activeTab === 'exercises') {
+          router.push('/modals/library/create-exercise-modal');
+        }
       }
     }
   };

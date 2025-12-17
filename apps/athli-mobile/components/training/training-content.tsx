@@ -34,11 +34,11 @@ export const TrainingContent = ({ date, onClose }: TrainingContentProps) => {
   };
 
   const handleAddExercise = () => {
-    router.push('/add-exercise-modal');
+    router.push('/modals/library/add-exercise-modal');
   };
 
   const handleAddCircuit = () => {
-    router.push('/add-circuit-modal');
+    router.push('/modals/library/add-circuit-modal');
   };
 
   return (

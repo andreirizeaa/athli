@@ -74,7 +74,7 @@ export default function TrainingScreen() {
   const handleOpenDatePicker = () => {
     const dateParam = selectedDate ? selectedDate.toISOString() : new Date().toISOString();
     router.push({
-      pathname: '/select-date-modal',
+      pathname: '/modals/calendar/select-date-modal',
       params: { selectedDate: dateParam },
     });
   };
@@ -135,7 +135,7 @@ export default function TrainingScreen() {
   };
 
   const handleProfilePress = () => {
-    router.push('/profile');
+    router.push('/profile/profile');
   };
 
   const displayText = useMemo(() => {
@@ -189,7 +189,7 @@ export default function TrainingScreen() {
 
   const handleAddFromLibrary = () => {
     hideOverlay();
-    router.push('/add-session-from-library-modal');
+    router.push('/modals/library/add-session-from-library-modal');
   };
 
   const handleCreateSession = () => {
