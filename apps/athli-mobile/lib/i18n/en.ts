@@ -44,6 +44,28 @@ export const en = {
   },
   library: {
     title: 'Library',
+    tabs: {
+      workouts: 'Workouts',
+      programs: 'Programs',
+      exercises: 'Exercises',
+    },
+    create: {
+      workout: 'Create a workout',
+      program: 'Create a program',
+      exercise: 'Create an exercise',
+    },
+    createPages: {
+      workout: 'Create workout',
+      program: 'Create program',
+      exercise: 'Create exercise',
+    },
+    createModal: {
+      namePlaceholder: 'Name',
+      descriptionPlaceholder: 'Optional description',
+      weeks: 'Weeks',
+      parameter: 'Parameter',
+      videoLinkPlaceholder: 'Youtube or Vimeo Link',
+    },
   },
   inbox: {
     title: 'Inbox',

@@ -17,6 +17,7 @@ import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
 import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
 import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
+import { LibraryTabProvider } from '@/contexts/useLibraryTab';
 import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -61,11 +62,13 @@ export default function RootLayout() {
         <ThemePreferenceProvider>
           <TranslationProvider>
             <AppViewProvider>
-              <ModalCallbacksProvider>
-                <TrainingOverlayProvider>
-                  <RootLayoutNav />
-                </TrainingOverlayProvider>
-              </ModalCallbacksProvider>
+              <LibraryTabProvider>
+                <ModalCallbacksProvider>
+                  <TrainingOverlayProvider>
+                    <RootLayoutNav />
+                  </TrainingOverlayProvider>
+                </ModalCallbacksProvider>
+              </LibraryTabProvider>
             </AppViewProvider>
           </TranslationProvider>
         </ThemePreferenceProvider>
@@ -83,9 +86,9 @@ function RootLayoutNav() {
   const shouldHideStatusBar = useMemo(() => {
     const currentRoute = segments[segments.length - 1] || '';
     const hideStatusBarRoutes = [
-      'camera',
-      'document-preview',
-      'video-preview',
+      'camera/camera',
+      'chats/document-preview',
+      'chats/video-preview',
     ];
     return hideStatusBarRoutes.includes(currentRoute);
   }, [segments]);
@@ -132,7 +135,7 @@ function RootLayoutNav() {
         <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]/goals-injuries" options={{ headerShown: false }} />
         <Stack.Screen
-          name="client/edit-client-details-modal"
+          name="modals/client/edit-client-details-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -154,7 +157,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="language-modal"
+          name="modals/settings/language-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -165,7 +168,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="units-modal"
+          name="modals/settings/units-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -176,7 +179,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="palette-modal"
+          name="modals/settings/palette-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -187,7 +190,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="select-date-modal"
+          name="modals/calendar/select-date-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -201,7 +204,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="search-client-modal"
+          name="modals/client/search-client-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -212,7 +215,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="session-type-modal"
+          name="modals/calendar/session-type-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -223,7 +226,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="repeat-options-modal"
+          name="modals/calendar/repeat-options-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -234,7 +237,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="number-select-modal"
+          name="modals/shared/number-select-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -245,7 +248,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="add-session-from-library-modal"
+          name="modals/library/add-session-from-library-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -256,7 +259,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="add-exercise-modal"
+          name="modals/library/add-exercise-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -267,7 +270,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="add-circuit-modal"
+          name="modals/library/add-circuit-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -278,7 +281,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="profile"
+          name="profile/profile"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -287,7 +290,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="camera"
+          name="camera/camera"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -296,7 +299,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="document-preview"
+          name="chats/document-preview"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -305,7 +308,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="message-image-preview"
+          name="chats/message-image-preview"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -314,7 +317,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="video-preview"
+          name="chats/video-preview"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -325,6 +328,41 @@ function RootLayoutNav() {
         <Stack.Screen name="chats/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
         <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="modals/library/create-workout-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="modals/library/create-program-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="modals/library/create-exercise-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen name="library/create-workout" options={{ headerShown: false }} />
+        <Stack.Screen name="library/create-program" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );

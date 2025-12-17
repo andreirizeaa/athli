@@ -76,15 +76,15 @@ export default function PreferencesScreen() {
 
 
   const handleOpenLanguageModal = () => {
-    router.push('/language-modal');
+    router.push('/modals/settings/language-modal');
   };
 
   const handleOpenUnitsModal = () => {
-    router.push('/units-modal');
+    router.push('/modals/settings/units-modal');
   };
 
   const handleOpenPaletteModal = () => {
-    router.push('/palette-modal');
+    router.push('/modals/settings/palette-modal');
   };
 
 

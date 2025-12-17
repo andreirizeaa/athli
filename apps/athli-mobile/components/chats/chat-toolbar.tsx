@@ -186,7 +186,7 @@ export const ChatToolbar = ({
                     activeOpacity={0.7}
                     onPress={() =>
                       router.push({
-                        pathname: '/camera',
+                        pathname: '/camera/camera',
                         params: {
                           chatId: participantInfo.chatId,
                           clientId: participantInfo.participantId,

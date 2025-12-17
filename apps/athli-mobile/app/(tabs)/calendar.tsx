@@ -71,7 +71,7 @@ export default function CalendarScreen() {
   const handleOpenDatePicker = () => {
     const dateParam = selectedDate ? selectedDate.toISOString() : new Date().toISOString();
     router.push({
-      pathname: '/select-date-modal',
+      pathname: '/modals/calendar/select-date-modal',
       params: { selectedDate: dateParam },
     });
   };
