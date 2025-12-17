@@ -14,13 +14,11 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useAppView } from '@/contexts/useAppView';
 import { useTranslations } from '@/contexts/useTranslations';
 import { useTrainingOverlay } from '@/contexts/useTrainingOverlay';
-import { useLibraryTab } from '@/contexts/useLibraryTab';
 import { iconSizes } from '@/constants/typography';
 import {
-  BookOpen,
-  Calendar,
-  CalendarFold,
   ChartNoAxesColumn,
+  FileText,
+  Home,
   Cog,
   Dumbbell,
   Mail,
@@ -48,14 +46,14 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
           <Label>Clients</Label>
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="calendar">
-          <Icon sf="calendar" />
-          <Label>Calendar</Label>
-        </NativeTabs.Trigger>
-
         <NativeTabs.Trigger name="chats">
           <Icon sf="bubble.left.and.text.bubble.right.fill" />
           <Label>Chats</Label>
+        </NativeTabs.Trigger>
+
+        <NativeTabs.Trigger name="files">
+          <Icon sf="folder.fill" />
+          <Label>Files</Label>
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="settings">
@@ -80,13 +78,16 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
   );
 };
 
-// Pure layout component with overlay button for athlete view
-const NativeTabsAthleteView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
-  const insets = useSafeAreaInsets();
-  
+// Pure layout component for athlete view
+const NativeTabsAthleteView = ({ primaryColor }: NativeTabsCoachViewProps) => {
   return (
     <View style={{ flex: 1 }}>
       <NativeTabs tintColor={primaryColor}>
+        <NativeTabs.Trigger name="home">
+          <Icon sf="house.fill" />
+          <Label>Home</Label>
+        </NativeTabs.Trigger>
+
         <NativeTabs.Trigger name="training">
           <Icon sf="dumbbell.fill" />
           <Label>Training</Label>
@@ -102,24 +103,11 @@ const NativeTabsAthleteView = ({ primaryColor, onAddPress }: NativeTabsCoachView
           <Label>Inbox</Label>
         </NativeTabs.Trigger>
 
-        <NativeTabs.Trigger name="library">
-          <Icon sf="book.fill" />
-          <Label>Library</Label>
-        </NativeTabs.Trigger>
-
-        {/* Keep this for layout - touch will be intercepted by overlay */}
-        <NativeTabs.Trigger name="add-modal" role="search">
-          <Icon sf="plus" />
-          <Label>Add</Label>
+        <NativeTabs.Trigger name="profile">
+          <Icon sf="person.fill" />
+          <Label>Profile</Label>
         </NativeTabs.Trigger>
       </NativeTabs>
-      
-      {/* Transparent overlay button on top of search pill */}
-      <TouchableOpacity
-        style={[styles.addButtonOverlay, { bottom: insets.bottom - 16 }]}
-        activeOpacity={1}
-        onPress={onAddPress}
-      />
     </View>
   );
 };
@@ -155,12 +143,12 @@ export default function TabLayout() {
     // On initial mount with NativeTabs, ensure we navigate to the correct initial route
     // This prevents add-modal from being shown on app load
     if (hasLiquidGlass) {
-      const initialRoute = '/training';
+      const initialRoute = '/home';
       // Navigate to initial route if we're on index or any unexpected route (but not on a valid tab)
       if (
         pathname === '/' ||
         pathname === '/(tabs)' ||
-        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/calendar') && !pathname.startsWith('/chats') && !pathname.startsWith('/settings') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/library') && !pathname.startsWith('/add-modal'))
+        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/files') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
       ) {
         router.replace(initialRoute);
       }
@@ -174,7 +162,7 @@ export default function TabLayout() {
       // For liquid glass, navigate explicitly
       // For non-liquid glass, the key prop on Tabs will handle remounting with correct initialRouteName
       if (hasLiquidGlass) {
-        const initialRoute = '/training';
+        const initialRoute = appView === 'athlete' ? '/home' : '/clients';
         router.replace(initialRoute);
       }
     }
@@ -182,40 +170,26 @@ export default function TabLayout() {
 
   const insets = useSafeAreaInsets();
 
-  const { activeTab } = useLibraryTab();
-
   const handleNativeTabsAddPress = () => {
     if (appView === 'coach') {
-      // Get current route from pathname
-      let routeName: 'clients' | 'calendar' | 'chats' = 'clients';
-      if (pathname.includes('/calendar')) {
-        routeName = 'calendar';
+      // Check for files first, then clients/chats
+      if (pathname.includes('/files')) {
+        router.push('/modals/files/add-file-modal');
       } else if (pathname.includes('/clients')) {
-        routeName = 'clients';
-      } else if (pathname.includes('/chats')) {
-        routeName = 'chats';
-      }
-
-      // Navigate to add-modal-content with route param
-      if (routeName === 'calendar' || routeName === 'clients' || routeName === 'chats') {
         router.push({
           pathname: '/add-modal-content',
-          params: { route: routeName },
+          params: { route: 'clients' },
+        });
+      } else if (pathname.includes('/chats')) {
+        router.push({
+          pathname: '/add-modal-content',
+          params: { route: 'chats' },
         });
       }
     } else if (appView === 'athlete') {
       // Show training overlay if on training tab
       if (pathname.includes('/training')) {
         showTrainingOverlay();
-      } else if (pathname.includes('/library')) {
-        // Open appropriate modal based on active library tab
-        if (activeTab === 'workouts') {
-          router.push('/modals/library/create-workout-modal');
-        } else if (activeTab === 'programs') {
-          router.push('/modals/library/create-program-modal');
-        } else if (activeTab === 'exercises') {
-          router.push('/modals/library/create-exercise-modal');
-        }
       }
     }
   };
@@ -233,7 +207,7 @@ export default function TabLayout() {
     // Athlete view (default)
     return (
       <>
-        <NativeTabsAthleteView primaryColor={primaryColor} onAddPress={handleNativeTabsAddPress} />
+        <NativeTabsAthleteView primaryColor={primaryColor} />
       </>
     );
   }
@@ -242,7 +216,7 @@ export default function TabLayout() {
     <>
       <Tabs
         key={appView}
-        initialRouteName="training"
+        initialRouteName={appView === 'athlete' ? 'home' : 'clients'}
         tabBar={(props) => <FallbackTabBar {...props} />}
         screenOptions={{ headerShown: false }}
       >
@@ -254,17 +228,17 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="calendar"
-          options={{
-            title: t('calendar.title'),
-            href: appView === 'coach' ? '/calendar' : null,
-          }}
-        />
-        <Tabs.Screen
           name="chats"
           options={{
             title: t('chats.title'),
             href: appView === 'coach' ? '/chats' : null,
+          }}
+        />
+        <Tabs.Screen
+          name="files"
+          options={{
+            title: t('files.title'),
+            href: appView === 'coach' ? '/files' : null,
           }}
         />
         <Tabs.Screen
@@ -275,10 +249,10 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="library"
+          name="home"
           options={{
-            title: t('library.title'),
-            href: appView === 'athlete' ? '/library' : null,
+            title: t('home.title'),
+            href: appView === 'athlete' ? '/home' : null,
           }}
         />
         <Tabs.Screen
@@ -302,6 +276,13 @@ export default function TabLayout() {
             href: appView === 'athlete' ? '/inbox' : null,
           }}
         />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: t('profile.title'),
+            href: appView === 'athlete' ? '/profile' : null,
+          }}
+        />
         <Tabs.Screen name="index" options={{ href: null }} />
         <Tabs.Screen name="add-modal" options={{ href: null }} />
       </Tabs>
@@ -320,7 +301,6 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const colorScheme = useColorScheme();
   const router = useRouter();
   const { showOverlay: showTrainingOverlay } = useTrainingOverlay();
-  const { activeTab } = useLibraryTab();
 
   const handleTabPress = (name: string) => {
     if (name === activeRouteName) {
@@ -333,7 +313,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
   const handleAddPress = () => {
     if (appView === 'coach') {
       // Navigate to appropriate modal based on route
-      if (activeRouteName === 'calendar' || activeRouteName === 'clients') {
+      if (activeRouteName === 'clients') {
         router.push({
           pathname: '/add-modal-content',
           params: { route: activeRouteName },
@@ -343,20 +323,13 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
           pathname: '/add-modal-content',
           params: { route: 'chats' },
         });
+      } else if (activeRouteName === 'files') {
+        router.push('/modals/files/add-file-modal');
       }
     } else if (appView === 'athlete') {
       // Show training overlay if on training tab
       if (activeRouteName === 'training') {
         showTrainingOverlay();
-      } else if (activeRouteName === 'library') {
-        // Open appropriate modal based on active library tab
-        if (activeTab === 'workouts') {
-          router.push('/modals/library/create-workout-modal');
-        } else if (activeTab === 'programs') {
-          router.push('/modals/library/create-program-modal');
-        } else if (activeTab === 'exercises') {
-          router.push('/modals/library/create-exercise-modal');
-        }
       }
     }
   };
@@ -399,19 +372,19 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       width: 70,
     },
     {
-      name: 'calendar',
-      label: t('calendar.title'),
-      sf: 'calendar',
-      mdi: 'calendar-today',
-      IconComponent: CalendarFold,
-      width: 75,
-    },
-    {
       name: 'chats',
       label: t('chats.title'),
       sf: 'bubble.left.and.text.bubble.right.fill',
       mdi: 'forum',
       IconComponent: MessagesSquare,
+      width: 60,
+    },
+    {
+      name: 'files',
+      label: t('files.title'),
+      sf: 'folder.fill',
+      mdi: 'folder',
+      IconComponent: FileText,
       width: 60,
     },
     {
@@ -426,6 +399,14 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
 
   // Athlete view: match NativeTabs SF icons
   const athleteTabs: TabDefinition[] = [
+    {
+      name: 'home',
+      label: t('home.title'),
+      sf: 'house.fill',
+      mdi: 'home',
+      IconComponent: Home,
+      width: 60,
+    },
     {
       name: 'training',
       label: t('training.title'),
@@ -451,12 +432,12 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       width: 60,
     },
     {
-      name: 'library',
-      label: t('library.title'),
-      sf: 'book.fill',
-      mdi: 'menu-book',
-      IconComponent: BookOpen,
-      width: 70,
+      name: 'profile',
+      label: t('profile.title'),
+      sf: 'person.fill',
+      mdi: 'person',
+      IconComponent: User,
+      width: 60,
     },
   ];
 
@@ -483,6 +464,8 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
         ]}
       >
         <View style={styles.tabsContainer}>
+          {appView === 'coach' ? (
+            <>
           {/* Section 1: First tab */}
           <View style={styles.tabSection}>
             {renderTab(tabs[0])}
@@ -513,6 +496,27 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
           <View style={styles.tabSection}>
             {renderTab(tabs[3])}
           </View>
+            </>
+          ) : (
+            <>
+              {/* Athlete view: No add button, just tabs */}
+              <View style={styles.tabSection}>
+                {renderTab(tabs[0])}
+              </View>
+              <View style={styles.tabSection}>
+                {renderTab(tabs[1])}
+              </View>
+              <View style={styles.tabSection}>
+                {renderTab(tabs[2])}
+              </View>
+              <View style={styles.tabSection}>
+                {renderTab(tabs[3])}
+              </View>
+              <View style={styles.tabSection}>
+                {renderTab(tabs[4])}
+              </View>
+            </>
+          )}
         </View>
       </View>
     </View>

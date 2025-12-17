@@ -24,6 +24,9 @@ export const en = {
     today: 'Today',
     yesterday: 'Yesterday',
   },
+  home: {
+    title: 'Home',
+  },
   training: {
     title: 'Training',
     addOptions: {
@@ -41,6 +44,9 @@ export const en = {
   },
   progress: {
     title: 'Progress',
+  },
+  tasks: {
+    title: 'Tasks',
   },
   library: {
     title: 'Library',
@@ -65,6 +71,9 @@ export const en = {
       weeks: 'Weeks',
       parameter: 'Parameter',
       videoLinkPlaceholder: 'Youtube or Vimeo Link',
+    },
+    reorder: {
+      title: 'Reorder',
     },
   },
   inbox: {
@@ -98,6 +107,29 @@ export const en = {
     accountActions: 'Account Actions',
     logout: 'Logout',
     deleteAccount: 'Delete Account',
+  },
+  personalDetails: {
+    title: 'Personal Details',
+    name: 'Name',
+    age: 'Age',
+    genderLabel: 'Gender',
+    height: 'Height',
+    weight: 'Weight',
+    namePlaceholder: 'Enter your name',
+    years: 'years',
+    cm: 'cm',
+    kg: 'kg',
+    editName: 'Edit Name',
+    editAge: 'Edit Age',
+    editGender: 'Edit Gender',
+    editHeight: 'Edit Height',
+    editWeight: 'Edit Weight',
+    editDetails: 'Edit Details',
+    gender: {
+      male: 'Male',
+      female: 'Female',
+      preferNotToSay: 'Prefer not to say',
+    },
   },
   clients: {
     title: 'Clients',
@@ -266,6 +298,27 @@ export const en = {
     title: 'Settings',
     athleteView: 'Athlete view',
     viewAthletesArea: 'View Athletes Area',
+  },
+  files: {
+    title: 'Files',
+    searchPlaceholder: 'Search for files...',
+    addFile: {
+      title: 'Add file',
+      fileName: 'File name',
+      fileNamePlaceholder: 'Enter file name',
+      attachFile: 'Attach file',
+      photos: 'Photos',
+      videos: 'Videos',
+      pdfs: 'PDFs',
+      selected: 'Selected',
+      errors: {
+        nameRequired: 'File name is required',
+        fileRequired: 'Please select a file',
+        permissionRequired: 'Permission required to access media library',
+        pickFailed: 'Failed to pick file. Please try again.',
+        saveFailed: 'Failed to save file. Please try again.',
+      },
+    },
   },
   preferences: {
     title: 'Preferences',

@@ -6,10 +6,11 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
   Archive,
-  CalendarDays,
+  // CalendarDays,
   Home,
   MessageCircle,
   Settings,
+  User,
   UserPlus,
   Users,
 } from 'lucide-react';
@@ -51,13 +52,13 @@ export function AppSidebar() {
     },
   ] as const;
 
-  const businessNavItems = [
-    {
-      href: '/calendar',
-      labelKey: 'sidebar.links.calendar',
-      icon: CalendarDays,
-    },
-  ] as const;
+  // const businessNavItems = [
+  //   {
+  //     href: '/calendar',
+  //     labelKey: 'sidebar.links.calendar',
+  //     icon: CalendarDays,
+  //   },
+  // ] as const;
 
   const athletesNavItems = [
     {
@@ -69,6 +70,11 @@ export function AppSidebar() {
       href: '/messaging',
       labelKey: 'sidebar.links.messaging',
       icon: MessageCircle,
+    },
+    {
+      href: '/settings/profile/account',
+      labelKey: 'sidebar.links.profile',
+      icon: User,
     },
   ] as const;
 
@@ -128,7 +134,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
-              {businessNavItems.map((item) => {
+              {/* {businessNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive =
                   activePath === item.href || activePath.startsWith(`${item.href}/`);
@@ -148,7 +154,7 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
-              })}
+              })} */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -168,7 +174,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/athletes' || href === '/messaging'
+                  href === '/athletes' || href === '/messaging' || href === '/settings/profile/account'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);
