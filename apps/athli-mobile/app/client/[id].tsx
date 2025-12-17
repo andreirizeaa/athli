@@ -112,7 +112,7 @@ export default function ClientDetailScreen() {
 
   const handleEditDetails = () => {
     router.push({
-      pathname: '/client/edit-client-details-modal',
+      pathname: '/modals/client/edit-client-details-modal',
       params: { id: client?.id },
     });
   };

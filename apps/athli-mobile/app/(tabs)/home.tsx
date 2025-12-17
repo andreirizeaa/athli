@@ -6,7 +6,7 @@ import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 
-export default function LibraryScreen() {
+export default function HomeScreen() {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const insets = useSafeAreaInsets();
@@ -25,7 +25,10 @@ export default function LibraryScreen() {
         ]}
       >
         <View style={styles.container}>
-          <Text style={[styles.title, { color: themeColors.text }]}>{t('library.title')}</Text>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: themeColors.text }]}>{t('home.title')}</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -43,6 +46,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  header: {
+    marginBottom: 16,
   },
   title: {
     ...typography.h1,

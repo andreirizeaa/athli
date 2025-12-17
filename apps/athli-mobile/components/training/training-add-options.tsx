@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
-import { Plus, Dumbbell, CalendarX } from 'lucide-react-native';
+import { Dumbbell, CalendarX } from 'lucide-react-native';
 
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
@@ -9,7 +9,6 @@ import { PlatformIcon } from '@/components/platform-icon';
 
 interface TrainingAddOptionsProps {
   isVisible: boolean;
-  onAddFromLibraryPress: () => void;
   onCreateSessionPress: () => void;
   onOneOffSessionPress: () => void;
   onClose: () => void;
@@ -17,7 +16,6 @@ interface TrainingAddOptionsProps {
 
 export function TrainingAddOptions({
   isVisible,
-  onAddFromLibraryPress,
   onCreateSessionPress,
   onOneOffSessionPress,
   onClose,
@@ -51,27 +49,6 @@ export function TrainingAddOptions({
         activeOpacity={1}
       >
         <View style={styles.cardsContainer} pointerEvents="box-none">
-          {/* Add from library Card */}
-          <TouchableOpacity
-            style={[styles.card, { backgroundColor: themeColors.surface }]}
-            onPress={() => {
-              onAddFromLibraryPress();
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardTitle, { color: themeColors.text }]}>
-                {t('training.addOptions.addFromLibrary')}
-              </Text>
-              <PlatformIcon
-                sf="plus"
-                IconComponent={Plus}
-                size={iconSizes.listIcons}
-                color={themeColors.text}
-              />
-            </View>
-          </TouchableOpacity>
-
           {/* Create a session Card */}
           <TouchableOpacity
             style={[styles.card, { backgroundColor: themeColors.surface }]}

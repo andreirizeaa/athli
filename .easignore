@@ -1,9 +1,9 @@
 # Ignore native directories in mobile app
-apps/mobile/ios
-apps/mobile/android
+apps/athli-mobile/ios
+apps/athli-mobile/android
 
 # Ignore expo cache
-apps/mobile/.expo
+apps/athli-mobile/.expo
 **/.expo
 
 # Ignore node_modules (EAS handles this)

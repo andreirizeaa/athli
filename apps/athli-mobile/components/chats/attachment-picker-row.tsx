@@ -77,7 +77,7 @@ export const AttachmentPickerRow = ({
         if (imageAttachments.length > 0) {
           // Navigate to message-image-preview screen
           router.push({
-            pathname: '/message-image-preview',
+            pathname: '/chats/message-image-preview',
             params: {
               images: JSON.stringify(imageAttachments),
               chatId: chatId || '',
@@ -116,7 +116,7 @@ export const AttachmentPickerRow = ({
         if (asset.uri) {
           // Navigate to video preview screen
           router.push({
-            pathname: '/video-preview',
+            pathname: '/chats/video-preview',
             params: {
               uri: asset.uri,
               duration: (asset.duration || 0).toString(),
@@ -149,7 +149,7 @@ export const AttachmentPickerRow = ({
         
         // Navigate to document preview screen
         router.push({
-          pathname: '/document-preview',
+          pathname: '/chats/document-preview',
           params: {
             uri: asset.uri,
             name: asset.name || 'Document',
@@ -169,7 +169,7 @@ export const AttachmentPickerRow = ({
 
   const handleCameraPress = () => {
     router.push({
-      pathname: '/camera',
+      pathname: '/camera/camera',
       params: {
         chatId: chatId || '',
         clientId: clientId || '',

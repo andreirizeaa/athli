@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ellipsis, Plus } from 'lucide-react-native';
+import { Ellipsis } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -9,7 +9,6 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { FilledButton } from '@/components/buttons/filled-button';
-import { PlatformIcon } from '@/components/platform-icon';
 
 type TrainingContentProps = {
   date: Date;
@@ -31,14 +30,6 @@ export const TrainingContent = ({ date, onClose }: TrainingContentProps) => {
 
   const handleBeginSession = () => {
     // TODO: Implement begin session
-  };
-
-  const handleAddExercise = () => {
-    router.push('/add-exercise-modal');
-  };
-
-  const handleAddCircuit = () => {
-    router.push('/add-circuit-modal');
   };
 
   return (
@@ -71,41 +62,6 @@ export const TrainingContent = ({ date, onClose }: TrainingContentProps) => {
       {/* Divider */}
       <View style={[styles.dividerContainer, { width: screenWidth }]}>
         <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-      </View>
-
-      {/* Third row: Two columns with plus circle buttons */}
-      <View style={styles.thirdRow}>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleAddExercise}
-          activeOpacity={0.8}
-        >
-          <PlatformIcon
-            sf="plus.circle"
-            IconComponent={Plus}
-            size={iconSizes.tabBarIcons + 2}
-            color={themeColors.primary}
-          />
-          <Text style={[styles.buttonText, { color: themeColors.text }]}>
-            {t('training.addExercise')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleAddCircuit}
-          activeOpacity={0.8}
-        >
-          <PlatformIcon
-            sf="plus.circle"
-            IconComponent={Plus}
-            size={iconSizes.tabBarIcons + 2}
-            color={themeColors.primary}
-          />
-          <Text style={[styles.buttonText, { color: themeColors.text }]}>
-            {t('training.addCircuit')}
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -154,21 +110,5 @@ const styles = StyleSheet.create({
   divider: {
     width: '100%',
     height: 1,
-  },
-  thirdRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  button: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  buttonText: {
-    ...typography.p1,
-    fontWeight: '600',
   },
 });

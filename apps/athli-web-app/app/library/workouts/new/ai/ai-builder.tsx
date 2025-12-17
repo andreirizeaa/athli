@@ -1,13 +1,20 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUp, BrainCog, Dumbbell, FileText, Info, Link2, Link2Off, NotebookPen, Paperclip, Plus, Sparkles, Timer, Trash2, X } from 'lucide-react';
+import { ArrowUp, BrainCog, Dumbbell, FileText, Info, Link2, Link2Off, NotebookPen, Paperclip, Plus, Repeat, Sparkles, Timer, Trash2, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
 import type { GeneratedWorkout } from '@/lib/library/workouts/generate-exercise';
@@ -42,6 +49,7 @@ type ExerciseWithSuperset = Exercise & {
   supersetGroupId?: string | null;
   instanceId: string;
   sets?: SetData[];
+  alternatives?: string[]; // Array of exercise IDs for alternative exercises
 };
 
 type ChatMessage = {
@@ -59,10 +67,11 @@ type ChatMessage = {
 type WorkoutSchema = {
   sections: Array<{
     id: string;
-    type: 'regular' | 'amrap' | 'timed';
+    type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
     exercises?: ExerciseWithSuperset[];
     roundDurationSec?: number;
     targetRounds?: number;
+    category?: 'warmup' | 'cooldown' | 'mobility';
   }>;
 };
 
@@ -180,6 +189,7 @@ const buildWorkoutPayload = (
           name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map(mapSetDataToPayload),
+          alternatives: exercise.alternatives || [],
         }));
 
         const isSuperset = mapped.length > 1;
@@ -213,6 +223,66 @@ const buildWorkoutPayload = (
         id: section.id,
         type: 'amrap',
         durationSec: section.roundDurationSec || 0,
+        exercises,
+      };
+    }
+
+    if (section.type === 'circuits') {
+      const groups = groupExercisesBySupersetForPayload(section.exercises || []);
+
+      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
+        const mapped = group.map<RegularExercisePayload>((exercise) => ({
+          id: exercise.exerciseId,
+          name: exercise.name,
+          exerciseType: exercise.exerciseType as ExerciseType,
+          // Circuits limit to one set per exercise - take only the first set
+          sets: (exercise.sets && exercise.sets.length > 0
+            ? [exercise.sets[0]]
+            : []
+          ).map(mapSetDataToPayload),
+          alternatives: exercise.alternatives || [],
+        }));
+
+        const isSuperset = mapped.length > 1;
+
+        return {
+          isSuperset,
+          exercises: mapped,
+        };
+      });
+
+      return {
+        id: section.id,
+        type: 'circuits',
+        targetRounds: section.targetRounds || 0,
+        exercises,
+      };
+    }
+
+    if (section.type === 'auxiliary') {
+      const groups = groupExercisesBySupersetForPayload(section.exercises || []);
+
+      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
+        const mapped = group.map<RegularExercisePayload>((exercise) => ({
+          id: exercise.exerciseId,
+          name: exercise.name,
+          exerciseType: exercise.exerciseType as ExerciseType,
+          sets: (exercise.sets || []).map(mapSetDataToPayload),
+          alternatives: exercise.alternatives || [],
+        }));
+
+        const isSuperset = mapped.length > 1;
+
+        return {
+          isSuperset,
+          exercises: mapped,
+        };
+      });
+
+      return {
+        id: section.id,
+        type: 'auxiliary',
+        category: section.category || 'warmup',
         exercises,
       };
     }
@@ -1068,6 +1138,18 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         }
       }
 
+      if (section.type === 'circuits') {
+        if (!section.targetRounds || section.targetRounds <= 0) {
+          sectionErrors.missingConfig = true;
+        }
+      }
+
+      if (section.type === 'auxiliary') {
+        if (!section.category) {
+          sectionErrors.missingConfig = true;
+        }
+      }
+
       if (!section.exercises || section.exercises.length === 0) {
         sectionErrors.emptyExercises = true;
       }
@@ -1157,13 +1239,17 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     }
   }, [saveSignal]);
 
-  const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed') => {
+  const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary') => {
     const newSection = {
       id: `sec_${type}_${Date.now()}`,
       type,
-      // All section types use `exercises` for the builder UI. For AMRAP/Timed,
-      // these will later be mapped to flat round exercises in the payload.
+      // All section types use `exercises` for the builder UI. For AMRAP/Timed/Circuits/Auxiliary,
+      // these will later be mapped appropriately in the payload.
       exercises: [] as ExerciseWithSuperset[],
+      ...(type === 'amrap' && { roundDurationSec: undefined }),
+      ...(type === 'timed' && { targetRounds: undefined }),
+      ...(type === 'circuits' && { targetRounds: undefined }),
+      ...(type === 'auxiliary' && { category: undefined }),
     };
 
     onDirtyChange?.();
@@ -1298,7 +1384,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     return groups;
   };
 
-  const getSectionDescription = (type: 'regular' | 'amrap' | 'timed'): string => {
+  const getSectionDescription = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'): string => {
     switch (type) {
       case 'regular':
         return 'Exercise for exercise. Follow the sets and reps specified.';
@@ -1306,6 +1392,10 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         return 'Track the total amount of rounds completed in the allocated time.';
       case 'timed':
         return 'Track total duration until completion of assigned rounds.';
+      case 'circuits':
+        return 'Complete all exercises in the circuit for the specified number of rounds. One set per exercise.';
+      case 'auxiliary':
+        return 'Warm up, cool down, or mobility exercises. Follow the sets and reps specified.';
       default:
         return '';
     }
@@ -2031,7 +2121,62 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                             </Tooltip>
                           </CardTitle>
                           <div className="flex items-center gap-2">
-                            {(section.type === 'amrap' || section.type === 'timed') && (
+                            {section.type === 'auxiliary' && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <span className="font-medium">Category</span>
+                                <Select
+                                  value={section.category || ''}
+                                  onValueChange={(value) => {
+                                    onDirtyChange?.();
+                                    setWorkoutSchema((prev) => ({
+                                      ...prev,
+                                      sections: prev.sections.map((sec) => {
+                                        if (sec.id === section.id) {
+                                          return {
+                                            ...sec,
+                                            category: value as 'warmup' | 'cooldown' | 'mobility',
+                                          };
+                                        }
+                                        return sec;
+                                      }),
+                                    }));
+
+                                    // Clear missing-config validation when category is selected
+                                    if (value) {
+                                      setSectionValidationErrors((prev) => {
+                                        const existing = prev[section.id];
+                                        if (!existing || !existing.missingConfig) return prev;
+                                        const nextSection = { ...existing };
+                                        delete nextSection.missingConfig;
+                                        const next: SectionValidationErrors = { ...prev };
+                                        if (Object.keys(nextSection).length === 0) {
+                                          delete next[section.id];
+                                        } else {
+                                          next[section.id] = nextSection;
+                                        }
+                                        return next;
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger
+                                    className={cn(
+                                      'h-7 w-32 text-[11px]',
+                                      sectionValidationErrors[section.id]?.missingConfig &&
+                                        'border-destructive focus-visible:ring-destructive'
+                                    )}
+                                  >
+                                    <SelectValue placeholder="Select..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="warmup">Warm up</SelectItem>
+                                    <SelectItem value="cooldown">Cool down</SelectItem>
+                                    <SelectItem value="mobility">Mobility</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            {(section.type === 'amrap' || section.type === 'timed' || section.type === 'circuits') && (
                               <div className="flex items-center gap-2 text-xs">
                                 <span className="font-medium">
                                   {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
@@ -2277,13 +2422,13 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                                       exerciseIndex < section.exercises.length - 1 && (
                                         <>
                                           {isLinkedToNext ? (
-                                            <div className="relative flex items-center justify-center bg-sidebar border-x py-1">
+                                            <div className="relative flex items-center justify-center bg-background border-x py-1">
                                               <Separator className="absolute w-full" />
                                               <Button
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
-                                                className="gap-1.5 bg-sidebar z-10 text-xs h-7 px-2"
+                                                className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
                                                 onClick={() =>
                                                   handleSupersetUnlink(section.id, exerciseIndex)
                                                 }
@@ -2398,6 +2543,10 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="center">
+                    <DropdownMenuItem onClick={() => handleSectionSelect('auxiliary')}>
+                      <Sparkles className="mr-2 size-4 text-foreground" />
+                      Warm up / Cool down / Mobility
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
                       <Dumbbell className="mr-2 size-4 text-foreground" />
                       Regular
@@ -2409,6 +2558,10 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                     <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
                       <Timer className="mr-2 size-4 text-foreground" />
                       Timed
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
+                      <Repeat className="mr-2 size-4 text-foreground" />
+                      Circuits
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -159,7 +159,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
     if (option === 'custom') {
       // Navigate to repeat options modal
       // The mode will only change to 'custom' if they click the tick in the modal
-      router.push({ pathname: '/repeat-options-modal', params: {} });
+      router.push({ pathname: '/modals/calendar/repeat-options-modal', params: {} });
     } else {
       setRepeatMode('never');
       setRepeatData(null);
@@ -168,7 +168,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
   };
 
   const handleEditRepeat = () => {
-    router.push({ pathname: '/repeat-options-modal', params: {} });
+    router.push({ pathname: '/modals/calendar/repeat-options-modal', params: {} });
   };
 
   const repeatDropdownOptions: DropdownMenuOption[] = [
@@ -184,14 +184,14 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
 
   const handleOpenClientModal = () => {
     router.push({
-      pathname: '/search-client-modal',
+      pathname: '/modals/client/search-client-modal',
       params: {},
     });
   };
 
   const handleOpenTypeModal = () => {
     router.push({
-      pathname: '/session-type-modal',
+      pathname: '/modals/calendar/session-type-modal',
       params: {},
     });
   };
