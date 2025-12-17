@@ -61,11 +61,11 @@ export default function RootLayout() {
         <ThemePreferenceProvider>
           <TranslationProvider>
             <AppViewProvider>
-              <ModalCallbacksProvider>
-                <TrainingOverlayProvider>
-                  <RootLayoutNav />
-                </TrainingOverlayProvider>
-              </ModalCallbacksProvider>
+                <ModalCallbacksProvider>
+                  <TrainingOverlayProvider>
+                    <RootLayoutNav />
+                  </TrainingOverlayProvider>
+                </ModalCallbacksProvider>
             </AppViewProvider>
           </TranslationProvider>
         </ThemePreferenceProvider>
@@ -83,9 +83,9 @@ function RootLayoutNav() {
   const shouldHideStatusBar = useMemo(() => {
     const currentRoute = segments[segments.length - 1] || '';
     const hideStatusBarRoutes = [
-      'camera',
-      'document-preview',
-      'video-preview',
+      'camera/camera',
+      'chats/document-preview',
+      'chats/video-preview',
     ];
     return hideStatusBarRoutes.includes(currentRoute);
   }, [segments]);
@@ -132,7 +132,7 @@ function RootLayoutNav() {
         <Stack.Screen name="client/[id]/training-calendar" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]/goals-injuries" options={{ headerShown: false }} />
         <Stack.Screen
-          name="client/edit-client-details-modal"
+          name="modals/client/edit-client-details-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -154,7 +154,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="language-modal"
+          name="modals/settings/language-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -165,7 +165,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="units-modal"
+          name="modals/settings/units-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -176,7 +176,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="palette-modal"
+          name="modals/settings/palette-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -187,7 +187,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="select-date-modal"
+          name="modals/calendar/select-date-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -201,7 +201,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="search-client-modal"
+          name="modals/client/search-client-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -212,7 +212,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="session-type-modal"
+          name="modals/calendar/session-type-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -223,7 +223,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="repeat-options-modal"
+          name="modals/calendar/repeat-options-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -234,7 +234,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="number-select-modal"
+          name="modals/shared/number-select-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -245,7 +245,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="add-session-from-library-modal"
+          name="modals/files/add-file-modal"
           options={{
             presentation: 'modal',
             headerShown: false,
@@ -255,30 +255,18 @@ function RootLayoutNav() {
             }),
           }}
         />
-        <Stack.Screen
-          name="add-exercise-modal"
+        {/* Profile is now a tab, so profile/profile route is no longer needed */}
+        {/* <Stack.Screen
+          name="profile/profile"
           options={{
-            presentation: 'modal',
+            presentation: 'card',
             headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
+            animation: 'slide_from_right',
+            animationDuration: 300,
           }}
-        />
+        /> */}
         <Stack.Screen
-          name="add-circuit-modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
-          }}
-        />
-        <Stack.Screen
-          name="profile"
+          name="personal-details"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -287,7 +275,18 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="camera"
+          name="modals/personal-details/edit-personal-details-modal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            ...(Platform.OS === 'android' && {
+              animation: 'slide_from_bottom',
+              gestureDirection: 'vertical',
+            }),
+          }}
+        />
+        <Stack.Screen
+          name="camera/camera"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -296,7 +295,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="document-preview"
+          name="chats/document-preview"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -305,7 +304,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="message-image-preview"
+          name="chats/message-image-preview"
           options={{
             presentation: 'card',
             headerShown: false,
@@ -314,7 +313,7 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="video-preview"
+          name="chats/video-preview"
           options={{
             presentation: 'card',
             headerShown: false,

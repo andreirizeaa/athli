@@ -789,7 +789,7 @@ export default function ChatDetailScreen() {
 
   const handleDocumentPress = (document: import('@/services/chats-service').DocumentAttachment) => {
     router.push({
-      pathname: '/document-preview',
+      pathname: '/chats/document-preview',
       params: {
         uri: document.uri,
         name: document.name,
@@ -810,7 +810,7 @@ export default function ChatDetailScreen() {
     messageTimestamp?: Date
   ) => {
     router.push({
-      pathname: '/message-image-preview',
+      pathname: '/chats/message-image-preview',
       params: {
         images: JSON.stringify(images),
         senderName: senderName,
@@ -827,7 +827,7 @@ export default function ChatDetailScreen() {
     messageTimestamp?: Date
   ) => {
     router.push({
-      pathname: '/video-preview',
+      pathname: '/chats/video-preview',
       params: {
         uri: video.uri,
         duration: video.duration.toString(),

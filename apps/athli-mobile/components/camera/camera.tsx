@@ -320,7 +320,7 @@ export default function Camera() {
           if (!asset.uri) return;
           // Navigate to video preview screen
           router.push({
-            pathname: '/video-preview',
+            pathname: '/chats/video-preview',
             params: {
               uri: asset.uri,
               duration: (asset.duration || 0).toString(),
@@ -517,7 +517,7 @@ export default function Camera() {
               setIsRecording(false);
               // Navigate to video preview screen
               router.push({
-                pathname: '/video-preview',
+                pathname: '/chats/video-preview',
                 params: {
                   uri: videoUri,
                   duration: duration.toString(),
