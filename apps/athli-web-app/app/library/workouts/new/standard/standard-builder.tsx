@@ -1,12 +1,19 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Timer, Trash2 } from 'lucide-react';
+import { Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
 import { toast } from 'sonner';
@@ -39,15 +46,17 @@ type ExerciseWithSuperset = Exercise & {
   supersetGroupId?: string | null;
   instanceId: string;
   sets?: SetData[];
+  alternatives?: string[]; // Array of exercise IDs for alternative exercises
 };
 
 type WorkoutSchema = {
   sections: Array<{
     id: string;
-    type: 'regular' | 'amrap' | 'timed';
+    type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
     exercises?: ExerciseWithSuperset[];
     roundDurationSec?: number;
     targetRounds?: number;
+    category?: 'warmup' | 'cooldown' | 'mobility';
   }>;
 };
 
@@ -122,38 +131,87 @@ const buildWorkoutPayload = (
     return parts.length > 0 ? parts : null;
   };
 
-  const mapSetDataToPayload = (set: SetData): SetPayload => {
-    const isDropset = set.type === 'dropset';
+const mapSetDataToPayload = (
+  exerciseType: ExerciseType,
+  set: SetData
+): SetPayload => {
+  const base = {
+    setNumber: set.setNumber,
+    restSec: set.rest ? parseNumberOrNull(set.rest) : null,
+  } as const;
 
-    if (isDropset) {
-      const weightStages = parseStages(set.weight);
-      const repStages = parseStages(set.reps);
+  // distance_duration is always non-dropset, with either distance or durationSec
+  if (exerciseType === 'distance_duration') {
+    return {
+      ...base,
+      exerciseType: 'distance_duration',
+      distance: set.distance ? parseNumberOrNull(set.distance) ?? undefined : undefined,
+      durationSec: set.duration ? parseNumberOrNull(set.duration) ?? undefined : undefined,
+    };
+  }
 
+  // Helper to parse "10-8-6" style strings into numbers
+  const parseStages = (value?: string): number[] => {
+    if (!value) return [];
+    return value
+      .split('-')
+      .map((part) => Number(part.trim()))
+      .filter((n) => !Number.isNaN(n));
+  };
+
+  // Dropset handling – presence of dropset implies dropset semantics
+  if (set.type === 'dropset') {
+    const repStages = parseStages(set.reps);
+    const weightStages = exerciseType === 'weight_reps' ? parseStages(set.weight) : [];
+
+    const stages = Array.from(
+      { length: Math.max(repStages.length, weightStages.length) },
+      (_v, index) => {
+        const stage: { weight?: number; reps?: number } = {};
+        if (repStages[index] != null) stage.reps = repStages[index];
+        if (weightStages[index] != null) stage.weight = weightStages[index];
+        return stage;
+      }
+    ).filter((s) => s.reps != null || s.weight != null);
+
+    if (exerciseType === 'weight_reps') {
       return {
-        setNumber: set.setNumber,
-        isDropset: true,
-        weight: null,
-        reps: null,
-        distance: parseNumberOrNull(set.distance),
-        durationSec: parseNumberOrNull(set.duration),
-        restSec: parseNumberOrNull(set.rest),
-        weightStages,
-        repStages,
+        ...base,
+        exerciseType: 'weight_reps',
+        weight: parseNumberOrNull(set.weight) ?? 0,
+        reps: parseNumberOrNull(set.reps) ?? 0,
+        dropset: { stages },
       };
     }
 
+    // reps-only dropset
     return {
-      setNumber: set.setNumber,
-      isDropset: false,
-      weight: parseNumberOrNull(set.weight),
-      reps: parseNumberOrNull(set.reps),
-      distance: parseNumberOrNull(set.distance),
-      durationSec: parseNumberOrNull(set.duration),
-      restSec: parseNumberOrNull(set.rest),
-      weightStages: null,
-      repStages: null,
+      ...base,
+      exerciseType: 'reps',
+      reps: parseNumberOrNull(set.reps) ?? 0,
+      dropset: {
+        stages: stages.map((s) => ({ reps: s.reps })),
+      },
     };
+  }
+
+  // Non-dropset sets
+  if (exerciseType === 'weight_reps') {
+    return {
+      ...base,
+      exerciseType: 'weight_reps',
+      weight: parseNumberOrNull(set.weight) ?? 0,
+      reps: parseNumberOrNull(set.reps) ?? 0,
+    };
+  }
+
+  // reps-only non-dropset
+  return {
+    ...base,
+    exerciseType: 'reps',
+    reps: parseNumberOrNull(set.reps) ?? 0,
   };
+};
 
   const sections: WorkoutSectionPayload[] = workoutSchema.sections.map((section) => {
     if (section.type === 'regular') {
@@ -164,7 +222,10 @@ const buildWorkoutPayload = (
           id: exercise.exerciseId,
           name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
-          sets: (exercise.sets || []).map(mapSetDataToPayload),
+          sets: (exercise.sets || []).map((set) =>
+            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)
+          ),
+          alternatives: exercise.alternatives || [],
         }));
 
         const isSuperset = mapped.length > 1;
@@ -183,21 +244,124 @@ const buildWorkoutPayload = (
     }
 
     if (section.type === 'amrap') {
-      const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
-        id: exercise.exerciseId ?? exercise.id,
-        name: exercise.name,
-        exerciseType: exercise.exerciseType,
-        weight: exercise.weight ?? null,
-        reps: exercise.reps ?? null,
-        distance: exercise.distance ?? null,
-        durationSec: exercise.durationSec ?? null,
-        restSec: exercise.restSec ?? null,
-      }));
+      const exercises: RoundExercisePayload[] = (section.exercises || []).map(
+        (exercise: any) => {
+          const base = {
+            id: exercise.exerciseId ?? exercise.id,
+            name: exercise.name,
+            restSec: exercise.restSec ?? null,
+          } as const;
+
+          if (exercise.exerciseType === 'weight_reps') {
+            return {
+              ...base,
+              exerciseType: 'weight_reps' as const,
+              weight: Number(exercise.weight),
+              reps: Number(exercise.reps),
+            };
+          }
+
+          if (exercise.exerciseType === 'reps') {
+            return {
+              ...base,
+              exerciseType: 'reps' as const,
+              reps: Number(exercise.reps),
+            };
+          }
+
+          return {
+            ...base,
+            exerciseType: 'distance_duration' as const,
+            distance:
+              exercise.distance != null ? Number(exercise.distance) : undefined,
+            durationSec:
+              exercise.durationSec != null
+                ? Number(exercise.durationSec)
+                : undefined,
+          };
+        }
+      );
 
       return {
         id: section.id,
         type: 'amrap',
         durationSec: section.roundDurationSec || 0,
+        exercises,
+      };
+    }
+
+    if (section.type === 'circuits') {
+      const groups = groupExercisesBySupersetForPayload(
+        section.exercises || []
+      );
+
+      const exercises: CircuitExerciseGroupPayload[] = groups.map((group) => {
+        const mapped = group.map<CircuitExercisePayload>((exercise) => {
+          const firstSet =
+            (exercise.sets && exercise.sets[0]) || {
+              setNumber: 1,
+              type: 'normal',
+              reps: '0',
+              weight: '0',
+              rest: '0',
+            };
+
+          return {
+            id: exercise.exerciseId,
+            name: exercise.name,
+            exerciseType: exercise.exerciseType as ExerciseType,
+            set: mapSetDataToPayload(
+              exercise.exerciseType as ExerciseType,
+              firstSet
+            ),
+            alternatives: exercise.alternatives || [],
+          };
+        });
+
+        const isSuperset = mapped.length > 1;
+
+        return {
+          isSuperset,
+          exercises: mapped,
+        };
+      });
+
+      return {
+        id: section.id,
+        type: 'circuits',
+        targetRounds: section.targetRounds || 0,
+        exercises,
+      };
+    }
+
+    if (section.type === 'auxiliary') {
+      const groups = groupExercisesBySupersetForPayload(
+        section.exercises || []
+      );
+
+      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
+        const mapped = group.map<RegularExercisePayload>((exercise) => ({
+          id: exercise.exerciseId,
+          name: exercise.name,
+          exerciseType: exercise.exerciseType as ExerciseType,
+          sets: (exercise.sets || []).map((set) =>
+            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)
+          ),
+          alternatives: exercise.alternatives || [],
+        }));
+
+        const isSuperset = mapped.length > 1;
+
+        return {
+          isSuperset,
+          exercises: mapped,
+        };
+      });
+
+      return {
+        id: section.id,
+        type: 'auxiliary',
+        category: section.category || 'warmup',
         exercises,
       };
     }
@@ -540,6 +704,18 @@ export const StandardBuilder = ({
         }
       }
 
+      if (section.type === 'circuits') {
+        if (!section.targetRounds || section.targetRounds <= 0) {
+          sectionErrors.missingConfig = true;
+        }
+      }
+
+      if (section.type === 'auxiliary') {
+        if (!section.category) {
+          sectionErrors.missingConfig = true;
+        }
+      }
+
       if (!section.exercises || section.exercises.length === 0) {
         sectionErrors.emptyExercises = true;
       }
@@ -629,7 +805,7 @@ export const StandardBuilder = ({
     }
   }, [saveSignal]);
 
-  const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed') => {
+  const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary') => {
     // Preserve current scroll position in the middle content column
     if (contentScrollRef.current) {
       pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
@@ -638,9 +814,13 @@ export const StandardBuilder = ({
     const newSection = {
       id: `sec_${type}_${Date.now()}`,
       type,
-      // All section types use `exercises` for the builder UI. For AMRAP/Timed,
-      // these will later be mapped to flat round exercises in the payload.
+      // All section types use `exercises` for the builder UI. For AMRAP/Timed/Circuits/Auxiliary,
+      // these will later be mapped appropriately in the payload.
       exercises: [] as ExerciseWithSuperset[],
+      ...(type === 'amrap' && { roundDurationSec: undefined }),
+      ...(type === 'timed' && { targetRounds: undefined }),
+      ...(type === 'circuits' && { targetRounds: undefined }),
+      ...(type === 'auxiliary' && { category: undefined }),
     };
 
     onDirtyChange?.();
@@ -715,7 +895,7 @@ export const StandardBuilder = ({
     }));
   };
 
-  const getSectionDescription = (type: 'regular' | 'amrap' | 'timed'): string => {
+  const getSectionDescription = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'): string => {
     switch (type) {
       case 'regular':
         return 'Exercise for exercise. Follow the sets and reps specified.';
@@ -723,6 +903,10 @@ export const StandardBuilder = ({
         return 'Track the total amount of rounds completed in the allocated time.';
       case 'timed':
         return 'Track total duration until completion of assigned rounds.';
+      case 'circuits':
+        return 'Complete all exercises in the circuit for the specified number of rounds. One set per exercise.';
+      case 'auxiliary':
+        return 'Warm up, cool down, or mobility exercises. Follow the sets and reps specified.';
       default:
         return '';
     }
@@ -1142,7 +1326,62 @@ export const StandardBuilder = ({
                           </Tooltip>
                         </CardTitle>
                         <div className="flex items-center gap-2">
-                          {(section.type === 'amrap' || section.type === 'timed') && (
+                          {section.type === 'auxiliary' && (
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="font-medium">Category</span>
+                              <Select
+                                value={section.category || ''}
+                                onValueChange={(value) => {
+                                  onDirtyChange?.();
+                                  setWorkoutSchema((prev) => ({
+                                    ...prev,
+                                    sections: prev.sections.map((sec) => {
+                                      if (sec.id === section.id) {
+                                        return {
+                                          ...sec,
+                                          category: value as 'warmup' | 'cooldown' | 'mobility',
+                                        };
+                                      }
+                                      return sec;
+                                    }),
+                                  }));
+
+                                  // Clear missing-config validation when category is selected
+                                  if (value) {
+                                    setSectionValidationErrors((prev) => {
+                                      const existing = prev[section.id];
+                                      if (!existing || !existing.missingConfig) return prev;
+                                      const nextSection = { ...existing };
+                                      delete nextSection.missingConfig;
+                                      const next: SectionValidationErrors = { ...prev };
+                                      if (Object.keys(nextSection).length === 0) {
+                                        delete next[section.id];
+                                      } else {
+                                        next[section.id] = nextSection;
+                                      }
+                                      return next;
+                                    });
+                                  }
+                                }}
+                              >
+                                <SelectTrigger
+                                  className={cn(
+                                    'h-7 w-32 text-[11px]',
+                                    sectionValidationErrors[section.id]?.missingConfig &&
+                                      'border-destructive focus-visible:ring-destructive'
+                                  )}
+                                >
+                                  <SelectValue placeholder="Select..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="warmup">Warm up</SelectItem>
+                                  <SelectItem value="cooldown">Cool down</SelectItem>
+                                  <SelectItem value="mobility">Mobility</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                          {(section.type === 'amrap' || section.type === 'timed' || section.type === 'circuits') && (
                             <div className="flex items-center gap-2 text-xs">
                               <span className="font-medium">
                                 {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
@@ -1388,13 +1627,13 @@ export const StandardBuilder = ({
                                     exerciseIndex < section.exercises.length - 1 && (
                                       <>
                                         {isLinkedToNext ? (
-                                          <div className="relative flex items-center justify-center bg-sidebar border-x py-1">
+                                          <div className="relative flex items-center justify-center bg-background border-x py-1">
                                             <Separator className="absolute w-full" />
                                             <Button
                                               type="button"
                                               variant="outline"
                                               size="sm"
-                                              className="gap-1.5 bg-sidebar z-10 text-xs h-7 px-2"
+                                              className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
                                               onClick={() =>
                                                 handleSupersetUnlink(section.id, exerciseIndex)
                                               }
@@ -1475,6 +1714,10 @@ export const StandardBuilder = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => handleSectionSelect('auxiliary')}>
+                      <Sparkles className="mr-2 size-4 text-foreground" />
+                      Warm up / Cool down / Mobility
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
                       <Dumbbell className="mr-2 size-4 text-foreground" />
                       Regular
@@ -1486,6 +1729,10 @@ export const StandardBuilder = ({
                     <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
                       <Timer className="mr-2 size-4 text-foreground" />
                       Timed
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
+                      <Repeat className="mr-2 size-4 text-foreground" />
+                      Circuits
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1509,6 +1756,10 @@ export const StandardBuilder = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center">
+                  <DropdownMenuItem onClick={() => handleSectionSelect('auxiliary')}>
+                    <Sparkles className="mr-2 size-4 text-foreground" />
+                    Warm up / Cool down / Mobility
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
                     <Dumbbell className="mr-2 size-4 text-foreground" />
                     Regular
@@ -1520,6 +1771,10 @@ export const StandardBuilder = ({
                   <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
                     <Timer className="mr-2 size-4 text-foreground" />
                     Timed
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
+                    <Repeat className="mr-2 size-4 text-foreground" />
+                    Circuits
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

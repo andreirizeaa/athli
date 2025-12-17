@@ -1,17 +1,77 @@
 export type ExerciseType = 'weight_reps' | 'reps' | 'distance_duration';
 
-export type SetPayload = {
-  setNumber: number;
-  isDropset: boolean;
-  weight: number | null;
-  reps: number | null;
-  distance: number | null;
-  durationSec: number | null;
+/**
+ * Common rest field shared by all exercise metric variants.
+ */
+type BaseMetrics = {
   restSec: number | null;
-  // For dropsets, these contain one entry per stage; for normal sets they are null.
-  weightStages: number[] | null;
-  repStages: number[] | null;
 };
+
+type WeightRepsMetrics = BaseMetrics & {
+  exerciseType: 'weight_reps';
+  weight: number;
+  reps: number;
+};
+
+type RepsMetrics = BaseMetrics & {
+  exerciseType: 'reps';
+  reps: number;
+};
+
+type DistanceDurationMetrics = BaseMetrics & {
+  exerciseType: 'distance_duration';
+  distance?: number;
+  durationSec?: number;
+};
+
+/**
+ * Round-level exercise metrics are now a discriminated union keyed
+ * by `exerciseType` so invalid combinations are impossible at the type level.
+ */
+export type RoundExercisePayload = {
+  id: string;
+  name: string;
+} & (WeightRepsMetrics | RepsMetrics | DistanceDurationMetrics);
+
+/**
+ * Dropset representation – each stage may specify weight and/or reps.
+ * Presence of `dropset` implies the set is a dropset; there is no
+ * separate `isDropset` flag or parallel arrays.
+ */
+export type DropsetStage = {
+  weight?: number;
+  reps?: number;
+};
+
+type BaseSet = {
+  setNumber: number;
+  restSec: number | null;
+};
+
+type WeightRepsSet = BaseSet & {
+  exerciseType: 'weight_reps';
+  weight: number;
+  reps: number;
+  dropset?: {
+    stages: DropsetStage[];
+  };
+};
+
+type RepsSet = BaseSet & {
+  exerciseType: 'reps';
+  reps: number;
+  dropset?: {
+    stages: DropsetStage[];
+  };
+};
+
+type DistanceDurationSet = BaseSet & {
+  exerciseType: 'distance_duration';
+  distance?: number;
+  durationSec?: number;
+};
+
+export type SetPayload = WeightRepsSet | RepsSet | DistanceDurationSet;
 
 // Regular section exercise (with sets)
 export type RegularExercisePayload = {
@@ -19,21 +79,12 @@ export type RegularExercisePayload = {
   name: string;
   exerciseType: ExerciseType;
   sets: SetPayload[];
+  alternatives?: string[]; // Array of exercise IDs for alternative exercises
 };
 
-// AMRAP / Timed round exercise (no sets, flat metrics only)
-export type RoundExercisePayload = {
-  id: string;
-  name: string;
-  exerciseType: ExerciseType;
-  weight: number | null;
-  reps: number | null;
-  distance: number | null;
-  durationSec: number | null;
-  restSec: number | null;
-};
+export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
 
-export type SectionType = 'regular' | 'amrap' | 'timed';
+export type AuxiliaryCategory = 'warmup' | 'cooldown' | 'mobility';
 
 export type ExerciseGroupPayload = {
   isSuperset: boolean;
@@ -63,10 +114,40 @@ export type TimedSectionPayload = {
   exercises: RoundExercisePayload[];
 };
 
+/**
+ * Circuits: exactly one set per exercise. At the payload level we
+ * model this explicitly as `set` instead of `sets[]`.
+ */
+export type CircuitExercisePayload = Omit<RegularExercisePayload, 'sets'> & {
+  set: SetPayload;
+};
+
+export type CircuitExerciseGroupPayload = {
+  isSuperset: boolean;
+  exercises: CircuitExercisePayload[];
+};
+
+export type CircuitsSectionPayload = {
+  id: string;
+  type: 'circuits';
+  targetRounds: number;
+  exercises: CircuitExerciseGroupPayload[];
+};
+
+export type AuxiliarySectionPayload = {
+  id: string;
+  type: 'auxiliary';
+  category: AuxiliaryCategory; // 'warmup' | 'cooldown' | 'mobility'
+  // Auxiliary sections act like regular sections with sets
+  exercises: ExerciseGroupPayload[];
+};
+
 export type WorkoutSectionPayload =
   | RegularSectionPayload
   | AmrapSectionPayload
-  | TimedSectionPayload;
+  | TimedSectionPayload
+  | CircuitsSectionPayload
+  | AuxiliarySectionPayload;
 
 export type WorkoutProgramPayload = {
   title: string;
