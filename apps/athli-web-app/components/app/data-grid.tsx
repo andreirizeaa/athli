@@ -19,6 +19,9 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Spinner } from '@/components/ui/spinner';
 import { Card } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
 import { EditColumnsSidebar } from '@/components/app/edit-columns-sidebar';
@@ -34,6 +37,26 @@ import {
   Download,
   Settings,
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 
 export type ColumnDefinition<T = any> = {
   id: string;
@@ -63,6 +86,9 @@ export type FilterDefinition<T = any> = {
   options: Array<{ value: string; label: string }>;
   getFilterValue?: (row: T) => string | null;
   defaultValue?: string | null;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  multiSelect?: boolean;
 };
 
 export type DataGridProps<T = any> = {
@@ -93,6 +119,7 @@ export type DataGridProps<T = any> = {
   stickyFirstColumn?: boolean;
   firstColumnWidth?: string;
   firstColumnId?: string;
+  hideFirstColumnBorder?: boolean;
   renderFirstColumn?: (row: T, isSelected: boolean) => React.ReactNode;
   renderFirstColumnHeader?: (props: {
     isSorted: boolean;
@@ -111,6 +138,12 @@ export type DataGridProps<T = any> = {
   selectionActions?: React.ReactNode;
   gridPadding?: boolean;
   compactPagination?: boolean;
+  filterBarActions?: React.ReactNode;
+  showLastColumnDivider?: boolean;
+  enableRowReordering?: boolean;
+  isReorderMode?: boolean;
+  onReorder?: (newData: T[]) => void;
+  fixedBottomRowFilter?: (row: T) => boolean;
 };
 
 const isFuzzyMatch = (text: string, query: string): boolean => {
@@ -178,6 +211,78 @@ const CellTextWithTooltip = ({ text }: { text: string }) => {
   return textSpan;
 };
 
+// Sortable Row Component for drag and drop
+const SortableTableRow = <T extends Record<string, any>>({
+  row,
+  rowId,
+  isSelected,
+  rowHeight,
+  onRowClick,
+  onRowKeyDown,
+  stickyFirstColumn,
+  firstColumnWidth,
+  hideFirstColumnBorder,
+  renderFirstColumn,
+  filteredColumnOrder,
+  columns,
+  showLastColumnDivider,
+  children,
+}: {
+  row: T;
+  rowId: string;
+  isSelected: boolean;
+  rowHeight: string;
+  onRowClick?: (row: T, event: React.MouseEvent<HTMLTableRowElement>) => void;
+  onRowKeyDown?: (row: T, event: React.KeyboardEvent<HTMLTableRowElement>) => void;
+  stickyFirstColumn: boolean;
+  firstColumnWidth: string;
+  hideFirstColumnBorder: boolean;
+  renderFirstColumn?: (row: T, isSelected: boolean) => React.ReactNode;
+  filteredColumnOrder: string[];
+  columns: ColumnDefinition<T>[];
+  showLastColumnDivider: boolean;
+  children: React.ReactNode;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: rowId });
+
+  const style = {
+    transform: transform ? `translate3d(0, ${transform.y}px, 0)` : undefined,
+    transition,
+    opacity: isDragging ? 0 : 1,
+  };
+
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      key={rowId}
+      data-row-id={rowId}
+      role={onRowClick ? 'button' : undefined}
+      tabIndex={onRowClick ? 0 : undefined}
+      aria-label={onRowClick ? `Open ${rowId}` : undefined}
+      onClick={onRowClick ? (e) => onRowClick(row, e) : undefined}
+      onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
+      className={cn(
+        isSelected && '!bg-muted',
+        (onRowClick || stickyFirstColumn) && 'cursor-pointer group',
+        '[&:hover_td]:bg-muted',
+        '!transition-none'
+      )}
+    >
+      {children}
+    </TableRow>
+  );
+};
+
 export function DataGrid<T extends Record<string, any>>({
   data,
   columns,
@@ -206,6 +311,7 @@ export function DataGrid<T extends Record<string, any>>({
   stickyFirstColumn = false,
   firstColumnWidth = '350px',
   firstColumnId,
+  hideFirstColumnBorder = false,
   renderFirstColumn,
   renderFirstColumnHeader,
   compactMode = false,
@@ -216,6 +322,12 @@ export function DataGrid<T extends Record<string, any>>({
   selectionActions,
   gridPadding = false,
   compactPagination = false,
+  filterBarActions,
+  showLastColumnDivider = false,
+  enableRowReordering = false,
+  isReorderMode = false,
+  onReorder,
+  fixedBottomRowFilter,
 }: DataGridProps<T>) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -223,7 +335,7 @@ export function DataGrid<T extends Record<string, any>>({
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
   const [isEditColumnsOpen, setIsEditColumnsOpen] = useState<boolean>(false);
-  const [filterValues, setFilterValues] = useState<Record<string, string | null>>({});
+  const [filterValues, setFilterValues] = useState<Record<string, string | string[] | null>>({});
   const [columnOrder, setColumnOrder] = useState<string[]>(
     defaultColumnOrder || columns.map((col) => col.id)
   );
@@ -233,13 +345,27 @@ export function DataGrid<T extends Record<string, any>>({
   const [isPageLoading, setIsPageLoading] = useState<boolean>(false);
   const [isInitializing, setIsInitializing] = useState<boolean>(enableEditColumns);
   const [pagesFullySelected, setPagesFullySelected] = useState<Set<number>>(new Set());
+  const [filterSearchQueries, setFilterSearchQueries] = useState<Record<string, string>>({});
   const filtersInitializedRef = useRef(false);
+
+  // Setup DnD sensors for row reordering
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
   const previousFiltersRef = useRef<string>('');
   const tableBodyRef = useRef<HTMLTableSectionElement>(null);
   const pageDropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
   const scrollableContainerRef = useRef<HTMLDivElement>(null);
   const [pageDropdownWidth, setPageDropdownWidth] = useState<number | undefined>(undefined);
   const [overlayHeight, setOverlayHeight] = useState<number | undefined>(undefined);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const handlePageDropdownTriggerRef = (node: HTMLButtonElement | null) => {
     pageDropdownTriggerRef.current = node;
@@ -357,9 +483,15 @@ export function DataGrid<T extends Record<string, any>>({
             : (row[filter.id] as string);
           // Support comma-separated values (for arrays like muscle groups)
           if (typeof rowValue === 'string' && rowValue.includes(',')) {
-            return rowValue.split(',').includes(filterValue);
+            if (typeof filterValue === 'string') {
+              return rowValue.split(',').includes(filterValue);
+            }
+            return false;
           }
-          return rowValue === filterValue;
+          if (typeof filterValue === 'string') {
+            return rowValue === filterValue;
+          }
+          return false;
         });
       }
     });
@@ -414,6 +546,14 @@ export function DataGrid<T extends Record<string, any>>({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  // Separate draggable rows from fixed bottom rows
+  const draggableRows = fixedBottomRowFilter
+    ? paginatedData.filter((row) => !fixedBottomRowFilter(row))
+    : paginatedData;
+  const fixedBottomRows = fixedBottomRowFilter
+    ? paginatedData.filter((row) => fixedBottomRowFilter(row))
+    : [];
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -545,7 +685,13 @@ export function DataGrid<T extends Record<string, any>>({
     }
   }, [selectedRowIds, paginatedData]);
 
-  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId));
+  const filteredColumnOrder = columnOrder.filter((colId) => {
+    // Exclude firstColumnId from regular column rendering when using stickyFirstColumn
+    if (stickyFirstColumn && firstColumnId && colId === firstColumnId) {
+      return false;
+    }
+    return visibleColumns.has(colId);
+  });
 
   const handleSort = (columnId: string, direction: 'asc' | 'desc') => {
     setSortColumn(columnId);
@@ -680,6 +826,28 @@ export function DataGrid<T extends Record<string, any>>({
     exportToCSV(csvData, exportFileName);
   };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id && onReorder) {
+      const oldIndex = draggableRows.findIndex((item) => getRowId(item) === active.id);
+      const newIndex = draggableRows.findIndex((item) => getRowId(item) === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedDraggable = arrayMove(draggableRows, oldIndex, newIndex);
+        // Combine reordered draggable rows with fixed bottom rows
+        const newData = [...reorderedDraggable, ...fixedBottomRows];
+        onReorder(newData);
+      }
+    }
+
+    setActiveId(null);
+  };
+
   const renderColumnHeader = (column: ColumnDefinition<T>) => {
     const currentIndex = columnOrder.indexOf(column.id);
     const isFirst = currentIndex === 0;
@@ -725,7 +893,7 @@ export function DataGrid<T extends Record<string, any>>({
         variant="ghost"
         className="flex items-center gap-2 h-full w-full justify-start rounded-none px-0 hover:bg-transparent"
       >
-        <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-accent">
+        <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground py-1">
           {column.icon && <div className="text-muted-foreground">{column.icon}</div>}
           {column.label}
         </span>
@@ -827,6 +995,9 @@ export function DataGrid<T extends Record<string, any>>({
     );
   }
 
+  // Check if toolbar has any content to show
+  const hasToolbarContent = enableSearch || filters.length > 0 || filterBarActions || enableEditColumns || enableExport;
+
   return (
     <div
       className={cn(
@@ -835,7 +1006,7 @@ export function DataGrid<T extends Record<string, any>>({
       )}
     >
       <div className="w-full flex-1 flex flex-col overflow-hidden">
-        {!compactMode && (
+        {!compactMode && hasToolbarContent && (
           <div className="w-full px-4 py-3 flex items-center justify-between gap-4 flex-shrink-0 relative">
             {selectionActions && selectedRowIds.size > 0 && (
               <Card className="absolute left-2 top-2 z-40 bg-background border-border py-0 px-0 rounded-md">
@@ -846,7 +1017,7 @@ export function DataGrid<T extends Record<string, any>>({
             )}
             <div className="flex items-center gap-4 flex-1">
               {enableSearch && (
-                <div className="relative w-[250px]">
+                <div className="relative w-[250px] px-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
@@ -870,9 +1041,127 @@ export function DataGrid<T extends Record<string, any>>({
             </div>
             <div className="flex items-center gap-2">
               {filters.map((filter) => {
-                const filterValue = filterValues[filter.id] || 'all';
-                const selectedOption = filter.options.find((opt) => opt.value === filterValues[filter.id]);
+                const filterValue = filterValues[filter.id];
+                const filterValueStr = Array.isArray(filterValue) 
+                  ? filterValue[0] || null 
+                  : filterValue || null;
+                const selectedOption = filterValueStr 
+                  ? filter.options.find((opt) => opt.value === filterValueStr)
+                  : null;
                 const displayValue = selectedOption ? selectedOption.label : 'All';
+                const filterSearchQuery = filterSearchQueries[filter.id] || '';
+                const filteredOptions = filter.searchable
+                  ? filter.options.filter((opt) =>
+                      opt.label.toLowerCase().includes(filterSearchQuery.toLowerCase())
+                    )
+                  : filter.options;
+
+                if (filter.multiSelect) {
+                  const selectedValues = Array.isArray(filterValues[filter.id])
+                    ? (filterValues[filter.id] as string[])
+                    : filterValues[filter.id]
+                    ? [filterValues[filter.id] as string]
+                    : [];
+                  
+                  return (
+                    <MultiAsyncSelect
+                      key={filter.id}
+                      options={filter.options}
+                      value={selectedValues}
+                      onValueChange={(values) => {
+                        setFilterValues((prev) => ({
+                          ...prev,
+                          [filter.id]: values.length > 0 ? values : null,
+                        }));
+                      }}
+                      placeholder={`${filter.label}...`}
+                      searchPlaceholder={filter.searchPlaceholder || 'Search...'}
+                      maxCount={3}
+                      clearText="Clear"
+                      closeText="Close"
+                      className="min-w-[200px]"
+                    />
+                  );
+                }
+                
+                if (filter.searchable) {
+                  return (
+                    <Popover key={filter.id}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="gap-2">
+                          {filter.icon}
+                          <span>
+                            {filter.label}: {displayValue}
+                          </span>
+                          <ChevronDown className="size-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-0" align="end">
+                        <Command>
+                          <CommandInput
+                            placeholder={filter.searchPlaceholder || 'Search...'}
+                            value={filterSearchQuery}
+                            onValueChange={(value) =>
+                              setFilterSearchQueries((prev) => ({
+                                ...prev,
+                                [filter.id]: value,
+                              }))
+                            }
+                          />
+                          <CommandList className="max-h-[300px] overflow-y-auto overflow-x-hidden">
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                onSelect={() => {
+                                  setFilterValues((prev) => ({
+                                    ...prev,
+                                    [filter.id]: null,
+                                  }));
+                                  setFilterSearchQueries((prev) => ({
+                                    ...prev,
+                                    [filter.id]: '',
+                                  }));
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 size-4',
+                                    filterValues[filter.id] === null ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                All
+                              </CommandItem>
+                              {filteredOptions.map((option) => (
+                                <CommandItem
+                                  key={option.value}
+                                  onSelect={() => {
+                                    setFilterValues((prev) => ({
+                                      ...prev,
+                                      [filter.id]: option.value,
+                                    }));
+                                    setFilterSearchQueries((prev) => ({
+                                      ...prev,
+                                      [filter.id]: '',
+                                    }));
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      'mr-2 size-4',
+                                      filterValues[filter.id] === option.value ? 'opacity-100' : 'opacity-0'
+                                    )}
+                                  />
+                                  {option.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  );
+                }
+
                 return (
                   <DropdownMenu key={filter.id}>
                     <DropdownMenuTrigger asChild>
@@ -884,9 +1173,9 @@ export function DataGrid<T extends Record<string, any>>({
                         <ChevronDown className="size-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuContent align="end" className="w-56 max-h-[300px] overflow-y-auto">
                       <DropdownMenuRadioGroup
-                        value={filterValue}
+                        value={typeof filterValue === 'string' ? filterValue : 'all'}
                         onValueChange={(value) =>
                           setFilterValues((prev) => ({
                             ...prev,
@@ -918,6 +1207,7 @@ export function DataGrid<T extends Record<string, any>>({
                   </DropdownMenu>
                 );
               })}
+              {filterBarActions}
               {enableEditColumns && (
                 <Button
                   variant="ghost"
@@ -971,8 +1261,41 @@ export function DataGrid<T extends Record<string, any>>({
         {compactMode && filters.length > 0 && (
           <div className="flex items-center gap-2 mb-4">
             {filters.map((filter) => {
-              const filterValue = filterValues[filter.id] || 'all';
-              const selectedOption = filter.options.find((opt) => opt.value === filterValues[filter.id]);
+              if (filter.multiSelect) {
+                const selectedValues = Array.isArray(filterValues[filter.id])
+                  ? (filterValues[filter.id] as string[])
+                  : filterValues[filter.id]
+                  ? [filterValues[filter.id] as string]
+                  : [];
+                
+                return (
+                  <MultiAsyncSelect
+                    key={filter.id}
+                    options={filter.options}
+                    value={selectedValues}
+                    onValueChange={(values) => {
+                      setFilterValues((prev) => ({
+                        ...prev,
+                        [filter.id]: values.length > 0 ? values : null,
+                      }));
+                    }}
+                    placeholder={`${filter.label}...`}
+                    searchPlaceholder={filter.searchPlaceholder || 'Search...'}
+                    maxCount={3}
+                    clearText="Clear"
+                    closeText="Close"
+                    className="min-w-[200px]"
+                  />
+                );
+              }
+              
+              const filterValue = filterValues[filter.id];
+              const filterValueStr = Array.isArray(filterValue) 
+                ? filterValue[0] || null 
+                : filterValue || null;
+              const selectedOption = filterValueStr 
+                ? filter.options.find((opt) => opt.value === filterValueStr)
+                : null;
               const displayValue = selectedOption ? selectedOption.label : 'All';
               return (
                 <DropdownMenu key={filter.id}>
@@ -985,9 +1308,9 @@ export function DataGrid<T extends Record<string, any>>({
                       <ChevronDown className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuContent align="end" className="w-56 max-h-[300px] overflow-y-auto">
                     <DropdownMenuRadioGroup
-                      value={filterValue}
+                      value={typeof filterValue === 'string' ? filterValue : 'all'}
                       onValueChange={(value) =>
                         setFilterValues((prev) => ({
                           ...prev,
@@ -1071,21 +1394,38 @@ export function DataGrid<T extends Record<string, any>>({
           <style
             dangerouslySetInnerHTML={{
               __html: `
-            tbody tr:hover td:first-child {
+            tbody tr:hover td:first-child,
+            tbody tr.group:hover td:first-child {
               background-color: hsl(var(--muted)) !important;
             }
             tbody tr[style*="background-color"] td:first-child {
+              background-color: hsl(var(--muted)) !important;
+            }
+            tbody tr:hover td.sticky.left-0,
+            tbody tr.group:hover td.sticky.left-0 {
               background-color: hsl(var(--muted)) !important;
             }
           `,
             }}
           />
           {paginatedData.length > 0 && (
-            <table
-              className="table-fixed border-separate border-spacing-0 w-full"
-              style={{ tableLayout: 'fixed', width: '100%' }}
-            >
-            <colgroup>
+            enableRowReordering && isReorderMode ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                modifiers={[restrictToVerticalAxis]}
+              >
+                <SortableContext
+                  items={draggableRows.map((row) => getRowId(row))}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <table
+                    className="table-fixed border-separate border-spacing-0 w-full"
+                    style={{ tableLayout: 'fixed', width: '100%' }}
+                  >
+                    <colgroup>
               {stickyFirstColumn && (
                 <col
                   style={{
@@ -1108,14 +1448,15 @@ export function DataGrid<T extends Record<string, any>>({
                   />
                 );
               })}
-            </colgroup>
-            <TableHeader className={cn('!bg-background')}>
+                    </colgroup>
+                    <TableHeader className={cn('!bg-background')}>
               <TableRow className="hover:bg-transparent h-10">
                 {stickyFirstColumn && renderFirstColumn && (
                   <TableHead
                     className={cn(
                       '!px-6 !py-0 h-10 !bg-background',
-                      'border-r border-b',
+                      !hideFirstColumnBorder && 'border-r',
+                      'border-b',
                       gridPadding && 'border-t-0'
                     )}
                     style={{
@@ -1178,86 +1519,754 @@ export function DataGrid<T extends Record<string, any>>({
                     ) : null}
                   </TableHead>
                 )}
-                {filteredColumnOrder.map((columnId) => {
+                {filteredColumnOrder.map((columnId, index) => {
                   const column = columns.find((col) => col.id === columnId);
                   if (!column) return null;
+                  const isLastColumn = index === filteredColumnOrder.length - 1;
+                  if (isLastColumn && showLastColumnDivider === true) {
+                    // Render last column with sticky positioning only when showLastColumnDivider is true
+                    const currentIndex = columnOrder.indexOf(column.id);
+                    const isFirst = currentIndex === 0;
+                    const isLast = currentIndex === columnOrder.length - 1;
+                    const isSorted = sortColumn === column.id;
+                    const isAscending = isSorted && sortDirection === 'asc';
+                    const isDescending = isSorted && sortDirection === 'desc';
+
+                    if (column.renderHeader) {
+                      return (
+                        <TableHead
+                          key={column.id}
+                          className={cn(
+                            '!px-6 !py-0 h-10 !bg-background sticky right-0 z-20',
+                            gridPadding ? 'border-b' : compactMode ? 'border-t border-b' : 'border-b',
+                            'border-l',
+                            column.width?.class || 'min-w-[130px]'
+                          )}
+                          style={{
+                            top: 0,
+                            backgroundColor: 'hsl(var(--background))',
+                            boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+                          }}
+                        >
+                          {column.renderHeader({
+                            isSorted,
+                            isAscending,
+                            isDescending,
+                            onSort: (direction) => handleSort(column.id, direction),
+                            onMoveColumn: (direction) => handleMoveColumn(column.id, direction),
+                            canMoveLeft: !isFirst,
+                            canMoveRight: !isLast,
+                          })}
+                        </TableHead>
+                      );
+                    }
+
+                    const headerWidth = column.width?.pixel || '130px';
+                    const headerButton = (
+                      <Button
+                        variant="ghost"
+                        className="flex items-center gap-2 h-full w-full justify-start rounded-none px-0 hover:bg-transparent"
+                      >
+                        <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground px-2 py-1">
+                          {column.icon && <div className="text-muted-foreground">{column.icon}</div>}
+                          {column.label}
+                        </span>
+                        {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+                        {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+                      </Button>
+                    );
+
+                    return (
+                      <TableHead
+                        key={column.id}
+                        className={cn(
+                          '!px-6 !py-0 h-10 !bg-background sticky right-0 z-20',
+                          gridPadding ? 'border-b' : compactMode ? 'border-t border-b' : 'border-b',
+                          'border-l',
+                          column.width?.class || 'min-w-[130px]'
+                        )}
+                        style={{
+                          top: 0,
+                          backgroundColor: 'hsl(var(--background))',
+                          boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+                        }}
+                      >
+                        <DropdownMenu>
+                          {column.tooltip ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DropdownMenuTrigger asChild>
+                                  {headerButton}
+                                </DropdownMenuTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                className="whitespace-normal break-words text-left"
+                                style={{ maxWidth: headerWidth }}
+                              >
+                                {column.tooltip}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <DropdownMenuTrigger asChild>
+                              {headerButton}
+                            </DropdownMenuTrigger>
+                          )}
+                          <DropdownMenuContent align="start">
+                            {column.sortable !== false && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => handleSort(column.id, 'asc')}
+                                  className={cn(isAscending && 'bg-accent')}
+                                >
+                                  <ArrowUpNarrowWide className="size-4 mr-2" />
+                                  <span className="flex-1">Sort ascending</span>
+                                  {isAscending && <Check className="ml-2 size-4" />}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleSort(column.id, 'desc')}
+                                  className={cn(isDescending && 'bg-accent')}
+                                >
+                                  <ArrowDownWideNarrow className="size-4 mr-2" />
+                                  <span className="flex-1">Sort descending</span>
+                                  {isDescending && <Check className="ml-2 size-4" />}
+                                </DropdownMenuItem>
+                                {isSorted && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => {
+                                      setSortColumn(null);
+                                      setSortDirection(null);
+                                    }}>
+                                      <X className="size-4 mr-2" />
+                                      <span>Clear sort</span>
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableHead>
+                    );
+                  }
                   return renderColumnHeader(column);
                 })}
               </TableRow>
-            </TableHeader>
-            <TableBody ref={tableBodyRef}>
+                    </TableHeader>
+                    <TableBody ref={tableBodyRef}>
               {paginatedData.length > 0 && (
-                paginatedData.map((row) => {
-                  const rowId = getRowId(row);
-                  const isSelected = selectedRowIds.has(rowId);
+                enableRowReordering && isReorderMode ? (
+                  <>
+                    {draggableRows.map((row) => {
+                        const rowId = getRowId(row);
+                        const isSelected = selectedRowIds.has(rowId);
 
-                  return (
-                    <TableRow
-                      key={rowId}
-                      data-row-id={rowId}
-                      role={onRowClick ? 'button' : undefined}
-                      tabIndex={onRowClick ? 0 : undefined}
-                      aria-label={onRowClick ? `Open ${rowId}` : undefined}
-                      onClick={onRowClick ? (e) => onRowClick(row, e) : undefined}
-                      onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
-                      className={cn(
-                        isSelected && '!bg-muted',
-                        onRowClick && 'cursor-pointer group',
-                        '[&:hover_td]:bg-muted',
-                        '!transition-none'
-                      )}
+                        return (
+                          <SortableTableRow
+                            key={rowId}
+                            row={row}
+                            rowId={rowId}
+                            isSelected={isSelected}
+                            rowHeight={rowHeight}
+                            onRowClick={isReorderMode ? undefined : onRowClick}
+                            onRowKeyDown={isReorderMode ? undefined : onRowKeyDown}
+                            stickyFirstColumn={stickyFirstColumn}
+                            firstColumnWidth={firstColumnWidth}
+                            hideFirstColumnBorder={hideFirstColumnBorder}
+                            renderFirstColumn={renderFirstColumn}
+                            filteredColumnOrder={filteredColumnOrder}
+                            columns={columns}
+                            showLastColumnDivider={showLastColumnDivider}
+                          >
+                            {stickyFirstColumn && renderFirstColumn && (
+                              <TableCell
+                                className={cn(
+                                  '!px-6 align-middle sticky left-0 z-10',
+                                  !hideFirstColumnBorder && 'border-r',
+                                  'border-b',
+                                  isSelected ? '!bg-muted' : (onRowClick || stickyFirstColumn) ? 'group-hover:!bg-muted !bg-background' : '!bg-background'
+                                )}
+                                style={{
+                                  boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                                  width: firstColumnWidth,
+                                  minWidth: firstColumnWidth,
+                                  maxWidth: firstColumnWidth,
+                                  height: rowHeight,
+                                }}
+                              >
+                                {renderFirstColumn(row, isSelected)}
+                              </TableCell>
+                            )}
+                            {filteredColumnOrder.map((columnId) => {
+                              const column = columns.find((col) => col.id === columnId);
+                              if (!column) return null;
+
+                              const isLastColumn = columnId === filteredColumnOrder[filteredColumnOrder.length - 1];
+                              return (
+                                <TableCell
+                                  key={columnId}
+                                  className={cn(
+                                    '!px-6 align-middle border-b',
+                                    isSelected ? '!bg-muted' : 'group-hover:!bg-muted',
+                                    column.width?.class || 'min-w-[130px]',
+                                    isLastColumn && showLastColumnDivider === true && 'sticky right-0 z-10 bg-background border-l'
+                                  )}
+                                  style={{
+                                    height: rowHeight,
+                                    ...(isLastColumn && showLastColumnDivider === true && {
+                                      boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                                    }),
+                                  }}
+                                >
+                                  {column.renderCell ? (
+                                    column.renderCell(row, isSelected)
+                                  ) : (
+                                    <div className="flex items-center w-full min-w-0">
+                                      <CellTextWithTooltip text={String(row[column.id] ?? '')} />
+                                    </div>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                          </SortableTableRow>
+                        );
+                      })}
+                      {fixedBottomRows.map((row) => {
+                        const rowId = getRowId(row);
+                        const isSelected = selectedRowIds.has(rowId);
+
+                        return (
+                          <TableRow
+                            key={rowId}
+                            data-row-id={rowId}
+                            className={cn(
+                              isSelected && '!bg-muted',
+                              (onRowClick || stickyFirstColumn) && 'cursor-pointer group',
+                              '[&:hover_td]:bg-muted',
+                              '!transition-none'
+                            )}
+                            style={{
+                              height: rowHeight,
+                              ...(isSelected ? { backgroundColor: 'hsl(var(--muted))' } : {}),
+                            }}
+                          >
+                            {stickyFirstColumn && renderFirstColumn && (
+                              <TableCell
+                                className={cn(
+                                  '!px-6 align-middle sticky left-0 z-10',
+                                  !hideFirstColumnBorder && 'border-r',
+                                  'border-b',
+                                  isSelected ? '!bg-muted' : (onRowClick || stickyFirstColumn) ? 'group-hover:!bg-muted !bg-background' : '!bg-background'
+                                )}
+                                style={{
+                                  boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                                  width: firstColumnWidth,
+                                  minWidth: firstColumnWidth,
+                                  maxWidth: firstColumnWidth,
+                                  height: rowHeight,
+                                }}
+                              >
+                                {renderFirstColumn(row, isSelected)}
+                              </TableCell>
+                            )}
+                            {filteredColumnOrder.map((columnId) => {
+                              const column = columns.find((col) => col.id === columnId);
+                              if (!column) return null;
+
+                              const isLastColumn = columnId === filteredColumnOrder[filteredColumnOrder.length - 1];
+                              return (
+                                <TableCell
+                                  key={columnId}
+                                  className={cn(
+                                    '!px-6 align-middle border-b',
+                                    isSelected ? '!bg-muted' : 'group-hover:!bg-muted',
+                                    column.width?.class || 'min-w-[130px]',
+                                    isLastColumn && showLastColumnDivider === true && 'sticky right-0 z-10 bg-background border-l'
+                                  )}
+                                  style={{
+                                    height: rowHeight,
+                                    ...(isLastColumn && showLastColumnDivider === true && {
+                                      boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                                    }),
+                                  }}
+                                >
+                                  {column.renderCell ? (
+                                    column.renderCell(row, isSelected)
+                                  ) : (
+                                    <div className="flex items-center w-full min-w-0">
+                                      <CellTextWithTooltip text={String(row[column.id] ?? '')} />
+                                    </div>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        );
+                      })}
+                    </>
+                ) : (
+                  paginatedData.map((row) => {
+                    const rowId = getRowId(row);
+                    const isSelected = selectedRowIds.has(rowId);
+
+                    return (
+                      <TableRow
+                        key={rowId}
+                        data-row-id={rowId}
+                        role={onRowClick ? 'button' : undefined}
+                        tabIndex={onRowClick ? 0 : undefined}
+                        aria-label={onRowClick ? `Open ${rowId}` : undefined}
+                        onClick={onRowClick ? (e) => onRowClick(row, e) : undefined}
+                        onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
+                        className={cn(
+                          isSelected && '!bg-muted',
+                          (onRowClick || stickyFirstColumn) && 'cursor-pointer group',
+                          '[&:hover_td]:bg-muted',
+                          '!transition-none'
+                        )}
+                        style={{
+                          height: rowHeight,
+                          ...(isSelected ? { backgroundColor: 'hsl(var(--muted))' } : {}),
+                        }}
+                      >
+                        {stickyFirstColumn && renderFirstColumn && (
+                          <TableCell
+                            className={cn(
+                              '!px-6 align-middle sticky left-0 z-10',
+                              !hideFirstColumnBorder && 'border-r',
+                              'border-b',
+                              isSelected ? '!bg-muted' : (onRowClick || stickyFirstColumn) ? 'group-hover:!bg-muted !bg-background' : '!bg-background'
+                            )}
+                            style={{
+                              boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                              width: firstColumnWidth,
+                              minWidth: firstColumnWidth,
+                              maxWidth: firstColumnWidth,
+                              height: rowHeight,
+                            }}
+                          >
+                            {renderFirstColumn(row, isSelected)}
+                          </TableCell>
+                        )}
+                        {filteredColumnOrder.map((columnId) => {
+                          const column = columns.find((col) => col.id === columnId);
+                          if (!column) return null;
+
+                          const isLastColumn = columnId === filteredColumnOrder[filteredColumnOrder.length - 1];
+                          return (
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                '!px-6 align-middle border-b',
+                                isSelected ? '!bg-muted' : 'group-hover:!bg-muted',
+                                column.width?.class || 'min-w-[130px]',
+                                isLastColumn && showLastColumnDivider === true && 'sticky right-0 z-10 bg-background border-l'
+                              )}
+                              style={{
+                                height: rowHeight,
+                                ...(isLastColumn && showLastColumnDivider === true && {
+                                  boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                                }),
+                              }}
+                            >
+                              {column.renderCell ? (
+                                column.renderCell(row, isSelected)
+                              ) : (
+                                <div className="flex items-center w-full min-w-0">
+                                  <CellTextWithTooltip text={String(row[column.id] ?? '')} />
+                                </div>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })
+                )
+              )}
+                    </TableBody>
+                  </table>
+                </SortableContext>
+                <DragOverlay dropAnimation={null}>
+                  {activeId ? (
+                    <table className="table-fixed border-separate border-spacing-0 w-full" style={{ tableLayout: 'fixed', width: '100%' }}>
+                      <TableBody>
+                        {(() => {
+                          const row = draggableRows.find((item) => getRowId(item) === activeId);
+                          if (!row) return null;
+
+                          return (
+                            <TableRow
+                              className="border rounded-lg shadow-lg !bg-muted"
+                              style={{ height: rowHeight }}
+                            >
+                              {stickyFirstColumn && renderFirstColumn && (
+                                <TableCell
+                                  className={cn(
+                                    '!px-6 !py-0 !bg-muted',
+                                    !hideFirstColumnBorder && 'border-r',
+                                    compactMode && '!text-xs'
+                                  )}
+                                  style={{
+                                    height: rowHeight,
+                                    width: firstColumnWidth,
+                                    minWidth: firstColumnWidth,
+                                    maxWidth: firstColumnWidth,
+                                  }}
+                                >
+                                  {renderFirstColumn(row, true)}
+                                </TableCell>
+                              )}
+                              {filteredColumnOrder.map((columnId) => {
+                                const column = columns.find((col) => col.id === columnId);
+                                if (!column) return null;
+
+                                return (
+                                  <TableCell
+                                    key={columnId}
+                                    className={cn(
+                                      '!px-6 !py-0 !bg-muted',
+                                      column.width?.class || 'w-[130px]',
+                                      compactMode && '!text-xs'
+                                    )}
+                                    style={{
+                                      height: rowHeight,
+                                      width: column.width?.pixel || '130px',
+                                      minWidth: column.width?.pixel || '130px',
+                                      maxWidth: column.width?.pixel || '130px',
+                                    }}
+                                  >
+                                    {column.renderCell ? (
+                                      column.renderCell(row, true)
+                                    ) : (
+                                      <div className="flex items-center w-full min-w-0">
+                                        <CellTextWithTooltip text={String(row[column.id] ?? '')} />
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          );
+                        })()}
+                      </TableBody>
+                    </table>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            ) : (
+              <table
+                className="table-fixed border-separate border-spacing-0 w-full"
+                style={{ tableLayout: 'fixed', width: '100%' }}
+              >
+                <colgroup>
+                  {stickyFirstColumn && (
+                    <col
                       style={{
-                        height: rowHeight,
-                        ...(isSelected ? { backgroundColor: 'hsl(var(--muted))' } : {}),
+                        width: firstColumnWidth,
+                        minWidth: firstColumnWidth,
+                        maxWidth: firstColumnWidth,
                       }}
-                    >
-                      {stickyFirstColumn && renderFirstColumn && (
-                        <TableCell
-                          className={cn(
-                            '!px-6 align-middle sticky left-0 z-10 border-r border-b',
-                            isSelected ? '!bg-muted' : 'group-hover:!bg-muted !bg-background'
-                          )}
-                          style={{
+                    />
+                  )}
+                  {filteredColumnOrder.map((columnId) => {
+                    const column = columns.find((col) => col.id === columnId);
+                    return (
+                      <col
+                        key={columnId}
+                        style={{
+                          width: column?.width?.pixel || '130px',
+                          minWidth: column?.width?.pixel || '130px',
+                          maxWidth: column?.width?.pixel || '130px',
+                        }}
+                      />
+                    );
+                  })}
+                </colgroup>
+                <TableHeader className={cn('!bg-background')}>
+                  <TableRow className="hover:bg-transparent h-10">
+                    {stickyFirstColumn && renderFirstColumn && (
+                      <TableHead
+                        className={cn(
+                          '!px-6 !py-0 h-10 !bg-background',
+                          !hideFirstColumnBorder && 'border-r',
+                          'border-b',
+                          gridPadding && 'border-t-0'
+                        )}
+                        style={{
+                          position: 'sticky',
+                          left: 0,
+                          top: 0,
+                          zIndex: 30,
+                          backgroundColor: 'hsl(var(--background))',
+                          ...(!compactMode && {
+                            boxShadow:
+                              '2px 0 4px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+                          }),
+                          ...(compactMode && {
                             boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                          }),
+                          ...(stickyFirstColumn && {
                             width: firstColumnWidth,
                             minWidth: firstColumnWidth,
                             maxWidth: firstColumnWidth,
-                            height: rowHeight,
-                          }}
-                        >
-                          {renderFirstColumn(row, isSelected)}
-                        </TableCell>
-                      )}
-                      {filteredColumnOrder.map((columnId) => {
-                        const column = columns.find((col) => col.id === columnId);
-                        if (!column) return null;
+                          }),
+                        }}
+                      >
+                        {renderFirstColumnHeader ? (
+                          renderFirstColumnHeader({
+                            isSorted:
+                              sortColumn ===
+                              (firstColumnId ||
+                                columns.find((col) => col.id === filteredColumnOrder[0])?.id ||
+                                null),
+                            isAscending:
+                              sortColumn ===
+                                (firstColumnId ||
+                                  columns.find((col) => col.id === filteredColumnOrder[0])?.id ||
+                                  null) && sortDirection === 'asc',
+                            isDescending:
+                              sortColumn ===
+                                (firstColumnId ||
+                                  columns.find((col) => col.id === filteredColumnOrder[0])?.id ||
+                                  null) && sortDirection === 'desc',
+                            onSort: (direction) => {
+                              const columnIdToSort =
+                                firstColumnId ||
+                                columns.find((col) => col.id === filteredColumnOrder[0])?.id;
+                              if (columnIdToSort) {
+                                handleSort(columnIdToSort, direction);
+                              }
+                            },
+                            isAllSelected,
+                            onToggleAll: handleToggleAll,
+                            enableRowSelection: enableRowSelection || false,
+                          })
+                        ) : enableRowSelection ? (
+                          <div className="flex items-center gap-3 h-full w-full">
+                            <Checkbox
+                              checked={isAllSelected}
+                              onCheckedChange={handleToggleAll}
+                              aria-label="Select all"
+                            />
+                          </div>
+                        ) : null}
+                      </TableHead>
+                    )}
+                    {filteredColumnOrder.map((columnId, index) => {
+                      const column = columns.find((col) => col.id === columnId);
+                      if (!column) return null;
+                      const isLastColumn = index === filteredColumnOrder.length - 1;
+                      if (isLastColumn && showLastColumnDivider === true) {
+                        const currentIndex = columnOrder.indexOf(column.id);
+                        const isFirst = currentIndex === 0;
+                        const isLast = currentIndex === columnOrder.length - 1;
+                        const isSorted = sortColumn === column.id;
+                        const isAscending = isSorted && sortDirection === 'asc';
+                        const isDescending = isSorted && sortDirection === 'desc';
+
+                        if (column.renderHeader) {
+                          return (
+                            <TableHead
+                              key={column.id}
+                              className={cn(
+                                '!px-6 !py-0 h-10 !bg-background sticky right-0 z-20',
+                                gridPadding ? 'border-b' : compactMode ? 'border-t border-b' : 'border-b',
+                                'border-l',
+                                column.width?.class || 'min-w-[130px]'
+                              )}
+                              style={{
+                                top: 0,
+                                backgroundColor: 'hsl(var(--background))',
+                                boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+                              }}
+                            >
+                              {column.renderHeader({
+                                isSorted,
+                                isAscending,
+                                isDescending,
+                                onSort: (direction) => handleSort(column.id, direction),
+                                onMoveColumn: (direction) => handleMoveColumn(column.id, direction),
+                                canMoveLeft: !isFirst,
+                                canMoveRight: !isLast,
+                              })}
+                            </TableHead>
+                          );
+                        }
+
+                        const headerWidth = column.width?.pixel || '130px';
+                        const headerButton = (
+                          <Button
+                            variant="ghost"
+                            className="flex items-center gap-2 h-full w-full justify-start rounded-none px-0 hover:bg-transparent"
+                          >
+                            <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground px-2 py-1">
+                              {column.icon && <div className="text-muted-foreground">{column.icon}</div>}
+                              {column.label}
+                            </span>
+                            {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+                            {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+                          </Button>
+                        );
 
                         return (
-                          <TableCell
-                            key={columnId}
+                          <TableHead
+                            key={column.id}
                             className={cn(
-                              '!px-6 align-middle border-b',
-                              isSelected ? '!bg-muted' : 'group-hover:!bg-muted',
+                              '!px-6 !py-0 h-10 !bg-background sticky right-0 z-20',
+                              gridPadding ? 'border-b' : compactMode ? 'border-t border-b' : 'border-b',
+                              'border-l',
                               column.width?.class || 'min-w-[130px]'
                             )}
-                            style={{ height: rowHeight }}
+                            style={{
+                              top: 0,
+                              backgroundColor: 'hsl(var(--background))',
+                              boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)',
+                            }}
                           >
-                            {column.renderCell ? (
-                              column.renderCell(row, isSelected)
-                            ) : (
-                              <div className="flex items-center w-full min-w-0">
-                                <CellTextWithTooltip text={String(row[column.id] ?? '')} />
-                              </div>
-                            )}
-                          </TableCell>
+                            <DropdownMenu>
+                              {column.tooltip ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <DropdownMenuTrigger asChild>
+                                      {headerButton}
+                                    </DropdownMenuTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent
+                                    className="whitespace-normal break-words text-left"
+                                    style={{ maxWidth: headerWidth }}
+                                  >
+                                    {column.tooltip}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <DropdownMenuTrigger asChild>
+                                  {headerButton}
+                                </DropdownMenuTrigger>
+                              )}
+                              <DropdownMenuContent align="start">
+                                {column.sortable !== false && (
+                                  <>
+                                    <DropdownMenuItem
+                                      onClick={() => handleSort(column.id, 'asc')}
+                                      className={cn(isAscending && 'bg-accent')}
+                                    >
+                                      <ArrowUpNarrowWide className="size-4 mr-2" />
+                                      <span className="flex-1">Sort ascending</span>
+                                      {isAscending && <Check className="ml-2 size-4" />}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleSort(column.id, 'desc')}
+                                      className={cn(isDescending && 'bg-accent')}
+                                    >
+                                      <ArrowDownWideNarrow className="size-4 mr-2" />
+                                      <span className="flex-1">Sort descending</span>
+                                      {isDescending && <Check className="ml-2 size-4" />}
+                                    </DropdownMenuItem>
+                                    {isSorted && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => {
+                                          setSortColumn(null);
+                                          setSortDirection(null);
+                                        }}>
+                                          <X className="size-4 mr-2" />
+                                          <span>Clear sort</span>
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableHead>
                         );
-                      })}
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </table>
+                      }
+                      return renderColumnHeader(column);
+                    })}
+                  </TableRow>
+                </TableHeader>
+                <TableBody ref={tableBodyRef}>
+                  {paginatedData.map((row) => {
+                    const rowId = getRowId(row);
+                    const isSelected = selectedRowIds.has(rowId);
+
+                    return (
+                      <TableRow
+                        key={rowId}
+                        data-row-id={rowId}
+                        role={onRowClick ? 'button' : undefined}
+                        tabIndex={onRowClick ? 0 : undefined}
+                        aria-label={onRowClick ? `Open ${rowId}` : undefined}
+                        onClick={onRowClick ? (e) => onRowClick(row, e) : undefined}
+                        onKeyDown={onRowKeyDown ? (e) => onRowKeyDown(row, e) : undefined}
+                        className={cn(
+                          isSelected && '!bg-muted',
+                          (onRowClick || stickyFirstColumn) && 'cursor-pointer group',
+                          '[&:hover_td]:bg-muted',
+                          '!transition-none'
+                        )}
+                        style={{
+                          height: rowHeight,
+                          ...(isSelected ? { backgroundColor: 'hsl(var(--muted))' } : {}),
+                        }}
+                      >
+                        {stickyFirstColumn && renderFirstColumn && (
+                          <TableCell
+                            className={cn(
+                              '!px-6 align-middle sticky left-0 z-10',
+                              !hideFirstColumnBorder && 'border-r',
+                              'border-b',
+                              isSelected ? '!bg-muted' : (onRowClick || stickyFirstColumn) ? 'group-hover:!bg-muted !bg-background' : '!bg-background'
+                            )}
+                            style={{
+                              boxShadow: '2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                              width: firstColumnWidth,
+                              minWidth: firstColumnWidth,
+                              maxWidth: firstColumnWidth,
+                              height: rowHeight,
+                            }}
+                          >
+                            {renderFirstColumn(row, isSelected)}
+                          </TableCell>
+                        )}
+                        {filteredColumnOrder.map((columnId) => {
+                          const column = columns.find((col) => col.id === columnId);
+                          if (!column) return null;
+
+                          const isLastColumn = columnId === filteredColumnOrder[filteredColumnOrder.length - 1];
+                          return (
+                            <TableCell
+                              key={columnId}
+                              className={cn(
+                                '!px-6 align-middle border-b',
+                                isSelected ? '!bg-muted' : 'group-hover:!bg-muted',
+                                column.width?.class || 'min-w-[130px]',
+                                isLastColumn && showLastColumnDivider === true && 'sticky right-0 z-10 bg-background border-l'
+                              )}
+                              style={{
+                                height: rowHeight,
+                                ...(isLastColumn && showLastColumnDivider === true && {
+                                  boxShadow: '-2px 0 4px -2px rgba(0, 0, 0, 0.1)',
+                                }),
+                              }}
+                            >
+                              {column.renderCell ? (
+                                column.renderCell(row, isSelected)
+                              ) : (
+                                <div className="flex items-center w-full min-w-0">
+                                  <CellTextWithTooltip text={String(row[column.id] ?? '')} />
+                                </div>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </table>
+            )
           )}
           </div>
           {showPagination && (

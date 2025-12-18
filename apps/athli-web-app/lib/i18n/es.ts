@@ -328,6 +328,7 @@ export const esMessages = {
       athletes: 'Atletas',
       calendar: 'Calendario',
       home: 'Inicio',
+      todo: 'Tareas pendientes',
       library: 'Biblioteca',
     },
     actions: {
@@ -1295,7 +1296,9 @@ export const esMessages = {
     profile: {
       athletes: 'Atletas',
       overview: 'Resumen',
+      notes: 'Notas',
       metrics: 'Métricas',
+      files: 'Archivos',
       bookings: 'Reservas',
       trainingCalendar: 'Calendario de Entrenamiento',
       appSettings: 'Configuración de la Aplicación',

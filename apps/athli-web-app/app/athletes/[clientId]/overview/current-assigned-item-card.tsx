@@ -41,9 +41,9 @@ export const CurrentAssignedItemCard = ({ clientId }: CurrentAssignedItemCardPro
     if (!assignedItem) return;
 
     if (assignedItem.type === 'program') {
-      router.push(`/library/programs/${assignedItem.id}/edit`);
+      router.push(`/training/programs/${assignedItem.id}/edit`);
     } else if (assignedItem.type === 'workout') {
-      router.push(`/library/workouts/${assignedItem.id}/edit/standard`);
+      router.push(`/training/workouts/${assignedItem.id}/edit/standard`);
     }
   };
 

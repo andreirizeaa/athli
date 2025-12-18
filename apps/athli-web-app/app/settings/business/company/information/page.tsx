@@ -233,7 +233,7 @@ const InformationPage = () => {
 
   return (
     <div className="w-full h-full flex flex-col overflow-auto">
-      <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-secondary flex flex-col items-center gap-4">
+      <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4">
         <Card className="bg-background max-w-3xl w-full">
             <CardHeader className="px-4">
               <CardTitle>{t('settings.company.information.title')}</CardTitle>

@@ -72,7 +72,6 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
       icon: Settings,
       sections: [
         { id: 'customisations', href: '/settings/app/customisations' },
-        { id: 'integrations', href: '/settings/app/integrations' },
       ],
     },
     {

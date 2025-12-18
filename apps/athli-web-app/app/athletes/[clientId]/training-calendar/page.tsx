@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { SidePanel } from '@/components/app/side-panel';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,8 +52,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { EquipmentPanel } from '@/app/library/workouts/new/components/equipment-panel';
-import { OverviewPanel } from '@/app/library/workouts/new/components/overview-panel';
 import {
   updateTrainingCalendar,
   getTrainingCalendar,
@@ -1755,39 +1754,28 @@ const ClientTrainingCalendarPage = () => {
           </div>
         </DialogContent>
       </Dialog>
-      <Dialog
+      <SidePanel
         open={!!selectedWorkoutDetails}
         onOpenChange={(open) => {
           if (!open) {
             handleCloseWorkoutDetails();
           }
         }}
+        title={selectedWorkoutDetails?.workout.program || ''}
+        contentClassName="w-full sm:w-[800px] sm:max-w-[800px]"
       >
-        <DialogContent className="max-w-5xl sm:max-w-5xl h-[600px] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex-1 min-w-0">
-              <span
-                className="block truncate text-left"
-                title={selectedWorkoutDetails?.workout.program}
-              >
-                {selectedWorkoutDetails?.workout.program}
-              </span>
-            </DialogTitle>
-          </DialogHeader>
           {selectedWorkoutDetails && (() => {
             const workoutSchema = buildWorkoutSchema(selectedWorkoutDetails.workout);
             return (
-              <>
-                <div className="flex flex-1 min-h-0 gap-4 pt-2">
-                  <div className="relative flex-[4] h-full">
-                    <div className="p-4 h-full overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="p-2">
                       {workoutSchema.length > 0 ? (
-                        <div className="flex flex-col gap-4 w-full">
+                        <div className="flex flex-col gap-2 w-full">
                           {workoutSchema.map((section) => (
                             <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
                               <Card className="bg-background w-full flex flex-col relative">
-                                <CardHeader className="border-b p-0 pb-2">
-                                  <div className="flex items-center justify-between px-3 pt-1">
+                                <CardHeader className="border-b p-0 pb-1">
+                                  <div className="flex items-center justify-between px-2 pt-1">
                                     <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
                                       {section.type === 'regular' ? t('athletes.trainingCalendar.section.regular') : section.type === 'amrap' ? t('athletes.trainingCalendar.section.amrap') : t('athletes.trainingCalendar.section.timed')}{' '}
                                       <span className="font-normal text-xs">
@@ -1834,7 +1822,7 @@ const ClientTrainingCalendarPage = () => {
                                     </div>
                                   </div>
                                 </CardHeader>
-                                <CardContent className="flex-1 flex flex-col px-3 py-1.5">
+                                <CardContent className="flex-1 flex flex-col px-2 py-1">
                                   <div className="flex-1 w-full flex flex-col gap-0">
                                     {section.exercises && section.exercises.length > 0 ? (
                                       <div className="w-full flex flex-col gap-0">
@@ -1867,7 +1855,7 @@ const ClientTrainingCalendarPage = () => {
                                             >
                                               <div
                                                 className={cn(
-                                                  'relative flex flex-col gap-3 p-3 bg-background dark:bg-transparent border',
+                                                  'relative flex flex-col gap-2 p-2 bg-background dark:bg-transparent border',
                                                   isLinkedToPrev && isLinkedToNext
                                                     ? 'rounded-none border-y-0'
                                                     : isLinkedToPrev
@@ -2019,46 +2007,9 @@ const ClientTrainingCalendarPage = () => {
                       )}
                     </div>
                   </div>
-                  <Separator orientation="vertical" />
-                  <div className="flex-[1.5] bg-background h-full overflow-y-auto">
-                    <div className="p-4">
-                      <EquipmentPanel sections={workoutSchema} />
-                      <OverviewPanel
-                        sections={workoutSchema}
-                        onSectionsChange={() => {}}
-                        onDeleteSection={() => {}}
-                        onDeleteExercise={() => {}}
-                        onDeleteSuperset={() => {}}
-                        groupExercisesBySuperset={groupExercisesBySuperset as any}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-end gap-2 pt-2 flex-shrink-0">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                      const baseId = selectedWorkoutDetails.workout.id.split('-')[0];
-                      router.push(`/library/workouts/${baseId}/edit/standard`);
-                    }}
-                    aria-label={t('athletes.trainingCalendar.editWorkoutAria')}
-                  >
-                    {t('athletes.trainingCalendar.editWorkout')}
-              </Button>
-              <Button
-                type="button"
-                    onClick={handleCloseWorkoutDetails}
-                    aria-label={t('athletes.trainingCalendar.closeAria')}
-              >
-                    {t('athletes.trainingCalendar.close')}
-              </Button>
-            </div>
-              </>
             );
           })()}
-        </DialogContent>
-      </Dialog>
+      </SidePanel>
       <Dialog
         open={isAddProgramModalOpen}
         onOpenChange={(open) => {

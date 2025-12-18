@@ -5,14 +5,19 @@ import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
-  Archive,
   // CalendarDays,
+  Dumbbell,
+  File,
   Home,
   MessageCircle,
   Settings,
-  User,
   UserPlus,
   Users,
+  CheckSquare,
+  Sprout,
+  ClipboardList,
+  Zap,
+  ClipboardCheck,
 } from 'lucide-react';
 import { LogoIcon } from '@/components/logo';
 import {
@@ -44,23 +49,7 @@ export function AppSidebar() {
     setActivePath(normalized);
   }, [pathname]);
 
-  const generalNavItems = [
-    {
-      href: '/library',
-      labelKey: 'sidebar.links.library',
-      icon: Archive,
-    },
-  ] as const;
-
-  // const businessNavItems = [
-  //   {
-  //     href: '/calendar',
-  //     labelKey: 'sidebar.links.calendar',
-  //     icon: CalendarDays,
-  //   },
-  // ] as const;
-
-  const athletesNavItems = [
+  const mainNavItems = [
     {
       href: '/athletes',
       labelKey: 'sidebar.links.athletes',
@@ -72,9 +61,45 @@ export function AppSidebar() {
       icon: MessageCircle,
     },
     {
-      href: '/settings/profile/account',
-      labelKey: 'sidebar.links.profile',
-      icon: User,
+      href: '/todo',
+      labelKey: 'sidebar.links.todo',
+      icon: CheckSquare,
+    },
+  ] as const;
+
+  const libraryNavItems = [
+    {
+      href: '/training',
+      labelKey: 'sidebar.links.training',
+      icon: Dumbbell,
+    },
+    {
+      href: '/files',
+      labelKey: 'sidebar.links.files',
+      icon: File,
+    },
+    {
+      href: '/habits',
+      labelKey: 'sidebar.links.habits',
+      icon: Sprout,
+    },
+    {
+      href: '/forms',
+      labelKey: 'sidebar.links.forms',
+      icon: ClipboardList,
+    },
+  ] as const;
+
+  const automationsNavItems = [
+    {
+      href: '/automations/onboarding',
+      labelKey: 'sidebar.links.onboarding',
+      icon: Zap,
+    },
+    {
+      href: '/automations/check-ins',
+      labelKey: 'sidebar.links.checkIns',
+      icon: ClipboardCheck,
     },
   ] as const;
 
@@ -107,10 +132,64 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {generalNavItems.map((item) => {
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="pb-0">
+          <div className="flex h-6 items-center px-2">
+            {isCollapsed ? (
+              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+            ) : (
+              <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                {t('sidebar.group.main')}
+              </span>
+            )}
+          </div>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {mainNavItems.map((item) => {
+                const Icon = item.icon;
+                const href = item.href;
+                const isActive =
+                  href === '/athletes' || href === '/messaging' || href === '/todo'
+                    ? activePath === href || activePath.startsWith(`${href}/`)
+                    : activePath === href;
+                const label = t(item.labelKey);
+
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                    >
+                      <Link href={item.href}>
+                        <Icon className="shrink-0" />
+                        {!isCollapsed && <span>{label}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="pb-0">
+          <div className="flex h-6 items-center px-2">
+            {isCollapsed ? (
+              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+            ) : (
+              <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
+                {t('sidebar.group.library')}
+              </span>
+            )}
+          </div>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {libraryNavItems.map((item) => {
                 const Icon = item.icon;
                 let isActive = false;
-                if (item.href === '/library') {
+                if (item.href === '/training' || item.href === '/files' || item.href === '/habits' || item.href === '/forms') {
                   // Check exact match or if path starts with the href followed by /
                   isActive = activePath === item.href || activePath.startsWith(`${item.href}/`);
                 } else {
@@ -134,27 +213,6 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
-              {/* {businessNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive =
-                  activePath === item.href || activePath.startsWith(`${item.href}/`);
-                const label = t(item.labelKey);
-
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
-                    >
-                      <Link href={item.href}>
-                        <Icon className="shrink-0" />
-                        {!isCollapsed && <span>{label}</span>}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })} */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -164,17 +222,17 @@ export function AppSidebar() {
               <div className="mx-auto h-px w-8 bg-sidebar-border" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
-                {t('sidebar.group.athletes')}
+                {t('sidebar.group.automations')}
               </span>
             )}
           </div>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {athletesNavItems.map((item) => {
+              {automationsNavItems.map((item) => {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/athletes' || href === '/messaging' || href === '/settings/profile/account'
+                  href === '/automations/onboarding' || href === '/automations/check-ins'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);

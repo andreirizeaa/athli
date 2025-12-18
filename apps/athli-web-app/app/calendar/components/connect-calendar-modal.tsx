@@ -164,8 +164,8 @@ export const ConnectCalendarModal = ({ open, onOpenChange, provider }: ConnectCa
       // This is where Supabase will redirect AFTER processing the OAuth
       // Include provider in query params so callback can detect it
       // Check if we're coming from integrations page
-      const returnUrl = window.location.pathname.includes('/settings/app/integrations')
-        ? '/settings/app/integrations'
+      const returnUrl = window.location.pathname.includes('/calendar')
+        ? '/calendar'
         : '/calendar';
       const redirectUrl = `${window.location.origin}/calendar/callback?provider=${providerToUse}&returnUrl=${encodeURIComponent(returnUrl)}`;
 
