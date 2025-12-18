@@ -203,7 +203,7 @@ export const AddHabitSidePanel = ({
       {showAlert && (
         <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
           <Info className="size-4" />
-          <AlertDescription className="min-w-0 line-clamp-2">
+          <AlertDescription className="min-w-0 line-clamp-4">
             Habits added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general habit, navigate to the respective main page in <Link href="/habits" className="underline hover:no-underline"><strong>Library</strong></Link>.
           </AlertDescription>
         </Alert>

@@ -413,7 +413,7 @@ const ClientFilesPage = () => {
           searchPlaceholder={t('files.searchPlaceholder')}
           searchFields={[(row) => `${row.fileName} ${row.tags.join(' ')}`]}
           filters={filters}
-          showLastColumnDivider={true}
+          showLastColumnDivider={false}
           filterBarActions={
             <Button onClick={handleOpenAddFile} className="gap-2">
               <Plus className="size-4" />
