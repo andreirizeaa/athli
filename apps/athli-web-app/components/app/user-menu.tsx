@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { Check, Laptop, LogOut, Moon, Settings, Sun } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +75,7 @@ export function UserMenu({
           aria-label={t('sidebar.profile.openAccountMenuAria')}
         >
           <Avatar className="h-8 w-8 rounded-md">
+            <AvatarImage src={user?.imageUrl} alt={displayName} />
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
         </button>
@@ -87,6 +88,7 @@ export function UserMenu({
       >
         <div className="flex items-center gap-3 px-3 py-3">
           <Avatar className="h-10 w-10 rounded-md">
+            <AvatarImage src={user?.imageUrl} alt={displayName} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col overflow-hidden">

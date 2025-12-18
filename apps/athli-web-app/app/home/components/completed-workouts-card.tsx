@@ -481,7 +481,7 @@ export const CompletedWorkoutsCard = () => {
   };
 
   const handleNavigateToWorkout = (workoutId: string) => {
-    router.push(`/library/workouts/${workoutId}/edit/standard`);
+    router.push(`/training/workouts/${workoutId}/edit/standard`);
   };
 
   const handleWorkoutKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, workoutId: string) => {

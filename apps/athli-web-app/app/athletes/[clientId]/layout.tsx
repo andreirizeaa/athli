@@ -48,12 +48,20 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.metrics'),
     },
     {
-      value: 'appointment-sessions',
-      label: t('athletes.profile.bookings'),
-    },
-    {
       value: 'training-calendar',
       label: t('athletes.profile.trainingCalendar'),
+    },
+    {
+      value: 'notes',
+      label: t('athletes.profile.notes'),
+    },
+    {
+      value: 'files',
+      label: t('athletes.profile.files'),
+    },
+    {
+      value: 'habits',
+      label: t('athletes.profile.habits'),
     },
   ];
 
@@ -257,7 +265,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-shrink-0 bg-background">{children}</div>
+      <div className="w-full flex-1 min-h-0 bg-background">{children}</div>
       <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
         <DialogContent
           className="w-full max-w-[500px] sm:max-w-[500px] flex flex-col"

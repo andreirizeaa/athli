@@ -3,7 +3,7 @@
  * These will be connected to the backend in the future
  */
 
-import type { WorkoutProgramPayload } from '@/app/library/workouts/new/workout-schema';
+import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
 import type { Workout } from '@/components/app/app-shell';
 
 /**
