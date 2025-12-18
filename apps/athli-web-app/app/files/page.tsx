@@ -597,7 +597,7 @@ const FilesPage = () => {
         searchFields={[(row) => `${row.fileName} ${row.tags.join(' ')}`]}
         filters={filters}
         enableEditColumns={false}
-        showLastColumnDivider={true}
+        showLastColumnDivider={false}
         enableExport={false}
         enableRowSelection={true}
         selectedRowIds={selectedFiles}

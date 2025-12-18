@@ -140,7 +140,7 @@ export const AddFileSidePanel = ({
       {showAlert && (
         <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
           <Info className="size-4" />
-          <AlertDescription className="min-w-0 line-clamp-2">
+          <AlertDescription className="min-w-0 line-clamp-4">
             Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
           </AlertDescription>
         </Alert>
