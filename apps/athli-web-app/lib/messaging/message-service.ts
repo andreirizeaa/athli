@@ -85,3 +85,43 @@ export const deleteMessage = async (data: DeleteMessageData): Promise<void> => {
   // })
   // if (!response.ok) throw new Error('Failed to delete message')
 };
+
+export interface BroadcastMessageData {
+  clientIds: string[];
+  text?: string;
+  pdf?: MessageFile;
+  images?: MessageFile[];
+  video?: MessageFile;
+}
+
+/**
+ * Dummy message service method to broadcast messages to multiple clients
+ * This will be connected to the backend in the future
+ */
+export const broadcastMessage = async (data: BroadcastMessageData): Promise<void> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+
+  console.log('Broadcasting message:', {
+    clientIds: data.clientIds,
+    clientCount: data.clientIds.length,
+    text: data.text || '(no text)',
+    hasPdf: !!data.pdf,
+    pdfName: data.pdf?.name,
+    hasImages: !!data.images && data.images.length > 0,
+    imageCount: data.images?.length || 0,
+    hasVideo: !!data.video,
+    videoName: data.video?.name,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch('/api/messages/broadcast', {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(data),
+  // })
+  // if (!response.ok) throw new Error('Failed to broadcast message')
+};

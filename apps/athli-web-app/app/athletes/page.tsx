@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
 import { cn } from '@/lib/utils';
 import { exportToCSV } from '@/lib/csv-export';
@@ -1101,6 +1102,7 @@ const AthletesPage = () => {
             </DropdownMenu>
           </div>
         </div>
+        <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <DataGrid
         data={mockAthletes}

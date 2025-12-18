@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { ProgrammingRequiredCard } from './components/programming-required-card';
 import { MessagesCard } from './components/messages-card';
-import { ToDoCard } from './components/to-do-card';
 import { CompletedWorkoutsCard } from './components/completed-workouts-card';
 
 const HomePage = () => {
@@ -91,7 +90,6 @@ const HomePage = () => {
                 <MessagesCard />
               </div>
             </div>
-            <ToDoCard />
           </div>
         </div>
       </div>

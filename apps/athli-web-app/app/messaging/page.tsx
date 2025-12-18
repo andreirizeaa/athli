@@ -68,6 +68,7 @@ import { ContactListItem } from './components/contact-list-item';
 import { format } from 'date-fns';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
+import { BroadcastSidePanel } from '@/lib/messaging/broadcast-side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Note = {
@@ -140,6 +141,7 @@ const MessagingPage = () => {
   const [messages, setMessages] = React.useState<Record<string, Message[]>>(mockMessages);
   const [isNewMessageOpen, setIsNewMessageOpen] = React.useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = React.useState(false);
+  const [isBroadcastOpen, setIsBroadcastOpen] = React.useState(false);
   const [noteTitle, setNoteTitle] = React.useState('');
   const [noteContent, setNoteContent] = React.useState('');
   const [isNoteEmpty, setIsNoteEmpty] = React.useState(true);
@@ -1637,17 +1639,14 @@ const MessagingPage = () => {
                   : t('messages.conversations')}
               </p>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="h-9 gap-2" aria-label={t('messages.broadcast')}>
-                  <RadioTower className="h-4 w-4" />
-                  {t('messages.broadcast')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>{t('messages.comingSoon')}</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              className="h-9 gap-2"
+              aria-label={t('messages.broadcast')}
+              onClick={() => setIsBroadcastOpen(true)}
+            >
+              <RadioTower className="h-4 w-4" />
+              {t('messages.broadcast')}
+            </Button>
           </div>
         </div>
         <Separator className="mb-4"/>
@@ -3063,6 +3062,7 @@ const MessagingPage = () => {
           </div>
         )}
       </SidePanel>
+      <BroadcastSidePanel open={isBroadcastOpen} onOpenChange={setIsBroadcastOpen} />
     </div>
   );
 };

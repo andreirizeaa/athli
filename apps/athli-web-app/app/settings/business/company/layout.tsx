@@ -71,7 +71,7 @@ const CompanyLayoutContent = ({ children }: CompanyLayoutProps) => {
           </div>
         </div>
       </div>
-      <div className="w-full flex-1 overflow-auto px-4 py-4 bg-secondary relative z-0 mt-2">
+      <div className="w-full flex-1 overflow-auto bg-background relative z-0">
         {children}
       </div>
     </>

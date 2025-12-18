@@ -142,7 +142,7 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
 
   return (
     <>
-      <Card className="bg-background flex flex-col flex-1 min-w-0 w-full" style={{ height: '400px', minHeight: '400px', maxHeight: '400px' }}>
+      <Card className="bg-background flex flex-col flex-1 min-w-0 w-full h-full">
         <CardHeader className="px-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle>{t('athletes.profile.athleteDetails')}</CardTitle>
