@@ -213,19 +213,19 @@ export function SearchComponent() {
   };
 
   const handleWorkoutSearchResultClick = (workoutId: string) => {
-    router.push(`/library/workouts/${workoutId}/edit/standard`);
+    router.push(`/training/workouts/${workoutId}/edit/standard`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
 
   const handleProgramSearchResultClick = (programId: string) => {
-    router.push(`/library/programs/${programId}/edit`);
+    router.push(`/training/programs/${programId}/edit`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
 
   const handleExerciseSearchResultClick = (exerciseId: string) => {
-    router.push(`/library/exercises?exerciseId=${exerciseId}`);
+    router.push(`/training/exercises?exerciseId=${exerciseId}`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };

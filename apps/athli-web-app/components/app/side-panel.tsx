@@ -15,6 +15,7 @@ type SidePanelProps = {
   side?: 'left' | 'right';
   contentClassName?: string;
   onOpenAutoFocus?: (event: Event) => void;
+  hideCloseButton?: boolean;
 };
 
 export const SidePanel = ({
@@ -26,6 +27,7 @@ export const SidePanel = ({
   side = 'right',
   contentClassName,
   onOpenAutoFocus,
+  hideCloseButton = false,
 }: SidePanelProps) => {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -33,6 +35,7 @@ export const SidePanel = ({
         side={side}
         className={cn(
           'w-full sm:w-[500px] sm:max-w-[500px] px-0 pb-0 flex flex-col',
+          hideCloseButton && '[&>button]:hidden',
           contentClassName
         )}
         onOpenAutoFocus={onOpenAutoFocus}

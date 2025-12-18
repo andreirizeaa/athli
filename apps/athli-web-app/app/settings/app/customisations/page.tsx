@@ -87,7 +87,7 @@ const CustomisationsPage = () => {
                     {t('settings.customisations.preferences.theme.label')}
                   </Label>
                   <RadioGroup
-                    value={isMounted ? (theme || 'light') : 'light'}
+                    value={isMounted ? (theme || 'system') : 'system'}
                     onValueChange={(value) => setTheme(value)}
                     className="flex max-w-md gap-6 pt-2"
                   >
@@ -100,7 +100,7 @@ const CustomisationsPage = () => {
                         <div
                           className={cn(
                             'items-center rounded-lg border-2 p-1 transition-colors',
-                            (isMounted ? (theme || 'light') : 'light') === 'light'
+                            (isMounted ? (theme || 'system') : 'system') === 'light'
                               ? 'border-primary bg-white'
                               : 'border-border bg-white hover:border-accent'
                           )}
@@ -134,7 +134,7 @@ const CustomisationsPage = () => {
                         <div
                           className={cn(
                             'items-center rounded-lg border-2 p-1 transition-colors',
-                            (isMounted ? (theme || 'light') : 'light') === 'dark'
+                            (isMounted ? (theme || 'system') : 'system') === 'dark'
                               ? 'border-primary bg-white'
                               : 'border-border bg-white hover:border-accent'
                           )}
@@ -156,6 +156,40 @@ const CustomisationsPage = () => {
                         </div>
                         <span className="block w-full p-2 text-center font-normal">
                           {t('sidebar.theme.dark')}
+                        </span>
+                      </Label>
+                    </div>
+                    <div className="flex flex-col">
+                      <Label
+                        htmlFor="theme-system"
+                        className="flex flex-col cursor-pointer"
+                      >
+                        <RadioGroupItem value="system" id="theme-system" className="sr-only" />
+                        <div
+                          className={cn(
+                            'items-center rounded-lg border-2 p-1 transition-colors',
+                            (isMounted ? (theme || 'system') : 'system') === 'system'
+                              ? 'border-primary bg-white'
+                              : 'border-border bg-white hover:border-accent'
+                          )}
+                        >
+                          <div className="space-y-2 rounded-lg bg-slate-950 p-2">
+                            <div className="space-y-2 rounded-md bg-white p-2 shadow-xs">
+                              <div className="h-2 w-[80px] rounded-lg bg-[#ecedef]" />
+                              <div className="h-2 w-[100px] rounded-lg bg-[#ecedef]" />
+                            </div>
+                            <div className="flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-xs">
+                              <div className="h-4 w-4 rounded-full bg-slate-400" />
+                              <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
+                            </div>
+                            <div className="flex items-center space-x-2 rounded-md bg-slate-800 p-2 shadow-xs">
+                              <div className="h-4 w-4 rounded-full bg-slate-400" />
+                              <div className="h-2 w-[100px] rounded-lg bg-slate-400" />
+                            </div>
+                          </div>
+                        </div>
+                        <span className="block w-full p-2 text-center font-normal">
+                          {t('sidebar.theme.system')}
                         </span>
                       </Label>
                     </div>
