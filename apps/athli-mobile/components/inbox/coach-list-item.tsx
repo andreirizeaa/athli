@@ -388,3 +388,4 @@ const styles = StyleSheet.create({
     height: 0.75,
   },
 });
+

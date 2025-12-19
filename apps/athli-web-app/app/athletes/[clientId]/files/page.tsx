@@ -17,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile } from '@/lib/files/file-service';
+import { addFile, updateFile, deleteFile, deleteClientFiles } from '@/lib/files/file-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { EditFileSidePanel } from '@/components/files/edit-file-side-panel';
@@ -149,6 +149,22 @@ const ClientFilesPage = () => {
 
   const handleClearSelected = () => {
     setSelectedFiles(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedFiles.size === 0 || !clientId) return;
+
+    try {
+      await deleteClientFiles({
+        fileIds: Array.from(selectedFiles),
+        clientId: clientId,
+      });
+      
+      setFiles((prev) => prev.filter((f) => !selectedFiles.has(f.id)));
+      setSelectedFiles(new Set());
+    } catch (error) {
+      console.error('Failed to delete files:', error);
+    }
   };
 
   const handleFileClick = (file: FileItem) => {
@@ -460,6 +476,15 @@ const ClientFilesPage = () => {
                 <span>
                   {t('files.actions.clearSelected')} {selectedFiles.size}
                 </span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleDeleteSelected}
+                className="gap-2"
+                aria-label={t('files.actions.deleteSelected')}
+              >
+                <Trash2Icon className="size-4" />
+                <span>{t('general.delete')}</span>
               </Button>
             </div>
           }

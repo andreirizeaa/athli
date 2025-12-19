@@ -18,9 +18,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Trash2, Edit, Plus, MoreHorizontal, FileText } from 'lucide-react';
+import { Trash2, Edit, Plus, MoreHorizontal, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/messaging/notes-service';
+import { getNotes, createNote, editNote, deleteNote, deleteClientNotes, type Note } from '@/lib/messaging/notes-service';
 
 const ClientNotesPage = () => {
   const t = useTranslations();
@@ -201,6 +201,22 @@ const ClientNotesPage = () => {
 
   const handleClearSelected = () => {
     setSelectedNotes(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedNotes.size === 0 || !clientId) return;
+
+    try {
+      await deleteClientNotes({
+        noteIds: Array.from(selectedNotes),
+        clientId: clientId,
+      });
+      
+      setNotes((prev) => prev.filter((n) => !selectedNotes.has(n.id)));
+      setSelectedNotes(new Set());
+    } catch (error) {
+      console.error('Failed to delete notes:', error);
+    }
   };
 
   const truncateText = (text: string, maxLength: number = 100): string => {
@@ -414,9 +430,19 @@ const ClientNotesPage = () => {
               className="gap-2"
               aria-label={t('general.clear')}
             >
+              <X className="size-4" />
               <span>
                 {t('general.clear')} {selectedNotes.size} selected
               </span>
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleDeleteSelected}
+              className="gap-2"
+              aria-label={t('general.delete')}
+            >
+              <Trash2 className="size-4" />
+              <span>{t('general.delete')}</span>
             </Button>
           </div>
         }

@@ -155,3 +155,31 @@ export const assignHabit = async (data: AssignHabitData): Promise<void> => {
   // })
   // if (!response.ok) throw new Error('Failed to assign habits')
 };
+
+export interface DeleteClientHabitsData {
+  habitIds: string[];
+  clientId: string;
+}
+
+/**
+ * Service method to delete habits from a client
+ * This will be connected to the backend in the future
+ */
+export const deleteClientHabits = async (data: DeleteClientHabitsData): Promise<void> => {
+  console.log('Deleting client habits:', {
+    habitIds: data.habitIds,
+    clientId: data.clientId,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/clients/${data.clientId}/habits`, {
+  //   method: 'DELETE',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ habitIds: data.habitIds }),
+  // })
+  // if (!response.ok) throw new Error('Failed to delete client habits')
+};
+

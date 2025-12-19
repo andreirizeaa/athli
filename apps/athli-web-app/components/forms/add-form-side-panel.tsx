@@ -216,9 +216,11 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
         <TabsContent value="templates" className="mt-0">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 text-sm leading-none font-medium text-foreground">
-                {t('forms.template')}
-                <RequiredAsterisk />
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                <span>
+                  {t('forms.template')}
+                  <RequiredAsterisk />
+                </span>
               </label>
               {selectedTemplate ? (
                 <Card className="p-4">
@@ -279,3 +281,4 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
     </SidePanel>
   );
 };
+

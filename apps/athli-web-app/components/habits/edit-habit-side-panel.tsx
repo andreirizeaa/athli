@@ -145,3 +145,4 @@ export const EditHabitSidePanel = ({
     </SidePanel>
   );
 };
+

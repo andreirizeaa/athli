@@ -3,12 +3,12 @@
 import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Target, Clock, Bell, X, Plus } from 'lucide-react';
+import { Target, Clock, Bell, X, Plus, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { addHabit, assignHabit, type Habit } from '@/lib/habits/habit-service';
+import { addHabit, assignHabit, deleteClientHabits, type Habit } from '@/lib/habits/habit-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { AddHabitSidePanel, type HabitFormValues } from '@/components/habits/add-habit-side-panel';
 
@@ -63,6 +63,22 @@ const ClientHabitsPage = () => {
 
   const handleClearSelected = () => {
     setSelectedHabits(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedHabits.size === 0 || !clientId) return;
+
+    try {
+      await deleteClientHabits({
+        habitIds: Array.from(selectedHabits),
+        clientId: clientId,
+      });
+      
+      setHabits((prev) => prev.filter((h) => !selectedHabits.has(h.id)));
+      setSelectedHabits(new Set());
+    } catch (error) {
+      console.error('Failed to delete habits:', error);
+    }
   };
 
   const handleOpenAddHabit = () => {
@@ -266,6 +282,15 @@ const ClientHabitsPage = () => {
               <span>
                 Clear {selectedHabits.size} selected
               </span>
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleDeleteSelected}
+              className="gap-2"
+              aria-label={t('habits.actions.deleteSelected')}
+            >
+              <Trash2 className="size-4" />
+              <span>{t('general.delete')}</span>
             </Button>
           </div>
         }
