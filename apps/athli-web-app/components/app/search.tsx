@@ -26,6 +26,114 @@ import {
   mockMessages,
 } from './mock-data';
 import type { Athlete, Contact, Workout, Program, Exercise } from './types';
+import { getForms, type Form } from '@/lib/forms/form-service';
+import { FileText } from 'lucide-react';
+
+type FileItem = {
+  id: string;
+  fileName: string;
+  type: 'pdf' | 'image' | 'video' | 'document' | 'spreadsheet' | 'other';
+  tags: string[];
+  pinned: boolean;
+};
+
+type Habit = {
+  id: string;
+  name: string;
+  description?: string;
+  amount: number;
+  unit: string;
+  period: 'daily' | 'weekly';
+  duration?: number;
+  reminderTime?: string;
+  reminderMessage?: string;
+  createdAt: number;
+};
+
+// Mock files data - in production this would come from an API
+const mockFiles: FileItem[] = [
+  {
+    id: '1',
+    fileName: 'Training Program Template.pdf',
+    type: 'pdf',
+    tags: ['Training', 'Program', 'Template'],
+    pinned: true,
+  },
+  {
+    id: '2',
+    fileName: 'Nutrition Guide.docx',
+    type: 'document',
+    tags: ['Nutrition', 'Education'],
+    pinned: false,
+  },
+  {
+    id: '3',
+    fileName: 'Recovery Protocol.pdf',
+    type: 'pdf',
+    tags: ['Recovery', 'Rehab'],
+    pinned: true,
+  },
+  {
+    id: '4',
+    fileName: 'Workout Video.mp4',
+    type: 'video',
+    tags: ['Training', 'Workout', 'Technique'],
+    pinned: false,
+  },
+  {
+    id: '5',
+    fileName: 'Progress Tracking.xlsx',
+    type: 'spreadsheet',
+    tags: ['Progress', 'Tracking', 'Assessment'],
+    pinned: false,
+  },
+];
+
+// Mock habits data - in production this would come from an API
+const mockHabits: Habit[] = [
+  {
+    id: '1',
+    name: 'Daily steps',
+    description: 'Track your daily step count to stay active',
+    amount: 10000,
+    unit: 'steps',
+    period: 'daily',
+    createdAt: Date.now() - 86400000 * 7,
+  },
+  {
+    id: '2',
+    name: 'Drink water',
+    description: 'Stay hydrated throughout the day',
+    amount: 8,
+    unit: 'cups',
+    period: 'daily',
+    reminderTime: '08:00',
+    reminderMessage: 'Time to hydrate!',
+    createdAt: Date.now() - 86400000 * 5,
+  },
+  {
+    id: '3',
+    name: 'Meditate',
+    description: 'Take time for mindfulness and mental clarity',
+    amount: 10,
+    unit: 'min',
+    period: 'daily',
+    duration: 10,
+    reminderTime: '07:00',
+    reminderMessage: 'Start your day with mindfulness',
+    createdAt: Date.now() - 86400000 * 3,
+  },
+  {
+    id: '4',
+    name: 'Mobility work',
+    description: 'Improve flexibility and prevent injury',
+    amount: 15,
+    unit: 'min',
+    period: 'daily',
+    duration: 15,
+    createdAt: Date.now() - 86400000 * 2,
+  },
+];
 
 export function SearchComponent() {
   const t = useTranslations();
@@ -33,10 +141,20 @@ export function SearchComponent() {
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isClient, setIsClient] = React.useState(false);
+  const [forms, setForms] = React.useState<Form[]>([]);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     setIsClient(true);
+    const loadForms = async () => {
+      try {
+        const formsData = await getForms();
+        setForms(formsData);
+      } catch (error) {
+        console.error('Failed to load forms:', error);
+      }
+    };
+    loadForms();
   }, []);
 
   React.useEffect(() => {
@@ -200,6 +318,85 @@ export function SearchComponent() {
     [searchQuery]
   );
 
+  const fileSearchResults = React.useMemo(
+    () =>
+      mockFiles.reduce<Array<{ file: FileItem }>>((results, file) => {
+        const query = searchQuery.trim();
+
+        if (!query) {
+          return results;
+        }
+
+        const hasMatchInFile =
+          isFuzzyMatch(file.fileName, query) ||
+          file.tags.some((tag) => isFuzzyMatch(tag, query));
+
+        if (!hasMatchInFile) {
+          return results;
+        }
+
+        results.push({
+          file,
+        });
+
+        return results;
+      }, []),
+    [searchQuery]
+  );
+
+  const formSearchResults = React.useMemo(
+    () =>
+      forms.reduce<Array<{ form: Form }>>((results, form) => {
+        const query = searchQuery.trim();
+
+        if (!query) {
+          return results;
+        }
+
+        const hasMatchInForm =
+          isFuzzyMatch(form.name, query) ||
+          (form.description && isFuzzyMatch(form.description, query));
+
+        if (!hasMatchInForm) {
+          return results;
+        }
+
+        results.push({
+          form,
+        });
+
+        return results;
+      }, []),
+    [searchQuery, forms]
+  );
+
+  const habitSearchResults = React.useMemo(
+    () =>
+      mockHabits.reduce<Array<{ habit: Habit }>>((results, habit) => {
+        const query = searchQuery.trim();
+
+        if (!query) {
+          return results;
+        }
+
+        const hasMatchInHabit =
+          isFuzzyMatch(habit.name, query) ||
+          (habit.description && isFuzzyMatch(habit.description, query)) ||
+          isFuzzyMatch(habit.unit, query);
+
+        if (!hasMatchInHabit) {
+          return results;
+        }
+
+        results.push({
+          habit,
+        });
+
+        return results;
+      }, []),
+    [searchQuery]
+  );
+
   const handleSearchResultClick = (contactId: string) => {
     router.push(`/messaging/${contactId}`);
     setIsSearchOpen(false);
@@ -226,6 +423,24 @@ export function SearchComponent() {
 
   const handleExerciseSearchResultClick = (exerciseId: string) => {
     router.push(`/training/exercises?exerciseId=${exerciseId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleFileSearchResultClick = (fileId: string) => {
+    router.push(`/files`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleFormSearchResultClick = (formId: string) => {
+    router.push(`/forms/${formId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleHabitSearchResultClick = (habitId: string) => {
+    router.push(`/habits`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
@@ -280,7 +495,10 @@ export function SearchComponent() {
                   athleteSearchResults.length === 0 &&
                   workoutSearchResults.length === 0 &&
                   programSearchResults.length === 0 &&
-                  exerciseSearchResults.length === 0 && (
+                  exerciseSearchResults.length === 0 &&
+                  fileSearchResults.length === 0 &&
+                  formSearchResults.length === 0 &&
+                  habitSearchResults.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
                       <p className="text-sm text-muted-foreground">
                         {t('sidebar.search.noResults')}{' '}
@@ -293,7 +511,10 @@ export function SearchComponent() {
                     athleteSearchResults.length > 0 ||
                     workoutSearchResults.length > 0 ||
                     programSearchResults.length > 0 ||
-                    exerciseSearchResults.length > 0) && (
+                    exerciseSearchResults.length > 0 ||
+                    fileSearchResults.length > 0 ||
+                    formSearchResults.length > 0 ||
+                    habitSearchResults.length > 0) && (
                     <div className="py-2">
                       {athleteSearchResults.length > 0 && (
                         <>
@@ -568,12 +789,216 @@ export function SearchComponent() {
                           </div>
                         </>
                       )}
-                      {messageSearchResults.length > 0 && (
+                      {fileSearchResults.length > 0 && (
                         <>
                           {(athleteSearchResults.length > 0 ||
                             workoutSearchResults.length > 0 ||
                             programSearchResults.length > 0 ||
                             exerciseSearchResults.length > 0) && (
+                            <div className="px-3 pt-4 pb-1">
+                              <div className="h-px bg-border" />
+                            </div>
+                          )}
+                          <div className="px-3 pb-1 pt-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {t('sidebar.search.files')}
+                            </p>
+                          </div>
+                          <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                            <div
+                              className={cn(
+                                'grid gap-2',
+                                fileSearchResults.length === 1
+                                  ? 'grid-cols-1'
+                                  : fileSearchResults.length === 2
+                                    ? 'grid-cols-2'
+                                    : 'grid-cols-2 sm:grid-cols-3'
+                              )}
+                            >
+                              {fileSearchResults.map((result) => (
+                                <Card
+                                  key={result.file.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => handleFileSearchResultClick(result.file.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      handleFileSearchResultClick(result.file.id);
+                                    }
+                                  }}
+                                  className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                  aria-label={t('sidebar.search.openFileAria', {
+                                    name: result.file.fileName,
+                                  })}
+                                >
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                        <FileText className="h-4 w-4 text-muted-foreground" />
+                                      </div>
+                                      <span className="text-sm font-medium truncate">
+                                        {result.file.fileName}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <span>{result.file.type}</span>
+                                      {result.file.tags.length > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span>{result.file.tags.slice(0, 2).join(', ')}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {formSearchResults.length > 0 && (
+                        <>
+                          {(athleteSearchResults.length > 0 ||
+                            workoutSearchResults.length > 0 ||
+                            programSearchResults.length > 0 ||
+                            exerciseSearchResults.length > 0 ||
+                            fileSearchResults.length > 0) && (
+                            <div className="px-3 pt-4 pb-1">
+                              <div className="h-px bg-border" />
+                            </div>
+                          )}
+                          <div className="px-3 pb-1 pt-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {t('sidebar.search.forms')}
+                            </p>
+                          </div>
+                          <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                            <div
+                              className={cn(
+                                'grid gap-2',
+                                formSearchResults.length === 1
+                                  ? 'grid-cols-1'
+                                  : formSearchResults.length === 2
+                                    ? 'grid-cols-2'
+                                    : 'grid-cols-2 sm:grid-cols-3'
+                              )}
+                            >
+                              {formSearchResults.map((result) => (
+                                <Card
+                                  key={result.form.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => handleFormSearchResultClick(result.form.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      handleFormSearchResultClick(result.form.id);
+                                    }
+                                  }}
+                                  className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                  aria-label={t('sidebar.search.openFormAria', {
+                                    name: result.form.name,
+                                  })}
+                                >
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                        <FileText className="h-4 w-4 text-muted-foreground" />
+                                      </div>
+                                      <span className="text-sm font-medium truncate">
+                                        {result.form.name}
+                                      </span>
+                                    </div>
+                                    {result.form.description && (
+                                      <div className="text-xs text-muted-foreground truncate">
+                                        {result.form.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {habitSearchResults.length > 0 && (
+                        <>
+                          {(athleteSearchResults.length > 0 ||
+                            workoutSearchResults.length > 0 ||
+                            programSearchResults.length > 0 ||
+                            exerciseSearchResults.length > 0 ||
+                            fileSearchResults.length > 0 ||
+                            formSearchResults.length > 0) && (
+                            <div className="px-3 pt-4 pb-1">
+                              <div className="h-px bg-border" />
+                            </div>
+                          )}
+                          <div className="px-3 pb-1 pt-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {t('sidebar.search.habits')}
+                            </p>
+                          </div>
+                          <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                            <div
+                              className={cn(
+                                'grid gap-2',
+                                habitSearchResults.length === 1
+                                  ? 'grid-cols-1'
+                                  : habitSearchResults.length === 2
+                                    ? 'grid-cols-2'
+                                    : 'grid-cols-2 sm:grid-cols-3'
+                              )}
+                            >
+                              {habitSearchResults.map((result) => (
+                                <Card
+                                  key={result.habit.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => handleHabitSearchResultClick(result.habit.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      handleHabitSearchResultClick(result.habit.id);
+                                    }
+                                  }}
+                                  className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                  aria-label={t('sidebar.search.openHabitAria', {
+                                    name: result.habit.name,
+                                  })}
+                                >
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                        <Archive className="h-4 w-4 text-muted-foreground" />
+                                      </div>
+                                      <span className="text-sm font-medium truncate">
+                                        {result.habit.name}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <span>
+                                        {result.habit.amount} {result.habit.unit}
+                                      </span>
+                                      <span>•</span>
+                                      <span>{result.habit.period}</span>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {messageSearchResults.length > 0 && (
+                        <>
+                          {(athleteSearchResults.length > 0 ||
+                            workoutSearchResults.length > 0 ||
+                            programSearchResults.length > 0 ||
+                            exerciseSearchResults.length > 0 ||
+                            fileSearchResults.length > 0 ||
+                            formSearchResults.length > 0 ||
+                            habitSearchResults.length > 0) && (
                             <div className="px-3 pt-4 pb-1">
                               <div className="h-px bg-border" />
                             </div>

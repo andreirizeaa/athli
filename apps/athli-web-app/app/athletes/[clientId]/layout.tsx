@@ -15,13 +15,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Archive, ChevronRight, MessageCircle, Users, X, Send } from 'lucide-react';
+import { ChevronRight, MessageCircle, Users, Send } from 'lucide-react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { mockAthletes } from '@/components/app/app-shell';
-import { archiveUser } from '@/lib/athletes/athlete-service';
 
 type ClientProfileLayoutProps = {
   children: React.ReactNode;
@@ -35,8 +33,6 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
   const athlete = mockAthletes.find((item) => item.id === clientId);
-
-  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
   const tabs = [
     {
@@ -53,7 +49,11 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
     },
     {
       value: 'check-in',
-      label: t('athletes.profile.checkIn'),
+      label: t('athletes.profile.checkIns.title'),
+    },
+    {
+      value: 'questionnaires',
+      label: t('athletes.profile.questionnaires.title'),
     },
     {
       value: 'notes',
@@ -67,17 +67,27 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       value: 'habits',
       label: t('athletes.profile.habits'),
     },
+    {
+      value: 'settings',
+      label: t('athletes.profile.settings.title'),
+    },
   ];
 
   const validTabValues = tabs.map((tab) => tab.value);
   const lastSegment = segments[segments.length - 1];
-  
-  // Check if we're in a check-in route (either list or detail page)
+
+  // Check if we're in a check-in, questionnaires, or settings route (either list or detail page)
   const isCheckInRoute = segments.includes('check-in');
-  
-  // Determine active tab: if in check-in route, use 'check-in', otherwise use last segment if valid
-  const activeTab = isCheckInRoute 
-    ? 'check-in' 
+  const isQuestionnairesRoute = segments.includes('questionnaires');
+  const isSettingsRoute = segments.includes('settings');
+
+  // Determine active tab
+  const activeTab = isCheckInRoute
+    ? 'check-in'
+    : isQuestionnairesRoute
+    ? 'questionnaires'
+    : isSettingsRoute
+    ? 'settings'
     : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const handleTabChange = (value: string) => {
@@ -119,35 +129,6 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         border: '1px solid rgb(187 247 208)',
       },
     });
-  };
-
-  const handleArchive = async () => {
-    if (!clientId) return;
-    
-    try {
-      await archiveUser(clientId);
-      setIsArchiveModalOpen(false);
-      toast.success(t('athletes.profile.archivedSuccessfully'), {
-        style: {
-          background: 'rgb(220 252 231)',
-          color: 'rgb(20 83 45)',
-          border: '1px solid rgb(187 247 208)',
-        },
-      });
-      handleNavigateToAthletes();
-    } catch (error) {
-      toast.error(t('athletes.profile.failedToArchive'), {
-        style: {
-          background: 'rgb(254 242 242)',
-          color: 'rgb(153 27 27)',
-          border: '1px solid rgb(254 202 202)',
-        },
-      });
-    }
-  };
-
-  const handleCancelArchive = () => {
-    setIsArchiveModalOpen(false);
   };
 
   if (!athlete) {
@@ -250,21 +231,6 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
               </TooltipContent>
             </Tooltip>
           </ButtonGroup>
-          <Tooltip>
-            <TooltipTrigger asChild>
-          <Button
-            size="icon"
-            className="gap-2"
-            aria-label={t('athletes.profile.archiveAria')}
-            onClick={() => setIsArchiveModalOpen(true)}
-          >
-            <Archive className="size-4" />
-          </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('athletes.profile.archiveAria')}</p>
-            </TooltipContent>
-          </Tooltip>
         </div>
         <div className="px-4">
           <PageTabs
@@ -277,36 +243,6 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 min-h-0 bg-background">{children}</div>
-      <Dialog open={isArchiveModalOpen} onOpenChange={setIsArchiveModalOpen}>
-        <DialogContent
-          className="w-full max-w-[500px] sm:max-w-[500px] flex flex-col"
-          showCloseButton={false}
-        >
-          <DialogHeader className="flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-left">{t('athletes.profile.archiveConfirmTitle', { firstName })}</DialogTitle>
-              <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('general.close')}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
-            </div>
-          </DialogHeader>
-          <div className="flex-1 mt-4">
-            <p className="text-sm text-muted-foreground">
-              {t('athletes.profile.archiveDescription')}
-            </p>
-          </div>
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={handleCancelArchive}>
-              {t('athletes.profile.no')}
-            </Button>
-            <Button type="button" onClick={handleArchive}>
-              {t('athletes.profile.yes')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

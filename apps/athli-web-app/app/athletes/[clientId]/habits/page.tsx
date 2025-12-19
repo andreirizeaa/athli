@@ -268,6 +268,12 @@ const ClientHabitsPage = () => {
           <EmptyGridState
             title="No habits assigned"
             subtitle="This client has no habits assigned yet"
+            action={
+              <Button onClick={handleOpenAddHabit} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('habits.addHabit')}</span>
+              </Button>
+            }
           />
         }
         selectionActions={
