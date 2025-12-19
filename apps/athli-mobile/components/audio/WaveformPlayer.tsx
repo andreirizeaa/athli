@@ -26,3 +26,4 @@ export const WaveformPlayer = React.forwardRef<IWaveformRef, any>(() => {
 WaveformPlayer.displayName = 'WaveformPlayer';
 
 
+

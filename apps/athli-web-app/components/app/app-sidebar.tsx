@@ -96,11 +96,6 @@ export function AppSidebar() {
       labelKey: 'sidebar.links.onboarding',
       icon: Zap,
     },
-    {
-      href: '/automations/check-ins',
-      labelKey: 'sidebar.links.checkIns',
-      icon: ClipboardCheck,
-    },
   ] as const;
 
   return (
@@ -232,7 +227,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/automations/onboarding' || href === '/automations/check-ins'
+                  href === '/automations/onboarding'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);
