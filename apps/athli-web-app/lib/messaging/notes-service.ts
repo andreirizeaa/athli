@@ -202,6 +202,33 @@ export const deleteNote = async (data: DeleteNoteData): Promise<void> => {
   // if (!response.ok) throw new Error('Failed to delete note')
 };
 
+export interface DeleteClientNotesData {
+  noteIds: string[];
+  clientId: string;
+}
+
+/**
+ * Service method to delete notes from a client
+ * This will be connected to the backend in the future
+ */
+export const deleteClientNotes = async (data: DeleteClientNotesData): Promise<void> => {
+  console.log('Deleting client notes:', {
+    noteIds: data.noteIds,
+    clientId: data.clientId,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/clients/${data.clientId}/notes`, {
+  //   method: 'DELETE',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ noteIds: data.noteIds }),
+  // })
+  // if (!response.ok) throw new Error('Failed to delete client notes')
+};
+
 /**
  * Dummy notes service method to search notes
  * This will be connected to the backend in the future

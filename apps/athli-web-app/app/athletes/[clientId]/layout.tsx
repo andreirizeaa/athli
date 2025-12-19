@@ -52,6 +52,10 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.trainingCalendar'),
     },
     {
+      value: 'check-in',
+      label: t('athletes.profile.checkIn'),
+    },
+    {
       value: 'notes',
       label: t('athletes.profile.notes'),
     },
@@ -67,7 +71,14 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
 
   const validTabValues = tabs.map((tab) => tab.value);
   const lastSegment = segments[segments.length - 1];
-  const activeTab = lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview';
+  
+  // Check if we're in a check-in route (either list or detail page)
+  const isCheckInRoute = segments.includes('check-in');
+  
+  // Determine active tab: if in check-in route, use 'check-in', otherwise use last segment if valid
+  const activeTab = isCheckInRoute 
+    ? 'check-in' 
+    : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const handleTabChange = (value: string) => {
     if (!clientId) {

@@ -137,3 +137,31 @@ export const deleteFile = async (data: DeleteFileData): Promise<void> => {
   // })
   // if (!response.ok) throw new Error('Failed to delete file')
 };
+
+export interface DeleteClientFilesData {
+  fileIds: string[];
+  clientId: string;
+}
+
+/**
+ * Service method to delete files from a client
+ * This will be connected to the backend in the future
+ */
+export const deleteClientFiles = async (data: DeleteClientFilesData): Promise<void> => {
+  console.log('Deleting client files:', {
+    fileIds: data.fileIds,
+    clientId: data.clientId,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/clients/${data.clientId}/files`, {
+  //   method: 'DELETE',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ fileIds: data.fileIds }),
+  // })
+  // if (!response.ok) throw new Error('Failed to delete client files')
+};
+

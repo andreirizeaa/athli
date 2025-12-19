@@ -1007,7 +1007,7 @@ export function DataGrid<T extends Record<string, any>>({
     >
       <div className="w-full flex-1 flex flex-col overflow-hidden">
         {!compactMode && hasToolbarContent && (
-          <div className="w-full px-4 py-3 flex items-center justify-between gap-4 flex-shrink-0 relative">
+          <div className="w-full px-3 py-3 flex items-center justify-between gap-4 flex-shrink-0 relative">
             {selectionActions && selectedRowIds.size > 0 && (
               <Card className="absolute left-2 top-2 z-40 bg-background border-border py-0 px-0 rounded-md">
                 <div className="px-2 py-[5px]">
