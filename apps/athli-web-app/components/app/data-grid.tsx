@@ -144,6 +144,8 @@ export type DataGridProps<T = any> = {
   isReorderMode?: boolean;
   onReorder?: (newData: T[]) => void;
   fixedBottomRowFilter?: (row: T) => boolean;
+  getRowClassName?: (row: T) => string;
+  getRowHeight?: (row: T) => string;
 };
 
 const isFuzzyMatch = (text: string, query: string): boolean => {
@@ -226,6 +228,7 @@ const SortableTableRow = <T extends Record<string, any>>({
   filteredColumnOrder,
   columns,
   showLastColumnDivider,
+  customClassName,
   children,
 }: {
   row: T;
@@ -241,6 +244,7 @@ const SortableTableRow = <T extends Record<string, any>>({
   filteredColumnOrder: string[];
   columns: ColumnDefinition<T>[];
   showLastColumnDivider: boolean;
+  customClassName?: string;
   children: React.ReactNode;
 }) => {
   const {
@@ -275,7 +279,8 @@ const SortableTableRow = <T extends Record<string, any>>({
         isSelected && '!bg-muted',
         (onRowClick || stickyFirstColumn) && 'cursor-pointer group',
         '[&:hover_td]:bg-muted',
-        '!transition-none'
+        '!transition-none',
+        customClassName
       )}
     >
       {children}
@@ -328,6 +333,8 @@ export function DataGrid<T extends Record<string, any>>({
   isReorderMode = false,
   onReorder,
   fixedBottomRowFilter,
+  getRowClassName,
+  getRowHeight,
 }: DataGridProps<T>) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -1007,7 +1014,7 @@ export function DataGrid<T extends Record<string, any>>({
     >
       <div className="w-full flex-1 flex flex-col overflow-hidden">
         {!compactMode && hasToolbarContent && (
-          <div className="w-full px-4 py-3 flex items-center justify-between gap-4 flex-shrink-0 relative">
+          <div className="w-full px-3 py-3 flex items-center justify-between gap-4 flex-shrink-0 relative">
             {selectionActions && selectedRowIds.size > 0 && (
               <Card className="absolute left-2 top-2 z-40 bg-background border-border py-0 px-0 rounded-md">
                 <div className="px-2 py-[5px]">
@@ -1677,6 +1684,7 @@ export function DataGrid<T extends Record<string, any>>({
                             filteredColumnOrder={filteredColumnOrder}
                             columns={columns}
                             showLastColumnDivider={showLastColumnDivider}
+                            customClassName={getRowClassName?.(row)}
                           >
                             {stickyFirstColumn && renderFirstColumn && (
                               <TableCell
@@ -1822,10 +1830,11 @@ export function DataGrid<T extends Record<string, any>>({
                           isSelected && '!bg-muted',
                           (onRowClick || stickyFirstColumn) && 'cursor-pointer group',
                           '[&:hover_td]:bg-muted',
-                          '!transition-none'
+                          '!transition-none',
+                          getRowClassName?.(row)
                         )}
                         style={{
-                          height: rowHeight,
+                          height: getRowHeight ? getRowHeight(row) : rowHeight,
                           ...(isSelected ? { backgroundColor: 'hsl(var(--muted))' } : {}),
                         }}
                       >
@@ -2204,10 +2213,11 @@ export function DataGrid<T extends Record<string, any>>({
                           isSelected && '!bg-muted',
                           (onRowClick || stickyFirstColumn) && 'cursor-pointer group',
                           '[&:hover_td]:bg-muted',
-                          '!transition-none'
+                          '!transition-none',
+                          getRowClassName?.(row)
                         )}
                         style={{
-                          height: rowHeight,
+                          height: getRowHeight ? getRowHeight(row) : rowHeight,
                           ...(isSelected ? { backgroundColor: 'hsl(var(--muted))' } : {}),
                         }}
                       >

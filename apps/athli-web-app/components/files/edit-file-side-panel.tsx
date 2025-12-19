@@ -153,3 +153,4 @@ export const EditFileSidePanel = ({
     </SidePanel>
   );
 };
+

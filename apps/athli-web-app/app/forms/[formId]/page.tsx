@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
@@ -16,12 +16,13 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, Trash2, GripVertical, Edit } from 'lucide-react';
-import { type Form } from '@/lib/forms/form-service';
+import { type Form, addQuestion, reorderQuestions } from '@/lib/forms/form-service';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { EditFormSidePanel } from '@/components/forms/edit-form-side-panel';
+import { FormPreviewContainer } from '@/components/forms/form-preview-container';
 
 // Mock forms data - in production this would come from an API
 const mockForms: Form[] = [
@@ -63,6 +64,8 @@ const FormDetailPage = () => {
   const [isReorderMode, setIsReorderMode] = useState<boolean>(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState<boolean>(false);
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
+  const [previewQuestionIndex, setPreviewQuestionIndex] = useState<number>(0);
+  const reorderedQuestionsRef = useRef<Question[] | null>(null);
   const [questions, setQuestions] = useState<Question[]>(() => {
     // Check for questions from template in sessionStorage
     const storedQuestions = sessionStorage.getItem(`form-questions-${formId}`);
@@ -124,6 +127,15 @@ const FormDetailPage = () => {
     }
   }, [form]);
 
+  // Ensure preview index is within bounds
+  useEffect(() => {
+    if (questions.length === 0) {
+      setPreviewQuestionIndex(0);
+    } else if (previewQuestionIndex >= questions.length) {
+      setPreviewQuestionIndex(questions.length - 1);
+    }
+  }, [questions.length, previewQuestionIndex]);
+
   if (!form) {
     return (
       <div className="h-full w-full flex items-center justify-center">
@@ -139,26 +151,57 @@ const FormDetailPage = () => {
     router.push(path);
   };
 
-  const handleToggleReorder = () => {
+  const handleToggleReorder = async () => {
+    const wasInReorderMode = isReorderMode;
     setIsReorderMode(!isReorderMode);
+    
+    // If we're exiting reorder mode, save the new order
+    if (wasInReorderMode) {
+      try {
+        // Use the ref if available (from handleReorder), otherwise use state
+        const questionsToReorder = reorderedQuestionsRef.current || questions;
+        await reorderQuestions({
+          formId: formId,
+          questionIds: questionsToReorder.map((q) => q.id),
+        });
+        reorderedQuestionsRef.current = null;
+      } catch (error) {
+        console.error('Failed to reorder questions:', error);
+      }
+    }
   };
 
   const handleReorder = (newData: any[]) => {
     // Filter out the add row before saving
     const filteredData = newData.filter((item) => !item._isAddRow) as Question[];
     setQuestions(filteredData);
+    // Store in ref for use when exiting reorder mode
+    reorderedQuestionsRef.current = filteredData;
   };
 
   const handleOpenAddQuestion = () => {
     setIsAddQuestionOpen(true);
   };
 
-  const handleAddQuestion = (questionData: any) => {
-    const newQuestion: Question = {
-      id: `q${Date.now()}`,
-      ...questionData,
-    };
-    setQuestions([...questions, newQuestion]);
+  const handleAddQuestion = async (questionData: any) => {
+    try {
+      const newQuestion = await addQuestion({
+        formId: formId,
+        question: questionData.question,
+        required: questionData.required,
+        format: questionData.format,
+        options: questionData.options,
+        scaleFrom: questionData.scaleFrom,
+        scaleTo: questionData.scaleTo,
+        mediaCount: questionData.mediaCount,
+      });
+      
+      setQuestions([...questions, newQuestion]);
+      // Navigate to the newly added question in preview
+      setPreviewQuestionIndex(questions.length);
+    } catch (error) {
+      console.error('Failed to add question:', error);
+    }
   };
 
   const handleEditQuestion = (questionData: Question) => {
@@ -168,6 +211,14 @@ const FormDetailPage = () => {
   const handleDeleteQuestion = (questionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setQuestions(questions.filter((q) => q.id !== questionId));
+    // Adjust preview index if needed
+    if (previewQuestionIndex >= questions.length - 1 && previewQuestionIndex > 0) {
+      setPreviewQuestionIndex(previewQuestionIndex - 1);
+    }
+  };
+
+  const handlePreviewNavigate = (index: number) => {
+    setPreviewQuestionIndex(index);
   };
 
   const handleEditForm = (updatedForm: Form) => {
@@ -403,18 +454,17 @@ const FormDetailPage = () => {
           </div>
           <Card
             className="flex flex-col items-center justify-center overflow-auto"
-            style={{ 
-              width: 'calc(30% - 0.5rem)', 
+            style={{
+              width: 'calc(30% - 0.5rem)',
               flexShrink: 0
             }}
           >
             <IphoneFrame>
-              <div className="p-4">
-                <h1 className="text-xl font-semibold">Preview</h1>
-                <p className="text-sm text-muted-foreground">
-                  Your form preview goes here.
-                </p>
-              </div>
+              <FormPreviewContainer
+                questions={questions}
+                currentQuestionIndex={previewQuestionIndex}
+                onNavigate={handlePreviewNavigate}
+              />
             </IphoneFrame>
           </Card>
         </div>
