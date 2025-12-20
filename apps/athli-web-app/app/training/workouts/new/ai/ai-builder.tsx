@@ -22,6 +22,8 @@ import { generateWorkoutFromPrompt, prompt } from '@/lib/library/workouts/genera
 import { toast } from 'sonner';
 import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
 import type {
+  CircuitExerciseGroupPayload,
+  CircuitExercisePayload,
   ExerciseGroupPayload,
   ExerciseType,
   RegularExercisePayload,
@@ -131,51 +133,97 @@ const buildWorkoutPayload = (
     return null;
   }
 
+  const parseNumberOrUndefined = (value?: string): number | undefined => {
+    if (!value) return undefined;
+    const n = Number(value);
+    return Number.isNaN(n) ? undefined : n;
+  };
+
   const parseNumberOrNull = (value?: string): number | null => {
     if (!value) return null;
     const n = Number(value);
     return Number.isNaN(n) ? null : n;
   };
 
-  const parseStages = (value?: string): number[] | null => {
-    if (!value) return null;
-    const parts = value
-      .split('-')
-      .map((part) => Number(part.trim()))
-      .filter((n) => !Number.isNaN(n));
-    return parts.length > 0 ? parts : null;
-  };
+  const mapSetDataToPayload = (
+    exerciseType: ExerciseType,
+    set: SetData
+  ): SetPayload => {
+    const base = {
+      setNumber: set.setNumber,
+      restSec: set.rest ? parseNumberOrNull(set.rest) : null,
+    } as const;
 
-  const mapSetDataToPayload = (set: SetData): SetPayload => {
-    const isDropset = set.type === 'dropset';
-
-    if (isDropset) {
-      const weightStages = parseStages(set.weight);
-      const repStages = parseStages(set.reps);
-
+    // distance_duration is always non-dropset, with either distance or durationSec
+    if (exerciseType === 'distance_duration') {
       return {
-        setNumber: set.setNumber,
-        isDropset: true,
-        weight: null,
-        reps: null,
-        distance: parseNumberOrNull(set.distance),
-        durationSec: parseNumberOrNull(set.duration),
-        restSec: parseNumberOrNull(set.rest),
-        weightStages,
-        repStages,
+        ...base,
+        exerciseType: 'distance_duration',
+        distance: set.distance ? parseNumberOrUndefined(set.distance) : undefined,
+        durationSec: set.duration ? parseNumberOrUndefined(set.duration) : undefined,
       };
     }
 
+    // Helper to parse "10-8-6" style strings into numbers
+    const parseStages = (value?: string): number[] => {
+      if (!value) return [];
+      return value
+        .split('-')
+        .map((part) => Number(part.trim()))
+        .filter((n) => !Number.isNaN(n));
+    };
+
+    // Dropset handling – presence of dropset implies dropset semantics
+    if (set.type === 'dropset') {
+      const repStages = parseStages(set.reps);
+      const weightStages = exerciseType === 'weight_reps' ? parseStages(set.weight) : [];
+
+      const stages = Array.from(
+        { length: Math.max(repStages.length, weightStages.length) },
+        (_v, index) => {
+          const stage: { weight?: number; reps?: number } = {};
+          if (repStages[index] != null) stage.reps = repStages[index];
+          if (weightStages[index] != null) stage.weight = weightStages[index];
+          return stage;
+        }
+      ).filter((s) => s.reps != null || s.weight != null);
+
+      if (exerciseType === 'weight_reps') {
+        return {
+          ...base,
+          exerciseType: 'weight_reps',
+          weight: parseNumberOrNull(set.weight) ?? 0,
+          reps: parseNumberOrNull(set.reps) ?? 0,
+          dropset: { stages },
+        };
+      }
+
+      // reps-only dropset
+      return {
+        ...base,
+        exerciseType: 'reps',
+        reps: parseNumberOrNull(set.reps) ?? 0,
+        dropset: {
+          stages: stages.map((s) => ({ reps: s.reps })),
+        },
+      };
+    }
+
+    // Non-dropset sets
+    if (exerciseType === 'weight_reps') {
+      return {
+        ...base,
+        exerciseType: 'weight_reps',
+        weight: parseNumberOrNull(set.weight) ?? 0,
+        reps: parseNumberOrNull(set.reps) ?? 0,
+      };
+    }
+
+    // reps-only non-dropset
     return {
-      setNumber: set.setNumber,
-      isDropset: false,
-      weight: parseNumberOrNull(set.weight),
-      reps: parseNumberOrNull(set.reps),
-      distance: parseNumberOrNull(set.distance),
-      durationSec: parseNumberOrNull(set.duration),
-      restSec: parseNumberOrNull(set.rest),
-      weightStages: null,
-      repStages: null,
+      ...base,
+      exerciseType: 'reps',
+      reps: parseNumberOrNull(set.reps) ?? 0,
     };
   };
 
@@ -188,7 +236,7 @@ const buildWorkoutPayload = (
           id: exercise.exerciseId,
           name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
-          sets: (exercise.sets || []).map(mapSetDataToPayload),
+          sets: (exercise.sets || []).map((set) => mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)),
           alternatives: exercise.alternatives || [],
         }));
 
@@ -230,18 +278,27 @@ const buildWorkoutPayload = (
     if (section.type === 'circuits') {
       const groups = groupExercisesBySupersetForPayload(section.exercises || []);
 
-      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
-        const mapped = group.map<RegularExercisePayload>((exercise) => ({
-          id: exercise.exerciseId,
-          name: exercise.name,
-          exerciseType: exercise.exerciseType as ExerciseType,
+      const exercises: CircuitExerciseGroupPayload[] = groups.map((group) => {
+        const mapped = group.map<CircuitExercisePayload>((exercise) => {
           // Circuits limit to one set per exercise - take only the first set
-          sets: (exercise.sets && exercise.sets.length > 0
-            ? [exercise.sets[0]]
-            : []
-          ).map(mapSetDataToPayload),
-          alternatives: exercise.alternatives || [],
-        }));
+          const firstSet: SetData = exercise.sets && exercise.sets.length > 0
+            ? exercise.sets[0]
+            : {
+                setNumber: 1,
+                type: 'normal' as const,
+                reps: '0',
+                weight: '0',
+                rest: '0',
+              };
+
+          return {
+            id: exercise.exerciseId,
+            name: exercise.name,
+            exerciseType: exercise.exerciseType as ExerciseType,
+            set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet),
+            alternatives: exercise.alternatives || [],
+          };
+        });
 
         const isSuperset = mapped.length > 1;
 
@@ -267,7 +324,7 @@ const buildWorkoutPayload = (
           id: exercise.exerciseId,
           name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
-          sets: (exercise.sets || []).map(mapSetDataToPayload),
+          sets: (exercise.sets || []).map((set) => mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)),
           alternatives: exercise.alternatives || [],
         }));
 
@@ -2575,16 +2632,18 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
           <CardContent className="absolute inset-0 p-4 overflow-y-auto">
           <EquipmentPanel sections={workoutSchema.sections} />
           <OverviewPanel
-            sections={workoutSchema.sections.map((section) => ({
-              id: section.id,
-              type: section.type,
-              exercises: section.exercises?.map((exercise) => ({
-                exerciseId: exercise.exerciseId,
-                instanceId: exercise.instanceId,
-                name: exercise.name,
-                supersetGroupId: exercise.supersetGroupId,
-              })),
-            }))}
+            sections={workoutSchema.sections
+              .filter((section) => section.type === 'regular' || section.type === 'amrap' || section.type === 'timed')
+              .map((section) => ({
+                id: section.id,
+                type: section.type as 'regular' | 'amrap' | 'timed',
+                exercises: section.exercises?.map((exercise) => ({
+                  exerciseId: exercise.exerciseId,
+                  instanceId: exercise.instanceId,
+                  name: exercise.name,
+                  supersetGroupId: exercise.supersetGroupId,
+                })),
+              }))}
             onSectionsChange={(sections) => {
               onDirtyChange?.();
               setWorkoutSchema((prev) => ({

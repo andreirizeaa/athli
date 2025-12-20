@@ -625,7 +625,9 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                       <Checkbox 
                         checked={isAllSelected} 
                         onCheckedChange={(checked) => {
-                          onToggleAll(checked);
+                          if (checked !== isAllSelected) {
+                            onToggleAll();
+                          }
                           setIsAllClientsSelected(checked === true);
                         }} 
                         aria-label={t('general.selectAll')} 
