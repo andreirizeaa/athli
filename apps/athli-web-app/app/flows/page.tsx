@@ -14,8 +14,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { cn } from '@/lib/utils';
+import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
 
-type Onboarding = {
+type Flow = {
   id: string;
   name: string;
   description: string;
@@ -23,17 +24,17 @@ type Onboarding = {
   createdAt: number;
 };
 
-// Mock onboardings data
-const mockOnboardings: Onboarding[] = [
+// Mock flows data
+const mockFlows: Flow[] = [
   {
-    id: 'onboarding-1',
+    id: 'flow-1',
     name: 'New Client Onboarding',
     description: 'Comprehensive onboarding flow for new clients',
     stepCount: 5,
     createdAt: Date.now() - 86400000 * 7,
   },
   {
-    id: 'onboarding-2',
+    id: 'flow-2',
     name: 'Athlete Welcome',
     description: 'Welcome and introduction flow for new athletes',
     stepCount: 3,
@@ -41,15 +42,16 @@ const mockOnboardings: Onboarding[] = [
   },
 ];
 
-const OnboardingsPage = () => {
+const FlowsPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const [onboardings, setOnboardings] = useState<Onboarding[]>(mockOnboardings);
+  const [flows, setFlows] = useState<Flow[]>(mockFlows);
+  const [isAddFlowOpen, setIsAddFlowOpen] = useState<boolean>(false);
 
-  const columns: ColumnDefinition<Onboarding>[] = [
+  const columns: ColumnDefinition<Flow>[] = [
     {
       id: 'name',
-      label: t('onboardings.columns.name'),
+      label: t('flows.columns.name'),
       icon: <FileText className="size-3" />,
       sortable: true,
       width: { class: 'w-[350px]', pixel: '350px' },
@@ -58,7 +60,7 @@ const OnboardingsPage = () => {
     },
     {
       id: 'description',
-      label: t('onboardings.columns.description'),
+      label: t('flows.columns.description'),
       icon: <FileText className="size-3" />,
       sortable: true,
       width: { class: 'w-[400px]', pixel: '400px' },
@@ -72,7 +74,7 @@ const OnboardingsPage = () => {
     },
     {
       id: 'stepCount',
-      label: t('onboardings.columns.stepCount'),
+      label: t('flows.columns.stepCount'),
       icon: <FileText className="size-3" />,
       sortable: true,
       width: { class: 'w-[150px]', pixel: '150px' },
@@ -101,7 +103,7 @@ const OnboardingsPage = () => {
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
               <span className="text-xs uppercase text-muted-foreground">
-                {t('onboardings.columns.name')}
+                {t('flows.columns.name')}
               </span>
               {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
               {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
@@ -130,7 +132,7 @@ const OnboardingsPage = () => {
     );
   };
 
-  const renderFirstColumn = (row: Onboarding) => {
+  const renderFirstColumn = (row: Flow) => {
     return (
       <div className="flex items-center gap-3 h-full w-full">
         <span className="text-sm font-medium truncate">{row.name}</span>
@@ -142,21 +144,21 @@ const OnboardingsPage = () => {
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
       <div className="w-full relative flex-shrink-0">
         <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
-          <h1 className="text-[22px] font-semibold">{t('onboardings.title')}</h1>
-          <Button className="gap-2">
+          <h1 className="text-[22px] font-semibold">{t('flows.title')}</h1>
+          <Button className="gap-2" onClick={() => setIsAddFlowOpen(true)}>
             <Plus className="size-4" />
-            <span>{t('onboardings.addOnboarding')}</span>
+            <span>{t('flows.addFlow')}</span>
           </Button>
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
 
       <DataGrid
-        data={onboardings}
+        data={flows}
         columns={columns}
         getRowId={(row) => row.id}
-        gridKey="onboardings"
-        searchPlaceholder={t('onboardings.searchPlaceholder')}
+        gridKey="flows"
+        searchPlaceholder={t('flows.searchPlaceholder')}
         enableSearch={true}
         searchFields={['name', 'description']}
         enableEditColumns={false}
@@ -171,19 +173,24 @@ const OnboardingsPage = () => {
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
-        emptyMessage={t('onboardings.emptyMessage')}
+        emptyMessage={t('flows.emptyMessage')}
         onRowClick={(row) => {
-          router.push(`/onboardings/${row.id}`);
+          router.push(`/flows/${row.id}`);
         }}
         onRowKeyDown={(row, event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            router.push(`/onboardings/${row.id}`);
+            router.push(`/flows/${row.id}`);
           }
         }}
+      />
+
+      <AddFlowSidePanel
+        open={isAddFlowOpen}
+        onOpenChange={setIsAddFlowOpen}
       />
     </div>
   );
 };
 
-export default OnboardingsPage;
+export default FlowsPage;

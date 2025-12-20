@@ -337,7 +337,7 @@ export const enMessages = {
       files: 'Files',
       habits: 'Habits',
       forms: 'Forms',
-      onboarding: 'Onboarding',
+      flows: 'Flows',
       checkIns: 'Check Ins',
     },
     actions: {
@@ -369,6 +369,7 @@ export const enMessages = {
       files: 'Files',
       forms: 'Forms',
       habits: 'Habits',
+      flows: 'Flows',
       messages: 'Messages',
       exercisesCount: 'exercises',
       aiAssistant: 'AI Assistant',
@@ -381,6 +382,7 @@ export const enMessages = {
       openFileAria: 'Open file {name}',
       openFormAria: 'Open form {name}',
       openHabitAria: 'Open habit {name}',
+      openFlowAria: 'Open flow {name}',
       openConversationAria: 'Open conversation with {name}',
     },
     theme: {
@@ -1864,15 +1866,26 @@ export const enMessages = {
       },
     },
   },
-  onboardings: {
-    title: 'Onboardings',
-    addOnboarding: 'Add onboarding',
-    searchPlaceholder: 'Search onboardings...',
-    emptyMessage: 'No onboardings found.',
+  flows: {
+    title: 'Flows',
+    addFlow: 'Add flow',
+    editFlow: 'Edit flow',
+    searchPlaceholder: 'Search flows...',
+    emptyMessage: 'No flows found.',
+    notFound: 'Flow not found',
+    notFoundDescription: 'The flow you are looking for does not exist.',
     columns: {
       name: 'Name',
       description: 'Description',
       stepCount: '# Steps',
+    },
+    form: {
+      name: 'Flow name',
+      namePlaceholder: 'Enter flow name...',
+      nameRequired: 'Flow name is required',
+      nameMaxLength: 'Flow name must be less than 100 characters',
+      description: 'Description',
+      descriptionPlaceholder: 'Enter description...',
     },
   },
 } as const;
