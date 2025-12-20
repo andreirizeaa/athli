@@ -36,7 +36,7 @@ import { addForm, type AddFormData } from '@/lib/forms/form-service';
 import { formTemplates, type FormTemplate } from '@/lib/constants/forms';
 import { cn } from '@/lib/utils';
 
-type AddFormSidePanelProps = {
+type AddCheckInFormSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave?: (form: ReturnType<typeof addForm> extends Promise<infer T> ? T : never, questions?: FormTemplate['questions']) => void;
@@ -47,15 +47,21 @@ type FormFormValues = {
   description?: string;
 };
 
-export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePanelProps) => {
+export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheckInFormSidePanelProps) => {
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<'new' | 'templates'>('new');
   const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null);
-  const [formType, setFormType] = useState<'check-in' | 'questionnaire'>('check-in');
   const [checkInFrequency, setCheckInFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>('daily');
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
   const [monthlyOption, setMonthlyOption] = useState<'first' | 'last' | 'specific'>('last');
   const [specificDay, setSpecificDay] = useState<number>(1);
+
+  // Filter templates to only show check-in templates
+  const checkInTemplates = useMemo(() => {
+    return formTemplates.filter((template) => 
+      template.schedule?.type === 'check-in' || !template.schedule
+    );
+  }, []);
 
   const formSchema = z.object({
     name: z
@@ -78,7 +84,6 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
     form.reset();
     setActiveTab('new');
     setSelectedTemplate(null);
-    setFormType('check-in');
     setCheckInFrequency('daily');
     setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
     setMonthlyOption('last');
@@ -104,40 +109,31 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
     form.setValue('description', template.description || '', { shouldValidate: true });
     
     // Apply scheduling defaults from template
-    if (template.schedule) {
-      setFormType(template.schedule.type);
+    if (template.schedule?.frequency) {
+      setCheckInFrequency(template.schedule.frequency);
       
-      if (template.schedule.type === 'check-in' && template.schedule.frequency) {
-        setCheckInFrequency(template.schedule.frequency);
-        
-        if (template.schedule.selectedDays) {
-          setSelectedDays(new Set(template.schedule.selectedDays));
-        } else if (template.schedule.frequency === 'daily') {
-          setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
-        } else if (template.schedule.frequency === 'weekly' || template.schedule.frequency === 'biweekly') {
-          setSelectedDays(new Set(['sunday']));
-        }
-        
-        if (template.schedule.monthlyOption) {
-          setMonthlyOption(template.schedule.monthlyOption);
-        }
-        
-        if (template.schedule.specificDay) {
-          setSpecificDay(template.schedule.specificDay);
-        }
+      if (template.schedule.selectedDays) {
+        setSelectedDays(new Set(template.schedule.selectedDays));
+      } else if (template.schedule.frequency === 'daily') {
+        setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
+      } else if (template.schedule.frequency === 'weekly' || template.schedule.frequency === 'biweekly') {
+        setSelectedDays(new Set(['sunday']));
+      }
+      
+      if (template.schedule.monthlyOption) {
+        setMonthlyOption(template.schedule.monthlyOption);
+      }
+      
+      if (template.schedule.specificDay) {
+        setSpecificDay(template.schedule.specificDay);
       }
     } else {
-      // Default to check-in if no schedule specified
-      setFormType('check-in');
+      // Default values
       setCheckInFrequency('daily');
       setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
       setMonthlyOption('last');
       setSpecificDay(1);
     }
-  };
-
-  const handleChangeTemplate = () => {
-    setActiveTab('templates');
   };
 
   const handleEditTemplate = () => {
@@ -198,7 +194,7 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title={t('forms.addFormTitle')}
+      title={t('forms.addCheckInTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
         <div className="flex w-full justify-start gap-2">
@@ -323,180 +319,141 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
               <div className="space-y-4">
                 <Label>
                   <span>
-                    {t('forms.type.label')}
+                    {t('athletes.profile.checkIns.schedule.frequency.label')}
                     <span className="text-destructive">*</span>
                   </span>
                 </Label>
                 <ToggleGroup
                   type="single"
-                  value={formType}
+                  value={checkInFrequency}
                   onValueChange={(value) => {
                     if (value) {
-                      setFormType(value as 'check-in' | 'questionnaire');
+                      const newFrequency = value as 'daily' | 'weekly' | 'biweekly' | 'monthly';
+                      setCheckInFrequency(newFrequency);
+                      // Reset selected days based on frequency
+                      if (newFrequency === 'daily') {
+                        setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
+                      } else if (newFrequency === 'weekly' || newFrequency === 'biweekly') {
+                        setSelectedDays(new Set(['sunday']));
+                      }
                     }
                   }}
                   variant="outline"
                   spacing={0}
                   className="w-full"
                 >
-                  <ToggleGroupItem value="check-in" aria-label={t('forms.type.checkIn')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                    {t('forms.type.checkIn')}
+                  <ToggleGroupItem value="daily" aria-label={t('athletes.profile.checkIns.schedule.frequency.daily')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    {t('athletes.profile.checkIns.schedule.frequency.daily')}
                   </ToggleGroupItem>
-                  <ToggleGroupItem value="questionnaire" aria-label={t('forms.type.questionnaire')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                    {t('forms.type.questionnaire')}
+                  <ToggleGroupItem value="weekly" aria-label={t('athletes.profile.checkIns.schedule.frequency.weekly')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    {t('athletes.profile.checkIns.schedule.frequency.weekly')}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="biweekly" aria-label={t('athletes.profile.checkIns.schedule.frequency.biweekly')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    {t('athletes.profile.checkIns.schedule.frequency.biweekly')}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="monthly" aria-label={t('athletes.profile.checkIns.schedule.frequency.monthly')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                    {t('athletes.profile.checkIns.schedule.frequency.monthly')}
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
 
-              {formType === 'questionnaire' ? (
-                <Alert className="bg-primary/5 border-primary/20 text-primary">
-                  <Info className="size-4" />
-                  <AlertDescription className="min-w-0 line-clamp-4">
-                    {t('forms.type.questionnaireInfo')}
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <>
+              <div className="space-y-4 w-full">
+                <Label>
+                  <span>
+                    {checkInFrequency === 'daily' && t('athletes.profile.checkIns.schedule.selectDays')}
+                    {(checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') && t('athletes.profile.checkIns.schedule.selectDay')}
+                    {checkInFrequency === 'monthly' && t('athletes.profile.checkIns.schedule.dayOfMonth')}
+                    <span className="text-destructive">*</span>
+                  </span>
+                </Label>
+                {(checkInFrequency === 'daily' || checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') && (
+                  <div className="flex gap-2 flex-wrap w-full justify-between">
+                    {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                      <div key={day} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedDays.has(day)}
+                          onCheckedChange={(checked) => {
+                            const newSelectedDays = new Set(selectedDays);
+                            if (checked) {
+                              newSelectedDays.add(day);
+                            } else {
+                              newSelectedDays.delete(day);
+                            }
+                            setSelectedDays(newSelectedDays);
+                          }}
+                          aria-label={t(`habits.form.${day}`)}
+                        />
+                        <Label className="text-sm font-normal cursor-pointer" onClick={() => {
+                          const newSelectedDays = new Set(selectedDays);
+                          if (selectedDays.has(day)) {
+                            newSelectedDays.delete(day);
+                          } else {
+                            newSelectedDays.add(day);
+                          }
+                          setSelectedDays(newSelectedDays);
+                        }}>
+                          {t(`habits.form.${day}`)}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {checkInFrequency === 'monthly' && (
                   <div className="space-y-4">
-                    <Label>
-                      <span>
-                        {t('athletes.profile.checkIns.schedule.frequency.label')}
-                        <span className="text-destructive">*</span>
-                      </span>
-                    </Label>
                     <ToggleGroup
                       type="single"
-                      value={checkInFrequency}
+                      value={monthlyOption}
                       onValueChange={(value) => {
                         if (value) {
-                          const newFrequency = value as 'daily' | 'weekly' | 'biweekly' | 'monthly';
-                          setCheckInFrequency(newFrequency);
-                          // Reset selected days based on frequency
-                          if (newFrequency === 'daily') {
-                            setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
-                          } else if (newFrequency === 'weekly' || newFrequency === 'biweekly') {
-                            setSelectedDays(new Set(['sunday']));
-                          }
+                          setMonthlyOption(value as 'first' | 'last' | 'specific');
                         }
                       }}
                       variant="outline"
                       spacing={0}
                       className="w-full"
                     >
-                      <ToggleGroupItem value="daily" aria-label={t('athletes.profile.checkIns.schedule.frequency.daily')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                        {t('athletes.profile.checkIns.schedule.frequency.daily')}
+                      <ToggleGroupItem value="first" aria-label={t('athletes.profile.checkIns.schedule.monthly.first')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                        {t('athletes.profile.checkIns.schedule.monthly.first')}
                       </ToggleGroupItem>
-                      <ToggleGroupItem value="weekly" aria-label={t('athletes.profile.checkIns.schedule.frequency.weekly')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                        {t('athletes.profile.checkIns.schedule.frequency.weekly')}
+                      <ToggleGroupItem value="last" aria-label={t('athletes.profile.checkIns.schedule.monthly.last')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                        {t('athletes.profile.checkIns.schedule.monthly.last')}
                       </ToggleGroupItem>
-                      <ToggleGroupItem value="biweekly" aria-label={t('athletes.profile.checkIns.schedule.frequency.biweekly')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                        {t('athletes.profile.checkIns.schedule.frequency.biweekly')}
-                      </ToggleGroupItem>
-                      <ToggleGroupItem value="monthly" aria-label={t('athletes.profile.checkIns.schedule.frequency.monthly')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                        {t('athletes.profile.checkIns.schedule.frequency.monthly')}
+                      <ToggleGroupItem value="specific" aria-label={t('athletes.profile.checkIns.schedule.monthly.specific')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                        {t('athletes.profile.checkIns.schedule.monthly.specific')}
                       </ToggleGroupItem>
                     </ToggleGroup>
-                  </div>
-
-                  <div className="space-y-4 w-full">
-                    <Label>
-                      <span>
-                        {checkInFrequency === 'daily' && t('athletes.profile.checkIns.schedule.selectDays')}
-                        {(checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') && t('athletes.profile.checkIns.schedule.selectDay')}
-                        {checkInFrequency === 'monthly' && t('athletes.profile.checkIns.schedule.dayOfMonth')}
-                        <span className="text-destructive">*</span>
-                      </span>
-                    </Label>
-                    {(checkInFrequency === 'daily' || checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') && (
-                      <div className="flex gap-2 flex-wrap w-full justify-between">
-                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
-                          <div key={day} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={selectedDays.has(day)}
-                              onCheckedChange={(checked) => {
-                                const newSelectedDays = new Set(selectedDays);
-                                if (checked) {
-                                  newSelectedDays.add(day);
-                                } else {
-                                  newSelectedDays.delete(day);
-                                }
-                                setSelectedDays(newSelectedDays);
-                              }}
-                              aria-label={t(`habits.form.${day}`)}
-                            />
-                            <Label className="text-sm font-normal cursor-pointer" onClick={() => {
-                              const newSelectedDays = new Set(selectedDays);
-                              if (selectedDays.has(day)) {
-                                newSelectedDays.delete(day);
-                              } else {
-                                newSelectedDays.add(day);
-                              }
-                              setSelectedDays(newSelectedDays);
-                            }}>
-                              {t(`habits.form.${day}`)}
-                            </Label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {checkInFrequency === 'monthly' && (
-                      <div className="space-y-4">
-                        <ToggleGroup
-                          type="single"
-                          value={monthlyOption}
-                          onValueChange={(value) => {
-                            if (value) {
-                              setMonthlyOption(value as 'first' | 'last' | 'specific');
-                            }
-                          }}
-                          variant="outline"
-                          spacing={0}
-                          className="w-full"
-                        >
-                          <ToggleGroupItem value="first" aria-label={t('athletes.profile.checkIns.schedule.monthly.first')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                            {t('athletes.profile.checkIns.schedule.monthly.first')}
-                          </ToggleGroupItem>
-                          <ToggleGroupItem value="last" aria-label={t('athletes.profile.checkIns.schedule.monthly.last')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                            {t('athletes.profile.checkIns.schedule.monthly.last')}
-                          </ToggleGroupItem>
-                          <ToggleGroupItem value="specific" aria-label={t('athletes.profile.checkIns.schedule.monthly.specific')} className="flex-1 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-                            {t('athletes.profile.checkIns.schedule.monthly.specific')}
-                          </ToggleGroupItem>
-                        </ToggleGroup>
-                        {monthlyOption === 'specific' && (
-                          <div className="flex flex-col gap-2 w-full">
-                            <Label>
-                              <span>
-                                {t('athletes.profile.checkIns.schedule.monthly.selectDay')}
-                                <span className="text-destructive">*</span>
-                              </span>
-                            </Label>
-                            <Select value={specificDay.toString()} onValueChange={(value) => setSpecificDay(parseInt(value, 10))}>
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-[200px]">
-                                {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
-                                  <SelectItem key={day} value={day.toString()}>
-                                    {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
+                    {monthlyOption === 'specific' && (
+                      <div className="flex flex-col gap-2 w-full">
+                        <Label>
+                          <span>
+                            {t('athletes.profile.checkIns.schedule.monthly.selectDay')}
+                            <span className="text-destructive">*</span>
+                          </span>
+                        </Label>
+                        <Select value={specificDay.toString()} onValueChange={(value) => setSpecificDay(parseInt(value, 10))}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px]">
+                            {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                              <SelectItem key={day} value={day.toString()}>
+                                {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
+                )}
+              </div>
 
-                  <Alert className="bg-primary/5 border-primary/20 text-primary">
-                    <Info className="size-4" />
-                    <AlertDescription className="min-w-0 line-clamp-4">
-                      {getScheduleExplanation()}
-                    </AlertDescription>
-                  </Alert>
-                </>
-              )}
+              <Alert className="bg-primary/5 border-primary/20 text-primary">
+                <Info className="size-4" />
+                <AlertDescription className="min-w-0 line-clamp-4">
+                  {getScheduleExplanation()}
+                </AlertDescription>
+              </Alert>
             </form>
           </Form>
         </TabsContent>
@@ -511,7 +468,7 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
                 </span>
               </label>
               <div className="flex flex-col gap-3 max-h-[calc(100vh-300px)] overflow-y-auto px-1 pt-1">
-                {formTemplates.map((template) => (
+                {checkInTemplates.map((template) => (
                   <Card
                     key={template.name}
                     className={cn(

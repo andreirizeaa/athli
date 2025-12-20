@@ -92,7 +92,7 @@ export function AppSidebar() {
 
   const automationsNavItems = [
     {
-      href: '/automations/onboarding',
+      href: '/onboardings',
       labelKey: 'sidebar.links.onboarding',
       icon: Zap,
     },
@@ -227,7 +227,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/automations/onboarding'
+                  href === '/onboardings'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);

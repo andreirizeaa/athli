@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
@@ -16,7 +16,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
-import { ChevronRight, MessageCircle, Users, Send } from 'lucide-react';
+import { ChevronRight, MessageCircle, Users, Send, Copy, Check } from 'lucide-react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { mockAthletes } from '@/components/app/app-shell';
@@ -31,8 +31,18 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const segments = useSelectedLayoutSegments();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const [isInviteCopied, setIsInviteCopied] = useState<boolean>(false);
+  const inviteCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const athlete = mockAthletes.find((item) => item.id === clientId);
+
+  useEffect(() => {
+    return () => {
+      if (inviteCopyTimeoutRef.current) {
+        clearTimeout(inviteCopyTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const tabs = [
     {
@@ -131,6 +141,56 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
     });
   };
 
+  const handleCopyInvite = async () => {
+    // TODO: Get actual invite link for this specific client
+    const inviteLink = `https://app.athli.com/invite/${clientId}`;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = inviteLink;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (fallbackErr) {
+        // Ignore copy errors
+      }
+      document.body.removeChild(textArea);
+    }
+
+    setIsInviteCopied(true);
+
+    // Clear existing timeout if any
+    if (inviteCopyTimeoutRef.current) {
+      clearTimeout(inviteCopyTimeoutRef.current);
+    }
+
+    // Set timeout to hide checkmark after 2 seconds
+    inviteCopyTimeoutRef.current = setTimeout(() => {
+      setIsInviteCopied(false);
+      inviteCopyTimeoutRef.current = null;
+    }, 2000);
+
+    toast.success(t('athletes.profile.copyInvite'), {
+      style: {
+        background: 'rgb(220 252 231)',
+        color: 'rgb(20 83 45)',
+        border: '1px solid rgb(187 247 208)',
+      },
+    });
+  };
+
+  const handleCopyInviteKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleCopyInvite();
+    }
+  };
+
   if (!athlete) {
     return (
       <div className="h-full w-full flex flex-col">
@@ -217,14 +277,31 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-          <Button
-            onClick={() => handleNavigateToMessages(clientId)}
-            className="gap-2"
-            aria-label={t('athletes.profile.messageAria')}
-          >
-            <MessageCircle className="size-4" />
-            <span>{t('athletes.profile.message')}</span>
-          </Button>
+                <Button
+                  onClick={handleCopyInvite}
+                  onKeyDown={handleCopyInviteKeyDown}
+                  variant="ghost"
+                  className="gap-2 border border-primary"
+                  aria-label={t('athletes.profile.copyInviteAria')}
+                >
+                  {isInviteCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  <span>{t('athletes.profile.copyInvite')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('athletes.profile.copyInviteAria')}</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => handleNavigateToMessages(clientId)}
+                  className="gap-2"
+                  aria-label={t('athletes.profile.messageAria')}
+                >
+                  <MessageCircle className="size-4" />
+                  <span>{t('athletes.profile.message')}</span>
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>{t('athletes.profile.messageAria')}</p>
