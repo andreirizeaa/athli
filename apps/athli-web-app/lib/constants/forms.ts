@@ -8,16 +8,28 @@ export interface FormTemplateQuestion {
   mediaCount?: number;
 }
 
+export interface FormTemplateSchedule {
+  type: 'check-in' | 'questionnaire';
+  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+  selectedDays?: string[];
+  monthlyOption?: 'first' | 'last' | 'specific';
+  specificDay?: number;
+}
+
 export interface FormTemplate {
   name: string;
   description?: string;
   questions: FormTemplateQuestion[];
+  schedule?: FormTemplateSchedule;
 }
 
 export const formTemplates: FormTemplate[] = [
   {
     name: 'Initial Assessment',
     description: 'Comprehensive initial assessment form for new clients',
+    schedule: {
+      type: 'questionnaire',
+    },
     questions: [
       {
         question: 'What is your primary fitness goal?',
@@ -52,6 +64,11 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Weekly Check-in',
     description: 'Weekly progress check-in form',
+    schedule: {
+      type: 'check-in',
+      frequency: 'weekly',
+      selectedDays: ['sunday'],
+    },
     questions: [
       {
         question: 'How would you rate your week overall?',
@@ -80,6 +97,11 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Nutrition Log',
     description: 'Track daily nutrition and meal intake',
+    schedule: {
+      type: 'check-in',
+      frequency: 'daily',
+      selectedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    },
     questions: [
       {
         question: 'Upload photos of your meals today',
@@ -107,6 +129,9 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Injury Assessment',
     description: 'Document and track injury details and recovery progress',
+    schedule: {
+      type: 'questionnaire',
+    },
     questions: [
       {
         question: 'Where is the injury located?',
@@ -142,6 +167,9 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Goal Setting',
     description: 'Set and track fitness and wellness goals',
+    schedule: {
+      type: 'questionnaire',
+    },
     questions: [
       {
         question: 'What is your primary goal?',
@@ -171,6 +199,11 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Sleep Quality',
     description: 'Monitor sleep patterns and quality',
+    schedule: {
+      type: 'check-in',
+      frequency: 'daily',
+      selectedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    },
     questions: [
       {
         question: 'How many hours did you sleep last night?',
@@ -199,6 +232,9 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Pain Assessment',
     description: 'Track pain levels and locations',
+    schedule: {
+      type: 'questionnaire',
+    },
     questions: [
       {
         question: 'Where are you experiencing pain?',
@@ -228,6 +264,9 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Mobility Test',
     description: 'Assess flexibility and range of motion',
+    schedule: {
+      type: 'questionnaire',
+    },
     questions: [
       {
         question: 'Upload videos of your mobility exercises',
@@ -258,6 +297,11 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Body Composition',
     description: 'Track body measurements and composition changes',
+    schedule: {
+      type: 'check-in',
+      frequency: 'monthly',
+      monthlyOption: 'last',
+    },
     questions: [
       {
         question: 'Current weight (kg)',
@@ -285,6 +329,11 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Training Feedback',
     description: 'Collect feedback on training sessions',
+    schedule: {
+      type: 'check-in',
+      frequency: 'daily',
+      selectedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    },
     questions: [
       {
         question: 'Rate today\'s training session',
@@ -313,6 +362,11 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Wellness Check',
     description: 'General wellness and health status check',
+    schedule: {
+      type: 'check-in',
+      frequency: 'weekly',
+      selectedDays: ['sunday'],
+    },
     questions: [
       {
         question: 'How would you rate your overall wellness today?',
@@ -343,6 +397,11 @@ export const formTemplates: FormTemplate[] = [
   {
     name: 'Pre-Workout Assessment',
     description: 'Assess readiness before training sessions',
+    schedule: {
+      type: 'check-in',
+      frequency: 'daily',
+      selectedDays: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    },
     questions: [
       {
         question: 'How is your energy level?',
@@ -374,4 +433,3 @@ export const formTemplates: FormTemplate[] = [
     ],
   },
 ];
-

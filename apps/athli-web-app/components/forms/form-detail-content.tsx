@@ -1,49 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Separator } from '@/components/ui/separator';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ButtonGroup } from '@/components/ui/button-group';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
-import { ChevronRight, Plus, Trash2, GripVertical, Edit } from 'lucide-react';
+import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { type Form, addQuestion, reorderQuestions } from '@/lib/forms/form-service';
-import { formTemplates } from '@/lib/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
-import { EditFormSidePanel } from '@/components/forms/edit-form-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
 
-// Mock forms data - in production this would come from an API
-const mockForms: Form[] = [
-  {
-    id: 'form-1',
-    name: 'Initial Assessment',
-    description: 'Comprehensive initial assessment form for new clients',
-    questionCount: 0,
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: 'form-2',
-    name: 'Weekly Check-in',
-    description: 'Weekly progress check-in form',
-    questionCount: 0,
-    createdAt: Date.now() - 86400000 * 3,
-  },
-];
-
-type Question = {
+export type Question = {
   id: string;
   question: string;
   required: boolean;
@@ -54,120 +23,29 @@ type Question = {
   mediaCount?: number;
 };
 
-const FormDetailPage = () => {
+type FormDetailContentProps = {
+  formId: string;
+  form: Form;
+  questions: Question[];
+  setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
+  previewQuestionIndex: number;
+  setPreviewQuestionIndex: React.Dispatch<React.SetStateAction<number>>;
+};
+
+export const FormDetailContent = ({
+  formId,
+  form,
+  questions,
+  setQuestions,
+  previewQuestionIndex,
+  setPreviewQuestionIndex,
+}: FormDetailContentProps) => {
   const t = useTranslations();
-  const params = useParams<{ formId: string }>();
-  const router = useRouter();
-  const formId = Array.isArray(params.formId) ? params.formId[0] : params.formId;
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
   const [isEditQuestionOpen, setIsEditQuestionOpen] = useState<boolean>(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [isReorderMode, setIsReorderMode] = useState<boolean>(false);
-  const [isEditFormOpen, setIsEditFormOpen] = useState<boolean>(false);
-  const [currentForm, setCurrentForm] = useState<Form | null>(null);
-  const [previewQuestionIndex, setPreviewQuestionIndex] = useState<number>(0);
   const reorderedQuestionsRef = useRef<Question[] | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
-
-  const form = mockForms.find((f) => f.id === formId);
-
-  // Determine form type from template
-  const formType = useMemo(() => {
-    if (!form) return 'check-in';
-    const template = formTemplates.find((t) => t.name === form.name);
-    return template?.schedule?.type || 'check-in';
-  }, [form]);
-
-  // Load questions from sessionStorage on client side
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    // Check for questions from template in sessionStorage
-    const storedQuestions = sessionStorage.getItem(`form-questions-${formId}`);
-    if (storedQuestions) {
-      try {
-        const parsedQuestions = JSON.parse(storedQuestions);
-        // Clear the stored questions
-        sessionStorage.removeItem(`form-questions-${formId}`);
-        // Convert template questions to Question format with IDs
-        const convertedQuestions = parsedQuestions.map((q: any, index: number) => ({
-          id: `q${Date.now()}-${index}`,
-          question: q.question,
-          required: q.required,
-          format: q.format,
-          options: q.options,
-          scaleFrom: q.scaleFrom,
-          scaleTo: q.scaleTo,
-          mediaCount: q.mediaCount,
-        }));
-        setQuestions(convertedQuestions);
-        return;
-      } catch (error) {
-        console.error('Failed to parse stored questions:', error);
-      }
-    }
-    
-    // Mock questions for Initial Assessment
-    if (formId === 'form-1') {
-      setQuestions([
-        {
-          id: 'q1',
-          question: 'What is your primary fitness goal?',
-          required: true,
-          format: 'multipleChoice',
-          options: ['Weight loss', 'Muscle gain', 'General fitness', 'Athletic performance'],
-        },
-        {
-          id: 'q2',
-          question: 'How many days per week can you commit to training?',
-          required: true,
-          format: 'number',
-        },
-        {
-          id: 'q3',
-          question: 'Rate your current fitness level',
-          required: true,
-          format: 'scale',
-          scaleFrom: '1',
-          scaleTo: '10',
-        },
-      ]);
-    }
-  }, [formId]);
-
-  useEffect(() => {
-    if (form) {
-      setCurrentForm(form);
-    }
-  }, [form]);
-
-  // Ensure preview index is within bounds
-  useEffect(() => {
-    if (questions.length === 0) {
-      setPreviewQuestionIndex(0);
-    } else if (previewQuestionIndex >= questions.length) {
-      setPreviewQuestionIndex(questions.length - 1);
-    }
-  }, [questions.length, previewQuestionIndex]);
-
-  if (!form) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-2">{t('forms.detail.notFound')}</h1>
-          <p className="text-muted-foreground">{t('forms.detail.notFoundDescription')}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleBreadcrumbClick = (path: string, tabType?: 'check-ins' | 'questionnaires') => {
-    if (tabType) {
-      router.push(`${path}?tab=${tabType}`);
-    } else {
-      router.push(path);
-    }
-  };
 
   const handleToggleReorder = async () => {
     const wasInReorderMode = isReorderMode;
@@ -237,10 +115,6 @@ const FormDetailPage = () => {
 
   const handlePreviewNavigate = (index: number) => {
     setPreviewQuestionIndex(index);
-  };
-
-  const handleEditForm = (updatedForm: Form) => {
-    setCurrentForm(updatedForm);
   };
 
   const handleRowClick = (row: any) => {
@@ -381,69 +255,7 @@ const FormDetailPage = () => {
   ];
 
   return (
-    <div className="h-full w-full flex flex-col bg-background overflow-hidden">
-      <div className="w-full relative flex-shrink-0">
-        <div className="px-4 flex items-start justify-between gap-4 mb-2 mt-2">
-          <div className="flex flex-col gap-1 flex-1 min-w-0">
-            <Breadcrumb>
-              <BreadcrumbList className="text-xs gap-1">
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    onClick={() => handleBreadcrumbClick('/forms')}
-                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
-                  >
-                    {t('forms.detail.breadcrumb.forms')}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="text-muted-foreground/60">
-                  <ChevronRight className="h-2 w-2" />
-                </BreadcrumbSeparator>
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    onClick={() => handleBreadcrumbClick('/forms', formType as 'check-ins' | 'questionnaires')}
-                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
-                  >
-                    {formType === 'check-in' ? t('forms.tabs.checkIns') : t('forms.tabs.questionnaires')}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="text-muted-foreground/60">
-                  <ChevronRight className="h-2 w-2" />
-                </BreadcrumbSeparator>
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {currentForm?.name || form.name}
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <h1 className="text-[22px] font-semibold">{currentForm?.name || form.name}</h1>
-          </div>
-          <ButtonGroup className="flex-shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsEditFormOpen(true)}
-              className="gap-2"
-            >
-              <Edit className="size-4" />
-              <span>{t('general.edit')}</span>
-            </Button>
-            <Button
-              variant={isReorderMode ? "default" : "outline"}
-              onClick={handleToggleReorder}
-              className="gap-2"
-            >
-              <GripVertical className="size-4" />
-              <span>{isReorderMode ? t('forms.detail.actions.done') : t('forms.detail.actions.reorder')}</span>
-            </Button>
-            <Button onClick={handleOpenAddQuestion} className="gap-2" disabled={isReorderMode}>
-              <Plus className="size-4" />
-              <span>{t('forms.detail.actions.addQuestion')}</span>
-            </Button>
-          </ButtonGroup>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
-
+    <>
       <div className="w-full h-full flex-1 px-4 min-h-0 py-4">
         <div className="w-full h-full flex gap-4">
           <div
@@ -511,15 +323,7 @@ const FormDetailPage = () => {
         question={editingQuestion}
         onSave={handleEditQuestion}
       />
-
-      <EditFormSidePanel
-        open={isEditFormOpen}
-        onOpenChange={setIsEditFormOpen}
-        form={currentForm}
-        onSave={handleEditForm}
-      />
-    </div>
+    </>
   );
 };
 
-export default FormDetailPage;
