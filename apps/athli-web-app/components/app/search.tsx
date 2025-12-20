@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Archive, CommandIcon, Search } from 'lucide-react';
+import { Archive, CommandIcon, Search, Workflow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -49,6 +49,32 @@ type Habit = {
   reminderMessage?: string;
   createdAt: number;
 };
+
+type Flow = {
+  id: string;
+  name: string;
+  description?: string;
+  stepCount: number;
+  createdAt: number;
+};
+
+// Mock flows data - in production this would come from an API
+const mockFlows: Flow[] = [
+  {
+    id: 'flow-1',
+    name: 'New Client Onboarding',
+    description: 'Comprehensive onboarding flow for new clients',
+    stepCount: 5,
+    createdAt: Date.now() - 86400000 * 7,
+  },
+  {
+    id: 'flow-2',
+    name: 'Athlete Welcome',
+    description: 'Welcome and introduction flow for new athletes',
+    stepCount: 3,
+    createdAt: Date.now() - 86400000 * 3,
+  },
+];
 
 // Mock files data - in production this would come from an API
 const mockFiles: FileItem[] = [
@@ -397,6 +423,32 @@ export function SearchComponent() {
     [searchQuery]
   );
 
+  const flowSearchResults = React.useMemo(
+    () =>
+      mockFlows.reduce<Array<{ flow: Flow }>>((results, flow) => {
+        const query = searchQuery.trim();
+
+        if (!query) {
+          return results;
+        }
+
+        const hasMatchInFlow =
+          isFuzzyMatch(flow.name, query) ||
+          (flow.description && isFuzzyMatch(flow.description, query));
+
+        if (!hasMatchInFlow) {
+          return results;
+        }
+
+        results.push({
+          flow,
+        });
+
+        return results;
+      }, []),
+    [searchQuery]
+  );
+
   const handleSearchResultClick = (contactId: string) => {
     router.push(`/messaging/${contactId}`);
     setIsSearchOpen(false);
@@ -441,6 +493,12 @@ export function SearchComponent() {
 
   const handleHabitSearchResultClick = (habitId: string) => {
     router.push(`/habits`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleFlowSearchResultClick = (flowId: string) => {
+    router.push(`/flows/${flowId}`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };
@@ -498,7 +556,8 @@ export function SearchComponent() {
                   exerciseSearchResults.length === 0 &&
                   fileSearchResults.length === 0 &&
                   formSearchResults.length === 0 &&
-                  habitSearchResults.length === 0 && (
+                  habitSearchResults.length === 0 &&
+                  flowSearchResults.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 px-4 min-h-[320px]">
                       <p className="text-sm text-muted-foreground">
                         {t('sidebar.search.noResults')}{' '}
@@ -514,7 +573,8 @@ export function SearchComponent() {
                     exerciseSearchResults.length > 0 ||
                     fileSearchResults.length > 0 ||
                     formSearchResults.length > 0 ||
-                    habitSearchResults.length > 0) && (
+                    habitSearchResults.length > 0 ||
+                    flowSearchResults.length > 0) && (
                     <div className="py-2">
                       {athleteSearchResults.length > 0 && (
                         <>
@@ -990,7 +1050,7 @@ export function SearchComponent() {
                           </div>
                         </>
                       )}
-                      {messageSearchResults.length > 0 && (
+                      {flowSearchResults.length > 0 && (
                         <>
                           {(athleteSearchResults.length > 0 ||
                             workoutSearchResults.length > 0 ||
@@ -999,6 +1059,74 @@ export function SearchComponent() {
                             fileSearchResults.length > 0 ||
                             formSearchResults.length > 0 ||
                             habitSearchResults.length > 0) && (
+                            <div className="px-3 pt-4 pb-1">
+                              <div className="h-px bg-border" />
+                            </div>
+                          )}
+                          <div className="px-3 pb-1 pt-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {t('sidebar.search.flows')}
+                            </p>
+                          </div>
+                          <div className="max-h-[360px] overflow-y-auto px-3 pb-2">
+                            <div
+                              className={cn(
+                                'grid gap-2',
+                                flowSearchResults.length === 1
+                                  ? 'grid-cols-1'
+                                  : flowSearchResults.length === 2
+                                    ? 'grid-cols-2'
+                                    : 'grid-cols-2 sm:grid-cols-3'
+                              )}
+                            >
+                              {flowSearchResults.map((result) => (
+                                <Card
+                                  key={result.flow.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => handleFlowSearchResultClick(result.flow.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      handleFlowSearchResultClick(result.flow.id);
+                                    }
+                                  }}
+                                  className="cursor-pointer hover:bg-accent transition-colors p-3"
+                                  aria-label={t('sidebar.search.openFlowAria', {
+                                    name: result.flow.name,
+                                  })}
+                                >
+                                  <div className="flex flex-col gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                                        <Workflow className="h-4 w-4 text-muted-foreground" />
+                                      </div>
+                                      <span className="text-sm font-medium truncate">
+                                        {result.flow.name}
+                                      </span>
+                                    </div>
+                                    {result.flow.description && (
+                                      <div className="text-xs text-muted-foreground truncate">
+                                        {result.flow.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {messageSearchResults.length > 0 && (
+                        <>
+                          {(athleteSearchResults.length > 0 ||
+                            workoutSearchResults.length > 0 ||
+                            programSearchResults.length > 0 ||
+                            exerciseSearchResults.length > 0 ||
+                            fileSearchResults.length > 0 ||
+                            formSearchResults.length > 0 ||
+                            habitSearchResults.length > 0 ||
+                            flowSearchResults.length > 0) && (
                             <div className="px-3 pt-4 pb-1">
                               <div className="h-px bg-border" />
                             </div>

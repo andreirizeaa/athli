@@ -16,7 +16,7 @@ import {
   CheckSquare,
   Sprout,
   ClipboardList,
-  Zap,
+  Workflow,
   ClipboardCheck,
 } from 'lucide-react';
 import { LogoIcon } from '@/components/logo';
@@ -92,9 +92,9 @@ export function AppSidebar() {
 
   const automationsNavItems = [
     {
-      href: '/onboardings',
-      labelKey: 'sidebar.links.onboarding',
-      icon: Zap,
+      href: '/flows',
+      labelKey: 'sidebar.links.flows',
+      icon: Workflow,
     },
   ] as const;
 
@@ -227,7 +227,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/onboardings'
+                  href === '/flows'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);
@@ -262,17 +262,6 @@ export function AppSidebar() {
               <Link href="/settings">
                 <Settings className="shrink-0" />
                 {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="text-sm border border-primary hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
-            >
-              <Link href="/settings/business/company/team">
-                <UserPlus className="shrink-0" />
-                {!isCollapsed && <span>{t('sidebar.footer.addTeamMembers')}</span>}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
