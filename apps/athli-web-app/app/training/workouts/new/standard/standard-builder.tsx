@@ -19,6 +19,8 @@ import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise
 import { toast } from 'sonner';
 import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
 import type {
+  CircuitExerciseGroupPayload,
+  CircuitExercisePayload,
   ExerciseGroupPayload,
   ExerciseType,
   RegularExercisePayload,
