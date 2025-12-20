@@ -124,19 +124,6 @@ const FlowDetailPage = () => {
       {/* Flow Editor */}
       <FlowEditor
         flowId={flowId}
-        initialNodes={initialNodes}
-        initialEdges={initialEdges}
-        onNodeClick={handleNodeClick}
-        sidePanelTitle="Add trigger"
-        sidePanelSearchPlaceholder="Search for actions"
-        isSidePanelOpen={isSidePanelOpen}
-        onSidePanelClose={handleCloseSidePanel}
-        sidePanelContent={
-          <div>
-            {/* Sidebar content will go here */}
-            <p className="text-sm text-muted-foreground">Select actions to add to your flow</p>
-          </div>
-        }
       />
 
       {/* Edit Flow Side Panel */}

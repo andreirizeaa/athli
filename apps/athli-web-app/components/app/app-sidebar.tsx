@@ -183,12 +183,13 @@ export function AppSidebar() {
             <SidebarMenu className="gap-0.5">
               {libraryNavItems.map((item) => {
                 const Icon = item.icon;
+                const href = item.href;
                 let isActive = false;
-                if (item.href === '/training' || item.href === '/files' || item.href === '/habits' || item.href === '/forms') {
+                if (href === '/training' || href === '/files' || href === '/habits' || href === '/forms') {
                   // Check exact match or if path starts with the href followed by /
-                  isActive = activePath === item.href || activePath.startsWith(`${item.href}/`);
+                  isActive = activePath === href || activePath.startsWith(`${href}/`);
                 } else {
-                  isActive = activePath === item.href;
+                  isActive = activePath === href;
                 }
                 const label =
                   'label' in item ? item.label : 'labelKey' in item ? t(item.labelKey) : '';

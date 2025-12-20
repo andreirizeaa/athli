@@ -145,7 +145,6 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
       const values: AddFormData = {
         name: selectedTemplate.name,
         description: selectedTemplate.description || '',
-        questions: selectedTemplate.questions,
       };
       try {
         const newForm = await addForm(values);
