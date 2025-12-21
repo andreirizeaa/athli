@@ -3,6 +3,7 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { getForms } from '@/lib/coach/coach-form-service';
 import { type Habit } from '@/lib/coach/coach-habit-service';
+import { getAllMetrics } from '@/lib/coach/coach-metric-service';
 import { updateFlow } from '@/lib/coach/coach-flow-service';
 import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
 import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
@@ -285,6 +286,7 @@ type ActionNodeData = {
   selectedCheckIns?: Set<string>;
   selectedFiles?: Set<string>;
   selectedHabits?: Set<string>;
+  selectedMetrics?: Set<string>;
 };
 
 export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditorProps) {
@@ -303,6 +305,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
   const [selectedCheckIns, setSelectedCheckIns] = useState<Set<string>>(new Set());
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
+  const [selectedMetrics, setSelectedMetrics] = useState<Set<string>>(new Set());
   const [editingActionNodeId, setEditingActionNodeId] = useState<string | null>(null);
   const [waitDuration, setWaitDuration] = useState<number>(1);
   const [waitUnit, setWaitUnit] = useState<'minutes' | 'hours' | 'days'>('hours');
@@ -315,6 +318,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
   const [checkIns, setCheckIns] = useState<Array<{ id: string; name: string }>>([]);
   const [files, setFiles] = useState<Array<{ id: string; name: string }>>([]);
   const [habits, setHabits] = useState<Array<{ id: string; name: string }>>([]);
+  const [metrics, setMetrics] = useState<Array<{ id: string; name: string }>>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Mock data for habits and files (matching the pages)
@@ -381,6 +385,9 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       } else if (selectedActionOption.id === 'add-habit') {
         // Using mock data (matching habits page)
         setHabits(mockHabits.map((habit) => ({ id: habit.id, name: habit.name })));
+      } else if (selectedActionOption.id === 'add-metric') {
+        const allMetrics = await getAllMetrics();
+        setMetrics(allMetrics.map((metric) => ({ id: metric.id, name: metric.name })));
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -593,6 +600,8 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
             ? (actionNode.selectedFiles?.size || 0)
             : actionNode.option.id === 'add-habit'
             ? (actionNode.selectedHabits?.size || 0)
+            : actionNode.option.id === 'add-metric'
+            ? (actionNode.selectedMetrics?.size || 0)
             : 0;
           
           if (count === 0) {
@@ -612,6 +621,8 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
               pluralName = 'files';
             } else if (singularName === 'habit') {
               pluralName = 'habits';
+            } else if (singularName === 'metric') {
+              pluralName = 'metrics';
             } else if (!singularName.endsWith('s')) {
               pluralName = `${singularName}s`;
             }
@@ -657,6 +668,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
                 setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
                 setSelectedFiles(actionNode.selectedFiles || new Set());
                 setSelectedHabits(actionNode.selectedHabits || new Set());
+                setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
                 // Fetch data for confirmation view
                 setIsLoadingData(true);
@@ -704,6 +716,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
                 setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
                 setSelectedFiles(actionNode.selectedFiles || new Set());
                 setSelectedHabits(actionNode.selectedHabits || new Set());
+                setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
                 setIsLoadingData(true);
                 try {
@@ -1123,6 +1136,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
                 selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
                 selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
                 selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
+                selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
               }
             : node
         )
@@ -1157,6 +1171,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
         selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
         selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
         selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
+        selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
       };
       // Insert at the correct position based on insertionIndex
       setActionNodes((prev) => {
@@ -1260,6 +1275,21 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
     }
   };
 
+  const handleToggleMetric = (id: string) => {
+    const newSet = new Set(selectedMetrics);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedMetrics(newSet);
+    
+    // If editing and all items removed, delete the node or close sidebar
+    if (editingActionNodeId && newSet.size === 0 && selectedActionOption?.id === 'add-metric') {
+      handleDeleteActionFromEdit();
+    }
+  };
+
   const handleTriggerKeyDown = (event: React.KeyboardEvent, option: TriggerOption) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -1345,14 +1375,17 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
         selectedCheckIns={selectedCheckIns}
         selectedFiles={selectedFiles}
         selectedHabits={selectedHabits}
+        selectedMetrics={selectedMetrics}
         onToggleQuestionnaire={handleToggleQuestionnaire}
         onToggleCheckIn={handleToggleCheckIn}
         onToggleFile={handleToggleFile}
         onToggleHabit={handleToggleHabit}
+        onToggleMetric={handleToggleMetric}
         questionnaires={questionnaires}
         checkIns={checkIns}
         files={files}
         habits={habits}
+        metrics={metrics}
         isLoadingData={isLoadingData}
         onClose={handleCloseSidePanel}
         onTriggerOptionClick={handleTriggerOptionClick}
