@@ -174,7 +174,7 @@ const ExercisesPage = () => {
     try {
       const fetchedExercises = await getExercises();
       const exercise = fetchedExercises.find((ex) => ex.id === exerciseId);
-      if (exercise) {
+    if (exercise) {
         setEditingExercise(exercise);
         setIsEditExerciseOpen(true);
       }
@@ -340,7 +340,7 @@ const ExercisesPage = () => {
   };
 
   const handleSaveExercise = async () => {
-    await loadExercises();
+      await loadExercises();
   };
 
   const handleExerciseRowKeyDown = (
@@ -928,7 +928,7 @@ const ExercisesPage = () => {
       <AddExerciseSidePanel
         open={isCreateExerciseOpen}
         onOpenChange={(open) => {
-          setIsCreateExerciseOpen(open);
+            setIsCreateExerciseOpen(open);
         }}
         onSave={handleSaveExercise}
       />
@@ -938,8 +938,8 @@ const ExercisesPage = () => {
           setIsEditExerciseOpen(open);
           if (!open) {
             setEditingExercise(null);
-          }
-        }}
+                }
+              }}
         exercise={editingExercise}
         onSave={handleSaveExercise}
       />

@@ -31,7 +31,7 @@ type MetricFormValues = {
 type AddMetricSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (name: string, unit: string) => Promise<void>;
+  onSave: (name: string, unit: string, description?: string) => Promise<void>;
 };
 
 export const AddMetricSidePanel = ({
@@ -67,7 +67,7 @@ export const AddMetricSidePanel = ({
   };
 
   const handleSave = async (values: MetricFormValues) => {
-    await onSave(values.name, values.unit || '');
+    await onSave(values.name, values.unit || '', values.description);
     handleClose();
   };
 
