@@ -494,6 +494,7 @@ const ClientFilesPage = () => {
         onOpenChange={setIsAddFileOpen}
         onSave={handleSaveFile}
         clientName={clientName}
+        clientId={clientId}
       />
       
       {editingFile && (

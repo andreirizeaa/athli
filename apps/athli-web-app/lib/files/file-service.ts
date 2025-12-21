@@ -143,6 +143,61 @@ export interface DeleteClientFilesData {
   clientId: string;
 }
 
+export interface CoachFile {
+  id: string;
+  fileName: string;
+  tags: string[];
+  type: 'pdf' | 'image' | 'video' | 'document' | 'spreadsheet' | 'other';
+}
+
+/**
+ * Service method to get all coach's files (library)
+ * This will be connected to the backend in the future
+ */
+export const getAllFiles = async (): Promise<CoachFile[]> => {
+  // TODO: Connect to backend API
+  console.log('Getting all coach files');
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Mock data - in production this would come from the backend
+  const mockFiles: CoachFile[] = [
+    {
+      id: 'coach-file-1',
+      fileName: 'Training Program Template.pdf',
+      tags: ['Training', 'Program', 'Template'],
+      type: 'pdf',
+    },
+    {
+      id: 'coach-file-2',
+      fileName: 'Nutrition Guide.docx',
+      tags: ['Nutrition', 'Education'],
+      type: 'document',
+    },
+    {
+      id: 'coach-file-3',
+      fileName: 'Recovery Protocol.pdf',
+      tags: ['Recovery', 'Rehab'],
+      type: 'pdf',
+    },
+    {
+      id: 'coach-file-4',
+      fileName: 'Warm-up Routine.pdf',
+      tags: ['Training', 'Warmup'],
+      type: 'pdf',
+    },
+    {
+      id: 'coach-file-5',
+      fileName: 'Stretching Guide.pdf',
+      tags: ['Mobility', 'Flexibility'],
+      type: 'pdf',
+    },
+  ];
+
+  return mockFiles;
+};
+
 /**
  * Service method to delete files from a client
  * This will be connected to the backend in the future
