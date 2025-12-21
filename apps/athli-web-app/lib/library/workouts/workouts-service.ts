@@ -169,3 +169,40 @@ export const editWorkout = async (
 
   return updatedWorkout;
 };
+
+/**
+ * Duplicate a workout
+ * @param workoutId - ID of the workout to duplicate
+ * @param originalWorkout - Original workout object to duplicate
+ */
+export const duplicateWorkout = async (workoutId: string, originalWorkout: Workout): Promise<Workout> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+  console.log('Duplicating workout:', { workoutId, originalWorkout });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  // In the future, this will:
+  // 1. Fetch the full workout data from the backend
+  // 2. Create a new workout with the same data but name appended with " (Copy)"
+  // 3. Return the new workout
+
+  // For now, create a duplicate with all properties copied and name appended with " (Copy)"
+  const duplicatedWorkout: Workout = {
+    ...originalWorkout,
+    id: Date.now().toString(),
+    program: `${originalWorkout.program} (Copy)`,
+    created: new Date().toLocaleDateString('en-GB').replace(/\//g, '-').slice(0, 8),
+  };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/workouts/${workoutId}/duplicate`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to duplicate workout')
+  // return await response.json()
+
+  return duplicatedWorkout;
+};

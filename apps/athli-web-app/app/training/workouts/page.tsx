@@ -55,11 +55,12 @@ import {
   User,
   Archive,
   Trash2,
+  Copy,
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
-import { starWorkouts, archiveWorkouts, deleteWorkouts } from '@/lib/library/workouts/workouts-service';
+import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/lib/library/workouts/workouts-service';
 
 type ColumnId = 'description' | 'type' | 'totalExercises' | 'equipment' | 'created';
 
@@ -90,6 +91,7 @@ const WorkoutsPage = () => {
   const router = useRouter();
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set());
   const [starredWorkouts, setStarredWorkouts] = useState<Set<string>>(new Set());
+  const [workouts, setWorkouts] = useState<Workout[]>(mockWorkouts);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const [filteredCount, setFilteredCount] = useState<number>(mockWorkouts.length);
@@ -678,20 +680,20 @@ Focus on proper form and progressive overload.`;
     }
   };
 
-  const handleExportSelected = () => {
-    if (selectedWorkouts.size === 0) return;
-    const selectedWorkoutsData = mockWorkouts.filter((workout) =>
-      selectedWorkouts.has(workout.id)
-    );
-    const exportData = selectedWorkoutsData.map((row) => ({
-      Program: row.program,
-      Description: row.description,
-      Type: row.type,
-      'Total Exercises': row.totalExercises,
-      Equipment: row.equipment,
-      Created: row.created,
-    }));
-    exportToCSV(exportData, 'selected-workouts.csv');
+  const handleDuplicateSelected = async () => {
+    if (selectedWorkouts.size !== 1) return;
+    const workoutId = Array.from(selectedWorkouts)[0];
+    const workout = workouts.find((w) => w.id === workoutId);
+    if (!workout) return;
+    try {
+      const duplicatedWorkout = await duplicateWorkout(workoutId, workout);
+      // Add the duplicated workout to the list
+      setWorkouts((prev) => [...prev, duplicatedWorkout]);
+      // Clear selection after duplicating
+      setSelectedWorkouts(new Set());
+    } catch (error) {
+      console.error('Failed to duplicate workout:', error);
+    }
   };
 
   // Create first column renderer
@@ -849,7 +851,7 @@ Focus on proper form and progressive overload.`;
         </div>
       </div>
       <DataGrid
-        data={mockWorkouts}
+        data={workouts}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="workouts"
@@ -859,16 +861,6 @@ Focus on proper form and progressive overload.`;
         searchPlaceholder={t('library.searchPlaceholder')}
         filters={filters}
         enableEditColumns={true}
-        enableExport={true}
-        exportFileName="workouts.csv"
-        exportDataTransform={(row) => ({
-          Program: row.program,
-          Description: row.description,
-          Type: row.type,
-          'Total Exercises': row.totalExercises,
-          Equipment: row.equipment,
-          Created: row.created,
-        })}
         enableRowSelection={true}
         selectedRowIds={selectedWorkouts}
         onSelectionChange={setSelectedWorkouts}
@@ -913,24 +905,26 @@ Focus on proper form and progressive overload.`;
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleExportSelected}
-                    className="gap-2"
-                    aria-label={t('workouts.actions.exportSelectedAria')}
-                  >
-                    <Download className="size-4" />
-                    <span>{t('workouts.actions.export')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('workouts.actions.export')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {selectedWorkouts.size === 1 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleDuplicateSelected}
+                      className="gap-2"
+                      aria-label={t('workouts.actions.duplicateAria')}
+                    >
+                      <Copy className="size-4" />
+                      <span>{t('workouts.actions.duplicate')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('workouts.actions.duplicate')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1228,7 +1222,7 @@ Focus on proper form and progressive overload.`;
               if (selectedWorkouts.size > 0) {
                 // For bulk assign, navigate with preselected workout
                 const firstWorkoutId = Array.from(selectedWorkouts)[0];
-                const workout = mockWorkouts.find((w) => w.id === firstWorkoutId);
+                const workout = workouts.find((w) => w.id === firstWorkoutId);
                 if (workout) {
                   router.push(
                     `/athletes/${athleteId}/training-calendar?workoutId=${workout.id}&workoutName=${encodeURIComponent(workout.program)}&openModal=true`

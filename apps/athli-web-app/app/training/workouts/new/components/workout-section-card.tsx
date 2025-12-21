@@ -66,6 +66,7 @@ type WorkoutSectionCardProps = {
   onSectionChange: (updates: Partial<Section>) => void;
   onDirtyChange?: () => void;
   sectionValidationErrors?: SectionValidationErrors;
+  onClearSectionValidation?: (sectionId: string, field: 'missingConfig' | 'emptyExercises') => void;
   // Exercise-related handlers
   exercises: ExerciseWithSuperset[];
   onExerciseChange: (exerciseIndex: number, exercise: ExerciseWithSuperset) => void;
@@ -89,6 +90,7 @@ type WorkoutSectionCardProps = {
   onClearValidationField?: (exerciseInstanceId: string, setIndex: number, field: string) => void;
   exerciseRefs?: React.MutableRefObject<Map<string, HTMLDivElement>>;
   focusedExerciseId?: string | null;
+  registerSectionRef?: (sectionId: string, element: HTMLElement | null) => void;
 };
 
 export const WorkoutSectionCard = ({
@@ -119,6 +121,8 @@ export const WorkoutSectionCard = ({
   onClearValidationField,
   exerciseRefs,
   focusedExerciseId,
+  registerSectionRef,
+  onClearSectionValidation,
 }: WorkoutSectionCardProps) => {
   const handleDeleteKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -187,6 +191,10 @@ export const WorkoutSectionCard = ({
                       onSectionChange({
                         category: value as 'warmup' | 'cooldown' | 'mobility',
                       });
+                      // Clear missing-config validation when category is selected
+                      if (value) {
+                        onClearSectionValidation?.(section.id, 'missingConfig');
+                      }
                     }}
                   >
                     <SelectTrigger
@@ -231,6 +239,10 @@ export const WorkoutSectionCard = ({
                           targetRounds: value ? parseInt(value, 10) : undefined,
                         });
                       }
+                      // Clear missing-config validation for this section as soon as a value is entered
+                      if (value && value.trim() !== '') {
+                        onClearSectionValidation?.(section.id, 'missingConfig');
+                      }
                     }}
                     className={cn(
                       'h-7 w-24 text-center text-[11px]',
@@ -264,6 +276,8 @@ export const WorkoutSectionCard = ({
             }}
           >
             <CardContent
+              ref={(el) => registerSectionRef?.(section.id, el)}
+              data-workout-section
               className="flex-1 flex flex-col px-3 py-1.5 pb-0"
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}

@@ -623,6 +623,43 @@ export const assignForm = async (data: AssignFormData): Promise<void> => {
   // if (!response.ok) throw new Error('Failed to assign form')
 }
 
+/**
+ * Duplicate a form
+ * @param formId - ID of the form to duplicate
+ * @param originalForm - Original form object to duplicate
+ */
+export const duplicateForm = async (formId: string, originalForm: Form): Promise<Form> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+  console.log('Duplicating form:', { formId, originalForm });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  // In the future, this will:
+  // 1. Fetch the full form data from the backend (including questions)
+  // 2. Create a new form with the same data but name appended with " (Copy)"
+  // 3. Return the new form
+
+  // For now, create a duplicate with all properties copied and name appended with " (Copy)"
+  const duplicatedForm: Form = {
+    ...originalForm,
+    id: `form-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+    name: `${originalForm.name} (Copy)`,
+    createdAt: Date.now(),
+  };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/forms/${formId}/duplicate`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to duplicate form')
+  // return await response.json()
+
+  return duplicatedForm;
+};
+
 export interface CheckInInstance {
   id: string;
   formId: string;

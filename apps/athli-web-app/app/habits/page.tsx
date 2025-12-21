@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X } from 'lucide-react';
+import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X, Copy } from 'lucide-react';
 import { SidePanel } from '@/components/app/side-panel';
 import {
   Form,
@@ -37,7 +37,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { addHabit, editHabit, deleteHabit, assignHabit, type Habit } from '@/lib/habits/habit-service';
+import { addHabit, editHabit, deleteHabit, assignHabit, duplicateHabit, type Habit } from '@/lib/habits/habit-service';
 import { defaultHabits, type DefaultHabit } from '@/lib/constants/habits';
 import { mockAthletes } from '@/components/app/app-shell';
 
@@ -889,6 +889,17 @@ const HabitsPage = () => {
                 Clear {selectedHabits.size} selected
               </span>
             </Button>
+            {selectedHabits.size === 1 && (
+              <Button
+                variant="ghost"
+                onClick={handleDuplicateSelected}
+                className="gap-2"
+                aria-label={t('habits.actions.duplicateAria')}
+              >
+                <Copy className="size-4" />
+                <span>{t('habits.actions.duplicate')}</span>
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={handleAssignToClients}

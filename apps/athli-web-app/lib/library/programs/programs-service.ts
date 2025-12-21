@@ -175,3 +175,40 @@ export const editProgram = async (
 
   return updatedProgram;
 };
+
+/**
+ * Duplicate a program
+ * @param programId - ID of the program to duplicate
+ * @param originalProgram - Original program object to duplicate
+ */
+export const duplicateProgram = async (programId: string, originalProgram: Program): Promise<Program> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+  console.log('Duplicating program:', { programId, originalProgram });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  // In the future, this will:
+  // 1. Fetch the full program data from the backend
+  // 2. Create a new program with the same data but name appended with " (Copy)"
+  // 3. Return the new program
+
+  // For now, create a duplicate with all properties copied and name appended with " (Copy)"
+  const duplicatedProgram: Program = {
+    ...originalProgram,
+    id: Date.now().toString(),
+    program: `${originalProgram.program} (Copy)`,
+    created: new Date().toLocaleDateString('en-GB').replace(/\//g, '-').slice(0, 8),
+  };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/programs/${programId}/duplicate`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to duplicate program')
+  // return await response.json()
+
+  return duplicatedProgram;
+};

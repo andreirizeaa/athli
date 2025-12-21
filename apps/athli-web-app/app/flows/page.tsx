@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check } from 'lucide-react';
+import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Copy } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,8 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
+import { duplicateFlow } from '@/lib/automations-service';
 
 type Flow = {
   id: string;
@@ -47,6 +49,7 @@ const FlowsPage = () => {
   const router = useRouter();
   const [flows, setFlows] = useState<Flow[]>(mockFlows);
   const [isAddFlowOpen, setIsAddFlowOpen] = useState<boolean>(false);
+  const [selectedFlows, setSelectedFlows] = useState<Set<string>>(new Set());
 
   const columns: ColumnDefinition<Flow>[] = [
     {
@@ -86,19 +89,47 @@ const FlowsPage = () => {
     },
   ];
 
+  const handleClearSelected = () => {
+    setSelectedFlows(new Set());
+  };
+
+  const handleDuplicateSelected = async () => {
+    if (selectedFlows.size !== 1) return;
+    const flowId = Array.from(selectedFlows)[0];
+    const flow = flows.find((f) => f.id === flowId);
+    if (!flow) return;
+    try {
+      const duplicatedFlow = await duplicateFlow(flowId, flow);
+      setFlows((prev) => [...prev, duplicatedFlow]);
+      setSelectedFlows(new Set());
+    } catch (error) {
+      console.error('Failed to duplicate flow:', error);
+    }
+  };
+
   const renderFirstColumnHeader = ({
     isSorted,
     isAscending,
     isDescending,
     onSort,
+    isAllSelected,
+    onToggleAll,
   }: {
     isSorted: boolean;
     isAscending: boolean;
     isDescending: boolean;
     onSort: (direction: 'asc' | 'desc') => void;
+    isAllSelected: boolean;
+    onToggleAll: () => void;
   }) => {
     return (
-      <div className="flex items-center gap-2 h-full w-full">
+      <div className="flex items-center gap-3 h-full w-full">
+        <div
+          className="flex items-center justify-center h-full flex-shrink-0"
+          data-no-row-link="true"
+        >
+          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
@@ -132,12 +163,20 @@ const FlowsPage = () => {
     );
   };
 
-  const renderFirstColumn = (row: Flow) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <span className="text-sm font-medium truncate">{row.name}</span>
-      </div>
-    );
+  const createRenderFirstColumn = (onToggleRow: (id: string) => void) => {
+    return (row: Flow, isSelected: boolean) => {
+      return (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div
+            className="flex items-center justify-center h-full flex-shrink-0"
+            data-no-row-link="true"
+          >
+            <Checkbox checked={isSelected} onCheckedChange={() => onToggleRow(row.id)} />
+          </div>
+          <span className="text-sm font-medium truncate">{row.name}</span>
+        </div>
+      );
+    };
   };
 
   return (
@@ -163,22 +202,68 @@ const FlowsPage = () => {
         searchFields={['name', 'description']}
         enableEditColumns={false}
         enableExport={false}
-        enableRowSelection={false}
+        enableRowSelection={true}
+        selectedRowIds={selectedFlows}
+        onSelectionChange={setSelectedFlows}
         firstColumnId="name"
         stickyFirstColumn={true}
         firstColumnWidth="350px"
         hideFirstColumnBorder={false}
-        renderFirstColumn={renderFirstColumn}
+        renderFirstColumn={createRenderFirstColumn((id) => {
+          const newSet = new Set(selectedFlows);
+          if (newSet.has(id)) {
+            newSet.delete(id);
+          } else {
+            newSet.add(id);
+          }
+          setSelectedFlows(newSet);
+        })}
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
         emptyMessage={t('flows.emptyMessage')}
-        onRowClick={(row) => {
+        selectionActions={
+          selectedFlows.size > 0 ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                onClick={handleClearSelected}
+                className="gap-2"
+                aria-label={t('flows.actions.clearSelected')}
+              >
+                <X className="size-4" />
+                <span>
+                  {t('flows.actions.clearSelected')} {selectedFlows.size}
+                </span>
+              </Button>
+              {selectedFlows.size === 1 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleDuplicateSelected}
+                  className="gap-2"
+                  aria-label={t('flows.actions.duplicateAria')}
+                >
+                  <Copy className="size-4" />
+                  <span>{t('flows.actions.duplicate')}</span>
+                </Button>
+              )}
+            </div>
+          ) : undefined
+        }
+        onRowClick={(row, event) => {
+          const targetElement = event.target as HTMLElement;
+          if (targetElement.closest('[data-no-row-link="true"]')) {
+            return;
+          }
           router.push(`/flows/${row.id}`);
         }}
         onRowKeyDown={(row, event) => {
           if (event.key === 'Enter' || event.key === ' ') {
+            const targetElement = event.target as HTMLElement;
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return;
+            }
             event.preventDefault();
             router.push(`/flows/${row.id}`);
           }
