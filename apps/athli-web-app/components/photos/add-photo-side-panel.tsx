@@ -2,88 +2,87 @@
 
 import { useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Check } from 'lucide-react';
+import { Upload, ChevronDownIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
-const TAG_OPTIONS: Option[] = [
-  { label: 'Training', value: 'Training' },
-  { label: 'Nutrition', value: 'Nutrition' },
-  { label: 'Recovery', value: 'Recovery' },
-  { label: 'Mobility', value: 'Mobility' },
-  { label: 'Rehab', value: 'Rehab' },
-  { label: 'Technique', value: 'Technique' },
-  { label: 'Mindset', value: 'Mindset' },
-  { label: 'Education', value: 'Education' },
-  { label: 'Assessment', value: 'Assessment' },
-  { label: 'Progress', value: 'Progress' },
-  { label: 'Checkin', value: 'Checkin' },
-  { label: 'Program', value: 'Program' },
-  { label: 'Workout', value: 'Workout' },
-  { label: 'Warmup', value: 'Warmup' },
-  { label: 'Cooldown', value: 'Cooldown' },
-  { label: 'Cardio', value: 'Cardio' },
-  { label: 'Strength', value: 'Strength' },
-  { label: 'Hypertrophy', value: 'Hypertrophy' },
-  { label: 'Conditioning', value: 'Conditioning' },
-  { label: 'Power', value: 'Power' },
-  { label: 'Endurance', value: 'Endurance' },
-  { label: 'Flexibility', value: 'Flexibility' },
-  { label: 'Lifestyle', value: 'Lifestyle' },
-  { label: 'Supplements', value: 'Supplements' },
-  { label: 'Template', value: 'Template' },
-];
+type PhotoType = 'front' | 'back' | 'side';
 
-type AddFileSidePanelProps = {
+type AddPhotoSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (fileName: string, file: File, tags: string[]) => Promise<void>;
-  clientName?: string;
+  onSave: (type: PhotoType, file: File, takenAt: Date) => Promise<void>;
+  clientId: string;
 };
 
-export const AddFileSidePanel = ({
+export const AddPhotoSidePanel = ({
   open,
   onOpenChange,
   onSave,
-  clientName,
-}: AddFileSidePanelProps) => {
+  clientId,
+}: AddPhotoSidePanelProps) => {
   const t = useTranslations();
-  const [fileName, setFileName] = useState<string>('');
+  const [photoType, setPhotoType] = useState<PhotoType>('front');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [takenAt, setTakenAt] = useState<Date | undefined>(new Date());
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
   const handleClose = () => {
     onOpenChange(false);
-    setFileName('');
+    setPhotoType('front');
     setSelectedFile(null);
-    setSelectedTags([]);
+    setImagePreview(null);
+    setTakenAt(new Date());
     setIsDragging(false);
     dragCounterRef.current = 0;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    // Clean up object URL
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
   };
 
   const handleSave = async () => {
-    if (!fileName.trim() || !selectedFile) return;
-    await onSave(fileName.trim(), selectedFile, selectedTags);
+    if (!selectedFile || !takenAt) return;
+    await onSave(photoType, selectedFile, takenAt);
     handleClose();
   };
 
   const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    if (!fileName.trim()) {
-      setFileName(file.name);
+    // Only allow image files
+    if (!file.type.startsWith('image/')) {
+      return;
     }
+    setSelectedFile(file);
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    // Clean up previous preview if exists
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(previewUrl);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -116,7 +115,7 @@ export const AddFileSidePanel = ({
     dragCounterRef.current = 0;
 
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
+    if (droppedFile && droppedFile.type.startsWith('image/')) {
       handleFileSelect(droppedFile);
     }
   };
@@ -128,16 +127,18 @@ export const AddFileSidePanel = ({
     }
   };
 
-  const showAlert = !!clientName;
-
   return (
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title={t('files.addFile')}
+      title={t('photos.addPhoto')}
       footer={
         <div className="flex w-full justify-start gap-2">
-          <Button type="button" onClick={handleSave} disabled={!fileName.trim() || !selectedFile}>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!selectedFile || !takenAt}
+          >
             {t('general.save')}
           </Button>
           <Button type="button" variant="outline" onClick={handleClose}>
@@ -156,46 +157,45 @@ export const AddFileSidePanel = ({
         {/* Drag Overlay */}
         {isDragging && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-            <p className="text-lg font-semibold text-primary">Drop file here</p>
+            <p className="text-lg font-semibold text-primary">Drop image here</p>
           </div>
         )}
         
         {/* Form Content - hidden when dragging */}
         <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
-          {showAlert && (
-            <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
-              <Info className="size-4" />
-              <AlertDescription className="min-w-0 line-clamp-4">
-                Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
-              </AlertDescription>
-            </Alert>
-          )}
-          {/* File Name Input */}
+          {/* Type Dropdown */}
           <div className="flex flex-col gap-2">
-            <label htmlFor="file-name" className="text-sm font-medium">
-              {t('files.form.fileName')}
-            </label>
-            <Input
-              id="file-name"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              placeholder={t('files.form.fileNamePlaceholder')}
-            />
+            <Label htmlFor="photo-type" className="px-1">
+              {t('photos.form.type')}
+            </Label>
+            <Select value={photoType} onValueChange={(value) => setPhotoType(value as PhotoType)}>
+              <SelectTrigger id="photo-type" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="front">{t('photos.form.front')}</SelectItem>
+                <SelectItem value="back">{t('photos.form.back')}</SelectItem>
+                <SelectItem value="side">{t('photos.form.side')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* File Drop Area */}
+          {/* Image Selection */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">{t('files.form.file')}</label>
+            <Label className="px-1">{t('photos.form.image')}</Label>
             <div
               className={cn(
                 'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                'border-muted hover:border-primary',
-                selectedFile && 'border-primary bg-primary/5'
+                selectedFile ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary'
               )}
             >
-              {selectedFile ? (
+              {selectedFile && imagePreview ? (
                 <>
-                  <Check className="size-10 text-green-500" />
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="size-20 object-cover rounded-md"
+                  />
                   <div className="text-center">
                     <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -207,24 +207,29 @@ export const AddFileSidePanel = ({
                     variant="outline"
                     onClick={() => {
                       setSelectedFile(null);
+                      if (imagePreview) {
+                        URL.revokeObjectURL(imagePreview);
+                      }
+                      setImagePreview(null);
                       if (fileInputRef.current) {
                         fileInputRef.current.value = '';
                       }
                     }}
                   >
-                    {t('files.form.changeFile')}
+                    {t('photos.form.changeImage')}
                   </Button>
                 </>
               ) : (
                 <>
                   <Upload className="size-10 text-muted-foreground" />
                   <div className="text-center">
-                    <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
-                    <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
+                    <p className="text-sm font-medium mb-1">{t('photos.form.dropImageHere')}</p>
+                    <p className="text-xs text-muted-foreground">{t('photos.form.orClickToSelect')}</p>
                   </div>
                   <Input
                     ref={fileInputRef}
                     type="file"
+                    accept="image/*"
                     className="hidden"
                     onChange={handleFileInputChange}
                   />
@@ -233,30 +238,44 @@ export const AddFileSidePanel = ({
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {t('files.form.selectFile')}
+                    {t('photos.form.selectImage')}
                   </Button>
                 </>
               )}
             </div>
           </div>
 
-          {/* Tags Dropdown */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">{t('files.form.tags')}</label>
-            <MultiAsyncSelect
-              options={TAG_OPTIONS}
-              value={selectedTags}
-              onValueChange={setSelectedTags}
-              placeholder={t('files.form.selectTags')}
-              searchPlaceholder={t('files.form.searchTags')}
-              maxCount={3}
-              clearText={t('general.clear')}
-              closeText={t('general.close')}
-            />
+          {/* Date Picker */}
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="date" className="px-1">
+              {t('photos.form.takenAt')}
+            </Label>
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  id="date"
+                  className="w-full justify-between font-normal bg-sidebar"
+                >
+                  {takenAt ? takenAt.toLocaleDateString() : t('photos.form.selectDate')}
+                  <ChevronDownIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={takenAt}
+                  captionLayout="dropdown"
+                  onSelect={(date) => {
+                    setTakenAt(date);
+                    setIsCalendarOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>
     </SidePanel>
   );
 };
-

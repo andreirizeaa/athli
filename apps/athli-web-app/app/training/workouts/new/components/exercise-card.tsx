@@ -947,7 +947,7 @@ export const ExerciseCard = ({
         exercise.exerciseType === 'distance_duration') && (
         <div className="w-full border rounded-lg overflow-hidden">
           <Table className="text-[11px] leading-tight">
-            <TableHeader className="bg-sidebar">
+            <TableHeader className="bg-transparent">
               <TableRow className="h-8">
                 <TableHead className="text-center h-8 py-1 px-2">Set</TableHead>
                 <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
@@ -1350,16 +1350,22 @@ export const ExerciseCard = ({
             <div className="flex gap-6">
               <div className="w-3/5 flex-shrink-0">
                 <div className="relative w-full aspect-video rounded-lg overflow-hidden">
-                  <video src={exercise.videoUrl} controls className="w-full h-full">
-                    Your browser does not support the video tag.
-                  </video>
+                  {exercise.videoUrl ? (
+                    <video src={exercise.videoUrl} controls className="w-full h-full">
+                      Your browser does not support the video tag.
+                    </video>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                      No video available
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex-1 flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <h3 className="text-sm font-semibold">Target Muscles</h3>
                   <div className="flex flex-wrap gap-2">
-                    {exercise.targetMuscles.map((muscle) => (
+                    {(exercise.targetMuscles || []).map((muscle) => (
                       <Badge key={muscle} variant="outline">
                         {muscle}
                       </Badge>
@@ -1369,7 +1375,7 @@ export const ExerciseCard = ({
                 <div className="flex flex-col gap-2">
                   <h3 className="text-sm font-semibold">Secondary Muscles</h3>
                   <div className="flex flex-wrap gap-2">
-                    {exercise.secondaryMuscles.map((muscle) => (
+                    {(exercise.secondaryMuscles || []).map((muscle) => (
                       <Badge key={muscle} variant="outline">
                         {muscle}
                       </Badge>
@@ -1383,7 +1389,7 @@ export const ExerciseCard = ({
                 <h3 className="text-sm font-semibold">Instructions</h3>
                 <Textarea
                   readOnly
-                  value={exercise.instructions.join('\n\n')}
+                  value={(exercise.instructions || []).join('\n\n')}
                   className="min-h-[120px] resize-none w-full select-none pointer-events-none"
                 />
               </div>
@@ -1391,7 +1397,7 @@ export const ExerciseCard = ({
                 <h3 className="text-sm font-semibold">Exercise Tips</h3>
                 <Textarea
                   readOnly
-                  value={exercise.exerciseTips.join('\n\n')}
+                  value={(exercise.exerciseTips || []).join('\n\n')}
                   className="min-h-[120px] resize-none w-full select-none pointer-events-none"
                 />
               </div>

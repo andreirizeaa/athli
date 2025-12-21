@@ -171,7 +171,12 @@ const ClientQuestionnairesPage = () => {
         </div>
       ),
       renderCell: (row) => (
-        <Badge variant={row.status === 'completed' ? 'default' : 'outline'} className="text-xs">
+        <Badge 
+          variant={row.status === 'completed' ? 'default' : 'outline'} 
+          className={row.status === 'completed' 
+            ? 'text-xs rounded-full bg-primary text-primary-foreground border-transparent' 
+            : 'text-xs border-primary text-primary bg-transparent'}
+        >
           {row.status === 'completed' ? t('athletes.profile.questionnaires.status.completed') : t('athletes.profile.questionnaires.status.pending')}
         </Badge>
       ),

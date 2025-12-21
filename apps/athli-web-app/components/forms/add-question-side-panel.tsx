@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
@@ -54,9 +54,10 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
     { id: 'date', label: t('forms.detail.addQuestion.formats.date'), subtitle: t('forms.detail.addQuestion.formats.dateSubtitle') },
     { id: 'rating', label: t('forms.detail.addQuestion.formats.rating'), subtitle: t('forms.detail.addQuestion.formats.ratingSubtitle') },
     { id: 'signature', label: t('forms.detail.addQuestion.formats.signature'), subtitle: t('forms.detail.addQuestion.formats.signatureSubtitle') },
+    { id: 'progressPhoto', label: t('forms.detail.addQuestion.formats.progressPhoto'), subtitle: t('forms.detail.addQuestion.formats.progressPhotoSubtitle') },
   ];
 
-  const handleClose = () => {
+  const resetForm = () => {
     setQuestionText('');
     setIsRequired(true);
     setSelectedFormat(null);
@@ -64,6 +65,17 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
     setScaleFrom('1');
     setScaleTo('10');
     setMediaCount(1);
+  };
+
+  // Reset form when panel closes
+  useEffect(() => {
+    if (!open) {
+      resetForm();
+    }
+  }, [open]);
+
+  const handleClose = () => {
+    resetForm();
     onOpenChange(false);
   };
 
@@ -238,7 +250,10 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
                       handleFormatSelect(format.id);
                     }
                   }}
-                  className="p-4 cursor-pointer hover:bg-accent transition-colors"
+                  className={cn(
+                    "p-4 cursor-pointer hover:bg-accent transition-colors",
+                    format.id === 'progressPhoto' && "col-span-2"
+                  )}
                   aria-label={`Select ${format.label} format`}
                 >
                   <div className="flex flex-col gap-1">

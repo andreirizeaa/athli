@@ -28,7 +28,7 @@ export interface AthleteDetails {
   age: number | null;
   weight: number | null; // in kg
   height: number | null; // in cm
-  category: 'online' | 'in-person';
+  category: 'online' | 'in-person' | 'hybrid';
   gender: 'male' | 'female' | 'prefer-not-to-say';
   phone: string;
   country: string;
@@ -976,4 +976,40 @@ export interface WeightOverviewResult {
   dataPoints: WeightDataPoint[];
   startingWeight: number;
 }
+
+export interface AddClientPhotoData {
+  clientId: string;
+  type: 'front' | 'back' | 'side';
+  file: File;
+  takenAt: Date;
+}
+
+/**
+ * Service method to add a client photo
+ * This will be connected to the backend in the future
+ */
+export const addClientPhoto = async (data: AddClientPhotoData): Promise<void> => {
+  console.log('Adding client photo:', {
+    clientId: data.clientId,
+    type: data.type,
+    fileName: data.file.name,
+    fileSize: data.file.size,
+    takenAt: data.takenAt,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const formData = new FormData();
+  // formData.append('file', data.file);
+  // formData.append('type', data.type);
+  // formData.append('takenAt', data.takenAt.toISOString());
+  // const response = await fetch(`/api/athletes/${data.clientId}/photos`, {
+  //   method: 'POST',
+  //   body: formData,
+  // })
+  // if (!response.ok) throw new Error('Failed to add client photo')
+  // return await response.json()
+};
 

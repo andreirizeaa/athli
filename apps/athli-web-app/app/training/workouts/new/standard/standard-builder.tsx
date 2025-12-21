@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -490,6 +490,8 @@ export const StandardBuilder = ({
     {}
   );
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -547,26 +549,59 @@ export const StandardBuilder = ({
   };
 
   const handleExerciseClickById = (exerciseId: string) => {
+    // Find which section contains this exercise
+    const sectionContainingExercise = workoutSchema.sections.find((section) =>
+      section.exercises?.some((ex) => ex.exerciseId === exerciseId)
+    );
+
+    // If the section is collapsed, expand it
+    const wasCollapsed = sectionContainingExercise && collapsedSections.has(sectionContainingExercise.id);
+    if (wasCollapsed && sectionContainingExercise) {
+      setCollapsedSections((prev) => {
+        const next = new Set(prev);
+        next.delete(sectionContainingExercise.id);
+        return next;
+      });
+    }
+
+    // Flash the border by setting focused exercise ID
+    setFocusedExerciseId(exerciseId);
+    // Clear the flash after animation (1 second)
+    setTimeout(() => {
+      setFocusedExerciseId(null);
+    }, 1000);
+
     // Find the exercise by ID from the search results
     const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
-    if (exercise) {
-      handleExerciseClick(exercise);
-    } else {
-      // If exercise not found, try to scroll using just the ID
-      const exerciseRef = exerciseRefs.current.get(exerciseId);
-      if (exerciseRef && contentScrollRef.current) {
-        const scrollContainer = contentScrollRef.current;
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const exerciseRect = exerciseRef.getBoundingClientRect();
-        const scrollTop = scrollContainer.scrollTop;
-        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+    
+    // If section was collapsed, wait for it to expand before scrolling
+    const scrollToExercise = () => {
+      if (exercise) {
+        handleExerciseClick(exercise);
+      } else {
+        // If exercise not found, try to scroll using just the ID
+        const exerciseRef = exerciseRefs.current.get(exerciseId);
+        if (exerciseRef && contentScrollRef.current) {
+          const scrollContainer = contentScrollRef.current;
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const exerciseRect = exerciseRef.getBoundingClientRect();
+          const scrollTop = scrollContainer.scrollTop;
+          const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
 
-        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: 'smooth',
-        });
+          const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+          scrollContainer.scrollTo({
+            top: Math.max(0, targetScroll),
+            behavior: 'smooth',
+          });
+        }
       }
+    };
+
+    if (wasCollapsed) {
+      // Wait for the section to expand (animation duration is 300ms)
+      setTimeout(scrollToExercise, 350);
+    } else {
+      scrollToExercise();
     }
   };
 
@@ -1258,6 +1293,18 @@ export const StandardBuilder = ({
     }));
   };
 
+  const activeExerciseIds = useMemo(() => {
+    const activeIds = new Set<string>();
+    workoutSchema.sections.forEach((section) => {
+      section.exercises?.forEach((exercise) => {
+        if (exercise.exerciseId) {
+          activeIds.add(exercise.exerciseId);
+        }
+      });
+    });
+    return activeIds;
+  }, [workoutSchema]);
+
   return (
     <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-background p-2">
       <div className="flex-[1] p-2 h-full flex flex-col min-h-0">
@@ -1291,6 +1338,7 @@ export const StandardBuilder = ({
                 onExerciseClick={handleExerciseClick}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
+                activeExerciseIds={activeExerciseIds}
               />
             </div>
           )}
@@ -1310,23 +1358,73 @@ export const StandardBuilder = ({
           >
           {workoutSchema.sections.length > 0 ? (
             <div className="flex flex-col gap-4 w-full min-h-0">
-              {workoutSchema.sections.map((section) => (
-                <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0 min-w-0">
-                  <Card className="bg-sidebar w-full flex flex-col relative min-w-0">
-                    <CardHeader className="border-b p-0 pb-2">
-                      <div className="flex items-center justify-between px-3 pt-1">
-                        <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
-                          {section.type}{' '}
-                          <span className="font-normal text-xs">
-                            ({section.exercises ? section.exercises.length : 0})
-                          </span>
+              {workoutSchema.sections.map((section) => {
+                const isCollapsed = collapsedSections.has(section.id);
+                return (
+                  <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0 min-w-0">
+                  <Card className="bg-sidebar w-full flex flex-col relative min-w-0 border-primary p-0 rounded-xl">
+                    <CardHeader className={cn(
+                      "p-0 bg-primary/10 rounded-t-xl",
+                      isCollapsed && "rounded-b-xl",
+                      !isCollapsed && "border-b border-primary"
+                    )}>
+                      <div className="flex items-center justify-between px-3 py-2 pb-0">
+                        <div className="flex items-center gap-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Info className="size-4 text-foreground translate-y-[1px]" />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-primary hover:text-primary hover:bg-primary/20"
+                                onClick={() => {
+                                  setCollapsedSections((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(section.id)) {
+                                      next.delete(section.id);
+                                    } else {
+                                      next.add(section.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setCollapsedSections((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(section.id)) {
+                                        next.delete(section.id);
+                                      } else {
+                                        next.add(section.id);
+                                      }
+                                      return next;
+                                    });
+                                  }
+                                }}
+                                aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+                              >
+                                {isCollapsed ? (
+                                  <ChevronDown className="size-4" />
+                                ) : (
+                                  <ChevronUp className="size-4" />
+                                )}
+                              </Button>
                             </TooltipTrigger>
-                            <TooltipContent>{getSectionDescription(section.type)}</TooltipContent>
+                            <TooltipContent>
+                              {isCollapsed ? 'Expand section' : 'Collapse section'}
+                            </TooltipContent>
                           </Tooltip>
-                        </CardTitle>
+                          <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
+                            {section.type}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="size-4 text-foreground -translate-y-[0.5px]" />
+                              </TooltipTrigger>
+                              <TooltipContent>{getSectionDescription(section.type)}</TooltipContent>
+                            </Tooltip>
+                          </CardTitle>
+                        </div>
                         <div className="flex items-center gap-2">
                           {section.type === 'auxiliary' && (
                             <div className="flex items-center gap-2 text-xs">
@@ -1460,12 +1558,20 @@ export const StandardBuilder = ({
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent
-                      className="flex-1 flex flex-col px-3 py-1.5"
-                      onDragOver={(e) => handleDragOver(e, section.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleSectionDrop(e, section.id)}
-                    >
+                    {!isCollapsed && (
+                      <div
+                        className="overflow-hidden transition-all duration-300 ease-in-out"
+                        style={{
+                          maxHeight: '10000px',
+                          opacity: 1,
+                        }}
+                      >
+                        <CardContent
+                          className="flex-1 flex flex-col px-3 py-1.5 pb-0"
+                          onDragOver={(e) => handleDragOver(e, section.id)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleSectionDrop(e, section.id)}
+                        >
                       <div
                         className={cn(
                           'flex-1 w-full',
@@ -1538,7 +1644,12 @@ export const StandardBuilder = ({
                                   }}
                                   className={wrapperClasses}
                                 >
-                                  <ExerciseCard
+                                  <div
+                                    className={cn(
+                                      focusedExerciseId === exercise.exerciseId && "[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse"
+                                    )}
+                                  >
+                                    <ExerciseCard
                                     exercise={exercise}
                                     isLinkedToPrev={isLinkedToPrev}
                                     isLinkedToNext={isLinkedToNext}
@@ -1598,6 +1709,7 @@ export const StandardBuilder = ({
                                       }));
                                     }}
                                   />
+                                  </div>
 
                                   {/* Slot between this exercise and the next */}
                                   <div
@@ -1665,7 +1777,7 @@ export const StandardBuilder = ({
                                 </div>
                               );
                             })}
-                            <div className="flex justify-center">
+                            <div className="flex justify-center pb-3">
                               <Button
                                 type="button"
                                 variant="outline"
@@ -1698,9 +1810,12 @@ export const StandardBuilder = ({
                         )}
                       </div>
                     </CardContent>
+                    </div>
+                    )}
                   </Card>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
               <div className="flex items-center justify-center py-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
