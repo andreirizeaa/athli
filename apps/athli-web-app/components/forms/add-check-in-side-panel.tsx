@@ -7,9 +7,10 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Search, FileText, Info, Edit } from 'lucide-react';
-import { getForms, type Form, assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/forms/form-service';
-import { formTemplates } from '@/lib/constants/forms';
-import { cn } from '@/lib/utils';
+import { getForms, type Form } from '@/lib/coach/coach-form-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { formTemplates } from '@/constants/forms';
+import { cn } from '@/lib/general/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 

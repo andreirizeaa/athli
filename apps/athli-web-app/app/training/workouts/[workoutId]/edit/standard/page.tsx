@@ -20,7 +20,7 @@ import { StandardBuilder } from '../../../new/standard/standard-builder';
 import type { WorkoutProgramPayload } from '../../../new/workout-schema';
 import { DiscardChangesDialog } from '../../../new/components/discard-changes-dialog';
 import { mockWorkouts } from '@/components/app/app-shell';
-import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
+import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 
 type WorkoutMeta = {
   title: string;

@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Calendar, Dumbbell, MessageCircle, User, FileEdit, CircleCheck, Clock, Gauge, Weight, Image, Video } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { mockAthletes, mockWorkouts } from '@/components/app/app-shell';
 
 type MissedWorkout = {

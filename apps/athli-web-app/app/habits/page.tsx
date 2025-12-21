@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X } from 'lucide-react';
+import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X, Copy } from 'lucide-react';
 import { SidePanel } from '@/components/app/side-panel';
 import {
   Form,
@@ -36,9 +36,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
-import { addHabit, editHabit, deleteHabit, assignHabit, type Habit } from '@/lib/habits/habit-service';
-import { defaultHabits, type DefaultHabit } from '@/lib/constants/habits';
+import { cn } from '@/lib/general/utils';
+import { addHabit, editHabit, deleteHabit, duplicateHabit, type Habit } from '@/lib/coach/coach-habit-service';
+import { assignHabit } from '@/lib/client/client-habit-service';
+import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { mockAthletes } from '@/components/app/app-shell';
 
 type HabitFormValues = {
@@ -384,12 +385,26 @@ const HabitsPage = () => {
     setSelectedHabits(new Set());
   };
 
+  const handleDuplicateSelected = async () => {
+    if (selectedHabits.size !== 1) return;
+    const habitId = Array.from(selectedHabits)[0];
+    const habit = habits.find((h) => h.id === habitId);
+    if (!habit) return;
+    try {
+      const duplicatedHabit = await duplicateHabit(habitId, habit);
+      setHabits((prev) => [...prev, duplicatedHabit]);
+      setSelectedHabits(new Set());
+    } catch (error) {
+      console.error('Failed to duplicate habit:', error);
+    }
+  };
+
   const handleAssignToClients = () => {
     const selectedHabitItems = habits.filter((habit) => selectedHabits.has(habit.id));
     if (selectedHabitItems.length === 0) {
       return;
     }
-    
+
     setHabitsToAssign(selectedHabitItems);
     setIsAssignToClientsOpen(true);
     setSelectedClientIds(new Set());
@@ -889,6 +904,17 @@ const HabitsPage = () => {
                 Clear {selectedHabits.size} selected
               </span>
             </Button>
+            {selectedHabits.size === 1 && (
+              <Button
+                variant="ghost"
+                onClick={handleDuplicateSelected}
+                className="gap-2"
+                aria-label={t('habits.actions.duplicateAria')}
+              >
+                <Copy className="size-4" />
+                <span>{t('habits.actions.duplicate')}</span>
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={handleAssignToClients}

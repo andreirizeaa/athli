@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { getForms } from '@/lib/forms/form-service';
-import { type Habit } from '@/lib/habits/habit-service';
-import { updateFlow } from '@/lib/automations-service';
+import { getForms } from '@/lib/coach/coach-form-service';
+import { type Habit } from '@/lib/coach/coach-habit-service';
+import { updateFlow } from '@/lib/coach/coach-flow-service';
 import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
 import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {

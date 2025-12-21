@@ -12,9 +12,9 @@ import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Trash2, Edit, Plus, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { format } from 'date-fns';
-import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/messaging/notes-service';
+import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/coach/coach-note-service';
 
 type NotesCardProps = {
   clientId: string;

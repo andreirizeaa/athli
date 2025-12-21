@@ -18,13 +18,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { SidePanel } from '@/components/app/side-panel';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type AddAthleteFormValues = {
   firstName: string;
   lastName: string;
   email: string;
-  coachingType: 'online' | 'in-person';
+  coachingType: 'online' | 'in-person' | 'hybrid';
 };
 
 interface AddClientSidePanelProps {
@@ -38,7 +38,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
     firstName: z.string().min(1, t('athletes.addClient.firstNameRequiredError')),
     lastName: z.string().min(1, t('athletes.addClient.lastNameRequiredError')),
     email: z.string().email(t('athletes.addClient.emailInvalidError')),
-    coachingType: z.union([z.literal('online'), z.literal('in-person')]),
+    coachingType: z.union([z.literal('online'), z.literal('in-person'), z.literal('hybrid')]),
   });
   const form = useForm<AddAthleteFormValues>({
     resolver: zodResolver(addAthleteSchema),
@@ -173,7 +173,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
                   <Tabs
                     value={field.value}
                     onValueChange={(value) => {
-                      field.onChange(value as 'online' | 'in-person');
+                      field.onChange(value as 'online' | 'in-person' | 'hybrid');
                     }}
                     className="w-full"
                   >
@@ -191,6 +191,13 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
                         aria-label={t('athletes.addClient.inPersonAria')}
                       >
                         {t('athletes.addClient.inPerson')}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="hybrid"
+                        className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                        aria-label={t('athletes.addClient.hybridAria')}
+                      >
+                        {t('athletes.addClient.hybrid')}
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>

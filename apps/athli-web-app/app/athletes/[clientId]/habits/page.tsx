@@ -8,7 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { addHabit, assignHabit, deleteClientHabits, type Habit } from '@/lib/habits/habit-service';
+import { addHabit, type Habit } from '@/lib/coach/coach-habit-service';
+import { assignHabit, deleteClientHabits } from '@/lib/client/client-habit-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { AddHabitSidePanel, type HabitFormValues } from '@/components/habits/add-habit-side-panel';
 

@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { getCheckInInstance, type CheckInInstance, type Question, type QuestionAnswer } from '@/lib/forms/form-service';
+import { getCheckInInstance, type CheckInInstance, type Question, type QuestionAnswer } from '@/lib/client/client-form-service';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface MediaPreview {
@@ -68,7 +68,7 @@ const CheckInInstancePage = () => {
 
     setIsDownloading(true);
     try {
-      const { downloadQuestionnaire } = await import('@/lib/pdf/pdf-service');
+      const { downloadQuestionnaire } = await import('@/lib/general/pdf-service');
 
       const clientName = 'Client Name';
 

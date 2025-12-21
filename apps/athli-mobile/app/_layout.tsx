@@ -212,17 +212,6 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="modals/calendar/session-type-modal"
-          options={{
-            presentation: 'modal',
-            headerShown: false,
-            ...(Platform.OS === 'android' && {
-              animation: 'slide_from_bottom',
-              gestureDirection: 'vertical',
-            }),
-          }}
-        />
-        <Stack.Screen
           name="modals/calendar/repeat-options-modal"
           options={{
             presentation: 'modal',

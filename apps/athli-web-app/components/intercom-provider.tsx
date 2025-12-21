@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser, useAuth } from '@clerk/nextjs';
-import { intercomApi } from '@/lib/api/intercom-api';
+import { intercomApi } from '@/lib/general/intercom-api';
 
 declare global {
   interface Window {

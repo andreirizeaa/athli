@@ -12,14 +12,15 @@ import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/compon
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, addFilesToClient, updateFile, deleteFile } from '@/lib/files/file-service';
+import { addFile, updateFile, deleteFile } from '@/lib/coach/coach-file-service';
+import { addFilesToClient } from '@/lib/client/client-file-service';
 import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';
@@ -118,6 +119,7 @@ const FilesPage = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragCounterRef = useRef(0);
   
   // Edit file state
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
@@ -146,6 +148,7 @@ const FilesPage = () => {
     setSelectedFile(null);
     setSelectedTags([]);
     setIsDragging(false);
+    dragCounterRef.current = 0;
   };
 
   const handleSave = async () => {
@@ -197,13 +200,19 @@ const FilesPage = () => {
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    dragCounterRef.current++;
+    if (dragCounterRef.current === 1) {
+      setIsDragging(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -215,6 +224,7 @@ const FilesPage = () => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    dragCounterRef.current = 0;
 
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile) {
@@ -665,34 +675,44 @@ const FilesPage = () => {
           </div>
         }
       >
-        <div className="flex flex-col gap-6">
-          {/* File Name Input */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="file-name" className="text-sm font-medium">
-              {t('files.form.fileName')}
-            </label>
-            <Input
-              id="file-name"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              placeholder={t('files.form.fileNamePlaceholder')}
-            />
-          </div>
+        <div
+          className="flex flex-col gap-6 flex-1 min-h-0 relative"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* Drag Overlay */}
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+              <p className="text-lg font-semibold text-primary">Drop file here</p>
+            </div>
+          )}
+          
+          {/* Form Content - hidden when dragging */}
+          <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
+            {/* File Name Input */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="file-name" className="text-sm font-medium">
+                {t('files.form.fileName')}
+              </label>
+              <Input
+                id="file-name"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                placeholder={t('files.form.fileNamePlaceholder')}
+              />
+            </div>
 
-          {/* File Drop Area */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">{t('files.form.file')}</label>
-            <div
-              className={cn(
-                'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                isDragging ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary',
-                selectedFile && 'border-primary bg-primary/5'
-              )}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-            >
+            {/* File Drop Area */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">{t('files.form.file')}</label>
+              <div
+                className={cn(
+                  'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
+                  selectedFile ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary'
+                )}
+              >
               {selectedFile ? (
                 <>
                   <Check className="size-10 text-green-500" />
@@ -737,22 +757,23 @@ const FilesPage = () => {
                   </Button>
                 </>
               )}
+              </div>
             </div>
-          </div>
 
-          {/* Tags Dropdown */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">{t('files.form.tags')}</label>
-            <MultiAsyncSelect
-              options={TAG_OPTIONS}
-              value={selectedTags}
-              onValueChange={setSelectedTags}
-              placeholder={t('files.form.selectTags')}
-              searchPlaceholder={t('files.form.searchTags')}
-              maxCount={3}
-              clearText={t('general.clear')}
-              closeText={t('general.close')}
-            />
+            {/* Tags Dropdown */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">{t('files.form.tags')}</label>
+              <MultiAsyncSelect
+                options={TAG_OPTIONS}
+                value={selectedTags}
+                onValueChange={setSelectedTags}
+                placeholder={t('files.form.selectTags')}
+                searchPlaceholder={t('files.form.searchTags')}
+                maxCount={3}
+                clearText={t('general.clear')}
+                closeText={t('general.close')}
+              />
+            </div>
           </div>
         </div>
       </SidePanel>

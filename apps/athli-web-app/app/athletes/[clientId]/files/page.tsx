@@ -17,7 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile, deleteClientFiles } from '@/lib/files/file-service';
+import { addFile, updateFile, deleteFile } from '@/lib/coach/coach-file-service';
+import { deleteClientFiles } from '@/lib/client/client-file-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { EditFileSidePanel } from '@/components/files/edit-file-side-panel';
@@ -494,6 +495,7 @@ const ClientFilesPage = () => {
         onOpenChange={setIsAddFileOpen}
         onSave={handleSaveFile}
         clientName={clientName}
+        clientId={clientId}
       />
       
       {editingFile && (

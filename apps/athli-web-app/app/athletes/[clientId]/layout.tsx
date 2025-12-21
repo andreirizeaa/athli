@@ -50,6 +50,10 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.overview'),
     },
     {
+      value: 'notes',
+      label: t('athletes.profile.notes'),
+    },
+    {
       value: 'metrics',
       label: t('athletes.profile.metrics'),
     },
@@ -66,8 +70,8 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.questionnaires.title'),
     },
     {
-      value: 'notes',
-      label: t('athletes.profile.notes'),
+      value: 'photos',
+      label: t('athletes.profile.photos'),
     },
     {
       value: 'files',
@@ -86,18 +90,24 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const validTabValues = tabs.map((tab) => tab.value);
   const lastSegment = segments[segments.length - 1];
 
-  // Check if we're in a check-in, questionnaires, or settings route (either list or detail page)
+  // Check if we're in a check-in, questionnaires, photos, settings, or training-calendar route (either list or detail page)
   const isCheckInRoute = segments.includes('check-in');
   const isQuestionnairesRoute = segments.includes('questionnaires');
+  const isPhotosRoute = segments.includes('photos');
   const isSettingsRoute = segments.includes('settings');
+  const isTrainingCalendarRoute = segments.includes('training-calendar');
 
   // Determine active tab
   const activeTab = isCheckInRoute
     ? 'check-in'
     : isQuestionnairesRoute
     ? 'questionnaires'
+    : isPhotosRoute
+    ? 'photos'
     : isSettingsRoute
     ? 'settings'
+    : isTrainingCalendarRoute
+    ? 'training-calendar'
     : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const handleTabChange = (value: string) => {

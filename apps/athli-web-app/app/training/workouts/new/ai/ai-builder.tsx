@@ -15,12 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
-import type { GeneratedWorkout } from '@/lib/library/workouts/generate-exercise';
-import { generateWorkoutFromPrompt, prompt } from '@/lib/library/workouts/generate-exercise';
+import { cn } from '@/lib/general/utils';
+import { searchExercises, type Exercise } from '@/lib/general/exercise-search';
+import type { GeneratedWorkout } from '@/lib/general/generate-exercise';
+import { generateWorkoutFromPrompt, prompt } from '@/lib/general/generate-exercise';
 import { toast } from 'sonner';
-import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
+import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
+import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
 import type {
   CircuitExerciseGroupPayload,
   CircuitExercisePayload,
@@ -32,6 +33,11 @@ import type {
   WorkoutProgramPayload,
   WorkoutSectionPayload,
 } from '../workout-schema';
+import type {
+  SetFieldValidation,
+  ValidationErrors,
+  SectionValidationErrors
+} from '../shared/types/workout-builder.types';
 import type { SetData } from '../components/exercise-card';
 import { ExerciseCard } from '../components/exercise-card';
 import { ExerciseSelectionPanel } from '../components/exercise-selection-panel';
@@ -39,6 +45,8 @@ import { SectionSelectionPanel } from '../components/section-selection-panel';
 import { EquipmentPanel } from '../components/equipment-panel';
 import { OverviewPanel } from '../components/overview-panel';
 import { VideoModal } from '../components/video-modal';
+import { WorkoutSectionCard } from '../components/workout-section-card';
+import { WorkoutAddSectionButton } from '../components/workout-add-section-button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -386,22 +394,10 @@ const buildWorkoutPayload = (
   };
 };
 
-type SetFieldValidation = {
-  reps?: boolean;
-  weight?: boolean;
-  distance?: boolean;
-  duration?: boolean;
-  rest?: boolean;
-};
-
-type ValidationErrors = Record<string, Record<number, SetFieldValidation>>;
-
 type SectionValidation = {
   missingConfig?: boolean;
   emptyExercises?: boolean;
 };
-
-type SectionValidationErrors = Record<string, SectionValidation>;
 
 export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: AiBuilderProps) => {
   const [workoutSchema, setWorkoutSchema] = useState<WorkoutSchema>({
@@ -429,23 +425,31 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null);
-  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
-  const [dragOverSlot, setDragOverSlot] = useState<{
-    sectionId: string;
-    slotIndex: number;
-  } | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [sectionValidationErrors, setSectionValidationErrors] = useState<SectionValidationErrors>(
     {}
   );
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null);
   const [isLoadingAiWorkout, setIsLoadingAiWorkout] = useState(false);
   const [newSectionId, setNewSectionId] = useState<string | null>(null);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  const sectionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const sectionRefsLocal = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Use the shared drag-drop hook
+  const {
+    draggedExercise,
+    dragOverSectionId,
+    dragOverSlot,
+    handleDragStart,
+    handleDragEnd,
+    handleSectionDragOver,
+    handleSectionDragLeave,
+    registerSectionRef,
+  } = useExerciseDragDrop();
 
   // Load shared mock schema in edit mode if no schema exists
   useEffect(() => {
@@ -1031,31 +1035,62 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
   };
 
   const handleExerciseClickById = (exerciseId: string) => {
-    // First, try to scroll to the exercise using the ref
-    const exerciseRef = exerciseRefs.current.get(exerciseId);
-    if (exerciseRef && contentScrollRef.current) {
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        const scrollContainer = contentScrollRef.current;
-        if (!scrollContainer) return;
-        
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const exerciseRect = exerciseRef.getBoundingClientRect();
-        const scrollTop = scrollContainer.scrollTop;
-        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+    // Find which section contains this exercise
+    const sectionContainingExercise = workoutSchema.sections.find((section) =>
+      section.exercises?.some((ex) => ex.exerciseId === exerciseId)
+    );
 
-        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: 'smooth',
-        });
+    // If the section is collapsed, expand it
+    const wasCollapsed = sectionContainingExercise && collapsedSections.has(sectionContainingExercise.id);
+    if (wasCollapsed && sectionContainingExercise) {
+      setCollapsedSections((prev) => {
+        const next = new Set(prev);
+        next.delete(sectionContainingExercise.id);
+        return next;
       });
-    } else {
-      // If ref not found, try to find exercise and use handleExerciseClick
-      const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
-      if (exercise) {
-        handleExerciseClick(exercise);
+    }
+
+    // Flash the border by setting focused exercise ID
+    setFocusedExerciseId(exerciseId);
+    // Clear the flash after animation (1 second)
+    setTimeout(() => {
+      setFocusedExerciseId(null);
+    }, 1000);
+
+    // First, try to scroll to the exercise using the ref
+    const scrollToExercise = () => {
+      const exerciseRef = exerciseRefs.current.get(exerciseId);
+      if (exerciseRef && contentScrollRef.current) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          const scrollContainer = contentScrollRef.current;
+          if (!scrollContainer) return;
+          
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const exerciseRect = exerciseRef.getBoundingClientRect();
+          const scrollTop = scrollContainer.scrollTop;
+          const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
+
+          const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
+          scrollContainer.scrollTo({
+            top: Math.max(0, targetScroll),
+            behavior: 'smooth',
+          });
+        });
+      } else {
+        // If ref not found, try to find exercise and use handleExerciseClick
+        const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
+        if (exercise) {
+          handleExerciseClick(exercise);
+        }
       }
+    };
+
+    if (wasCollapsed) {
+      // Wait for the section to expand (animation duration is 300ms)
+      setTimeout(scrollToExercise, 350);
+    } else {
+      scrollToExercise();
     }
   };
 
@@ -1133,6 +1168,22 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         next[exerciseInstanceId] = exerciseErrors;
       }
 
+      return next;
+    });
+  };
+
+  const clearSectionValidationField = (sectionId: string, field: 'missingConfig' | 'emptyExercises') => {
+    setSectionValidationErrors((prev) => {
+      const existing = prev[sectionId];
+      if (!existing || !existing[field]) return prev;
+      const nextSection = { ...existing };
+      delete nextSection[field];
+      const next: SectionValidationErrors = { ...prev };
+      if (Object.keys(nextSection).length === 0) {
+        delete next[sectionId];
+      } else {
+        next[sectionId] = nextSection;
+      }
       return next;
     });
   };
@@ -1324,12 +1375,12 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     if (newSectionId && contentScrollRef.current) {
       // Use a small timeout to ensure the DOM has updated
       const timeoutId = setTimeout(() => {
-        const sectionRef = sectionRefs.current.get(newSectionId);
+        const sectionRef = sectionRefsLocal.current.get(newSectionId);
         if (sectionRef && contentScrollRef.current) {
           requestAnimationFrame(() => {
             const scrollContainer = contentScrollRef.current;
             if (!scrollContainer) return;
-            
+
             const containerRect = scrollContainer.getBoundingClientRect();
             const sectionRect = sectionRef.getBoundingClientRect();
             const scrollTop = scrollContainer.scrollTop;
@@ -1340,7 +1391,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
               top: Math.max(0, targetScroll),
               behavior: 'smooth',
             });
-            
+
             setNewSectionId(null);
           });
         }
@@ -1458,25 +1509,6 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     }
   };
 
-  const handleDragStart = (exercise: Exercise) => {
-    setDraggedExercise(exercise);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedExercise(null);
-    setDragOverSectionId(null);
-    setDragOverSlot(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent, sectionId: string) => {
-    e.preventDefault();
-    setDragOverSectionId(sectionId);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverSectionId(null);
-  };
-
   // Fallback drop handler used for empty sections or when no specific slot is active.
   const handleDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault();
@@ -1516,20 +1548,16 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         return next;
       });
     }
-    setDraggedExercise(null);
-    setDragOverSectionId(null);
-    setDragOverSlot(null);
+    handleDragEnd();
   };
 
   // Higher-level drop handler for the whole section content.
-  // If the user drops over the general area (not directly on a slot),
-  // use the last active slot as the insertion point so the order matches
-  // where they released the drag.
+  // Uses the calculated nearest slot position for smart dropping
   const handleSectionDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault();
 
     if (dragOverSlot && dragOverSlot.sectionId === sectionId) {
-      // Delegate to slot-based drop so we respect the intended index.
+      // Use the calculated slot position
       handleSlotDrop(e, sectionId, dragOverSlot.slotIndex);
       return;
     }
@@ -1589,17 +1617,6 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     });
   };
 
-  const handleSlotDragOver = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!draggedExercise) return;
-    setDragOverSlot({ sectionId, slotIndex });
-  };
-
-  const handleSlotDragLeave = (_e: React.DragEvent) => {
-    // Intentionally no-op to avoid flicker when moving within the slot.
-  };
-
   const handleSlotDrop = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1644,9 +1661,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       return next;
     });
 
-    setDraggedExercise(null);
-    setDragOverSectionId(null);
-    setDragOverSlot(null);
+    handleDragEnd();
   };
 
   const handleSupersetLink = (sectionId: string, exerciseIndex: number) => {
@@ -1768,6 +1783,24 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     }));
   };
 
+  // Wrapper functions for slot drag handlers
+  const handleSlotDragOver = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
+    // The hook's handleSectionDragOver automatically calculates the nearest slot
+    // We just need to call it with the section info
+    const section = workoutSchema.sections.find((s) => s.id === sectionId);
+    if (section) {
+      handleSectionDragOver(e, sectionId, section.exercises?.length || 0);
+    }
+  };
+
+  const handleSlotDragLeave = (e: React.DragEvent) => {
+    handleSectionDragLeave(e);
+  };
+
+  const handleSlotDropWrapper = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
+    handleSlotDrop(e, sectionId, slotIndex);
+  };
+
   return (
     <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-background p-2">
       <div className="flex-[1.5] p-2 h-full flex flex-col min-h-0">
@@ -1803,37 +1836,23 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
           </Tabs>
         {builderMode === 'chat' && (
           <div
-                className="flex-1 min-h-0 mt-4 flex flex-col overflow-hidden"
+            className="flex-1 min-h-0 mt-4 flex flex-col overflow-hidden relative"
             onDragEnter={handleChatDragEnter}
             onDragOver={handleChatDragOver}
             onDragLeave={handleChatDragLeave}
             onDrop={handleChatDrop}
           >
-            {/* Drag and Drop Overlay */}
+            {/* Drag Overlay */}
             {isDraggingOver && (
-              <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
-                <div className="text-center px-8">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="flex items-center gap-2 text-primary">
-                      <FileText className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-foreground">
-                        Drop your PDF here
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        PDF files will be added to the message composer
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+                <p className="text-lg font-semibold text-primary">Drop PDF here</p>
               </div>
             )}
-                {/* Chat Messages - Scrollable */}
-              <div 
-                ref={chatScrollRef}
-                  className="flex-1 min-h-0 overflow-y-auto"
-              >
+            {/* Chat Messages - Scrollable - hidden when dragging */}
+            <div 
+              ref={chatScrollRef}
+              className={cn('flex-1 min-h-0 overflow-y-auto', isDraggingOver && 'opacity-0 pointer-events-none')}
+            >
                 <div className="flex flex-col gap-3 px-4 pt-4 pb-4">
                   {chatMessages.length === 0 ? (
                     <div className="flex flex-col items-center gap-4 py-8">
@@ -1928,7 +1947,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                 </div>
               </div>
                 {/* Chat Input - Fixed at bottom */}
-              <div className="flex-shrink-0">
+              <div className={cn('flex-shrink-0', isDraggingOver && 'opacity-0 pointer-events-none')}>
                 <div
                   ref={containerRef}
                   className={cn(
@@ -2150,436 +2169,103 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
           <CardContent ref={contentScrollRef} className="absolute inset-0 p-4 overflow-y-auto">
             {workoutSchema.sections.length > 0 ? (
               <div className="flex flex-col gap-4 w-full min-h-0">
-                {workoutSchema.sections.map((section) => (
-                  <div
-                    key={section.id}
-                    ref={(el) => {
-                      if (el) {
-                        sectionRefs.current.set(section.id, el);
-                      } else {
-                        sectionRefs.current.delete(section.id);
-                      }
-                    }}
-                    className="relative flex w-full items-stretch flex-shrink-0 min-w-0"
-                  >
-                    <Card className="bg-sidebar w-full flex flex-col relative min-w-0">
-                      <CardHeader className="border-b p-0 pb-2">
-                        <div className="flex items-center justify-between px-3 pt-1">
-                          <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
-                            {section.type}{' '}
-                            <span className="font-normal text-xs">
-                              ({section.exercises ? section.exercises.length : 0})
-                            </span>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="size-4 text-foreground translate-y-[1px]" />
-                              </TooltipTrigger>
-                              <TooltipContent>{getSectionDescription(section.type)}</TooltipContent>
-                            </Tooltip>
-                          </CardTitle>
-                          <div className="flex items-center gap-2">
-                            {section.type === 'auxiliary' && (
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="font-medium">Category</span>
-                                <Select
-                                  value={section.category || ''}
-                                  onValueChange={(value) => {
-                                    onDirtyChange?.();
-                                    setWorkoutSchema((prev) => ({
-                                      ...prev,
-                                      sections: prev.sections.map((sec) => {
-                                        if (sec.id === section.id) {
-                                          return {
-                                            ...sec,
-                                            category: value as 'warmup' | 'cooldown' | 'mobility',
-                                          };
-                                        }
-                                        return sec;
-                                      }),
-                                    }));
-
-                                    // Clear missing-config validation when category is selected
-                                    if (value) {
-                                      setSectionValidationErrors((prev) => {
-                                        const existing = prev[section.id];
-                                        if (!existing || !existing.missingConfig) return prev;
-                                        const nextSection = { ...existing };
-                                        delete nextSection.missingConfig;
-                                        const next: SectionValidationErrors = { ...prev };
-                                        if (Object.keys(nextSection).length === 0) {
-                                          delete next[section.id];
-                                        } else {
-                                          next[section.id] = nextSection;
-                                        }
-                                        return next;
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    className={cn(
-                                      'h-7 w-32 text-[11px]',
-                                      sectionValidationErrors[section.id]?.missingConfig &&
-                                        'border-destructive focus-visible:ring-destructive'
-                                    )}
-                                  >
-                                    <SelectValue placeholder="Select..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="warmup">Warm up</SelectItem>
-                                    <SelectItem value="cooldown">Cool down</SelectItem>
-                                    <SelectItem value="mobility">Mobility</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-                            {(section.type === 'amrap' || section.type === 'timed' || section.type === 'circuits') && (
-                              <div className="flex items-center gap-2 text-xs">
-                                <span className="font-medium">
-                                  {section.type === 'amrap' ? 'Time (s)' : 'Rounds'}
-                                </span>
-                                <Input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={
-                                    section.type === 'amrap'
-                                      ? section.roundDurationSec?.toString() || ''
-                                      : section.targetRounds?.toString() || ''
-                                  }
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    onDirtyChange?.();
-                                    setWorkoutSchema((prev) => ({
-                                      ...prev,
-                                      sections: prev.sections.map((sec) => {
-                                        if (sec.id === section.id) {
-                                          if (section.type === 'amrap') {
-                                            return {
-                                              ...sec,
-                                              roundDurationSec: value
-                                                ? parseInt(value, 10)
-                                                : undefined,
-                                            };
-                                          }
-                                          return {
-                                            ...sec,
-                                            targetRounds: value ? parseInt(value, 10) : undefined,
-                                          };
-                                        }
-                                        return sec;
-                                      }),
-                                    }));
-
-                                    // Clear missing-config validation for this section as soon as a value is entered
-                                    if (value && value.trim() !== '') {
-                                      setSectionValidationErrors((prev) => {
-                                        const existing = prev[section.id];
-                                        if (!existing || !existing.missingConfig) return prev;
-                                        const nextSection = { ...existing };
-                                        delete nextSection.missingConfig;
-                                        const next: SectionValidationErrors = { ...prev };
-                                        if (Object.keys(nextSection).length === 0) {
-                                          delete next[section.id];
-                                        } else {
-                                          next[section.id] = nextSection;
-                                        }
-                                        return next;
-                                      });
-                                    }
-                                  }}
-                                  className={cn(
-                                    'h-7 w-24 text-center text-[11px]',
-                                    sectionValidationErrors[section.id]?.missingConfig &&
-                                      'border-destructive focus-visible:ring-destructive'
-                                  )}
-                                  placeholder="-"
-                                />
-                              </div>
-                            )}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive hover:border-destructive"
-                              onClick={() => handleDeleteSection(section.id)}
-                              onKeyDown={(e) => handleDeleteKeyDown(e, section.id)}
-                              aria-label={`Delete ${section.type} section`}
-                            >
-                              <Trash2 className="size-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent
-                        className="flex-1 flex flex-col px-3 py-1.5"
-                        onDragOver={(e) => handleDragOver(e, section.id)}
-                        onDragLeave={handleDragLeave}
+                {workoutSchema.sections.map((section) => {
+                  const isCollapsed = collapsedSections.has(section.id);
+                  return (
+                    <div
+                      key={section.id}
+                      ref={(el) => {
+                        if (el) {
+                          sectionRefsLocal.current.set(section.id, el);
+                        } else {
+                          sectionRefsLocal.current.delete(section.id);
+                        }
+                      }}
+                    >
+                      <WorkoutSectionCard
+                        section={section}
+                        isCollapsed={isCollapsed}
+                        onToggleCollapse={() => {
+                          setCollapsedSections((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(section.id)) {
+                              next.delete(section.id);
+                            } else {
+                              next.add(section.id);
+                            }
+                            return next;
+                          });
+                        }}
+                        onDelete={() => handleDeleteSection(section.id)}
+                        onSectionChange={(updates) => {
+                          onDirtyChange?.();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            sections: prev.sections.map((sec) =>
+                              sec.id === section.id ? { ...sec, ...updates } : sec
+                            ),
+                          }));
+                        }}
+                        onDirtyChange={onDirtyChange}
+                        sectionValidationErrors={sectionValidationErrors}
+                        exercises={section.exercises || []}
+                        onExerciseChange={(exerciseIndex, exercise) => {
+                          onDirtyChange?.();
+                          recomputeExerciseValidation(
+                            exercise.instanceId,
+                            exercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
+                            exercise.sets || []
+                          );
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            sections: prev.sections.map((sec) => {
+                              if (sec.id === section.id && sec.exercises) {
+                                const updatedExercises = [...sec.exercises];
+                                updatedExercises[exerciseIndex] = exercise;
+                                return { ...sec, exercises: updatedExercises };
+                              }
+                              return sec;
+                            }),
+                          }));
+                        }}
+                        onExerciseDelete={(exerciseIndex) => {
+                          onDirtyChange?.();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            sections: prev.sections.map((sec) => {
+                              if (sec.id === section.id && sec.exercises) {
+                                return {
+                                  ...sec,
+                                  exercises: sec.exercises.filter((_, idx) => idx !== exerciseIndex),
+                                };
+                              }
+                              return sec;
+                            }),
+                          }));
+                        }}
+                        onAddExercise={() => handleAddExercise(section.id)}
+                        onSupersetLink={(exerciseIndex) => handleSupersetLink(section.id, exerciseIndex)}
+                        onSupersetUnlink={(exerciseIndex) => handleSupersetUnlink(section.id, exerciseIndex)}
+                        onDragOver={(e) => handleSectionDragOver(e, section.id, section.exercises?.length || 0)}
+                        onDragLeave={handleSectionDragLeave}
                         onDrop={(e) => handleSectionDrop(e, section.id)}
-                      >
-                        <div
-                          className={cn(
-                            'flex-1 w-full',
-                            section.exercises && section.exercises.length > 0
-                              ? 'flex flex-col gap-0'
-                              : 'flex items-center justify-center'
-                          )}
-                        >
-                          {section.exercises && section.exercises.length > 0 ? (
-                            <div className="w-full flex flex-col gap-0">
-                              {/* Slot before the first exercise */}
-                              <div
-                                onDragOver={(e) => handleSlotDragOver(e, section.id, 0)}
-                                onDragLeave={handleSlotDragLeave}
-                                onDrop={(e) => handleSlotDrop(e, section.id, 0)}
-                                className={cn(
-                                  'transition-all w-full',
-                                  draggedExercise &&
-                                    dragOverSlot &&
-                                    dragOverSlot.sectionId === section.id &&
-                                    dragOverSlot.slotIndex === 0
-                                    ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                                    : 'h-1'
-                                )}
-                              >
-                                {draggedExercise &&
-                                  dragOverSlot &&
-                                  dragOverSlot.sectionId === section.id &&
-                                  dragOverSlot.slotIndex === 0 && (
-                                    <span>Drop your exercise here</span>
-                                  )}
-                              </div>
-
-                              {section.exercises.map((exercise, exerciseIndex) => {
-                                const nextExercise = section.exercises?.[exerciseIndex + 1];
-                                const prevExercise =
-                                  exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
-
-                                const isLinkedToNext = !!(
-                                  exercise.supersetGroupId &&
-                                  nextExercise?.supersetGroupId === exercise.supersetGroupId
-                                );
-
-                                const isLinkedToPrev = !!(
-                                  exercise.supersetGroupId &&
-                                  prevExercise?.supersetGroupId === exercise.supersetGroupId
-                                );
-
-                                const wrapperClasses = cn(
-                                  'flex flex-col',
-                                  isLinkedToNext ? 'gap-0' : 'gap-2',
-                                  exerciseIndex === 0
-                                    ? ''
-                                    : isLinkedToPrev
-                                      ? '-mt-px'
-                                      : isLinkedToNext
-                                        ? 'mt-0'
-                                        : 'mt-1'
-                                );
-
-                                return (
-                                  <div
-                                    key={exercise.instanceId}
-                                    ref={(el) => {
-                                      if (el) {
-                                        exerciseRefs.current.set(exercise.exerciseId, el);
-                                      } else {
-                                        exerciseRefs.current.delete(exercise.exerciseId);
-                                      }
-                                    }}
-                                    className={wrapperClasses}
-                                  >
-                                    <ExerciseCard
-                                      exercise={exercise}
-                                      isLinkedToPrev={isLinkedToPrev}
-                                      isLinkedToNext={isLinkedToNext}
-                                      onVideoClick={handleExerciseClick}
-                                      sectionType={section.type}
-                                      validationErrors={validationErrors[exercise.instanceId]}
-                                      onClearValidationField={(setIndex, field) =>
-                                        clearSetValidationField(exercise.instanceId, setIndex, field)
-                                      }
-                                      onExerciseChange={(newExercise) => {
-                                        onDirtyChange?.();
-                                        const castExercise = newExercise as ExerciseWithSuperset;
-                                        recomputeExerciseValidation(
-                                          exercise.instanceId,
-                                          castExercise.exerciseType as
-                                            | 'weight_reps'
-                                            | 'reps'
-                                            | 'distance_duration',
-                                          castExercise.sets || []
-                                        );
-                                        setWorkoutSchema((prev) => ({
-                                          ...prev,
-                                          sections: prev.sections.map((sec) => {
-                                            if (sec.id === section.id && sec.exercises) {
-                                              const updatedExercises: ExerciseWithSuperset[] = [
-                                                ...sec.exercises,
-                                              ];
-                                              updatedExercises[exerciseIndex] = {
-                                                ...castExercise,
-                                                supersetGroupId: exercise.supersetGroupId,
-                                              };
-                                              return {
-                                                ...sec,
-                                                exercises: updatedExercises,
-                                              };
-                                            }
-                                            return sec;
-                                          }),
-                                        }));
-                                      }}
-                                      onDelete={() => {
-                                        onDirtyChange?.();
-                                        setWorkoutSchema((prev) => ({
-                                          ...prev,
-                                          sections: prev.sections.map((sec) => {
-                                            if (sec.id === section.id && sec.exercises) {
-                                              const updatedExercises = sec.exercises.filter(
-                                                (_, idx) => idx !== exerciseIndex
-                                              );
-                                              return {
-                                                ...sec,
-                                                exercises: updatedExercises,
-                                              };
-                                            }
-                                            return sec;
-                                          }),
-                                        }));
-                                      }}
-                                    />
-
-                                    {/* Slot between this exercise and the next */}
-                                    <div
-                                      onDragOver={(e) =>
-                                        handleSlotDragOver(e, section.id, exerciseIndex + 1)
-                                      }
-                                      onDragLeave={handleSlotDragLeave}
-                                      onDrop={(e) => handleSlotDrop(e, section.id, exerciseIndex + 1)}
-                                      className={cn(
-                                        'transition-all w-full',
-                                        draggedExercise &&
-                                          dragOverSlot &&
-                                          dragOverSlot.sectionId === section.id &&
-                                          dragOverSlot.slotIndex === exerciseIndex + 1
-                                          ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                                          : isLinkedToNext
-                                            ? 'h-0'
-                                            : 'h-1'
-                                      )}
-                                    >
-                                      {draggedExercise &&
-                                        dragOverSlot &&
-                                        dragOverSlot.sectionId === section.id &&
-                                        dragOverSlot.slotIndex === exerciseIndex + 1 && (
-                                          <span>Drop your exercise here</span>
-                                        )}
-                                    </div>
-                                    {section.exercises &&
-                                      exerciseIndex < section.exercises.length - 1 && (
-                                        <>
-                                          {isLinkedToNext ? (
-                                            <div className="relative flex items-center justify-center bg-background border-x py-1">
-                                              <Separator className="absolute w-full" />
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="gap-1.5 bg-background z-10 text-xs h-7 px-2"
-                                                onClick={() =>
-                                                  handleSupersetUnlink(section.id, exerciseIndex)
-                                                }
-                                              >
-                                                <Link2Off className="size-3" />
-                                                Unlink
-                                              </Button>
-                                            </div>
-                                          ) : (
-                                            <div className="flex justify-center -mt-2 mb-2">
-                                              <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                className="gap-1.5 text-xs h-7 px-2"
-                                                onClick={() =>
-                                                  handleSupersetLink(section.id, exerciseIndex)
-                                                }
-                                              >
-                                                <Link2 className="size-3" />
-                                                Superset
-                                              </Button>
-                                            </div>
-                                          )}
-                                        </>
-                                      )}
-                                  </div>
-                                );
-                              })}
-                              <div className="flex justify-center">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleAddExercise(section.id)}
-                                  className="gap-1.5 text-xs h-7 px-2"
-                                >
-                                  <Plus className="size-3" />
-                                  Add Exercise
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              className={cn(
-                                'flex items-center justify-center w-full my-4 py-3 border-2 border-dashed rounded-lg transition-colors',
-                                dragOverSectionId === section.id
-                                  ? 'border-primary bg-primary/5'
-                                  : sectionValidationErrors[section.id]?.emptyExercises
-                                    ? 'border-destructive bg-destructive/5'
-                                    : 'border-muted'
-                              )}
-                            >
-                              <p className="text-muted-foreground text-sm text-center">
-                                Drag exercises from
-                                <br />
-                                the left to add
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ))}
+                        onSlotDragOver={(e, slotIndex) => handleSlotDragOver(e, section.id, slotIndex)}
+                        onSlotDragLeave={handleSlotDragLeave}
+                        onSlotDrop={(e, slotIndex) => handleSlotDropWrapper(e, section.id, slotIndex)}
+                        draggedExercise={draggedExercise}
+                        dragOverSlot={dragOverSlot}
+                        dragOverSectionId={dragOverSectionId}
+                        onVideoClick={handleExerciseClick}
+                        exerciseRefs={exerciseRefs}
+                        focusedExerciseId={focusedExerciseId}
+                        registerSectionRef={registerSectionRef}
+                        onClearSectionValidation={clearSectionValidationField}
+                      />
+                    </div>
+                  );
+                })}
                 <div className="flex items-center justify-center py-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs h-7 px-2"
-                        aria-label="Add new section"
-                      >
-                        <Plus className="size-3" />
-                        <span>Add section</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
-                        <Dumbbell className="mr-2 size-4 text-foreground" />
-                        Regular
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
-                        <NotebookPen className="mr-2 size-4 text-foreground" />
-                        AMRAP
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
-                        <Timer className="mr-2 size-4 text-foreground" />
-                        Timed
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <WorkoutAddSectionButton onSectionSelect={handleSectionSelect} size="sm" />
                 </div>
               </div>
             ) : (
@@ -2587,41 +2273,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                 <p className="text-muted-foreground text-center">
                   Add your first section to start building your workout.
                 </p>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="gap-2"
-                      aria-label="Add new section"
-                    >
-                      <Plus className="size-4" />
-                      <span>Add section</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="center">
-                    <DropdownMenuItem onClick={() => handleSectionSelect('auxiliary')}>
-                      <Sparkles className="mr-2 size-4 text-foreground" />
-                      Warm up / Cool down / Mobility
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
-                      <Dumbbell className="mr-2 size-4 text-foreground" />
-                      Regular
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
-                      <NotebookPen className="mr-2 size-4 text-foreground" />
-                      AMRAP
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
-                      <Timer className="mr-2 size-4 text-foreground" />
-                      Timed
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
-                      <Repeat className="mr-2 size-4 text-foreground" />
-                      Circuits
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <WorkoutAddSectionButton onSectionSelect={handleSectionSelect} variant="centered" size="default" />
               </div>
             )}
           </CardContent>

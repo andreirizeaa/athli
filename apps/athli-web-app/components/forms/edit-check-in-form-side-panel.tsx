@@ -30,8 +30,8 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
-import { editFormDetails, type Form as FormType } from '@/lib/forms/form-service';
-import { formTemplates } from '@/lib/constants/forms';
+import { editFormDetails, type Form as FormType } from '@/lib/coach/coach-form-service';
+import { formTemplates } from '@/constants/forms';
 
 type EditCheckInFormSidePanelProps = {
   open: boolean;
@@ -377,4 +377,5 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
     </SidePanel>
   );
 };
+
 

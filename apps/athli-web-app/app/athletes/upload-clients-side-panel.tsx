@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/table';
 import { Spinner } from '@/components/ui/spinner';
 import { SidePanel } from '@/components/app/side-panel';
-import { parseCSV, type ClientData } from '@/lib/csv-parser';
-import { cn } from '@/lib/utils';
+import { parseCSV, type ClientData } from '@/lib/general/csv-parser';
+import { cn } from '@/lib/general/utils';
 import { Trash2, Check, Upload } from 'lucide-react';
 
 interface UploadClientsSidePanelProps {
@@ -31,6 +31,8 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
   const [isValidatingCSV, setIsValidatingCSV] = useState<boolean>(false);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [parsedClients, setParsedClients] = useState<ClientData[]>([]);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const dragCounterRef = useRef(0);
 
   const handleOpenChange = (isOpen: boolean) => {
     onOpenChange(isOpen);
@@ -40,6 +42,44 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
       setIsValidatingCSV(false);
       setCsvError(null);
       setParsedClients([]);
+      setIsDragging(false);
+      dragCounterRef.current = 0;
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (dragCounterRef.current === 1) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.name.endsWith('.csv')) {
+      setSelectedFile(droppedFile);
+      setCsvError(null);
     }
   };
 
@@ -128,9 +168,20 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
         ) : undefined
       }
     >
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div
+        className="flex-1 overflow-hidden flex flex-col relative"
+        onDragEnter={uploadStep === 1 ? handleDragEnter : undefined}
+        onDragLeave={uploadStep === 1 ? handleDragLeave : undefined}
+        onDragOver={uploadStep === 1 ? handleDragOver : undefined}
+        onDrop={uploadStep === 1 ? handleDrop : undefined}
+      >
+        {isDragging && uploadStep === 1 && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg">
+            <p className="text-lg font-semibold text-primary pointer-events-none">Drop CSV file here</p>
+          </div>
+        )}
         {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-4 mb-8">
+        <div className={cn('flex items-center justify-center gap-4 mb-8', isDragging && uploadStep === 1 && 'opacity-0 pointer-events-none')}>
           <div className="flex items-center gap-2">
             <div
               className={cn(
@@ -173,7 +224,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
 
         {/* Step 1: Upload CSV */}
         {uploadStep === 1 && (
-          <div className="flex flex-col items-center gap-6">
+          <div className={cn('flex flex-col items-center gap-6', isDragging && 'opacity-0 pointer-events-none')}>
             <div className="flex flex-col items-center gap-2">
               <h3 className="text-lg font-semibold">{t('athletes.uploadClients.step1')}</h3>
               {csvError && <p className="text-sm text-destructive text-center">{csvError}</p>}

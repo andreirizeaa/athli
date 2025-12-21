@@ -52,10 +52,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
-import { messageDraftStorage } from '@/lib/messaging/message-draft-storage';
-import { sendMessage } from '@/lib/messaging/message-service';
-import { searchNotes } from '@/lib/messaging/notes-service';
+import { cn } from '@/lib/general/utils';
+import { messageDraftStorage } from '@/lib/general/message-draft-storage';
+import { sendMessage } from '@/lib/coach/coach-message-service';
+import { searchNotes } from '@/lib/coach/coach-note-service';
 import {
   mockContacts,
   mockMessages,
@@ -68,7 +68,7 @@ import { ContactListItem } from './components/contact-list-item';
 import { format } from 'date-fns';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
-import { BroadcastSidePanel } from '@/lib/messaging/broadcast-side-panel';
+import { BroadcastSidePanel } from '@/app/messaging/components/broadcast-side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Note = {
@@ -274,7 +274,7 @@ const MessagingPage = () => {
   const [openDeleteMenuId, setOpenDeleteMenuId] = React.useState<string | null>(null);
   const [replyingToMessage, setReplyingToMessage] = React.useState<Message | null>(null);
   const [drafts, setDrafts] = React.useState<
-    Record<string, import('@/lib/messaging/message-draft-storage').MessageDraftData>
+    Record<string, import('@/lib/general/message-draft-storage').MessageDraftData>
   >({});
   const [attachedPdf, setAttachedPdf] = React.useState<File | null>(null);
   const [attachedImages, setAttachedImages] = React.useState<File[]>([]);
