@@ -6,7 +6,8 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { getClientQuestionnaire, type ClientQuestionnaireDetail, type Question, type QuestionAnswer } from '@/lib/forms/form-service';
+import { type Form } from '@/lib/coach/coach-form-service';
+import { getClientQuestionnaire, type ClientQuestionnaireDetail, type Question, type QuestionAnswer } from '@/lib/client/client-form-service';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import {
   Dialog,
   DialogContent,
@@ -72,7 +73,7 @@ const QuestionnaireDetailPage = () => {
 
     setIsDownloading(true);
     try {
-      const { downloadQuestionnaire } = await import('@/lib/pdf/pdf-service');
+      const { downloadQuestionnaire } = await import('@/lib/general/pdf-service');
 
       // TODO: Get actual client name from client service
       // For now, using a placeholder client name

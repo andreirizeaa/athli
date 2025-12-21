@@ -12,7 +12,7 @@ import { ConditionalAppShell } from '@/components/app/conditional-app-shell';
 import { IntercomProvider } from '@/components/intercom-provider';
 import { ActiveThemeProvider } from '@/components/app/active-theme';
 import { DEFAULT_THEME } from '@/lib/theme';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

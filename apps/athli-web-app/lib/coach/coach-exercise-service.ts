@@ -223,7 +223,7 @@ export const deleteExercises = async (exerciseIds: string | string[]): Promise<v
  */
 export const createExercise = async (exerciseData: {
   name: string;
-  instructions: string;
+  instructions?: string;
   videoLink?: string;
   category: string;
   muscleGroups: string[];
@@ -239,7 +239,7 @@ export const createExercise = async (exerciseData: {
   const newExercise: Exercise = {
     id: Date.now().toString(),
     program: exerciseData.name,
-    description: exerciseData.instructions,
+    description: exerciseData.instructions || '',
     category: exerciseData.category,
     muscleGroup: exerciseData.muscleGroups,
     equipment: exerciseData.equipment,
@@ -260,7 +260,7 @@ export const editExercise = async (
   exerciseId: string,
   exerciseData: {
     name: string;
-    instructions: string;
+    instructions?: string;
     videoLink?: string;
     category: string;
     muscleGroups: string[];
@@ -277,7 +277,7 @@ export const editExercise = async (
   const updatedExercise: Exercise = {
     id: exerciseId,
     program: exerciseData.name,
-    description: exerciseData.instructions,
+    description: exerciseData.instructions || '',
     category: exerciseData.category,
     muscleGroup: exerciseData.muscleGroups,
     equipment: exerciseData.equipment,

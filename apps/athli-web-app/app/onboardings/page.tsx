@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { AddOnboardingSidePanel } from '@/components/onboardings/add-onboarding-side-panel';
 
 type Onboarding = {

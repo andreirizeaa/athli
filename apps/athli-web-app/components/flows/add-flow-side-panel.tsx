@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { createFlow, updateFlow } from '@/lib/automations-service';
-import { defaultFlowTemplates, type FlowTemplate } from '@/lib/constants/flows';
+import { createFlow, updateFlow } from '@/lib/coach/coach-flow-service';
+import { defaultFlowTemplates, type FlowTemplate } from '@/constants/flows';
 
 type AddFlowSidePanelProps = {
   open: boolean;

@@ -20,8 +20,8 @@ import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group'
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/csv-export';
+import { cn } from '@/lib/general/utils';
+import { exportToCSV } from '@/lib/general/csv-export';
 import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';

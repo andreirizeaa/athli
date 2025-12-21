@@ -25,7 +25,7 @@ type UpdateFlowDetailsData = {
 };
 
 /**
- * Create a new flow
+ * Create a new flow in coach's library
  * @param data - Flow data from the form
  */
 export const createFlow = async (
@@ -37,7 +37,6 @@ export const createFlow = async (
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 200));
 
-  // Return a mock created flow
   const newFlow: Flow = {
     id: Date.now().toString(),
     name: data.name,
@@ -45,20 +44,11 @@ export const createFlow = async (
     createdAt: Date.now(),
   };
 
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/automations/flows', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data),
-  // })
-  // if (!response.ok) throw new Error('Failed to create flow')
-  // return await response.json()
-
   return newFlow;
 };
 
 /**
- * Update an existing flow
+ * Update an existing flow in coach's library
  * @param data - Flow update data including nodes and edges
  */
 export const updateFlow = async (
@@ -75,14 +65,6 @@ export const updateFlow = async (
 
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 200));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/automations/flows/${data.id}`, {
-  //   method: 'PATCH',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ nodes: data.nodes, edges: data.edges }),
-  // })
-  // if (!response.ok) throw new Error('Failed to update flow')
 };
 
 /**
@@ -101,18 +83,10 @@ export const updateFlowDetails = async (
 
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 200));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/automations/flows/${data.id}/details`, {
-  //   method: 'PATCH',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ name: data.name, description: data.description }),
-  // })
-  // if (!response.ok) throw new Error('Failed to update flow details')
 };
 
 /**
- * Duplicate a flow
+ * Duplicate a flow in coach's library
  * @param flowId - ID of the flow to duplicate
  * @param originalFlow - Original flow object to duplicate
  */
@@ -123,26 +97,12 @@ export const duplicateFlow = async (flowId: string, originalFlow: Flow & { stepC
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 200));
 
-  // In the future, this will:
-  // 1. Fetch the full flow data from the backend (including nodes and edges)
-  // 2. Create a new flow with the same data but name appended with " (Copy)"
-  // 3. Return the new flow
-
-  // For now, create a duplicate with all properties copied and name appended with " (Copy)"
   const duplicatedFlow: Flow & { stepCount?: number } = {
     ...originalFlow,
     id: Date.now().toString(),
     name: `${originalFlow.name} (Copy)`,
     createdAt: Date.now(),
   };
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/automations/flows/${flowId}/duplicate`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to duplicate flow')
-  // return await response.json()
 
   return duplicatedFlow;
 };

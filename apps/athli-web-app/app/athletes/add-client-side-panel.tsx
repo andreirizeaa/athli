@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { SidePanel } from '@/components/app/side-panel';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type AddAthleteFormValues = {
   firstName: string;

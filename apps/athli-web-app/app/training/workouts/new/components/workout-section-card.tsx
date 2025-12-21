@@ -13,10 +13,10 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { ExerciseCard } from './exercise-card';
 import type { SetData } from './exercise-card';
-import type { Exercise } from '@/lib/library/exercises/exercise-search';
+import type { Exercise } from '@/lib/general/exercise-search';
 
 type ExerciseWithSuperset = Exercise & {
   supersetGroupId?: string | null;
@@ -39,7 +39,7 @@ type SectionValidationErrors = Record<string, {
   missingConfig?: boolean;
 }>;
 
-type ValidationErrors = Record<string, Record<string, Record<string, string>>>;
+type WorkoutValidationErrors = Record<string, Record<string, Record<string, string>>>;
 
 const getSectionDescription = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'): string => {
   switch (type) {
@@ -86,7 +86,7 @@ type WorkoutSectionCardProps = {
   dragOverSectionId?: string | null;
   // Exercise card props
   onVideoClick: (exercise: Exercise) => void;
-  validationErrors?: ValidationErrors;
+  validationErrors?: WorkoutValidationErrors;
   onClearValidationField?: (exerciseInstanceId: string, setIndex: number, field: string) => void;
   exerciseRefs?: React.MutableRefObject<Map<string, HTMLDivElement>>;
   focusedExerciseId?: string | null;
@@ -367,7 +367,7 @@ export const WorkoutSectionCard = ({
                               isLinkedToNext={isLinkedToNext}
                               onVideoClick={onVideoClick}
                               sectionType={section.type}
-                              validationErrors={validationErrors[exercise.instanceId]}
+                              validationErrors={validationErrors?.[exercise.instanceId]}
                               onClearValidationField={(setIndex, field) =>
                                 onClearValidationField?.(exercise.instanceId, setIndex, field)
                               }

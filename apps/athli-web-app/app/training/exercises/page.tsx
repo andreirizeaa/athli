@@ -19,8 +19,8 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/csv-export';
+import { cn } from '@/lib/general/utils';
+import { exportToCSV } from '@/lib/general/csv-export';
 import {
   Search,
   X,
@@ -44,8 +44,8 @@ import {
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/lib/library/programs/programs-service';
-import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/lib/library/exercises/exercises-service';
+import { starPrograms, archivePrograms, deletePrograms } from '@/lib/coach/coach-program-service';
+import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/lib/coach/coach-exercise-service';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
 

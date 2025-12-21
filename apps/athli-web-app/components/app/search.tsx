@@ -15,7 +15,7 @@ import {
   CommandInput,
   CommandList,
 } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { isFuzzyMatch } from './utils';
 import {
   mockAthletes,
@@ -26,7 +26,7 @@ import {
   mockMessages,
 } from './mock-data';
 import type { Athlete, Contact, Workout, Program, Exercise } from './types';
-import { getForms, type Form } from '@/lib/forms/form-service';
+import { getForms, type Form } from '@/lib/coach/coach-form-service';
 import { FileText } from 'lucide-react';
 
 type FileItem = {

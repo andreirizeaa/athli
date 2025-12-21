@@ -12,8 +12,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Info } from 'lucide-react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { getAllFiles, type CoachFile, addFilesToClient } from '@/lib/files/file-service';
+import { cn } from '@/lib/general/utils';
+import { getAllFiles, type CoachFile } from '@/lib/coach/coach-file-service';
+import { addFilesToClient } from '@/lib/client/client-file-service';
 
 const TAG_OPTIONS: Option[] = [
   { label: 'Training', value: 'Training' },

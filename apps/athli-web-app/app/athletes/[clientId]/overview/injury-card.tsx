@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Edit, Plus, X } from 'lucide-react';
-import { getAthleteInjuries, saveAthleteInjuries } from '@/lib/athletes/athlete-service';
+import { getAthleteInjuries, saveAthleteInjuries } from '@/lib/client/client-athlete-service';
 
 type InjuryCardProps = {
   clientId: string;

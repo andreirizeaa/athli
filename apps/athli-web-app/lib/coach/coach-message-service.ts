@@ -23,14 +23,25 @@ export interface SendMessageData {
   repliedTo?: RepliedToMessage;
 }
 
+export interface DeleteMessageData {
+  contactId: string;
+  messageId: string;
+}
+
+export interface BroadcastMessageData {
+  clientIds: string[];
+  text?: string;
+  pdf?: MessageFile;
+  images?: MessageFile[];
+  video?: MessageFile;
+}
+
 /**
- * Dummy message service method to send messages
+ * Service method to send a message to a client
  * This will be connected to the backend in the future
  */
 export const sendMessage = async (data: SendMessageData): Promise<void> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Sending message:', {
     contactId: data.contactId,
     text: data.text || '(no text)',
@@ -46,29 +57,14 @@ export const sendMessage = async (data: SendMessageData): Promise<void> => {
 
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/messages', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data),
-  // })
-  // if (!response.ok) throw new Error('Failed to send message')
 };
 
-export interface DeleteMessageData {
-  contactId: string;
-  messageId: string;
-}
-
 /**
- * Dummy message service method to delete messages
+ * Service method to delete a message
  * This will be connected to the backend in the future
  */
 export const deleteMessage = async (data: DeleteMessageData): Promise<void> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Deleting message:', {
     contactId: data.contactId,
     messageId: data.messageId,
@@ -76,32 +72,14 @@ export const deleteMessage = async (data: DeleteMessageData): Promise<void> => {
 
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/messages/${data.messageId}`, {
-  //   method: 'DELETE',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ contactId: data.contactId }),
-  // })
-  // if (!response.ok) throw new Error('Failed to delete message')
 };
 
-export interface BroadcastMessageData {
-  clientIds: string[];
-  text?: string;
-  pdf?: MessageFile;
-  images?: MessageFile[];
-  video?: MessageFile;
-}
-
 /**
- * Dummy message service method to broadcast messages to multiple clients
+ * Service method to broadcast a message to multiple clients
  * This will be connected to the backend in the future
  */
 export const broadcastMessage = async (data: BroadcastMessageData): Promise<void> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Broadcasting message:', {
     clientIds: data.clientIds,
     clientCount: data.clientIds.length,
@@ -116,12 +94,4 @@ export const broadcastMessage = async (data: BroadcastMessageData): Promise<void
 
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/messages/broadcast', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data),
-  // })
-  // if (!response.ok) throw new Error('Failed to broadcast message')
 };

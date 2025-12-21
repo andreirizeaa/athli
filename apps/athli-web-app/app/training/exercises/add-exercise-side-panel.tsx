@@ -17,8 +17,8 @@ import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Spinner } from '@/components/ui/spinner';
 import { X, Upload } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { createExercise } from '@/lib/library/exercises/exercises-service';
+import { cn } from '@/lib/general/utils';
+import { createExercise } from '@/lib/coach/coach-exercise-service';
 
 const EXERCISE_CATEGORIES = ['Weight & Reps', 'Reps', 'Distance / Duration'] as const;
 

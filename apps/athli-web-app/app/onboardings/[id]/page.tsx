@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/breadcrumb';
 import { ChevronRight } from 'lucide-react';
 import { FlowEditor } from '@/components/onboardings/flow-editor';
-import type { Node, Edge } from 'reactflow';
 
 // Mock onboarding data - in production this would come from an API
 const mockOnboardings = [
@@ -34,10 +33,6 @@ const mockOnboardings = [
   },
 ];
 
-// Empty initial nodes and edges
-const initialNodes: Node[] = [];
-const initialEdges: Edge[] = [];
-
 const OnboardingDetailPage = () => {
   const t = useTranslations();
   const params = useParams<{ id: string }>();
@@ -45,18 +40,13 @@ const OnboardingDetailPage = () => {
   const onboardingId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const onboarding = mockOnboardings.find((o) => o.id === onboardingId);
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
 
   const handleBreadcrumbClick = (path: string) => {
     router.push(path);
   };
 
-  const handleNodeClick = (_node: Node) => {
-    setIsSidePanelOpen(true);
-  };
-
-  const handleCloseSidePanel = () => {
-    setIsSidePanelOpen(false);
+  const handleNodeClick = () => {
+    // Handle node click if needed
   };
 
   if (!onboarding) {
@@ -104,19 +94,8 @@ const OnboardingDetailPage = () => {
 
       {/* Flow Editor */}
       <FlowEditor
-        initialNodes={initialNodes}
-        initialEdges={initialEdges}
-        onNodeClick={handleNodeClick}
-        sidePanelTitle="Add trigger"
-        sidePanelSearchPlaceholder="Search for actions"
-        isSidePanelOpen={isSidePanelOpen}
-        onSidePanelClose={handleCloseSidePanel}
-        sidePanelContent={
-          <div>
-            {/* Sidebar content will go here */}
-            <p className="text-sm text-muted-foreground">Select actions to add to your flow</p>
-          </div>
-        }
+        onTriggerClick={handleNodeClick}
+        onActionClick={handleNodeClick}
       />
     </div>
   );

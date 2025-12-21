@@ -18,6 +18,7 @@ export type FlowTemplate = {
     selectedCheckIns?: string[];
     selectedFiles?: string[];
     selectedHabits?: string[];
+    repeatLinkedActionId?: string | null;
   }>;
   hasTemplateNodes: boolean; // Indicates if nodes need to be edited
 };
@@ -274,3 +275,4 @@ export const createNodesAndEdgesFromTemplate = (
 
   return { nodes, edges };
 };
+

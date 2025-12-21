@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { createOnboardingAutomation } from '@/lib/automations-service';
+import { createFlow } from '@/lib/coach/coach-flow-service';
 
 type AddOnboardingSidePanelProps = {
   open: boolean;
@@ -56,7 +56,7 @@ export const AddOnboardingSidePanel = ({ open, onOpenChange }: AddOnboardingSide
 
   const handleSave = async (values: FormFormValues) => {
     try {
-      await createOnboardingAutomation({
+      await createFlow({
         name: values.name,
         description: values.description,
       });
@@ -143,3 +143,4 @@ export const AddOnboardingSidePanel = ({ open, onOpenChange }: AddOnboardingSide
     </SidePanel>
   );
 };
+

@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dumbbell, MessageCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
 
 type ProgrammingClient = {

@@ -11,9 +11,9 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
-import { duplicateMetric } from '@/lib/metrics/metrics-service';
+import { duplicateMetric } from '@/lib/coach/coach-metric-service';
 import { mockAthletes } from '@/components/app/app-shell';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type Metric = {
   id: string;

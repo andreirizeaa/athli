@@ -11,7 +11,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Edit, Plus, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type QuestionFormat = {
   id: string;
@@ -381,5 +381,6 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
     </SidePanel>
   );
 };
+
 
 

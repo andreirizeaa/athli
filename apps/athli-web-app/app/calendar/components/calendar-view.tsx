@@ -30,10 +30,10 @@ import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { format, startOfWeek, addDays, addWeeks, subWeeks, startOfMonth, endOfMonth, eachWeekOfInterval, isSameDay, startOfDay, endOfDay, setHours } from 'date-fns';
 import { toast } from 'sonner';
-import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/calendar/calendar-service';
+import { deleteCalendarEvent, updateCalendarEvent, sendAppointmentInfo } from '@/lib/coach/coach-calendar-service';
 import { calendarApi } from '@/lib/api/calendar-api';
 
 interface CalendarEvent {
@@ -837,15 +837,10 @@ export const CalendarView = () => {
 
       await updateCalendarEvent({
         eventId: selectedEvent.id,
-        summary: updatedData.title,
-        start: {
-          dateTime: startDateTime.toISOString(),
-        },
-        end: {
-          dateTime: endDateTime.toISOString(),
-        },
+        title: updatedData.title,
+        start: startDateTime,
+        end: endDateTime,
         description: updatedData.description || undefined,
-        location: updatedData.location || undefined,
       });
 
       toast.success(t('calendar.toast.meetingUpdated'));

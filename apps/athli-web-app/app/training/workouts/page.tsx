@@ -25,9 +25,9 @@ import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/compon
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/csv-export';
-import { generateWorkoutFromPrompt } from '@/lib/library/workouts/generate-exercise';
+import { cn } from '@/lib/general/utils';
+import { exportToCSV } from '@/lib/general/csv-export';
+import { generateWorkoutFromPrompt } from '@/lib/general/generate-exercise';
 import { BasicInformation } from './new/basic-information';
 import {
   Search,
@@ -60,7 +60,7 @@ import {
 
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
-import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/lib/library/workouts/workouts-service';
+import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/lib/coach/coach-workout-service';
 
 type ColumnId = 'description' | 'type' | 'totalExercises' | 'equipment' | 'created';
 

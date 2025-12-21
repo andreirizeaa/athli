@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
+import { cn } from '@/lib/general/utils';
+import { searchExercises, type Exercise } from '@/lib/general/exercise-search';
 
 type ExerciseSelectionPanelProps = {
   onExerciseClick?: (exercise: Exercise) => void;

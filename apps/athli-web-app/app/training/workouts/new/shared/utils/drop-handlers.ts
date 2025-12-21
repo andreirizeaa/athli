@@ -1,4 +1,4 @@
-import type { Exercise } from '@/lib/library/exercises/exercise-search';
+import type { Exercise } from '@/lib/general/exercise-search';
 import type { WorkoutSchema, ExerciseWithSuperset } from '../types/workout-builder.types';
 
 /**

@@ -19,7 +19,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { availableLanguages } from '@/lib/providers/intl-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { DEFAULT_THEME, THEMES } from '@/lib/theme';

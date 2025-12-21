@@ -22,8 +22,8 @@ import { Card } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/csv-export';
+import { cn } from '@/lib/general/utils';
+import { exportToCSV } from '@/lib/general/csv-export';
 import { EditColumnsSidebar } from '@/components/app/edit-columns-sidebar';
 import {
   Search,

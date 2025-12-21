@@ -17,12 +17,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { format } from 'date-fns';
 import { Plus, GitCompare, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AddPhotoSidePanel } from '@/components/photos/add-photo-side-panel';
-import { addClientPhoto } from '@/lib/athletes/athlete-service';
+import { addClientPhoto } from '@/lib/client/client-photo-service';
 
 type PhotoView = 'all' | 'front' | 'back' | 'side';
 

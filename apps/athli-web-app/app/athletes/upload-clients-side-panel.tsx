@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/table';
 import { Spinner } from '@/components/ui/spinner';
 import { SidePanel } from '@/components/app/side-panel';
-import { parseCSV, type ClientData } from '@/lib/csv-parser';
-import { cn } from '@/lib/utils';
+import { parseCSV, type ClientData } from '@/lib/general/csv-parser';
+import { cn } from '@/lib/general/utils';
 import { Trash2, Check, Upload } from 'lucide-react';
 
 interface UploadClientsSidePanelProps {

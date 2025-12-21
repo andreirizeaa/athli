@@ -15,8 +15,8 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, GripVertical, Edit } from 'lucide-react';
-import { type Form, addQuestion, reorderQuestions } from '@/lib/forms/form-service';
-import { formTemplates } from '@/lib/constants/forms';
+import { type Form, addQuestion, reorderQuestions } from '@/lib/coach/coach-form-service';
+import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EditQuestionnaireFormSidePanel } from '@/components/forms/edit-questionnaire-form-side-panel';

@@ -20,7 +20,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type PhotoType = 'front' | 'back' | 'side';
 

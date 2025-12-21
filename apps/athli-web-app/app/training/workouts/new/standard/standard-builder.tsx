@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
+import { cn } from '@/lib/general/utils';
+import { searchExercises, type Exercise } from '@/lib/general/exercise-search';
 import { toast } from 'sonner';
-import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
+import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
 import type {
   CircuitExerciseGroupPayload,

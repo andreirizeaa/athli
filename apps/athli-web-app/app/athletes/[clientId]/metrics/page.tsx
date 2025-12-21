@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { LogMetricSidePanel } from '@/components/metrics/log-metric-side-panel';
 import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';

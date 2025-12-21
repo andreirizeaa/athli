@@ -92,8 +92,8 @@ export const mapSetDataToPayload = (
 ): SetPayload => {
   const base = {
     setNumber: set.setNumber,
-    restSec: set.rest ? parseNumber(set.rest, 'null') : null,
-  } as const;
+    restSec: set.rest ? (parseNumber(set.rest, 'null') ?? null) : null,
+  };
 
   // distance_duration is always non-dropset, with either distance or durationSec
   if (exerciseType === 'distance_duration') {

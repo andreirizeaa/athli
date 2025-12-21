@@ -41,7 +41,7 @@ import {
   CircleCheck,
   Info,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import type { Program, Workout } from '@/components/app/app-shell';
 import { mockPrograms, mockWorkouts } from '@/components/app/app-shell';
 import {
@@ -57,7 +57,7 @@ import {
   getTrainingCalendar,
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
-} from '@/lib/athletes/athlete-service';
+} from '@/lib/client/client-athlete-service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
