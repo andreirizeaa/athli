@@ -110,3 +110,39 @@ export const updateFlowDetails = async (
   // })
   // if (!response.ok) throw new Error('Failed to update flow details')
 };
+
+/**
+ * Duplicate a flow
+ * @param flowId - ID of the flow to duplicate
+ * @param originalFlow - Original flow object to duplicate
+ */
+export const duplicateFlow = async (flowId: string, originalFlow: Flow & { stepCount?: number }): Promise<Flow & { stepCount?: number }> => {
+  // TODO: Connect to backend API
+  console.log('Duplicating flow:', { flowId, originalFlow });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  // In the future, this will:
+  // 1. Fetch the full flow data from the backend (including nodes and edges)
+  // 2. Create a new flow with the same data but name appended with " (Copy)"
+  // 3. Return the new flow
+
+  // For now, create a duplicate with all properties copied and name appended with " (Copy)"
+  const duplicatedFlow: Flow & { stepCount?: number } = {
+    ...originalFlow,
+    id: Date.now().toString(),
+    name: `${originalFlow.name} (Copy)`,
+    createdAt: Date.now(),
+  };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/automations/flows/${flowId}/duplicate`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to duplicate flow')
+  // return await response.json()
+
+  return duplicatedFlow;
+};

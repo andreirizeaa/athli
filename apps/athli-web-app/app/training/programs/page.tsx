@@ -57,11 +57,12 @@ import {
   Star,
   Archive,
   Trash2,
+  Copy,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
 import { mockPrograms } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/lib/library/programs/programs-service';
+import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/lib/library/programs/programs-service';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
 
@@ -117,6 +118,7 @@ const ProgramsPage = () => {
   const router = useRouter();
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
   const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
+  const [programs, setPrograms] = useState<Program[]>(mockPrograms);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const [filteredCount, setFilteredCount] = useState<number>(mockPrograms.length);
@@ -233,21 +235,20 @@ const ProgramsPage = () => {
     }
   };
 
-  const handleExportSelected = () => {
-    if (selectedPrograms.size === 0) return;
-    const selectedProgramsData = mockPrograms.filter((program) =>
-      selectedPrograms.has(program.id)
-    );
-    const exportData = selectedProgramsData.map((row) => ({
-      Program: row.program,
-      Description: row.description,
-      Type: row.type,
-      Length: row.length,
-      'Total Exercises': row.totalExercises,
-      Equipment: row.equipment,
-      Created: row.created,
-    }));
-    exportToCSV(exportData, 'selected-programs.csv');
+  const handleDuplicateSelected = async () => {
+    if (selectedPrograms.size !== 1) return;
+    const programId = Array.from(selectedPrograms)[0];
+    const program = programs.find((p) => p.id === programId);
+    if (!program) return;
+    try {
+      const duplicatedProgram = await duplicateProgram(programId, program);
+      // Add the duplicated program to the list
+      setPrograms((prev) => [...prev, duplicatedProgram]);
+      // Clear selection after duplicating
+      setSelectedPrograms(new Set());
+    } catch (error) {
+      console.error('Failed to duplicate program:', error);
+    }
   };
 
   const resetCreateProgramState = () => {
@@ -390,8 +391,8 @@ const ProgramsPage = () => {
 
   const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId));
 
-  const uniqueTypes = Array.from(new Set(mockPrograms.map((w) => w.type))).sort();
-  const uniqueLengths = Array.from(new Set(mockPrograms.map((w) => w.length))).sort((a, b) => {
+  const uniqueTypes = Array.from(new Set(programs.map((w) => w.type))).sort();
+  const uniqueLengths = Array.from(new Set(programs.map((w) => w.length))).sort((a, b) => {
     const aWeeks = parseInt(a.split(' ')[0]);
     const bWeeks = parseInt(b.split(' ')[0]);
     if (isNaN(aWeeks) || isNaN(bWeeks)) return a.localeCompare(b);
@@ -731,7 +732,7 @@ const ProgramsPage = () => {
         </div>
       </div>
       <DataGrid
-        data={mockPrograms}
+        data={programs}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="programs"
@@ -741,17 +742,6 @@ const ProgramsPage = () => {
         searchPlaceholder={t('programs.searchPlaceholder')}
         filters={filters}
         enableEditColumns={true}
-        enableExport={true}
-        exportFileName="programs.csv"
-        exportDataTransform={(row) => ({
-          Program: row.program,
-          Description: row.description,
-          Type: row.type,
-          Length: row.length,
-          'Total Exercises': row.totalExercises,
-          Equipment: row.equipment,
-          Created: row.created,
-        })}
         enableRowSelection={true}
         selectedRowIds={selectedPrograms}
         onSelectionChange={setSelectedPrograms}
@@ -796,24 +786,26 @@ const ProgramsPage = () => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleExportSelected}
-                    className="gap-2"
-                    aria-label={t('programs.actions.exportSelectedAria')}
-                  >
-                    <Download className="size-4" />
-                    <span>{t('programs.actions.export')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('programs.actions.export')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {selectedPrograms.size === 1 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleDuplicateSelected}
+                      className="gap-2"
+                      aria-label={t('programs.actions.duplicateAria')}
+                    >
+                      <Copy className="size-4" />
+                      <span>{t('programs.actions.duplicate')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('programs.actions.duplicate')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -907,7 +899,7 @@ const ProgramsPage = () => {
               if (selectedPrograms.size > 0) {
                 // For bulk assign, navigate with preselected program
                 const firstProgramId = Array.from(selectedPrograms)[0];
-                const program = mockPrograms.find((p) => p.id === firstProgramId);
+                const program = programs.find((p) => p.id === firstProgramId);
                 if (program) {
                   router.push(
                     `/athletes/${athleteId}/training-calendar?programId=${program.id}&programName=${encodeURIComponent(program.program)}&openModal=true`

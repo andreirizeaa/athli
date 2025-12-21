@@ -50,33 +50,43 @@ const messagesMap = {
 } as const;
 
 export const IntlProvider = ({ children }: IntlProviderProps) => {
+  // Initialize with 'en' to ensure context is always available
   const [locale, setLocaleState] = useState<string>('en');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
     // Load language from localStorage or default to 'en'
-    const savedLocale = localStorage.getItem('language') || 'en';
-    if (availableLanguages.some((lang) => lang.code === savedLocale)) {
-      setLocaleState(savedLocale);
+    if (typeof window !== 'undefined') {
+      const savedLocale = localStorage.getItem('language') || 'en';
+      if (availableLanguages.some((lang) => lang.code === savedLocale)) {
+        setLocaleState(savedLocale);
+      }
     }
   }, []);
 
   const setLocale = (newLocale: string) => {
     setLocaleState(newLocale);
-    localStorage.setItem('language', newLocale);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('language', newLocale);
+    }
   };
 
   const messages = messagesMap[locale as keyof typeof messagesMap] || enMessages;
   const currentLocale = locale || 'en';
 
   // Always render NextIntlClientProvider to ensure context is available
-  // Use default 'en' during SSR, then update to saved locale after mount
+  // Use default 'en' during SSR and initial render, then update to saved locale after mount
+  // This ensures the context is always available, preventing "context not found" errors
+  const providerLocale = isMounted ? currentLocale : 'en';
+  const providerMessages = isMounted ? messages : enMessages;
+
   return (
     <LanguageContext.Provider value={{ locale: currentLocale, setLocale }}>
       <NextIntlClientProvider 
-        locale={isMounted ? currentLocale : 'en'} 
-        messages={isMounted ? messages : enMessages} 
+        key="intl-provider"
+        locale={providerLocale} 
+        messages={providerMessages} 
         timeZone="UTC"
       >
         {children}

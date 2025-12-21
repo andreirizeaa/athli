@@ -183,3 +183,40 @@ export const deleteClientHabits = async (data: DeleteClientHabitsData): Promise<
   // if (!response.ok) throw new Error('Failed to delete client habits')
 };
 
+/**
+ * Duplicate a habit
+ * @param habitId - ID of the habit to duplicate
+ * @param originalHabit - Original habit object to duplicate
+ */
+export const duplicateHabit = async (habitId: string, originalHabit: Habit): Promise<Habit> => {
+  // TODO: Connect to backend API
+  // This is a placeholder that logs the data for now
+  console.log('Duplicating habit:', { habitId, originalHabit });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  // In the future, this will:
+  // 1. Fetch the full habit data from the backend
+  // 2. Create a new habit with the same data but name appended with " (Copy)"
+  // 3. Return the new habit
+
+  // For now, create a duplicate with all properties copied and name appended with " (Copy)"
+  const duplicatedHabit: Habit = {
+    ...originalHabit,
+    id: `habit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+    name: `${originalHabit.name} (Copy)`,
+    createdAt: Date.now(),
+  };
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/habits/${habitId}/duplicate`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  // })
+  // if (!response.ok) throw new Error('Failed to duplicate habit')
+  // return await response.json()
+
+  return duplicatedHabit;
+};
+
