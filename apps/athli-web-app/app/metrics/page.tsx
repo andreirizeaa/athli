@@ -383,7 +383,7 @@ const MetricsPage = () => {
       <AddMetricSidePanel
         open={isAddMetricOpen}
         onOpenChange={setIsAddMetricOpen}
-        onSave={handleSaveMetric}
+        onSave={async (name, unit, description) => await handleSaveMetric(name, unit, description)}
       />
 
       {editingMetric && (

@@ -906,24 +906,24 @@ Focus on proper form and progressive overload.`;
               </Tooltip>
             </TooltipProvider>
             {selectedWorkouts.size === 1 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
                       onClick={handleDuplicateSelected}
-                      className="gap-2"
+                    className="gap-2"
                       aria-label={t('workouts.actions.duplicateAria')}
-                    >
+                  >
                       <Copy className="size-4" />
                       <span>{t('workouts.actions.duplicate')}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
                     <p>{t('workouts.actions.duplicate')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             )}
             <TooltipProvider>
               <Tooltip>

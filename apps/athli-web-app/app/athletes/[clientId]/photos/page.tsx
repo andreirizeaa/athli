@@ -189,7 +189,7 @@ const ClientPhotosPage = () => {
             <Separator className="absolute bottom-[-1px] left-0 right-0" />
           </div>
           <div className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-0">
+            <div className="space-y-0">
               {filteredPhotos.map((photo, index) => {
                 const isSelected = selectedPhotoId === photo.id;
                 const isLast = index === filteredPhotos.length - 1;
@@ -199,7 +199,7 @@ const ClientPhotosPage = () => {
                     <button
                       onClick={() => setSelectedPhotoId(photo.id)}
                       className={cn(
-                        'w-full flex items-start gap-3 px-3 py-3 rounded-md text-sm transition-colors text-left',
+                        'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
                         isSelected
                           ? 'bg-accent text-accent-foreground'
                           : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
@@ -229,7 +229,7 @@ const ClientPhotosPage = () => {
                         </span>
                       </div>
                     </button>
-                    {!isLast && <Separator className="my-1" />}
+                    {!isLast && <Separator className="w-full" />}
                   </React.Fragment>
                 );
               })}

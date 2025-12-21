@@ -58,9 +58,9 @@ export const IntlProvider = ({ children }: IntlProviderProps) => {
     setIsMounted(true);
     // Load language from localStorage or default to 'en'
     if (typeof window !== 'undefined') {
-      const savedLocale = localStorage.getItem('language') || 'en';
-      if (availableLanguages.some((lang) => lang.code === savedLocale)) {
-        setLocaleState(savedLocale);
+    const savedLocale = localStorage.getItem('language') || 'en';
+    if (availableLanguages.some((lang) => lang.code === savedLocale)) {
+      setLocaleState(savedLocale);
       }
     }
   }, []);
@@ -68,7 +68,7 @@ export const IntlProvider = ({ children }: IntlProviderProps) => {
   const setLocale = (newLocale: string) => {
     setLocaleState(newLocale);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('language', newLocale);
+    localStorage.setItem('language', newLocale);
     }
   };
 

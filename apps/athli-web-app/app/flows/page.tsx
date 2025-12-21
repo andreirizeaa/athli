@@ -165,17 +165,17 @@ const FlowsPage = () => {
 
   const createRenderFirstColumn = (onToggleRow: (id: string) => void) => {
     return (row: Flow, isSelected: boolean) => {
-      return (
-        <div className="flex items-center gap-3 h-full w-full">
+    return (
+      <div className="flex items-center gap-3 h-full w-full">
           <div
             className="flex items-center justify-center h-full flex-shrink-0"
             data-no-row-link="true"
           >
             <Checkbox checked={isSelected} onCheckedChange={() => onToggleRow(row.id)} />
           </div>
-          <span className="text-sm font-medium truncate">{row.name}</span>
-        </div>
-      );
+        <span className="text-sm font-medium truncate">{row.name}</span>
+      </div>
+    );
     };
   };
 

@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
@@ -14,8 +16,6 @@ import {
   FormItem,
   FormLabel,
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Trash2 } from 'lucide-react';
 
@@ -43,6 +43,7 @@ export const EditMetricSidePanel = ({
   onOpenChange,
   metric,
   onSave,
+  onDelete,
 }: EditMetricSidePanelProps) => {
   const t = useTranslations();
 
@@ -62,11 +63,31 @@ export const EditMetricSidePanel = ({
     },
   });
 
+  // Track original values to detect changes
+  const originalValues = useMemo(() => ({
+    name: metric.name,
+    unit: metric.unit,
+    description: metric.description || '',
+  }), [metric]);
+
+  // Watch form values to detect changes
+  const currentValues = form.watch();
+  
+  // Check if form values have changed
+  const hasChanges = useMemo(() => {
+    return (
+      currentValues.name !== originalValues.name ||
+      currentValues.unit !== originalValues.unit ||
+      currentValues.description !== originalValues.description
+    );
+  }, [currentValues, originalValues]);
+
   useEffect(() => {
     if (open) {
       form.reset({
         name: metric.name,
         unit: metric.unit,
+        description: metric.description || '',
       });
     }
   }, [open, metric, form]);
@@ -98,13 +119,13 @@ export const EditMetricSidePanel = ({
       }}
       title={t('metrics.editMetricTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
+      contentClassName="w-full sm:w-[400px] sm:max-w-[400px]"
       footer={
         <div className="flex w-full justify-start gap-2">
           <Button
             type="button"
             onClick={form.handleSubmit(handleSave)}
-            disabled={!form.formState.isValid}
+            disabled={!form.formState.isValid || !hasChanges}
           >
             {t('general.save')}
           </Button>
