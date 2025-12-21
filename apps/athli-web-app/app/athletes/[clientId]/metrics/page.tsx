@@ -24,6 +24,7 @@ import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { mockAthletes } from '@/components/app/app-shell';
 
 type Metric = {
   id: string;
@@ -71,6 +72,8 @@ const ClientMetricsPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const athlete = mockAthletes.find((item) => item.id === clientId);
+  const clientName = athlete?.name || 'this client';
   const [isAddMetricOpen, setIsAddMetricOpen] = useState<boolean>(false);
   const [isLogMetricOpen, setIsLogMetricOpen] = useState<boolean>(false);
   const [isEditMetricOpen, setIsEditMetricOpen] = useState<boolean>(false);
@@ -668,6 +671,8 @@ const ClientMetricsPage = () => {
         open={isAddMetricOpen}
         onOpenChange={setIsAddMetricOpen}
         onSave={handleSaveMetric}
+        clientName={clientName}
+        clientId={clientId}
       />
 
       {selectedMetric && (

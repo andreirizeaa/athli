@@ -46,7 +46,7 @@ export const AddHabitSidePanel = ({
   clientId,
 }: AddHabitSidePanelProps) => {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'manual' | 'library' | 'yourLibrary'>('yourLibrary');
+  const [activeTab, setActiveTab] = useState<'newHabit' | 'library' | 'yourLibrary'>('yourLibrary');
   const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
   const [coachHabits, setCoachHabits] = useState<Habit[]>([]);
   const [isLoadingHabits, setIsLoadingHabits] = useState<boolean>(false);
@@ -178,7 +178,7 @@ export const AddHabitSidePanel = ({
       setEnableReminder(false);
     }
     
-    setActiveTab('manual');
+    setActiveTab('newHabit');
   };
 
   const handleHabitCardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, habit: DefaultHabit) => {
@@ -257,7 +257,7 @@ export const AddHabitSidePanel = ({
               {t('general.cancel')}
             </Button>
           </div>
-        ) : activeTab === 'manual' ? (
+        ) : activeTab === 'newHabit' ? (
           <div className="flex w-full justify-start gap-2">
             <Button
               type="button"
@@ -273,16 +273,7 @@ export const AddHabitSidePanel = ({
         ) : null
       }
     >
-      {showAlert && (
-        <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
-          <Info className="size-4" />
-          <AlertDescription className="min-w-0 line-clamp-4">
-            Habits added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general habit, navigate to the respective main page in <Link href="/habits" className="underline hover:no-underline"><strong>Library</strong></Link>.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'manual' | 'library' | 'yourLibrary')} className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'newHabit' | 'library' | 'yourLibrary')} className="w-full">
         <TabsList className="w-full mb-6">
           <TabsTrigger
             value="yourLibrary"
@@ -297,12 +288,21 @@ export const AddHabitSidePanel = ({
             {t('habits.athliLibrary')}
           </TabsTrigger>
           <TabsTrigger
-            value="manual"
+            value="newHabit"
             className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
           >
-            {t('habits.manualAdd')}
+            {t('habits.newHabit')}
           </TabsTrigger>
         </TabsList>
+
+        {showAlert && activeTab !== 'yourLibrary' && (
+          <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
+            <Info className="size-4" />
+            <AlertDescription className="min-w-0 line-clamp-4">
+              Habits added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general habit, navigate to the respective main page in <Link href="/habits" className="underline hover:no-underline"><strong>Library</strong></Link>.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <TabsContent value="library" className="mt-0">
           <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
@@ -453,7 +453,7 @@ export const AddHabitSidePanel = ({
           </div>
         </TabsContent>
 
-        <TabsContent value="manual" className="mt-0">
+        <TabsContent value="newHabit" className="mt-0">
           <HabitFormManual
             form={form}
             enableDuration={enableDuration}

@@ -1762,7 +1762,7 @@ export const enMessages = {
     addHabitTitle: 'Add habit',
     athliLibrary: 'Athli library',
     yourLibrary: 'Your library',
-    manualAdd: 'Manual add',
+    newHabit: 'New habit',
     searchPlaceholder: 'Search habits...',
     emptyMessage: 'No habits found',
     noLibraryHabits: 'You have no habits in your library.',
@@ -2012,7 +2012,10 @@ export const enMessages = {
     tabs: {
       newMetric: 'New metric',
       athliLibrary: 'Athli library',
+      yourLibrary: 'Your library',
     },
+    noLibraryMetrics: 'You don\'t have any metrics in your library yet. Create metrics in',
+    libraryLink: 'Library',
     columns: {
       name: 'Name',
       unit: 'Unit',
