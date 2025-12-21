@@ -167,7 +167,7 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
           ) : details ? (
             <div className="flex flex-col gap-3 text-sm">
               {athlete && (
-                <div className="flex justify-center mb-2">
+                <div className="flex justify-start mb-2">
                   <Avatar className="h-20 w-20">
                     <AvatarImage src={athlete.avatar} alt={athlete.name} />
                     <AvatarFallback className="text-lg">
@@ -226,7 +226,15 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
                   </div>
                   <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
                     <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="text-xs text-foreground leading-tight">{details.category === 'online' ? t('athletes.profile.online') : t('athletes.profile.inPerson')}</p>
+                    <p className="text-xs text-foreground leading-tight">
+                      {details.category === 'online' 
+                        ? t('athletes.profile.online') 
+                        : details.category === 'in-person'
+                          ? t('athletes.profile.inPerson')
+                          : details.category === 'hybrid'
+                            ? t('athletes.profile.hybrid')
+                            : details.category}
+                    </p>
                   </div>
                 </div>
                 {details.country && (
@@ -406,7 +414,7 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
               </Label>
               <Select
                 value={formData.category}
-                onValueChange={(value: 'online' | 'in-person') => setFormData({ ...formData, category: value })}
+                onValueChange={(value: 'online' | 'in-person' | 'hybrid') => setFormData({ ...formData, category: value })}
               >
                 <SelectTrigger id="category" className="w-full">
                   <SelectValue placeholder={t('athletes.profile.selectCategory')} />
@@ -414,6 +422,7 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
                 <SelectContent>
                   <SelectItem value="online">{t('athletes.profile.online')}</SelectItem>
                   <SelectItem value="in-person">{t('athletes.profile.inPerson')}</SelectItem>
+                  <SelectItem value="hybrid">{t('athletes.profile.hybrid')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

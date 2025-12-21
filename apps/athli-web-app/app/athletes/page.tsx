@@ -26,6 +26,7 @@ import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { Badge } from '@/components/ui/badge';
 import {
   User,
   Users,
@@ -237,7 +238,14 @@ const AthletesPage = () => {
       [t('athletes.export.email')]: row.email,
       [t('athletes.export.phone')]: row.phone,
       [t('athletes.export.country')]: row.country,
-      [t('athletes.export.category')]: row.category === 'online' ? t('athletes.filters.online') : t('athletes.filters.inPerson'),
+      [t('athletes.export.category')]: 
+        row.category === 'online' 
+          ? t('athletes.filters.online') 
+          : row.category === 'in-person'
+            ? t('athletes.filters.inPerson')
+            : row.category === 'hybrid'
+              ? t('athletes.filters.hybrid')
+              : row.category,
       [t('athletes.export.connected')]:
         row.connected === true
           ? t('athletes.status.connected')
@@ -590,11 +598,33 @@ const AthletesPage = () => {
             getSortValue: (row) => row.category,
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
-            renderCell: (row) => (
-              <div className="flex items-center w-full">
-                <span className="text-sm capitalize">{row.category}</span>
-              </div>
-            ),
+            renderCell: (row) => {
+              const category = row.category;
+              if (category === 'in-person') {
+                return (
+                  <Badge variant="default" className="text-xs rounded-full bg-primary text-primary-foreground border-transparent">
+                    {t('athletes.filters.inPerson')}
+                  </Badge>
+                );
+              } else if (category === 'online') {
+                return (
+                  <Badge variant="outline" className="text-xs border-primary text-primary bg-transparent">
+                    {t('athletes.filters.online')}
+                  </Badge>
+                );
+              } else if (category === 'hybrid') {
+                return (
+                  <Badge variant="outline" className="text-xs">
+                    {t('athletes.filters.hybrid')}
+                  </Badge>
+                );
+              }
+              return (
+                <div className="flex items-center w-full">
+                  <span className="text-sm capitalize">{category}</span>
+                </div>
+              );
+            },
           };
         case 'connected':
           return {
@@ -858,6 +888,7 @@ const AthletesPage = () => {
       options: [
         { value: 'online', label: t('athletes.filters.online') },
         { value: 'in-person', label: t('athletes.filters.inPerson') },
+        { value: 'hybrid', label: t('athletes.filters.hybrid') },
       ],
       getFilterValue: (row) => row.category,
     },
@@ -1123,7 +1154,14 @@ const AthletesPage = () => {
           [t('athletes.export.email')]: row.email,
           [t('athletes.export.phone')]: row.phone,
           [t('athletes.export.country')]: row.country,
-          [t('athletes.export.category')]: row.category === 'online' ? t('athletes.filters.online') : t('athletes.filters.inPerson'),
+          [t('athletes.export.category')]: 
+        row.category === 'online' 
+          ? t('athletes.filters.online') 
+          : row.category === 'in-person'
+            ? t('athletes.filters.inPerson')
+            : row.category === 'hybrid'
+              ? t('athletes.filters.hybrid')
+              : row.category,
           [t('athletes.export.connected')]:
             row.connected === true
               ? t('athletes.status.connected')

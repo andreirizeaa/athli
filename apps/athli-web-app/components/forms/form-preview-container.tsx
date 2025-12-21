@@ -82,7 +82,7 @@ export const FormPreviewContainer = ({
       </div>
 
       {/* Question title */}
-      <div className="flex-shrink-0 px-4 pt-4 pb-2">
+      <div className="flex-shrink-0 px-4 pt-2 pb-2">
         <h2 className="text-lg font-semibold leading-tight">
           {currentQuestion.question}
           {currentQuestion.required && (
@@ -92,7 +92,7 @@ export const FormPreviewContainer = ({
       </div>
 
       {/* Content area - scrollable and centered */}
-      <div className="flex-1 overflow-y-auto py-4 flex items-center justify-center">
+      <div className="flex-1 overflow-y-auto flex items-center justify-center min-h-0">
         <div className="w-full">
           <PreviewQuestion
             question={currentQuestion.question}
@@ -112,7 +112,6 @@ export const FormPreviewContainer = ({
           <Button
             onClick={handleContinue}
             className="w-full h-11 rounded-[28px]"
-            disabled={currentQuestionIndex >= totalQuestions - 1}
           >
             {currentQuestionIndex < totalQuestions - 1 ? 'Continue' : 'Submit'}
           </Button>

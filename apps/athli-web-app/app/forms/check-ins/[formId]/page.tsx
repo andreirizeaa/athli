@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import {
@@ -15,12 +14,13 @@ import {
   BreadcrumbSeparator,
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
-import { ChevronRight, Plus, Trash2, GripVertical, Edit } from 'lucide-react';
+import { ChevronRight, Plus, GripVertical, Edit } from 'lucide-react';
 import { type Form, addQuestion, reorderQuestions } from '@/lib/forms/form-service';
 import { formTemplates } from '@/lib/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EditCheckInFormSidePanel } from '@/components/forms/edit-check-in-form-side-panel';
+import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { FormDetailContent } from '@/components/forms/form-detail-content';
 
 // Mock forms data - in production this would come from an API
@@ -49,9 +49,12 @@ const CheckInFormDetailPage = () => {
   const router = useRouter();
   const formId = Array.isArray(params.formId) ? params.formId[0] : params.formId;
   const [isEditFormOpen, setIsEditFormOpen] = useState<boolean>(false);
+  const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
   const [currentForm, setCurrentForm] = useState<Form | null>(null);
   const [previewQuestionIndex, setPreviewQuestionIndex] = useState<number>(0);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [isReorderMode, setIsReorderMode] = useState<boolean>(false);
+  const reorderedQuestionsRef = useRef<Question[] | null>(null);
 
   // Load questions from sessionStorage on client side
   useEffect(() => {
@@ -156,6 +159,59 @@ const CheckInFormDetailPage = () => {
     setCurrentForm(updatedForm);
   };
 
+  const handleToggleReorder = async () => {
+    const wasInReorderMode = isReorderMode;
+    setIsReorderMode(!isReorderMode);
+    
+    // If we're exiting reorder mode, save the new order
+    if (wasInReorderMode) {
+      try {
+        // Use the ref if available (from handleReorder), otherwise use state
+        const questionsToReorder = reorderedQuestionsRef.current || questions;
+        await reorderQuestions({
+          formId: formId,
+          questionIds: questionsToReorder.map((q) => q.id),
+        });
+        reorderedQuestionsRef.current = null;
+      } catch (error) {
+        console.error('Failed to reorder questions:', error);
+      }
+    }
+  };
+
+  const handleOpenAddQuestion = () => {
+    setIsAddQuestionOpen(true);
+  };
+
+  const handleAddQuestion = async (questionData: any) => {
+    try {
+      const newQuestion = await addQuestion({
+        formId: formId,
+        question: questionData.question,
+        required: questionData.required,
+        format: questionData.format,
+        options: questionData.options,
+        scaleFrom: questionData.scaleFrom,
+        scaleTo: questionData.scaleTo,
+        mediaCount: questionData.mediaCount,
+      });
+      
+      setQuestions([...questions, newQuestion]);
+      // Navigate to the newly added question in preview
+      setPreviewQuestionIndex(questions.length);
+    } catch (error) {
+      console.error('Failed to add question:', error);
+    }
+  };
+
+  const handleReorder = (newData: any[]) => {
+    // Filter out the add row before saving
+    const filteredData = newData.filter((item) => !item._isAddRow) as Question[];
+    setQuestions(filteredData);
+    // Store in ref for use when exiting reorder mode
+    reorderedQuestionsRef.current = filteredData;
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-hidden">
       <div className="w-full relative flex-shrink-0">
@@ -201,7 +257,19 @@ const CheckInFormDetailPage = () => {
               className="gap-2"
             >
               <Edit className="size-4" />
-              <span>{t('forms.editDetailsAndSchedule')}</span>
+              <span>{t('general.edit')}</span>
+            </Button>
+            <Button
+              variant={isReorderMode ? "default" : "outline"}
+              onClick={handleToggleReorder}
+              className="gap-2"
+            >
+              <GripVertical className="size-4" />
+              <span>{isReorderMode ? t('forms.detail.actions.done') : t('forms.detail.actions.reorder')}</span>
+            </Button>
+            <Button onClick={handleOpenAddQuestion} className="gap-2" disabled={isReorderMode}>
+              <Plus className="size-4" />
+              <span>{t('forms.detail.actions.addQuestion')}</span>
             </Button>
           </ButtonGroup>
         </div>
@@ -215,6 +283,17 @@ const CheckInFormDetailPage = () => {
         setQuestions={setQuestions}
         previewQuestionIndex={previewQuestionIndex}
         setPreviewQuestionIndex={setPreviewQuestionIndex}
+        onEditForm={() => setIsEditFormOpen(true)}
+        isReorderMode={isReorderMode}
+        onToggleReorder={handleToggleReorder}
+        onOpenAddQuestion={handleOpenAddQuestion}
+        onReorder={handleReorder}
+      />
+
+      <AddQuestionSidePanel
+        open={isAddQuestionOpen}
+        onOpenChange={setIsAddQuestionOpen}
+        onSave={handleAddQuestion}
       />
 
       <EditCheckInFormSidePanel

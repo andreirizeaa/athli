@@ -261,6 +261,7 @@ const FormDetailPage = () => {
       date: t('forms.detail.addQuestion.formats.date'),
       rating: t('forms.detail.addQuestion.formats.rating'),
       signature: t('forms.detail.addQuestion.formats.signature'),
+      progressPhoto: t('forms.detail.addQuestion.formats.progressPhoto'),
     };
     return formatMap[format] || format;
   };
