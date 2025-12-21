@@ -10,8 +10,16 @@ import { Switch } from '@/components/ui/switch';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Card } from '@/components/ui/card';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Edit, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
+import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
 
 type QuestionFormat = {
   id: string;
@@ -30,6 +38,7 @@ type AddQuestionSidePanelProps = {
     scaleFrom?: string;
     scaleTo?: string;
     mediaCount?: number;
+    metricId?: string;
   }) => void;
 };
 
@@ -42,8 +51,16 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
   const [scaleFrom, setScaleFrom] = useState<string>('1');
   const [scaleTo, setScaleTo] = useState<string>('10');
   const [mediaCount, setMediaCount] = useState<number>(1);
+  const [selectedMetricId, setSelectedMetricId] = useState<string>('');
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
 
-  const questionFormats: QuestionFormat[] = [
+  const syncsWithFormats: QuestionFormat[] = [
+    { id: 'progressPhoto', label: t('forms.detail.addQuestion.formats.progressPhoto'), subtitle: t('forms.detail.addQuestion.formats.progressPhotoSubtitle') },
+    { id: 'metrics', label: t('forms.detail.addQuestion.formats.metrics'), subtitle: t('forms.detail.addQuestion.formats.metricsSubtitle') },
+  ];
+
+  const generalFormats: QuestionFormat[] = [
     { id: 'text', label: t('forms.detail.addQuestion.formats.text'), subtitle: t('forms.detail.addQuestion.formats.textSubtitle') },
     { id: 'number', label: t('forms.detail.addQuestion.formats.number'), subtitle: t('forms.detail.addQuestion.formats.numberSubtitle') },
     { id: 'multipleChoice', label: t('forms.detail.addQuestion.formats.multipleChoice'), subtitle: t('forms.detail.addQuestion.formats.multipleChoiceSubtitle') },
@@ -54,8 +71,9 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
     { id: 'date', label: t('forms.detail.addQuestion.formats.date'), subtitle: t('forms.detail.addQuestion.formats.dateSubtitle') },
     { id: 'rating', label: t('forms.detail.addQuestion.formats.rating'), subtitle: t('forms.detail.addQuestion.formats.ratingSubtitle') },
     { id: 'signature', label: t('forms.detail.addQuestion.formats.signature'), subtitle: t('forms.detail.addQuestion.formats.signatureSubtitle') },
-    { id: 'progressPhoto', label: t('forms.detail.addQuestion.formats.progressPhoto'), subtitle: t('forms.detail.addQuestion.formats.progressPhotoSubtitle') },
   ];
+
+  const allFormats = [...syncsWithFormats, ...generalFormats];
 
   const resetForm = () => {
     setQuestionText('');
@@ -65,6 +83,8 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
     setScaleFrom('1');
     setScaleTo('10');
     setMediaCount(1);
+    setSelectedMetricId('');
+    setMetrics([]);
   };
 
   // Reset form when panel closes
@@ -73,6 +93,25 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
       resetForm();
     }
   }, [open]);
+
+  // Fetch metrics when metrics format is selected
+  useEffect(() => {
+    if (open && selectedFormat === 'metrics') {
+      fetchMetrics();
+    }
+  }, [open, selectedFormat]);
+
+  const fetchMetrics = async () => {
+    setIsLoadingMetrics(true);
+    try {
+      const fetchedMetrics = await getAllMetrics();
+      setMetrics(fetchedMetrics);
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  };
 
   const handleClose = () => {
     resetForm();
@@ -108,6 +147,9 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
     if (selectedFormat === 'images' || selectedFormat === 'videos') {
       questionData.mediaCount = mediaCount;
     }
+    if (selectedFormat === 'metrics') {
+      questionData.metricId = selectedMetricId;
+    }
 
     onSave(questionData);
     handleClose();
@@ -133,6 +175,11 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
       setMediaCount(1);
     } else {
       setMediaCount(1);
+    }
+    if (format === 'metrics') {
+      setSelectedMetricId('');
+    } else {
+      setSelectedMetricId('');
     }
   };
 
@@ -160,7 +207,8 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
   const isValid = questionText.trim() &&
     selectedFormat &&
     !(selectedFormat === 'multipleChoice' && !options.some((opt) => opt.trim() !== '')) &&
-    !(selectedFormat === 'scale' && (!scaleFrom.trim() || !scaleTo.trim()));
+    !(selectedFormat === 'scale' && (!scaleFrom.trim() || !scaleTo.trim())) &&
+    !(selectedFormat === 'metrics' && !selectedMetricId);
 
   return (
     <SidePanel
@@ -219,10 +267,10 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
               <div className="flex items-center justify-between gap-4">
                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                   <span className="text-sm font-medium text-foreground">
-                    {questionFormats.find((f) => f.id === selectedFormat)?.label}
+                    {allFormats.find((f) => f.id === selectedFormat)?.label}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {questionFormats.find((f) => f.id === selectedFormat)?.subtitle}
+                    {allFormats.find((f) => f.id === selectedFormat)?.subtitle}
                   </span>
                 </div>
                 <Button
@@ -237,31 +285,66 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {questionFormats.map((format) => (
-                <Card
-                  key={format.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleFormatSelect(format.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleFormatSelect(format.id);
-                    }
-                  }}
-                  className={cn(
-                    "p-4 cursor-pointer hover:bg-accent transition-colors",
-                    format.id === 'progressPhoto' && "col-span-2"
-                  )}
-                  aria-label={`Select ${format.label} format`}
-                >
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-foreground">{format.label}</span>
-                    <span className="text-xs text-muted-foreground">{format.subtitle}</span>
-                  </div>
-                </Card>
-              ))}
+            <div className="flex flex-col gap-6">
+              {/* Syncs with section */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t('forms.detail.addQuestion.syncsWith')}
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {syncsWithFormats.map((format) => (
+                    <Card
+                      key={format.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleFormatSelect(format.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleFormatSelect(format.id);
+                        }
+                      }}
+                      className="p-4 cursor-pointer hover:bg-accent transition-colors"
+                      aria-label={`Select ${format.label} format`}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-foreground">{format.label}</span>
+                        <span className="text-xs text-muted-foreground">{format.subtitle}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* General section */}
+              <div className="flex flex-col gap-3">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  {t('forms.detail.addQuestion.general')}
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {generalFormats.map((format) => (
+                    <Card
+                      key={format.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleFormatSelect(format.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleFormatSelect(format.id);
+                        }
+                      }}
+                      className="p-4 cursor-pointer hover:bg-accent transition-colors"
+                      aria-label={`Select ${format.label} format`}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-foreground">{format.label}</span>
+                        <span className="text-xs text-muted-foreground">{format.subtitle}</span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -375,6 +458,37 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
+          </div>
+        )}
+
+        {selectedFormat === 'metrics' && (
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium text-foreground">
+              {t('forms.detail.addQuestion.selectMetric')}
+              <RequiredAsterisk />
+            </label>
+            <Select
+              value={selectedMetricId}
+              onValueChange={setSelectedMetricId}
+              disabled={isLoadingMetrics}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue
+                  placeholder={
+                    isLoadingMetrics
+                      ? t('general.loading')
+                      : t('forms.detail.addQuestion.selectMetricPlaceholder')
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {metrics.map((metric) => (
+                  <SelectItem key={metric.id} value={metric.id}>
+                    {metric.name} {metric.unit && `(${metric.unit})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>

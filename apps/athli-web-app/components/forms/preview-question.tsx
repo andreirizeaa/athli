@@ -17,7 +17,8 @@ type QuestionFormat =
   | 'date'
   | 'rating'
   | 'signature'
-  | 'progressPhoto';
+  | 'progressPhoto'
+  | 'metrics';
 
 type PreviewQuestionProps = {
   question: string;
@@ -27,6 +28,8 @@ type PreviewQuestionProps = {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
+  metricUnit?: string;
 };
 
 export const PreviewQuestion = ({
@@ -37,6 +40,8 @@ export const PreviewQuestion = ({
   scaleFrom = '1',
   scaleTo = '10',
   mediaCount = 1,
+  metricId,
+  metricUnit,
 }: PreviewQuestionProps) => {
   const [selectedValue, setSelectedValue] = React.useState<string | null>(null);
   const [ratingValue, setRatingValue] = React.useState<number>(0);
@@ -198,6 +203,24 @@ export const PreviewQuestion = ({
                   <span>{label}</span>
                 </Button>
               ))}
+            </div>
+          </div>
+        );
+
+      case 'metrics':
+        return (
+          <div className="w-full">
+            <div className="relative">
+              <Input
+                type="number"
+                placeholder="Enter value..."
+                className="w-full pr-16"
+              />
+              {metricUnit && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                  {metricUnit}
+                </span>
+              )}
             </div>
           </div>
         );

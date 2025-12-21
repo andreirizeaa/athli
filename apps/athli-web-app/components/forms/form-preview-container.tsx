@@ -5,6 +5,7 @@ import { cn } from '@/lib/general/utils';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { PreviewQuestion } from './preview-question';
+import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
 
 type Question = {
   id: string;
@@ -15,6 +16,7 @@ type Question = {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
 };
 
 type FormPreviewContainerProps = {
@@ -30,6 +32,30 @@ export const FormPreviewContainer = ({
 }: FormPreviewContainerProps) => {
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
+  const [metrics, setMetrics] = React.useState<Metric[]>([]);
+  const [isLoadingMetrics, setIsLoadingMetrics] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (currentQuestion?.format === 'metrics' && currentQuestion?.metricId) {
+      fetchMetrics();
+    }
+  }, [currentQuestion?.format, currentQuestion?.metricId]);
+
+  const fetchMetrics = async () => {
+    setIsLoadingMetrics(true);
+    try {
+      const fetchedMetrics = await getAllMetrics();
+      setMetrics(fetchedMetrics);
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  };
+
+  const selectedMetric = currentQuestion?.metricId
+    ? metrics.find((m) => m.id === currentQuestion.metricId)
+    : null;
 
   const handleBack = () => {
     if (currentQuestionIndex > 0) {
@@ -102,6 +128,8 @@ export const FormPreviewContainer = ({
             scaleFrom={currentQuestion.scaleFrom}
             scaleTo={currentQuestion.scaleTo}
             mediaCount={currentQuestion.mediaCount}
+            metricId={currentQuestion.metricId}
+            metricUnit={selectedMetric?.unit}
           />
         </div>
       </div>

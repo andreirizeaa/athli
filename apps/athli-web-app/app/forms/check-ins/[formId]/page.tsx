@@ -77,6 +77,7 @@ const CheckInFormDetailPage = () => {
           scaleFrom: q.scaleFrom,
           scaleTo: q.scaleTo,
           mediaCount: q.mediaCount,
+          metricId: q.metricId,
         }));
         setQuestions(convertedQuestions);
         return;
@@ -194,9 +195,16 @@ const CheckInFormDetailPage = () => {
         scaleFrom: questionData.scaleFrom,
         scaleTo: questionData.scaleTo,
         mediaCount: questionData.mediaCount,
+        metricId: questionData.metricId,
       });
       
-      setQuestions([...questions, newQuestion]);
+      // Ensure metricId is preserved if it exists in questionData
+      const questionWithMetric = {
+        ...newQuestion,
+        metricId: questionData.metricId || newQuestion.metricId,
+      };
+      
+      setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);
     } catch (error) {

@@ -26,6 +26,7 @@ export interface Question {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
 }
 
 export interface AddQuestionData {
@@ -37,6 +38,7 @@ export interface AddQuestionData {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
 }
 
 export interface ReorderQuestionsData {
@@ -154,6 +156,7 @@ export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
     scaleFrom: data.scaleFrom,
     scaleTo: data.scaleTo,
     mediaCount: data.mediaCount,
+    metricId: data.metricId,
   };
 
   return newQuestion;

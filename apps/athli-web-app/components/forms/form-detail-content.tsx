@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
+import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
 
 export type Question = {
   id: string;
@@ -21,6 +22,7 @@ export type Question = {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
 };
 
 type FormDetailContentProps = {
@@ -54,6 +56,27 @@ export const FormDetailContent = ({
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
   const [isEditQuestionOpen, setIsEditQuestionOpen] = useState<boolean>(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const fetchedMetrics = await getAllMetrics();
+        setMetrics(fetchedMetrics);
+      } catch (error) {
+        console.error('Failed to fetch metrics:', error);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  const metricsMap = useMemo(() => {
+    const map = new Map<string, Metric>();
+    metrics.forEach((metric) => {
+      map.set(metric.id, metric);
+    });
+    return map;
+  }, [metrics]);
 
   const handleReorder = (newData: any[]) => {
     // Filter out the add row before saving
@@ -81,9 +104,16 @@ export const FormDetailContent = ({
         scaleFrom: questionData.scaleFrom,
         scaleTo: questionData.scaleTo,
         mediaCount: questionData.mediaCount,
+        metricId: questionData.metricId,
       });
       
-      setQuestions([...questions, newQuestion]);
+      // Ensure metricId is preserved if it exists in questionData
+      const questionWithMetric = {
+        ...newQuestion,
+        metricId: questionData.metricId || newQuestion.metricId,
+      };
+      
+      setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);
     } catch (error) {
@@ -115,7 +145,7 @@ export const FormDetailContent = ({
     setIsEditQuestionOpen(true);
   };
 
-  const getFormatLabel = (format: string) => {
+  const getFormatLabel = useMemo(() => {
     const formatMap: Record<string, string> = {
       text: t('forms.detail.addQuestion.formats.text'),
       number: t('forms.detail.addQuestion.formats.number'),
@@ -128,11 +158,12 @@ export const FormDetailContent = ({
       rating: t('forms.detail.addQuestion.formats.rating'),
       signature: t('forms.detail.addQuestion.formats.signature'),
       progressPhoto: t('forms.detail.addQuestion.formats.progressPhoto'),
+      metrics: t('forms.detail.addQuestion.formats.metrics'),
     };
-    return formatMap[format] || format;
-  };
+    return (format: string) => formatMap[format] || format;
+  }, [t]);
 
-  const columns: ColumnDefinition<any>[] = [
+  const columns: ColumnDefinition<any>[] = useMemo(() => [
     {
       id: 'question',
       label: t('forms.detail.columns.question'),
@@ -161,7 +192,23 @@ export const FormDetailContent = ({
             </Button>
           );
         }
-        return <span className="text-sm">{row.question || ''}</span>;
+        // Check if this is a metric question
+        if (row.format === 'metrics' && row.metricId) {
+          const metric = metricsMap.get(row.metricId);
+          return (
+            <div className="flex flex-col gap-0.5 py-1">
+              <span className="text-sm font-medium">{row.question || ''}</span>
+              {metric && (
+                <span className="text-xs text-muted-foreground font-normal">{metric.name}</span>
+              )}
+            </div>
+          );
+        }
+        
+        // For non-metric questions, just show the question
+        return (
+          <span className="text-sm font-medium py-1">{row.question || ''}</span>
+        );
       },
     },
     {
@@ -245,7 +292,7 @@ export const FormDetailContent = ({
         );
       },
     },
-  ];
+  ], [t, isReorderMode, handleOpenAddQuestionInternal, handleDeleteQuestion, onToggleReorder, metricsMap, getFormatLabel]);
 
   return (
     <>
