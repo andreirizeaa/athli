@@ -24,6 +24,7 @@ import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { EditFormSidePanel } from '@/components/forms/edit-form-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
+import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
 
 // Mock forms data - in production this would come from an API
 const mockForms: Form[] = [
@@ -52,6 +53,7 @@ type Question = {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
 };
 
 const FormDetailPage = () => {
@@ -68,6 +70,7 @@ const FormDetailPage = () => {
   const [previewQuestionIndex, setPreviewQuestionIndex] = useState<number>(0);
   const reorderedQuestionsRef = useRef<Question[] | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [metrics, setMetrics] = useState<Metric[]>([]);
 
   const form = mockForms.find((f) => f.id === formId);
 
@@ -99,6 +102,7 @@ const FormDetailPage = () => {
           scaleFrom: q.scaleFrom,
           scaleTo: q.scaleTo,
           mediaCount: q.mediaCount,
+          metricId: q.metricId,
         }));
         setQuestions(convertedQuestions);
         return;
@@ -140,6 +144,26 @@ const FormDetailPage = () => {
       setCurrentForm(form);
     }
   }, [form]);
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const fetchedMetrics = await getAllMetrics();
+        setMetrics(fetchedMetrics);
+      } catch (error) {
+        console.error('Failed to fetch metrics:', error);
+      }
+    };
+    fetchMetrics();
+  }, []);
+
+  const metricsMap = useMemo(() => {
+    const map = new Map<string, Metric>();
+    metrics.forEach((metric) => {
+      map.set(metric.id, metric);
+    });
+    return map;
+  }, [metrics]);
 
   // Ensure preview index is within bounds
   useEffect(() => {
@@ -212,9 +236,16 @@ const FormDetailPage = () => {
         scaleFrom: questionData.scaleFrom,
         scaleTo: questionData.scaleTo,
         mediaCount: questionData.mediaCount,
+        metricId: questionData.metricId,
       });
       
-      setQuestions([...questions, newQuestion]);
+      // Ensure metricId is preserved if it exists in questionData
+      const questionWithMetric = {
+        ...newQuestion,
+        metricId: questionData.metricId || newQuestion.metricId,
+      };
+      
+      setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);
     } catch (error) {
@@ -262,6 +293,7 @@ const FormDetailPage = () => {
       rating: t('forms.detail.addQuestion.formats.rating'),
       signature: t('forms.detail.addQuestion.formats.signature'),
       progressPhoto: t('forms.detail.addQuestion.formats.progressPhoto'),
+      metrics: t('forms.detail.addQuestion.formats.metrics'),
     };
     return formatMap[format] || format;
   };
@@ -295,7 +327,23 @@ const FormDetailPage = () => {
             </Button>
           );
         }
-        return <span className="text-sm">{row.question || ''}</span>;
+        // Check if this is a metric question
+        if (row.format === 'metrics' && row.metricId) {
+          const metric = metricsMap.get(row.metricId);
+          return (
+            <div className="flex flex-col gap-0.5 py-1">
+              <span className="text-sm font-medium">{row.question || ''}</span>
+              {metric && (
+                <span className="text-xs text-muted-foreground font-normal">{metric.name}</span>
+              )}
+            </div>
+          );
+        }
+        
+        // For non-metric questions, just show the question
+        return (
+          <span className="text-sm font-medium py-1">{row.question || ''}</span>
+        );
       },
     },
     {
