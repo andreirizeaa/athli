@@ -220,3 +220,60 @@ export const duplicateHabit = async (habitId: string, originalHabit: Habit): Pro
   return duplicatedHabit;
 };
 
+/**
+ * Service method to get all coach's habits (library)
+ * This will be connected to the backend in the future
+ */
+export const getAllHabits = async (): Promise<Habit[]> => {
+  // TODO: Connect to backend API
+  console.log('Getting all coach habits');
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // Mock data - in production this would come from the backend
+  const mockHabits: Habit[] = [
+    {
+      id: 'coach-habit-1',
+      name: 'Morning Meditation',
+      description: 'Start your day with mindfulness',
+      amount: 10,
+      unit: 'min',
+      period: 'daily',
+      duration: 10,
+      createdAt: Date.now() - 86400000 * 30,
+    },
+    {
+      id: 'coach-habit-2',
+      name: 'Evening Stretch',
+      description: 'Improve flexibility and recovery',
+      amount: 15,
+      unit: 'min',
+      period: 'daily',
+      createdAt: Date.now() - 86400000 * 25,
+    },
+    {
+      id: 'coach-habit-3',
+      name: 'Weekly Meal Prep',
+      description: 'Plan and prepare healthy meals',
+      amount: 1,
+      unit: 'session',
+      period: 'weekly',
+      createdAt: Date.now() - 86400000 * 20,
+    },
+    {
+      id: 'coach-habit-4',
+      name: 'Daily Protein Intake',
+      description: 'Track your protein consumption',
+      amount: 150,
+      unit: 'g',
+      period: 'daily',
+      reminderTime: '20:00',
+      reminderMessage: 'Log your protein intake',
+      createdAt: Date.now() - 86400000 * 15,
+    },
+  ];
+
+  return mockHabits;
+};
+
