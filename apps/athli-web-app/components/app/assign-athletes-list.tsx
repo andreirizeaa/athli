@@ -6,7 +6,7 @@ import { Mail, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type AssignAthletesListProps = {
   onAthleteSelected?: (athleteId?: string) => void;

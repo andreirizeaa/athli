@@ -20,11 +20,11 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { DataGrid } from '@/components/app/data-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { broadcastMessage, type BroadcastMessageData } from './message-service';
+import { broadcastMessage, type BroadcastMessageData } from '../../../lib/coach/coach-message-service';
 
 type BroadcastSidePanelProps = {
   open: boolean;

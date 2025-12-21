@@ -14,9 +14,10 @@ import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import Link from 'next/link';
-import { defaultHabits, type DefaultHabit } from '@/lib/constants/habits';
+import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { HabitFormManual } from './habit-form-manual';
-import { getAllHabits, assignHabit, type Habit } from '@/lib/habits/habit-service';
+import { getAllHabits, type Habit } from '@/lib/coach/coach-habit-service';
+import { assignHabit } from '@/lib/client/client-habit-service';
 
 export type HabitFormValues = {
   name: string;

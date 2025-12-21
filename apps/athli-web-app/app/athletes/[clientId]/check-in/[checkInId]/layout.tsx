@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/forms/form-service';
+import { cn } from '@/lib/general/utils';
+import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/client/client-form-service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -75,7 +75,7 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
     setIsDownloading(true);
     try {
       const instanceDetail = await getCheckInInstance(clientId, checkInId, downloadInstanceId);
-      const { downloadQuestionnaire } = await import('@/lib/pdf/pdf-service');
+      const { downloadQuestionnaire } = await import('@/lib/general/pdf-service');
 
       const clientName = 'Client Name';
 

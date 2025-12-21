@@ -13,7 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { Upload, Trash2, Building2 } from 'lucide-react';
-import { updateCompanyDetails, type CompanyDetails } from '@/lib/settings/settings-service';
+import { updateCompanyDetails, type CompanyDetails } from '@/lib/general/settings-service';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useCompanySave } from '../context/company-save-context';
 import { toast } from 'sonner';

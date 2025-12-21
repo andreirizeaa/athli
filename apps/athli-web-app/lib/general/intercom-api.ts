@@ -3,7 +3,7 @@
  * Wrapper around the Express API for Intercom operations
  */
 
-import { apiRequest } from './client';
+import { apiRequest } from '../api/client';
 
 export const intercomApi = {
   /**

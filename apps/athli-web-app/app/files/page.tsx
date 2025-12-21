@@ -12,14 +12,15 @@ import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/compon
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, addFilesToClient, updateFile, deleteFile } from '@/lib/files/file-service';
+import { addFile, updateFile, deleteFile } from '@/lib/coach/coach-file-service';
+import { addFilesToClient } from '@/lib/client/client-file-service';
 import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';

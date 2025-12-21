@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
-import { type Habit } from '@/lib/habits/habit-service';
+import { type Habit } from '@/lib/coach/coach-habit-service';
 import { HabitFormManual } from './habit-form-manual';
 import { type HabitFormValues } from './add-habit-side-panel';
 
@@ -145,4 +145,5 @@ export const EditHabitSidePanel = ({
     </SidePanel>
   );
 };
+
 

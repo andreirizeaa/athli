@@ -14,8 +14,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Info } from 'lucide-react';
 import Link from 'next/link';
-import { getForms } from '@/lib/forms/form-service';
-import { type Habit } from '@/lib/habits/habit-service';
+import { getForms } from '@/lib/coach/coach-form-service';
+import { type Habit } from '@/lib/coach/coach-habit-service';
 import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw } from 'lucide-react';
 
 export type PanelType = 'trigger' | 'action' | null;

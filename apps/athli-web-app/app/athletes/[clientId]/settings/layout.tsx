@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { AlertTriangle } from 'lucide-react';
 
 type AthleteSettingsLayoutProps = {

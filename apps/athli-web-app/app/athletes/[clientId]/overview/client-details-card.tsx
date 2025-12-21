@@ -20,7 +20,7 @@ import {
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit, User, Mail, Users, Phone, MapPin, Scale, Ruler, ArrowUp10 } from 'lucide-react';
-import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/lib/athletes/athlete-service';
+import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/lib/client/client-athlete-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { parsePhoneNumber } from 'react-phone-number-input';
 import type { Value as PhoneValue } from 'react-phone-number-input';

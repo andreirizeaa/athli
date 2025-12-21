@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { type Form, addQuestion, reorderQuestions } from '@/lib/forms/form-service';
+import { type Form, addQuestion, reorderQuestions } from '@/lib/coach/coach-form-service';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
@@ -319,4 +319,5 @@ export const FormDetailContent = ({
     </>
   );
 };
+
 

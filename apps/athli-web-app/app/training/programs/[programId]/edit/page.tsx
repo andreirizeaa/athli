@@ -4,8 +4,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { ProgramBuilder } from '../../components/program-builder';
 import { mockPrograms, mockWorkouts } from '@/components/app/app-shell';
 import type { Workout } from '@/components/app/app-shell';
-import { MOCK_PROGRAM_SCHEMA } from '@/lib/library/programs/mock-program-schema';
-import type { ProgramSchema } from '@/lib/library/programs/mock-program-schema';
+import { MOCK_PROGRAM_SCHEMA } from '@/constants/mock-program-schema';
+import type { ProgramSchema } from '@/constants/mock-program-schema';
 
 type ProgramMeta = {
   name: string;

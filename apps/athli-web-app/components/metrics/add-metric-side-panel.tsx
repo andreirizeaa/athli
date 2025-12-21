@@ -20,11 +20,11 @@ import {
   FormLabel,
 } from '@/components/ui/form';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { defaultMetrics, type DefaultMetric } from '@/lib/constants/metrics';
+import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
 
 type MetricFormValues = {
   name: string;
-  unit: string;
+  unit?: string;
   description?: string;
 };
 

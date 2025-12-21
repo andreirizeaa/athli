@@ -16,10 +16,11 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
-import { addForm, assignForm, convertScheduleToCron, duplicateForm, type Form, type AssignFormScheduleData } from '@/lib/forms/form-service';
-import { formTemplates } from '@/lib/constants/forms';
+import { addForm, duplicateForm, type Form } from '@/lib/coach/coach-form-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 // Mock forms data
 const mockForms: Form[] = [

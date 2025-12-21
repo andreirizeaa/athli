@@ -31,8 +31,8 @@ import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/compon
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/csv-export';
+import { cn } from '@/lib/general/utils';
+import { exportToCSV } from '@/lib/general/csv-export';
 import {
   Search,
   X,
@@ -62,7 +62,7 @@ import {
 
 import type { Program } from '@/components/app/app-shell';
 import { mockPrograms } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/lib/library/programs/programs-service';
+import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/lib/coach/coach-program-service';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
 

@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Info, Play, Plus, RefreshCw, Trash2, X } from 'lucide-react';
-import { Exercise, searchExercises } from '@/lib/library/exercises/exercise-search';
+import { Exercise, searchExercises } from '@/lib/general/exercise-search';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 export type SetData = {
   setNumber: number;

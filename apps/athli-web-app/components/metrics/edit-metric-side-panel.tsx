@@ -21,7 +21,7 @@ import { Trash2 } from 'lucide-react';
 
 type MetricFormValues = {
   name: string;
-  unit: string;
+  unit?: string;
   description?: string;
 };
 

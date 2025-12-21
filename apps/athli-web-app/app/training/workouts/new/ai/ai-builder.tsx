@@ -15,12 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
-import type { GeneratedWorkout } from '@/lib/library/workouts/generate-exercise';
-import { generateWorkoutFromPrompt, prompt } from '@/lib/library/workouts/generate-exercise';
+import { cn } from '@/lib/general/utils';
+import { searchExercises, type Exercise } from '@/lib/general/exercise-search';
+import type { GeneratedWorkout } from '@/lib/general/generate-exercise';
+import { generateWorkoutFromPrompt, prompt } from '@/lib/general/generate-exercise';
 import { toast } from 'sonner';
-import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
+import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
 import type {
   CircuitExerciseGroupPayload,
@@ -33,6 +33,11 @@ import type {
   WorkoutProgramPayload,
   WorkoutSectionPayload,
 } from '../workout-schema';
+import type {
+  SetFieldValidation,
+  ValidationErrors,
+  SectionValidationErrors
+} from '../shared/types/workout-builder.types';
 import type { SetData } from '../components/exercise-card';
 import { ExerciseCard } from '../components/exercise-card';
 import { ExerciseSelectionPanel } from '../components/exercise-selection-panel';
@@ -389,22 +394,10 @@ const buildWorkoutPayload = (
   };
 };
 
-type SetFieldValidation = {
-  reps?: boolean;
-  weight?: boolean;
-  distance?: boolean;
-  duration?: boolean;
-  rest?: boolean;
-};
-
-type ValidationErrors = Record<string, Record<number, SetFieldValidation>>;
-
 type SectionValidation = {
   missingConfig?: boolean;
   emptyExercises?: boolean;
 };
-
-type SectionValidationErrors = Record<string, SectionValidation>;
 
 export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: AiBuilderProps) => {
   const [workoutSchema, setWorkoutSchema] = useState<WorkoutSchema>({
@@ -2263,10 +2256,6 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                         dragOverSlot={dragOverSlot}
                         dragOverSectionId={dragOverSectionId}
                         onVideoClick={handleExerciseClick}
-                        validationErrors={validationErrors}
-                        onClearValidationField={(exerciseInstanceId, setIndex, field) =>
-                          clearSetValidationField(exerciseInstanceId, setIndex, field)
-                        }
                         exerciseRefs={exerciseRefs}
                         focusedExerciseId={focusedExerciseId}
                         registerSectionRef={registerSectionRef}

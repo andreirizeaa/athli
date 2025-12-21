@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
 import { Badge } from '@/components/ui/badge';

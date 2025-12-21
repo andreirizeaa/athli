@@ -14,14 +14,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
-import { duplicateFlow } from '@/lib/automations-service';
+import { duplicateFlow } from '@/lib/coach/coach-flow-service';
 
 type Flow = {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   stepCount: number;
   createdAt: number;
 };
@@ -100,7 +100,11 @@ const FlowsPage = () => {
     if (!flow) return;
     try {
       const duplicatedFlow = await duplicateFlow(flowId, flow);
-      setFlows((prev) => [...prev, duplicatedFlow]);
+      setFlows((prev) => [...prev, { 
+        ...duplicatedFlow, 
+        description: duplicatedFlow.description || '',
+        stepCount: duplicatedFlow.stepCount ?? flow.stepCount
+      }]);
       setSelectedFlows(new Set());
     } catch (error) {
       console.error('Failed to duplicate flow:', error);

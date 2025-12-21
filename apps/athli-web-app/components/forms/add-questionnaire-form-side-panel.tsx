@@ -22,9 +22,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
-import { addForm, type AddFormData } from '@/lib/forms/form-service';
-import { formTemplates, type FormTemplate } from '@/lib/constants/forms';
-import { cn } from '@/lib/utils';
+import { addForm, type AddFormData } from '@/lib/coach/coach-form-service';
+import { formTemplates, type FormTemplate } from '@/constants/forms';
+import { cn } from '@/lib/general/utils';
 
 type AddQuestionnaireFormSidePanelProps = {
   open: boolean;

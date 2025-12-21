@@ -19,8 +19,9 @@ import {
 } from '@/components/ui/select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Search, Edit, FileText, ChevronDownIcon, Info } from 'lucide-react';
-import { getForms, type Form, assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/forms/form-service';
-import { cn } from '@/lib/utils';
+import { getForms, type Form } from '@/lib/coach/coach-form-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { cn } from '@/lib/general/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Alert, AlertDescription } from '@/components/ui/alert';

@@ -66,13 +66,11 @@ const mockNotesForJohnSmith: Note[] = [
 ];
 
 /**
- * Dummy notes service method to get all notes for a contact
+ * Service method to get all notes for a contact
  * This will be connected to the backend in the future
  */
 export const getNotes = async (contactId: string): Promise<Note[]> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Getting notes for contact:', contactId);
 
   // Simulate API call delay
@@ -83,27 +81,15 @@ export const getNotes = async (contactId: string): Promise<Note[]> => {
     return mockNotesForJohnSmith;
   }
 
-  // Dummy response - in the future, this will come from the backend
-  // For now, return empty array for other clients
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/notes?contactId=${contactId}`, {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get notes')
-  // return await response.json()
-
   return [];
 };
 
 /**
- * Dummy notes service method to create a new note
+ * Service method to create a new note
  * This will be connected to the backend in the future
  */
 export const createNote = async (data: CreateNoteData): Promise<Note> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Creating note:', {
     contactId: data.contactId,
     title: data.title,
@@ -113,7 +99,6 @@ export const createNote = async (data: CreateNoteData): Promise<Note> => {
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  // Dummy response - in the future, this will come from the backend
   const newNote: Note = {
     id: `note-${Date.now()}-${Math.random().toString(36).substring(7)}`,
     title: data.title,
@@ -122,26 +107,15 @@ export const createNote = async (data: CreateNoteData): Promise<Note> => {
     updatedAt: null,
   };
 
-  // In the future, this will make an actual API call:
-  // const response = await fetch('/api/notes', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data),
-  // })
-  // if (!response.ok) throw new Error('Failed to create note')
-  // return await response.json()
-
   return newNote;
 };
 
 /**
- * Dummy notes service method to edit an existing note
+ * Service method to edit an existing note
  * This will be connected to the backend in the future
  */
 export const editNote = async (data: EditNoteData): Promise<Note> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Editing note:', {
     noteId: data.noteId,
     contactId: data.contactId,
@@ -152,7 +126,6 @@ export const editNote = async (data: EditNoteData): Promise<Note> => {
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  // Dummy response - in the future, this will come from the backend
   const updatedNote: Note = {
     id: data.noteId,
     title: data.title,
@@ -161,30 +134,15 @@ export const editNote = async (data: EditNoteData): Promise<Note> => {
     updatedAt: Date.now(),
   };
 
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/notes/${data.noteId}`, {
-  //   method: 'PATCH',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({
-  //     contactId: data.contactId,
-  //     title: data.title,
-  //     body: data.body,
-  //   }),
-  // })
-  // if (!response.ok) throw new Error('Failed to edit note')
-  // return await response.json()
-
   return updatedNote;
 };
 
 /**
- * Dummy notes service method to delete a note
+ * Service method to delete a note
  * This will be connected to the backend in the future
  */
 export const deleteNote = async (data: DeleteNoteData): Promise<void> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Deleting note:', {
     noteId: data.noteId,
     contactId: data.contactId,
@@ -192,45 +150,10 @@ export const deleteNote = async (data: DeleteNoteData): Promise<void> => {
 
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/notes/${data.noteId}`, {
-  //   method: 'DELETE',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ contactId: data.contactId }),
-  // })
-  // if (!response.ok) throw new Error('Failed to delete note')
-};
-
-export interface DeleteClientNotesData {
-  noteIds: string[];
-  clientId: string;
-}
-
-/**
- * Service method to delete notes from a client
- * This will be connected to the backend in the future
- */
-export const deleteClientNotes = async (data: DeleteClientNotesData): Promise<void> => {
-  console.log('Deleting client notes:', {
-    noteIds: data.noteIds,
-    clientId: data.clientId,
-  });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${data.clientId}/notes`, {
-  //   method: 'DELETE',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ noteIds: data.noteIds }),
-  // })
-  // if (!response.ok) throw new Error('Failed to delete client notes')
 };
 
 /**
- * Dummy notes service method to search notes
+ * Service method to search notes
  * This will be connected to the backend in the future
  */
 export const searchNotes = async (
@@ -238,8 +161,6 @@ export const searchNotes = async (
   query: string
 ): Promise<Note[]> => {
   // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
   console.log('Searching notes:', {
     contactId,
     query,
@@ -248,16 +169,5 @@ export const searchNotes = async (
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
 
-  // Dummy response - in the future, this will come from the backend
-  // For now, return empty array as the filtering will be done client-side
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/notes/search?contactId=${contactId}&query=${encodeURIComponent(query)}`, {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to search notes')
-  // return await response.json()
-
   return [];
 };
-
