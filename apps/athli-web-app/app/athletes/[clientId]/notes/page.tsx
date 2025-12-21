@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Trash2, Edit, Plus, MoreHorizontal, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { getNotes, createNote, editNote, deleteNote, deleteClientNotes, type Note } from '@/lib/messaging/notes-service';
+import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/coach/coach-note-service';
+import { deleteClientNotes } from '@/lib/client/client-note-service';
 
 const ClientNotesPage = () => {
   const t = useTranslations();

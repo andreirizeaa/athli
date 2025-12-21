@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type IphoneFrameProps = {
   /** iPhone screen size in CSS pixels (e.g. 390x844 for iPhone 14/15) */
@@ -149,4 +149,5 @@ export const IphoneFrame = ({
     </div>
   );
 };
+
 

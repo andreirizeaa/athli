@@ -18,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { editFormDetails, type Form as FormType } from '@/lib/forms/form-service';
+import { editFormDetails, type Form as FormType } from '@/lib/coach/coach-form-service';
 
 type EditFormSidePanelProps = {
   open: boolean;
@@ -168,4 +168,5 @@ export const EditFormSidePanel = ({ open, onOpenChange, form, onSave }: EditForm
     </SidePanel>
   );
 };
+
 

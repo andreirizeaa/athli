@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload } from 'lucide-react';
+import { Upload, Plus, Star } from 'lucide-react';
 
 type QuestionFormat =
   | 'text'
@@ -16,7 +16,9 @@ type QuestionFormat =
   | 'videos'
   | 'date'
   | 'rating'
-  | 'signature';
+  | 'signature'
+  | 'progressPhoto'
+  | 'metrics';
 
 type PreviewQuestionProps = {
   question: string;
@@ -26,6 +28,8 @@ type PreviewQuestionProps = {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
+  metricUnit?: string;
 };
 
 export const PreviewQuestion = ({
@@ -36,8 +40,11 @@ export const PreviewQuestion = ({
   scaleFrom = '1',
   scaleTo = '10',
   mediaCount = 1,
+  metricId,
+  metricUnit,
 }: PreviewQuestionProps) => {
   const [selectedValue, setSelectedValue] = React.useState<string | null>(null);
+  const [ratingValue, setRatingValue] = React.useState<number>(0);
   const [sliderValue, setSliderValue] = React.useState<number>(
     Math.floor((parseInt(scaleTo) - parseInt(scaleFrom)) / 2) + parseInt(scaleFrom)
   );
@@ -113,17 +120,27 @@ export const PreviewQuestion = ({
 
       case 'rating':
         return (
-          <div className="flex flex-col gap-2 w-full items-center justify-center">
-            {[1, 2, 3, 4, 5].map((rating) => (
-              <Button
-                key={rating}
-                variant={selectedValue === rating.toString() ? 'default' : 'outline'}
-                className="w-full h-12 text-sm rounded-[28px]"
-                onClick={() => setSelectedValue(rating.toString())}
-              >
-                {rating} {rating === 1 ? 'Star' : 'Stars'}
-              </Button>
-            ))}
+          <div className="w-full flex justify-center">
+            <div className="flex items-center gap-3">
+              {[1, 2, 3, 4, 5].map((rating) => (
+                <button
+                  key={rating}
+                  type="button"
+                  onClick={() => setRatingValue(rating)}
+                  className="focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary rounded"
+                  aria-label={`Rate ${rating} ${rating === 1 ? 'star' : 'stars'}`}
+                >
+                  <Star
+                    className={cn(
+                      "h-12 w-12 transition-colors",
+                      rating <= ratingValue
+                        ? "fill-primary text-primary"
+                        : "fill-none text-muted-foreground"
+                    )}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         );
 
@@ -171,6 +188,43 @@ export const PreviewQuestion = ({
           </div>
         );
 
+      case 'progressPhoto':
+        return (
+          <div className="w-full flex flex-col gap-3 items-start px-4">
+            <div className="grid grid-cols-3 gap-3 w-full">
+              {['Front', 'Back', 'Side'].map((label) => (
+                <Button
+                  key={label}
+                  variant="outline"
+                  className="aspect-square h-24 text-sm rounded-lg flex flex-col items-center justify-center gap-2 bg-muted"
+                  disabled
+                >
+                  <Plus className="h-5 w-5 text-muted-foreground" />
+                  <span>{label}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'metrics':
+        return (
+          <div className="w-full">
+            <div className="relative">
+              <Input
+                type="number"
+                placeholder="Enter value..."
+                className="w-full pr-16"
+              />
+              {metricUnit && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                  {metricUnit}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="w-full">
@@ -184,8 +238,10 @@ export const PreviewQuestion = ({
   };
 
   return (
-    <div className="w-full px-4">
-      {renderQuestionContent()}
+    <div className="w-full px-4 flex items-center justify-center min-h-full">
+      <div className="w-full">
+        {renderQuestionContent()}
+      </div>
     </div>
   );
 };

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePathname, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/forms/form-service';
+import { cn } from '@/lib/general/utils';
+import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/client/client-form-service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -75,7 +75,7 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
     setIsDownloading(true);
     try {
       const instanceDetail = await getCheckInInstance(clientId, checkInId, downloadInstanceId);
-      const { downloadQuestionnaire } = await import('@/lib/pdf/pdf-service');
+      const { downloadQuestionnaire } = await import('@/lib/general/pdf-service');
 
       const clientName = 'Client Name';
 
@@ -291,37 +291,40 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
           {/* Left sidebar navigation */}
           <div className="w-80 border-r bg-background flex-shrink-0">
             <div className="p-4">
-              <nav className="space-y-1">
+              <nav className="space-y-0">
                 {instances
                   .filter((instance) => instance.status !== 'completed')
-                  .map((instance) => {
+                  .map((instance, index, array) => {
                   const instanceHref = `/athletes/${clientId}/check-in/${checkInId}/${instance.id}`;
                   const isActive = pathname === instanceHref;
+                  const isLast = index === array.length - 1;
 
                   return (
-                    <Link
-                      key={instance.id}
-                      href={instanceHref}
-                      className={cn(
-                        'flex items-center justify-between gap-3 px-3 py-2.5 rounded-md text-sm transition-colors',
-                        isActive
-                          ? 'bg-accent text-accent-foreground font-medium'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                      )}
-                    >
-                      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                        <span className={cn('text-sm truncate', isActive && 'font-medium')}>{instance.formName}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatScheduledDate(instance.scheduledDate)}
-                        </span>
-                      </div>
-                      <Badge 
-                        variant={getStatusVariant(instance.status)} 
-                        className={cn("text-xs flex-shrink-0", getStatusClassName(instance.status))}
+                    <React.Fragment key={instance.id}>
+                      <Link
+                        href={instanceHref}
+                        className={cn(
+                          'flex items-center justify-between gap-3 px-3 py-2.5 rounded-md text-sm transition-colors',
+                          isActive
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                        )}
                       >
-                        {getStatusLabel(instance.status)}
-                      </Badge>
-                    </Link>
+                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                          <span className={cn('text-sm truncate', isActive && 'font-medium')}>{instance.formName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatScheduledDate(instance.scheduledDate)}
+                          </span>
+                        </div>
+                        <Badge 
+                          variant={getStatusVariant(instance.status)} 
+                          className={cn("text-xs flex-shrink-0", getStatusClassName(instance.status))}
+                        >
+                          {getStatusLabel(instance.status)}
+                        </Badge>
+                      </Link>
+                      {!isLast && <Separator className="my-1" />}
+                    </React.Fragment>
                   );
                 })}
               </nav>

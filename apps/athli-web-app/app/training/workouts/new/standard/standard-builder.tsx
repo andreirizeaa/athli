@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,10 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { searchExercises, type Exercise } from '@/lib/library/exercises/exercise-search';
+import { cn } from '@/lib/general/utils';
+import { searchExercises, type Exercise } from '@/lib/general/exercise-search';
 import { toast } from 'sonner';
-import { MOCK_WORKOUT_SCHEMA } from '@/lib/library/workouts/mock-workout-schema';
+import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
+import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
 import type {
   CircuitExerciseGroupPayload,
   CircuitExercisePayload,
@@ -43,31 +44,49 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-type ExerciseWithSuperset = Exercise & {
-  supersetGroupId?: string | null;
-  instanceId: string;
-  sets?: SetData[];
-  alternatives?: string[]; // Array of exercise IDs for alternative exercises
-};
-
-type WorkoutSchema = {
-  sections: Array<{
-    id: string;
-    type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
-    exercises?: ExerciseWithSuperset[];
-    roundDurationSec?: number;
-    targetRounds?: number;
-    category?: 'warmup' | 'cooldown' | 'mobility';
-  }>;
-};
-
-type WorkoutMeta = {
-  title: string;
-  description: string;
-  type: string;
-  difficulty: string;
-};
+import type {
+  ExerciseWithSuperset,
+  WorkoutSchema,
+  WorkoutMeta,
+  SetFieldValidation,
+  ValidationErrors,
+  SectionValidation,
+  SectionValidationErrors,
+} from '../shared/types/workout-builder.types';
+import {
+  recomputeExerciseValidation as recomputeValidation,
+  clearSetValidationField as clearFieldValidation,
+  validateWorkoutSchema,
+  clearEmptyExercisesError,
+  clearMissingConfigError,
+} from '../shared/utils/validation';
+import {
+  buildWorkoutPayload,
+  groupExercisesBySupersetForPayload,
+} from '../shared/utils/payload-builder';
+import {
+  handleSectionSelect as selectSection,
+  handleDeleteSection as deleteSection,
+  getSectionDescription,
+} from '../shared/utils/section-handlers';
+import {
+  handleDeleteExerciseFromOverview as deleteExerciseFromOverview,
+  handleDeleteSupersetFromOverview as deleteSupersetFromOverview,
+  handleAddExercise as addExercise,
+} from '../shared/utils/exercise-handlers';
+import {
+  groupExercisesBySuperset,
+  handleSupersetLink as linkSuperset,
+  handleSupersetUnlink as unlinkSuperset,
+} from '../shared/utils/superset-handlers';
+import {
+  handleDrop as dropExercise,
+  handleSlotDrop,
+} from '../shared/utils/drop-handlers';
+import {
+  handleExerciseClick as scrollToExercise,
+  handleExerciseClickById,
+} from '../shared/utils/exercise-scroll';
 
 type StandardBuilderProps = {
   meta: WorkoutMeta | null;
@@ -75,357 +94,6 @@ type StandardBuilderProps = {
   saveSignal?: number;
   onSaveSuccess?: (payload: WorkoutProgramPayload) => void;
 };
-
-// Helper used only for payload building – groups consecutive exercises that share a superset id
-const groupExercisesBySupersetForPayload = (exercises: ExerciseWithSuperset[]) => {
-  const groups: Array<ExerciseWithSuperset[]> = [];
-  let currentGroup: ExerciseWithSuperset[] = [];
-  let currentGroupId: string | null = null;
-
-  exercises.forEach((exercise) => {
-    if (exercise.supersetGroupId) {
-      if (exercise.supersetGroupId === currentGroupId) {
-        currentGroup.push(exercise);
-      } else {
-        if (currentGroup.length > 0) {
-          groups.push(currentGroup);
-        }
-        currentGroup = [exercise];
-        currentGroupId = exercise.supersetGroupId;
-      }
-    } else {
-      if (currentGroup.length > 0) {
-        groups.push(currentGroup);
-        currentGroup = [];
-        currentGroupId = null;
-      }
-      groups.push([exercise]);
-    }
-  });
-
-  if (currentGroup.length > 0) {
-    groups.push(currentGroup);
-  }
-
-  return groups;
-};
-
-const buildWorkoutPayload = (
-  workoutSchema: WorkoutSchema,
-  meta: WorkoutMeta | null
-): WorkoutProgramPayload | null => {
-  if (!meta) {
-    return null;
-  }
-
-  const parseNumberOrNull = (value?: string): number | null => {
-    if (!value) return null;
-    const n = Number(value);
-    return Number.isNaN(n) ? null : n;
-  };
-
-  const parseStages = (value?: string): number[] | null => {
-    if (!value) return null;
-    const parts = value
-      .split('-')
-      .map((part) => Number(part.trim()))
-      .filter((n) => !Number.isNaN(n));
-    return parts.length > 0 ? parts : null;
-  };
-
-const mapSetDataToPayload = (
-  exerciseType: ExerciseType,
-  set: SetData
-): SetPayload => {
-  const base = {
-    setNumber: set.setNumber,
-    restSec: set.rest ? parseNumberOrNull(set.rest) : null,
-  } as const;
-
-  // distance_duration is always non-dropset, with either distance or durationSec
-  if (exerciseType === 'distance_duration') {
-    return {
-      ...base,
-      exerciseType: 'distance_duration',
-      distance: set.distance ? parseNumberOrNull(set.distance) ?? undefined : undefined,
-      durationSec: set.duration ? parseNumberOrNull(set.duration) ?? undefined : undefined,
-    };
-  }
-
-  // Helper to parse "10-8-6" style strings into numbers
-  const parseStages = (value?: string): number[] => {
-    if (!value) return [];
-    return value
-      .split('-')
-      .map((part) => Number(part.trim()))
-      .filter((n) => !Number.isNaN(n));
-  };
-
-  // Dropset handling – presence of dropset implies dropset semantics
-  if (set.type === 'dropset') {
-    const repStages = parseStages(set.reps);
-    const weightStages = exerciseType === 'weight_reps' ? parseStages(set.weight) : [];
-
-    const stages = Array.from(
-      { length: Math.max(repStages.length, weightStages.length) },
-      (_v, index) => {
-        const stage: { weight?: number; reps?: number } = {};
-        if (repStages[index] != null) stage.reps = repStages[index];
-        if (weightStages[index] != null) stage.weight = weightStages[index];
-        return stage;
-      }
-    ).filter((s) => s.reps != null || s.weight != null);
-
-    if (exerciseType === 'weight_reps') {
-      return {
-        ...base,
-        exerciseType: 'weight_reps',
-        weight: parseNumberOrNull(set.weight) ?? 0,
-        reps: parseNumberOrNull(set.reps) ?? 0,
-        dropset: { stages },
-      };
-    }
-
-    // reps-only dropset
-    return {
-      ...base,
-      exerciseType: 'reps',
-      reps: parseNumberOrNull(set.reps) ?? 0,
-      dropset: {
-        stages: stages.map((s) => ({ reps: s.reps })),
-      },
-    };
-  }
-
-  // Non-dropset sets
-  if (exerciseType === 'weight_reps') {
-    return {
-      ...base,
-      exerciseType: 'weight_reps',
-      weight: parseNumberOrNull(set.weight) ?? 0,
-      reps: parseNumberOrNull(set.reps) ?? 0,
-    };
-  }
-
-  // reps-only non-dropset
-  return {
-    ...base,
-    exerciseType: 'reps',
-    reps: parseNumberOrNull(set.reps) ?? 0,
-  };
-};
-
-  const sections: WorkoutSectionPayload[] = workoutSchema.sections.map((section) => {
-    if (section.type === 'regular') {
-      const groups = groupExercisesBySupersetForPayload(section.exercises || []);
-
-      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
-        const mapped = group.map<RegularExercisePayload>((exercise) => ({
-          id: exercise.exerciseId,
-          name: exercise.name,
-          exerciseType: exercise.exerciseType as ExerciseType,
-          sets: (exercise.sets || []).map((set) =>
-            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)
-          ),
-          alternatives: exercise.alternatives || [],
-        }));
-
-        const isSuperset = mapped.length > 1;
-
-        return {
-          isSuperset,
-          exercises: mapped,
-        };
-      });
-
-      return {
-        id: section.id,
-        type: 'regular',
-        exercises,
-      };
-    }
-
-    if (section.type === 'amrap') {
-      const exercises: RoundExercisePayload[] = (section.exercises || []).map(
-        (exercise: any) => {
-          const base = {
-            id: exercise.exerciseId ?? exercise.id,
-            name: exercise.name,
-            restSec: exercise.restSec ?? null,
-          } as const;
-
-          if (exercise.exerciseType === 'weight_reps') {
-            return {
-              ...base,
-              exerciseType: 'weight_reps' as const,
-              weight: Number(exercise.weight),
-              reps: Number(exercise.reps),
-            };
-          }
-
-          if (exercise.exerciseType === 'reps') {
-            return {
-              ...base,
-              exerciseType: 'reps' as const,
-              reps: Number(exercise.reps),
-            };
-          }
-
-          return {
-            ...base,
-            exerciseType: 'distance_duration' as const,
-            distance:
-              exercise.distance != null ? Number(exercise.distance) : undefined,
-            durationSec:
-              exercise.durationSec != null
-                ? Number(exercise.durationSec)
-                : undefined,
-          };
-        }
-      );
-
-      return {
-        id: section.id,
-        type: 'amrap',
-        durationSec: section.roundDurationSec || 0,
-        exercises,
-      };
-    }
-
-    if (section.type === 'circuits') {
-      const groups = groupExercisesBySupersetForPayload(
-        section.exercises || []
-      );
-
-      const exercises: CircuitExerciseGroupPayload[] = groups.map((group) => {
-        const mapped = group.map<CircuitExercisePayload>((exercise) => {
-          const firstSet =
-            (exercise.sets && exercise.sets[0]) || {
-              setNumber: 1,
-              type: 'normal',
-              reps: '0',
-              weight: '0',
-              rest: '0',
-            };
-
-          return {
-            id: exercise.exerciseId,
-            name: exercise.name,
-            exerciseType: exercise.exerciseType as ExerciseType,
-            set: mapSetDataToPayload(
-              exercise.exerciseType as ExerciseType,
-              firstSet
-            ),
-            alternatives: exercise.alternatives || [],
-          };
-        });
-
-        const isSuperset = mapped.length > 1;
-
-        return {
-          isSuperset,
-          exercises: mapped,
-        };
-      });
-
-      return {
-        id: section.id,
-        type: 'circuits',
-        targetRounds: section.targetRounds || 0,
-        exercises,
-      };
-    }
-
-    if (section.type === 'auxiliary') {
-      const groups = groupExercisesBySupersetForPayload(
-        section.exercises || []
-      );
-
-      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
-        const mapped = group.map<RegularExercisePayload>((exercise) => ({
-          id: exercise.exerciseId,
-          name: exercise.name,
-          exerciseType: exercise.exerciseType as ExerciseType,
-          sets: (exercise.sets || []).map((set) =>
-            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)
-          ),
-          alternatives: exercise.alternatives || [],
-        }));
-
-        const isSuperset = mapped.length > 1;
-
-        return {
-          isSuperset,
-          exercises: mapped,
-        };
-      });
-
-      return {
-        id: section.id,
-        type: 'auxiliary',
-        category: section.category || 'warmup',
-        exercises,
-      };
-    }
-
-    const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
-      id: exercise.exerciseId ?? exercise.id,
-      name: exercise.name,
-      exerciseType: exercise.exerciseType,
-      weight: exercise.weight ?? null,
-      reps: exercise.reps ?? null,
-      distance: exercise.distance ?? null,
-      durationSec: exercise.durationSec ?? null,
-      restSec: exercise.restSec ?? null,
-    }));
-
-    return {
-      id: section.id,
-      type: 'timed',
-      targetRounds: section.targetRounds || 0,
-      exercises,
-    };
-  });
-
-  // Extract unique equipment from all exercises
-  const equipmentSet = new Set<string>();
-  workoutSchema.sections.forEach((section) => {
-    section.exercises?.forEach((exercise) => {
-      exercise.equipments?.forEach((equipment) => {
-        if (equipment && equipment.trim() !== '') {
-          equipmentSet.add(equipment);
-        }
-      });
-    });
-  });
-  const equipment = Array.from(equipmentSet).sort();
-
-  return {
-    title: meta.title,
-    description: meta.description,
-    type: meta.type,
-    difficulty: meta.difficulty,
-    equipment,
-    sections,
-  };
-};
-
-type SetFieldValidation = {
-  reps?: boolean;
-  weight?: boolean;
-  distance?: boolean;
-  duration?: boolean;
-  rest?: boolean;
-};
-
-type ValidationErrors = Record<string, Record<number, SetFieldValidation>>;
-
-type SectionValidation = {
-  missingConfig?: boolean;
-  emptyExercises?: boolean;
-};
-
-type SectionValidationErrors = Record<string, SectionValidation>;
 
 export const StandardBuilder = ({
   meta,
@@ -479,20 +147,37 @@ export const StandardBuilder = ({
   const [builderMode, setBuilderMode] = useState<'exercise' | 'section'>('exercise');
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
-  const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null);
-  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
-  const [dragOverSlot, setDragOverSlot] = useState<{
-    sectionId: string;
-    slotIndex: number;
-  } | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [sectionValidationErrors, setSectionValidationErrors] = useState<SectionValidationErrors>(
     {}
   );
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Use the shared drag-drop hook
+  const {
+    draggedExercise,
+    dragOverSectionId,
+    dragOverSlot,
+    handleDragStart,
+    handleDragEnd,
+    handleSectionDragOver,
+    handleSectionDragLeave,
+    registerSectionRef,
+  } = useExerciseDragDrop({
+    onExpandSection: (sectionId) => {
+      // Expand the section when dragging over it
+      setCollapsedSections((prev) => {
+        const next = new Set(prev);
+        next.delete(sectionId);
+        return next;
+      });
+    },
+  });
 
   // Load shared mock schema in edit mode if no schema exists
   useEffect(() => {
@@ -524,161 +209,47 @@ export const StandardBuilder = ({
   }, []);
 
   const handleExerciseClick = (exercise: Exercise) => {
-    // First, try to scroll to the exercise if it exists in the middle area
-    const exerciseRef = exerciseRefs.current.get(exercise.exerciseId);
-    if (exerciseRef && contentScrollRef.current) {
-      const scrollContainer = contentScrollRef.current;
-      const containerRect = scrollContainer.getBoundingClientRect();
-      const exerciseRect = exerciseRef.getBoundingClientRect();
-      const scrollTop = scrollContainer.scrollTop;
-      const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
-
-      // Scroll to center the exercise in the viewport
-      const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-      scrollContainer.scrollTo({
-        top: Math.max(0, targetScroll),
-        behavior: 'smooth',
-      });
-    } else {
-      // If exercise not found in middle area, open video modal
-      setSelectedExercise(exercise);
-      setIsVideoModalOpen(true);
-    }
-  };
-
-  const handleExerciseClickById = (exerciseId: string) => {
-    // Find the exercise by ID from the search results
-    const exercise = searchExercises('').find((e) => e.exerciseId === exerciseId);
-    if (exercise) {
-      handleExerciseClick(exercise);
-    } else {
-      // If exercise not found, try to scroll using just the ID
-      const exerciseRef = exerciseRefs.current.get(exerciseId);
-      if (exerciseRef && contentScrollRef.current) {
-        const scrollContainer = contentScrollRef.current;
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const exerciseRect = exerciseRef.getBoundingClientRect();
-        const scrollTop = scrollContainer.scrollTop;
-        const exerciseTop = exerciseRect.top - containerRect.top + scrollTop;
-
-        const targetScroll = exerciseTop - containerRect.height / 2 + exerciseRect.height / 2;
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetScroll),
-          behavior: 'smooth',
-        });
+    scrollToExercise(
+      exercise,
+      exerciseRefs,
+      contentScrollRef,
+      (ex) => {
+        setSelectedExercise(ex);
+        setIsVideoModalOpen(true);
       }
-    }
+    );
   };
 
-  const recomputeExerciseValidation = (
+  const handleExerciseClickByIdWrapper = (exerciseId: string) => {
+    handleExerciseClickById(
+      exerciseId,
+      workoutSchema.sections,
+      collapsedSections,
+      exerciseRefs,
+      contentScrollRef,
+      setFocusedExerciseId,
+      setCollapsedSections
+    );
+  };
+
+  const handleRecomputeExerciseValidation = (
     exerciseInstanceId: string,
     exerciseType: 'weight_reps' | 'reps' | 'distance_duration',
     sets: SetData[] | undefined
   ) => {
-    // Do not show validation until the user has clicked Save at least once
-    if (!hasAttemptedSave) {
-      return;
-    }
-
-    setValidationErrors((prev) => {
-      const next: ValidationErrors = { ...prev };
-      const exerciseErrors: Record<number, SetFieldValidation> = {};
-
-      if (sets && sets.length > 0) {
-        sets.forEach((set, index) => {
-          const setErrors: SetFieldValidation = {};
-
-          const hasRest = !!set.rest && set.rest.trim() !== '';
-          if (!hasRest) {
-            setErrors.rest = true;
-          }
-
-          if (exerciseType === 'distance_duration') {
-            const hasDistance = !!set.distance && set.distance.trim() !== '';
-            const hasDuration = !!set.duration && set.duration.trim() !== '';
-
-            if (!hasDistance && !hasDuration) {
-              setErrors.distance = true;
-              setErrors.duration = true;
-            }
-          } else {
-            if (set.type === 'dropset') {
-              // For dropsets, at least one drop stage is required in reps or weight
-              const hasReps = !!set.reps && set.reps.trim() !== '';
-              const hasWeight =
-                exerciseType === 'weight_reps' && !!set.weight && set.weight.trim() !== '';
-              if (!hasReps && !hasWeight) {
-                setErrors.reps = true;
-                if (exerciseType === 'weight_reps') {
-                  setErrors.weight = true;
-                }
-              }
-            } else {
-              // Reps are required only for normal/warmUp (not dropset or failure)
-              if (set.type !== 'failure') {
-                const hasReps = !!set.reps && set.reps.trim() !== '';
-                if (!hasReps) {
-                  setErrors.reps = true;
-                }
-              }
-
-              // Weight is required for all weight_reps sets except dropsets
-              if (exerciseType === 'weight_reps') {
-                const hasWeight = !!set.weight && set.weight.trim() !== '';
-                if (!hasWeight) {
-                  setErrors.weight = true;
-                }
-              }
-            }
-          }
-
-          if (Object.keys(setErrors).length > 0) {
-            exerciseErrors[index] = setErrors;
-          }
-        });
-      }
-
-      if (Object.keys(exerciseErrors).length === 0) {
-        delete next[exerciseInstanceId];
-      } else {
-        next[exerciseInstanceId] = exerciseErrors;
-      }
-
-      return next;
-    });
+    setValidationErrors((prev) =>
+      recomputeValidation(exerciseInstanceId, exerciseType, sets, hasAttemptedSave, prev)
+    );
   };
 
-  const clearSetValidationField = (
+  const handleClearSetValidationField = (
     exerciseInstanceId: string,
     setIndex: number,
     field: keyof SetFieldValidation
   ) => {
-    setValidationErrors((prev) => {
-      const exerciseErrors = prev[exerciseInstanceId];
-      if (!exerciseErrors) return prev;
-
-      const setErrors = exerciseErrors[setIndex];
-      if (!setErrors || !setErrors[field]) return prev;
-
-      const nextSetErrors: SetFieldValidation = { ...setErrors };
-      delete nextSetErrors[field];
-
-      const nextExerciseErrors: Record<number, SetFieldValidation> = { ...exerciseErrors };
-      if (Object.keys(nextSetErrors).length === 0) {
-        delete nextExerciseErrors[setIndex];
-      } else {
-        nextExerciseErrors[setIndex] = nextSetErrors;
-      }
-
-      const nextValidationErrors: ValidationErrors = { ...prev };
-      if (Object.keys(nextExerciseErrors).length === 0) {
-        delete nextValidationErrors[exerciseInstanceId];
-      } else {
-        nextValidationErrors[exerciseInstanceId] = nextExerciseErrors;
-      }
-
-      return nextValidationErrors;
-    });
+    setValidationErrors((prev) =>
+      clearFieldValidation(exerciseInstanceId, setIndex, field, prev)
+    );
   };
 
   useEffect(() => {
@@ -688,107 +259,11 @@ export const StandardBuilder = ({
 
     setHasAttemptedSave(true);
 
-    const nextErrors: ValidationErrors = {};
-    const nextSectionErrors: SectionValidationErrors = {};
+    const { exerciseErrors, sectionErrors } = validateWorkoutSchema(workoutSchema);
 
-    workoutSchema.sections.forEach((section) => {
-      const sectionErrors: SectionValidation = {};
-
-      if (section.type === 'amrap') {
-        if (!section.roundDurationSec || section.roundDurationSec <= 0) {
-          sectionErrors.missingConfig = true;
-        }
-      }
-
-      if (section.type === 'timed') {
-        if (!section.targetRounds || section.targetRounds <= 0) {
-          sectionErrors.missingConfig = true;
-        }
-      }
-
-      if (section.type === 'circuits') {
-        if (!section.targetRounds || section.targetRounds <= 0) {
-          sectionErrors.missingConfig = true;
-        }
-      }
-
-      if (section.type === 'auxiliary') {
-        if (!section.category) {
-          sectionErrors.missingConfig = true;
-        }
-      }
-
-      if (!section.exercises || section.exercises.length === 0) {
-        sectionErrors.emptyExercises = true;
-      }
-
-      if (Object.keys(sectionErrors).length > 0) {
-        nextSectionErrors[section.id] = sectionErrors;
-      }
-
-      section.exercises?.forEach((exercise) => {
-        const sets = exercise.sets || [];
-
-        sets.forEach((set, index) => {
-          const setErrors: SetFieldValidation = {};
-
-          const hasRest = !!set.rest && set.rest.trim() !== '';
-          if (!hasRest) {
-            setErrors.rest = true;
-          }
-
-          if (exercise.exerciseType === 'distance_duration') {
-            const hasDistance = !!set.distance && set.distance.trim() !== '';
-            const hasDuration = !!set.duration && set.duration.trim() !== '';
-
-            if (!hasDistance && !hasDuration) {
-              setErrors.distance = true;
-              setErrors.duration = true;
-            }
-          } else {
-            if (set.type === 'dropset') {
-              // For dropsets, at least one drop stage is required in reps or weight
-              const hasReps = !!set.reps && set.reps.trim() !== '';
-              const hasWeight =
-                exercise.exerciseType === 'weight_reps' && !!set.weight && set.weight.trim() !== '';
-              if (!hasReps && !hasWeight) {
-                setErrors.reps = true;
-                if (exercise.exerciseType === 'weight_reps') {
-                  setErrors.weight = true;
-                }
-              }
-            } else {
-              // Reps required only for non-dropset, non-failure sets
-              if (set.type !== 'failure') {
-                const hasReps = !!set.reps && set.reps.trim() !== '';
-                if (!hasReps) {
-                  setErrors.reps = true;
-                }
-              }
-
-              // Weight required for all weight_reps sets except dropsets
-              if (exercise.exerciseType === 'weight_reps') {
-                const hasWeight = !!set.weight && set.weight.trim() !== '';
-                if (!hasWeight) {
-                  setErrors.weight = true;
-                }
-              }
-            }
-          }
-
-          if (Object.keys(setErrors).length > 0) {
-            if (!nextErrors[exercise.instanceId]) {
-              nextErrors[exercise.instanceId] = {};
-            }
-            nextErrors[exercise.instanceId][index] = setErrors;
-          }
-        });
-      });
-    });
-
-    if (Object.keys(nextErrors).length > 0 || Object.keys(nextSectionErrors).length > 0) {
-      setValidationErrors(nextErrors);
-      setSectionValidationErrors(nextSectionErrors);
+    if (Object.keys(exerciseErrors).length > 0 || Object.keys(sectionErrors).length > 0) {
+      setValidationErrors(exerciseErrors);
+      setSectionValidationErrors(sectionErrors);
       toast.error('Please fill out all fields');
       return;
     }
@@ -805,7 +280,7 @@ export const StandardBuilder = ({
     if (onSaveSuccess) {
       onSaveSuccess(payload);
     }
-  }, [saveSignal]);
+  }, [saveSignal, workoutSchema, meta, onSaveSuccess]);
 
   const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary') => {
     // Preserve current scroll position in the middle content column
@@ -813,23 +288,7 @@ export const StandardBuilder = ({
       pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
     }
 
-    const newSection = {
-      id: `sec_${type}_${Date.now()}`,
-      type,
-      // All section types use `exercises` for the builder UI. For AMRAP/Timed/Circuits/Auxiliary,
-      // these will later be mapped appropriately in the payload.
-      exercises: [] as ExerciseWithSuperset[],
-      ...(type === 'amrap' && { roundDurationSec: undefined }),
-      ...(type === 'timed' && { targetRounds: undefined }),
-      ...(type === 'circuits' && { targetRounds: undefined }),
-      ...(type === 'auxiliary' && { category: undefined }),
-    };
-
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => ({
-      ...prev,
-      sections: [...prev.sections, newSection],
-    }));
+    setWorkoutSchema((prev) => selectSection(type, prev, { onDirtyChange }));
   };
 
   // After sections change (e.g. a new section is added), restore scroll position
@@ -841,18 +300,11 @@ export const StandardBuilder = ({
   }, [workoutSchema.sections.length]);
 
   const handleDeleteSection = (sectionId: string) => {
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => {
-      const updatedSections = prev.sections.filter((section) => section.id !== sectionId);
-      // If no sections remain, switch to section mode
-      if (updatedSections.length === 0) {
-        setBuilderMode('section');
-      }
-      return {
-        ...prev,
-        sections: updatedSections,
-      };
-    });
+    const result = deleteSection(sectionId, workoutSchema, { onDirtyChange });
+    setWorkoutSchema(result.schema);
+    if (result.shouldSwitchToSectionMode) {
+      setBuilderMode('section');
+    }
   };
 
   const handleDeleteKeyDown = (e: React.KeyboardEvent, sectionId: string) => {
@@ -863,130 +315,39 @@ export const StandardBuilder = ({
   };
 
   const handleDeleteExerciseFromOverview = (sectionId: string, exerciseId: string) => {
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) => {
-        if (section.id === sectionId && section.exercises) {
-          return {
-            ...section,
-            exercises: section.exercises.filter((exercise) => exercise.exerciseId !== exerciseId),
-          };
-        }
-        return section;
-      }),
-    }));
+    setWorkoutSchema((prev) =>
+      deleteExerciseFromOverview(sectionId, exerciseId, prev, { onDirtyChange })
+    );
   };
 
   const handleDeleteSupersetFromOverview = (sectionId: string, exerciseIds: string[]) => {
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) => {
-        if (section.id === sectionId && section.exercises) {
-          const exerciseIdSet = new Set(exerciseIds);
-          return {
-            ...section,
-            exercises: section.exercises.filter(
-              (exercise) => !exerciseIdSet.has(exercise.exerciseId)
-            ),
-          };
-        }
-        return section;
-      }),
-    }));
-  };
-
-  const getSectionDescription = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'): string => {
-    switch (type) {
-      case 'regular':
-        return 'Exercise for exercise. Follow the sets and reps specified.';
-      case 'amrap':
-        return 'Track the total amount of rounds completed in the allocated time.';
-      case 'timed':
-        return 'Track total duration until completion of assigned rounds.';
-      case 'circuits':
-        return 'Complete all exercises in the circuit for the specified number of rounds. One set per exercise.';
-      case 'auxiliary':
-        return 'Warm up, cool down, or mobility exercises. Follow the sets and reps specified.';
-      default:
-        return '';
-    }
-  };
-
-  const handleDragStart = (exercise: Exercise) => {
-    setDraggedExercise(exercise);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedExercise(null);
-    setDragOverSectionId(null);
-    setDragOverSlot(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent, sectionId: string) => {
-    e.preventDefault();
-    setDragOverSectionId(sectionId);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverSectionId(null);
+    setWorkoutSchema((prev) =>
+      deleteSupersetFromOverview(sectionId, exerciseIds, prev, { onDirtyChange })
+    );
   };
 
   // Fallback drop handler used for empty sections or when no specific slot is active.
   const handleDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault();
     if (draggedExercise) {
-      onDirtyChange?.();
-      setWorkoutSchema((prev) => ({
-        ...prev,
-        sections: prev.sections.map((section) => {
-          if (section.id === sectionId) {
-            const exercises = section.exercises || [];
-            const exerciseWithSuperset: ExerciseWithSuperset = {
-              ...draggedExercise,
-              supersetGroupId: null,
-              instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            };
-            return {
-              ...section,
-              exercises: [...exercises, exerciseWithSuperset],
-            };
-          }
-          return section;
-        }),
-      }));
+      setWorkoutSchema((prev) =>
+        dropExercise(sectionId, draggedExercise, prev, { onDirtyChange })
+      );
 
       // Clear empty-exercises validation for this section once an exercise is added
-      setSectionValidationErrors((prev) => {
-        const existing = prev[sectionId];
-        if (!existing || !existing.emptyExercises) return prev;
-        const nextSection = { ...existing };
-        delete nextSection.emptyExercises;
-        const next: SectionValidationErrors = { ...prev };
-        if (Object.keys(nextSection).length === 0) {
-          delete next[sectionId];
-        } else {
-          next[sectionId] = nextSection;
-        }
-        return next;
-      });
+      setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
     }
-    setDraggedExercise(null);
-    setDragOverSectionId(null);
-    setDragOverSlot(null);
+    handleDragEnd();
   };
 
   // Higher-level drop handler for the whole section content.
-  // If the user drops over the general area (not directly on a slot),
-  // use the last active slot as the insertion point so the order matches
-  // where they released the drag.
+  // Uses the calculated nearest slot position for smart dropping
   const handleSectionDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault();
 
     if (dragOverSlot && dragOverSlot.sectionId === sectionId) {
-      // Delegate to slot-based drop so we respect the intended index.
-      handleSlotDrop(e, sectionId, dragOverSlot.slotIndex);
+      // Use the calculated slot position
+      handleSlotDropWrapper(e, sectionId, dragOverSlot.slotIndex);
       return;
     }
 
@@ -995,268 +356,46 @@ export const StandardBuilder = ({
   };
 
   const handleAddExercise = (sectionId: string) => {
-    const emptyExercise: ExerciseWithSuperset = {
-      exerciseId: `empty_${Date.now()}`,
-      name: '',
-      imageUrl: '',
-      videoUrl: '',
-      equipments: [],
-      bodyParts: [],
-      exerciseType: 'weight_reps',
-      targetMuscles: [],
-      secondaryMuscles: [],
-      keywords: [],
-      overview: '',
-      instructions: [],
-      exerciseTips: [],
-      variations: [],
-      relatedExerciseIds: [],
-      supersetGroupId: null,
-      instanceId: `empty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    };
-
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) => {
-        if (section.id === sectionId && section.exercises) {
-          return {
-            ...section,
-            exercises: [...section.exercises, emptyExercise],
-          };
-        }
-        return section;
-      }),
-    }));
+    setWorkoutSchema((prev) => addExercise(sectionId, prev, { onDirtyChange }));
 
     // Clear empty-exercises validation when a manual exercise is added
-    setSectionValidationErrors((prev) => {
-      const existing = prev[sectionId];
-      if (!existing || !existing.emptyExercises) return prev;
-      const nextSection = { ...existing };
-      delete nextSection.emptyExercises;
-      const next: SectionValidationErrors = { ...prev };
-      if (Object.keys(nextSection).length === 0) {
-        delete next[sectionId];
-      } else {
-        next[sectionId] = nextSection;
-      }
-      return next;
-    });
+    setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
   };
 
-  const handleSlotDragOver = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!draggedExercise) return;
-    setDragOverSlot({ sectionId, slotIndex });
-  };
-
-  const handleSlotDragLeave = (_e: React.DragEvent) => {
-    // Intentionally no-op to avoid flicker when moving within the slot.
-  };
-
-  const handleSlotDrop = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
+  const handleSlotDropWrapper = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
     if (!draggedExercise) return;
 
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) => {
-        if (section.id !== sectionId) return section;
-
-        const exercises = section.exercises || [];
-        const exerciseWithSuperset: ExerciseWithSuperset = {
-          ...draggedExercise,
-          supersetGroupId: null,
-          instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        };
-
-        const updatedExercises = [...exercises];
-        const safeIndex = Math.min(Math.max(slotIndex, 0), updatedExercises.length);
-        updatedExercises.splice(safeIndex, 0, exerciseWithSuperset);
-
-        return {
-          ...section,
-          exercises: updatedExercises,
-        };
-      }),
-    }));
+    setWorkoutSchema((prev) =>
+      handleSlotDrop(sectionId, slotIndex, draggedExercise, prev, { onDirtyChange })
+    );
 
     // Clear empty-exercises validation when an exercise is dropped into a section
-    setSectionValidationErrors((prev) => {
-      const existing = prev[sectionId];
-      if (!existing || !existing.emptyExercises) return prev;
-      const nextSection = { ...existing };
-      delete nextSection.emptyExercises;
-      const next: SectionValidationErrors = { ...prev };
-      if (Object.keys(nextSection).length === 0) {
-        delete next[sectionId];
-      } else {
-        next[sectionId] = nextSection;
-      }
-      return next;
-    });
+    setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
 
-    setDraggedExercise(null);
-    setDragOverSectionId(null);
-    setDragOverSlot(null);
-  };
-
-  // Helper function to group exercises by superset
-  const groupExercisesBySuperset = (exercises: ExerciseWithSuperset[]) => {
-    const groups: Array<ExerciseWithSuperset[]> = [];
-    let currentGroup: ExerciseWithSuperset[] = [];
-    let currentGroupId: string | null = null;
-
-    exercises.forEach((exercise) => {
-      if (exercise.supersetGroupId) {
-        if (exercise.supersetGroupId === currentGroupId) {
-          currentGroup.push(exercise);
-        } else {
-          if (currentGroup.length > 0) {
-            groups.push(currentGroup);
-          }
-          currentGroup = [exercise];
-          currentGroupId = exercise.supersetGroupId;
-        }
-      } else {
-        if (currentGroup.length > 0) {
-          groups.push(currentGroup);
-          currentGroup = [];
-          currentGroupId = null;
-        }
-        groups.push([exercise]);
-      }
-    });
-
-    if (currentGroup.length > 0) {
-      groups.push(currentGroup);
-    }
-
-    return groups;
+    handleDragEnd();
   };
 
   const handleSupersetLink = (sectionId: string, exerciseIndex: number) => {
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) => {
-        if (section.id === sectionId && section.exercises) {
-          const exercises = [...section.exercises];
-          const currentExercise = exercises[exerciseIndex];
-          const nextExercise = exercises[exerciseIndex + 1];
-
-          if (currentExercise && nextExercise) {
-            // Determine the contiguous block we are (or will be) linking
-            let start = exerciseIndex;
-            let end = exerciseIndex + 1;
-
-            // Extend upwards while part of any existing superset chain
-            while (start > 0 && exercises[start - 1].supersetGroupId) {
-              start -= 1;
-            }
-
-            // Extend downwards while part of any existing superset chain
-            while (end < exercises.length - 1 && exercises[end + 1].supersetGroupId) {
-              end += 1;
-            }
-
-            // Use an existing group id if present, otherwise create a new one
-            const existingGroupId =
-              currentExercise.supersetGroupId ||
-              nextExercise.supersetGroupId ||
-              exercises[start].supersetGroupId ||
-              exercises[end].supersetGroupId;
-
-            const supersetGroupId =
-              existingGroupId || `superset_${sectionId}_${exerciseIndex}_${Date.now()}`;
-
-            // Assign the same supersetGroupId to the entire contiguous block
-            for (let i = start; i <= end; i += 1) {
-              exercises[i] = {
-                ...exercises[i],
-                supersetGroupId,
-              };
-            }
-          }
-
-          return {
-            ...section,
-            exercises,
-          };
-        }
-        return section;
-      }),
-    }));
+    setWorkoutSchema((prev) => linkSuperset(sectionId, exerciseIndex, prev, { onDirtyChange }));
   };
 
   const handleSupersetUnlink = (sectionId: string, exerciseIndex: number) => {
-    onDirtyChange?.();
-    setWorkoutSchema((prev) => ({
-      ...prev,
-      sections: prev.sections.map((section) => {
-        if (section.id === sectionId && section.exercises) {
-          const exercises = [...section.exercises];
-          const currentExercise = exercises[exerciseIndex];
-          const nextExercise = exercises[exerciseIndex + 1];
-
-          if (
-            currentExercise &&
-            nextExercise &&
-            currentExercise.supersetGroupId &&
-            currentExercise.supersetGroupId === nextExercise.supersetGroupId
-          ) {
-            const groupId = currentExercise.supersetGroupId;
-
-            // We want to break the chain only at the selected boundary:
-            // - Keep the chain above exerciseIndex as one superset group
-            // - Keep the chain below exerciseIndex+1 as a separate superset group (if 2+ cards)
-
-            // Find contiguous segment ABOVE including exerciseIndex that belongs to this group
-            let upperStart = exerciseIndex;
-            while (upperStart > 0 && exercises[upperStart - 1].supersetGroupId === groupId) {
-              upperStart -= 1;
-            }
-            const upperEnd = exerciseIndex;
-
-            // Find contiguous segment BELOW starting at exerciseIndex + 1 that belongs to this group
-            let lowerStart = exerciseIndex + 1;
-            let lowerEnd = lowerStart;
-            while (
-              lowerEnd < exercises.length - 1 &&
-              exercises[lowerEnd + 1].supersetGroupId === groupId
-            ) {
-              lowerEnd += 1;
-            }
-
-            // Upper segment stays with the original groupId (no change needed)
-
-            // Lower segment becomes either a new superset group (if at least 2 exercises)
-            // or is fully unlinked if it's only a single exercise.
-            const lowerLength = lowerEnd - lowerStart + 1;
-            const newGroupId =
-              lowerLength >= 2 ? `superset_${sectionId}_${lowerStart}_${Date.now()}` : null;
-
-            for (let i = lowerStart; i <= lowerEnd; i += 1) {
-              exercises[i] = {
-                ...exercises[i],
-                supersetGroupId: newGroupId,
-              };
-            }
-          }
-
-          return {
-            ...section,
-            exercises,
-          };
-        }
-        return section;
-      }),
-    }));
+    setWorkoutSchema((prev) => unlinkSuperset(sectionId, exerciseIndex, prev, { onDirtyChange }));
   };
+
+  const activeExerciseIds = useMemo(() => {
+    const activeIds = new Set<string>();
+    workoutSchema.sections.forEach((section) => {
+      section.exercises?.forEach((exercise) => {
+        if (exercise.exerciseId) {
+          activeIds.add(exercise.exerciseId);
+        }
+      });
+    });
+    return activeIds;
+  }, [workoutSchema]);
 
   return (
     <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-background p-2">
@@ -1291,6 +430,7 @@ export const StandardBuilder = ({
                 onExerciseClick={handleExerciseClick}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
+                activeExerciseIds={activeExerciseIds}
               />
             </div>
           )}
@@ -1310,23 +450,93 @@ export const StandardBuilder = ({
           >
           {workoutSchema.sections.length > 0 ? (
             <div className="flex flex-col gap-4 w-full min-h-0">
-              {workoutSchema.sections.map((section) => (
-                <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0 min-w-0">
-                  <Card className="bg-sidebar w-full flex flex-col relative min-w-0">
-                    <CardHeader className="border-b p-0 pb-2">
-                      <div className="flex items-center justify-between px-3 pt-1">
-                        <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
-                          {section.type}{' '}
-                          <span className="font-normal text-xs">
-                            ({section.exercises ? section.exercises.length : 0})
-                          </span>
+              {workoutSchema.sections.map((section) => {
+                const isCollapsed = collapsedSections.has(section.id);
+                return (
+                  <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0 min-w-0">
+                  <Card
+                    className={cn(
+                      "bg-sidebar w-full flex flex-col relative min-w-0 border-primary p-0 rounded-xl transition-all",
+                      isCollapsed && draggedExercise && dragOverSectionId === section.id && "ring-2 ring-primary bg-primary/5"
+                    )}
+                    onDragOver={(e) => {
+                      if (isCollapsed) {
+                        handleSectionDragOver(e, section.id, section.exercises?.length || 0);
+                      }
+                    }}
+                    onDragLeave={(e) => {
+                      if (isCollapsed) {
+                        handleSectionDragLeave(e);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      if (isCollapsed) {
+                        handleSectionDrop(e, section.id);
+                      }
+                    }}
+                  >
+                    <CardHeader className={cn(
+                      "p-0 bg-primary/10 rounded-t-xl",
+                      isCollapsed && "rounded-b-xl",
+                      !isCollapsed && "border-b border-primary"
+                    )}>
+                      <div className="flex items-center justify-between px-3 py-2 pb-0">
+                        <div className="flex items-center gap-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Info className="size-4 text-foreground translate-y-[1px]" />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-primary hover:text-primary hover:bg-primary/20"
+                                onClick={() => {
+                                  setCollapsedSections((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(section.id)) {
+                                      next.delete(section.id);
+                                    } else {
+                                      next.add(section.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setCollapsedSections((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(section.id)) {
+                                        next.delete(section.id);
+                                      } else {
+                                        next.add(section.id);
+                                      }
+                                      return next;
+                                    });
+                                  }
+                                }}
+                                aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+                              >
+                                {isCollapsed ? (
+                                  <ChevronDown className="size-4" />
+                                ) : (
+                                  <ChevronUp className="size-4" />
+                                )}
+                              </Button>
                             </TooltipTrigger>
-                            <TooltipContent>{getSectionDescription(section.type)}</TooltipContent>
+                            <TooltipContent>
+                              {isCollapsed ? 'Expand section' : 'Collapse section'}
+                            </TooltipContent>
                           </Tooltip>
-                        </CardTitle>
+                          <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
+                            {section.type}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="size-4 text-foreground -translate-y-[0.5px]" />
+                              </TooltipTrigger>
+                              <TooltipContent>{getSectionDescription(section.type)}</TooltipContent>
+                            </Tooltip>
+                          </CardTitle>
+                        </div>
                         <div className="flex items-center gap-2">
                           {section.type === 'auxiliary' && (
                             <div className="flex items-center gap-2 text-xs">
@@ -1350,19 +560,9 @@ export const StandardBuilder = ({
 
                                   // Clear missing-config validation when category is selected
                                   if (value) {
-                                    setSectionValidationErrors((prev) => {
-                                      const existing = prev[section.id];
-                                      if (!existing || !existing.missingConfig) return prev;
-                                      const nextSection = { ...existing };
-                                      delete nextSection.missingConfig;
-                                      const next: SectionValidationErrors = { ...prev };
-                                      if (Object.keys(nextSection).length === 0) {
-                                        delete next[section.id];
-                                      } else {
-                                        next[section.id] = nextSection;
-                                      }
-                                      return next;
-                                    });
+                                    setSectionValidationErrors((prev) =>
+                                      clearMissingConfigError(section.id, prev)
+                                    );
                                   }
                                 }}
                               >
@@ -1422,19 +622,9 @@ export const StandardBuilder = ({
 
                                   // Clear missing-config validation for this section as soon as a value is entered
                                   if (value && value.trim() !== '') {
-                                    setSectionValidationErrors((prev) => {
-                                      const existing = prev[section.id];
-                                      if (!existing || !existing.missingConfig) return prev;
-                                      const nextSection = { ...existing };
-                                      delete nextSection.missingConfig;
-                                      const next: SectionValidationErrors = { ...prev };
-                                      if (Object.keys(nextSection).length === 0) {
-                                        delete next[section.id];
-                                      } else {
-                                        next[section.id] = nextSection;
-                                      }
-                                      return next;
-                                    });
+                                    setSectionValidationErrors((prev) =>
+                                      clearMissingConfigError(section.id, prev)
+                                    );
                                   }
                                 }}
                                 className={cn(
@@ -1460,12 +650,22 @@ export const StandardBuilder = ({
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent
-                      className="flex-1 flex flex-col px-3 py-1.5"
-                      onDragOver={(e) => handleDragOver(e, section.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleSectionDrop(e, section.id)}
-                    >
+                    {!isCollapsed && (
+                      <div
+                        className="overflow-hidden transition-all duration-300 ease-in-out"
+                        style={{
+                          maxHeight: '10000px',
+                          opacity: 1,
+                        }}
+                      >
+                        <CardContent
+                          ref={(el) => registerSectionRef(section.id, el)}
+                          data-workout-section
+                          className="flex-1 flex flex-col px-3 py-1.5 pb-0"
+                          onDragOver={(e) => handleSectionDragOver(e, section.id, section.exercises?.length || 0)}
+                          onDragLeave={handleSectionDragLeave}
+                          onDrop={(e) => handleSectionDrop(e, section.id)}
+                        >
                       <div
                         className={cn(
                           'flex-1 w-full',
@@ -1476,19 +676,16 @@ export const StandardBuilder = ({
                       >
                         {section.exercises && section.exercises.length > 0 ? (
                           <div className="w-full flex flex-col gap-0">
-                            {/* Slot before the first exercise */}
+                            {/* Drop zone before the first exercise */}
                             <div
-                              onDragOver={(e) => handleSlotDragOver(e, section.id, 0)}
-                              onDragLeave={handleSlotDragLeave}
-                              onDrop={(e) => handleSlotDrop(e, section.id, 0)}
                               className={cn(
-                                'transition-all w-full',
+                                'w-full',
                                 draggedExercise &&
                                   dragOverSlot &&
                                   dragOverSlot.sectionId === section.id &&
                                   dragOverSlot.slotIndex === 0
                                   ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                                  : 'h-1'
+                                  : 'h-0'
                               )}
                             >
                               {draggedExercise &&
@@ -1538,7 +735,13 @@ export const StandardBuilder = ({
                                   }}
                                   className={wrapperClasses}
                                 >
-                                  <ExerciseCard
+                                  <div
+                                    data-exercise-card
+                                    className={cn(
+                                      focusedExerciseId === exercise.exerciseId && "[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse"
+                                    )}
+                                  >
+                                    <ExerciseCard
                                     exercise={exercise}
                                     isLinkedToPrev={isLinkedToPrev}
                                     isLinkedToNext={isLinkedToNext}
@@ -1546,12 +749,12 @@ export const StandardBuilder = ({
                                     sectionType={section.type}
                                     validationErrors={validationErrors[exercise.instanceId]}
                                     onClearValidationField={(setIndex, field) =>
-                                      clearSetValidationField(exercise.instanceId, setIndex, field)
+                                      handleClearSetValidationField(exercise.instanceId, setIndex, field)
                                     }
                                     onExerciseChange={(newExercise) => {
                                       onDirtyChange?.();
                                       const castExercise = newExercise as ExerciseWithSuperset;
-                                      recomputeExerciseValidation(
+                                      handleRecomputeExerciseValidation(
                                         exercise.instanceId,
                                         castExercise.exerciseType as
                                           | 'weight_reps'
@@ -1598,24 +801,18 @@ export const StandardBuilder = ({
                                       }));
                                     }}
                                   />
+                                  </div>
 
-                                  {/* Slot between this exercise and the next */}
+                                  {/* Drop zone between exercises */}
                                   <div
-                                    onDragOver={(e) =>
-                                      handleSlotDragOver(e, section.id, exerciseIndex + 1)
-                                    }
-                                    onDragLeave={handleSlotDragLeave}
-                                    onDrop={(e) => handleSlotDrop(e, section.id, exerciseIndex + 1)}
                                     className={cn(
-                                      'transition-all w-full',
+                                      'w-full',
                                       draggedExercise &&
                                         dragOverSlot &&
                                         dragOverSlot.sectionId === section.id &&
                                         dragOverSlot.slotIndex === exerciseIndex + 1
                                         ? 'my-1 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm'
-                                        : isLinkedToNext
-                                          ? 'h-0'
-                                          : 'h-1'
+                                        : 'h-0'
                                     )}
                                   >
                                     {draggedExercise &&
@@ -1665,7 +862,7 @@ export const StandardBuilder = ({
                                 </div>
                               );
                             })}
-                            <div className="flex justify-center">
+                            <div className="flex justify-center pb-3">
                               <Button
                                 type="button"
                                 variant="outline"
@@ -1698,9 +895,12 @@ export const StandardBuilder = ({
                         )}
                       </div>
                     </CardContent>
+                    </div>
+                    )}
                   </Card>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
               <div className="flex items-center justify-center py-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1799,7 +999,7 @@ export const StandardBuilder = ({
             onDeleteExercise={handleDeleteExerciseFromOverview}
             onDeleteSuperset={handleDeleteSupersetFromOverview}
             groupExercisesBySuperset={groupExercisesBySuperset as any}
-            onExerciseClick={handleExerciseClickById}
+            onExerciseClick={handleExerciseClickByIdWrapper}
           />
           </CardContent>
         </Card>

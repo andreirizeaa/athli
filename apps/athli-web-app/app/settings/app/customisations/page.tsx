@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { availableLanguages, useLanguage } from '@/lib/providers/intl-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { THEMES, DEFAULT_THEME } from '@/lib/theme';

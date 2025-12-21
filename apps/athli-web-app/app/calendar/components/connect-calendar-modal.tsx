@@ -19,7 +19,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { Loader2, Mail } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 type CalendarProvider = 'google' | 'outlook' | 'icloud' | null;
 

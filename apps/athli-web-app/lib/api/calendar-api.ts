@@ -1,6 +1,6 @@
 /**
- * Calendar API client
- * Wrapper around the Express API for calendar operations
+ * Calendar API Client
+ * Wrapper around the base API client with token support for calendar operations
  */
 
 import { apiRequest } from './client';
@@ -8,22 +8,24 @@ import { apiRequest } from './client';
 export const calendarApi = {
   /**
    * Check calendar connection status
+   * @param token - Optional Clerk session token
    */
-  status: async (token?: string | null) => {
-    return apiRequest('/calendar/status', {}, token);
-  },
+  status: (token?: string | null) => apiRequest('/calendar/status', {}, token),
 
   /**
-   * Disconnect calendar account
+   * Disconnect calendar
+   * @param token - Optional Clerk session token
    */
-  disconnect: async (token?: string | null) => {
-    return apiRequest('/calendar/disconnect', { method: 'DELETE' }, token);
-  },
+  disconnect: (token?: string | null) =>
+    apiRequest('/calendar/disconnect', { method: 'DELETE' }, token),
 
   /**
    * Get calendar events
+   * @param timeMin - Start time (ISO string)
+   * @param timeMax - End time (ISO string)
+   * @param token - Optional Clerk session token
    */
-  events: async (timeMin?: string, timeMax?: string, token?: string | null) => {
+  events: (timeMin?: string, timeMax?: string, token?: string | null) => {
     const params = new URLSearchParams();
     if (timeMin) params.set('timeMin', timeMin);
     if (timeMax) params.set('timeMax', timeMax);
@@ -32,33 +34,34 @@ export const calendarApi = {
   },
 
   /**
-   * Store calendar OAuth tokens
+   * Handle calendar OAuth callback
+   * @param data - Callback data
+   * @param token - Optional Clerk session token
    */
-  callback: async (
+  callback: (
     data: {
       provider: string;
       provider_access_token?: string;
       access_token?: string;
-      provider_refresh_token?: string | null;
-      refresh_token?: string | null;
+      provider_refresh_token?: string;
+      refresh_token?: string;
     },
     token?: string | null
-  ) => {
-    return apiRequest(
+  ) =>
+    apiRequest(
       '/calendar/callback',
       {
         method: 'POST',
         body: JSON.stringify(data),
       },
       token
-    );
-  },
+    ),
 
   /**
-   * Detect email provider
+   * Detect calendar provider from email
+   * @param email - Email address
+   * @param token - Optional Clerk session token
    */
-  detectProvider: async (email: string) => {
-    return apiRequest(`/provider/detect?email=${encodeURIComponent(email)}`);
-  },
+  detectProvider: (email: string, token?: string | null) =>
+    apiRequest(`/provider/detect?email=${encodeURIComponent(email)}`, {}, token),
 };
-

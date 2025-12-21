@@ -50,40 +50,45 @@ const messagesMap = {
 } as const;
 
 export const IntlProvider = ({ children }: IntlProviderProps) => {
+  // Initialize with 'en' to ensure context is always available
   const [locale, setLocaleState] = useState<string>('en');
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
     // Load language from localStorage or default to 'en'
+    if (typeof window !== 'undefined') {
     const savedLocale = localStorage.getItem('language') || 'en';
     if (availableLanguages.some((lang) => lang.code === savedLocale)) {
       setLocaleState(savedLocale);
+      }
     }
   }, []);
 
   const setLocale = (newLocale: string) => {
     setLocaleState(newLocale);
+    if (typeof window !== 'undefined') {
     localStorage.setItem('language', newLocale);
+    }
   };
 
   const messages = messagesMap[locale as keyof typeof messagesMap] || enMessages;
   const currentLocale = locale || 'en';
 
-  // Only render NextIntlClientProvider after mounting to avoid hydration issues
-  if (!isMounted) {
-    return (
-      <LanguageContext.Provider value={{ locale: currentLocale, setLocale }}>
-        <NextIntlClientProvider locale="en" messages={enMessages} timeZone="UTC">
-          {children}
-        </NextIntlClientProvider>
-      </LanguageContext.Provider>
-    );
-  }
+  // Always render NextIntlClientProvider to ensure context is available
+  // Use default 'en' during SSR and initial render, then update to saved locale after mount
+  // This ensures the context is always available, preventing "context not found" errors
+  const providerLocale = isMounted ? currentLocale : 'en';
+  const providerMessages = isMounted ? messages : enMessages;
 
   return (
     <LanguageContext.Provider value={{ locale: currentLocale, setLocale }}>
-      <NextIntlClientProvider locale={currentLocale} messages={messages} timeZone="UTC">
+      <NextIntlClientProvider 
+        key="intl-provider"
+        locale={providerLocale} 
+        messages={providerMessages} 
+        timeZone="UTC"
+      >
         {children}
       </NextIntlClientProvider>
     </LanguageContext.Provider>

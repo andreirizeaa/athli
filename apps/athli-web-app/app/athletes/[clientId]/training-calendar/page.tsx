@@ -41,7 +41,7 @@ import {
   CircleCheck,
   Info,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import type { Program, Workout } from '@/components/app/app-shell';
 import { mockPrograms, mockWorkouts } from '@/components/app/app-shell';
 import {
@@ -57,7 +57,7 @@ import {
   getTrainingCalendar,
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
-} from '@/lib/athletes/athlete-service';
+} from '@/lib/client/client-athlete-service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -141,8 +141,19 @@ const ClientTrainingCalendarPage = () => {
     exerciseId: string;
     instanceId: string;
     name: string;
-    exerciseType?: 'weight_reps' | 'reps' | 'distance_duration';
+    imageUrl?: string;
     equipments?: string[];
+    bodyParts?: string[];
+    exerciseType?: 'weight_reps' | 'reps' | 'distance_duration';
+    targetMuscles?: string[];
+    secondaryMuscles?: string[];
+    videoUrl?: string;
+    keywords?: string[];
+    overview?: string;
+    instructions?: string[];
+    exerciseTips?: string[];
+    variations?: string[];
+    relatedExerciseIds?: string[];
     supersetGroupId?: string | null;
     sets?: Array<{
       setNumber: number;
@@ -164,6 +175,10 @@ const ClientTrainingCalendarPage = () => {
   };
 
   const buildWorkoutSchema = (workout: Workout): WorkoutSection[] => {
+    const equipmentList = workout.equipment
+      ? workout.equipment.split(',').map((e) => e.trim()).filter((e) => e)
+      : [];
+
     return [
       {
         id: 'sec-1',
@@ -173,10 +188,19 @@ const ClientTrainingCalendarPage = () => {
             exerciseId: 'ex-1',
             instanceId: 'ex-1-inst',
             name: `${workout.program} - Main lift`,
+            imageUrl: '/demo-img.png',
+            equipments: equipmentList,
+            bodyParts: workout.type ? [workout.type] : [],
             exerciseType: 'weight_reps',
-            equipments: workout.equipment
-              ? workout.equipment.split(',').map((e) => e.trim()).filter((e) => e)
-              : [],
+            targetMuscles: [],
+            secondaryMuscles: [],
+            videoUrl: '/demo-video.mp4',
+            keywords: [],
+            overview: workout.description || '',
+            instructions: [],
+            exerciseTips: [],
+            variations: [],
+            relatedExerciseIds: [],
             sets: [
               { setNumber: 1, type: 'normal', reps: '8', weight: '100', rest: '90' },
               { setNumber: 2, type: 'normal', reps: '8', weight: '100', rest: '90' },
@@ -187,10 +211,19 @@ const ClientTrainingCalendarPage = () => {
             exerciseId: 'ex-2',
             instanceId: 'ex-2-inst',
             name: 'Accessory 1',
+            imageUrl: '/demo-img.png',
+            equipments: equipmentList,
+            bodyParts: [],
             exerciseType: 'weight_reps',
-            equipments: workout.equipment
-              ? workout.equipment.split(',').map((e) => e.trim()).filter((e) => e)
-              : [],
+            targetMuscles: [],
+            secondaryMuscles: [],
+            videoUrl: '/demo-video.mp4',
+            keywords: [],
+            overview: '',
+            instructions: [],
+            exerciseTips: [],
+            variations: [],
+            relatedExerciseIds: [],
             sets: [
               { setNumber: 1, type: 'normal', reps: '10', weight: '50', rest: '60' },
               { setNumber: 2, type: 'normal', reps: '10', weight: '50', rest: '60' },
@@ -201,10 +234,19 @@ const ClientTrainingCalendarPage = () => {
             exerciseId: 'ex-3',
             instanceId: 'ex-3-inst',
             name: 'Accessory 2',
+            imageUrl: '/demo-img.png',
+            equipments: equipmentList,
+            bodyParts: [],
             exerciseType: 'weight_reps',
-            equipments: workout.equipment
-              ? workout.equipment.split(',').map((e) => e.trim()).filter((e) => e)
-              : [],
+            targetMuscles: [],
+            secondaryMuscles: [],
+            videoUrl: '/demo-video.mp4',
+            keywords: [],
+            overview: '',
+            instructions: [],
+            exerciseTips: [],
+            variations: [],
+            relatedExerciseIds: [],
             sets: [
               { setNumber: 1, type: 'normal', reps: '12', weight: '30', rest: '45' },
               { setNumber: 2, type: 'normal', reps: '12', weight: '30', rest: '45' },
@@ -222,8 +264,19 @@ const ClientTrainingCalendarPage = () => {
             exerciseId: 'ex-4',
             instanceId: 'ex-4-inst',
             name: 'Finisher circuit',
-            exerciseType: 'reps',
+            imageUrl: '/demo-img.png',
             equipments: [],
+            bodyParts: [],
+            exerciseType: 'reps',
+            targetMuscles: [],
+            secondaryMuscles: [],
+            videoUrl: '/demo-video.mp4',
+            keywords: [],
+            overview: '',
+            instructions: [],
+            exerciseTips: [],
+            variations: [],
+            relatedExerciseIds: [],
             sets: [{ setNumber: 1, type: 'normal', reps: '10', weight: '', rest: '60' }],
           },
         ],
@@ -461,6 +514,35 @@ const ClientTrainingCalendarPage = () => {
 
     loadTrainingData();
   }, [clientId]);
+
+  // Restore view state from URL params (when navigating back from edit page)
+  useEffect(() => {
+    const currentWeekParam = searchParams.get('currentWeek');
+    const selectedWeekParam = searchParams.get('selectedWeek');
+
+    if (currentWeekParam) {
+      const week = parseInt(currentWeekParam, 10);
+      if (!Number.isNaN(week)) {
+        setCurrentWeek(week);
+      }
+    }
+
+    if (selectedWeekParam && ['1', '2', '4'].includes(selectedWeekParam)) {
+      setSelectedWeek(selectedWeekParam);
+    }
+
+    // Clean up URL params after restoring state
+    if (currentWeekParam || selectedWeekParam) {
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('currentWeek');
+      newSearchParams.delete('selectedWeek');
+      if (newSearchParams.toString()) {
+        router.replace(`/athletes/${clientId}/training-calendar?${newSearchParams.toString()}`, { scroll: false });
+      } else {
+        router.replace(`/athletes/${clientId}/training-calendar`, { scroll: false });
+      }
+    }
+  }, [searchParams, clientId, router]);
 
   // Handle query params for auto-opening modals and preselecting workouts/programs
   useEffect(() => {
@@ -1001,6 +1083,44 @@ const ClientTrainingCalendarPage = () => {
   };
 
   const handleOpenWorkoutDetails = (dateKey: string, workout: Workout & { id: string }) => {
+    // Parse the dateKey to check if it's in the future
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const workoutDate = new Date(year, month - 1, day);
+    workoutDate.setHours(0, 0, 0, 0);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // If workout is in the future, navigate to edit page instead of opening side panel
+    if (workoutDate > today) {
+      // Build workout schema
+      const workoutSchema = buildWorkoutSchema(workout);
+      
+      // Store workout schema and view state in localStorage
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('oneninety_workout_schema', JSON.stringify({ sections: workoutSchema }));
+        window.localStorage.setItem('oneninety_training_calendar_view_state', JSON.stringify({
+          currentWeek,
+          selectedWeek,
+        }));
+        window.localStorage.setItem('oneninety_workout_builder_access', 'edit-standard');
+        window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify({
+          title: workout.program || 'Workout',
+          description: workout.description || '',
+          type: workout.type || 'Push',
+          difficulty: 'Intermediate',
+          builder: 'standard',
+        }));
+        // Store workout date for breadcrumb
+        window.localStorage.setItem('oneninety_workout_date', dateKey);
+      }
+      
+      // Navigate to edit page
+      router.push(`/athletes/${clientId}/training-calendar/${workout.id}/edit`);
+      return;
+    }
+    
+    // For past or today workouts, open side panel as before
     setSelectedWorkoutDetails({ dateKey, workout });
   };
 

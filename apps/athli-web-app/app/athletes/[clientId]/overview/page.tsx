@@ -6,7 +6,6 @@ import { GoalsCard } from './goals-card';
 import { InjuryCard } from './injury-card';
 import { ClientDetailsCard } from './client-details-card';
 import { AthleteWorkoutsCard } from './athlete-workouts-card';
-import { CurrentAssignedItemCard } from './current-assigned-item-card';
 
 const ClientOverviewPage = () => {
   const params = useParams<{ clientId: string }>();
@@ -28,11 +27,6 @@ const ClientOverviewPage = () => {
             <div className="flex flex-col gap-4" style={{ width: 'calc(20% - 0.67rem)', flexShrink: 0 }}>
             <ClientDetailsCard clientId={clientId} />
           </div>
-          </div>
-          <div className="w-full flex gap-4 items-start mb-24">
-            <div className="flex flex-col gap-4" style={{ width: '100%', flexShrink: 0 }}>
-              <CurrentAssignedItemCard clientId={clientId} />
-            </div>
           </div>
         </>
       )}

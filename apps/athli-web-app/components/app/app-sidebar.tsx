@@ -18,6 +18,8 @@ import {
   ClipboardList,
   Workflow,
   ClipboardCheck,
+  UtensilsCrossed,
+  BarChart3,
 } from 'lucide-react';
 import { LogoIcon } from '@/components/logo';
 import {
@@ -74,6 +76,11 @@ export function AppSidebar() {
       icon: Dumbbell,
     },
     {
+      href: '/metrics',
+      labelKey: 'sidebar.links.metrics',
+      icon: BarChart3,
+    },
+    {
       href: '/files',
       labelKey: 'sidebar.links.files',
       icon: File,
@@ -87,6 +94,11 @@ export function AppSidebar() {
       href: '/forms',
       labelKey: 'sidebar.links.forms',
       icon: ClipboardList,
+    },
+    {
+      href: '/nutrition',
+      labelKey: 'sidebar.links.nutrition',
+      icon: UtensilsCrossed,
     },
   ] as const;
 
@@ -185,7 +197,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 let isActive = false;
-                if (href === '/training' || href === '/files' || href === '/habits' || href === '/forms') {
+                if (href === '/training' || href === '/metrics' || href === '/files' || href === '/habits' || href === '/forms' || href === '/nutrition') {
                   // Check exact match or if path starts with the href followed by /
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
                 } else {

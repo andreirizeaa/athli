@@ -33,7 +33,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar, Search } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 import { mockAthletes } from '@/components/app/app-shell';
 import { format } from 'date-fns';
 

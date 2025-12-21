@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/general/utils';
 
 const WORKOUT_TYPES = [
   'Weightlifting',

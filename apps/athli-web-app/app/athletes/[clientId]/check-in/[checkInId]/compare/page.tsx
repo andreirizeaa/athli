@@ -27,9 +27,9 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/forms/form-service';
-import type { Question, QuestionAnswer } from '@/lib/forms/form-service';
-import { cn } from '@/lib/utils';
+import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/client/client-form-service';
+import type { Question, QuestionAnswer } from '@/lib/client/client-form-service';
+import { cn } from '@/lib/general/utils';
 import Image from 'next/image';
 
 interface MediaPreview {

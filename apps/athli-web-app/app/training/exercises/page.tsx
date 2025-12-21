@@ -5,15 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,13 +17,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
-import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
-import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { Spinner } from '@/components/ui/spinner';
-import { cn } from '@/lib/utils';
-import { exportToCSV } from '@/lib/csv-export';
+import { cn } from '@/lib/general/utils';
+import { exportToCSV } from '@/lib/general/csv-export';
 import {
   Search,
   X,
@@ -46,7 +34,6 @@ import {
   FileText,
   Tag,
   Wrench,
-  Calendar,
   HelpCircle,
   Download,
   Settings,
@@ -57,17 +44,18 @@ import {
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/lib/library/programs/programs-service';
-import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise } from '@/lib/library/exercises/exercises-service';
+import { starPrograms, archivePrograms, deletePrograms } from '@/lib/coach/coach-program-service';
+import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/lib/coach/coach-exercise-service';
+import { AddExerciseSidePanel } from './add-exercise-side-panel';
+import { EditExerciseSidePanel } from './edit-exercise-side-panel';
 
-type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment' | 'created';
+type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment';
 
 const COLUMN_ORDER: ColumnId[] = [
   'category',
   'muscleGroup',
   'modality',
   'equipment',
-  'created',
 ];
 
 
@@ -139,27 +127,6 @@ const MODALITY_OPTIONS = [
   'Coordination',
 ] as const;
 
-const extractVideoId = (url: string): { id: string; type: 'youtube' | 'vimeo' | null } => {
-  if (!url.trim()) {
-    return { id: '', type: null };
-  }
-
-  // YouTube patterns
-  const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-  const youtubeMatch = url.match(youtubeRegex);
-  if (youtubeMatch) {
-    return { id: youtubeMatch[1], type: 'youtube' };
-  }
-
-  // Vimeo patterns
-  const vimeoRegex = /(?:vimeo\.com\/)(?:.*\/)?(\d+)/;
-  const vimeoMatch = url.match(vimeoRegex);
-  if (vimeoMatch) {
-    return { id: vimeoMatch[1], type: 'vimeo' };
-  }
-
-  return { id: '', type: null };
-};
 
 const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
@@ -167,7 +134,6 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     muscleGroup: { class: 'min-w-[150px]', pixel: '150px' },
     modality: { class: 'min-w-[140px]', pixel: '140px' },
     equipment: { class: 'min-w-[200px]', pixel: '200px' },
-    created: { class: 'min-w-[150px]', pixel: '150px' },
   };
 
   return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
@@ -186,36 +152,11 @@ const ExercisesPage = () => {
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const [isCreateExerciseOpen, setIsCreateExerciseOpen] = useState<boolean>(false);
-  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
-  const [originalExerciseData, setOriginalExerciseData] = useState<{
-    name: string;
-    instructions: string;
-    videoLink: string;
-    category: string;
-    muscleGroups: string[];
-    equipment: string;
-    modality: string;
-  } | null>(null);
-  const [exerciseName, setExerciseName] = useState<string>('');
-  const [exerciseInstructions, setExerciseInstructions] = useState<string>('');
-  const [videoLink, setVideoLink] = useState<string>('');
-  const [vimeoThumbnail, setVimeoThumbnail] = useState<string | null>(null);
-  const [isLoadingVimeoThumbnail, setIsLoadingVimeoThumbnail] = useState<boolean>(false);
-  const [category, setCategory] = useState<string>('');
-  const [muscleGroups, setMuscleGroups] = useState<string[]>([]);
-  const [equipment, setEquipment] = useState<string>('');
-  const [modality, setModality] = useState<string>('');
-  const [exerciseNameError, setExerciseNameError] = useState<string | null>(null);
-  const [exerciseInstructionsError, setExerciseInstructionsError] = useState<string | null>(null);
-  const [videoLinkError, setVideoLinkError] = useState<string | null>(null);
-  const [categoryError, setCategoryError] = useState<string | null>(null);
-  const [muscleGroupsError, setMuscleGroupsError] = useState<string | null>(null);
-  const [equipmentError, setEquipmentError] = useState<string | null>(null);
-  const [modalityError, setModalityError] = useState<string | null>(null);
+  const [isEditExerciseOpen, setIsEditExerciseOpen] = useState<boolean>(false);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [isAssignExerciseOpen, setIsAssignExerciseOpen] = useState<boolean>(false);
   const [isAssignIndividualExerciseOpen, setIsAssignIndividualExerciseOpen] = useState<boolean>(false);
   const [selectedExerciseForAssignment, setSelectedExerciseForAssignment] = useState<Program | null>(null);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   const handleToggleExercise = (exerciseId: string) => {
     setSelectedExercises((prev) => {
@@ -229,12 +170,16 @@ const ExercisesPage = () => {
     });
   };
 
-  const handleNavigateToExercise = (exerciseId: string) => {
-    const exercise = exercises.find((ex) => ex.id === exerciseId);
+  const handleNavigateToExercise = async (exerciseId: string) => {
+    try {
+      const fetchedExercises = await getExercises();
+      const exercise = fetchedExercises.find((ex) => ex.id === exerciseId);
     if (exercise) {
-      setEditingExerciseId(exerciseId);
-      populateFormFromExercise(exercise);
-      setIsCreateExerciseOpen(true);
+        setEditingExercise(exercise);
+        setIsEditExerciseOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to load exercise:', error);
     }
   };
 
@@ -284,7 +229,7 @@ const ExercisesPage = () => {
     if (exerciseId && exercises.length > 0) {
       // Check if exercise exists
       const exercise = exercises.find((ex) => ex.id === exerciseId);
-      if (exercise && editingExerciseId !== exerciseId) {
+      if (exercise && editingExercise?.id !== exerciseId) {
         // Only open if it's a different exercise than currently being edited
         handleNavigateToExercise(exerciseId);
         // Remove exerciseId from URL to clean it up
@@ -297,7 +242,7 @@ const ExercisesPage = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, exercises, editingExerciseId, router]);
+  }, [searchParams, exercises, editingExercise, router]);
 
   const handleToggleStar = async (exerciseId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -386,210 +331,16 @@ const ExercisesPage = () => {
       'Muscle Group': (row as any).muscleGroup || '',
       Modality: (row as any).modality || '',
       Equipment: (row as any).equipment || row.equipment || '',
-      Created: row.created,
     }));
     exportToCSV(exportData, 'selected-exercises.csv');
   };
 
-  const resetCreateExerciseState = () => {
-    setExerciseName('');
-    setExerciseInstructions('');
-    setVideoLink('');
-    setVimeoThumbnail(null);
-    setIsLoadingVimeoThumbnail(false);
-    setCategory('');
-    setMuscleGroups([]);
-    setEquipment('');
-    setModality('');
-    setExerciseNameError(null);
-    setExerciseInstructionsError(null);
-    setVideoLinkError(null);
-    setCategoryError(null);
-    setMuscleGroupsError(null);
-    setEquipmentError(null);
-    setModalityError(null);
-    setIsSaving(false);
-    setEditingExerciseId(null);
-    setOriginalExerciseData(null);
-  };
-
-  const populateFormFromExercise = (exercise: Program) => {
-    const muscleGroupsArray = (exercise as any).muscleGroups || 
-      ((exercise as any).muscleGroup?.split(',').map((g: string) => g.trim()) || []);
-    
-    setExerciseName(exercise.program);
-    setExerciseInstructions(exercise.description);
-    setVideoLink((exercise as any).videoLink || '');
-    setCategory((exercise as any).category || '');
-    setMuscleGroups(muscleGroupsArray);
-    setEquipment(exercise.equipment);
-    setModality((exercise as any).modality || '');
-    
-    // Store original data for change detection
-    setOriginalExerciseData({
-      name: exercise.program,
-      instructions: exercise.description,
-      videoLink: (exercise as any).videoLink || '',
-      category: (exercise as any).category || '',
-      muscleGroups: muscleGroupsArray,
-      equipment: exercise.equipment,
-      modality: (exercise as any).modality || '',
-    });
-  };
-
-  const hasFormChanged = (): boolean => {
-    if (!originalExerciseData || !editingExerciseId) {
-      return false;
-    }
-
-    return (
-      exerciseName.trim() !== originalExerciseData.name.trim() ||
-      exerciseInstructions.trim() !== originalExerciseData.instructions.trim() ||
-      videoLink.trim() !== originalExerciseData.videoLink.trim() ||
-      category !== originalExerciseData.category ||
-      JSON.stringify([...muscleGroups].sort()) !== JSON.stringify([...originalExerciseData.muscleGroups].sort()) ||
-      equipment !== originalExerciseData.equipment ||
-      modality !== originalExerciseData.modality
-    );
-  };
-
-  // Fetch Vimeo thumbnail when video link changes
-  useEffect(() => {
-    const { id, type } = extractVideoId(videoLink);
-    
-    if (id && type === 'vimeo') {
-      setIsLoadingVimeoThumbnail(true);
-      setVimeoThumbnail(null);
-      
-      fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(videoLink)}`)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error('Failed to fetch Vimeo thumbnail');
-          }
-          return response.json();
-        })
-        .then((data) => {
-          if (data.thumbnail_url) {
-            setVimeoThumbnail(data.thumbnail_url);
-          }
-        })
-        .catch((error) => {
-          console.error('Error fetching Vimeo thumbnail:', error);
-          setVimeoThumbnail(null);
-        })
-        .finally(() => {
-          setIsLoadingVimeoThumbnail(false);
-        });
-    } else {
-      setVimeoThumbnail(null);
-      setIsLoadingVimeoThumbnail(false);
-    }
-  }, [videoLink]);
-
   const handleOpenCreateExercise = () => {
-    resetCreateExerciseState();
-    setEditingExerciseId(null);
     setIsCreateExerciseOpen(true);
   };
 
-  const handleCloseCreateExercise = () => {
-    setIsCreateExerciseOpen(false);
-  };
-
   const handleSaveExercise = async () => {
-    let hasError = false;
-
-    if (!exerciseName.trim()) {
-      setExerciseNameError(t('exercises.addExercise.exerciseNameRequiredError'));
-      hasError = true;
-    } else {
-      setExerciseNameError(null);
-    }
-
-    if (!exerciseInstructions.trim()) {
-      setExerciseInstructionsError(t('exercises.addExercise.instructionsRequiredError'));
-      hasError = true;
-    } else {
-      setExerciseInstructionsError(null);
-    }
-
-    if (!videoLink.trim()) {
-      setVideoLinkError(t('exercises.addExercise.videoLinkRequiredError'));
-      hasError = true;
-    } else {
-      const { id, type } = extractVideoId(videoLink);
-      if (!id || !type) {
-        setVideoLinkError(t('exercises.addExercise.videoLinkInvalidError'));
-        hasError = true;
-      } else {
-        setVideoLinkError(null);
-      }
-    }
-
-    if (!category) {
-      setCategoryError(t('exercises.addExercise.categoryRequiredError'));
-      hasError = true;
-    } else {
-      setCategoryError(null);
-    }
-
-    if (muscleGroups.length === 0) {
-      setMuscleGroupsError(t('exercises.addExercise.muscleGroupsRequiredError'));
-      hasError = true;
-    } else {
-      setMuscleGroupsError(null);
-    }
-
-    if (!equipment) {
-      setEquipmentError(t('exercises.addExercise.equipmentRequiredError'));
-      hasError = true;
-    } else {
-      setEquipmentError(null);
-    }
-
-    if (!modality) {
-      setModalityError(t('exercises.addExercise.modalityRequiredError'));
-      hasError = true;
-    } else {
-      setModalityError(null);
-    }
-
-    if (hasError) {
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const exerciseData = {
-        name: exerciseName.trim(),
-        instructions: exerciseInstructions.trim(),
-        videoLink: videoLink.trim() || undefined,
-        category,
-        muscleGroups,
-        equipment,
-        modality,
-      };
-
-      if (editingExerciseId) {
-        // Edit mode
-        await editExercise(editingExerciseId, exerciseData);
-      } else {
-        // Create mode
-        await createExercise(exerciseData);
-      }
-      
-      // Refresh exercises list
       await loadExercises();
-
-      // Close side panel after successful save
-      setIsCreateExerciseOpen(false);
-      resetCreateExerciseState();
-    } catch (error) {
-      console.error('Failed to save exercise:', error);
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const handleExerciseRowKeyDown = (
@@ -618,27 +369,6 @@ const ExercisesPage = () => {
 
     handleNavigateToExercise(exerciseId);
   };
-
-  const formatDate = (dateStr: string): string => {
-    const [day, month, year] = dateStr.split('-');
-    const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return `${months[date.getMonth()]} ${date.getDate()}, 20${year}`;
-  };
-
 
   const isFuzzyMatch = (text: string, query: string): boolean => {
     const normalizedText = text.toLowerCase();
@@ -809,26 +539,6 @@ const ExercisesPage = () => {
               );
             },
           };
-        case 'created':
-          return {
-            id: 'created',
-            label: t('general.created'),
-            icon: <Calendar className="size-3" />,
-            width: {
-              class: getColumnWidth('created', 'class'),
-              pixel: getColumnWidth('created', 'pixel'),
-            },
-            tooltip: t('exercises.columnTooltips.created'),
-            getSortValue: (row) => {
-              const [day, month, year] = row.created.split('-').map(Number);
-              return new Date(2000 + year, month - 1, day).getTime();
-            },
-            renderCell: (row) => (
-              <div className="flex items-center h-full w-full pr-6">
-                <span className="text-sm">{formatDate(row.created)}</span>
-              </div>
-            ),
-          };
         default:
           return {
             id: columnId,
@@ -980,7 +690,6 @@ const ExercisesPage = () => {
   };
 
   const handleStartCreating = () => {
-    resetCreateExerciseState();
     setIsCreateExerciseOpen(true);
   };
 
@@ -1020,7 +729,6 @@ const ExercisesPage = () => {
           'Muscle Group': (row as any).muscleGroup || '',
           Modality: (row as any).modality || '',
           Equipment: (row as any).equipment || row.equipment || '',
-          Created: row.created,
         })}
         enableRowSelection={true}
         selectedRowIds={selectedExercises}
@@ -1217,304 +925,24 @@ const ExercisesPage = () => {
           />
         )}
       </SidePanel>
-      <SidePanel
+      <AddExerciseSidePanel
         open={isCreateExerciseOpen}
         onOpenChange={(open) => {
             setIsCreateExerciseOpen(open);
+        }}
+        onSave={handleSaveExercise}
+      />
+      <EditExerciseSidePanel
+        open={isEditExerciseOpen}
+        onOpenChange={(open) => {
+          setIsEditExerciseOpen(open);
           if (!open) {
-            resetCreateExerciseState();
-          }
-        }}
-        onOpenAutoFocus={(e) => {
-          // Prevent auto-focus when opening
-          e.preventDefault();
-        }}
-        title={editingExerciseId ? t('exercises.addExercise.editTitle') : t('exercises.addExercise.title')}
-        footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button
-              type="button"
-              onClick={handleSaveExercise}
-              disabled={isSaving || (editingExerciseId ? !hasFormChanged() : false)}
-              aria-label={t('exercises.addExercise.saveAria')}
-              className={cn(isSaving && 'min-w-[120px] justify-center')}
-            >
-              {isSaving ? <Spinner className="h-4 w-4" /> : t('general.save')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseCreateExercise}
-              disabled={isSaving}
-              aria-label={t('exercises.addExercise.cancelAria')}
-            >
-              {t('general.cancel')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="exercise-name" className="text-sm font-medium">
-                {t('exercises.addExercise.exerciseName')}<RequiredAsterisk />
-              </label>
-              <Input
-                id="exercise-name"
-                type="text"
-                placeholder={t('exercises.addExercise.exerciseNamePlaceholder')}
-              value={exerciseName}
-                onChange={(event) => {
-                setExerciseName(event.target.value);
-                if (exerciseNameError) {
-                  setExerciseNameError(null);
-                  }
-                }}
-                className="w-full"
-              aria-invalid={!!exerciseNameError}
-              />
-            {exerciseNameError && <p className="text-sm text-destructive">{exerciseNameError}</p>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-            <label htmlFor="exercise-instructions" className="text-sm font-medium">
-              {t('exercises.addExercise.instructions')}<RequiredAsterisk />
-            </label>
-            <Textarea
-              id="exercise-instructions"
-              value={exerciseInstructions}
-              onChange={(event) => {
-                setExerciseInstructions(event.target.value);
-                if (exerciseInstructionsError) {
-                  setExerciseInstructionsError(null);
+            setEditingExercise(null);
                 }
               }}
-              placeholder={t('exercises.addExercise.instructionsPlaceholder')}
-              rows={3}
-              className="resize-none"
-              aria-invalid={!!exerciseInstructionsError}
-            />
-            {exerciseInstructionsError && (
-              <p className="text-sm text-destructive">{exerciseInstructionsError}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="video-link" className="text-sm font-medium">
-              {t('exercises.addExercise.videoLink')}<RequiredAsterisk />
-            </label>
-            <div className="relative">
-              <Input
-                id="video-link"
-                type="text"
-                placeholder={t('exercises.addExercise.videoLinkPlaceholder')}
-                value={videoLink}
-                onChange={(event) => {
-                  setVideoLink(event.target.value);
-                  if (videoLinkError) {
-                    setVideoLinkError(null);
-                  }
-                }}
-                className={cn('w-full pr-8', videoLinkError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!videoLinkError}
-              />
-              {videoLink && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVideoLink('');
-                    setVimeoThumbnail(null);
-                    setIsLoadingVimeoThumbnail(false);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  aria-label={t('exercises.addExercise.clearVideoLink')}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-            {(() => {
-              const { id, type } = extractVideoId(videoLink);
-              if (id && type === 'youtube') {
-                return (
-                  <div className="mt-2">
-                    <a
-                      href={videoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <img
-                        src={`https://img.youtube.com/vi/${id}/maxresdefault.jpg`}
-                        alt="Video thumbnail"
-                        className="w-full rounded-md border border-border"
-                        onError={(e) => {
-                          // Fallback to hqdefault if maxresdefault fails
-                          const target = e.target as HTMLImageElement;
-                          target.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-                        }}
-                      />
-                    </a>
-                  </div>
-                );
-              }
-              if (id && type === 'vimeo') {
-                if (isLoadingVimeoThumbnail) {
-                  return (
-                    <div className="mt-2">
-                      <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
-                        <Spinner className="h-4 w-4" />
-                      </div>
-                    </div>
-                  );
-                }
-                
-                if (vimeoThumbnail) {
-                  return (
-                    <div className="mt-2">
-                      <a
-                        href={videoLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block"
-                      >
-                        <img
-                          src={vimeoThumbnail}
-                          alt="Video thumbnail"
-                          className="w-full rounded-md border border-border"
-                        />
-                      </a>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div className="mt-2">
-                    <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
-                      <p className="text-sm text-muted-foreground">
-                        {t('exercises.addExercise.vimeoThumbnailPlaceholder')}
-                      </p>
-                    </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="category" className="text-sm font-medium">
-              {t('exercises.addExercise.category')}<RequiredAsterisk />
-              </label>
-              <Select
-              value={category}
-                onValueChange={(value) => {
-                setCategory(value);
-                if (categoryError) {
-                  setCategoryError(null);
-                  }
-                }}
-              >
-                <SelectTrigger
-                id="category"
-                className={cn('w-full', categoryError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!categoryError}
-                >
-                  <SelectValue placeholder={t('general.select')} />
-                </SelectTrigger>
-                <SelectContent>
-                {EXERCISE_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            {categoryError && <p className="text-sm text-destructive">{categoryError}</p>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-            <label htmlFor="muscle-groups" className="text-sm font-medium">
-              {t('exercises.addExercise.muscleGroups')}<RequiredAsterisk />
-            </label>
-            <MultiAsyncSelect
-              options={MUSCLE_GROUPS.map((group) => ({ label: group, value: group }))}
-              value={muscleGroups}
-              onValueChange={(values) => {
-                setMuscleGroups(values);
-                if (muscleGroupsError) {
-                  setMuscleGroupsError(null);
-                }
-              }}
-              placeholder={t('exercises.addExercise.muscleGroupsPlaceholder')}
-              searchPlaceholder={t('exercises.addExercise.searchMuscleGroups')}
-              className={cn(muscleGroupsError && 'border-destructive')}
-            />
-            {muscleGroupsError && <p className="text-sm text-destructive">{muscleGroupsError}</p>}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="equipment" className="text-sm font-medium">
-              {t('exercises.addExercise.equipment')}<RequiredAsterisk />
-              </label>
-              <Select
-              value={equipment}
-                onValueChange={(value) => {
-                setEquipment(value);
-                if (equipmentError) {
-                  setEquipmentError(null);
-                  }
-                }}
-              >
-                <SelectTrigger
-                id="equipment"
-                className={cn('w-full', equipmentError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!equipmentError}
-                >
-                  <SelectValue placeholder={t('general.select')} />
-                </SelectTrigger>
-                <SelectContent>
-                {EQUIPMENT_OPTIONS.map((eq) => (
-                  <SelectItem key={eq} value={eq}>
-                    {eq}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            {equipmentError && <p className="text-sm text-destructive">{equipmentError}</p>}
-            </div>
-
-            <div className="flex flex-col gap-2">
-            <label htmlFor="modality" className="text-sm font-medium">
-              {t('exercises.addExercise.modality')}<RequiredAsterisk />
-              </label>
-            <Select
-              value={modality}
-              onValueChange={(value) => {
-                setModality(value);
-                if (modalityError) {
-                  setModalityError(null);
-                }
-              }}
-            >
-              <SelectTrigger
-                id="modality"
-                className={cn('w-full', modalityError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!modalityError}
-              >
-                <SelectValue placeholder={t('general.select')} />
-              </SelectTrigger>
-              <SelectContent>
-                {MODALITY_OPTIONS.map((mod) => (
-                  <SelectItem key={mod} value={mod}>
-                    {mod}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {modalityError && <p className="text-sm text-destructive">{modalityError}</p>}
-          </div>
-        </div>
-      </SidePanel>
+        exercise={editingExercise}
+        onSave={handleSaveExercise}
+      />
     </div>
   );
 };

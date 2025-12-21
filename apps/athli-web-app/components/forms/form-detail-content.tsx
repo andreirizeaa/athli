@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { type Form, addQuestion, reorderQuestions } from '@/lib/forms/form-service';
+import { type Form, addQuestion, reorderQuestions } from '@/lib/coach/coach-form-service';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
+import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
 
 export type Question = {
   id: string;
@@ -21,6 +22,7 @@ export type Question = {
   scaleFrom?: string;
   scaleTo?: string;
   mediaCount?: number;
+  metricId?: string;
 };
 
 type FormDetailContentProps = {
@@ -30,6 +32,11 @@ type FormDetailContentProps = {
   setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
   previewQuestionIndex: number;
   setPreviewQuestionIndex: React.Dispatch<React.SetStateAction<number>>;
+  onEditForm?: () => void;
+  isReorderMode: boolean;
+  onToggleReorder: () => void;
+  onOpenAddQuestion: () => void;
+  onReorder?: (newData: any[]) => void;
 };
 
 export const FormDetailContent = ({
@@ -39,44 +46,51 @@ export const FormDetailContent = ({
   setQuestions,
   previewQuestionIndex,
   setPreviewQuestionIndex,
+  onEditForm,
+  isReorderMode,
+  onToggleReorder,
+  onOpenAddQuestion,
+  onReorder,
 }: FormDetailContentProps) => {
   const t = useTranslations();
   const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
   const [isEditQuestionOpen, setIsEditQuestionOpen] = useState<boolean>(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [isReorderMode, setIsReorderMode] = useState<boolean>(false);
-  const reorderedQuestionsRef = useRef<Question[] | null>(null);
+  const [metrics, setMetrics] = useState<Metric[]>([]);
 
-  const handleToggleReorder = async () => {
-    const wasInReorderMode = isReorderMode;
-    setIsReorderMode(!isReorderMode);
-    
-    // If we're exiting reorder mode, save the new order
-    if (wasInReorderMode) {
+  useEffect(() => {
+    const fetchMetrics = async () => {
       try {
-        // Use the ref if available (from handleReorder), otherwise use state
-        const questionsToReorder = reorderedQuestionsRef.current || questions;
-        await reorderQuestions({
-          formId: formId,
-          questionIds: questionsToReorder.map((q) => q.id),
-        });
-        reorderedQuestionsRef.current = null;
+        const fetchedMetrics = await getAllMetrics();
+        setMetrics(fetchedMetrics);
       } catch (error) {
-        console.error('Failed to reorder questions:', error);
+        console.error('Failed to fetch metrics:', error);
       }
-    }
-  };
+    };
+    fetchMetrics();
+  }, []);
+
+  const metricsMap = useMemo(() => {
+    const map = new Map<string, Metric>();
+    metrics.forEach((metric) => {
+      map.set(metric.id, metric);
+    });
+    return map;
+  }, [metrics]);
 
   const handleReorder = (newData: any[]) => {
     // Filter out the add row before saving
     const filteredData = newData.filter((item) => !item._isAddRow) as Question[];
     setQuestions(filteredData);
-    // Store in ref for use when exiting reorder mode
-    reorderedQuestionsRef.current = filteredData;
+    // Call parent's onReorder if provided
+    if (onReorder) {
+      onReorder(filteredData);
+    }
   };
 
-  const handleOpenAddQuestion = () => {
+  const handleOpenAddQuestionInternal = () => {
     setIsAddQuestionOpen(true);
+    onOpenAddQuestion();
   };
 
   const handleAddQuestion = async (questionData: any) => {
@@ -90,15 +104,23 @@ export const FormDetailContent = ({
         scaleFrom: questionData.scaleFrom,
         scaleTo: questionData.scaleTo,
         mediaCount: questionData.mediaCount,
+        metricId: questionData.metricId,
       });
       
-      setQuestions([...questions, newQuestion]);
+      // Ensure metricId is preserved if it exists in questionData
+      const questionWithMetric = {
+        ...newQuestion,
+        metricId: questionData.metricId || newQuestion.metricId,
+      };
+      
+      setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);
     } catch (error) {
       console.error('Failed to add question:', error);
     }
   };
+
 
   const handleEditQuestion = (questionData: Question) => {
     setQuestions(questions.map((q) => (q.id === questionData.id ? questionData : q)));
@@ -123,7 +145,7 @@ export const FormDetailContent = ({
     setIsEditQuestionOpen(true);
   };
 
-  const getFormatLabel = (format: string) => {
+  const getFormatLabel = useMemo(() => {
     const formatMap: Record<string, string> = {
       text: t('forms.detail.addQuestion.formats.text'),
       number: t('forms.detail.addQuestion.formats.number'),
@@ -135,11 +157,13 @@ export const FormDetailContent = ({
       date: t('forms.detail.addQuestion.formats.date'),
       rating: t('forms.detail.addQuestion.formats.rating'),
       signature: t('forms.detail.addQuestion.formats.signature'),
+      progressPhoto: t('forms.detail.addQuestion.formats.progressPhoto'),
+      metrics: t('forms.detail.addQuestion.formats.metrics'),
     };
-    return formatMap[format] || format;
-  };
+    return (format: string) => formatMap[format] || format;
+  }, [t]);
 
-  const columns: ColumnDefinition<any>[] = [
+  const columns: ColumnDefinition<any>[] = useMemo(() => [
     {
       id: 'question',
       label: t('forms.detail.columns.question'),
@@ -160,7 +184,7 @@ export const FormDetailContent = ({
           return (
             <Button
               variant="default"
-              onClick={handleOpenAddQuestion}
+              onClick={handleOpenAddQuestionInternal}
               className="gap-2"
             >
               <Plus className="size-4" />
@@ -168,7 +192,23 @@ export const FormDetailContent = ({
             </Button>
           );
         }
-        return <span className="text-sm">{row.question || ''}</span>;
+        // Check if this is a metric question
+        if (row.format === 'metrics' && row.metricId) {
+          const metric = metricsMap.get(row.metricId);
+          return (
+            <div className="flex flex-col gap-0.5 py-1">
+              <span className="text-sm font-medium">{row.question || ''}</span>
+              {metric && (
+                <span className="text-xs text-muted-foreground font-normal">{metric.name}</span>
+              )}
+            </div>
+          );
+        }
+        
+        // For non-metric questions, just show the question
+        return (
+          <span className="text-sm font-medium py-1">{row.question || ''}</span>
+        );
       },
     },
     {
@@ -223,7 +263,7 @@ export const FormDetailContent = ({
             return (
               <Button
                 variant="default"
-                onClick={handleToggleReorder}
+                onClick={onToggleReorder}
                 className="gap-2"
               >
                 <span>{t('forms.detail.actions.done')}</span>
@@ -252,17 +292,17 @@ export const FormDetailContent = ({
         );
       },
     },
-  ];
+  ], [t, isReorderMode, handleOpenAddQuestionInternal, handleDeleteQuestion, onToggleReorder, metricsMap, getFormatLabel]);
 
   return (
     <>
       <div className="w-full h-full flex-1 px-4 min-h-0 py-4">
         <div className="w-full h-full flex gap-4">
-          <div
-            className="h-full flex flex-col"
-            style={{ width: 'calc(70% - 0.5rem)', flexShrink: 0 }}
-          >
-            <DataGrid
+            <div
+              className="h-full flex flex-col"
+              style={{ width: 'calc(70% - 0.5rem)', flexShrink: 0 }}
+            >
+              <DataGrid
               data={[
                 ...questions,
                 {
@@ -292,7 +332,7 @@ export const FormDetailContent = ({
               onReorder={handleReorder}
               fixedBottomRowFilter={(row: any) => row._isAddRow === true}
             />
-          </div>
+            </div>
           <Card
             className="flex flex-col items-center justify-center overflow-auto"
             style={{
@@ -326,4 +366,5 @@ export const FormDetailContent = ({
     </>
   );
 };
+
 

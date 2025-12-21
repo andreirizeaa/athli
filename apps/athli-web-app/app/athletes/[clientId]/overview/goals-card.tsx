@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Edit, Plus, X } from 'lucide-react';
-import { getAthleteGoals, saveAthleteGoals } from '@/lib/athletes/athlete-service';
+import { getAthleteGoals, saveAthleteGoals } from '@/lib/client/client-athlete-service';
 
 type GoalsCardProps = {
   clientId: string;
@@ -104,7 +104,7 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
 
   return (
     <>
-      <Card className="bg-background flex flex-col w-full flex-1 min-h-0" style={{ height: '240px', minHeight: '240px', maxHeight: '240px' }}>
+      <Card className="bg-background flex flex-col w-full flex-1 min-h-0">
         <CardHeader className="px-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle>{t('athletes.profile.goals')}</CardTitle>

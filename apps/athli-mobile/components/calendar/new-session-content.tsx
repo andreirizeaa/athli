@@ -40,7 +40,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const { t } = useTranslations();
-  const { setClientSelectCallback, setTypeSelectCallback, setRepeatSelectCallback, getRepeatData, setRepeatData: clearStoredRepeatData } = useModalCallbacks();
+  const { setClientSelectCallback, setRepeatSelectCallback, getRepeatData, setRepeatData: clearStoredRepeatData } = useModalCallbacks();
   
   // iOS picker styling based on theme
   const iosPickerTextColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
@@ -131,10 +131,6 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
       setSelectedClient(client);
     });
 
-    setTypeSelectCallback((type: string) => {
-      setSelectedType(type);
-    });
-
     setRepeatSelectCallback((data: {
       type: 'weekly' | 'monthly';
       every?: number;
@@ -145,7 +141,7 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
       setRepeatData(data);
       setRepeatMode('custom');
     });
-  }, [setClientSelectCallback, setTypeSelectCallback, setRepeatSelectCallback]);
+  }, [setClientSelectCallback, setRepeatSelectCallback]);
 
   const handleOpenRepeatDropdown = () => {
     repeatRowRef.current?.measure((x, y, width, height, pageX, pageY) => {
@@ -189,12 +185,6 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
     });
   };
 
-  const handleOpenTypeModal = () => {
-    router.push({
-      pathname: '/modals/calendar/session-type-modal',
-      params: {},
-    });
-  };
 
   const handleDateChange = (event: any, date?: Date) => {
     if (Platform.OS === 'android') {
@@ -379,24 +369,6 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
                 {t('calendar.newSession.client')}
               </Text>
             )}
-            <PlatformIcon
-              sf="chevron.right"
-              IconComponent={ChevronRight}
-              size={iconSizes.navigationChevrons}
-              color={themeColors.mutedText}
-            />
-          </View>
-        </TouchableOpacity>
-        <Separator />
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handleOpenTypeModal}
-          style={styles.rowButton}
-        >
-          <View style={styles.rowButtonContent}>
-            <Text style={[selectedType ? styles.selectedTypeText : styles.rowButtonText, { color: selectedType ? themeColors.text : themeColors.mutedText }]}>
-              {selectedType || t('calendar.newSession.type')}
-            </Text>
             <PlatformIcon
               sf="chevron.right"
               IconComponent={ChevronRight}
