@@ -709,3 +709,104 @@ export const getCheckInInstance = async (
   };
 };
 
+export interface AddCoachReviewData {
+  clientId: string;
+  checkInId: string;
+  instanceId: string;
+  review: string;
+}
+
+export interface UpdateCoachReviewData {
+  clientId: string;
+  checkInId: string;
+  instanceId: string;
+  review: string;
+}
+
+export interface CoachReview {
+  id: string;
+  clientId: string;
+  checkInId: string;
+  instanceId: string;
+  review: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Service method to get a coach review for a check-in instance
+ * This will be connected to the backend in the future
+ */
+export const getCoachReview = async (
+  clientId: string,
+  checkInId: string,
+  instanceId: string
+): Promise<CoachReview | null> => {
+  console.log('Getting coach review:', { clientId, checkInId, instanceId });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/clients/${clientId}/check-ins/${checkInId}/instances/${instanceId}/review`, {
+  //   method: 'GET',
+  // })
+  // if (!response.ok) {
+  //   if (response.status === 404) return null;
+  //   throw new Error('Failed to get coach review')
+  // }
+  // return await response.json()
+
+  // Mock: Return null to simulate no review exists
+  // In production, this would check if a review exists
+  return null;
+};
+
+/**
+ * Service method to add a coach review to a check-in instance
+ * This will be connected to the backend in the future
+ */
+export const addCoachReview = async (data: AddCoachReviewData): Promise<void> => {
+  console.log('Adding coach review:', {
+    clientId: data.clientId,
+    checkInId: data.checkInId,
+    instanceId: data.instanceId,
+    review: data.review,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/clients/${data.clientId}/check-ins/${data.checkInId}/instances/${data.instanceId}/review`, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ review: data.review }),
+  // })
+  // if (!response.ok) throw new Error('Failed to add coach review')
+};
+
+/**
+ * Service method to update a coach review for a check-in instance
+ * This will be connected to the backend in the future
+ */
+export const updateCoachReview = async (data: UpdateCoachReviewData): Promise<void> => {
+  console.log('Updating coach review:', {
+    clientId: data.clientId,
+    checkInId: data.checkInId,
+    instanceId: data.instanceId,
+    review: data.review,
+  });
+
+  // Simulate API call delay
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // In the future, this will make an actual API call:
+  // const response = await fetch(`/api/clients/${data.clientId}/check-ins/${data.checkInId}/instances/${data.instanceId}/review`, {
+  //   method: 'PUT',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify({ review: data.review }),
+  // })
+  // if (!response.ok) throw new Error('Failed to update coach review')
+};
+

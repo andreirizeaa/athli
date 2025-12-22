@@ -146,6 +146,7 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
       case 'assigned':
         return 'outline';
       case 'review':
+      case 'completed':
         return 'outline';
       case 'reviewed':
         return 'default';
@@ -157,6 +158,7 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
   const getStatusClassName = (status: CheckInInstance['status']) => {
     switch (status) {
       case 'review':
+      case 'completed':
         return 'border-primary text-primary';
       case 'reviewed':
         return 'bg-primary text-primary-foreground border-transparent';
@@ -169,12 +171,13 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
     switch (status) {
       case 'assigned':
         return t('athletes.profile.checkIns.status.assigned');
-      case 'completed':
-        return t('athletes.profile.checkIns.status.completed');
       case 'review':
         return t('athletes.profile.checkIns.status.review');
       case 'reviewed':
         return t('athletes.profile.checkIns.status.reviewed');
+      case 'completed':
+        // Map 'completed' to 'review' for display purposes
+        return t('athletes.profile.checkIns.status.review');
       default:
         return status;
     }
@@ -186,6 +189,11 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
   const showButtons = completedInstances.length > 0;
   const isComparePage = pathname?.includes('/compare');
 
+  // Sort instances by scheduled date (newest first)
+  const sortedInstances = React.useMemo(() => {
+    return [...instances].sort((a, b) => b.scheduledDate.getTime() - a.scheduledDate.getTime());
+  }, [instances]);
+
   if (isLoading) {
     return (
       <div className="flex h-full w-full flex-col">
@@ -196,9 +204,11 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
         <div className="flex h-full w-full flex-1 min-h-0">
-          <div className="w-80 border-r bg-background flex-shrink-0">
-            <div className="p-4">
-              <p className="text-sm text-muted-foreground">Loading...</p>
+          <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              </div>
             </div>
           </div>
           <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
@@ -289,31 +299,30 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
           {/* Main content area with sidebar and content */}
         <div className="flex h-full w-full flex-1 min-h-0">
           {/* Left sidebar navigation */}
-          <div className="w-80 border-r bg-background flex-shrink-0">
-            <div className="p-4">
-              <nav className="space-y-0">
-                {instances
-                  .filter((instance) => instance.status !== 'completed')
-                  .map((instance, index, array) => {
+          <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              {/* Instances list */}
+              <div className="space-y-0 flex-1 overflow-y-auto">
+                {sortedInstances.map((instance, index) => {
                   const instanceHref = `/athletes/${clientId}/check-in/${checkInId}/${instance.id}`;
                   const isActive = pathname === instanceHref;
-                  const isLast = index === array.length - 1;
+                  const isLast = index === sortedInstances.length - 1;
 
                   return (
                     <React.Fragment key={instance.id}>
                       <Link
                         href={instanceHref}
                         className={cn(
-                          'flex items-center justify-between gap-3 px-3 py-2.5 rounded-md text-sm transition-colors',
+                          'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
                           isActive
-                            ? 'bg-accent text-accent-foreground font-medium'
+                            ? 'bg-accent text-accent-foreground'
                             : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
                         )}
                       >
-                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                          <span className={cn('text-sm truncate', isActive && 'font-medium')}>{instance.formName}</span>
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <span className="text-sm font-medium">{formatScheduledDate(instance.scheduledDate)}</span>
                           <span className="text-xs text-muted-foreground">
-                            {formatScheduledDate(instance.scheduledDate)}
+                            {getStatusLabel(instance.status)}
                           </span>
                         </div>
                         <Badge 
@@ -323,11 +332,11 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
                           {getStatusLabel(instance.status)}
                         </Badge>
                       </Link>
-                      {!isLast && <Separator className="my-1" />}
+                      {!isLast && <Separator className="w-full" />}
                     </React.Fragment>
                   );
                 })}
-              </nav>
+              </div>
             </div>
           </div>
 
