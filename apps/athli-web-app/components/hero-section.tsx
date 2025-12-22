@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { TextEffect } from '@/components/ui/text-effect';
 import { AnimatedGroup } from '@/components/ui/animated-group';
 import { HeroHeader } from './header';
-import { useClerk, useUser } from '@clerk/nextjs';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useRouter } from 'next/navigation';
 
 const transitionVariants = {
@@ -26,9 +26,10 @@ const transitionVariants = {
 };
 
 export default function HeroSection() {
-  const { isSignedIn } = useUser();
-  const { openSignIn } = useClerk();
+  const { user } = useSupabaseAuth();
   const router = useRouter();
+
+  const isSignedIn = !!user;
 
   const handleStartBuildingClick = () => {
     if (isSignedIn) {
@@ -36,9 +37,7 @@ export default function HeroSection() {
       return;
     }
 
-    openSignIn({
-      redirectUrl: '/home',
-    });
+    router.push('/auth/login');
   };
 
   return (

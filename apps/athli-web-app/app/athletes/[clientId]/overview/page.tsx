@@ -12,7 +12,7 @@ const ClientOverviewPage = () => {
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
   return (
-    <div className="w-full h-full bg-background flex flex-col items-start justify-start px-4 pt-4 pb-2 gap-4">
+    <div className="h-full w-full flex flex-col flex-1 min-h-0 p-4 gap-4">
       {clientId && (
         <>
           <div className="w-full flex gap-4 items-stretch">

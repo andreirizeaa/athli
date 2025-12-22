@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useSession } from '@clerk/nextjs';
 import { SupabaseClient, createClient } from '@supabase/supabase-js';
 
 type SupabaseContextValue = {
@@ -17,21 +16,10 @@ type SupabaseProviderProps = {
 };
 
 export default function SupabaseProvider({ children }: SupabaseProviderProps) {
-  const { isLoaded: isSessionLoaded, session } = useSession();
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!isSessionLoaded) {
-      return;
-    }
-
-    if (!session) {
-      setSupabase(null);
-      setIsLoaded(true);
-      return;
-    }
-
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
       throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL in your .env file');
     }
@@ -42,15 +30,12 @@ export default function SupabaseProvider({ children }: SupabaseProviderProps) {
 
     const client = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_KEY,
-      {
-        accessToken: () => session.getToken(),
-      }
+      process.env.NEXT_PUBLIC_SUPABASE_KEY
     );
 
     setSupabase(client);
     setIsLoaded(true);
-  }, [isSessionLoaded, session]);
+  }, []);
 
   return (
     <SupabaseContext.Provider

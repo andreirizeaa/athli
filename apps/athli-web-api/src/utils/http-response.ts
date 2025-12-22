@@ -18,3 +18,29 @@ export function sendError(
   });
 }
 
+interface ResponseData {
+  message?: string;
+  data?: any;
+}
+
+export function success(res: Response, payload: ResponseData): void {
+  res.status(200).json({
+    success: true,
+    ...payload,
+  });
+}
+
+export function created(res: Response, payload: ResponseData): void {
+  res.status(201).json({
+    success: true,
+    ...payload,
+  });
+}
+
+export function unauthorized(res: Response, payload: ResponseData): void {
+  res.status(401).json({
+    success: false,
+    ...payload,
+  });
+}
+

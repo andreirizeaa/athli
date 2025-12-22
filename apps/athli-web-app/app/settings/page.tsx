@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
 const SettingsPage = () => {
-  redirect('/settings/profile/account');
+  redirect('/settings/account/profile');
 };
 
 export default SettingsPage;

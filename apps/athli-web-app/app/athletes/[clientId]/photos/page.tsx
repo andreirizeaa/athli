@@ -142,8 +142,8 @@ const ClientPhotosPage = () => {
         {/* Left sidebar navigation */}
         <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
           <div className="w-full relative flex-shrink-0">
-            <div className="px-4 flex items-center mb-2 mt-2">
-              <ButtonGroup className="w-full">
+            <div className="px-3 py-3 flex items-center">
+              <ButtonGroup className="w-full px-1">
                 <Button
                   variant={activeView === 'all' ? 'default' : 'outline'}
                   onClick={() => handleViewChange('all')}
@@ -241,7 +241,7 @@ const ClientPhotosPage = () => {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="w-full relative flex-shrink-0">
-            <div className="px-4 flex items-center justify-end mb-2 mt-2">
+            <div className="px-3 py-3 flex items-center justify-end">
               <ButtonGroup>
                 <Button
                   variant="outline"
