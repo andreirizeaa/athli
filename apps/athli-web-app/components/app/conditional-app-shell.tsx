@@ -9,7 +9,7 @@ type ConditionalAppShellProps = {
 
 export const ConditionalAppShell = ({ children }: ConditionalAppShellProps) => {
   const pathname = usePathname();
-  const isAuthRoute = pathname?.startsWith('/sign-in') || pathname?.startsWith('/sign-up');
+  const isAuthRoute = pathname?.startsWith('/auth/');
   const isErrorRoute = pathname?.startsWith('/pages/error');
 
   if (isAuthRoute || isErrorRoute) {

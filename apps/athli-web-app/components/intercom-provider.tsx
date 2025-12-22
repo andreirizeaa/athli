@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useUser, useAuth } from '@clerk/nextjs';
+import { usePathname } from 'next/navigation';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
+import { createClient } from '@/lib/supabase/client';
 import { intercomApi } from '@/lib/general/intercom-api';
 
 declare global {
@@ -12,10 +14,14 @@ declare global {
 }
 
 export const IntercomProvider = () => {
-  const { user, isLoaded } = useUser();
-  const { getToken } = useAuth();
+  const { user, supabaseUser, isLoading } = useSupabaseAuth();
+  const pathname = usePathname();
+  const supabase = createClient();
   const [jwt, setJwt] = useState<string | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  // Check if we're on an auth page
+  const isAuthPage = pathname?.startsWith('/auth/');
 
   // Load Intercom script
   useEffect(() => {
@@ -77,15 +83,25 @@ export const IntercomProvider = () => {
     }
   }, []);
 
-  // Fetch JWT token
+  // Fetch JWT token - only when user is logged in and not on auth pages
+  // Extract email to a stable variable
+  const userEmail = supabaseUser?.email;
+
   useEffect(() => {
-    if (!isLoaded || !user) {
+    if (isLoading || !user || !supabaseUser || isAuthPage) {
       return;
     }
 
     const fetchJwt = async () => {
       try {
-        const token = await getToken();
+        // Get the Supabase session token
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        if (!token) {
+          return;
+        }
+
         const response = await intercomApi.jwt(token);
         if (!response.ok) {
           return;
@@ -100,17 +116,17 @@ export const IntercomProvider = () => {
     };
 
     fetchJwt();
-  }, [user, isLoaded, getToken]);
+  }, [user, supabaseUser, userEmail, isLoading, isAuthPage, supabase.auth]);
 
-  // Boot Intercom with JWT and user data
+  // Boot Intercom with JWT and user data - only when user is logged in and not on auth pages
   useEffect(() => {
-    if (!isLoaded || !user || !jwt || !scriptLoaded || typeof window.Intercom === 'undefined') {
+    if (isLoading || !user || !supabaseUser || !jwt || !scriptLoaded || typeof window.Intercom === 'undefined' || isAuthPage) {
       return;
     }
 
-    const emailAddress = user.emailAddresses[0]?.emailAddress || '';
-    const fullName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || '';
-    const createdAt = user.createdAt ? Math.floor(new Date(user.createdAt).getTime() / 1000) : undefined;
+    const emailAddress = user.email || supabaseUser.email || '';
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || '';
+    const createdAt = supabaseUser.created_at ? Math.floor(new Date(supabaseUser.created_at).getTime() / 1000) : undefined;
 
     window.Intercom('boot', {
       api_base: 'https://api-iam.intercom.io',
@@ -122,7 +138,7 @@ export const IntercomProvider = () => {
       ...(createdAt && { created_at: createdAt }),
       session_duration: 86400000, // 1 day
     });
-  }, [user, isLoaded, jwt, scriptLoaded]);
+  }, [user, supabaseUser, isLoading, jwt, scriptLoaded]);
 
   return null;
 };

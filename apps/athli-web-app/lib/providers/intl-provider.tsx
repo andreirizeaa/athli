@@ -76,17 +76,13 @@ export const IntlProvider = ({ children }: IntlProviderProps) => {
   const currentLocale = locale || 'en';
 
   // Always render NextIntlClientProvider to ensure context is available
-  // Use default 'en' during SSR and initial render, then update to saved locale after mount
+  // Always use current locale and messages to ensure context is stable
   // This ensures the context is always available, preventing "context not found" errors
-  const providerLocale = isMounted ? currentLocale : 'en';
-  const providerMessages = isMounted ? messages : enMessages;
-
   return (
     <LanguageContext.Provider value={{ locale: currentLocale, setLocale }}>
       <NextIntlClientProvider 
-        key="intl-provider"
-        locale={providerLocale} 
-        messages={providerMessages} 
+        locale={currentLocale} 
+        messages={messages} 
         timeZone="UTC"
       >
         {children}

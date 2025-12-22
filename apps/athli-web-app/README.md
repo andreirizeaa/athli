@@ -8,7 +8,7 @@ The main web application for Athli, built with Next.js.
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
 - **shadcn/ui** - UI component library
-- **Clerk** - Authentication
+- **Supabase Auth** - Authentication
 - **Convex** - Backend-as-a-Service
 - **Supabase** - Database and backend services
 - **next-intl** - Internationalization
@@ -73,8 +73,8 @@ Create a `.env.local` file in this directory with the following variables:
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3001
 NEXT_PUBLIC_WWW_URL=http://localhost:3000
-CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 CONVEX_DEPLOYMENT=your_convex_deployment
 ```

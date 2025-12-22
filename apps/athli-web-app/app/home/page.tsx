@@ -1,6 +1,8 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { ProgrammingRequiredCard } from './components/programming-required-card';
@@ -8,8 +10,24 @@ import { MessagesCard } from './components/messages-card';
 import { CompletedWorkoutsCard } from './components/completed-workouts-card';
 
 const HomePage = () => {
-  const { user } = useUser();
+  const { user, refreshUser } = useSupabaseAuth();
   const t = useTranslations();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check if user needs to be refreshed after email change
+  useEffect(() => {
+    const checkRefresh = async () => {
+      if (searchParams.get('refresh')) {
+        // Refresh user data
+        await refreshUser();
+        // Redirect to /home without query parameter
+        router.replace('/home');
+      }
+    };
+
+    checkRefresh();
+  }, [searchParams, refreshUser, router]);
 
   const hour = new Date().getHours();
   const firstName = user?.firstName || 'there';
