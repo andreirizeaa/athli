@@ -2,11 +2,10 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { cookies } from 'next/headers';
 import './globals.css';
-import { ClerkProvider } from '@clerk/nextjs';
-import { shadcn } from '@clerk/themes';
 import { ThemeProvider } from '@/lib/providers/theme-provider';
 import { IntlProvider } from '@/lib/providers/intl-provider';
 import SupabaseProvider from '@/lib/providers/supabase-provider';
+import { SupabaseAuthProvider } from '@/lib/providers/supabase-auth-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { ConditionalAppShell } from '@/components/app/conditional-app-shell';
 import { IntercomProvider } from '@/components/intercom-provider';
@@ -63,28 +62,14 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <ActiveThemeProvider initialTheme={themeSettings}>
-            <ClerkProvider
-              appearance={{
-                theme: shadcn,
-                elements: {
-                  rootBox: 'bg-transparent',
-                  card: 'bg-transparent shadow-none',
-                  cardBox: 'bg-transparent',
-                  main: 'bg-transparent',
-                },
-              }}
-              signInUrl="/sign-in"
-              signUpUrl="/sign-up"
-              signInForceRedirectUrl="/home"
-              signUpForceRedirectUrl="/home"
-            >
+            <SupabaseAuthProvider>
               <IntercomProvider />
               <SupabaseProvider>
                 <IntlProvider>
                   <ConditionalAppShell>{children}</ConditionalAppShell>
                 </IntlProvider>
               </SupabaseProvider>
-            </ClerkProvider>
+            </SupabaseAuthProvider>
             <Toaster position="bottom-right" />
           </ActiveThemeProvider>
         </ThemeProvider>

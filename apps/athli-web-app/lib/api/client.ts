@@ -7,19 +7,17 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 /**
- * Get the Clerk session token for authentication (client-side)
+ * Get the Supabase session token for authentication (client-side)
+ * Note: This should be called from client components that have access to Supabase client
  */
 const getAuthToken = async (): Promise<string | null> => {
   try {
-    // For client components, use Clerk's useAuth hook
-    // This function should be called from within a component that has access to useAuth
-    // For now, we'll create a helper that components can use
     if (typeof window === 'undefined') {
       return null;
     }
 
-    // In client components, use useAuth() hook and pass token to apiRequest
-    // For server components, use getAuth() from @clerk/nextjs/server
+    // Get Supabase session token
+    // Components should use useSupabase hook and pass token directly
     return null;
   } catch {
     return null;
@@ -28,9 +26,9 @@ const getAuthToken = async (): Promise<string | null> => {
 
 /**
  * Make an authenticated API request
- * @param endpoint - API endpoint (e.g., '/calendar/status')
+ * @param endpoint - API endpoint (e.g., '/intercom/jwt')
  * @param options - Fetch options
- * @param token - Optional Clerk session token (pass from useAuth().getToken())
+ * @param token - Optional Supabase session token
  */
 export const apiRequest = async (
   endpoint: string,

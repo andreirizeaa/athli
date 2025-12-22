@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Check, Laptop, Menu, Moon, Sun, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { useClerk, useUser } from '@clerk/nextjs';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useRouter } from 'next/navigation';
 
 import { Logo } from '@/components/logo';
@@ -32,11 +32,11 @@ export const HeroHeader = () => {
   const [isThemeMounted, setIsThemeMounted] = React.useState(false);
   const [currentLanguage, setCurrentLanguage] = React.useState('en');
   const { resolvedTheme, setTheme, theme } = useTheme();
-  const { isSignedIn } = useUser();
-  const { openSignIn } = useClerk();
+  const { user } = useSupabaseAuth();
   const router = useRouter();
 
   const currentTheme = theme || 'system';
+  const isSignedIn = !!user;
 
   const handleAuthClick = () => {
     if (isSignedIn) {
@@ -44,9 +44,7 @@ export const HeroHeader = () => {
       return;
     }
 
-    openSignIn({
-      redirectUrl: '/home',
-    });
+    router.push('/auth/login');
   };
 
   React.useEffect(() => {

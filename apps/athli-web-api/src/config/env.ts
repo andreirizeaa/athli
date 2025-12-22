@@ -5,8 +5,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.string().default('3000'),
   LOG_LEVEL: z.string().default('info'),
-  // Clerk
-  CLERK_SECRET_KEY: z.string().optional(),
+  // JWT
+  JWT_SECRET: z.string().optional(),
   // Supabase
   NEXT_PUBLIC_SUPABASE_URL: z.string().optional(),
   SUPABASE_URL: z.string().optional(),
