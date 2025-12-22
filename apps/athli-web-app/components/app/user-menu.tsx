@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Check, Laptop, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +23,7 @@ import { cn } from '@/lib/general/utils';
 import { availableLanguages } from '@/lib/providers/intl-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { DEFAULT_THEME, THEMES } from '@/lib/theme';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 
 type UserMenuProps = {
   isThemeMounted: boolean;
@@ -38,15 +39,16 @@ export function UserMenu({
   setIsLoggingOut,
 }: UserMenuProps) {
   const t = useTranslations();
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { user, signOut } = useSupabaseAuth();
+  const router = useRouter();
   const { resolvedTheme, setTheme, theme } = useTheme();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
 
-  const displayName =
-    user?.fullName || user?.firstName || user?.primaryEmailAddress?.emailAddress || 'User';
-  const displayEmail = user?.primaryEmailAddress?.emailAddress;
+  const displayName = user
+    ? `${user.firstName} ${user.lastName}`.trim() || user.email
+    : 'User';
+  const displayEmail = user?.email;
 
   const [initials, setInitials] = React.useState('U');
 
@@ -75,7 +77,9 @@ export function UserMenu({
           aria-label={t('sidebar.profile.openAccountMenuAria')}
         >
           <Avatar className="h-8 w-8 rounded-md">
-            <AvatarImage src={user?.imageUrl} alt={displayName} />
+            {user?.profileImageUrl && (
+              <AvatarImage src={user.profileImageUrl} alt={displayName} />
+            )}
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
         </button>
@@ -88,7 +92,9 @@ export function UserMenu({
       >
         <div className="flex items-center gap-3 px-3 py-3">
           <Avatar className="h-10 w-10 rounded-md">
-            <AvatarImage src={user?.imageUrl} alt={displayName} />
+            {user?.profileImageUrl && (
+              <AvatarImage src={user.profileImageUrl} alt={displayName} />
+            )}
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col overflow-hidden">
@@ -222,10 +228,14 @@ export function UserMenu({
         <DropdownMenuItem
           className="cursor-pointer px-3 py-2 rounded-t-none"
           variant="destructive"
-          onClick={() => {
+          onClick={async () => {
             setIsLoggingOut(true);
-            const wwwUrl = process.env.NEXT_PUBLIC_WWW_URL || 'http://localhost:3000';
-            signOut({ redirectUrl: wwwUrl });
+            try {
+              await signOut();
+            } catch (error) {
+              console.error('Sign out error:', error);
+              setIsLoggingOut(false);
+            }
           }}
         >
           <LogOut className="mr-2 size-4" />

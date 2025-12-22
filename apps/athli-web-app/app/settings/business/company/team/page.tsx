@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useUser } from '@clerk/nextjs';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -15,15 +15,15 @@ type Role = 'admin' | 'non-admin';
 
 const TeamPage = () => {
   const t = useTranslations();
-  const { user } = useUser();
+  const { user } = useSupabaseAuth();
   const [role, setRole] = useState<Role>('admin');
 
   const displayName = user
-    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.emailAddresses[0]?.emailAddress || 'User'
+    ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User'
     : 'User';
 
   const initials = user
-    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.emailAddresses[0]?.emailAddress?.[0].toUpperCase() || 'U'
+    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || user.email?.[0].toUpperCase() || 'U'
     : 'U';
 
   return (
@@ -52,7 +52,7 @@ const TeamPage = () => {
                     <div className="grid grid-cols-[1fr_auto] gap-4 py-4 px-4 items-center">
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
-                          <AvatarImage src={user?.imageUrl} alt={displayName} />
+                          <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} />
                           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">

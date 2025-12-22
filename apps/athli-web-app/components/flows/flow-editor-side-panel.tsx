@@ -16,7 +16,8 @@ import { Info } from 'lucide-react';
 import Link from 'next/link';
 import { getForms } from '@/lib/coach/coach-form-service';
 import { type Habit } from '@/lib/coach/coach-habit-service';
-import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw } from 'lucide-react';
+import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
+import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3 } from 'lucide-react';
 
 export type PanelType = 'trigger' | 'action' | null;
 
@@ -102,6 +103,11 @@ export const CLIENT_ACTION_OPTIONS: ActionOption[] = [
     name: 'Add habit',
     icon: Sprout,
   },
+  {
+    id: 'add-metric',
+    name: 'Add metric',
+    icon: BarChart3,
+  },
 ];
 
 export const ACTION_OPTIONS: ActionOption[] = [
@@ -123,14 +129,17 @@ interface FlowEditorSidePanelProps {
   selectedCheckIns: Set<string>;
   selectedFiles: Set<string>;
   selectedHabits: Set<string>;
+  selectedMetrics: Set<string>;
   onToggleQuestionnaire: (id: string) => void;
   onToggleCheckIn: (id: string) => void;
   onToggleFile: (id: string) => void;
   onToggleHabit: (id: string) => void;
+  onToggleMetric: (id: string) => void;
   questionnaires: Array<{ id: string; name: string }>;
   checkIns: Array<{ id: string; name: string }>;
   files: Array<{ id: string; name: string }>;
   habits: Array<{ id: string; name: string }>;
+  metrics: Array<{ id: string; name: string }>;
   isLoadingData: boolean;
   onClose: () => void;
   onTriggerOptionClick: (option: TriggerOption) => void;
@@ -159,6 +168,7 @@ interface FlowEditorSidePanelProps {
     selectedCheckIns?: Set<string>;
     selectedFiles?: Set<string>;
     selectedHabits?: Set<string>;
+    selectedMetrics?: Set<string>;
   }>;
   onTriggerKeyDown: (event: React.KeyboardEvent, option: TriggerOption) => void;
   onActionKeyDown: (event: React.KeyboardEvent, option: ActionOption) => void;
@@ -177,14 +187,17 @@ export function FlowEditorSidePanel({
   selectedCheckIns,
   selectedFiles,
   selectedHabits,
+  selectedMetrics,
   onToggleQuestionnaire,
   onToggleCheckIn,
   onToggleFile,
   onToggleHabit,
+  onToggleMetric,
   questionnaires,
   checkIns,
   files,
   habits,
+  metrics,
   isLoadingData,
   onClose,
   onTriggerOptionClick,
@@ -545,6 +558,8 @@ export function FlowEditorSidePanel({
                               ? (node.selectedFiles?.size || 0)
                               : node.option.id === 'add-habit'
                               ? (node.selectedHabits?.size || 0)
+                              : node.option.id === 'add-metric'
+                              ? (node.selectedMetrics?.size || 0)
                               : 0;
 
                             if (count > 0) {
@@ -560,6 +575,8 @@ export function FlowEditorSidePanel({
                                 pluralName = 'files';
                               } else if (singularName === 'habit') {
                                 pluralName = 'habits';
+                              } else if (singularName === 'metric') {
+                                pluralName = 'metrics';
                               } else if (!singularName.endsWith('s')) {
                                 pluralName = `${singularName}s`;
                               }
@@ -637,6 +654,16 @@ export function FlowEditorSidePanel({
                         emptyMessage: 'Please add a habit in the',
                         emptyLink: '/habits',
                         emptyLinkText: 'Habits',
+                      } : selectedActionOption?.id === 'add-metric' ? {
+                        data: metrics,
+                        selectedIds: selectedMetrics,
+                        onToggle: onToggleMetric,
+                        label: 'Metric',
+                        gridKey: 'select-metrics',
+                        searchPlaceholder: 'Search metrics...',
+                        emptyMessage: 'Please add a metric in the',
+                        emptyLink: '/metrics',
+                        emptyLinkText: 'Metrics',
                       } : null;
 
                       if (!config) return null;
@@ -819,6 +846,26 @@ export function FlowEditorSidePanel({
                           </div>
                         ) : null;
                       })}
+                    {selectedActionOption?.id === 'add-metric' &&
+                      Array.from(selectedMetrics).map((id) => {
+                        const item = metrics.find((m) => m.id === id);
+                        return item ? (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+                          >
+                            <span className="text-sm flex-1">{item.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => onToggleMetric(item.id)}
+                              className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                              aria-label={`Remove ${item.name}`}
+                            >
+                              <X className="size-4" />
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
                     {/* Add more button row */}
                     <div
                       role="button"
@@ -855,7 +902,8 @@ export function FlowEditorSidePanel({
                           (selectedActionOption?.id === 'assign-questionnaire' && selectedQuestionnaires.size === 0) ||
                           (selectedActionOption?.id === 'assign-check-in' && selectedCheckIns.size === 0) ||
                           (selectedActionOption?.id === 'add-file' && selectedFiles.size === 0) ||
-                          (selectedActionOption?.id === 'add-habit' && selectedHabits.size === 0)
+                          (selectedActionOption?.id === 'add-habit' && selectedHabits.size === 0) ||
+                          (selectedActionOption?.id === 'add-metric' && selectedMetrics.size === 0)
                         }
                         className="flex-1"
                       >

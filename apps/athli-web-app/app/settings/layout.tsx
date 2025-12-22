@@ -63,7 +63,16 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
       id: 'personal',
       icon: User,
       sections: [
-        { id: 'account', href: '/settings/profile/account' },
+        {
+          id: 'account',
+          href: '/settings/account/profile',
+          subSections: [
+            { id: 'accountProfile', href: '/settings/account/profile' },
+            { id: 'accountSecurity', href: '/settings/account/security' },
+            { id: 'accountInformation', href: '/settings/account/information' },
+            { id: 'accountDanger', href: '/settings/account/danger' },
+          ],
+        },
         { id: 'notifications', href: '/settings/profile/notifications' },
       ],
     },
@@ -168,8 +177,10 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
 
   // Check if company section should be expanded based on pathname
   const isCompanyPath = pathname.startsWith('/settings/business/company');
+  // Check if account section should be expanded based on pathname
+  const isAccountPath = pathname.startsWith('/settings/account');
 
-  // Update expanded sections when search results change or when on company path
+  // Update expanded sections when search results change or when on company/account path
   const effectiveExpandedSections = useMemo(() => {
     const base = new Set(expandedSections);
     if (searchQuery.trim()) {
@@ -178,10 +189,14 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
     if (isCompanyPath) {
       base.add('company');
     }
+    if (isAccountPath) {
+      base.add('account');
+    }
     return base;
-  }, [searchQuery, expandedSections, filteredGroups.sectionsToExpand, isCompanyPath]);
+  }, [searchQuery, expandedSections, filteredGroups.sectionsToExpand, isCompanyPath, isAccountPath]);
 
   const shouldExpandCompany = effectiveExpandedSections.has('company');
+  const shouldExpandAccount = effectiveExpandedSections.has('account');
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     if (hasUnsavedChanges && pathname !== href) {
@@ -242,6 +257,8 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
                         : isPathActive(section.href);
                       const isExpanded = section.id === 'company' 
                         ? shouldExpandCompany 
+                        : section.id === 'account'
+                        ? shouldExpandAccount
                         : effectiveExpandedSections.has(section.id);
                       const hasSubSections = section.subSections && section.subSections.length > 0;
                       

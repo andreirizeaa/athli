@@ -4,7 +4,6 @@ import cors from 'cors';
 import compression from 'compression';
 import pinoHttp from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
-import { clerkMiddleware } from '@clerk/express';
 import { logger } from '../config/logger';
 import { env } from '../config/env';
 import { rateLimiter } from '../middlewares/rate-limit';
@@ -53,9 +52,6 @@ export function createExpressApp() {
 
   app.use(requestLogger);
 
-  // Clerk authentication middleware
-  app.use(clerkMiddleware());
-
   // Rate limiting for basic DoS protection
   app.use('/api', rateLimiter);
 
@@ -95,10 +91,8 @@ export function createExpressApp() {
       endpoints: {
         health: '/health',
         docs: '/api-docs',
-        calendar: '/api/v1/calendar',
-        email: '/api/v1/email',
+        auth: '/api/v1/auth',
         intercom: '/api/v1/intercom',
-        provider: '/api/v1/provider',
       },
     });
   });

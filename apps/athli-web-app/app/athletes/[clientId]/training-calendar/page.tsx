@@ -1303,11 +1303,11 @@ const ClientTrainingCalendarPage = () => {
   };
 
   return (
-    <div className="w-full flex flex-col p-4">
-      <Card className="w-full flex flex-col p-0" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
+    <div className="w-full flex flex-col">
+      <Card className="w-full flex flex-col p-0 rounded-none border-0 shadow-none" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
         <div className="w-full relative flex-shrink-0">
-          <div className="w-full px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="w-full px-3 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 px-1">
             <Button
               type="button"
               variant="outline"
@@ -1427,7 +1427,7 @@ const ClientTrainingCalendarPage = () => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 bg-background rounded-b-xl px-4 pb-4 pt-2 min-h-0 flex flex-col">
+      <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col">
         {/* Day names header - only at the top */}
         <div className="flex gap-4 flex-shrink-0 mb-1">
           {calendarDates[0]?.map((date, dayIndex) => (

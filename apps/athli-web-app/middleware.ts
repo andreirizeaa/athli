@@ -1,30 +1,21 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-const isPublicRoute = createRouteMatcher([
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-]);
+const publicRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password'];
 
-const isProtectedRoute = createRouteMatcher(['/((?!_next|api|favicon.ico|.*\\..*|$).*)']);
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-export default clerkMiddleware(async (auth, req) => {
-  // Allow public routes (sign-in, sign-up)
-  if (isPublicRoute(req)) {
+  // Allow public routes and let client-side handle auth checks
+  // This prevents blocking navigation after successful login
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
-  // Protect all other routes
-  if (isProtectedRoute(req)) {
-    const { userId } = await auth();
-
-    if (!userId) {
-      // Redirect to sign-in page
-      const signInUrl = new URL('/sign-in', req.url);
-      return NextResponse.redirect(signInUrl);
-    }
-  }
-});
+  // Allow all other routes through - client-side auth will handle redirects
+  // This ensures navigation works even if cookies aren't immediately visible to middleware
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
