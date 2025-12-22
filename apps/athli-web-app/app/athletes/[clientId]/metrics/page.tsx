@@ -340,8 +340,8 @@ const ClientMetricsPage = () => {
         {/* Left sidebar navigation */}
         <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
           <div className="w-full relative flex-shrink-0">
-            <div className="px-4 flex items-center mb-2 mt-2">
-              <div className="relative w-full">
+            <div className="px-3 py-3 flex items-center">
+              <div className="relative w-full px-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                 <Input
                   type="text"
@@ -401,7 +401,7 @@ const ClientMetricsPage = () => {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="w-full relative flex-shrink-0">
-            <div className="px-4 flex items-center justify-end mb-2 mt-2">
+            <div className="px-3 py-3 flex items-center justify-end">
               <ButtonGroup>
                 <Button
                   variant="outline"
