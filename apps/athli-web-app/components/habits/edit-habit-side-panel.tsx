@@ -109,7 +109,7 @@ export const EditHabitSidePanel = ({
     <SidePanel
       open={open}
       onOpenChange={onOpenChange}
-      title="Edit Habit"
+      title={t('habits.editHabitTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
       footer={

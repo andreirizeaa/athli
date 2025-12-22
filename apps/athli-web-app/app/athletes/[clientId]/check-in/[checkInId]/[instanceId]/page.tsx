@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Download, Loader2 } from 'lucide-react';
-import { getCheckInInstance, type CheckInInstance, type Question, type QuestionAnswer } from '@/lib/client/client-form-service';
+import { getCheckInInstance, addCoachReview, updateCoachReview, getCoachReview, type CheckInInstance, type Question, type QuestionAnswer } from '@/lib/client/client-form-service';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -40,6 +41,11 @@ const CheckInInstancePage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [mediaPreview, setMediaPreview] = useState<MediaPreview | null>(null);
+  const [reviewText, setReviewText] = useState<string>('');
+  const [originalReviewText, setOriginalReviewText] = useState<string>('');
+  const [isSavingReview, setIsSavingReview] = useState<boolean>(false);
+  const [isEditingReview, setIsEditingReview] = useState<boolean>(false);
+  const [hasReview, setHasReview] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchInstance = async () => {
@@ -49,6 +55,32 @@ const CheckInInstancePage = () => {
       try {
         const data = await getCheckInInstance(clientId, checkInId, instanceId);
         setInstance(data);
+        
+        // Fetch existing review if status is 'reviewed'
+        if (data.status === 'reviewed') {
+          try {
+            const review = await getCoachReview(clientId, checkInId, instanceId);
+            if (review && review.review) {
+              setReviewText(review.review);
+              setOriginalReviewText(review.review);
+              setHasReview(true);
+            } else {
+              setHasReview(false);
+              setReviewText('');
+              setOriginalReviewText('');
+            }
+          } catch (error) {
+            // Review doesn't exist yet, which is fine
+            setHasReview(false);
+            setReviewText('');
+            setOriginalReviewText('');
+          }
+        } else {
+          // For 'review' status, start fresh
+          setHasReview(false);
+          setReviewText('');
+          setOriginalReviewText('');
+        }
       } catch (error) {
         console.error('Failed to fetch check-in instance:', error);
       } finally {
@@ -118,6 +150,53 @@ const CheckInInstancePage = () => {
       ...mediaPreview,
       currentIndex: index,
     });
+  };
+
+  const handleSaveReview = async () => {
+    if (!clientId || !checkInId || !instanceId || !reviewText.trim() || isSavingReview || !instance) return;
+
+    setIsSavingReview(true);
+    try {
+      if (instance.status === 'reviewed' && isEditingReview) {
+        // Update existing review
+        await updateCoachReview({
+          clientId,
+          checkInId,
+          instanceId,
+          review: reviewText.trim(),
+        });
+        setOriginalReviewText(reviewText.trim());
+        setIsEditingReview(false);
+      } else {
+        // Create new review (status is 'review')
+        await addCoachReview({
+          clientId,
+          checkInId,
+          instanceId,
+          review: reviewText.trim(),
+        });
+        setOriginalReviewText(reviewText.trim());
+        setHasReview(true);
+        // Update instance status to 'reviewed' after saving
+        setInstance({ ...instance, status: 'reviewed' });
+      }
+      // TODO: Show success toast
+    } catch (error) {
+      console.error('Failed to save review:', error);
+      // TODO: Show error toast
+    } finally {
+      setIsSavingReview(false);
+    }
+  };
+
+  const handleEditReview = () => {
+    setIsEditingReview(true);
+    setReviewText(originalReviewText);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingReview(false);
+    setReviewText(originalReviewText);
   };
 
   const getDateSuffix = (day: number): string => {
@@ -254,7 +333,7 @@ const CheckInInstancePage = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-hidden">
-      <div className="w-full h-full flex-1 min-h-0 py-4 flex items-start justify-center overflow-auto">
+      <div className="w-full h-full flex-1 min-h-0 py-4 flex flex-col items-center overflow-auto gap-4">
         {instance.status === 'assigned' ? (
           <Card className="w-full max-w-2xl">
             <CardHeader className="px-4">
@@ -268,35 +347,103 @@ const CheckInInstancePage = () => {
             </div>
           </Card>
         ) : (
-          <Card className="w-full max-w-2xl">
-            <div className="w-full">
-              {instance.completedAt && (
-                <>
-                  <CardHeader className="px-4 pb-3">
-                    <CardTitle>{formatCompletionDate(instance.completedAt)}</CardTitle>
-                  </CardHeader>
-                  <Separator className="w-full mt-[-8px] mb-[-4px]" />
-                </>
-              )}
-              {instance.questions?.map((question, index) => (
-                <div
-                  key={question.id}
-                  className={cn('py-4 px-4', index < (instance.questions?.length || 0) - 1 && 'border-b')}
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-sm font-medium text-muted-foreground flex-shrink-0">{index + 1}.</span>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start gap-2">
-                        <p className="text-sm font-medium text-foreground">{question.question}</p>
-                        {question.required && <span className="text-red-500 text-sm">*</span>}
+          <>
+            <Card className="w-full max-w-2xl">
+              <div className="w-full">
+                {instance.completedAt && (
+                  <>
+                    <CardHeader className="px-4 pb-3">
+                      <CardTitle>{formatCompletionDate(instance.completedAt)}</CardTitle>
+                    </CardHeader>
+                    <Separator className="w-full mt-[-8px] mb-[-4px]" />
+                  </>
+                )}
+                {instance.questions?.map((question, index) => (
+                  <div
+                    key={question.id}
+                    className={cn('py-4 px-4', index < (instance.questions?.length || 0) - 1 && 'border-b')}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="text-sm font-medium text-muted-foreground flex-shrink-0">{index + 1}.</span>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <p className="text-sm font-medium text-foreground">{question.question}</p>
+                          {question.required && <span className="text-red-500 text-sm">*</span>}
+                        </div>
+                        <div className="pl-0">{renderAnswer(question, index)}</div>
                       </div>
-                      <div className="pl-0">{renderAnswer(question, index)}</div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Review Check-in Card - Only show for 'review' or 'reviewed' status */}
+            {(instance.status === 'review' || instance.status === 'reviewed') && (
+              <Card className="w-full max-w-2xl">
+                <CardHeader className="px-4 pb-0">
+                  <CardTitle>
+                    {instance.status === 'reviewed'
+                      ? t('athletes.profile.checkIns.reviewCompletedTitle')
+                      : t('athletes.profile.checkIns.reviewTitle')}
+                  </CardTitle>
+                </CardHeader>
+                <Separator className="w-full mt-[-8px] mb-[-4px]" />
+                <div className="px-4 py-2 space-y-4">
+                  <Textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder={t('athletes.profile.checkIns.reviewPlaceholder')}
+                    className="min-h-[120px] w-full resize-none"
+                    rows={5}
+                    disabled={instance.status === 'reviewed' && !isEditingReview}
+                  />
+                  <div className="flex justify-end gap-2">
+                    {instance.status === 'reviewed' && !isEditingReview ? (
+                      <Button onClick={handleEditReview} className="gap-2" variant="outline">
+                        <span>{t('athletes.profile.checkIns.editReview')}</span>
+                      </Button>
+                    ) : (
+                      <>
+                        {isEditingReview && (
+                          <Button
+                            onClick={handleCancelEdit}
+                            variant="outline"
+                            className="gap-2"
+                            disabled={isSavingReview}
+                          >
+                            <span>{t('general.cancel')}</span>
+                          </Button>
+                        )}
+                        <Button
+                          onClick={handleSaveReview}
+                          disabled={!reviewText.trim() || isSavingReview}
+                          className="gap-2"
+                        >
+                          {isSavingReview ? (
+                            <>
+                              <Loader2 className="size-4 animate-spin" />
+                              <span>
+                                {instance.status === 'reviewed' && isEditingReview
+                                  ? t('athletes.profile.checkIns.updatingReview')
+                                  : t('athletes.profile.checkIns.completingReview')}
+                              </span>
+                            </>
+                          ) : (
+                            <span>
+                              {instance.status === 'reviewed' && isEditingReview
+                                ? t('athletes.profile.checkIns.updateReview')
+                                : t('athletes.profile.checkIns.completeReview')}
+                            </span>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </Card>
+              </Card>
+            )}
+          </>
         )}
       </div>
 
