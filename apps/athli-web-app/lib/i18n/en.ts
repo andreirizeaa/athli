@@ -433,6 +433,7 @@ export const enMessages = {
       workouts: 'Workouts',
       athletes: 'Athletes',
       calendar: 'Calendar',
+      getStarted: 'Get Started',
       home: 'Home',
       todo: 'To do',
       library: 'Library',
@@ -445,6 +446,7 @@ export const enMessages = {
       nutrition: 'Nutrition',
       flows: 'Flows',
       checkIns: 'Check Ins',
+      referAndEarn: 'Refer and Earn',
     },
     actions: {
       keepMenuOpen: 'Keep menu open',
