@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
-import { ProgrammingRequiredCard } from './components/programming-required-card';
-import { MessagesCard } from './components/messages-card';
 import { CompletedWorkoutsCard } from './components/completed-workouts-card';
 
 const HomePage = () => {
@@ -92,21 +90,11 @@ const HomePage = () => {
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 px-4 py-4">
-        <div className="w-full flex gap-4">
+        <div className="w-full flex justify-center">
           <div className="flex flex-col" style={{ width: '50%', height: '1200px' }}>
             <CompletedWorkoutsCard />
             <div className="flex-1 overflow-y-auto mt-4">
               {/* Scrollable content below the card */}
-            </div>
-          </div>
-          <div className="flex-1 flex flex-col gap-4">
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <ProgrammingRequiredCard />
-              </div>
-              <div className="flex-1">
-                <MessagesCard />
-              </div>
             </div>
           </div>
         </div>
