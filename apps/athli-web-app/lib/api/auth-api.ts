@@ -163,6 +163,16 @@ class AuthAPI {
       },
     });
   }
+
+  async newClient(coachId: string, token: string): Promise<AuthResponse> {
+    return this.request('/new-client', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ coachId }),
+    });
+  }
 }
 
 export const authAPI = new AuthAPI();

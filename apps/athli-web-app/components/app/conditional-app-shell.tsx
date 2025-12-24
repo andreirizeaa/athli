@@ -11,8 +11,9 @@ export const ConditionalAppShell = ({ children }: ConditionalAppShellProps) => {
   const pathname = usePathname();
   const isAuthRoute = pathname?.startsWith('/auth/');
   const isErrorRoute = pathname?.startsWith('/pages/error');
+  const isClientRoute = pathname?.startsWith('/client/');
 
-  if (isAuthRoute || isErrorRoute) {
+  if (isAuthRoute || isErrorRoute || isClientRoute) {
     return <>{children}</>;
   }
 
