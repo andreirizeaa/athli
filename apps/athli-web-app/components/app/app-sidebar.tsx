@@ -20,6 +20,8 @@ import {
   ClipboardCheck,
   UtensilsCrossed,
   BarChart3,
+  Rocket,
+  Gift,
 } from 'lucide-react';
 import { LogoIcon } from '@/components/logo';
 import {
@@ -66,6 +68,11 @@ export function AppSidebar() {
       href: '/todo',
       labelKey: 'sidebar.links.todo',
       icon: CheckSquare,
+    },
+    {
+      href: '/check-ins',
+      labelKey: 'sidebar.links.checkIns',
+      icon: ClipboardCheck,
     },
   ] as const;
 
@@ -130,6 +137,18 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
+                  isActive={activePath === '/get-started'}
+                  className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                >
+                  <Link href="/get-started">
+                    <Rocket className="shrink-0" />
+                    {!isCollapsed && <span>{t('sidebar.links.getStarted')}</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
                   isActive={activePath === '/home'}
                   className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
                 >
@@ -158,7 +177,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/athletes' || href === '/messaging' || href === '/todo'
+                  href === '/athletes' || href === '/messaging' || href === '/todo' || href === '/check-ins'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);
@@ -264,7 +283,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="mt-auto px-2 pb-3">
+      <SidebarFooter className="mt-auto pb-3">
         <SidebarMenu className="gap-0.5">
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -275,6 +294,18 @@ export function AppSidebar() {
               <Link href="/settings">
                 <Settings className="shrink-0" />
                 {!isCollapsed && <span>{t('sidebar.settings.label') || 'Settings'}</span>}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={activePath === '/refer-and-earn'}
+              className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+            >
+              <Link href="/refer-and-earn">
+                <Gift className="shrink-0" />
+                {!isCollapsed && <span>{t('sidebar.links.referAndEarn')}</span>}
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
