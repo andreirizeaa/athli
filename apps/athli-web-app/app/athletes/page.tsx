@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,6 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
+import { toast } from 'sonner';
 import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
@@ -147,6 +149,7 @@ const AthleteNameTooltip = ({ name }: { name: string }) => {
 const AthletesPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const { user } = useSupabaseAuth();
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
   const [copiedFields, setCopiedFields] = useState<Set<string>>(new Set());
@@ -458,7 +461,12 @@ const AthletesPage = () => {
   };
 
   const handleCopyInviteLink = async () => {
-    const inviteLink = 'google.com';
+    if (!user?.id) {
+      toast.error('Unable to generate invite link. Please try again.');
+      return;
+    }
+
+    const inviteLink = `${window.location.origin}/client/invite/${user.id}`;
     try {
       await navigator.clipboard.writeText(inviteLink);
     } catch (err) {

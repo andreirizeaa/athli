@@ -60,3 +60,9 @@ export const verifySecurityOTPSchema = z.object({
     otp: z.string().min(6, 'OTP must be at least 6 characters'),
   }),
 });
+
+export const newClientSchema = z.object({
+  body: z.object({
+    coachId: z.string().uuid('Invalid coach ID'),
+  }),
+});
