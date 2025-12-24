@@ -279,3 +279,17 @@ authRouter.post('/send-security-otp', supabaseAuthenticate, validate(sendSecurit
  *         description: OTP verified successfully
  */
 authRouter.post('/verify-security-otp', supabaseAuthenticate, validate(verifySecurityOTPSchema), authController.verifySecurityOTP);
+
+/**
+ * @swagger
+ * /api/v1/auth/delete-account:
+ *   delete:
+ *     summary: Delete user account
+ *     tags: [Auth]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ */
+authRouter.delete('/delete-account', supabaseAuthenticate, authController.deleteAccount);

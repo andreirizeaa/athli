@@ -71,7 +71,6 @@ export default function SignInPage() {
         <div className="w-full max-w-md space-y-8 px-4">
           <div className="text-center">
             <h2 className="mt-6 text-3xl font-bold">Welcome back</h2>
-            <p className="text-muted-foreground mt-2 text-sm">Please sign in to your account</p>
           </div>
 
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

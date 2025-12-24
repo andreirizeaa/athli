@@ -28,7 +28,7 @@ const HomePage = () => {
   }, [searchParams, refreshUser, router]);
 
   const hour = new Date().getHours();
-  const firstName = user?.firstName || 'there';
+  const firstName = user?.name?.split(' ')[0] || 'there';
 
   let greetingKey = 'greetings.goodMorning';
   if (hour >= 12 && hour < 18) {

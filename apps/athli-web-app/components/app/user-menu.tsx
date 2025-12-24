@@ -46,7 +46,7 @@ export function UserMenu({
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
 
   const displayName = user
-    ? `${user.firstName} ${user.lastName}`.trim() || user.email
+    ? user.name || user.email
     : 'User';
   const displayEmail = user?.email;
 
@@ -77,8 +77,8 @@ export function UserMenu({
           aria-label={t('sidebar.profile.openAccountMenuAria')}
         >
           <Avatar className="h-8 w-8 rounded-md">
-            {user?.profileImageUrl && (
-              <AvatarImage src={user.profileImageUrl} alt={displayName} />
+            {user?.profilePictureUrl && (
+              <AvatarImage src={user.profilePictureUrl} alt={displayName} />
             )}
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
@@ -92,8 +92,8 @@ export function UserMenu({
       >
         <div className="flex items-center gap-3 px-3 py-3">
           <Avatar className="h-10 w-10 rounded-md">
-            {user?.profileImageUrl && (
-              <AvatarImage src={user.profileImageUrl} alt={displayName} />
+            {user?.profilePictureUrl && (
+              <AvatarImage src={user.profilePictureUrl} alt={displayName} />
             )}
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>

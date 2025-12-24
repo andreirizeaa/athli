@@ -68,13 +68,27 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Check if user already has a session (email change case)
+      // Check if user already has a session
       const { data: { session } } = await supabase.auth.getSession();
+
       if (session) {
-        // Email was just changed, redirect with refresh flag
-        return NextResponse.redirect(new URL('/home?refresh=true', request.url));
+        // For new Google OAuth users, set user_type if not already set
+        if (!session.user.user_metadata?.user_type) {
+          await supabase.auth.updateUser({
+            data: {
+              user_type: 'coach', // Default to coach for /auth registration
+            }
+          });
+        }
+
+        // Check if this was an email change
+        const isEmailChange = requestUrl.searchParams.get('type') === 'email_change';
+        if (isEmailChange) {
+          return NextResponse.redirect(new URL('/home?refresh=true', request.url));
+        }
       }
-      // New login/signup
+
+      // New login/signup or existing user
       return NextResponse.redirect(new URL('/home', request.url));
     } else {
       console.error('Error exchanging code for session:', error);

@@ -47,6 +47,68 @@ export function createExpressApp() {
         if (res.statusCode >= 400) return 'warn';
         return 'info';
       },
+      serializers: {
+        req: (req) => {
+          // Redact sensitive fields from body
+          const sensitiveFields = ['password', 'newPassword', 'otp', 'token', 'credential'];
+          let sanitizedBody = req.body;
+          
+          if (req.body && typeof req.body === 'object') {
+            sanitizedBody = { ...req.body };
+            for (const field of sensitiveFields) {
+              if (sanitizedBody[field]) {
+                sanitizedBody[field] = '[REDACTED]';
+              }
+            }
+          }
+
+          // Truncate body if too large
+          let bodyLog: unknown = sanitizedBody;
+          if (sanitizedBody) {
+            const bodyStr = typeof sanitizedBody === 'string'
+              ? sanitizedBody
+              : JSON.stringify(sanitizedBody);
+            
+            if (bodyStr.length > 500) {
+              bodyLog = `${bodyStr.substring(0, 500)}... [truncated ${bodyStr.length - 500} chars]`;
+            }
+          }
+
+          return {
+            id: req.id,
+            method: req.method,
+            url: req.url,
+            path: req.path,
+            query: req.query,
+            headers: {
+              host: req.headers.host,
+              'user-agent': req.headers['user-agent'],
+              'content-type': req.headers['content-type'],
+              authorization: req.headers.authorization
+                ? `${req.headers.authorization.substring(0, 20)}...`
+                : undefined,
+            },
+            remoteAddress: req.remoteAddress,
+            remotePort: req.remotePort,
+            body: bodyLog,
+          };
+        },
+        res: (res) => ({
+          statusCode: res.statusCode,
+        }),
+      },
+      customSuccessMessage: (req, res) => {
+        return `${req.method} ${req.url} ${res.statusCode}`;
+      },
+      customErrorMessage: (req, res, err) => {
+        return `${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
+      },
+      customAttributeKeys: {
+        req: 'request',
+        res: 'response',
+        err: 'error',
+        responseTime: 'responseTime',
+      },
     })
   );
 
