@@ -69,6 +69,11 @@ export function AppSidebar() {
       labelKey: 'sidebar.links.todo',
       icon: CheckSquare,
     },
+    {
+      href: '/check-ins',
+      labelKey: 'sidebar.links.checkIns',
+      icon: ClipboardCheck,
+    },
   ] as const;
 
   const libraryNavItems = [
@@ -172,7 +177,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/athletes' || href === '/messaging' || href === '/todo'
+                  href === '/athletes' || href === '/messaging' || href === '/todo' || href === '/check-ins'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);
