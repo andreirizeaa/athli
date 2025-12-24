@@ -11,13 +11,12 @@ export class AuthController {
    * Register new user
    */
   register = asyncHandler(async (req: Request, res: Response) => {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, name } = req.body;
 
     const result = await authService.register({
       email,
       password,
-      firstName,
-      lastName,
+      name,
     });
 
     created(res, {
@@ -122,8 +121,8 @@ export class AuthController {
 
       const googleUser = {
         email: payload.email!,
-        given_name: payload.given_name || '',
-        family_name: payload.family_name || '',
+        name: payload.name || '',
+        picture: payload.picture,
         sub: payload.sub,
       };
 
@@ -194,6 +193,24 @@ export class AuthController {
     success(res, {
       message: result.valid ? 'OTP verified successfully' : 'Invalid OTP',
       data: { valid: result.valid },
+    });
+  });
+
+  /**
+   * Delete user account
+   */
+  deleteAccount = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    await authService.deleteAccount(userId);
+
+    success(res, {
+      message: 'Account deleted successfully',
     });
   });
 }

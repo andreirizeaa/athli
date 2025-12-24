@@ -3,8 +3,7 @@ import { getSupabaseClient } from './supabase.service';
 interface RegisterInput {
   email: string;
   password: string;
-  firstName: string;
-  lastName: string;
+  name: string;
 }
 
 interface LoginInput {
@@ -14,16 +13,19 @@ interface LoginInput {
 
 interface GoogleUser {
   email: string;
-  given_name: string;
-  family_name: string;
+  name: string;
+  picture?: string;
   sub: string;
 }
 
 interface User {
   id: string;
   email: string;
-  firstName: string;
-  lastName: string;
+  name: string;
+  userType: 'coach' | 'client';
+  profilePictureUrl?: string | null;
+  signinMethod: 'email' | 'google';
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -40,8 +42,8 @@ class AuthService {
       password: input.password,
       email_confirm: false, // Require email verification
       user_metadata: {
-        first_name: input.firstName,
-        last_name: input.lastName,
+        name: input.name,
+        user_type: 'coach', // Default to coach for /auth registration
       },
     });
 
@@ -298,8 +300,10 @@ class AuthService {
         email: googleUser.email,
         email_confirm: true, // Google email is already verified
         user_metadata: {
-          first_name: googleUser.given_name,
-          last_name: googleUser.family_name,
+          name: googleUser.name,
+          user_type: 'coach', // Default to coach for /auth registration
+          avatar_url: googleUser.picture,
+          picture: googleUser.picture,
           provider: 'google',
           provider_id: googleUser.sub,
         },
@@ -362,23 +366,55 @@ class AuthService {
 
     if (profileError) {
       console.error('Profile fetch error:', profileError);
-      // Return user without profile if profile doesn't exist
+      // Return user from metadata if profile doesn't exist
       return {
         id: authUser.user.id,
         email: authUser.user.email || '',
-        firstName: authUser.user.user_metadata?.first_name || '',
-        lastName: authUser.user.user_metadata?.last_name || '',
+        name: authUser.user.user_metadata?.name || '',
+        userType: (authUser.user.user_metadata?.user_type as 'coach' | 'client') || 'coach',
+        profilePictureUrl: authUser.user.user_metadata?.avatar_url || authUser.user.user_metadata?.picture || null,
+        signinMethod: (authUser.user.app_metadata?.provider as 'email' | 'google') || 'email',
+        isActive: true,
         createdAt: authUser.user.created_at,
       };
     }
 
     return {
       id: authUser.user.id,
-      email: authUser.user.email || '',
-      firstName: profile.first_name,
-      lastName: profile.last_name,
+      email: profile.email,
+      name: profile.name,
+      userType: profile.user_type,
+      profilePictureUrl: profile.profile_picture_url,
+      signinMethod: profile.signin_method,
+      isActive: profile.is_active,
       createdAt: authUser.user.created_at,
     };
+  }
+
+  /**
+   * Delete user account
+   * Deletes the user profile from user_profiles table
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const supabase = getSupabaseClient();
+
+    // Delete user profile from user_profiles table
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      throw new Error(`Failed to delete user profile: ${profileError.message}`);
+    }
+
+    // Note: We're only deleting from user_profiles as requested
+    // The auth.users record will remain, but the user won't have a profile
+    // If you want to also delete from auth.users, uncomment the following:
+    // const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+    // if (authError) {
+    //   throw new Error(`Failed to delete auth user: ${authError.message}`);
+    // }
   }
 }
 

@@ -10,6 +10,7 @@ import { X, Loader2 } from 'lucide-react';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { authAPI } from '@/lib/api/auth-api';
 
 const DangerPage = () => {
   const t = useTranslations();
@@ -23,15 +24,16 @@ const DangerPage = () => {
     setIsDeletingAccount(true);
 
     try {
+      // Get Supabase access token
       const supabase = createClient();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      // Delete user profile (cascade will handle related data)
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', user.id);
+      if (sessionError || !session) {
+        throw new Error('Not authenticated');
+      }
 
-      if (profileError) throw profileError;
+      // Delete account via backend API
+      await authAPI.deleteAccount(session.access_token);
 
       setIsDeleteModalOpen(false);
       // Sign out and redirect

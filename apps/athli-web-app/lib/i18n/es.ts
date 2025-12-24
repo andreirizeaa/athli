@@ -240,6 +240,17 @@ export const esMessages = {
       connectAccountAria: 'Conectar cuenta',
       connectAccountError: 'Error al conectar la cuenta. Por favor intenta de nuevo.',
       noConnectedAccounts: 'No hay cuentas conectadas',
+      profilePictureDialog: {
+        title: 'Actualizar Foto de Perfil',
+        description: 'Sube una imagen para tu foto de perfil',
+        clickToUpload: 'Haz clic para subir o arrastra y suelta',
+        fileTypes: 'PNG, JPG hasta 5MB',
+        zoom: 'Zoom',
+        rotate: 'Rotar',
+        imageFileError: 'Por favor selecciona un archivo de imagen',
+        imageSizeError: 'El tamaño de la imagen debe ser menor a 5MB',
+        saveFailed: 'Error al guardar la foto de perfil',
+      },
       verification: {
         title: 'Verificación adicional requerida',
         description: 'Se requiere verificación adicional para conectar cuentas externas. Por favor verifica tu identidad a través de la configuración de tu cuenta, luego intenta conectar de nuevo.',

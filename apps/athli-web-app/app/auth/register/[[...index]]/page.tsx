@@ -17,22 +17,21 @@ export default function SignUpPage() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!firstName || !lastName || !email || !password) {
+    if (!name || !email || !password) {
       toast.error('Please fill in all fields');
       return;
     }
 
     setIsSigningUp(true);
     try {
-      await signUp(email, password, firstName, lastName);
+      await signUp(email, password, name);
       toast.success('Account created! Please check your email for verification code.');
       // signUp already redirects to verify-email page
     } catch (err: any) {
@@ -74,34 +73,18 @@ export default function SignUpPage() {
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="first_name" className="sr-only">
-                  First name
+                <Label htmlFor="name" className="sr-only">
+                  Full name
                 </Label>
                 <Input
-                  id="first_name"
-                  name="first_name"
+                  id="name"
+                  name="name"
                   type="text"
                   required
                   className="w-full"
-                  placeholder="First name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  disabled={isSigningUp || isGoogleLoading}
-                />
-              </div>
-              <div>
-                <Label htmlFor="last_name" className="sr-only">
-                  Last name
-                </Label>
-                <Input
-                  id="last_name"
-                  name="last_name"
-                  type="text"
-                  required
-                  className="w-full"
-                  placeholder="Last name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   disabled={isSigningUp || isGoogleLoading}
                 />
               </div>

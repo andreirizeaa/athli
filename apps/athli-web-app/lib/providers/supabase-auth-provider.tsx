@@ -7,17 +7,19 @@ import type { User } from '@supabase/supabase-js';
 
 interface UserProfile {
   id: string;
+  userType: 'coach' | 'client';
   email: string;
-  firstName: string;
-  lastName: string;
-  profileImageUrl?: string | null;
+  name: string;
+  profilePictureUrl?: string | null;
+  signinMethod: 'email' | 'google';
+  isActive: boolean;
 }
 
 interface AuthContextType {
   user: UserProfile | null;
   supabaseUser: User | null;
   isLoading: boolean;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   verifyOTP: (email: string, token: string) => Promise<void>;
@@ -68,7 +70,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     try {
       // Wait a bit for session to be fully established
       await new Promise((resolve) => setTimeout(resolve, 100));
-      
+
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -83,11 +85,13 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           if (currentUser) {
             setUser({
               id: userId,
+              userType: 'coach', // Default to coach for /auth registration
               email: currentUser.email || '',
-              firstName: (currentUser.user_metadata?.first_name as string) || '',
-              lastName: (currentUser.user_metadata?.last_name as string) || '',
-              profileImageUrl: (currentUser.user_metadata?.avatar_url as string) || 
-                               (currentUser.user_metadata?.picture as string) || null,
+              name: (currentUser.user_metadata?.name as string) || '',
+              profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
+                                 (currentUser.user_metadata?.picture as string) || null,
+              signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
+              isActive: true,
             });
             setIsLoading(false);
             return;
@@ -99,10 +103,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         const currentUser = authUser || supabaseUser;
         setUser({
           id: userId,
-          email: currentUser?.email || '',
-          firstName: data.first_name,
-          lastName: data.last_name,
-          profileImageUrl: data.profile_image_url,
+          userType: data.user_type as 'coach' | 'client',
+          email: data.email,
+          name: data.name,
+          profilePictureUrl: data.profile_picture_url,
+          signinMethod: data.signin_method as 'email' | 'google',
+          isActive: data.is_active,
         });
         setIsLoading(false);
         return;
@@ -111,30 +117,32 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       // Log but don't fail - use fallback
       console.warn('Error fetching user profile (using fallback):', error?.message);
     }
-    
+
     // Fallback to user metadata if profile fetch fails
     const currentUser = authUser || supabaseUser;
     if (currentUser) {
       setUser({
         id: userId,
+        userType: 'coach', // Default to coach for /auth registration
         email: currentUser.email || '',
-        firstName: (currentUser.user_metadata?.first_name as string) || '',
-        lastName: (currentUser.user_metadata?.last_name as string) || '',
-        profileImageUrl: (currentUser.user_metadata?.avatar_url as string) || 
-                         (currentUser.user_metadata?.picture as string) || null,
+        name: (currentUser.user_metadata?.name as string) || '',
+        profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
+                           (currentUser.user_metadata?.picture as string) || null,
+        signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
+        isActive: true,
       });
     }
     setIsLoading(false);
   };
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+  const signUp = async (email: string, password: string, name: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          first_name: firstName,
-          last_name: lastName,
+          name: name,
+          user_type: 'coach', // Default to coach for /auth registration
         },
         emailRedirectTo: `${window.location.origin}/auth/verify-email`,
       },
@@ -221,6 +229,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           access_type: 'offline',
           prompt: 'consent',
         },
+        // Set user_type for new Google signups
+        scopes: 'email profile',
       },
     });
 

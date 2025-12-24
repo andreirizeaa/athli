@@ -240,6 +240,17 @@ export const enMessages = {
       connectAccountAria: 'Connect account',
       connectAccountError: 'Failed to connect account. Please try again.',
       noConnectedAccounts: 'No connected accounts',
+      profilePictureDialog: {
+        title: 'Update Profile Picture',
+        description: 'Upload an image for your profile picture',
+        clickToUpload: 'Click to upload or drag and drop',
+        fileTypes: 'PNG, JPG up to 5MB',
+        zoom: 'Zoom',
+        rotate: 'Rotate',
+        imageFileError: 'Please select an image file',
+        imageSizeError: 'Image size must be less than 5MB',
+        saveFailed: 'Failed to save profile picture',
+      },
       verification: {
         title: 'Additional verification required',
         description: 'Additional verification is required to connect external accounts. Please verify your identity through your account settings, then try connecting again.',
