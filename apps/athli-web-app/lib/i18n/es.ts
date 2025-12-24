@@ -431,9 +431,11 @@ export const esMessages = {
       workouts: 'Entrenamientos',
       athletes: 'Atletas',
       calendar: 'Calendario',
+      getStarted: 'Comenzar',
       home: 'Inicio',
       todo: 'Tareas pendientes',
       library: 'Biblioteca',
+      referAndEarn: 'Referir y Ganar',
     },
     actions: {
       keepMenuOpen: 'Mantener menú abierto',
