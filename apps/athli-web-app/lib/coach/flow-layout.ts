@@ -1,104 +1,107 @@
-import ELK from 'elkjs/lib/elk.bundled.js';
+import dagre from '@dagrejs/dagre';
 import { type Node, type Edge } from 'reactflow';
 
-const elk = new ELK();
+export const getLayoutedElements = async (nodes: Node[], edges: Edge[]) => {
+    const dagreGraph = new dagre.graphlib.Graph();
+    dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-// Default layout options for a balanced, vertical tree
-const defaultOptions = {
-    'elk.algorithm': 'layered',
-    'elk.direction': 'DOWN',
-    'elk.layered.spacing.nodeNodeBetweenLayers': '60',
-    'elk.layered.spacing.nodeNode': '100', // Horizontal gap between sibling nodes/subtrees
-    'elk.layered.nodePlacement.strategy': 'SIMPLE', // Simple but effective for centered trees
-    'elk.layered.centering.strategy': 'BALANCED', // Centers nodes relative to their parents and children
-    'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-    'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
-    'elk.padding': '[top=50,left=50,bottom=50,right=50]',
-    'org.eclipse.elk.portConstraints': 'FIXED_ORDER',
-    'elk.layered.nodePlacement.favorStraightEdges': 'true',
-};
+    dagreGraph.setGraph({
+        rankdir: 'TB',
+        nodesep: 150,
+        ranksep: 30, // Baseline vertical gap
+        marginx: 0,
+        marginy: 0,
+        ranker: 'network-simplex', // Generally more stable for ordering
+    });
 
-export const getLayoutedElements = async (nodes: Node[], edges: Edge[], options = {}) => {
-    const layoutOptions = { ...defaultOptions, ...options };
+    // 1. Identify roots and build adjacency list
+    const incomingEdges = new Set(edges.map(e => e.target));
+    const roots = nodes.filter(n => !incomingEdges.has(n.id));
 
-    const graph = {
-        id: 'root',
-        layoutOptions,
-        children: nodes.map((node) => {
-            let height = 60;
-            if (node.type === 'addAction') height = 24;
-            else if (node.type === 'end') height = 30;
+    const adj: Record<string, { target: string, handle?: string }[]> = {};
+    edges.forEach(e => {
+        if (!adj[e.source]) adj[e.source] = [];
+        adj[e.source].push({ target: e.target, handle: e.sourceHandle ?? undefined });
+    });
 
-            const children: any = {
-                ...node,
-                width: 300,
-                height: height,
-                targetPosition: 'top',
-                sourcePosition: 'bottom',
-            };
+    // 2. Traversal to add nodes and edges in a specific order (Yes branch first)
+    const visited = new Set<string>();
 
-            // Define ports to maintain strict branch ordering (Yes=Left, No=Right)
-            const ports: any[] = [
-                {
-                    id: 'input',
-                    properties: {
-                        'org.eclipse.elk.port.side': 'NORTH',
-                        'org.eclipse.elk.port.index': 0,
-                    },
-                }
-            ];
+    const addNodeToGraph = (nodeId: string) => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return;
 
-            if (node.type === 'check') {
-                ports.push(
-                    {
-                        id: 'yes',
-                        properties: {
-                            'org.eclipse.elk.port.side': 'SOUTH',
-                            'org.eclipse.elk.port.index': 0, // SOUTH-LEFT
-                        },
-                    },
-                    {
-                        id: 'no',
-                        properties: {
-                            'org.eclipse.elk.port.side': 'SOUTH',
-                            'org.eclipse.elk.port.index': 1, // SOUTH-RIGHT
-                        },
-                    }
-                );
-            } else {
-                ports.push({
-                    id: 'output',
-                    properties: {
-                        'org.eclipse.elk.port.side': 'SOUTH',
-                        'org.eclipse.elk.port.index': 0,
-                    },
-                });
-            }
+        // Using 64px virtual height for actions to pull icons closer
+        let height = 64;
+        if (node.type === 'addAction') height = 40;
+        else if (node.type === 'end') height = 40;
 
-            children.ports = ports;
-            return children;
-        }),
-        edges: edges.map((edge) => ({
-            ...edge,
-            sources: [edge.source],
-            targets: [edge.target],
-            sourcePort: edge.sourceHandle || (nodes.find(n => n.id === edge.source)?.type === 'check' ? undefined : 'output'),
-            targetPort: 'input',
-        })),
+        dagreGraph.setNode(node.id, { width: 300, height: height });
     };
 
-    try {
-        const layoutedGraph = await elk.layout(graph);
+    const traverse = (nodeId: string) => {
+        if (visited.has(nodeId)) return;
+        visited.add(nodeId);
+
+        addNodeToGraph(nodeId);
+
+        const node = nodes.find(n => n.id === nodeId);
+        const children = adj[nodeId] || [];
+        const sortedChildren = [...children].sort((a, b) => {
+            if (a.handle === 'yes') return -1;
+            if (b.handle === 'yes') return 1;
+            if (a.handle === 'no' && b.handle !== 'yes') return 1;
+            if (b.handle === 'no' && a.handle !== 'yes') return -1;
+            return 0;
+        });
+
+        sortedChildren.forEach(child => {
+            // Apply double spacing (60px) for edges coming out of Check nodes
+            const edgeOptions = node?.type === 'check' ? { minlen: 2 } : {};
+            dagreGraph.setEdge(nodeId, child.target, edgeOptions);
+            traverse(child.target);
+        });
+    };
+
+    roots.forEach(root => traverse(root.id));
+
+    // Catch any orphaned nodes that might have been missed
+    nodes.forEach(node => {
+        if (!visited.has(node.id)) {
+            addNodeToGraph(node.id);
+        }
+    });
+
+    dagre.layout(dagreGraph);
+
+    // 3. Post-layout adjustment: Align all nodes in a rank to the TOP of the rank
+    const nodesWithDagre = nodes.map(n => ({ ...n, dagre: dagreGraph.node(n.id) }));
+    const nodesByY: Record<number, typeof nodesWithDagre> = {};
+
+    nodesWithDagre.forEach(n => {
+        const y = n.dagre.y;
+        if (!nodesByY[y]) nodesByY[y] = [];
+        nodesByY[y].push(n);
+    });
+
+    const layoutedNodes = nodesWithDagre.map((node) => {
+        const sameRankNodes = nodesByY[node.dagre.y];
+        const maxHInRank = Math.max(...sameRankNodes.map(sn => sn.dagre.height));
+
+        // Dagre positions are centered. The top of the rank is at y - maxH/2.
+        const rankTop = node.dagre.y - maxHInRank / 2;
 
         return {
-            nodes: (layoutedGraph.children || []).map((node: any) => ({
-                ...node,
-                position: { x: node.x, y: node.y },
-            })) as Node[],
-            edges: (layoutedGraph.edges || []) as Edge[],
+            ...node,
+            position: {
+                x: Math.round(node.dagre.x - node.dagre.width / 2),
+                y: Math.round(rankTop),
+            },
         };
-    } catch (error) {
-        console.error('ELK layout error:', error);
-        return { nodes, edges };
-    }
+    });
+
+    return {
+        nodes: layoutedNodes,
+        edges,
+    };
 };

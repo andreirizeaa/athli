@@ -215,8 +215,8 @@ function CheckNode({ data }: { data: { label: string; subtitle?: string; onDelet
             style={{ top: '-8px' }}
           />
         )}
-        <Handle type="source" position={Position.Bottom} id="yes" style={{ left: '30%' }} className="!bg-green-500" />
-        <Handle type="source" position={Position.Bottom} id="no" style={{ left: '70%' }} className="!bg-red-500" />
+        <Handle type="source" position={Position.Bottom} id="yes" className="!bg-green-500" />
+        <Handle type="source" position={Position.Bottom} id="no" className="!bg-red-500" />
       </div>
     </div>
   );
@@ -836,22 +836,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
 
-      // Center viewport on trigger
-      if (reactFlowInstanceRef.current && layoutedNodes.length > 0) {
-        const instance = reactFlowInstanceRef.current;
-        const triggerNode = layoutedNodes.find((n) => n.id === 'trigger');
-        if (triggerNode) {
-          const flowBounds = document.querySelector('.react-flow__renderer');
-          if (flowBounds) {
-            const containerWidth = flowBounds.clientWidth;
-            const nodeWidth = 300;
-            const centerX = (containerWidth / 2) - (nodeWidth / 2) - triggerNode.position.x;
-            const topPadding = 40;
-            const topY = -triggerNode.position.y + topPadding;
-            instance.setViewport({ x: centerX, y: topY, zoom: instance.getViewport().zoom }, { duration: 200 });
-          }
-        }
-      }
+      // Viewport centering is handled only once on initial load (onInit).
+      // We removed the auto-centering here to prevent the view from jumping 
+      // back to the top whenever nodes are added or edited.
+
     };
 
     layout();
@@ -1300,7 +1288,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
           onConnect={onConnect}
           onNodeDrag={onNodeDrag}
           nodeTypes={nodeTypes}
-          nodesDraggable={true}
+          nodesDraggable={false}
           nodesConnectable={false}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           onInit={(reactFlowInstance) => {
