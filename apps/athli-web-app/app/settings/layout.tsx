@@ -68,6 +68,7 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
           href: '/settings/account/profile',
           subSections: [
             { id: 'accountProfile', href: '/settings/account/profile' },
+            { id: 'billing', href: '/settings/account/billing' },
             { id: 'accountSecurity', href: '/settings/account/security' },
             { id: 'accountInformation', href: '/settings/account/information' },
             { id: 'accountDanger', href: '/settings/account/danger' },
@@ -96,7 +97,6 @@ const SettingsLayoutContent = ({ children }: SettingsLayoutProps) => {
             { id: 'companyTeam', href: '/settings/business/company/team' },
           ],
         },
-        { id: 'billing', href: '/settings/business/billing' },
       ],
     },
   ];
