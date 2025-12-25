@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -89,6 +90,21 @@ const InformationPage = () => {
               <div className="flex items-center justify-between w-full pb-2 border-b pt-2 px-4">
                 <Label className="text-sm">{t('settings.information.email')}</Label>
                 <p className="text-sm">{user?.email}</p>
+              </div>
+
+              <div className="flex items-center justify-between w-full pb-2 border-b pt-2 px-4">
+                <Label className="text-sm">{t('settings.information.provider')}</Label>
+                {user?.signinMethod === 'google' ? (
+                  <Image
+                    src="/icons/google.png"
+                    alt="Google"
+                    width={20}
+                    height={20}
+                    className="object-contain"
+                  />
+                ) : (
+                  <p className="text-sm">{t('settings.information.providerEmail')}</p>
+                )}
               </div>
 
               <div className="flex items-center justify-between w-full pb-2 border-b pt-2 px-4">

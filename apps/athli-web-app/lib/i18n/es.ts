@@ -77,6 +77,8 @@ export const esMessages = {
     markComplete: 'Marcar como completado',
     markIncomplete: 'Marcar como incompleto',
     editTask: 'Editar tarea',
+    yourList: 'Tu lista',
+    athliAssistant: 'Asistente Athli',
   },
   dashboard: {
     title: 'Panel de control',
@@ -318,6 +320,11 @@ export const esMessages = {
         verifying: 'Verificando...',
         verifyFailed: 'Verificación de contraseña fallida',
       },
+      googleAccount: {
+        title: 'Administra tu cuenta con Google',
+        description: 'Tu cuenta se administra a través de Google. Para cambiar tu contraseña o correo electrónico, visita la configuración de tu cuenta de Google.',
+        manageAccount: 'Administrar Cuenta de Google',
+      },
       otpVerification: {
         title: 'Verifica Tu Identidad',
         description: 'Enviamos un código de verificación de 6 dígitos a {email}. Por favor ingrésalo a continuación para confirmar tus cambios.',
@@ -354,6 +361,9 @@ export const esMessages = {
       email: 'Correo electrónico',
       emailVerified: 'Correo Verificado',
       accountCreated: 'Cuenta Creada',
+      provider: 'Proveedor',
+      providerGoogle: 'Google',
+      providerEmail: 'Correo electrónico',
       yes: 'Sí',
       no: 'No',
       accountIdCopied: 'ID de cuenta copiado al portapapeles',
@@ -1862,6 +1872,45 @@ export const esMessages = {
       message: 'Página No Encontrada',
       backToHome: 'Volver al Inicio',
       backToHomeAria: 'Volver a la página de inicio',
+    },
+  },
+  referAndEarn: {
+    title: 'Comparte Athli con tus amigos',
+    subtitle: '¡Gana sin límites! Por cada referencia exitosa, recibe hasta un mes gratis.',
+    copyReferralLink: 'Copiar Enlace de Referencia',
+    referralLinkCopied: '¡Enlace de referencia copiado al portapapeles!',
+    copyFailed: 'Error al copiar el enlace de referencia',
+    columns: {
+      coach: 'Entrenador',
+      date: 'Fecha',
+      status: 'Estado',
+    },
+    status: {
+      signedUp: 'Registrado',
+      freeTrial: 'Prueba gratuita',
+      paidPlan: 'Plan de Pago',
+    },
+    steps: {
+      referFriends: {
+        title: 'Referir amigos',
+        description: 'Comparte tu enlace especial con otros entrenadores',
+      },
+      friendSignsUp: {
+        title: 'El amigo se registra',
+        description: '¡Su prueba gratuita ahora se duplica a 30 días!',
+      },
+      coachJoinsPaidPlan: {
+        title: 'El entrenador se une a un plan de pago',
+        description: 'Completan su mes gratis y compran un plan',
+      },
+      rewardGifted: {
+        title: 'Se otorga la recompensa',
+        description: 'Recibes un mes gratis prorrateado según el valor de su plan',
+      },
+      referMoreCoaches: {
+        title: 'Referir más entrenadores',
+        description: '¡Beneficios de referencia ilimitados!',
+      },
     },
   },
 } as const;

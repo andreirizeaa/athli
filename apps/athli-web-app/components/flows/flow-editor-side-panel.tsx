@@ -71,8 +71,8 @@ export const GENERAL_ACTION_OPTIONS: ActionOption[] = [
 
 export const CHECK_IN_ACTION_OPTIONS: ActionOption[] = [
   {
-    id: 'repeat',
-    name: 'Until completed',
+    id: 'check',
+    name: 'Is check in completed',
     icon: RotateCw,
   },
 ];
@@ -172,6 +172,7 @@ interface FlowEditorSidePanelProps {
   }>;
   onTriggerKeyDown: (event: React.KeyboardEvent, option: TriggerOption) => void;
   onActionKeyDown: (event: React.KeyboardEvent, option: ActionOption) => void;
+  isPreviousActionCheck?: boolean;
 }
 
 export function FlowEditorSidePanel({
@@ -218,6 +219,7 @@ export function FlowEditorSidePanel({
   actionNodes,
   onTriggerKeyDown,
   onActionKeyDown,
+  isPreviousActionCheck = false,
 }: FlowEditorSidePanelProps) {
   const isSidePanelOpen = panelType !== null;
   const isEditing = editingActionNodeId !== null;
@@ -242,10 +244,9 @@ export function FlowEditorSidePanel({
   const filteredCheckInActions = CHECK_IN_ACTION_OPTIONS.filter((option) =>
     option.name.toLowerCase().includes(searchQuery.toLowerCase())
   ).filter((option) => {
-    // Show "Until completed" only if trigger is "missed check in" AND it hasn't been added yet
-    if (option.id === 'repeat') {
-      const hasRepeatAction = actionNodes.some(node => node.option.id === 'repeat');
-      return selectedTrigger?.id === 'missed-check-in' && !hasRepeatAction;
+    // Show "Is check in completed" only if trigger is "missed check in" AND previous action is not a check
+    if (option.id === 'check') {
+      return selectedTrigger?.id === 'missed-check-in' && !isPreviousActionCheck;
     }
     return true;
   });
@@ -391,11 +392,11 @@ export function FlowEditorSidePanel({
                   </Card>
                 )}
 
-                {/* Check in Actions Card */}
-                {(filteredCheckInActions.length > 0 || searchQuery) && (
+                {/* Check in Actions Card - Hidden when on branch with insertionIndex 1 */}
+                {filteredCheckInActions.length > 0 && !isPreviousActionCheck && (
                   <Card className="bg-background pb-0">
                     <CardHeader className="px-4">
-                      <CardTitle className="text-sm">Check in</CardTitle>
+                      <CardTitle className="text-sm">Checks</CardTitle>
                     </CardHeader>
                     <Separator className="w-full mt-[-8px] mb-[-12px]" />
                     <div className="w-full">
@@ -524,81 +525,6 @@ export function FlowEditorSidePanel({
                         </Select>
                       </div>
                     </div>
-                  </div>
-                ) : selectedActionOption?.id === 'repeat' ? (
-                  <div className="space-y-4 px-4">
-                    <Label>
-                      <span>Repeat from<RequiredAsterisk /></span>
-                    </Label>
-                    <Select 
-                      value={repeatLinkedActionId || ''} 
-                      onValueChange={(value) => onRepeatLinkedActionIdChange(value || null)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select an action" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {actionNodes
-                          .filter((node) => node.option.id !== 'wait' && node.option.id !== 'repeat')
-                          .map((node, index) => {
-                          // Calculate action number (only counting non-repeat actions)
-                          const originalIndex = actionNodes.indexOf(node);
-                          const actionNumber = actionNodes.slice(0, originalIndex + 1).filter(a => a.option.id !== 'repeat').length;
-
-                          // Generate action description
-                          let description = node.option.name;
-                          if (node.option.id === 'send-message') {
-                            description = node.option.name;
-                          } else {
-                            const count = node.option.id === 'assign-questionnaire'
-                              ? (node.selectedQuestionnaires?.size || 0)
-                              : node.option.id === 'assign-check-in'
-                              ? (node.selectedCheckIns?.size || 0)
-                              : node.option.id === 'add-file'
-                              ? (node.selectedFiles?.size || 0)
-                              : node.option.id === 'add-habit'
-                              ? (node.selectedHabits?.size || 0)
-                              : node.option.id === 'add-metric'
-                              ? (node.selectedMetrics?.size || 0)
-                              : 0;
-
-                            if (count > 0) {
-                              const baseName = node.option.name.replace(/^Add /i, '').replace(/^Assign /i, '');
-                              let singularName = baseName.toLowerCase();
-                              let pluralName = singularName;
-
-                              if (singularName === 'questionnaire') {
-                                pluralName = 'questionnaires';
-                              } else if (singularName === 'check-in' || singularName === 'check in') {
-                                pluralName = 'check-ins';
-                              } else if (singularName === 'file') {
-                                pluralName = 'files';
-                              } else if (singularName === 'habit') {
-                                pluralName = 'habits';
-                              } else if (singularName === 'metric') {
-                                pluralName = 'metrics';
-                              } else if (!singularName.endsWith('s')) {
-                                pluralName = `${singularName}s`;
-                              }
-
-                              const itemName = count === 1 ? singularName : pluralName;
-
-                              if (node.option.id.startsWith('assign-')) {
-                                description = `Assign ${count} ${itemName}`;
-                              } else {
-                                description = `Add ${count} ${itemName}`;
-                              }
-                            }
-                          }
-
-                          return (
-                            <SelectItem key={node.id} value={node.id}>
-                              Action {actionNumber}: {description}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 flex-1 min-h-0 px-4">
@@ -895,7 +821,7 @@ export function FlowEditorSidePanel({
               <div className="flex gap-2">
                 {isEditing ? (
                   <>
-                    {actionStep === 'config' && selectedActionOption?.id !== 'send-message' && selectedActionOption?.id !== 'wait' && selectedActionOption?.id !== 'repeat' ? (
+                    {actionStep === 'config' && selectedActionOption?.id !== 'send-message' && selectedActionOption?.id !== 'wait' ? (
                       <Button
                         onClick={onActionContinue}
                         disabled={
@@ -914,8 +840,7 @@ export function FlowEditorSidePanel({
                         onClick={onSaveAction}
                         className="flex-1"
                         disabled={
-                          (selectedActionOption?.id === 'send-message' && !messageText.trim()) ||
-                          (selectedActionOption?.id === 'repeat' && (!repeatLinkedActionId || repeatLinkedActionId === initialRepeatLinkedActionId))
+                          (selectedActionOption?.id === 'send-message' && !messageText.trim())
                         }
                       >
                         Save
@@ -934,14 +859,13 @@ export function FlowEditorSidePanel({
                       Cancel
                     </Button>
                   </>
-                ) : actionStep === 'confirmation' || (selectedActionOption?.id === 'send-message' && actionStep === 'config') || (selectedActionOption?.id === 'wait' && actionStep === 'config') || (selectedActionOption?.id === 'repeat' && actionStep === 'config') ? (
+                ) : actionStep === 'confirmation' || (selectedActionOption?.id === 'send-message' && actionStep === 'config') || (selectedActionOption?.id === 'wait' && actionStep === 'config') ? (
                   <>
                     <Button 
                       onClick={onSaveAction} 
                       className="flex-1"
                       disabled={
-                        (selectedActionOption?.id === 'send-message' && !messageText.trim()) ||
-                        (selectedActionOption?.id === 'repeat' && !repeatLinkedActionId)
+                        (selectedActionOption?.id === 'send-message' && !messageText.trim())
                       }
                     >
                       Save

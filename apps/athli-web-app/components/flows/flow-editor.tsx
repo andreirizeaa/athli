@@ -3,8 +3,6 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { getForms } from '@/lib/coach/coach-form-service';
 import { type Habit } from '@/lib/coach/coach-habit-service';
-import { getAllMetrics } from '@/lib/coach/coach-metric-service';
-import { updateFlow } from '@/lib/coach/coach-flow-service';
 import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
 import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
@@ -22,6 +20,7 @@ import ReactFlow, {
   type Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { getLayoutedElements } from '@/lib/coach/flow-layout';
 
 // Custom node components
 function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?: React.ComponentType<{ className?: string }>; onClick: () => void; onEdit?: () => void; onDelete?: () => void } }) {
@@ -31,9 +30,8 @@ function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?
   return (
     <div className="flex justify-center" style={{ width: '300px' }}>
       <div
-        className={`px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-50 hover:bg-blue-100 transition-colors relative group w-full min-h-[44px] flex items-center ${
-          hasSelection ? '' : 'border-dashed'
-        }`}
+        className={`px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-50 hover:bg-blue-100 transition-colors relative group w-full min-h-[44px] flex items-center ${hasSelection ? '' : 'border-dashed'
+          }`}
       >
         {hasSelection ? (
           <div className="flex items-center gap-2 w-full">
@@ -80,13 +78,13 @@ function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?
             </span>
           </div>
         )}
-        <Handle type="source" position={Position.Bottom} className="!bg-blue-500" />
+        <Handle type="source" position={Position.Bottom} id="output" className="!bg-blue-500" />
       </div>
     </div>
   );
 }
 
-function ActionNode({ data }: { data: { label: string; subtitle?: string; icon?: React.ComponentType<{ className?: string }>; onClick: () => void; onEdit?: () => void; onDelete?: () => void; isWait?: boolean; isRepeat?: boolean } }) {
+function ActionNode({ data }: { data: { label: string; subtitle?: string; icon?: React.ComponentType<{ className?: string }>; onClick: () => void; onEdit?: () => void; onDelete?: () => void; isWait?: boolean; isRepeat?: boolean; isDisconnected?: boolean; isOrphanRoot?: boolean } }) {
   const IconComponent = data.icon || Play;
   const hasSelection = !!data.subtitle;
   const isWait = data.isWait || false;
@@ -147,77 +145,88 @@ function ActionNode({ data }: { data: { label: string; subtitle?: string; icon?:
             </div>
           )}
         </div>
-        <Handle type="target" position={Position.Top} className={handleColor} />
-        <Handle type="source" position={Position.Bottom} className={handleColor} />
+        <Handle type="target" position={Position.Top} id="input" className={handleColor} />
+        {data.isOrphanRoot && (
+          <>
+            <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 animate-bounce whitespace-nowrap z-20">
+              Drag to re-attach
+            </div>
+            <Handle
+              type="source"
+              position={Position.Top}
+              id="reconnect"
+              className="!w-4 !h-4 !bg-red-500 border-2 border-white shadow-lg cursor-grab active:cursor-grabbing hover:scale-125 transition-transform z-30"
+              style={{ top: '-8px' }}
+            />
+          </>
+        )}
+        <Handle type="source" position={Position.Bottom} id="output" className={handleColor} />
       </div>
     </div>
   );
 }
 
-function AddActionNode({ data }: { data: { onClick: () => void } }) {
+function AddActionNode({ data }: { data: { onClick: () => void; metadata?: { index: number; branch?: 'yes' | 'no'; checkNodeId?: string } } }) {
   return (
     <div className="flex justify-center" style={{ width: '300px' }}>
       <div
         onClick={data.onClick}
-        className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 bg-white cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-colors flex items-center justify-center relative"
+        className="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 bg-white cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-all flex items-center justify-center relative group"
       >
-        <Handle type="target" position={Position.Top} className="!bg-gray-400" />
-        <Plus className="h-3 w-3 text-gray-500" />
-        <Handle type="source" position={Position.Bottom} className="!bg-gray-400" />
+        <Handle type="target" position={Position.Top} id="input" className="!bg-gray-400 group-hover:scale-150 transition-transform" />
+        <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+        <Handle type="source" position={Position.Bottom} id="output" className="!bg-gray-400 group-hover:scale-150 transition-transform" />
       </div>
     </div>
   );
 }
 
-function CheckNode({ data }: { data: { label: string; onEdit?: () => void; onDelete?: () => void } }) {
+function CheckNode({ data }: { data: { label: string; subtitle?: string; onDelete?: () => void; isDisconnected?: boolean; isOrphanRoot?: boolean } }) {
   return (
     <div className="flex justify-center" style={{ width: '300px' }}>
-      <div className="px-4 py-2 rounded-lg border-2 border-purple-500 bg-purple-50 hover:bg-purple-100 transition-colors relative group w-full min-h-[44px] flex items-center">
+      <div className="px-4 py-2 rounded-lg border-2 border-yellow-500 bg-yellow-50 hover:bg-yellow-100 transition-colors relative group w-full min-h-[44px] flex items-center">
         <div className="flex items-center gap-2 w-full">
           <div className="flex flex-col flex-1">
-            <span className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Check</span>
-            <span className="text-sm font-medium text-purple-900">{data.label}</span>
+            <span className="text-xs font-semibold text-yellow-900 uppercase tracking-wide">Check</span>
+            <span className="text-sm font-medium text-yellow-900">{data.subtitle || data.label}</span>
           </div>
           <div className="flex items-center gap-1">
-            {data.onEdit && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  data.onEdit?.();
-                }}
-                className="flex items-center justify-center h-6 w-6 rounded hover:bg-purple-200 transition-colors flex-shrink-0"
-                aria-label="Edit check"
-              >
-                <Pencil className="h-3 w-3 text-purple-600" />
-              </button>
-            )}
             {data.onDelete && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   data.onDelete?.();
                 }}
-                className="flex items-center justify-center h-6 w-6 rounded hover:bg-purple-200 transition-colors flex-shrink-0"
+                className="flex items-center justify-center h-6 w-6 rounded hover:bg-yellow-200 transition-colors flex-shrink-0"
                 aria-label="Delete check"
               >
-                <Trash2 className="h-3 w-3 text-purple-600" />
+                <Trash2 className="h-3 w-3 text-yellow-600" />
               </button>
             )}
           </div>
         </div>
-        <Handle type="target" position={Position.Top} className="!bg-purple-500" />
-        <Handle type="source" position={Position.Right} id="yes" className="!bg-purple-500" />
-        <Handle type="source" position={Position.Bottom} id="no" className="!bg-purple-500" />
+        <Handle type="target" position={Position.Top} id="input" className="!bg-yellow-500" />
+        {data.isOrphanRoot && (
+          <Handle
+            type="source"
+            position={Position.Top}
+            id="reconnect"
+            className="!w-4 !h-4 !bg-red-500 border-2 border-white shadow-lg cursor-grab active:cursor-grabbing hover:scale-125 transition-transform z-30"
+            style={{ top: '-8px' }}
+          />
+        )}
+        <Handle type="source" position={Position.Bottom} id="yes" style={{ left: '30%' }} className="!bg-green-500" />
+        <Handle type="source" position={Position.Bottom} id="no" style={{ left: '70%' }} className="!bg-red-500" />
       </div>
     </div>
   );
 }
 
-function EndNode({ data }: { data: { label: string } }) {
+function EndNode({ data }: { data: { label: string; isDisconnected?: boolean } }) {
   return (
     <div className="flex justify-center" style={{ width: '300px' }}>
-      <div className="px-4 py-1.5 rounded-full bg-gray-200 border border-gray-300 relative flex items-center justify-center">
-        <Handle type="target" position={Position.Top} className="!bg-gray-400" />
+      <div className={`px-4 py-1.5 rounded-full bg-gray-200 border border-gray-300 relative flex items-center justify-center ${data.isDisconnected ? 'border-dashed opacity-50' : ''}`}>
+        <Handle type="target" position={Position.Top} id="input" className="!bg-gray-400" />
         <span className="text-xs font-medium text-gray-700">{data.label}</span>
       </div>
     </div>
@@ -233,7 +242,6 @@ const nodeTypes = {
 };
 
 interface FlowEditorProps {
-  flowId: string;
   onTriggerClick?: () => void;
   onActionClick?: () => void;
 }
@@ -243,13 +251,13 @@ const DEFAULT_NODES: Node[] = [
     id: 'trigger',
     type: 'trigger',
     position: { x: 200, y: 20 },
-    data: { label: 'Create Trigger', onClick: () => {} },
+    data: { label: 'Create Trigger', onClick: () => { } },
   },
   {
     id: 'add-action',
     type: 'addAction',
     position: { x: 200, y: 120 },
-    data: { onClick: () => {} },
+    data: { onClick: () => { } },
   },
   {
     id: 'end',
@@ -286,10 +294,11 @@ type ActionNodeData = {
   selectedCheckIns?: Set<string>;
   selectedFiles?: Set<string>;
   selectedHabits?: Set<string>;
-  selectedMetrics?: Set<string>;
+  branch?: 'yes' | 'no' | null;
+  checkNodeId?: string;
 };
 
-export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditorProps) {
+export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
   const [panelType, setPanelType] = useState<PanelType>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrigger, setSelectedTrigger] = useState<TriggerOption | null>(null);
@@ -312,6 +321,8 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
   const [repeatLinkedActionId, setRepeatLinkedActionId] = useState<string | null>(null);
   const [initialRepeatLinkedActionId, setInitialRepeatLinkedActionId] = useState<string | null>(null);
   const [insertionIndex, setInsertionIndex] = useState<number>(-1); // Track where new action will be inserted
+  const [currentBranch, setCurrentBranch] = useState<'yes' | 'no' | null>(null); // Track which branch we're adding to
+  const [currentCheckNodeId, setCurrentCheckNodeId] = useState<string | null>(null); // Track which check node the branch belongs to
 
   // Data from services
   const [questionnaires, setQuestionnaires] = useState<Array<{ id: string; name: string }>>([]);
@@ -367,7 +378,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
 
   const fetchData = useCallback(async () => {
     if (!selectedActionOption) return;
-    
+
     setIsLoadingData(true);
     try {
       if (selectedActionOption.id === 'assign-questionnaire' || selectedActionOption.id === 'assign-check-in') {
@@ -376,7 +387,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
         // Using the same logic as forms page
         const checkInForms = allForms.filter((form) => form.name.includes('Check-in') || form.name.includes('Weekly'));
         const questionnaireForms = allForms.filter((form) => !form.name.includes('Check-in') && !form.name.includes('Weekly'));
-        
+
         setCheckIns(checkInForms.map((form) => ({ id: form.id, name: form.name })));
         setQuestionnaires(questionnaireForms.map((form) => ({ id: form.id, name: form.name })));
       } else if (selectedActionOption.id === 'add-file') {
@@ -385,9 +396,6 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       } else if (selectedActionOption.id === 'add-habit') {
         // Using mock data (matching habits page)
         setHabits(mockHabits.map((habit) => ({ id: habit.id, name: habit.name })));
-      } else if (selectedActionOption.id === 'add-metric') {
-        const allMetrics = await getAllMetrics();
-        setMetrics(allMetrics.map((metric) => ({ id: metric.id, name: metric.name })));
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -413,6 +421,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
     setSelectedCheckIns(new Set());
     setSelectedFiles(new Set());
     setSelectedHabits(new Set());
+    setSelectedMetrics(new Set());
     setWaitDuration(1);
     setWaitUnit('hours');
     setRepeatLinkedActionId(null);
@@ -420,7 +429,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
     onTriggerClick?.();
   }, [onTriggerClick]);
 
-  const handleOpenActionPanel = useCallback((index: number = -1) => {
+  const handleOpenActionPanel = useCallback((index: number = -1, branch: 'yes' | 'no' | null = null, checkNodeId: string | null = null) => {
     // Reset action state for new action creation
     setActionStep('list');
     setSelectedActionOption(null);
@@ -430,10 +439,13 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
     setSelectedCheckIns(new Set());
     setSelectedFiles(new Set());
     setSelectedHabits(new Set());
+    setSelectedMetrics(new Set());
     setWaitDuration(1);
     setWaitUnit('hours');
     setRepeatLinkedActionId(null);
     setInsertionIndex(index);
+    setCurrentBranch(branch);
+    setCurrentCheckNodeId(checkNodeId);
     setPanelType('action');
     onActionClick?.();
   }, [onActionClick]);
@@ -451,380 +463,59 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(DEFAULT_EDGES);
 
-  // Update nodes when trigger or action nodes change
-  useEffect(() => {
-    const triggerY = 20;
-    const nodeSpacing = 100;
-    
-    // Calculate positions: trigger at top, then add-action, then alternating action nodes and add-action nodes
-    // The add-action node should be centered between the two nodes around it
-    const triggerNodeY = triggerY;
-    const nodeHeight = 44; // Approximate height of trigger/action nodes
-    const addActionNodeHeight = 24; // Height of add-action node (w-6 h-6)
-    
-    // Position add-action after trigger: centered in the gap
-    const triggerBottom = triggerNodeY + nodeHeight;
-    const firstAddActionY = triggerBottom + (nodeSpacing / 2) - (addActionNodeHeight / 2);
-    
-    // Position first action: centered after add-action
-    const addActionBottom = firstAddActionY + addActionNodeHeight;
-    const firstActionY = addActionBottom + (nodeSpacing / 2) - (nodeHeight / 2);
-    
-    // Calculate positions: each action node is followed by an add-action node
-    // Calculate sequentially to avoid circular reference
-    const actionNodePositions: Array<{ y: number }> = [];
-    const addActionNodePositions: Array<{ y: number }> = [];
-    
-    for (let index = 0; index < actionNodes.length; index++) {
-      let actionY: number;
-      if (index === 0) {
-        actionY = firstActionY;
-      } else {
-        // Calculate based on previous add-action position
-        const prevActionY = actionNodePositions[index - 1].y;
-        const prevActionBottom = prevActionY + nodeHeight;
-        const prevAddActionY = prevActionBottom + (nodeSpacing / 2) - (addActionNodeHeight / 2);
-        const prevAddActionBottom = prevAddActionY + addActionNodeHeight;
-        actionY = prevAddActionBottom + (nodeSpacing / 2) - (nodeHeight / 2);
-      }
-      actionNodePositions.push({ y: actionY });
-      
-      // Add-action node goes after this action (centered)
-      const actionBottom = actionY + nodeHeight;
-      const addActionY = actionBottom + (nodeSpacing / 2) - (addActionNodeHeight / 2);
-      addActionNodePositions.push({ y: addActionY });
-    }
-    
-    // Calculate check node positions (they replace repeat actions)
-    const checkNodePositions: Array<{ y: number; checkNode: { id: string; linkedActionId: string; repeatActionId: string } }> = [];
-    const checkNodeAddActionPositions: Array<{ y: number; checkNodeId: string; repeatActionIndex: number }> = [];
-    checkNodes.forEach((checkNode) => {
-      const repeatActionIndex = actionNodes.findIndex((a) => a.id === checkNode.repeatActionId);
-      if (repeatActionIndex >= 0) {
-        // Check node replaces the repeat action position
-        const checkY = actionNodePositions[repeatActionIndex].y;
-        checkNodePositions.push({ y: checkY, checkNode });
+  // Function to build the logical graph nodes and edges
+  const buildLogicalGraph = useCallback(() => {
+    const logicalNodes: Node[] = [];
+    const logicalEdges: Edge[] = [];
 
-        // Add-action node after check node (for continuing the flow)
-        const checkBottom = checkY + nodeHeight;
-        const addActionAfterCheckY = checkBottom + (nodeSpacing / 2) - (addActionNodeHeight / 2);
-        checkNodeAddActionPositions.push({ y: addActionAfterCheckY, checkNodeId: checkNode.id, repeatActionIndex });
-      }
+    // 1. Trigger Node
+    logicalNodes.push({
+      id: 'trigger',
+      type: 'trigger',
+      position: { x: 0, y: 0 },
+      data: {
+        label: selectedTrigger ? 'Trigger' : 'Create Trigger',
+        subtitle: selectedTrigger?.name,
+        icon: selectedTrigger?.icon,
+        onClick: handleOpenTriggerPanel,
+        onEdit: selectedTrigger ? handleOpenTriggerPanel : undefined,
+        onDelete: selectedTrigger ? handleDeleteTrigger : undefined,
+      },
     });
-    
-    // Calculate add-action node before end (for check node "no" edge)
-    // End node goes after the last add-action node or check node
-    let endNodeY: number;
-    let addActionBeforeEndY: number | null = null;
-    if (actionNodes.length > 0) {
-      const lastAddActionY = addActionNodePositions[actionNodes.length - 1].y;
 
-      // If there are check nodes, add an add-action node before end (for Yes path from check node)
-      if (checkNodePositions.length > 0) {
-        // Find the index of the last repeat action (which becomes a check node)
-        const lastCheckNodeIndex = checkNodePositions.length - 1;
-        const lastCheckNode = checkNodePositions[lastCheckNodeIndex].checkNode;
-        const repeatActionIndex = actionNodes.findIndex((a) => a.id === lastCheckNode.repeatActionId);
-
-        // Check if there are any actions after the last repeat action
-        const hasActionsAfterCheck = repeatActionIndex < actionNodes.length - 1;
-
-        if (hasActionsAfterCheck) {
-          // If there are actions after the check node, position end after the last add-action
-          // No need for add-action-before-end since we already have add-action nodes after the last action
-          endNodeY = lastAddActionY + addActionNodeHeight + (nodeSpacing / 2);
-        } else {
-          // If check node is last, position add-action-before-end after it
-          const lastCheckY = checkNodePositions[lastCheckNodeIndex].y;
-          const lastCheckBottom = lastCheckY + nodeHeight;
-          addActionBeforeEndY = lastCheckBottom + (nodeSpacing / 2) - (addActionNodeHeight / 2);
-          endNodeY = addActionBeforeEndY + addActionNodeHeight + (nodeSpacing / 2);
-        }
-      } else {
-        // No check nodes, position end after last add-action
-        endNodeY = lastAddActionY + addActionNodeHeight + (nodeSpacing / 2);
-      }
-    } else {
-      endNodeY = firstAddActionY + addActionNodeHeight + (nodeSpacing / 2);
-    }
-
-    const updatedNodes: Node[] = [
-      {
-        id: 'trigger',
-        type: 'trigger',
-        position: { x: 200, y: triggerNodeY },
-        data: {
-          label: selectedTrigger ? 'Trigger' : 'Create Trigger',
-          subtitle: selectedTrigger?.name,
-          icon: selectedTrigger?.icon,
-          onClick: handleOpenTriggerPanel,
-          onEdit: selectedTrigger ? handleOpenTriggerPanel : undefined,
-          onDelete: selectedTrigger ? handleDeleteTrigger : undefined,
-          },
-        },
-      {
-        id: 'add-action-trigger',
-        type: 'addAction',
-        position: { x: 200, y: firstAddActionY },
-        data: { onClick: () => handleOpenActionPanel(0) },
+    // 2. Initial Add Action Node after Trigger
+    logicalNodes.push({
+      id: 'add-action-trigger',
+      type: 'addAction',
+      position: { x: 0, y: 0 },
+      data: {
+        onClick: () => handleOpenActionPanel(0),
+        metadata: { index: 0 }
       },
-      ...actionNodes.flatMap((actionNode, index) => {
-        // Skip repeat actions - they are replaced by check nodes
-        if (actionNode.option.id === 'repeat') {
-          return [];
-        }
-        
-        // Calculate action number (only counting non-repeat actions)
-        const actionNumber = actionNodes.slice(0, index + 1).filter(a => a.option.id !== 'repeat').length;
-        
-        // Generate subtitle with count for grid picker actions
-        let subtitle = actionNode.option.name;
-        if (actionNode.option.id === 'send-message') {
-          // Keep message name as is
-          subtitle = actionNode.option.name;
-        } else if (actionNode.option.id === 'wait') {
-          // Format wait action: "Wait 1 hour" or "Wait 3 days"
-          const duration = actionNode.waitDuration || 1;
-          const unit = actionNode.waitUnit || 'hours';
-          const unitLabel = duration === 1 
-            ? unit.slice(0, -1) // Remove 's' for singular
-            : unit;
-          subtitle = `Wait ${duration} ${unitLabel}`;
-        } else {
-          // For grid picker actions, show count
-          const count = actionNode.option.id === 'assign-questionnaire'
-            ? (actionNode.selectedQuestionnaires?.size || 0)
-            : actionNode.option.id === 'assign-check-in'
-            ? (actionNode.selectedCheckIns?.size || 0)
-            : actionNode.option.id === 'add-file'
-            ? (actionNode.selectedFiles?.size || 0)
-            : actionNode.option.id === 'add-habit'
-            ? (actionNode.selectedHabits?.size || 0)
-            : actionNode.option.id === 'add-metric'
-            ? (actionNode.selectedMetrics?.size || 0)
-            : 0;
-          
-          if (count === 0) {
-            subtitle = actionNode.option.name;
-          } else {
-            // Format: "Add 1 file" or "Add 3 files", "Assign 1 questionnaire" or "Assign 3 questionnaires"
-            const baseName = actionNode.option.name.replace(/^Add /i, '').replace(/^Assign /i, '');
-            let singularName = baseName.toLowerCase();
-            let pluralName = singularName;
-            
-            // Handle specific pluralizations
-            if (singularName === 'questionnaire') {
-              pluralName = 'questionnaires';
-            } else if (singularName === 'check-in' || singularName === 'check in') {
-              pluralName = 'check-ins';
-            } else if (singularName === 'file') {
-              pluralName = 'files';
-            } else if (singularName === 'habit') {
-              pluralName = 'habits';
-            } else if (singularName === 'metric') {
-              pluralName = 'metrics';
-            } else if (!singularName.endsWith('s')) {
-              pluralName = `${singularName}s`;
-            }
-            
-            const itemName = count === 1 ? singularName : pluralName;
-            
-            if (actionNode.option.id.startsWith('assign-')) {
-              subtitle = `Assign ${count} ${itemName}`;
-            } else {
-              subtitle = `Add ${count} ${itemName}`;
-            }
-          }
-        }
-        
-        const actionNodeData = {
-          id: actionNode.id,
-          type: 'action' as const,
-          position: { x: 200, y: actionNodePositions[index].y },
-          data: {
-            label: actionNode.option.id === 'wait' ? 'Wait' : `Action ${actionNumber}`,
-            subtitle,
-            icon: actionNode.option.icon,
-            isWait: actionNode.option.id === 'wait',
-            isRepeat: actionNode.option.id === 'repeat',
-          onClick: () => {
-            // Open edit mode
-            const handleEdit = async () => {
-              setEditingActionNodeId(actionNode.id);
-              setSelectedActionOption(actionNode.option);
-              setPanelType('action');
-              onActionClick?.();
-              
-              // Load the action's data
-              if (actionNode.option.id === 'send-message') {
-                setMessageText(actionNode.messageText || '');
-                setActionStep('config');
-              } else if (actionNode.option.id === 'wait') {
-                setWaitDuration(actionNode.waitDuration || 1);
-                setWaitUnit(actionNode.waitUnit || 'hours');
-                setActionStep('config');
-              } else {
-                setSelectedQuestionnaires(actionNode.selectedQuestionnaires || new Set());
-                setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
-                setSelectedFiles(actionNode.selectedFiles || new Set());
-                setSelectedHabits(actionNode.selectedHabits || new Set());
-                setSelectedMetrics(actionNode.selectedMetrics || new Set());
-                setActionStep('confirmation');
-                // Fetch data for confirmation view
-                setIsLoadingData(true);
-                try {
-                  if (actionNode.option.id === 'assign-questionnaire' || actionNode.option.id === 'assign-check-in') {
-                    const allForms = await getForms();
-                    const checkInForms = allForms.filter((form) => form.name.includes('Check-in') || form.name.includes('Weekly'));
-                    const questionnaireForms = allForms.filter((form) => !form.name.includes('Check-in') && !form.name.includes('Weekly'));
-                    setCheckIns(checkInForms.map((form) => ({ id: form.id, name: form.name })));
-                    setQuestionnaires(questionnaireForms.map((form) => ({ id: form.id, name: form.name })));
-                  } else if (actionNode.option.id === 'add-file') {
-                    setFiles(mockFiles);
-                  } else if (actionNode.option.id === 'add-habit') {
-                    setHabits(mockHabits.map((habit) => ({ id: habit.id, name: habit.name })));
-                  }
-                } catch (error) {
-                  console.error('Failed to fetch data:', error);
-                } finally {
-                  setIsLoadingData(false);
-                }
-              }
-            };
-            handleEdit();
-          },
-          onEdit: () => {
-            // Same as onClick for editing
-            const handleEdit = async () => {
-              setEditingActionNodeId(actionNode.id);
-              setSelectedActionOption(actionNode.option);
-              setPanelType('action');
-              onActionClick?.();
-              
-              if (actionNode.option.id === 'send-message') {
-                setMessageText(actionNode.messageText || '');
-                setActionStep('config');
-              } else if (actionNode.option.id === 'wait') {
-                setWaitDuration(actionNode.waitDuration || 1);
-                setWaitUnit(actionNode.waitUnit || 'hours');
-                setActionStep('config');
-              } else if (actionNode.option.id === 'repeat') {
-                setRepeatLinkedActionId(actionNode.repeatLinkedActionId || null);
-                setActionStep('config');
-              } else {
-                setSelectedQuestionnaires(actionNode.selectedQuestionnaires || new Set());
-                setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
-                setSelectedFiles(actionNode.selectedFiles || new Set());
-                setSelectedHabits(actionNode.selectedHabits || new Set());
-                setSelectedMetrics(actionNode.selectedMetrics || new Set());
-                setActionStep('confirmation');
-                setIsLoadingData(true);
-                try {
-                  if (actionNode.option.id === 'assign-questionnaire' || actionNode.option.id === 'assign-check-in') {
-                    const allForms = await getForms();
-                    const checkInForms = allForms.filter((form) => form.name.includes('Check-in') || form.name.includes('Weekly'));
-                    const questionnaireForms = allForms.filter((form) => !form.name.includes('Check-in') && !form.name.includes('Weekly'));
-                    setCheckIns(checkInForms.map((form) => ({ id: form.id, name: form.name })));
-                    setQuestionnaires(questionnaireForms.map((form) => ({ id: form.id, name: form.name })));
-                  } else if (actionNode.option.id === 'add-file') {
-                    setFiles(mockFiles);
-                  } else if (actionNode.option.id === 'add-habit') {
-                    setHabits(mockHabits.map((habit) => ({ id: habit.id, name: habit.name })));
-                  }
-                } catch (error) {
-                  console.error('Failed to fetch data:', error);
-                } finally {
-                  setIsLoadingData(false);
-                }
-              }
-            };
-            handleEdit();
-          },
-          onDelete: () => handleDeleteAction(actionNode.id),
-        },
-      };
-      // Add an add-action node after each action node
-      return [
-        actionNodeData,
-        {
-          id: `add-action-${index}`,
-          type: 'addAction',
-          position: { x: 200, y: addActionNodePositions[index].y },
-          data: { onClick: () => handleOpenActionPanel(index + 1) },
-        },
-      ];
-      }),
-      ...checkNodePositions.map(({ y, checkNode }) => {
-        // Find the corresponding repeat action
-        const repeatAction = actionNodes.find(a => a.id === checkNode.repeatActionId);
+    });
 
-        return {
-          id: checkNode.id,
-          type: 'check' as const,
-          position: { x: 200, y },
-          data: {
-            label: 'Until check in completed',
-            onEdit: repeatAction ? () => {
-              // Open edit mode for the repeat action
-              setEditingActionNodeId(repeatAction.id);
-              setSelectedActionOption(repeatAction.option);
-              setRepeatLinkedActionId(repeatAction.repeatLinkedActionId || null);
-              setInitialRepeatLinkedActionId(repeatAction.repeatLinkedActionId || null);
-              setActionStep('config');
-              setPanelType('action');
-              onActionClick?.();
-            } : undefined,
-            onDelete: () => handleDeleteAction(checkNode.repeatActionId),
-          },
-        };
-      }),
-      ...checkNodeAddActionPositions.map(({ y, checkNodeId, repeatActionIndex }) => ({
-        id: `add-action-after-check-${checkNodeId}`,
-        type: 'addAction' as const,
-        position: { x: 200, y },
-        data: { onClick: () => handleOpenActionPanel(repeatActionIndex + 1) },
-      })),
-      ...(addActionBeforeEndY !== null ? [{
-        id: 'add-action-before-end',
-        type: 'addAction' as const,
-        position: { x: 200, y: addActionBeforeEndY },
-        data: { onClick: () => handleOpenActionPanel(actionNodes.length) },
-      }] : []),
-      {
-        id: 'end',
-        type: 'end',
-        position: { x: 200, y: endNodeY },
-        data: { label: 'End' },
-      },
-    ];
-
-    // Update edges
-    const updatedEdges: Edge[] = [];
-    
-    // Always connect trigger to the first add-action node
-    updatedEdges.push({
+    logicalEdges.push({
       id: 'trigger-to-add-trigger',
       source: 'trigger',
       target: 'add-action-trigger',
       type: 'smoothstep',
     });
 
+    // 3. Process actions and check nodes
     if (actionNodes.length > 0) {
       // Connect first add-action to first action or check node
       const firstAction = actionNodes[0];
       const firstCheckNode = checkNodes.find((c) => c.repeatActionId === firstAction.id);
-      
-      if (firstCheckNode && firstAction.option.id === 'repeat') {
-        // First action is repeat -> connect to check node
-        updatedEdges.push({
+
+      if (firstCheckNode && firstAction.option.id === 'check') {
+        logicalEdges.push({
           id: 'add-trigger-to-check',
           source: 'add-action-trigger',
           target: firstCheckNode.id,
           type: 'smoothstep',
         });
-      } else if (firstAction.option.id !== 'repeat') {
-        // First action is not repeat
-        updatedEdges.push({
+      } else if (firstAction.option.id !== 'check') {
+        logicalEdges.push({
           id: 'add-trigger-to-first-action',
           source: 'add-action-trigger',
           target: firstAction.id,
@@ -832,167 +523,255 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
         });
       }
 
-      // Connect each action to its add-action node, then to the next action
-      for (let i = 0; i < actionNodes.length; i++) {
-        const actionNode = actionNodes[i];
-        const isRepeatAction = actionNode.option.id === 'repeat';
-        const checkNode = checkNodes.find((c) => c.repeatActionId === actionNode.id);
-        
-        // Skip repeat actions - they don't create action nodes
-        if (isRepeatAction) {
-          // For repeat actions, the previous add-action connects directly to check node
-          // This is handled when we process the previous action
-          continue;
+      // Process each action node
+      actionNodes.forEach((actionNode, index) => {
+        if (actionNode.option.id === 'check') return; // Handled by check nodes
+
+        // Generate subtitle
+        let subtitle = actionNode.option.name;
+        if (actionNode.option.id === 'send-message') {
+          subtitle = actionNode.option.name;
+        } else if (actionNode.option.id === 'wait') {
+          const duration = actionNode.waitDuration || 1;
+          const unit = actionNode.waitUnit || 'hours';
+          const unitLabel = duration === 1 ? unit.slice(0, -1) : unit;
+          subtitle = `Wait ${duration} ${unitLabel}`;
+        } else {
+          const count = actionNode.option.id === 'assign-questionnaire'
+            ? (actionNode.selectedQuestionnaires?.size || 0)
+            : actionNode.option.id === 'assign-check-in'
+              ? (actionNode.selectedCheckIns?.size || 0)
+              : actionNode.option.id === 'add-file'
+                ? (actionNode.selectedFiles?.size || 0)
+                : actionNode.option.id === 'add-habit'
+                  ? (actionNode.selectedHabits?.size || 0)
+                  : 0;
+
+          if (count > 0) {
+            const baseName = actionNode.option.name.replace(/^Add /i, '').replace(/^Assign /i, '');
+            let singularName = baseName.toLowerCase();
+            let pluralName = singularName;
+
+            if (singularName === 'questionnaire') pluralName = 'questionnaires';
+            else if (singularName === 'check-in' || singularName === 'check in') pluralName = 'check-ins';
+            else if (singularName === 'file') pluralName = 'files';
+            else if (singularName === 'habit') pluralName = 'habits';
+            else if (!singularName.endsWith('s')) pluralName = `${singularName}s`;
+
+            const itemName = count === 1 ? singularName : pluralName;
+            subtitle = actionNode.option.id.startsWith('assign-') ? `Assign ${count} ${itemName}` : `Add ${count} ${itemName}`;
+          }
         }
-        
-        const addActionId = `add-action-${i}`;
-        
-        // Action -> Add Action
-        updatedEdges.push({
-          id: `action-${i}-to-add-${i}`,
+
+        logicalNodes.push({
+          id: actionNode.id,
+          type: 'action',
+          position: { x: 0, y: 0 },
+          data: {
+            label: actionNode.option.id === 'wait' ? 'Wait' : 'Action',
+            subtitle,
+            icon: actionNode.option.icon,
+            isWait: actionNode.option.id === 'wait',
+            isRepeat: actionNode.option.id === 'check',
+            onClick: () => {
+              setEditingActionNodeId(actionNode.id);
+              setSelectedActionOption(actionNode.option);
+              setPanelType('action');
+              onActionClick?.();
+              if (actionNode.option.id === 'send-message') {
+                setMessageText(actionNode.messageText || '');
+                setActionStep('config');
+              } else if (actionNode.option.id === 'wait') {
+                setWaitDuration(actionNode.waitDuration || 1);
+                setWaitUnit(actionNode.waitUnit || 'hours');
+                setActionStep('config');
+              } else {
+                setSelectedQuestionnaires(actionNode.selectedQuestionnaires || new Set());
+                setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
+                setSelectedFiles(actionNode.selectedFiles || new Set());
+                setSelectedHabits(actionNode.selectedHabits || new Set());
+                setActionStep('confirmation');
+                fetchData();
+              }
+            },
+            onEdit: () => {
+              setEditingActionNodeId(actionNode.id);
+              setSelectedActionOption(actionNode.option);
+              setPanelType('action');
+              onActionClick?.();
+              if (actionNode.option.id === 'send-message') {
+                setMessageText(actionNode.messageText || '');
+                setActionStep('config');
+              } else if (actionNode.option.id === 'wait') {
+                setWaitDuration(actionNode.waitDuration || 1);
+                setWaitUnit(actionNode.waitUnit || 'hours');
+                setActionStep('config');
+              } else {
+                setSelectedQuestionnaires(actionNode.selectedQuestionnaires || new Set());
+                setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
+                setSelectedFiles(actionNode.selectedFiles || new Set());
+                setSelectedHabits(actionNode.selectedHabits || new Set());
+                setActionStep('confirmation');
+                fetchData();
+              }
+            },
+            onDelete: () => handleDeleteAction(actionNode.id),
+          },
+        });
+
+        // Add action button after this node
+        let addActionInsertionIndex: number;
+        if (actionNode.branch && actionNode.checkNodeId) {
+          const branchActions = actionNodes.filter(a => a.checkNodeId === actionNode.checkNodeId && a.branch === actionNode.branch);
+          const positionInBranch = branchActions.findIndex(a => a.id === actionNode.id);
+          addActionInsertionIndex = positionInBranch + 1;
+        } else {
+          addActionInsertionIndex = index + 1;
+        }
+
+        const addActionId = `add-action-${actionNode.id}`;
+        logicalNodes.push({
+          id: addActionId,
+          type: 'addAction',
+          position: { x: 0, y: 0 },
+          data: {
+            onClick: () => handleOpenActionPanel(addActionInsertionIndex, actionNode.branch, actionNode.checkNodeId),
+            metadata: {
+              index: addActionInsertionIndex,
+              branch: actionNode.branch,
+              checkNodeId: actionNode.checkNodeId
+            }
+          },
+        });
+
+        logicalEdges.push({
+          id: `action-${actionNode.id}-to-add`,
           source: actionNode.id,
           target: addActionId,
           type: 'smoothstep',
         });
 
-        // Find next action (could be repeat or regular)
-        let nextActionIndex = -1;
-        let nextCheckNode: typeof checkNodes[0] | undefined;
-        
-        for (let j = i + 1; j < actionNodes.length; j++) {
-          const nextAction = actionNodes[j];
-          if (nextAction.option.id === 'repeat') {
-            // Next is a repeat action, find its check node
-            nextCheckNode = checkNodes.find((c) => c.repeatActionId === nextAction.id);
-            if (nextCheckNode) {
-              break;
-            }
-          } else {
-            // Next is a regular action
-            nextActionIndex = j;
-            break;
-          }
+        // Connect addAction to next node in the same branch or main flow
+        let nextAction: ActionNodeData | undefined;
+        if (actionNode.branch && actionNode.checkNodeId) {
+          const branchActions = actionNodes.filter(a => a.checkNodeId === actionNode.checkNodeId && a.branch === actionNode.branch);
+          const idxInBranch = branchActions.findIndex(a => a.id === actionNode.id);
+          nextAction = branchActions[idxInBranch + 1];
+        } else {
+          nextAction = actionNodes.slice(index + 1).find(a => !a.branch);
         }
 
-        // Add Action -> Next Action or Check Node or End
-        if (nextCheckNode) {
-          // Next is a check node (repeat action)
-          updatedEdges.push({
-            id: `add-${i}-to-check-${nextCheckNode.id}`,
+        if (nextAction) {
+          const nextCheckNode = checkNodes.find(c => c.repeatActionId === nextAction?.id);
+          logicalEdges.push({
+            id: `add-${actionNode.id}-to-next`,
             source: addActionId,
-            target: nextCheckNode.id,
+            target: (nextCheckNode && nextAction.option.id === 'check') ? nextCheckNode.id : nextAction.id,
             type: 'smoothstep',
           });
-        } else if (nextActionIndex >= 0) {
-          // Next is a regular action
-          updatedEdges.push({
-            id: `add-${i}-to-action-${nextActionIndex}`,
-            source: addActionId,
-            target: actionNodes[nextActionIndex].id,
-            type: 'smoothstep',
-          });
-        } else {
-          // Last add-action -> End
-          updatedEdges.push({
-            id: `add-${i}-to-end`,
+        } else if (!actionNode.branch) {
+          // End of main flow
+          logicalEdges.push({
+            id: `add-${actionNode.id}-to-end`,
             source: addActionId,
             target: 'end',
             type: 'smoothstep',
           });
         }
-      }
-      
-      // Connect check nodes
+      });
+
+      // 4. Process check nodes
       checkNodes.forEach((checkNode) => {
-        // Right handle (yes) -> Linked action (No path - client hasn't completed check-in)
-        const linkedActionExists = updatedNodes.some(n => n.id === checkNode.linkedActionId);
-        if (linkedActionExists) {
-          updatedEdges.push({
-            id: `check-${checkNode.id}-no-to-action`,
-            source: checkNode.id,
-            sourceHandle: 'yes',
-            target: checkNode.linkedActionId,
-            type: 'smoothstep',
-            label: 'No',
-          });
-        }
+        logicalNodes.push({
+          id: checkNode.id,
+          type: 'check',
+          position: { x: 0, y: 0 },
+          data: {
+            label: 'Check',
+            subtitle: 'Check in completed',
+            onDelete: () => handleDeleteAction(checkNode.repeatActionId),
+          },
+        });
 
-        // Bottom handle (no) -> Add action after check (Yes path - client has completed)
-        const addActionAfterCheckId = `add-action-after-check-${checkNode.id}`;
-        const addActionAfterCheckExists = updatedNodes.some(n => n.id === addActionAfterCheckId);
+        // Branch connections
+        ['yes', 'no'].forEach((branch) => {
+          const branchActions = actionNodes.filter(a => a.checkNodeId === checkNode.id && a.branch === branch);
+          const addActionId = `add-action-${branch}-${checkNode.id}`;
 
-        if (addActionAfterCheckExists) {
-          // Connect check -> add-action-after-check
-          updatedEdges.push({
-            id: `check-${checkNode.id}-yes-to-add-action-after-check`,
-            source: checkNode.id,
-            sourceHandle: 'no',
-            target: addActionAfterCheckId,
-            type: 'smoothstep',
-            label: 'Yes',
-          });
-
-          // Find the next action or end after this check node
-          const repeatActionIndex = actionNodes.findIndex((a) => a.id === checkNode.repeatActionId);
-          const nextActionIndex = repeatActionIndex + 1;
-
-          if (nextActionIndex < actionNodes.length) {
-            // There's a next action
-            const nextAction = actionNodes[nextActionIndex];
-            if (nextAction.option.id === 'repeat') {
-              // Next is also a repeat, find its check node
-              const nextCheckNode = checkNodes.find(c => c.repeatActionId === nextAction.id);
-              if (nextCheckNode) {
-                updatedEdges.push({
-                  id: `${addActionAfterCheckId}-to-next-check`,
-                  source: addActionAfterCheckId,
-                  target: nextCheckNode.id,
-                  type: 'smoothstep',
-                });
-              }
-            } else {
-              // Next is a regular action
-              updatedEdges.push({
-                id: `${addActionAfterCheckId}-to-next-action`,
-                source: addActionAfterCheckId,
-                target: nextAction.id,
-                type: 'smoothstep',
-              });
-            }
+          if (branchActions.length === 0) {
+            // No actions in branch, connect check directly to an add-action node
+            logicalNodes.push({
+              id: addActionId,
+              type: 'addAction',
+              position: { x: 0, y: 0 },
+              data: {
+                onClick: () => handleOpenActionPanel(0, branch as 'yes' | 'no', checkNode.id),
+                metadata: {
+                  index: 0,
+                  branch: branch as 'yes' | 'no',
+                  checkNodeId: checkNode.id
+                }
+              },
+            });
+            logicalEdges.push({
+              id: `check-${checkNode.id}-${branch}-to-add`,
+              source: checkNode.id,
+              sourceHandle: branch,
+              target: addActionId,
+              type: 'smoothstep',
+              label: branch === 'yes' ? 'Yes' : 'No',
+            });
+            // Connect this add-action to a branch end node
+            const branchEndId = `end-${branch}-${checkNode.id}`;
+            logicalNodes.push({
+              id: branchEndId,
+              type: 'end',
+              position: { x: 0, y: 0 },
+              data: { label: 'End' },
+            });
+            logicalEdges.push({
+              id: `add-${branch}-${checkNode.id}-to-end`,
+              source: addActionId,
+              target: branchEndId,
+              type: 'smoothstep',
+            });
           } else {
-            // No next action, connect to add-action-before-end or end
-            const addActionBeforeEndExists = updatedNodes.some(n => n.id === 'add-action-before-end');
-            if (addActionBeforeEndExists) {
-              updatedEdges.push({
-                id: `${addActionAfterCheckId}-to-add-action-before-end`,
-                source: addActionAfterCheckId,
-                target: 'add-action-before-end',
-                type: 'smoothstep',
+            // Connect check to first action in branch
+            const firstAction = branchActions[0];
+            const firstActionCheck = checkNodes.find(c => c.repeatActionId === firstAction.id);
+            logicalEdges.push({
+              id: `check-${checkNode.id}-${branch}-to-first`,
+              source: checkNode.id,
+              sourceHandle: branch,
+              target: (firstActionCheck && firstAction.option.id === 'check') ? firstActionCheck.id : firstAction.id,
+              type: 'smoothstep',
+              label: branch === 'yes' ? 'Yes' : 'No',
+            });
+
+            // The last action in the branch needs to connect to a branch end node
+            const lastAction = branchActions[branchActions.length - 1];
+            if (lastAction.option.id !== 'check') {
+              const lastAddActionId = `add-action-${lastAction.id}`;
+              const branchEndId = `end-${branch}-${checkNode.id}`;
+              logicalNodes.push({
+                id: branchEndId,
+                type: 'end',
+                position: { x: 0, y: 0 },
+                data: { label: 'End' },
               });
-            } else {
-              updatedEdges.push({
-                id: `${addActionAfterCheckId}-to-end`,
-                source: addActionAfterCheckId,
-                target: 'end',
+              logicalEdges.push({
+                id: `add-${lastAction.id}-to-branch-end`,
+                source: lastAddActionId,
+                target: branchEndId,
                 type: 'smoothstep',
               });
             }
           }
-        }
-      });
-
-      // Connect add-action-before-end to end if it exists
-      if (addActionBeforeEndY !== null) {
-        updatedEdges.push({
-          id: 'add-action-before-end-to-end',
-          source: 'add-action-before-end',
-          target: 'end',
-          type: 'smoothstep',
         });
-      }
+      });
     } else {
-      // No actions: trigger -> add-action -> end
-      updatedEdges.push({
+      // No actions: connect trigger-add to main end node
+      logicalEdges.push({
         id: 'add-trigger-to-end',
         source: 'add-action-trigger',
         target: 'end',
@@ -1000,61 +779,178 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       });
     }
 
-    setNodes(updatedNodes);
+    // 5. Main End Node
+    // We need a main end node if the main flow doesn't terminate at a check node
+    const mainFlowActions = actionNodes.filter(a => !a.branch);
+    const lastMainFlowAction = mainFlowActions[mainFlowActions.length - 1];
 
-    setEdges(updatedEdges);
+    if (!lastMainFlowAction || lastMainFlowAction.option.id !== 'check') {
+      logicalNodes.push({
+        id: 'end',
+        type: 'end',
+        position: { x: 0, y: 0 },
+        data: { label: 'End' },
+      });
+    }
 
-    // Update viewport to show top after nodes are updated
-    if (reactFlowInstanceRef.current) {
-      setTimeout(() => {
+    // 6. Find disconnected groups and identify roots
+    const reachable = new Set<string>(['trigger']);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      logicalEdges.forEach(e => {
+        if (reachable.has(e.source) && !reachable.has(e.target)) {
+          reachable.add(e.target);
+          changed = true;
+        }
+      });
+    }
+
+    // Count incoming edges for nodes not reachable from trigger
+    const incomingCount: Record<string, number> = {};
+    logicalEdges.forEach(e => {
+      incomingCount[e.target] = (incomingCount[e.target] || 0) + 1;
+    });
+
+    // Mark nodes as disconnected or orphan root
+    logicalNodes.forEach(node => {
+      if (!reachable.has(node.id) && node.id !== 'trigger') {
+        const isRoot = !incomingCount[node.id];
+        node.data = { ...node.data, isDisconnected: true, isOrphanRoot: isRoot };
+      }
+    });
+
+    return { logicalNodes, logicalEdges };
+  }, [selectedTrigger, actionNodes, checkNodes, handleOpenTriggerPanel, handleOpenActionPanel, handleDeleteTrigger, handleDeleteAction, fetchData]);
+
+  // Handle auto-layout
+  useEffect(() => {
+    let isMounted = true;
+
+    const layout = async () => {
+      const { logicalNodes, logicalEdges } = buildLogicalGraph();
+      const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(logicalNodes, logicalEdges);
+
+      if (!isMounted) return;
+
+      setNodes(layoutedNodes);
+      setEdges(layoutedEdges);
+
+      // Center viewport on trigger
+      if (reactFlowInstanceRef.current && layoutedNodes.length > 0) {
         const instance = reactFlowInstanceRef.current;
-        if (instance && updatedNodes.length > 0) {
-          // Find the topmost node (trigger is always at y: 20)
-          const topNode = updatedNodes.find((n) => n.id === 'trigger') || updatedNodes[0];
+        const triggerNode = layoutedNodes.find((n) => n.id === 'trigger');
+        if (triggerNode) {
           const flowBounds = document.querySelector('.react-flow__renderer');
-
           if (flowBounds) {
             const containerWidth = flowBounds.clientWidth;
-            const nodeWidth = 300; // Our node width
-
-            // Center horizontally: (containerWidth / 2) - (nodeWidth / 2) - nodeX
-            const centerX = (containerWidth / 2) - (nodeWidth / 2) - topNode.position.x;
-
-            // Position at top with padding
+            const nodeWidth = 300;
+            const centerX = (containerWidth / 2) - (nodeWidth / 2) - triggerNode.position.x;
             const topPadding = 40;
-            const newY = -topNode.position.y + topPadding;
-
-            const viewport = instance.getViewport();
-            instance.setViewport({ x: centerX, y: newY, zoom: viewport.zoom });
+            const topY = -triggerNode.position.y + topPadding;
+            instance.setViewport({ x: centerX, y: topY, zoom: instance.getViewport().zoom }, { duration: 200 });
           }
         }
-      }, 50);
-    }
-  }, [selectedTrigger, actionNodes, checkNodes, handleOpenTriggerPanel, handleOpenActionPanel, handleDeleteTrigger, handleDeleteAction]);
-
-  // Call updateFlow whenever nodes or edges change
-  useEffect(() => {
-    const saveFlow = async () => {
-      try {
-        await updateFlow({
-          id: flowId,
-          nodes,
-          edges,
-        });
-      } catch (error) {
-        console.error('Failed to update flow:', error);
       }
     };
 
-    // Only save if we have actual nodes (not just the default nodes)
-    if (nodes.length > 0) {
-      saveFlow();
-    }
-  }, [flowId, nodes, edges]);
+    layout();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [buildLogicalGraph, setNodes, setEdges]);
+
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection) => {
+      // If target is an addAction node, we want to perform a re-attachment
+      if (params.target && params.target.startsWith('add-action-') && params.source) {
+        const sourceId = params.source;
+        const targetId = params.target;
+
+        // Find the addAction node in our current logical nodes to get its metadata
+        const targetNode = nodes.find(n => n.id === targetId);
+        if (targetNode?.data?.metadata) {
+          const { index, branch, checkNodeId } = targetNode.data.metadata;
+
+          setActionNodes(prev => {
+            const movingNodeIdx = prev.findIndex(n => n.id === sourceId);
+            if (movingNodeIdx === -1) return prev;
+
+            const updatedNodes = [...prev];
+            const [movingNode] = updatedNodes.splice(movingNodeIdx, 1);
+
+            // Update the node's branch context
+            const reattachedNode = {
+              ...movingNode,
+              branch: branch || undefined,
+              checkNodeId: checkNodeId || undefined
+            };
+
+            // Calculate new insertion index
+            // If it's a branch, we need to find the correct spot in the global array
+            if (branch && checkNodeId) {
+              const branchActions = updatedNodes.filter(a => a.checkNodeId === checkNodeId && a.branch === branch);
+              if (index === 0 || branchActions.length === 0) {
+                // Add to the end of the global array (it will be filtered into the branch)
+                return [...updatedNodes, reattachedNode];
+              } else {
+                const targetBranchAction = branchActions[index - 1];
+                const globalIdx = updatedNodes.findIndex(a => a.id === targetBranchAction.id);
+                updatedNodes.splice(globalIdx + 1, 0, reattachedNode);
+                return updatedNodes;
+              }
+            } else {
+              // Main flow
+              updatedNodes.splice(index, 0, reattachedNode);
+              return updatedNodes;
+            }
+          });
+        }
+      } else {
+        setEdges((eds) => addEdge(params, eds));
+      }
+    },
+    [nodes, setEdges, setActionNodes]
+  );
+
+  const onNodeDrag = useCallback(
+    (_: any, node: Node, nodes: Node[]) => {
+      // Only handle children movement if this is an orphan root
+      if (node.data?.isOrphanRoot) {
+        // Collect all nodes reachable from this root in the logical graph
+        const reachable = new Set<string>([node.id]);
+        let changed = true;
+        while (changed) {
+          changed = false;
+          edges.forEach((e) => {
+            if (reachable.has(e.source) && !reachable.has(e.target)) {
+              reachable.add(e.target);
+              changed = true;
+            }
+          });
+        }
+
+        // Calculate the delta movement
+        const dx = node.dragHandle ? 0 : 0; // React Flow already updated 'node.position'
+
+        // Update all reachable nodes except the root itself (which is already moving)
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id !== node.id && reachable.has(n.id)) {
+              // We need the original position before this drag step to apply the same delta
+              // But React Flow gives us the new 'node.position'. 
+              // A better way is to use the difference between 'node.position' and 'node.dragging' state.
+              // However, since we are in onNodeDrag, we can just apply the same movement. 
+              // React Flow handles the root. We handle the others by offsetting them relative to the root.
+            }
+            return n;
+          })
+        );
+      }
+    },
+    [edges, setNodes]
   );
 
   const handleCloseSidePanel = () => {
@@ -1067,12 +963,15 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
     setSelectedCheckIns(new Set());
     setSelectedFiles(new Set());
     setSelectedHabits(new Set());
+    setSelectedMetrics(new Set());
     setEditingActionNodeId(null);
     setWaitDuration(1);
     setWaitUnit('hours');
     setRepeatLinkedActionId(null);
     setInitialRepeatLinkedActionId(null);
     setInsertionIndex(-1);
+    setCurrentBranch(null);
+    setCurrentCheckNodeId(null);
   };
 
   const handleTriggerOptionClick = (option: TriggerOption) => {
@@ -1081,8 +980,65 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
   };
 
   const handleActionOptionClick = (option: ActionOption) => {
-    if (option.id === 'send-message' || option.id === 'wait' || option.id === 'repeat') {
-      // For message, wait, and repeat, go directly to config step
+    if (option.id === 'check') {
+      // For check actions (check nodes), immediately create the check node
+      const newActionNode: ActionNodeData = {
+        id: `action-${Date.now()}-${Math.random()}`,
+        option: option,
+        repeatLinkedActionId: null,
+        branch: currentBranch || undefined,
+        checkNodeId: currentCheckNodeId || undefined,
+      };
+
+      // Insert at the correct position
+      setActionNodes((prev) => {
+        // If this is a branch action, insert at the correct position within the branch
+        if (currentBranch && currentCheckNodeId) {
+          // Find all actions in this branch
+          const branchActions = prev.filter(a =>
+            a.checkNodeId === currentCheckNodeId &&
+            a.branch === currentBranch
+          );
+
+          if (branchActions.length === 0 || insertionIndex === 0) {
+            // First action in the branch - add it after all existing actions
+            return [...prev, newActionNode];
+          } else {
+            // Insert at the specified position within the branch
+            // Find the global index of the action at insertionIndex - 1 in this branch
+            const targetBranchAction = branchActions[insertionIndex - 1];
+            const globalIndex = prev.findIndex(a => a.id === targetBranchAction.id);
+
+            // Insert after that action
+            return [...prev.slice(0, globalIndex + 1), newActionNode, ...prev.slice(globalIndex + 1)];
+          }
+        }
+
+        // For main flow actions, use insertionIndex
+        if (insertionIndex >= 0 && insertionIndex < prev.length) {
+          return [...prev.slice(0, insertionIndex), newActionNode, ...prev.slice(insertionIndex)];
+        }
+
+        // Default to appending at the end
+        return [...prev, newActionNode];
+      });
+
+      // Create the check node
+      const checkNodeId = `check-${Date.now()}-${Math.random()}`;
+      setCheckNodes((prev) => [
+        ...prev,
+        {
+          id: checkNodeId,
+          linkedActionId: '',
+          repeatActionId: newActionNode.id,
+        },
+      ]);
+
+      // Reset and close
+      handleBackToActionList();
+      handleCloseSidePanel();
+    } else if (option.id === 'send-message' || option.id === 'wait') {
+      // For message and wait, go directly to config step
       setSelectedActionOption(option);
       setActionStep('config');
     } else {
@@ -1100,17 +1056,20 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
     setSelectedCheckIns(new Set());
     setSelectedFiles(new Set());
     setSelectedHabits(new Set());
+    setSelectedMetrics(new Set());
     setEditingActionNodeId(null);
     setWaitDuration(1);
     setWaitUnit('hours');
     setRepeatLinkedActionId(null);
     setInitialRepeatLinkedActionId(null);
     setInsertionIndex(-1);
+    setCurrentBranch(null);
+    setCurrentCheckNodeId(null);
   };
 
   const handleActionContinue = () => {
-    if (selectedActionOption?.id === 'send-message' || selectedActionOption?.id === 'wait' || selectedActionOption?.id === 'repeat') {
-      // For message, wait, and repeat, save directly
+    if (selectedActionOption?.id === 'send-message' || selectedActionOption?.id === 'wait' || selectedActionOption?.id === 'check') {
+      // For message, wait, and check, save directly
       handleSaveAction();
     } else {
       // For others, go to confirmation
@@ -1127,23 +1086,22 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
         prev.map((node) =>
           node.id === editingActionNodeId
             ? {
-                ...node,
-                messageText: selectedActionOption.id === 'send-message' ? messageText : undefined,
-                waitDuration: selectedActionOption.id === 'wait' ? waitDuration : undefined,
-                waitUnit: selectedActionOption.id === 'wait' ? waitUnit : undefined,
-                repeatLinkedActionId: selectedActionOption.id === 'repeat' ? repeatLinkedActionId : undefined,
-                selectedQuestionnaires: selectedActionOption.id === 'assign-questionnaire' ? selectedQuestionnaires : undefined,
-                selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
-                selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
-                selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
-                selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
-              }
+              ...node,
+              messageText: selectedActionOption.id === 'send-message' ? messageText : undefined,
+              waitDuration: selectedActionOption.id === 'wait' ? waitDuration : undefined,
+              waitUnit: selectedActionOption.id === 'wait' ? waitUnit : undefined,
+              repeatLinkedActionId: selectedActionOption.id === 'check' ? repeatLinkedActionId : undefined,
+              selectedQuestionnaires: selectedActionOption.id === 'assign-questionnaire' ? selectedQuestionnaires : undefined,
+              selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
+              selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
+              selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
+            }
             : node
         )
       );
-      
-      // Update check node if it exists for this repeat action
-      if (selectedActionOption.id === 'repeat' && repeatLinkedActionId) {
+
+      // Update check node if it exists for this check action
+      if (selectedActionOption.id === 'check' && repeatLinkedActionId) {
         setCheckNodes((prev) => {
           const existing = prev.find((c) => c.repeatActionId === editingActionNodeId);
           if (existing) {
@@ -1156,7 +1114,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
           return prev;
         });
       }
-      
+
       setEditingActionNodeId(null);
     } else {
       // Create new action node
@@ -1166,36 +1124,61 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
         messageText: selectedActionOption.id === 'send-message' ? messageText : undefined,
         waitDuration: selectedActionOption.id === 'wait' ? waitDuration : undefined,
         waitUnit: selectedActionOption.id === 'wait' ? waitUnit : undefined,
-        repeatLinkedActionId: selectedActionOption.id === 'repeat' ? repeatLinkedActionId : undefined,
+        repeatLinkedActionId: selectedActionOption.id === 'check' ? repeatLinkedActionId : undefined,
         selectedQuestionnaires: selectedActionOption.id === 'assign-questionnaire' ? selectedQuestionnaires : undefined,
         selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
         selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
         selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
-        selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
+        branch: currentBranch || undefined,
+        checkNodeId: currentCheckNodeId || undefined,
       };
-      // Insert at the correct position based on insertionIndex
+      // Insert at the correct position
       setActionNodes((prev) => {
+        // If this is a branch action, insert at the correct position within the branch
+        if (currentBranch && currentCheckNodeId) {
+          // Find all actions in this branch
+          const branchActions = prev.filter(a =>
+            a.checkNodeId === currentCheckNodeId &&
+            a.branch === currentBranch
+          );
+
+          if (branchActions.length === 0 || insertionIndex === 0) {
+            // First action in the branch - add it after all existing actions
+            return [...prev, newActionNode];
+          } else {
+            // Insert at the specified position within the branch
+            // Find the global index of the action at insertionIndex - 1 in this branch
+            const targetBranchAction = branchActions[insertionIndex - 1];
+            const globalIndex = prev.findIndex(a => a.id === targetBranchAction.id);
+
+            // Insert after that action
+            return [...prev.slice(0, globalIndex + 1), newActionNode, ...prev.slice(globalIndex + 1)];
+          }
+        }
+
+        // For main flow actions, use insertionIndex
         if (insertionIndex >= 0 && insertionIndex < prev.length) {
           return [...prev.slice(0, insertionIndex), newActionNode, ...prev.slice(insertionIndex)];
         }
+
         // Default to appending at the end
         return [...prev, newActionNode];
       });
-      
-      // If repeat action, create a check node
-      if (selectedActionOption.id === 'repeat' && repeatLinkedActionId) {
+
+      // If check action, create a check node (no longer needs linkedActionId)
+      if (selectedActionOption.id === 'check') {
         const checkNodeId = `check-${Date.now()}-${Math.random()}`;
         setCheckNodes((prev) => [
           ...prev,
           {
             id: checkNodeId,
-            linkedActionId: repeatLinkedActionId,
+            linkedActionId: '', // Not used anymore, but kept for type compatibility
             repeatActionId: newActionNode.id,
           },
         ]);
       }
     }
-    
+
     // Reset and close
     handleBackToActionList();
     handleCloseSidePanel();
@@ -1223,7 +1206,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       newSet.add(id);
     }
     setSelectedQuestionnaires(newSet);
-    
+
     // If editing and all items removed, delete the node or close sidebar
     if (editingActionNodeId && newSet.size === 0 && selectedActionOption?.id === 'assign-questionnaire') {
       handleDeleteActionFromEdit();
@@ -1238,7 +1221,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       newSet.add(id);
     }
     setSelectedCheckIns(newSet);
-    
+
     // If editing and all items removed, delete the node or close sidebar
     if (editingActionNodeId && newSet.size === 0 && selectedActionOption?.id === 'assign-check-in') {
       handleDeleteActionFromEdit();
@@ -1253,7 +1236,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       newSet.add(id);
     }
     setSelectedFiles(newSet);
-    
+
     // If editing and all items removed, delete the node or close sidebar
     if (editingActionNodeId && newSet.size === 0 && selectedActionOption?.id === 'add-file') {
       handleDeleteActionFromEdit();
@@ -1268,7 +1251,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       newSet.add(id);
     }
     setSelectedHabits(newSet);
-    
+
     // If editing and all items removed, delete the node or close sidebar
     if (editingActionNodeId && newSet.size === 0 && selectedActionOption?.id === 'add-habit') {
       handleDeleteActionFromEdit();
@@ -1283,7 +1266,7 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
       newSet.add(id);
     }
     setSelectedMetrics(newSet);
-    
+
     // If editing and all items removed, delete the node or close sidebar
     if (editingActionNodeId && newSet.size === 0 && selectedActionOption?.id === 'add-metric') {
       handleDeleteActionFromEdit();
@@ -1315,8 +1298,9 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeDrag={onNodeDrag}
           nodeTypes={nodeTypes}
-          nodesDraggable={false}
+          nodesDraggable={true}
           nodesConnectable={false}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           onInit={(reactFlowInstance) => {
@@ -1410,6 +1394,23 @@ export function FlowEditor({ flowId, onTriggerClick, onActionClick }: FlowEditor
         }
         onTriggerKeyDown={handleTriggerKeyDown}
         onActionKeyDown={handleActionKeyDown}
+        isPreviousActionCheck={
+          // Only prevent checks after checks in the main flow (not in branches)
+          (() => {
+            if (currentBranch) return false; // Allow checks in branches
+            if (insertionIndex <= 0) return false; // No previous action
+
+            // Find the previous main flow action (skip branch actions)
+            for (let i = insertionIndex - 1; i >= 0; i--) {
+              const action = actionNodes[i];
+              // Skip branch actions
+              if (action.branch && action.checkNodeId) continue;
+              // Found the previous main flow action
+              return action.option.id === 'check';
+            }
+            return false;
+          })()
+        }
       />
     </div>
   );

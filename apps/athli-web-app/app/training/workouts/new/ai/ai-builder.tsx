@@ -242,7 +242,6 @@ const buildWorkoutPayload = (
       const exercises: ExerciseGroupPayload[] = groups.map((group) => {
         const mapped = group.map<RegularExercisePayload>((exercise) => ({
           id: exercise.exerciseId,
-          name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) => mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)),
           alternatives: exercise.alternatives || [],
@@ -266,7 +265,6 @@ const buildWorkoutPayload = (
     if (section.type === 'amrap') {
       const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
         id: exercise.exerciseId ?? exercise.id,
-        name: exercise.name,
         exerciseType: exercise.exerciseType,
         weight: exercise.weight ?? null,
         reps: exercise.reps ?? null,
@@ -301,7 +299,6 @@ const buildWorkoutPayload = (
 
           return {
             id: exercise.exerciseId,
-            name: exercise.name,
             exerciseType: exercise.exerciseType as ExerciseType,
             set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet),
             alternatives: exercise.alternatives || [],
@@ -330,7 +327,6 @@ const buildWorkoutPayload = (
       const exercises: ExerciseGroupPayload[] = groups.map((group) => {
         const mapped = group.map<RegularExercisePayload>((exercise) => ({
           id: exercise.exerciseId,
-          name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) => mapSetDataToPayload(exercise.exerciseType as ExerciseType, set)),
           alternatives: exercise.alternatives || [],
@@ -354,7 +350,6 @@ const buildWorkoutPayload = (
 
     const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
       id: exercise.exerciseId ?? exercise.id,
-      name: exercise.name,
       exerciseType: exercise.exerciseType,
       weight: exercise.weight ?? null,
       reps: exercise.reps ?? null,

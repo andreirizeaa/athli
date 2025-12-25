@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { InputGroup, InputGroupInput, InputGroupAddon } from '@/components/ui/input-group';
 import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Separator } from '@/components/ui/separator';
@@ -19,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, User, Mail, Users, Phone, MapPin, Scale, Ruler, ArrowUp10 } from 'lucide-react';
+import { Edit, User, Mail, Users, Phone, MapPin, ArrowUp10 } from 'lucide-react';
 import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/lib/client/client-athlete-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { parsePhoneNumber } from 'react-phone-number-input';
@@ -40,8 +39,6 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
     lastName: '',
     email: '',
     age: null,
-    weight: null,
-    height: null,
     category: 'online',
     gender: 'male',
     phone: '',
@@ -101,8 +98,6 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
         formData.lastName !== details.lastName ||
         formData.email !== details.email ||
         formData.age !== details.age ||
-        formData.weight !== details.weight ||
-        formData.height !== details.height ||
         formData.category !== details.category ||
         formData.gender !== details.gender ||
         formData.phone !== details.phone ||
@@ -197,24 +192,6 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
                   </div>
                 )}
                 </div>
-                <div className="flex gap-4">
-                {details.weight !== null && details.weight !== undefined && (
-                    <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
-                      <Scale className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <p className="text-xs text-foreground leading-tight">
-                      {details.weight} kg
-                    </p>
-                  </div>
-                )}
-                {details.height !== null && details.height !== undefined && (
-                    <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
-                      <Ruler className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <p className="text-xs text-foreground leading-tight">
-                      {details.height} cm
-                    </p>
-                  </div>
-                )}
-              </div>
                 <div className="flex gap-4">
                   <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
                     <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -364,47 +341,6 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
               autoFocus={false}
               tabIndex={0}
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="weight">
-                <span>{t('athletes.profile.weight')}<RequiredAsterisk /></span>
-              </Label>
-              <InputGroup>
-                <InputGroupInput
-                  id="weight"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={formData.weight || ''}
-                  onChange={(e) => setFormData({ ...formData, weight: e.target.value ? parseFloat(e.target.value) : null })}
-                  placeholder={t('athletes.profile.weightPlaceholder')}
-                  autoFocus={false}
-                  tabIndex={0}
-                />
-                <InputGroupAddon align="inline-end">kg</InputGroupAddon>
-              </InputGroup>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="height">
-                <span>{t('athletes.profile.height')}<RequiredAsterisk /></span>
-              </Label>
-              <InputGroup>
-                <InputGroupInput
-                  id="height"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={formData.height || ''}
-                  onChange={(e) => setFormData({ ...formData, height: e.target.value ? parseFloat(e.target.value) : null })}
-                  placeholder={t('athletes.profile.heightPlaceholder')}
-                  autoFocus={false}
-                  tabIndex={0}
-                />
-                <InputGroupAddon align="inline-end">cm</InputGroupAddon>
-              </InputGroup>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

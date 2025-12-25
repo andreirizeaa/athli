@@ -1,10 +1,16 @@
 export type ExerciseType = 'weight_reps' | 'reps' | 'distance_duration';
 
 /**
+ * Workout execution status
+ */
+export type WorkoutStatus = 'not_started' | 'in_progress' | 'completed';
+
+/**
  * Common rest field shared by all exercise metric variants.
  */
 type BaseMetrics = {
   restSec: number | null;
+  completed?: boolean; // Whether this particular metric was completed (empty when coach creates)
 };
 
 type WeightRepsMetrics = BaseMetrics & {
@@ -27,10 +33,10 @@ type DistanceDurationMetrics = BaseMetrics & {
 /**
  * Round-level exercise metrics are now a discriminated union keyed
  * by `exerciseType` so invalid combinations are impossible at the type level.
+ * Only stores exerciseId - exercise details are fetched from RapidAPI Exercise DB
  */
 export type RoundExercisePayload = {
   id: string;
-  name: string;
 } & (WeightRepsMetrics | RepsMetrics | DistanceDurationMetrics);
 
 /**
@@ -41,11 +47,14 @@ export type RoundExercisePayload = {
 export type DropsetStage = {
   weight?: number;
   reps?: number;
+  completed?: boolean; // Whether this stage was completed (empty when coach creates)
 };
 
 type BaseSet = {
   setNumber: number;
   restSec: number | null;
+  completed?: boolean; // Whether this set was completed (empty when coach creates)
+  skipped?: boolean; // Whether this set was skipped (empty when coach creates)
 };
 
 type WeightRepsSet = BaseSet & {
@@ -74,12 +83,13 @@ type DistanceDurationSet = BaseSet & {
 export type SetPayload = WeightRepsSet | RepsSet | DistanceDurationSet;
 
 // Regular section exercise (with sets)
+// Only stores exerciseId - exercise details are fetched from RapidAPI Exercise DB
 export type RegularExercisePayload = {
   id: string;
-  name: string;
   exerciseType: ExerciseType;
   sets: SetPayload[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
+  notes?: string; // User notes for this exercise (empty when coach creates)
 };
 
 export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
@@ -94,24 +104,28 @@ export type ExerciseGroupPayload = {
 export type RegularSectionPayload = {
   id: string;
   type: 'regular';
-  // Regular sections contain exercise groups. For tri-sets / giant-sets,
-  // isSuperset is true and the exercises array has 2+ items. For single
-  // exercises, isSuperset is false and exercises has exactly 1 item.
   exercises: ExerciseGroupPayload[];
+  notes?: string; // User notes for this section (empty when coach creates)
 };
 
 export type AmrapSectionPayload = {
   id: string;
   type: 'amrap';
-  durationSec: number;
+  durationSec: number; // Planned duration
+  actualDurationSec?: number; // Actual duration completed (empty when coach creates)
+  roundsCompleted?: number; // Number of rounds completed (empty when coach creates)
   exercises: RoundExercisePayload[];
+  notes?: string; // User notes (empty when coach creates)
 };
 
 export type TimedSectionPayload = {
   id: string;
   type: 'timed';
-  targetRounds: number;
+  targetRounds: number; // Planned rounds
+  actualRounds?: number; // Actual rounds completed (empty when coach creates)
+  totalDurationSec?: number; // Total time taken (empty when coach creates)
   exercises: RoundExercisePayload[];
+  notes?: string; // User notes (empty when coach creates)
 };
 
 /**
@@ -130,16 +144,19 @@ export type CircuitExerciseGroupPayload = {
 export type CircuitsSectionPayload = {
   id: string;
   type: 'circuits';
-  targetRounds: number;
+  targetRounds: number; // Planned rounds
+  actualRounds?: number; // Actual rounds completed (empty when coach creates)
+  totalDurationSec?: number; // Total time taken (empty when coach creates)
   exercises: CircuitExerciseGroupPayload[];
+  notes?: string; // User notes (empty when coach creates)
 };
 
 export type AuxiliarySectionPayload = {
   id: string;
   type: 'auxiliary';
-  category: AuxiliaryCategory; // 'warmup' | 'cooldown' | 'mobility'
-  // Auxiliary sections act like regular sections with sets
+  category: AuxiliaryCategory;
   exercises: ExerciseGroupPayload[];
+  notes?: string; // User notes (empty when coach creates)
 };
 
 export type WorkoutSectionPayload =
@@ -149,11 +166,37 @@ export type WorkoutSectionPayload =
   | CircuitsSectionPayload
   | AuxiliarySectionPayload;
 
-export type WorkoutProgramPayload = {
+/**
+ * Complete workout schema
+ * When coaches create: status is 'not_started', optional fields are empty
+ * During/after execution: user fills in completion data
+ */
+export type WorkoutPayload = {
+  id?: string; // Workout ID (assigned after creation)
   title: string;
   description: string;
   type: string;
   difficulty: string;
   equipment: string[];
+  totalExercises: number; // Total number of exercises across all sections
   sections: WorkoutSectionPayload[];
+
+  // Execution tracking (empty when coach creates)
+  status?: WorkoutStatus;
+  startedAt?: string; // ISO 8601 timestamp
+  completedAt?: string; // ISO 8601 timestamp
+  totalDurationMin?: number; // Total workout duration in minutes
+
+  // Session-level metrics (empty when coach creates)
+  sessionComments?: string; // User comments for the entire session
+  totalWeightLifted?: number; // Total weight lifted in the session (in kg or lbs)
+  intensity?: number; // Perceived intensity (0-10 scale)
+  readiness?: number; // Pre-workout readiness (0-10 scale)
+
+  // Additional fields
+  overallNotes?: string; // User notes for the entire workout
+  rating?: number; // User rating (1-5)
 };
+
+// Legacy aliases for backwards compatibility
+export type WorkoutProgramPayload = WorkoutPayload;
