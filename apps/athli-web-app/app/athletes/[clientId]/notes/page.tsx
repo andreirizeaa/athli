@@ -20,14 +20,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Trash2, Edit, Plus, MoreHorizontal, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/coach/coach-note-service';
-import { deleteClientNotes } from '@/lib/client/client-note-service';
+import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/api/coach/coach-client-service';
+import { deleteClientNotes } from '@/lib/api/client/client-note-service';
 
 const ClientNotesPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
-  
+
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isViewNoteOpen, setIsViewNoteOpen] = useState(false);
@@ -137,7 +137,7 @@ const ClientNotesPage = () => {
 
   const handleDeleteNote = async (noteId: string) => {
     if (!clientId) return;
-    
+
     try {
       await deleteNote({
         noteId,
@@ -212,7 +212,7 @@ const ClientNotesPage = () => {
         noteIds: Array.from(selectedNotes),
         clientId: clientId,
       });
-      
+
       setNotes((prev) => prev.filter((n) => !selectedNotes.has(n.id)));
       setSelectedNotes(new Set());
     } catch (error) {

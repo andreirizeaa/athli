@@ -15,7 +15,7 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, GripVertical, Edit } from 'lucide-react';
-import { type Form, addQuestion, reorderQuestions } from '@/lib/coach/coach-form-service';
+import { type CheckIn as Form, addQuestion, reorderQuestions } from '@/lib/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
@@ -59,7 +59,7 @@ const CheckInFormDetailPage = () => {
   // Load questions from sessionStorage on client side
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     // Check for questions from template in sessionStorage
     const storedQuestions = sessionStorage.getItem(`form-questions-${formId}`);
     if (storedQuestions) {
@@ -85,7 +85,7 @@ const CheckInFormDetailPage = () => {
         console.error('Failed to parse stored questions:', error);
       }
     }
-    
+
     // Mock questions for Weekly Check-in
     if (formId === 'form-2') {
       setQuestions([
@@ -163,7 +163,7 @@ const CheckInFormDetailPage = () => {
   const handleToggleReorder = async () => {
     const wasInReorderMode = isReorderMode;
     setIsReorderMode(!isReorderMode);
-    
+
     // If we're exiting reorder mode, save the new order
     if (wasInReorderMode) {
       try {
@@ -197,13 +197,13 @@ const CheckInFormDetailPage = () => {
         mediaCount: questionData.mediaCount,
         metricId: questionData.metricId,
       });
-      
+
       // Ensure metricId is preserved if it exists in questionData
       const questionWithMetric = {
         ...newQuestion,
         metricId: questionData.metricId || newQuestion.metricId,
       };
-      
+
       setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);

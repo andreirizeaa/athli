@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
-import { archiveUser } from '@/lib/coach/coach-athlete-service';
+import { archiveUser } from '@/lib/api/coach/coach-client-service';
 import { toast } from 'sonner';
 import { mockAthletes } from '@/components/app/app-shell';
 

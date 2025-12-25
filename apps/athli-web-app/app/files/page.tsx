@@ -19,8 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile } from '@/lib/coach/coach-file-service';
-import { addFilesToClient } from '@/lib/client/client-file-service';
+import { addFile, updateFile, deleteFile } from '@/lib/api/coach/coach-file-service';
+import { addFilesToClient } from '@/lib/api/client/client-file-service';
 import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';
@@ -112,7 +112,7 @@ const FilesPage = () => {
   const [files, setFiles] = useState<FileItem[]>(mockFiles);
   const [filteredCount, setFilteredCount] = useState<number>(mockFiles.length);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  
+
   // Side panel state
   const [fileName, setFileName] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
@@ -120,14 +120,14 @@ const FilesPage = () => {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
-  
+
   // Edit file state
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [editFileName, setEditFileName] = useState<string>('');
   const [editSelectedTags, setEditSelectedTags] = useState<string[]>([]);
   const [hasEditChanges, setHasEditChanges] = useState<boolean>(false);
   const [rowMenuOpenId, setRowMenuOpenId] = useState<string | null>(null);
-  
+
   // Add to clients side panel state
   const [isAddToClientsOpen, setIsAddToClientsOpen] = useState<boolean>(false);
   const [filesToAdd, setFilesToAdd] = useState<FileItem[]>([]);
@@ -155,7 +155,7 @@ const FilesPage = () => {
     if (!fileName.trim() || !selectedFile) {
       return;
     }
-    
+
     try {
       // Call the addFile service method
       const fileId = await addFile({
@@ -163,7 +163,7 @@ const FilesPage = () => {
         file: selectedFile,
         tags: selectedTags,
       });
-      
+
       // Add the file to the local state
       const newFile: FileItem = {
         id: fileId,
@@ -250,7 +250,7 @@ const FilesPage = () => {
     if (selectedFileItems.length === 0) {
       return;
     }
-    
+
     setFilesToAdd(selectedFileItems);
     setIsAddToClientsOpen(true);
     setSelectedClientIds(new Set());
@@ -271,11 +271,11 @@ const FilesPage = () => {
     if (selectedClientIds.size === 0 || filesToAdd.length === 0) {
       return;
     }
-    
+
     try {
       const fileIds = filesToAdd.map((file) => file.id);
       const clientIdsArray = Array.from(selectedClientIds);
-      
+
       // Call the service for each client
       await Promise.all(
         clientIdsArray.map((clientId) =>
@@ -285,7 +285,7 @@ const FilesPage = () => {
           })
         )
       );
-      
+
       // Close the side panel and clear selections
       setIsAddToClientsOpen(false);
       setFilesToAdd([]);
@@ -379,7 +379,7 @@ const FilesPage = () => {
   const handleFileClick = (file: FileItem) => {
     // Mock URL - in production this would come from the file service
     const mockFileUrl = 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800';
-    
+
     if (file.type === 'image' || file.type === 'video' || file.type === 'pdf') {
       // Open in new tab
       window.open(mockFileUrl, '_blank');
@@ -416,14 +416,14 @@ const FilesPage = () => {
 
   const handleSaveEdit = async () => {
     if (!editingFileId || !hasEditChanges) return;
-    
+
     try {
       await updateFile({
         fileId: editingFileId,
         fileName: editFileName.trim(),
         tags: editSelectedTags,
       });
-      
+
       setFiles((prev) =>
         prev.map((f) =>
           f.id === editingFileId
@@ -431,7 +431,7 @@ const FilesPage = () => {
             : f
         )
       );
-      
+
       handleCloseEdit();
       // TODO: Show success toast
     } catch (error) {
@@ -637,17 +637,17 @@ const FilesPage = () => {
         }
         selectionActions={
           <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                onClick={handleClearSelected}
-                className="gap-2"
-                aria-label={t('files.actions.clearSelected')}
-              >
-                <X className="size-4" />
-                <span>
-                  Clear {selectedFiles.size} selected
-                </span>
-              </Button>
+            <Button
+              variant="ghost"
+              onClick={handleClearSelected}
+              className="gap-2"
+              aria-label={t('files.actions.clearSelected')}
+            >
+              <X className="size-4" />
+              <span>
+                Clear {selectedFiles.size} selected
+              </span>
+            </Button>
             <Button
               variant="ghost"
               onClick={handleAddToClients}
@@ -688,7 +688,7 @@ const FilesPage = () => {
               <p className="text-lg font-semibold text-primary">Drop file here</p>
             </div>
           )}
-          
+
           {/* Form Content - hidden when dragging */}
           <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
             {/* File Name Input */}
@@ -713,50 +713,50 @@ const FilesPage = () => {
                   selectedFile ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary'
                 )}
               >
-              {selectedFile ? (
-                <>
-                  <Check className="size-10 text-green-500" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium mb-1">{(selectedFile as globalThis.File).name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {((selectedFile as globalThis.File).size / 1024).toFixed(2)} KB
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                      }
-                    }}
-                  >
-                    {t('files.form.changeFile')}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Upload className="size-10 text-muted-foreground" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
-                    <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
-                  </div>
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileInputChange}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {t('files.form.selectFile')}
-                  </Button>
-                </>
-              )}
+                {selectedFile ? (
+                  <>
+                    <Check className="size-10 text-green-500" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium mb-1">{(selectedFile as globalThis.File).name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {((selectedFile as globalThis.File).size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                    >
+                      {t('files.form.changeFile')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-10 text-muted-foreground" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
+                      <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
+                    </div>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileInputChange}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {t('files.form.selectFile')}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -777,7 +777,7 @@ const FilesPage = () => {
           </div>
         </div>
       </SidePanel>
-      
+
       {/* Edit File Side Panel */}
       <SidePanel
         open={editingFileId !== null}
@@ -844,7 +844,7 @@ const FilesPage = () => {
           </div>
         </div>
       </SidePanel>
-      
+
       {/* Add to Clients Side Panel */}
       <SidePanel
         open={isAddToClientsOpen}

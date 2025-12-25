@@ -13,8 +13,8 @@ import { Card } from '@/components/ui/card';
 import { Info } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
-import { getAllFiles, type CoachFile } from '@/lib/coach/coach-file-service';
-import { addFilesToClient } from '@/lib/client/client-file-service';
+import { getAllFiles, type CoachFile } from '@/lib/api/coach/coach-file-service';
+import { addFilesToClient } from '@/lib/api/client/client-file-service';
 
 const TAG_OPTIONS: Option[] = [
   { label: 'Training', value: 'Training' },
@@ -399,7 +399,7 @@ export const AddFileSidePanel = ({
                 <p className="text-lg font-semibold text-primary">Drop file here</p>
               </div>
             )}
-            
+
             {/* Form Content - hidden when dragging */}
             <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
               {showAlert && (

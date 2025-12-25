@@ -24,7 +24,7 @@ import { cn } from '@/lib/general/utils';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { broadcastMessage, type BroadcastMessageData } from '../../../lib/coach/coach-message-service';
+import { broadcastMessage, type BroadcastMessageData } from '../../../lib/api/coach/coach-message-service';
 
 type BroadcastSidePanelProps = {
   open: boolean;
@@ -241,11 +241,11 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
       // Convert files to MessageFile format
       const pdfFile = attachedPdf
         ? {
-            name: attachedPdf.name,
-            data: await fileToBase64(attachedPdf),
-            type: attachedPdf.type,
-            size: attachedPdf.size,
-          }
+          name: attachedPdf.name,
+          data: await fileToBase64(attachedPdf),
+          type: attachedPdf.type,
+          size: attachedPdf.size,
+        }
         : undefined;
 
       const imageFiles = await Promise.all(
@@ -259,11 +259,11 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
 
       const videoFile = attachedVideo
         ? {
-            name: attachedVideo.name,
-            data: await fileToBase64(attachedVideo),
-            type: attachedVideo.type,
-            size: attachedVideo.size,
-          }
+          name: attachedVideo.name,
+          data: await fileToBase64(attachedVideo),
+          type: attachedVideo.type,
+          size: attachedVideo.size,
+        }
         : undefined;
 
       const broadcastData: BroadcastMessageData = {
@@ -351,7 +351,7 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
         : isAllClients
           ? t('messages.broadcastPanel.broadcastToAllClients')
           : t('messages.broadcastPanel.broadcastToClients', { count: selectedClients.length });
-      
+
       return (
         <div className="flex w-full justify-start gap-2">
           <Button type="button" onClick={handleSave} disabled={isSaving || !message.trim() || selectedClientIds.size === 0}>
@@ -622,15 +622,15 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
                 renderFirstColumnHeader={({ isAllSelected, onToggleAll }) => {
                   return (
                     <div className="flex items-center gap-3 h-full w-full">
-                      <Checkbox 
-                        checked={isAllSelected} 
+                      <Checkbox
+                        checked={isAllSelected}
                         onCheckedChange={(checked) => {
                           if (checked !== isAllSelected) {
                             onToggleAll();
                           }
                           setIsAllClientsSelected(checked === true);
-                        }} 
-                        aria-label={t('general.selectAll')} 
+                        }}
+                        aria-label={t('general.selectAll')}
                       />
                       <div className="flex items-center gap-2">
                         <UserPlus className="size-3 text-muted-foreground" />

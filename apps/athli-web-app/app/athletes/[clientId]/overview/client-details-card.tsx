@@ -19,7 +19,7 @@ import {
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit, User, Mail, Users, Phone, MapPin, ArrowUp10 } from 'lucide-react';
-import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/lib/client/client-athlete-service';
+import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/lib/api/client/client-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { parsePhoneNumber } from 'react-phone-number-input';
 import type { Value as PhoneValue } from 'react-phone-number-input';
@@ -182,30 +182,30 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
                     <p className="text-xs text-foreground leading-tight">
                       {`${details.firstName || ''} ${details.lastName || ''}`.trim() || '-'}
                     </p>
-                </div>
-                {details.age !== null && details.age !== undefined && (
+                  </div>
+                  {details.age !== null && details.age !== undefined && (
                     <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
                       <ArrowUp10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <p className="text-xs text-foreground leading-tight">
-                      {details.age}
-                    </p>
-                  </div>
-                )}
+                        {details.age}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-4">
                   <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
                     <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <p className="text-xs text-foreground leading-tight">
                       {details.gender === 'male' ? t('athletes.profile.male') :
-                       details.gender === 'female' ? t('athletes.profile.female') :
-                       t('athletes.profile.preferNotToSay')}
+                        details.gender === 'female' ? t('athletes.profile.female') :
+                          t('athletes.profile.preferNotToSay')}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
                     <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <p className="text-xs text-foreground leading-tight">
-                      {details.category === 'online' 
-                        ? t('athletes.profile.online') 
+                      {details.category === 'online'
+                        ? t('athletes.profile.online')
                         : details.category === 'in-person'
                           ? t('athletes.profile.inPerson')
                           : details.category === 'hybrid'

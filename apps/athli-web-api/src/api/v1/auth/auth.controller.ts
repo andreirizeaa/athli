@@ -142,23 +142,6 @@ export class AuthController {
     }
   });
 
-  /**
-   * Get current user
-   */
-  getCurrentUser = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-
-    const user = await authService.getUserById(userId);
-
-    if (!user) {
-      unauthorized(res, { message: 'User not found' });
-      return;
-    }
-
-    success(res, {
-      data: { user },
-    });
-  });
 
   /**
    * Logout (client-side token removal)
@@ -196,46 +179,6 @@ export class AuthController {
     });
   });
 
-  /**
-   * Delete user account
-   */
-  deleteAccount = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-
-    if (!userId) {
-      unauthorized(res, { message: 'User not authenticated' });
-      return;
-    }
-
-    await authService.deleteAccount(userId);
-
-    success(res, {
-      message: 'Account deleted successfully',
-    });
-  });
-
-  /**
-   * Handle new client signup - checks if coach profile exists, creates client profile if needed
-   */
-  newClient = asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).userId;
-    const { coachId } = req.body;
-
-    if (!userId) {
-      unauthorized(res, { message: 'User not authenticated' });
-      return;
-    }
-
-    const result = await authService.handleNewClient(userId, coachId);
-
-    success(res, {
-      message: result.isNew ? 'Client profile created successfully' : 'Client profile already exists',
-      data: {
-        profile: result.profile,
-        isNew: result.isNew,
-      },
-    });
-  });
 }
 
 export const authController = new AuthController();

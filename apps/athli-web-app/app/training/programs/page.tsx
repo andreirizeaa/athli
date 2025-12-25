@@ -62,7 +62,7 @@ import {
 
 import type { Program } from '@/components/app/app-shell';
 import { mockPrograms } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/lib/coach/coach-program-service';
+import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/lib/api/coach/coach-program-service';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
 
@@ -787,24 +787,24 @@ const ProgramsPage = () => {
               </Tooltip>
             </TooltipProvider>
             {selectedPrograms.size === 1 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
                       onClick={handleDuplicateSelected}
-                    className="gap-2"
+                      className="gap-2"
                       aria-label={t('programs.actions.duplicateAria')}
-                  >
+                    >
                       <Copy className="size-4" />
                       <span>{t('programs.actions.duplicate')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
                     <p>{t('programs.actions.duplicate')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             <TooltipProvider>
               <Tooltip>
@@ -1050,7 +1050,7 @@ const ProgramsPage = () => {
                   className={cn(
                     'w-full',
                     newProgramDifficultyError &&
-                      'border-destructive aria-invalid:border-destructive'
+                    'border-destructive aria-invalid:border-destructive'
                   )}
                   aria-invalid={!!newProgramDifficultyError}
                 >

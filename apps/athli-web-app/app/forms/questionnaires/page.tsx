@@ -16,8 +16,8 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
-import { addForm, duplicateForm, type Form } from '@/lib/coach/coach-form-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { addQuestionnaire, duplicateQuestionnaire, type Questionnaire as Form } from '@/lib/api/coach/coach-questionnaire-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
@@ -61,10 +61,10 @@ const QuestionnairesPage = () => {
   const handleDuplicateSelected = async () => {
     const selectedForms = questionnaireForms.filter((form) => selectedQuestionnaires.has(form.id));
     if (selectedForms.length !== 1) return;
-    
+
     const formToDuplicate = selectedForms[0];
     try {
-      const duplicatedForm = await duplicateForm(formToDuplicate.id, formToDuplicate);
+      const duplicatedForm = await duplicateQuestionnaire(formToDuplicate.id, formToDuplicate);
       setForms((prev) => [...prev, duplicatedForm]);
       setSelectedQuestionnaires(new Set());
     } catch (error) {
@@ -75,7 +75,7 @@ const QuestionnairesPage = () => {
   const handleAssignToClients = () => {
     const selectedForms = questionnaireForms.filter((form) => selectedQuestionnaires.has(form.id));
     if (selectedForms.length === 0) return;
-    
+
     setFormsToAssign(selectedForms);
     setIsAssignToClientsOpen(true);
     setSelectedClientIds(new Set());
@@ -93,10 +93,10 @@ const QuestionnairesPage = () => {
 
   const handleAssignFormsToClients = async () => {
     if (selectedClientIds.size === 0 || formsToAssign.length === 0) return;
-    
+
     try {
       const clientIdsArray = Array.from(selectedClientIds);
-      
+
       await Promise.all(
         formsToAssign.flatMap((form) =>
           clientIdsArray.map(async (clientId) => {
@@ -104,9 +104,9 @@ const QuestionnairesPage = () => {
               type: 'one-time',
               sendNow: true,
             };
-            
+
             const cronExpression = convertScheduleToCron(scheduleData);
-            
+
             await assignForm({
               formId: form.id,
               clientId: clientId,
@@ -116,7 +116,7 @@ const QuestionnairesPage = () => {
           })
         )
       );
-      
+
       setIsAssignToClientsOpen(false);
       setFormsToAssign([]);
       setSelectedQuestionnaires(new Set());
@@ -158,10 +158,10 @@ const QuestionnairesPage = () => {
     mediaCount?: number;
   }>) => {
     setForms((prev) => [...prev, newForm]);
-    
+
     const template = formTemplates.find((t) => t.name === newForm.name);
     const formType = template?.schedule?.type || 'check-in';
-    
+
     if (questions && questions.length > 0) {
       sessionStorage.setItem(`form-questions-${newForm.id}`, JSON.stringify(questions));
       if (formType === 'check-in') {

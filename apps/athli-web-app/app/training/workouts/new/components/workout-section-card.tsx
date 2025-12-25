@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/general/utils';
 import { ExerciseCard } from './exercise-card';
 import type { SetData } from './exercise-card';
-import type { Exercise } from '@/lib/general/exercise-search';
+import type { Exercise } from '@/lib/api/exercise/exercise-search';
 
 type ExerciseWithSuperset = Exercise & {
   supersetGroupId?: string | null;
@@ -201,7 +201,7 @@ export const WorkoutSectionCard = ({
                       className={cn(
                         'h-7 w-32 text-[11px]',
                         sectionValidationErrors[section.id]?.missingConfig &&
-                          'border-destructive focus-visible:ring-destructive'
+                        'border-destructive focus-visible:ring-destructive'
                       )}
                     >
                       <SelectValue placeholder="Select..." />
@@ -247,7 +247,7 @@ export const WorkoutSectionCard = ({
                     className={cn(
                       'h-7 w-24 text-center text-[11px]',
                       sectionValidationErrors[section.id]?.missingConfig &&
-                        'border-destructive focus-visible:ring-destructive'
+                      'border-destructive focus-visible:ring-destructive'
                     )}
                     placeholder="-"
                   />
@@ -358,7 +358,7 @@ export const WorkoutSectionCard = ({
                           <div
                             className={cn(
                               focusedExerciseId === exercise.exerciseId &&
-                                '[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse'
+                              '[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse'
                             )}
                           >
                             <ExerciseCard

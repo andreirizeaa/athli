@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
-import { editFormDetails, type Form as FormType } from '@/lib/coach/coach-form-service';
+import { editQuestionnaireDetails, type Questionnaire as FormType } from '@/lib/api/coach/coach-questionnaire-service';
 
 type EditQuestionnaireFormSidePanelProps = {
   open: boolean;
@@ -72,7 +72,7 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
     if (!form) return;
 
     try {
-      const updatedForm = await editFormDetails({
+      const updatedForm = await editQuestionnaireDetails({
         id: form.id,
         name: values.name,
         description: values.description,

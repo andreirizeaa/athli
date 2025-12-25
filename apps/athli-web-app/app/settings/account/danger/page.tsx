@@ -10,7 +10,7 @@ import { X, Loader2 } from 'lucide-react';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
-import { authAPI } from '@/lib/api/auth-api';
+import { authService } from '@/lib/api/auth/auth-service';
 
 const DangerPage = () => {
   const t = useTranslations();
@@ -33,7 +33,7 @@ const DangerPage = () => {
       }
 
       // Delete account via backend API
-      await authAPI.deleteAccount(session.access_token);
+      await authService.deleteAccount(session.access_token);
 
       setIsDeleteModalOpen(false);
       // Sign out and redirect

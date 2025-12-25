@@ -32,14 +32,17 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
-import { addForm, type AddFormData } from '@/lib/coach/coach-form-service';
+import { addCheckIn, type AddCheckInData } from '@/lib/api/coach/coach-check-in-service';
+import { addQuestionnaire, type AddQuestionnaireData } from '@/lib/api/coach/coach-questionnaire-service';
+
+type AddFormData = AddCheckInData | AddQuestionnaireData;
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 
 type AddFormSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (form: ReturnType<typeof addForm> extends Promise<infer T> ? T : never, questions?: FormTemplate['questions']) => void;
+  onSave?: (form: ReturnType<typeof addCheckIn> | ReturnType<typeof addQuestionnaire> extends Promise<infer T> ? T : never, questions?: FormTemplate['questions']) => void;
 };
 
 type FormFormValues = {
@@ -88,7 +91,9 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
 
   const handleSave = async (values: FormFormValues) => {
     try {
-      const newForm = await addForm(values);
+      const newForm = formType === 'check-in'
+        ? await addCheckIn(values)
+        : await addQuestionnaire(values);
       if (onSave) {
         onSave(newForm);
       }
@@ -102,14 +107,14 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
     setSelectedTemplate(template);
     form.setValue('name', template.name, { shouldValidate: true });
     form.setValue('description', template.description || '', { shouldValidate: true });
-    
+
     // Apply scheduling defaults from template
     if (template.schedule) {
       setFormType(template.schedule.type);
-      
+
       if (template.schedule.type === 'check-in' && template.schedule.frequency) {
         setCheckInFrequency(template.schedule.frequency);
-        
+
         if (template.schedule.selectedDays) {
           setSelectedDays(new Set(template.schedule.selectedDays));
         } else if (template.schedule.frequency === 'daily') {
@@ -117,11 +122,11 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
         } else if (template.schedule.frequency === 'weekly' || template.schedule.frequency === 'biweekly') {
           setSelectedDays(new Set(['sunday']));
         }
-        
+
         if (template.schedule.monthlyOption) {
           setMonthlyOption(template.schedule.monthlyOption);
         }
-        
+
         if (template.schedule.specificDay) {
           setSpecificDay(template.schedule.specificDay);
         }
@@ -151,7 +156,9 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
         description: selectedTemplate.description || '',
       };
       try {
-        const newForm = await addForm(values);
+        const newForm = formType === 'check-in'
+          ? await addCheckIn(values)
+          : await addQuestionnaire(values);
         if (onSave) {
           onSave(newForm, selectedTemplate.questions);
         }
@@ -189,7 +196,7 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
     return '';
   };
 
-  const isValid = activeTab === 'new' 
+  const isValid = activeTab === 'new'
     ? form.formState.isValid && form.watch('name').trim() !== ''
     : selectedTemplate !== null;
 

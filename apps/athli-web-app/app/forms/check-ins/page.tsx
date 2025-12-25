@@ -16,8 +16,8 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddCheckInFormSidePanel } from '@/components/forms/add-check-in-form-side-panel';
-import { addForm, duplicateForm, type Form } from '@/lib/coach/coach-form-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { addCheckIn, duplicateCheckIn, type CheckIn as Form } from '@/lib/api/coach/coach-check-in-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
@@ -61,10 +61,10 @@ const CheckInsPage = () => {
   const handleDuplicateSelected = async () => {
     const selectedForms = checkInForms.filter((form) => selectedCheckIns.has(form.id));
     if (selectedForms.length !== 1) return;
-    
+
     const formToDuplicate = selectedForms[0];
     try {
-      const duplicatedForm = await duplicateForm(formToDuplicate.id, formToDuplicate);
+      const duplicatedForm = await duplicateCheckIn(formToDuplicate.id, formToDuplicate);
       setForms((prev) => [...prev, duplicatedForm]);
       setSelectedCheckIns(new Set());
     } catch (error) {
@@ -75,7 +75,7 @@ const CheckInsPage = () => {
   const handleAssignToClients = () => {
     const selectedForms = checkInForms.filter((form) => selectedCheckIns.has(form.id));
     if (selectedForms.length === 0) return;
-    
+
     setFormsToAssign(selectedForms);
     setIsAssignToClientsOpen(true);
     setSelectedClientIds(new Set());
@@ -93,10 +93,10 @@ const CheckInsPage = () => {
 
   const handleAssignFormsToClients = async () => {
     if (selectedClientIds.size === 0 || formsToAssign.length === 0) return;
-    
+
     try {
       const clientIdsArray = Array.from(selectedClientIds);
-      
+
       await Promise.all(
         formsToAssign.flatMap((form) =>
           clientIdsArray.map(async (clientId) => {
@@ -105,9 +105,9 @@ const CheckInsPage = () => {
               frequency: 'weekly',
               selectedDays: ['sunday'],
             };
-            
+
             const cronExpression = convertScheduleToCron(scheduleData);
-            
+
             await assignForm({
               formId: form.id,
               clientId: clientId,
@@ -117,7 +117,7 @@ const CheckInsPage = () => {
           })
         )
       );
-      
+
       setIsAssignToClientsOpen(false);
       setFormsToAssign([]);
       setSelectedCheckIns(new Set());
@@ -159,10 +159,10 @@ const CheckInsPage = () => {
     mediaCount?: number;
   }>) => {
     setForms((prev) => [...prev, newForm]);
-    
+
     const template = formTemplates.find((t) => t.name === newForm.name);
     const formType = template?.schedule?.type || 'check-in';
-    
+
     if (questions && questions.length > 0) {
       sessionStorage.setItem(`form-questions-${newForm.id}`, JSON.stringify(questions));
       if (formType === 'check-in') {
@@ -175,13 +175,13 @@ const CheckInsPage = () => {
 
   const formatScheduleText = (form: Form): string => {
     const template = formTemplates.find((t) => t.name === form.name);
-    
+
     if (!template?.schedule || template.schedule.type !== 'check-in') {
       return '-';
     }
-    
+
     const schedule = template.schedule;
-    
+
     if (schedule.frequency === 'daily') {
       if (schedule.selectedDays && schedule.selectedDays.length > 0) {
         const dayNames = schedule.selectedDays.map(day => t(`habits.form.${day}`)).join(', ');
@@ -211,7 +211,7 @@ const CheckInsPage = () => {
       }
       return t('athletes.profile.checkIns.schedule.frequency.monthly');
     }
-    
+
     return '-';
   };
 

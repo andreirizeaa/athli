@@ -7,8 +7,8 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Search, FileText, Info, Edit } from 'lucide-react';
-import { getForms, type Form } from '@/lib/coach/coach-form-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { getQuestionnaires, type Questionnaire as Form } from '@/lib/api/coach/coach-questionnaire-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/api/client/client-form-service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 
@@ -40,7 +40,7 @@ export const AddQuestionnaireSidePanel = ({
   const fetchForms = async () => {
     setIsLoading(true);
     try {
-      const fetchedForms = await getForms();
+      const fetchedForms = await getQuestionnaires();
       setForms(fetchedForms);
     } catch (error) {
       console.error('Failed to fetch forms:', error);

@@ -7,8 +7,8 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Search, FileText, Info, Edit } from 'lucide-react';
-import { getForms, type Form } from '@/lib/coach/coach-form-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { getCheckIns, type CheckIn as Form } from '@/lib/api/coach/coach-check-in-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -42,7 +42,7 @@ export const AddCheckInSidePanel = ({
   const fetchForms = async () => {
     setIsLoading(true);
     try {
-      const fetchedForms = await getForms();
+      const fetchedForms = await getCheckIns();
       setForms(fetchedForms);
     } catch (error) {
       console.error('Failed to fetch forms:', error);

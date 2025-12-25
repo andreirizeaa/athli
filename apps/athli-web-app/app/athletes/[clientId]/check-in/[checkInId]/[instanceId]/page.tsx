@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Download, Loader2 } from 'lucide-react';
-import { getCheckInInstance, addCoachReview, updateCoachReview, getCoachReview, type CheckInInstance, type Question, type QuestionAnswer } from '@/lib/client/client-form-service';
+import { getCheckInInstance, addCoachReview, updateCoachReview, getCoachReview, type CheckInInstance, type Question, type QuestionAnswer } from '@/lib/api/client/client-form-service';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -55,7 +55,7 @@ const CheckInInstancePage = () => {
       try {
         const data = await getCheckInInstance(clientId, checkInId, instanceId);
         setInstance(data);
-        
+
         // Fetch existing review if status is 'reviewed'
         if (data.status === 'reviewed') {
           try {
@@ -269,9 +269,8 @@ const CheckInInstancePage = () => {
             {[1, 2, 3, 4, 5].map((star) => (
               <svg
                 key={star}
-                className={`w-5 h-5 ${
-                  star <= (answer.answer as number) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                }`}
+                className={`w-5 h-5 ${star <= (answer.answer as number) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+                  }`}
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"

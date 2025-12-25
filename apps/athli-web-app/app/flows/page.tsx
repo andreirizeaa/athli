@@ -16,7 +16,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/general/utils';
 import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
-import { duplicateFlow } from '@/lib/coach/coach-flow-service';
+import { duplicateFlow } from '@/lib/api/coach/coach-flow-service';
 
 type Flow = {
   id: string;
@@ -100,8 +100,8 @@ const FlowsPage = () => {
     if (!flow) return;
     try {
       const duplicatedFlow = await duplicateFlow(flowId, flow);
-      setFlows((prev) => [...prev, { 
-        ...duplicatedFlow, 
+      setFlows((prev) => [...prev, {
+        ...duplicatedFlow,
         description: duplicatedFlow.description || '',
         stepCount: duplicatedFlow.stepCount ?? flow.stepCount
       }]);
@@ -169,17 +169,17 @@ const FlowsPage = () => {
 
   const createRenderFirstColumn = (onToggleRow: (id: string) => void) => {
     return (row: Flow, isSelected: boolean) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
+      return (
+        <div className="flex items-center gap-3 h-full w-full">
           <div
             className="flex items-center justify-center h-full flex-shrink-0"
             data-no-row-link="true"
           >
             <Checkbox checked={isSelected} onCheckedChange={() => onToggleRow(row.id)} />
           </div>
-        <span className="text-sm font-medium truncate">{row.name}</span>
-      </div>
-    );
+          <span className="text-sm font-medium truncate">{row.name}</span>
+        </div>
+      );
     };
   };
 

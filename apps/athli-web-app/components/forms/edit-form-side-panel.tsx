@@ -18,7 +18,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { editFormDetails, type Form as FormType } from '@/lib/coach/coach-form-service';
+import { editCheckInDetails, type CheckIn } from '@/lib/api/coach/coach-check-in-service';
+import { editQuestionnaireDetails, type Questionnaire } from '@/lib/api/coach/coach-questionnaire-service';
+
+type FormType = CheckIn | Questionnaire;
 
 type EditFormSidePanelProps = {
   open: boolean;
@@ -70,11 +73,19 @@ export const EditFormSidePanel = ({ open, onOpenChange, form, onSave }: EditForm
     if (!form) return;
 
     try {
-      const updatedForm = await editFormDetails({
-        id: form.id,
-        name: values.name,
-        description: values.description,
-      });
+      // Determine which service to use based on form ID prefix
+      const isCheckIn = form.id.startsWith('checkin-');
+      const updatedForm = isCheckIn
+        ? await editCheckInDetails({
+          id: form.id,
+          name: values.name,
+          description: values.description,
+        })
+        : await editQuestionnaireDetails({
+          id: form.id,
+          name: values.name,
+          description: values.description,
+        });
       if (onSave) {
         onSave(updatedForm);
       }

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { userService } from '../../../services/user.service';
 import { asyncHandler } from '../../../utils/async-handler';
-import { success } from '../../../utils/http-response';
+import { success, unauthorized } from '../../../utils/http-response';
 
 export class UserController {
   /**
@@ -57,6 +57,47 @@ export class UserController {
 
     success(res, {
       data: { user },
+    });
+  });
+
+  /**
+   * Delete user account
+   */
+  deleteAccount = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    await userService.deleteAccount(userId);
+
+    success(res, {
+      message: 'Account deleted successfully',
+    });
+  });
+
+  /**
+   * Handle new client signup
+   */
+  newClient = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).userId;
+    const { coachId } = req.body;
+
+    if (!userId) {
+      unauthorized(res, { message: 'User not authenticated' });
+      return;
+    }
+
+    const result = await userService.handleNewClient(userId, coachId);
+
+    success(res, {
+      message: result.isNew ? 'Client profile created successfully' : 'Client profile already exists',
+      data: {
+        profile: result.profile,
+        isNew: result.isNew,
+      },
     });
   });
 }

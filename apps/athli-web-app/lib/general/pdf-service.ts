@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import type { ClientQuestionnaireDetail, Question, QuestionAnswer } from '@/lib/client/client-form-service';
+import type { ClientQuestionnaireDetail, Question, QuestionAnswer } from '@/lib/api/client/client-form-service';
 
 interface DownloadQuestionnaireOptions {
   questionnaire: ClientQuestionnaireDetail;

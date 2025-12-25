@@ -37,8 +37,8 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/general/utils';
-import { addHabit, editHabit, deleteHabit, duplicateHabit, type Habit } from '@/lib/coach/coach-habit-service';
-import { assignHabit } from '@/lib/client/client-habit-service';
+import { addHabit, editHabit, deleteHabit, duplicateHabit, type Habit } from '@/lib/api/coach/coach-habit-service';
+import { assignHabit } from '@/lib/api/client/client-habit-service';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { mockAthletes } from '@/components/app/app-shell';
 
@@ -124,7 +124,7 @@ const HabitsPage = () => {
   const [habits, setHabits] = useState<Habit[]>(mockHabits);
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
   const [filteredCount, setFilteredCount] = useState<number>(mockHabits.length);
-  
+
   // Add habit side panel state
   const [isAddHabitOpen, setIsAddHabitOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'manual' | 'library'>('library');
@@ -216,7 +216,7 @@ const HabitsPage = () => {
     form.setValue('amount', habit.amount);
     form.setValue('unit', habit.unit);
     form.setValue('period', habit.period);
-    
+
     if (habit.duration) {
       form.setValue('duration', habit.duration);
       setEnableDuration(true);
@@ -224,7 +224,7 @@ const HabitsPage = () => {
       form.setValue('duration', undefined);
       setEnableDuration(false);
     }
-    
+
     if (habit.reminderTime) {
       form.setValue('reminderTime', habit.reminderTime);
       form.setValue('reminderMessage', habit.reminderMessage || '');
@@ -234,7 +234,7 @@ const HabitsPage = () => {
       form.setValue('reminderMessage', undefined);
       setEnableReminder(false);
     }
-    
+
     setIsEditHabitOpen(true);
   };
 
@@ -270,7 +270,7 @@ const HabitsPage = () => {
 
   const handleDeleteHabit = async () => {
     if (!editingHabitId) return;
-    
+
     try {
       await deleteHabit({ id: editingHabitId });
       setHabits((prev) => prev.filter((h) => h.id !== editingHabitId));
@@ -286,7 +286,7 @@ const HabitsPage = () => {
     form.setValue('amount', habit.amount);
     form.setValue('unit', habit.unit);
     form.setValue('period', habit.period);
-    
+
     if (habit.duration) {
       form.setValue('duration', habit.duration);
       setEnableDuration(true);
@@ -294,7 +294,7 @@ const HabitsPage = () => {
       form.setValue('duration', undefined);
       setEnableDuration(false);
     }
-    
+
     if (habit.reminderTime) {
       form.setValue('reminderTime', habit.reminderTime);
       form.setValue('reminderMessage', habit.reminderMessage || '');
@@ -304,7 +304,7 @@ const HabitsPage = () => {
       form.setValue('reminderMessage', undefined);
       setEnableReminder(false);
     }
-    
+
     setActiveTab('manual');
   };
 
@@ -346,14 +346,14 @@ const HabitsPage = () => {
     }
 
     const query = librarySearchQuery.trim().toLowerCase();
-    
+
     return defaultHabits
       .map((section) => {
         const filteredHabitsInSection = section.habits.filter((habit) => {
           const matchesName = isFuzzyMatch(habit.name, query);
           const matchesDescription = habit.description ? isFuzzyMatch(habit.description, query) : false;
           const matchesSection = isFuzzyMatch(section.label, query);
-          
+
           return matchesName || matchesDescription || matchesSection;
         });
 
@@ -424,16 +424,16 @@ const HabitsPage = () => {
     if (selectedClientIds.size === 0 || habitsToAssign.length === 0) {
       return;
     }
-    
+
     try {
       const habitIds = habitsToAssign.map((habit) => habit.id);
       const clientIdsArray = Array.from(selectedClientIds);
-      
+
       await assignHabit({
         habitIds,
         clientIds: clientIdsArray,
       });
-      
+
       setIsAssignToClientsOpen(false);
       setHabitsToAssign([]);
       setSelectedHabits(new Set());
@@ -997,7 +997,7 @@ const HabitsPage = () => {
                         const unitLabel = t(`habits.form.units.${habit.unit as any}`);
                         const periodText = habit.period === 'daily' ? t('habits.form.daily') : t('habits.form.weekly');
                         const subtitle = `${habit.amount} ${unitLabel} / ${periodText}`;
-                        
+
                         return (
                           <Card
                             key={`${section.label}-${habit.name}`}

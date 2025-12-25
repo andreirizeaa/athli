@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
-import { editFormDetails, type Form as FormType } from '@/lib/coach/coach-form-service';
+import { editCheckInDetails, type CheckIn as FormType } from '@/lib/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 
 type EditCheckInFormSidePanelProps = {
@@ -113,7 +113,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
     if (!form) return;
 
     try {
-      const updatedForm = await editFormDetails({
+      const updatedForm = await editCheckInDetails({
         id: form.id,
         name: values.name,
         description: values.description,

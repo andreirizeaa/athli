@@ -22,14 +22,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
-import { addForm, type AddFormData } from '@/lib/coach/coach-form-service';
+import { addQuestionnaire, type AddQuestionnaireData as AddFormData } from '@/lib/api/coach/coach-questionnaire-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 
 type AddQuestionnaireFormSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (form: ReturnType<typeof addForm> extends Promise<infer T> ? T : never, questions?: FormTemplate['questions']) => void;
+  onSave?: (form: ReturnType<typeof addQuestionnaire> extends Promise<infer T> ? T : never, questions?: FormTemplate['questions']) => void;
 };
 
 type FormFormValues = {
@@ -44,7 +44,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
 
   // Filter templates to only show questionnaire templates
   const questionnaireTemplates = useMemo(() => {
-    return formTemplates.filter((template) => 
+    return formTemplates.filter((template) =>
       template.schedule?.type === 'questionnaire'
     );
   }, []);
@@ -75,7 +75,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
 
   const handleSave = async (values: FormFormValues) => {
     try {
-      const newForm = await addForm(values);
+      const newForm = await addQuestionnaire(values);
       if (onSave) {
         onSave(newForm);
       }
@@ -102,7 +102,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
         description: selectedTemplate.description || '',
       };
       try {
-        const newForm = await addForm(values);
+        const newForm = await addQuestionnaire(values);
         if (onSave) {
           onSave(newForm, selectedTemplate.questions);
         }
@@ -113,7 +113,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
     }
   };
 
-  const isValid = activeTab === 'new' 
+  const isValid = activeTab === 'new'
     ? form.formState.isValid && form.watch('name').trim() !== ''
     : selectedTemplate !== null;
 

@@ -11,7 +11,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
-import { duplicateMetric } from '@/lib/coach/coach-metric-service';
+import { duplicateMetric } from '@/lib/api/coach/coach-metric-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 
@@ -187,7 +187,7 @@ const MetricsPage = () => {
     if (selectedMetricItems.length === 0) {
       return;
     }
-    
+
     setMetricsToAssign(selectedMetricItems);
     setIsAssignToClientsOpen(true);
     setSelectedClientIds(new Set());
@@ -207,14 +207,14 @@ const MetricsPage = () => {
     if (selectedClientIds.size === 0 || metricsToAssign.length === 0) {
       return;
     }
-    
+
     try {
       // TODO: Call service to assign metrics to clients
       // await assignMetricsToClients({
       //   metricIds: metricsToAssign.map((m) => m.id),
       //   clientIds: Array.from(selectedClientIds),
       // });
-      
+
       setIsAssignToClientsOpen(false);
       setMetricsToAssign([]);
       setSelectedMetrics(new Set());

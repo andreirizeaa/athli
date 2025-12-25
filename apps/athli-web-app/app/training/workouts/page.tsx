@@ -27,7 +27,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
-import { generateWorkoutFromPrompt } from '@/lib/general/generate-exercise';
+import { generateWorkoutFromPrompt } from '@/lib/api/exercise/generate-exercise';
 import { BasicInformation } from './new/basic-information';
 import {
   Search,
@@ -60,7 +60,7 @@ import {
 
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
-import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/lib/coach/coach-workout-service';
+import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/lib/api/coach/coach-workout-service';
 
 type ColumnId = 'description' | 'type' | 'totalExercises' | 'equipment' | 'created';
 
@@ -193,7 +193,7 @@ const WorkoutsPage = () => {
 
       // If standard builder, proceed directly to builder
       setIsGeneratingStandard(true);
-      
+
       const meta = {
         title: newWorkoutName.trim(),
         description: newDescription.trim(),
@@ -214,7 +214,7 @@ const WorkoutsPage = () => {
       setTimeout(() => {
         const targetPath = '/training/workouts/new/standard';
         router.push(targetPath);
-        
+
         // Keep sidebar open during navigation, close after a brief delay
         setTimeout(() => {
           setIsCreateWorkoutOpen(false);
@@ -265,11 +265,11 @@ const WorkoutsPage = () => {
         prompt,
         pdfAttachment: pdfContent && selectedFile
           ? {
-              name: selectedFile.name,
-              data: pdfContent,
-              type: selectedFile.type,
-              size: selectedFile.size,
-            }
+            name: selectedFile.name,
+            data: pdfContent,
+            type: selectedFile.type,
+            size: selectedFile.size,
+          }
           : null,
       };
 
@@ -318,7 +318,7 @@ const WorkoutsPage = () => {
       setTimeout(() => {
         const targetPath = '/training/workouts/new/ai';
         router.push(targetPath);
-        
+
         // Keep sidebar open during navigation, close after a brief delay
         setTimeout(() => {
           setIsCreateWorkoutOpen(false);
@@ -906,24 +906,24 @@ Focus on proper form and progressive overload.`;
               </Tooltip>
             </TooltipProvider>
             {selectedWorkouts.size === 1 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
                       onClick={handleDuplicateSelected}
-                    className="gap-2"
+                      className="gap-2"
                       aria-label={t('workouts.actions.duplicateAria')}
-                  >
+                    >
                       <Copy className="size-4" />
                       <span>{t('workouts.actions.duplicate')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
                     <p>{t('workouts.actions.duplicate')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             <TooltipProvider>
               <Tooltip>
@@ -1026,14 +1026,14 @@ Focus on proper form and progressive overload.`;
                 (isCreateWorkoutStep2
                   ? !aiPrompt.trim()
                   : !newWorkoutName.trim() ||
-                    !newWorkoutType ||
-                    !newDifficulty ||
-                    !newSelectedBuilder)
+                  !newWorkoutType ||
+                  !newDifficulty ||
+                  !newSelectedBuilder)
               }
               aria-label={isCreateWorkoutStep2 ? t('library.generateWorkout') : t('general.continue')}
               className={cn(
                 ((isCreateWorkoutStep2 && isGenerating) || (!isCreateWorkoutStep2 && isGeneratingStandard)) &&
-                  'min-w-[120px] justify-center'
+                'min-w-[120px] justify-center'
               )}
             >
               {isCreateWorkoutStep2 ? (
@@ -1109,7 +1109,7 @@ Focus on proper form and progressive overload.`;
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
               >
-                  <div className="flex flex-col items-center gap-4 text-center">
+                <div className="flex flex-col items-center gap-4 text-center">
                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
                     <FileText className="h-8 w-8" />
                   </div>
