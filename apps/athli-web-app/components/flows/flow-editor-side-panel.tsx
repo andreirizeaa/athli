@@ -308,7 +308,7 @@ export function FlowEditorSidePanel({
           )}
 
           {/* Sidebar Content */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
             {panelType === 'trigger' ? (
               <div className="px-4 pb-4 space-y-4">
                 {filteredTriggerOptions.length > 0 ? (
