@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { authService } from '@/lib/api/auth/auth-service';
+import { createClient } from '@/supabase/client';
+import { authService } from '@/api/auth/auth-service';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 

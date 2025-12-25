@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/general/utils';
 import { ExerciseCard } from './exercise-card';
 import type { SetData } from './exercise-card';
-import type { Exercise } from '@/lib/api/exercise/exercise-search';
+import type { Exercise } from '@/api/exercise/exercise-search';
 
 type ExerciseWithSuperset = Exercise & {
   supersetGroupId?: string | null;

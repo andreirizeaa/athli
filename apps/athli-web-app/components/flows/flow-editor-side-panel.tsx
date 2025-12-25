@@ -15,8 +15,8 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Info } from 'lucide-react';
 import Link from 'next/link';
 // Forms are now split into check-ins and questionnaires services
-import { type Habit } from '@/lib/api/coach/coach-habit-service';
-import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
+import { type Habit } from '@/api/coach/coach-habit-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3 } from 'lucide-react';
 
 export type PanelType = 'trigger' | 'action' | null;

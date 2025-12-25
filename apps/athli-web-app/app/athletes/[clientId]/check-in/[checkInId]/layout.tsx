@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { usePathname, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
-import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/api/client/client-form-service';
+import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/api/client/client-form-service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';

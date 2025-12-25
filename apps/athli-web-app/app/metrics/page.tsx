@@ -11,7 +11,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
-import { duplicateMetric } from '@/lib/api/coach/coach-metric-service';
+import { duplicateMetric } from '@/api/coach/coach-metric-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 

@@ -37,8 +37,8 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/general/utils';
-import { addHabit, editHabit, deleteHabit, duplicateHabit, type Habit } from '@/lib/api/coach/coach-habit-service';
-import { assignHabit } from '@/lib/api/client/client-habit-service';
+import { addHabit, editHabit, deleteHabit, duplicateHabit, type Habit } from '@/api/coach/coach-habit-service';
+import { assignHabit } from '@/api/client/client-habit-service';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { mockAthletes } from '@/components/app/app-shell';
 

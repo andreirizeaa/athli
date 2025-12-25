@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Edit } from 'lucide-react';
 import { PieChart, Pie, Label } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { getWorkoutStatistics, type WorkoutStatistics } from '@/lib/api/client/client-service';
+import { getWorkoutStatistics, type WorkoutStatistics } from '@/api/client/client-service';
 
 type AthleteWorkoutsCardProps = {
   clientId: string;

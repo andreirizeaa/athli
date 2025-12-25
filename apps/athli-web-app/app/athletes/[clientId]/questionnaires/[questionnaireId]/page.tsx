@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { type Questionnaire as Form } from '@/lib/api/coach/coach-questionnaire-service';
-import { getClientQuestionnaire, type ClientQuestionnaireDetail, type Question, type QuestionAnswer } from '@/lib/api/client/client-form-service';
+import { type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
+import { getClientQuestionnaire, type ClientQuestionnaireDetail, type Question, type QuestionAnswer } from '@/api/client/client-form-service';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,

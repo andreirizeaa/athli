@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
-import { editCheckInDetails, type CheckIn as FormType } from '@/lib/api/coach/coach-check-in-service';
+import { editCheckInDetails, type CheckIn as FormType } from '@/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 
 type EditCheckInFormSidePanelProps = {

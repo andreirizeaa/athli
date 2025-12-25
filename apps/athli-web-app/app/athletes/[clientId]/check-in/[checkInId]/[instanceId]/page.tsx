@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Download, Loader2 } from 'lucide-react';
-import { getCheckInInstance, addCoachReview, updateCoachReview, getCoachReview, type CheckInInstance, type Question, type QuestionAnswer } from '@/lib/api/client/client-form-service';
+import { getCheckInInstance, addCoachReview, updateCoachReview, getCoachReview, type CheckInInstance, type Question, type QuestionAnswer } from '@/api/client/client-form-service';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,

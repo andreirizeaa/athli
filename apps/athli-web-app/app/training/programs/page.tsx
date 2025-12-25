@@ -62,7 +62,7 @@ import {
 
 import type { Program } from '@/components/app/app-shell';
 import { mockPrograms } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/lib/api/coach/coach-program-service';
+import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/api/coach/coach-program-service';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
 

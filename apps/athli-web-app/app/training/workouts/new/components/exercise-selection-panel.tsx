@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/general/utils';
-import { searchExercises, type Exercise } from '@/lib/api/exercise/exercise-search';
+import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 
 type ExerciseSelectionPanelProps = {
   onExerciseClick?: (exercise: Exercise) => void;

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { authService } from '../api/auth/auth-service';
+import { authService } from '../../api/auth/auth-service';
 
 interface User {
   id: string;

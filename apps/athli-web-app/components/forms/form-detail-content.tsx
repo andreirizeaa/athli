@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions } from '@/lib/api/coach/coach-check-in-service';
-import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions } from '@/lib/api/coach/coach-questionnaire-service';
+import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions } from '@/api/coach/coach-check-in-service';
+import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions } from '@/api/coach/coach-questionnaire-service';
 
 type Form = CheckIn | Questionnaire;
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
@@ -14,7 +14,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
-import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
 export type Question = {
   id: string;

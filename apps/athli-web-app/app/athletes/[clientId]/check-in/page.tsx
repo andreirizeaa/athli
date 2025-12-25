@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Plus, FileText, X, Trash2, ClipboardList } from 'lucide-react';
-import { deleteClientCheckIns, getClientCheckIns, type ClientCheckIn } from '@/lib/api/client/client-form-service';
+import { deleteClientCheckIns, getClientCheckIns, type ClientCheckIn } from '@/api/client/client-form-service';
 import { AddCheckInSidePanel } from '@/components/forms/add-check-in-side-panel';
 
 const ClientCheckInPage = () => {

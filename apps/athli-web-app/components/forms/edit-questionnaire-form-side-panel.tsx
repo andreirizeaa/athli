@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
-import { editQuestionnaireDetails, type Questionnaire as FormType } from '@/lib/api/coach/coach-questionnaire-service';
+import { editQuestionnaireDetails, type Questionnaire as FormType } from '@/api/coach/coach-questionnaire-service';
 
 type EditQuestionnaireFormSidePanelProps = {
   open: boolean;

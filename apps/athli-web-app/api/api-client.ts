@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/supabase/client';
 
 /**
  * URL and API configuration

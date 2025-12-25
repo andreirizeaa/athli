@@ -13,7 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { Upload, Trash2, Building2, Loader2 } from 'lucide-react';
-import { updateCompanyDetails, type CompanyDetails } from '@/lib/general/settings-service';
+import { updateCompanyDetails, type CompanyDetails } from '@/api/settings/settings-service';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useCompanySave } from '../context/company-save-context';
 import { toast } from 'sonner';
@@ -230,158 +230,158 @@ const InformationPage = () => {
     <div className="w-full h-full flex flex-col overflow-auto">
       <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4">
         <Card className="bg-background max-w-3xl w-full">
-            <CardHeader className="px-4">
-              <CardTitle>{t('settings.company.information.title')}</CardTitle>
-            </CardHeader>
-            <Separator className="w-full mt-[-8px]" />
-            <CardContent className="px-0">
-              <div className="px-4">
-                <div className="flex flex-col gap-2 mb-6">
-                  <Label className="text-sm font-medium">
-                    {t('settings.company.information.logo')}
-                  </Label>
-                  <div className="flex items-start gap-4">
-                    <Avatar className="size-20">
-                      {logoPreview ? (
-                        <AvatarImage src={logoPreview} alt={t('settings.company.information.logo')} />
-                      ) : (
-                        <AvatarFallback className="bg-muted">
-                          <Building2 className="size-10 text-muted-foreground" />
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="flex flex-col gap-1.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleUploadClick}
-                        onKeyDown={handleUploadKeyDown}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={t('settings.company.information.uploadAria')}
-                        className="h-7 px-2 text-xs"
-                      >
-                        <Upload className="size-3 mr-1.5" />
-                        {t('settings.company.information.upload')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDeleteClick}
-                        onKeyDown={handleDeleteKeyDown}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={t('settings.company.information.deleteAria')}
-                        className="h-7 px-2 text-xs"
-                        disabled={!logoPreview}
-                      >
-                        <Trash2 className="size-3 mr-1.5" />
-                        {t('settings.company.information.delete')}
-                      </Button>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      aria-label={t('settings.company.information.uploadAria')}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="companyName">
-                      <span>
-                        {t('settings.company.information.companyName')}
-                        <RequiredAsterisk />
-                      </span>
-                    </Label>
-                    <Input
-                      id="companyName"
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder={t('settings.company.information.companyNamePlaceholder')}
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="website">{t('settings.company.information.website')}</Label>
-                    <Input
-                      id="website"
-                      type="url"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      placeholder={t('settings.company.information.websitePlaceholder')}
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="linkedin">{t('settings.company.information.linkedin')}</Label>
-                    <Input
-                      id="linkedin"
-                      type="url"
-                      value={linkedin}
-                      onChange={(e) => setLinkedin(e.target.value)}
-                      placeholder={t('settings.company.information.linkedinPlaceholder')}
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="location">{t('settings.company.information.location')}</Label>
-                    <Select value={location} onValueChange={setLocation}>
-                      <SelectTrigger id="location" className="w-full">
-                        <SelectValue placeholder={t('settings.company.information.locationPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countries.map((country) => (
-                          <SelectItem key={country} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="specialities">{t('settings.company.information.specialities')}</Label>
-                    <MultiAsyncSelect
-                      options={specialityOptions}
-                      value={specialities}
-                      onValueChange={setSpecialities}
-                      placeholder={t('settings.company.information.specialitiesPlaceholder')}
-                      searchPlaceholder={t('settings.company.information.specialitiesSearchPlaceholder')}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Save Button */}
-                <div className="flex justify-end pt-4">
-                  <Button
-                    onClick={handleSave}
-                    disabled={!hasUnsavedChanges || isSaving}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t('general.saving')}
-                      </>
+          <CardHeader className="px-4">
+            <CardTitle>{t('settings.company.information.title')}</CardTitle>
+          </CardHeader>
+          <Separator className="w-full mt-[-8px]" />
+          <CardContent className="px-0">
+            <div className="px-4">
+              <div className="flex flex-col gap-2 mb-6">
+                <Label className="text-sm font-medium">
+                  {t('settings.company.information.logo')}
+                </Label>
+                <div className="flex items-start gap-4">
+                  <Avatar className="size-20">
+                    {logoPreview ? (
+                      <AvatarImage src={logoPreview} alt={t('settings.company.information.logo')} />
                     ) : (
-                      t('general.save')
+                      <AvatarFallback className="bg-muted">
+                        <Building2 className="size-10 text-muted-foreground" />
+                      </AvatarFallback>
                     )}
-                  </Button>
+                  </Avatar>
+                  <div className="flex flex-col gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleUploadClick}
+                      onKeyDown={handleUploadKeyDown}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={t('settings.company.information.uploadAria')}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <Upload className="size-3 mr-1.5" />
+                      {t('settings.company.information.upload')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDeleteClick}
+                      onKeyDown={handleDeleteKeyDown}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={t('settings.company.information.deleteAria')}
+                      className="h-7 px-2 text-xs"
+                      disabled={!logoPreview}
+                    >
+                      <Trash2 className="size-3 mr-1.5" />
+                      {t('settings.company.information.delete')}
+                    </Button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    aria-label={t('settings.company.information.uploadAria')}
+                  />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="companyName">
+                    <span>
+                      {t('settings.company.information.companyName')}
+                      <RequiredAsterisk />
+                    </span>
+                  </Label>
+                  <Input
+                    id="companyName"
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder={t('settings.company.information.companyNamePlaceholder')}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="website">{t('settings.company.information.website')}</Label>
+                  <Input
+                    id="website"
+                    type="url"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder={t('settings.company.information.websitePlaceholder')}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="linkedin">{t('settings.company.information.linkedin')}</Label>
+                  <Input
+                    id="linkedin"
+                    type="url"
+                    value={linkedin}
+                    onChange={(e) => setLinkedin(e.target.value)}
+                    placeholder={t('settings.company.information.linkedinPlaceholder')}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="location">{t('settings.company.information.location')}</Label>
+                  <Select value={location} onValueChange={setLocation}>
+                    <SelectTrigger id="location" className="w-full">
+                      <SelectValue placeholder={t('settings.company.information.locationPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="specialities">{t('settings.company.information.specialities')}</Label>
+                  <MultiAsyncSelect
+                    options={specialityOptions}
+                    value={specialities}
+                    onValueChange={setSpecialities}
+                    placeholder={t('settings.company.information.specialitiesPlaceholder')}
+                    searchPlaceholder={t('settings.company.information.specialitiesSearchPlaceholder')}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={handleSave}
+                  disabled={!hasUnsavedChanges || isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t('general.saving')}
+                    </>
+                  ) : (
+                    t('general.save')
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

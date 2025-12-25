@@ -1,4 +1,4 @@
-import type { Exercise } from '@/lib/api/exercise/exercise-search';
+import type { Exercise } from '@/api/exercise/exercise-search';
 import type { SetData } from '../../components/exercise-card';
 
 /**

@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Edit, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
 type QuestionFormat = {
   id: string;

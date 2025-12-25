@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
-import { updateUserProfile, uploadProfilePicture } from '@/lib/api/user/user-service';
+import { updateUserProfile, uploadProfilePicture } from '@/api/user/user-service';
 
 interface UpdateProfileInput {
   name?: string;

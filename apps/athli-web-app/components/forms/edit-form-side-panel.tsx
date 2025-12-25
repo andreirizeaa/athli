@@ -18,8 +18,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { editCheckInDetails, type CheckIn } from '@/lib/api/coach/coach-check-in-service';
-import { editQuestionnaireDetails, type Questionnaire } from '@/lib/api/coach/coach-questionnaire-service';
+import { editCheckInDetails, type CheckIn } from '@/api/coach/coach-check-in-service';
+import { editQuestionnaireDetails, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 
 type FormType = CheckIn | Questionnaire;
 
