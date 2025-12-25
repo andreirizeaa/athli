@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { getForms } from '@/lib/coach/coach-form-service';
 import { type Habit } from '@/lib/coach/coach-habit-service';
@@ -305,8 +305,18 @@ type ActionNodeData = {
   selectedCheckIns?: Set<string>;
   selectedFiles?: Set<string>;
   selectedHabits?: Set<string>;
+  selectedMetrics?: Set<string>;
   branch?: 'yes' | 'no' | null;
   checkNodeId?: string;
+
+  // Structured data for automation execution
+  actionSchema?: {
+    type: string;
+    payload: string | number | string[] | null;
+    nextId?: string | null;
+    yesId?: string | null;
+    noId?: string | null;
+  };
 };
 
 export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
@@ -581,7 +591,9 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
                 ? (actionNode.selectedFiles?.size || 0)
                 : actionNode.option.id === 'add-habit'
                   ? (actionNode.selectedHabits?.size || 0)
-                  : 0;
+                  : actionNode.option.id === 'add-metric'
+                    ? (actionNode.selectedMetrics?.size || 0)
+                    : 0;
 
           if (count > 0) {
             const baseName = actionNode.option.name.replace(/^Add /i, '').replace(/^Assign /i, '');
@@ -626,6 +638,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
                 setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
                 setSelectedFiles(actionNode.selectedFiles || new Set());
                 setSelectedHabits(actionNode.selectedHabits || new Set());
+                setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
                 fetchData();
               }
@@ -647,6 +660,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
                 setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
                 setSelectedFiles(actionNode.selectedFiles || new Set());
                 setSelectedHabits(actionNode.selectedHabits || new Set());
+                setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
                 fetchData();
               }
@@ -858,6 +872,69 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
 
     return { logicalNodes, logicalEdges };
   }, [selectedTrigger, actionNodes, checkNodes, handleOpenTriggerPanel, handleOpenActionPanel, handleDeleteTrigger, handleDeleteAction, fetchData]);
+
+  // Derived schema for automation execution - easy for backend to implement
+  const automationSchema = useMemo(() => {
+    if (!selectedTrigger) return null;
+
+    const findNextExecutionNode = (sourceId: string, branch?: 'yes' | 'no') => {
+      const { logicalEdges } = buildLogicalGraph();
+
+      // Find direct edge from this source
+      let edge = logicalEdges.find(e =>
+        e.source === sourceId && (!branch || e.sourceHandle === branch)
+      );
+
+      // Skip 'addAction' nodes - they are UI placeholders
+      while (edge && edge.target.startsWith('add-action')) {
+        const nextEdge = logicalEdges.find(e => e.source === edge?.target);
+        if (!nextEdge) return null;
+        edge = nextEdge;
+      }
+
+      if (!edge || edge.target === 'end' || edge.target.startsWith('end-')) return null;
+
+      return edge.target;
+    };
+
+    return {
+      trigger: {
+        id: 'trigger',
+        type: selectedTrigger.id,
+        nextId: findNextExecutionNode('trigger'),
+      },
+      actions: actionNodes.reduce((acc, node) => {
+        const isCheck = node.option.id === 'check';
+        const checkNode = checkNodes.find(c => c.repeatActionId === node.id);
+        const sourceId = isCheck && checkNode ? checkNode.id : node.id;
+
+        acc[node.id] = {
+          type: node.option.id,
+          payload: node.actionSchema?.payload ?? (
+            isCheck ? 'check-in-completed' :
+              (node.option.id === 'wait' ? (node.waitDuration || 1) * (
+                node.waitUnit === 'days' ? 1440 :
+                  node.waitUnit === 'hours' ? 60 : 1
+              ) : null)
+          ),
+          // Traversal links
+          nextId: !isCheck ? findNextExecutionNode(sourceId) : undefined,
+          yesId: isCheck ? findNextExecutionNode(sourceId, 'yes') : undefined,
+          noId: isCheck ? findNextExecutionNode(sourceId, 'no') : undefined,
+        };
+        return acc;
+      }, {} as Record<string, any>)
+    };
+  }, [selectedTrigger, actionNodes, checkNodes, buildLogicalGraph]);
+
+  // Log schema for development and API readiness
+  useEffect(() => {
+    if (automationSchema) {
+      console.log('--- Current Flow Automation Schema ---');
+      console.log(JSON.stringify(automationSchema, null, 2));
+      console.log('--------------------------------------');
+    }
+  }, [automationSchema]);
 
   // Handle auto-layout
   useEffect(() => {
@@ -1119,6 +1196,23 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
               selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
               selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
               selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
+              selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
+              actionSchema: {
+                type: selectedActionOption.id,
+                payload: selectedActionOption.id === 'send-message' ? messageText
+                  : selectedActionOption.id === 'wait' ? (
+                    waitUnit === 'days' ? waitDuration * 24 * 60 :
+                      waitUnit === 'hours' ? waitDuration * 60 :
+                        waitDuration
+                  ) : selectedActionOption.id === 'check' ? 'check-in-completed'
+                    : ['assign-questionnaire', 'assign-check-in', 'add-file', 'add-habit', 'add-metric'].includes(selectedActionOption.id) ? (
+                      selectedActionOption.id === 'assign-questionnaire' ? Array.from(selectedQuestionnaires)
+                        : selectedActionOption.id === 'assign-check-in' ? Array.from(selectedCheckIns)
+                          : selectedActionOption.id === 'add-file' ? Array.from(selectedFiles)
+                            : selectedActionOption.id === 'add-habit' ? Array.from(selectedHabits)
+                              : Array.from(selectedMetrics)
+                    ) : null,
+              }
             }
             : node
         )
@@ -1153,6 +1247,23 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
         selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
         selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
         selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
+        selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
+        actionSchema: {
+          type: selectedActionOption.id,
+          payload: selectedActionOption.id === 'send-message' ? messageText
+            : selectedActionOption.id === 'wait' ? (
+              waitUnit === 'days' ? waitDuration * 24 * 60 :
+                waitUnit === 'hours' ? waitDuration * 60 :
+                  waitDuration
+            ) : selectedActionOption.id === 'check' ? 'check-in-completed'
+              : ['assign-questionnaire', 'assign-check-in', 'add-file', 'add-habit', 'add-metric'].includes(selectedActionOption.id) ? (
+                selectedActionOption.id === 'assign-questionnaire' ? Array.from(selectedQuestionnaires)
+                  : selectedActionOption.id === 'assign-check-in' ? Array.from(selectedCheckIns)
+                    : selectedActionOption.id === 'add-file' ? Array.from(selectedFiles)
+                      : selectedActionOption.id === 'add-habit' ? Array.from(selectedHabits)
+                        : Array.from(selectedMetrics)
+              ) : null,
+        },
         branch: currentBranch || undefined,
         checkNodeId: currentCheckNodeId || undefined,
       };

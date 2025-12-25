@@ -131,7 +131,7 @@ export function AppSidebar() {
           </div>
         )}
       </SidebarHeader>
-      <SidebarContent className="gap-0">
+      <SidebarContent className="gap-0 overflow-y-auto">
         <SidebarGroup className="pb-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
