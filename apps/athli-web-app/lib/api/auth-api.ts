@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+// API base URL - should NOT include /api/v1 path
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = API_BASE_URL.replace(/\/api\/v1\/?$/, ''); // Remove /api/v1 if present
 
 export interface RegisterData {
   email: string;
@@ -43,7 +45,7 @@ export interface AuthResponse {
 class AuthAPI {
   private async request(endpoint: string, options: RequestInit = {}): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${API_URL}/auth${endpoint}`, {
+      const response = await fetch(`${API_URL}/api/v1/auth${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -150,6 +152,25 @@ class AuthAPI {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ email, otp }),
+    });
+  }
+
+  async deleteAccount(token: string): Promise<AuthResponse> {
+    return this.request('/delete-account', {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  }
+
+  async newClient(coachId: string, token: string): Promise<AuthResponse> {
+    return this.request('/new-client', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ coachId }),
     });
   }
 }

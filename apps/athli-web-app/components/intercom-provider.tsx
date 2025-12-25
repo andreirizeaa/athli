@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
-import { createClient } from '@/lib/supabase/client';
-import { intercomApi } from '@/lib/general/intercom-api';
+// import { createClient } from '@/lib/supabase/client';
+// import { intercomApi } from '@/lib/general/intercom-api';
 
 declare global {
   interface Window {
@@ -16,8 +16,8 @@ declare global {
 export const IntercomProvider = () => {
   const { user, supabaseUser, isLoading } = useSupabaseAuth();
   const pathname = usePathname();
-  const supabase = createClient();
-  const [jwt, setJwt] = useState<string | null>(null);
+  // const supabase = createClient(); // Not needed when JWT API is disabled
+  // const [jwt, setJwt] = useState<string | null>(null); // Not needed when JWT API is disabled
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
   // Check if we're on an auth page
@@ -83,62 +83,60 @@ export const IntercomProvider = () => {
     }
   }, []);
 
-  // Fetch JWT token - only when user is logged in and not on auth pages
-  // Extract email to a stable variable
-  const userEmail = supabaseUser?.email;
+  // Fetch JWT token - DISABLED
+  // JWT API call has been disabled - Intercom will boot without JWT authentication
+  // useEffect(() => {
+  //   if (isLoading || !user || !supabaseUser || isAuthPage) {
+  //     return;
+  //   }
 
-  useEffect(() => {
-    if (isLoading || !user || !supabaseUser || isAuthPage) {
-      return;
-    }
+  //   const fetchJwt = async () => {
+  //     try {
+  //       const { data: { session } } = await supabase.auth.getSession();
+  //       const token = session?.access_token;
 
-    const fetchJwt = async () => {
-      try {
-        // Get the Supabase session token
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+  //       if (!token) {
+  //         return;
+  //       }
 
-        if (!token) {
-          return;
-        }
+  //       const response = await intercomApi.jwt(token);
+  //       if (!response.ok) {
+  //         return;
+  //       }
+  //       const data = await response.json();
+  //       if (data.jwt) {
+  //         setJwt(data.jwt);
+  //       }
+  //     } catch (error) {
+  //       // Silently fail - Intercom will work without JWT if not enforced
+  //     }
+  //   };
 
-        const response = await intercomApi.jwt(token);
-        if (!response.ok) {
-          return;
-        }
-        const data = await response.json();
-        if (data.jwt) {
-          setJwt(data.jwt);
-        }
-      } catch (error) {
-        // Silently fail - Intercom will work without JWT if not enforced
-      }
-    };
-
-    fetchJwt();
-  }, [user, supabaseUser, userEmail, isLoading, isAuthPage, supabase.auth]);
+  //   fetchJwt();
+  // }, [user, supabaseUser, isLoading, isAuthPage, supabase.auth]);
 
   // Boot Intercom with JWT and user data - only when user is logged in and not on auth pages
+  // JWT API call disabled, so booting without JWT
   useEffect(() => {
-    if (isLoading || !user || !supabaseUser || !jwt || !scriptLoaded || typeof window.Intercom === 'undefined' || isAuthPage) {
+    if (isLoading || !user || !supabaseUser || !scriptLoaded || typeof window.Intercom === 'undefined' || isAuthPage) {
       return;
     }
 
     const emailAddress = user.email || supabaseUser.email || '';
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || '';
+    const fullName = user.name || '';
     const createdAt = supabaseUser.created_at ? Math.floor(new Date(supabaseUser.created_at).getTime() / 1000) : undefined;
 
     window.Intercom('boot', {
       api_base: 'https://api-iam.intercom.io',
       app_id: 'anv873r9',
-      intercom_user_jwt: jwt,
+      // intercom_user_jwt: jwt, // JWT disabled
       user_id: user.id,
       ...(fullName && { name: fullName }),
       ...(emailAddress && { email: emailAddress }),
       ...(createdAt && { created_at: createdAt }),
       session_duration: 86400000, // 1 day
     });
-  }, [user, supabaseUser, isLoading, jwt, scriptLoaded]);
+  }, [user, supabaseUser, isLoading, scriptLoaded]);
 
   return null;
 };

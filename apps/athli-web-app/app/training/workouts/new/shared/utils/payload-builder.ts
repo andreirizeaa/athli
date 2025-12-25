@@ -187,7 +187,6 @@ export const buildWorkoutPayload = (
       const exercises: ExerciseGroupPayload[] = groups.map((group) => {
         const mapped = group.map<RegularExercisePayload>((exercise) => ({
           id: exercise.exerciseId,
-          name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) =>
             mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
@@ -213,7 +212,6 @@ export const buildWorkoutPayload = (
     if (section.type === 'amrap') {
       const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
         id: exercise.exerciseId ?? exercise.id,
-        name: exercise.name,
         exerciseType: exercise.exerciseType,
         weight: exercise.weight ?? null,
         reps: exercise.reps ?? null,
@@ -246,7 +244,6 @@ export const buildWorkoutPayload = (
 
           return {
             id: exercise.exerciseId,
-            name: exercise.name,
             exerciseType: exercise.exerciseType as ExerciseType,
             set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet, parserType),
             alternatives: exercise.alternatives || [],
@@ -275,7 +272,6 @@ export const buildWorkoutPayload = (
       const exercises: ExerciseGroupPayload[] = groups.map((group) => {
         const mapped = group.map<RegularExercisePayload>((exercise) => ({
           id: exercise.exerciseId,
-          name: exercise.name,
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) =>
             mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
@@ -301,7 +297,6 @@ export const buildWorkoutPayload = (
 
     const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
       id: exercise.exerciseId ?? exercise.id,
-      name: exercise.name,
       exerciseType: exercise.exerciseType,
       weight: exercise.weight ?? null,
       reps: exercise.reps ?? null,
@@ -331,12 +326,29 @@ export const buildWorkoutPayload = (
   });
   const equipment = Array.from(equipmentSet).sort();
 
+  // Calculate total exercises across all sections
+  let totalExercises = 0;
+  sections.forEach((section) => {
+    if (section.type === 'regular' || section.type === 'auxiliary') {
+      section.exercises.forEach((group) => {
+        totalExercises += group.exercises.length;
+      });
+    } else if (section.type === 'circuits') {
+      section.exercises.forEach((group) => {
+        totalExercises += group.exercises.length;
+      });
+    } else if (section.type === 'amrap' || section.type === 'timed') {
+      totalExercises += section.exercises.length;
+    }
+  });
+
   return {
     title: meta.title,
     description: meta.description,
     type: meta.type,
     difficulty: meta.difficulty,
     equipment,
+    totalExercises,
     sections,
   };
 };

@@ -68,14 +68,39 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Check if user already has a session (email change case)
+      // Check if user already has a session
       const { data: { session } } = await supabase.auth.getSession();
+
       if (session) {
-        // Email was just changed, redirect with refresh flag
-        return NextResponse.redirect(new URL('/home?refresh=true', request.url));
+        const coachId = requestUrl.searchParams.get('coach_id');
+        const redirectPath = requestUrl.searchParams.get('redirect') || '/home';
+
+        // For new Google OAuth users, set user_type based on context
+        if (!session.user.user_metadata?.user_type) {
+          const userType = coachId ? 'client' : 'coach';
+          await supabase.auth.updateUser({
+            data: {
+              user_type: userType,
+              ...(coachId && { coach_id: coachId }),
+            }
+          });
+
+          // Client profile creation will be handled by /auth/new-client route
+        }
+
+        // Check if this was an email change
+        const isEmailChange = requestUrl.searchParams.get('type') === 'email_change';
+        if (isEmailChange) {
+          return NextResponse.redirect(new URL('/home?refresh=true', request.url));
+        }
+
+        // Redirect to specified path or default to home
+        return NextResponse.redirect(new URL(redirectPath, request.url));
       }
-      // New login/signup
-      return NextResponse.redirect(new URL('/home', request.url));
+
+      // New login/signup or existing user
+      const redirectPath = requestUrl.searchParams.get('redirect') || '/home';
+      return NextResponse.redirect(new URL(redirectPath, request.url));
     } else {
       console.error('Error exchanging code for session:', error);
       // If code exchange fails but user has a session, might be email change
@@ -91,3 +116,4 @@ export async function GET(request: NextRequest) {
   // No valid parameters
   return NextResponse.redirect(new URL('/auth/login?error=invalid_request', request.url));
 }
+

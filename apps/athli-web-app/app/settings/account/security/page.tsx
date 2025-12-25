@@ -203,11 +203,47 @@ const SecurityPage = () => {
     return () => setOnSave(undefined);
   }, [setOnSave]);
 
+  const isGoogleProvider = user?.signinMethod === 'google';
+  const isEmailProvider = user?.signinMethod === 'email';
+
   return (
     <div className="w-full h-full flex flex-col overflow-auto">
       <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-1 bg-background flex flex-col items-center gap-4">
-        {/* Password Card */}
-        <Card className="bg-background max-w-3xl w-full">
+        {/* Google Account Card */}
+        {isGoogleProvider && (
+          <Card className="bg-background max-w-3xl w-full">
+            <CardHeader className="px-4">
+              <CardTitle>{t('settings.security.googleAccount.title')}</CardTitle>
+            </CardHeader>
+            <Separator className="w-full mt-[-8px]" />
+            <CardContent className="px-0">
+              <div className="space-y-0">
+                <div className="px-4 pb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {t('settings.security.googleAccount.description')}
+                  </p>
+                </div>
+                <div className="flex justify-end pt-2 px-4">
+                  <Button 
+                    asChild
+                  >
+                    <a 
+                      href="https://myaccount.google.com/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                    >
+                      {t('settings.security.googleAccount.manageAccount')}
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Password Card - Only show for email provider */}
+        {isEmailProvider && (
+          <Card className="bg-background max-w-3xl w-full">
           <CardHeader className="px-4">
             <CardTitle>{t('settings.security.password')}</CardTitle>
           </CardHeader>
@@ -296,9 +332,11 @@ const SecurityPage = () => {
             </form>
           </CardContent>
         </Card>
+        )}
 
-        {/* Email Card */}
-        <Card className="bg-background max-w-3xl w-full">
+        {/* Email Card - Only show for email provider */}
+        {isEmailProvider && (
+          <Card className="bg-background max-w-3xl w-full">
           <CardHeader className="px-4">
             <CardTitle>{t('settings.security.email')}</CardTitle>
           </CardHeader>
@@ -323,6 +361,7 @@ const SecurityPage = () => {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
 
       {/* Password Confirmation Dialog for Password Changes */}

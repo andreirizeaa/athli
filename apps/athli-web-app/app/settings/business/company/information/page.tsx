@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-import { Upload, Trash2, Building2 } from 'lucide-react';
+import { Upload, Trash2, Building2, Loader2 } from 'lucide-react';
 import { updateCompanyDetails, type CompanyDetails } from '@/lib/general/settings-service';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useCompanySave } from '../context/company-save-context';
@@ -92,7 +92,7 @@ const specialityOptions: Option[] = [
 const InformationPage = () => {
   const t = useTranslations();
   const { setHasUnsavedChanges: setContextHasUnsavedChanges } = useUnsavedChanges();
-  const { setOnSave, setIsSaving: setContextIsSaving } = useCompanySave();
+  const { setIsSaving: setContextIsSaving } = useCompanySave();
   const [companyName, setCompanyName] = useState('');
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
@@ -224,12 +224,7 @@ const InformationPage = () => {
     }
   }, [setContextHasUnsavedChanges, setContextIsSaving, t]);
 
-  // Register save handler with layout - only once
-  useEffect(() => {
-    setOnSave(handleSave);
-    return () => setOnSave(undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only register once on mount
+  // Don't register save handler with layout - save button is in the card
 
   return (
     <div className="w-full h-full flex flex-col overflow-auto">
@@ -240,7 +235,7 @@ const InformationPage = () => {
             </CardHeader>
             <Separator className="w-full mt-[-8px]" />
             <CardContent className="px-0">
-              <div className="px-4 pt-6 pb-4">
+              <div className="px-4">
                 <div className="flex flex-col gap-2 mb-6">
                   <Label className="text-sm font-medium">
                     {t('settings.company.information.logo')}
@@ -366,6 +361,23 @@ const InformationPage = () => {
                       className="w-full"
                     />
                   </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-end pt-4">
+                  <Button
+                    onClick={handleSave}
+                    disabled={!hasUnsavedChanges || isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t('general.saving')}
+                      </>
+                    ) : (
+                      t('general.save')
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardContent>
