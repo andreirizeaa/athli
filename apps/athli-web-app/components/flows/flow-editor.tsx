@@ -2,8 +2,9 @@
 
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { getForms } from '@/lib/coach/coach-form-service';
-import { type Habit } from '@/lib/coach/coach-habit-service';
+import { getCheckIns } from '@/lib/api/coach/coach-check-in-service';
+import { getQuestionnaires } from '@/lib/api/coach/coach-questionnaire-service';
+import { type Habit } from '@/lib/api/coach/coach-habit-service';
 import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
 import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
@@ -21,7 +22,7 @@ import ReactFlow, {
   type Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { getLayoutedElements } from '@/lib/coach/flow-layout';
+import { getLayoutedElements } from '@/lib/api/coach/flow-layout';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -406,11 +407,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
     setIsLoadingData(true);
     try {
       if (selectedActionOption.id === 'assign-questionnaire' || selectedActionOption.id === 'assign-check-in') {
-        const allForms = await getForms();
-        // Filter forms - questionnaires are non-check-in forms, check-ins are check-in forms
-        // Using the same logic as forms page
-        const checkInForms = allForms.filter((form) => form.name.includes('Check-in') || form.name.includes('Weekly'));
-        const questionnaireForms = allForms.filter((form) => !form.name.includes('Check-in') && !form.name.includes('Weekly'));
+        const [checkInForms, questionnaireForms] = await Promise.all([
+          getCheckIns(),
+          getQuestionnaires(),
+        ]);
 
         setCheckIns(checkInForms.map((form) => ({ id: form.id, name: form.name })));
         setQuestionnaires(questionnaireForms.map((form) => ({ id: form.id, name: form.name })));

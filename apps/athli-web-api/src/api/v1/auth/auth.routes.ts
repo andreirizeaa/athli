@@ -200,19 +200,6 @@ authRouter.post('/reset-password', validate(resetPasswordSchema), authController
  */
 authRouter.post('/google', validate(googleAuthSchema), authController.googleAuth);
 
-/**
- * @swagger
- * /api/v1/auth/me:
- *   get:
- *     summary: Get current user
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: User data retrieved successfully
- */
-authRouter.get('/me', authenticate, authController.getCurrentUser);
 
 /**
  * @swagger
@@ -281,42 +268,3 @@ authRouter.post('/send-security-otp', supabaseAuthenticate, validate(sendSecurit
  */
 authRouter.post('/verify-security-otp', supabaseAuthenticate, validate(verifySecurityOTPSchema), authController.verifySecurityOTP);
 
-/**
- * @swagger
- * /api/v1/auth/delete-account:
- *   delete:
- *     summary: Delete user account
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Account deleted successfully
- */
-authRouter.delete('/delete-account', supabaseAuthenticate, authController.deleteAccount);
-
-/**
- * @swagger
- * /api/v1/auth/new-client:
- *   post:
- *     summary: Handle new client signup - creates client profile if coach doesn't exist
- *     tags: [Auth]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - coachId
- *             properties:
- *               coachId:
- *                 type: string
- *                 format: uuid
- *     responses:
- *       200:
- *         description: Client profile ready
- */
-authRouter.post('/new-client', supabaseAuthenticate, validate(newClientSchema), authController.newClient);

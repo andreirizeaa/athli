@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 // import { createClient } from '@/lib/supabase/client';
-// import { intercomApi } from '@/lib/general/intercom-api';
+// import { intercomApi } from '@/lib/api/intercom/intercom';
 
 declare global {
   interface Window {

@@ -16,9 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/general/utils';
-import { searchExercises, type Exercise } from '@/lib/general/exercise-search';
-import type { GeneratedWorkout } from '@/lib/general/generate-exercise';
-import { generateWorkoutFromPrompt, prompt } from '@/lib/general/generate-exercise';
+import { searchExercises, type Exercise } from '@/lib/api/exercise/exercise-search';
+import type { GeneratedWorkout } from '@/lib/api/exercise/generate-exercise';
+import { generateWorkoutFromPrompt, prompt } from '@/lib/api/exercise/generate-exercise';
 import { toast } from 'sonner';
 import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
@@ -290,12 +290,12 @@ const buildWorkoutPayload = (
           const firstSet: SetData = exercise.sets && exercise.sets.length > 0
             ? exercise.sets[0]
             : {
-                setNumber: 1,
-                type: 'normal' as const,
-                reps: '0',
-                weight: '0',
-                rest: '0',
-              };
+              setNumber: 1,
+              type: 'normal' as const,
+              reps: '0',
+              weight: '0',
+              rest: '0',
+            };
 
           return {
             id: exercise.exerciseId,
@@ -454,12 +454,12 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     const isEditMode = accessFlag === 'edit-ai';
     const hasNewWorkoutMeta = window.localStorage.getItem('oneninety_new_workout_meta');
     const aiGenerated = window.localStorage.getItem('oneninety_ai_generated_workout');
-    
+
     // If we're in edit mode OR if we're not creating a new workout (no meta and no AI generated)
     // then we should load the schema
     if (isEditMode || (!hasNewWorkoutMeta && !aiGenerated)) {
       const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
-      
+
       // Only load mock schema if no saved schema and no AI generated workout
       if (!savedSchema && !aiGenerated) {
         // Load shared mock schema for edit mode
@@ -488,19 +488,19 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
 
       // Get the container width
       const containerWidth = container.offsetWidth;
-      
+
       // Account for container padding (px-3 = 12px on each side = 24px total)
       // In single-line mode: plus button (32px) + gap (8px) + send button (32px) + gap (8px) = ~80px
       // Add some buffer for spacing: ~100px total
       const availableWidth = containerWidth - 24 - 100;
-      
+
       // Estimate character width
       // Use a conservative estimate of 7-8px per character for typical font
       // Account for different screen sizes - smaller screens = smaller font = smaller char width
       const isSmallScreen = containerWidth < 640; // sm breakpoint
       const estimatedCharWidth = isSmallScreen ? 6.5 : 7.5;
       const charLimit = Math.floor(availableWidth / estimatedCharWidth);
-      
+
       // Set a minimum of 25 and maximum of 100 characters
       // Smaller minimum for mobile devices
       const minLimit = isSmallScreen ? 25 : 30;
@@ -514,7 +514,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       // Debounce resize calculations
       setTimeout(calculateCharLimit, 50);
     });
-    
+
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
     }
@@ -522,7 +522,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     const handleResize = () => {
       setTimeout(calculateCharLimit, 50);
     };
-    
+
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -839,16 +839,16 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         setTimeout(() => {
           setWorkoutSchema((prev) => {
             const updated = {
-            ...prev,
-            sections: prev.sections.map((sec) => {
-              if (sec.id === item.sectionId) {
-                return {
-                  ...sec,
-                  exercises: [...(sec.exercises || []), item.exercise],
-                };
-              }
-              return sec;
-            }),
+              ...prev,
+              sections: prev.sections.map((sec) => {
+                if (sec.id === item.sectionId) {
+                  return {
+                    ...sec,
+                    exercises: [...(sec.exercises || []), item.exercise],
+                  };
+                }
+                return sec;
+              }),
             };
             // Mark as dirty when first exercise is added
             if (index === 0) {
@@ -1060,7 +1060,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
         requestAnimationFrame(() => {
           const scrollContainer = contentScrollRef.current;
           if (!scrollContainer) return;
-          
+
           const containerRect = scrollContainer.getBoundingClientRect();
           const exerciseRect = exerciseRef.getBoundingClientRect();
           const scrollTop = scrollContainer.scrollTop;
@@ -1360,7 +1360,7 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       ...prev,
       sections: [...prev.sections, newSection],
     }));
-    
+
     // Set the new section ID to trigger scrolling
     setNewSectionId(newSection.id);
   };
@@ -1801,353 +1801,353 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       <div className="flex-[1.5] p-2 h-full flex flex-col min-h-0">
         <Card className="relative h-full" style={{ height: '100%' }}>
           <CardContent className="absolute inset-0 p-4 overflow-y-auto flex flex-col">
-          <Tabs
-            value={builderMode}
-            onValueChange={(value) => {
-              if (value) setBuilderMode(value as 'chat' | 'exercise' | 'section');
-            }}
-          >
-            <TabsList className="w-full">
-              <TabsTrigger
-                value="chat"
-                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-              >
-                Chat
-              </TabsTrigger>
-              <TabsTrigger
-                value="exercise"
-                disabled={workoutSchema.sections.length === 0}
-                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-              >
-                Exercises
-              </TabsTrigger>
-              <TabsTrigger
-                value="section"
-                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-              >
-                Sections
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        {builderMode === 'chat' && (
-          <div
-            className="flex-1 min-h-0 mt-4 flex flex-col overflow-hidden relative"
-            onDragEnter={handleChatDragEnter}
-            onDragOver={handleChatDragOver}
-            onDragLeave={handleChatDragLeave}
-            onDrop={handleChatDrop}
-          >
-            {/* Drag Overlay */}
-            {isDraggingOver && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-                <p className="text-lg font-semibold text-primary">Drop PDF here</p>
-              </div>
-            )}
-            {/* Chat Messages - Scrollable - hidden when dragging */}
-            <div 
-              ref={chatScrollRef}
-              className={cn('flex-1 min-h-0 overflow-y-auto', isDraggingOver && 'opacity-0 pointer-events-none')}
+            <Tabs
+              value={builderMode}
+              onValueChange={(value) => {
+                if (value) setBuilderMode(value as 'chat' | 'exercise' | 'section');
+              }}
             >
-                <div className="flex flex-col gap-3 px-4 pt-4 pb-4">
-                  {chatMessages.length === 0 ? (
-                    <div className="flex flex-col items-center gap-4 py-8">
-                      <div className="relative flex items-center justify-center py-8 px-8">
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 blur-sm opacity-30 -z-10"></div>
-                        <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg">
-                          <BrainCog className="h-10 w-10" />
+              <TabsList className="w-full">
+                <TabsTrigger
+                  value="chat"
+                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                >
+                  Chat
+                </TabsTrigger>
+                <TabsTrigger
+                  value="exercise"
+                  disabled={workoutSchema.sections.length === 0}
+                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                >
+                  Exercises
+                </TabsTrigger>
+                <TabsTrigger
+                  value="section"
+                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                >
+                  Sections
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {builderMode === 'chat' && (
+              <div
+                className="flex-1 min-h-0 mt-4 flex flex-col overflow-hidden relative"
+                onDragEnter={handleChatDragEnter}
+                onDragOver={handleChatDragOver}
+                onDragLeave={handleChatDragLeave}
+                onDrop={handleChatDrop}
+              >
+                {/* Drag Overlay */}
+                {isDraggingOver && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+                    <p className="text-lg font-semibold text-primary">Drop PDF here</p>
+                  </div>
+                )}
+                {/* Chat Messages - Scrollable - hidden when dragging */}
+                <div
+                  ref={chatScrollRef}
+                  className={cn('flex-1 min-h-0 overflow-y-auto', isDraggingOver && 'opacity-0 pointer-events-none')}
+                >
+                  <div className="flex flex-col gap-3 px-4 pt-4 pb-4">
+                    {chatMessages.length === 0 ? (
+                      <div className="flex flex-col items-center gap-4 py-8">
+                        <div className="relative flex items-center justify-center py-8 px-8">
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 blur-sm opacity-30 -z-10"></div>
+                          <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg">
+                            <BrainCog className="h-10 w-10" />
+                          </div>
                         </div>
+                        <h2 className="text-xl font-semibold text-center">OneNinety AI Builder</h2>
+                        <p className="text-sm text-foreground text-center max-w-md">
+                          Ask for an auto-made workout, explain what you want to be included in yours and write in whatever form you wish.
+                        </p>
                       </div>
-                      <h2 className="text-xl font-semibold text-center">OneNinety AI Builder</h2>
-                      <p className="text-sm text-foreground text-center max-w-md">
-                        Ask for an auto-made workout, explain what you want to be included in yours and write in whatever form you wish.
-                      </p>
-                    </div>
-                  ) : (
-                    chatMessages.map((message, index) => {
-                      const isLastInSequence =
-                        index === chatMessages.length - 1 ||
-                        chatMessages[index + 1]?.isSent !== message.isSent;
+                    ) : (
+                      chatMessages.map((message, index) => {
+                        const isLastInSequence =
+                          index === chatMessages.length - 1 ||
+                          chatMessages[index + 1]?.isSent !== message.isSent;
 
-                      return (
-                        <div
-                          key={message.id}
-                          className={cn(
-                            'flex w-full flex-col',
-                            message.isSent ? 'items-end' : 'items-start'
-                          )}
-                        >
-                          {/* Message Text */}
-                          {message.text.trim() && (
-                            <div
-                              className={cn(
-                                'max-w-[80%] rounded-xl px-3 py-2',
-                                message.isSent
-                                  ? 'bg-primary/20 text-foreground'
-                                  : 'bg-sidebar text-foreground',
-                                isLastInSequence && message.isSent && 'rounded-br-sm',
-                                isLastInSequence && !message.isSent && 'rounded-bl-sm'
-                              )}
-                            >
-                              <p className="text-sm whitespace-pre-wrap break-words">
-                                {message.text}
-                              </p>
-                            </div>
-                          )}
-                          {/* PDF Attachment - Below message */}
-                          {message.pdfAttachment && (
-                            <div
-                              className={cn(
-                                'mt-2 max-w-[80%] px-3 py-2 bg-background/50 border',
-                                message.isSent ? 'items-end' : 'items-start',
-                                isLastInSequence && message.isSent
-                                  ? 'rounded-[18px] rounded-br-sm'
-                                  : isLastInSequence && !message.isSent
-                                    ? 'rounded-[18px] rounded-bl-sm'
-                                    : 'rounded-[18px]'
-                              )}
-                            >
+                        return (
+                          <div
+                            key={message.id}
+                            className={cn(
+                              'flex w-full flex-col',
+                              message.isSent ? 'items-end' : 'items-start'
+                            )}
+                          >
+                            {/* Message Text */}
+                            {message.text.trim() && (
                               <div
-                                role="button"
-                                tabIndex={0}
-                                aria-label={`View ${message.pdfAttachment.name}`}
-                                className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                                className={cn(
+                                  'max-w-[80%] rounded-xl px-3 py-2',
+                                  message.isSent
+                                    ? 'bg-primary/20 text-foreground'
+                                    : 'bg-sidebar text-foreground',
+                                  isLastInSequence && message.isSent && 'rounded-br-sm',
+                                  isLastInSequence && !message.isSent && 'rounded-bl-sm'
+                                )}
                               >
-                                <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                  <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-foreground truncate">
-                                    {message.pdfAttachment.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">PDF</p>
+                                <p className="text-sm whitespace-pre-wrap break-words">
+                                  {message.text}
+                                </p>
+                              </div>
+                            )}
+                            {/* PDF Attachment - Below message */}
+                            {message.pdfAttachment && (
+                              <div
+                                className={cn(
+                                  'mt-2 max-w-[80%] px-3 py-2 bg-background/50 border',
+                                  message.isSent ? 'items-end' : 'items-start',
+                                  isLastInSequence && message.isSent
+                                    ? 'rounded-[18px] rounded-br-sm'
+                                    : isLastInSequence && !message.isSent
+                                      ? 'rounded-[18px] rounded-bl-sm'
+                                      : 'rounded-[18px]'
+                                )}
+                              >
+                                <div
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`View ${message.pdfAttachment.name}`}
+                                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                                >
+                                  <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                                    <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground truncate">
+                                      {message.pdfAttachment.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">PDF</p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                  {isSendingMessage && (
-                    <div className="flex justify-start">
-                      <div className="max-w-[80%] rounded-xl px-3 py-2 bg-sidebar text-foreground">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse" />
-                          <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse delay-75" />
-                          <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse delay-150" />
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                    {isSendingMessage && (
+                      <div className="flex justify-start">
+                        <div className="max-w-[80%] rounded-xl px-3 py-2 bg-sidebar text-foreground">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse" />
+                            <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse delay-75" />
+                            <div className="h-2 w-2 rounded-full bg-foreground/40 animate-pulse delay-150" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
                 {/* Chat Input - Fixed at bottom */}
-              <div className={cn('flex-shrink-0', isDraggingOver && 'opacity-0 pointer-events-none')}>
-                <div
-                  ref={containerRef}
-                  className={cn(
-                    'relative flex bg-sidebar px-3 py-2 transition-all duration-700 ease-in-out',
-                    isMultiLine ? 'flex-col' : 'items-center'
-                  )}
-                  style={{ borderRadius: '28px' }}
-                >
-                  {/* PDF Preview */}
-                  {attachedPdf && (
-                    <div
-                      className="mb-2 px-3 py-2 bg-background/50"
-                      style={{ borderRadius: '18px' }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          aria-label={`View ${attachedPdf.name}`}
-                          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                        >
-                          <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                            <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                <div className={cn('flex-shrink-0', isDraggingOver && 'opacity-0 pointer-events-none')}>
+                  <div
+                    ref={containerRef}
+                    className={cn(
+                      'relative flex bg-sidebar px-3 py-2 transition-all duration-700 ease-in-out',
+                      isMultiLine ? 'flex-col' : 'items-center'
+                    )}
+                    style={{ borderRadius: '28px' }}
+                  >
+                    {/* PDF Preview */}
+                    {attachedPdf && (
+                      <div
+                        className="mb-2 px-3 py-2 bg-background/50"
+                        style={{ borderRadius: '18px' }}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`View ${attachedPdf.name}`}
+                            className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+                          >
+                            <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
+                              <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {attachedPdf.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">PDF</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {attachedPdf.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">PDF</p>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 flex-shrink-0"
-                          onClick={handleRemovePdf}
-                          aria-label="Remove PDF"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    aria-label="Attach PDF"
-                  />
-                  {!isMultiLine ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                            onClick={handleFileButtonClick}
-                            aria-label="Attach file"
+                            className="h-6 w-6 flex-shrink-0"
+                            onClick={handleRemovePdf}
+                            aria-label="Remove PDF"
                           >
-                            <Plus className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Attach files</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : null}
-                  <Textarea
-                    ref={chatTextareaRef}
-                    placeholder="Type, dictate or upload a file..."
-                    value={chatPrompt}
-                    onChange={(e) => setChatPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    className={cn(
-                      'resize-none min-h-[36px] max-h-[120px] py-2 bg-sidebar dark:bg-sidebar border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-sidebar dark:focus-visible:bg-sidebar',
-                      isMultiLine ? 'w-full' : 'flex-1 min-w-0'
-                    )}
-                    aria-label="Type a message"
-                    rows={1}
-                  />
-                  {isMultiLine ? (
-                    <>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                onClick={handleFileButtonClick}
-                                aria-label="Attach file"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Attach files</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        {chatPrompt.trim() || attachedPdf ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  onClick={handleSendMessage}
-                                  disabled={isSendingMessage || (!chatPrompt.trim() && !attachedPdf)}
-                                  className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                  aria-label="Send message"
-                                >
-                                  <ArrowUp className="size-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Send message</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  onClick={handleSendMessage}
-                                  className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                  aria-label="Send message"
-                                >
-                                  <ArrowUp className="size-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Send message</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        </div>
                       </div>
-                    </>
-                  ) : chatPrompt.trim() || attachedPdf ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={handleSendMessage}
-                            disabled={isSendingMessage || (!chatPrompt.trim() && !attachedPdf)}
-                            className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                            aria-label="Send message"
-                          >
-                            <ArrowUp className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Send message</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={handleSendMessage}
-                            className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                            aria-label="Send message"
-                          >
-                            <ArrowUp className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Send message</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      aria-label="Attach PDF"
+                    />
+                    {!isMultiLine ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                              onClick={handleFileButtonClick}
+                              aria-label="Attach file"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Attach files</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : null}
+                    <Textarea
+                      ref={chatTextareaRef}
+                      placeholder="Type, dictate or upload a file..."
+                      value={chatPrompt}
+                      onChange={(e) => setChatPrompt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      className={cn(
+                        'resize-none min-h-[36px] max-h-[120px] py-2 bg-sidebar dark:bg-sidebar border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-sidebar dark:focus-visible:bg-sidebar',
+                        isMultiLine ? 'w-full' : 'flex-1 min-w-0'
+                      )}
+                      aria-label="Type a message"
+                      rows={1}
+                    />
+                    {isMultiLine ? (
+                      <>
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                  onClick={handleFileButtonClick}
+                                  aria-label="Attach file"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Attach files</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          {chatPrompt.trim() || attachedPdf ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    onClick={handleSendMessage}
+                                    disabled={isSendingMessage || (!chatPrompt.trim() && !attachedPdf)}
+                                    className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                                    aria-label="Send message"
+                                  >
+                                    <ArrowUp className="size-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Send message</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    onClick={handleSendMessage}
+                                    className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                                    aria-label="Send message"
+                                  >
+                                    <ArrowUp className="size-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Send message</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      </>
+                    ) : chatPrompt.trim() || attachedPdf ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={handleSendMessage}
+                              disabled={isSendingMessage || (!chatPrompt.trim() && !attachedPdf)}
+                              className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                              aria-label="Send message"
+                            >
+                              <ArrowUp className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Send message</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={handleSendMessage}
+                              className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
+                              aria-label="Send message"
+                            >
+                              <ArrowUp className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Send message</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          {builderMode === 'exercise' && (
+            )}
+            {builderMode === 'exercise' && (
               <div className="flex-1 min-h-0 mt-4">
-              <ExerciseSelectionPanel
-                onExerciseClick={handleExerciseClick}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              />
-            </div>
-          )}
-          {builderMode === 'section' && (
+                <ExerciseSelectionPanel
+                  onExerciseClick={handleExerciseClick}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                />
+              </div>
+            )}
+            {builderMode === 'section' && (
               <div className="flex-1 min-h-0 mt-4">
-              <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
-            </div>
-          )}
+                <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -2277,40 +2277,40 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
       <div className="flex-[1] p-2 h-full flex flex-col min-h-0">
         <Card className="relative h-full" style={{ height: '100%' }}>
           <CardContent className="absolute inset-0 p-4 overflow-y-auto">
-          <EquipmentPanel sections={workoutSchema.sections} />
-          <OverviewPanel
-            sections={workoutSchema.sections
-              .filter((section) => section.type === 'regular' || section.type === 'amrap' || section.type === 'timed')
-              .map((section) => ({
-                id: section.id,
-                type: section.type as 'regular' | 'amrap' | 'timed',
-                exercises: section.exercises?.map((exercise) => ({
-                  exerciseId: exercise.exerciseId,
-                  instanceId: exercise.instanceId,
-                  name: exercise.name,
-                  supersetGroupId: exercise.supersetGroupId,
-                })),
-              }))}
-            onSectionsChange={(sections) => {
-              onDirtyChange?.();
-              setWorkoutSchema((prev) => ({
-                ...prev,
-                sections: sections.map((section) => {
-                  const originalSection = prev.sections.find((s) => s.id === section.id);
-                  if (!originalSection) {
-                    return {
-                      id: section.id,
-                      type: section.type,
-                      exercises: section.exercises?.map((ex) => {
-                        const found = searchExercises('').find((e) => e.exerciseId === ex.exerciseId);
-                        return found
-                          ? {
+            <EquipmentPanel sections={workoutSchema.sections} />
+            <OverviewPanel
+              sections={workoutSchema.sections
+                .filter((section) => section.type === 'regular' || section.type === 'amrap' || section.type === 'timed')
+                .map((section) => ({
+                  id: section.id,
+                  type: section.type as 'regular' | 'amrap' | 'timed',
+                  exercises: section.exercises?.map((exercise) => ({
+                    exerciseId: exercise.exerciseId,
+                    instanceId: exercise.instanceId,
+                    name: exercise.name,
+                    supersetGroupId: exercise.supersetGroupId,
+                  })),
+                }))}
+              onSectionsChange={(sections) => {
+                onDirtyChange?.();
+                setWorkoutSchema((prev) => ({
+                  ...prev,
+                  sections: sections.map((section) => {
+                    const originalSection = prev.sections.find((s) => s.id === section.id);
+                    if (!originalSection) {
+                      return {
+                        id: section.id,
+                        type: section.type,
+                        exercises: section.exercises?.map((ex) => {
+                          const found = searchExercises('').find((e) => e.exerciseId === ex.exerciseId);
+                          return found
+                            ? {
                               ...found,
                               instanceId: ex.instanceId,
                               supersetGroupId: ex.supersetGroupId,
                               sets: [],
                             }
-                          : {
+                            : {
                               exerciseId: ex.exerciseId,
                               name: ex.name,
                               imageUrl: '',
@@ -2330,21 +2330,21 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                               supersetGroupId: ex.supersetGroupId,
                               sets: [],
                             };
-                      }),
-                    };
-                  }
-                  return {
-                    ...originalSection,
-                    exercises: section.exercises?.map((ex) => {
-                      const originalExercise = originalSection.exercises?.find(
-                        (e) => e.instanceId === ex.instanceId
-                      );
-                      return originalExercise
-                        ? {
+                        }),
+                      };
+                    }
+                    return {
+                      ...originalSection,
+                      exercises: section.exercises?.map((ex) => {
+                        const originalExercise = originalSection.exercises?.find(
+                          (e) => e.instanceId === ex.instanceId
+                        );
+                        return originalExercise
+                          ? {
                             ...originalExercise,
                             supersetGroupId: ex.supersetGroupId,
                           }
-                        : {
+                          : {
                             ...searchExercises('').find((e) => e.exerciseId === ex.exerciseId) || {
                               exerciseId: ex.exerciseId,
                               name: ex.name,
@@ -2366,25 +2366,25 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
                             supersetGroupId: ex.supersetGroupId,
                             sets: [],
                           };
-                    }),
-                  };
-                }),
-              }));
-            }}
-            onDeleteSection={handleDeleteSection}
-            onDeleteExercise={handleDeleteExerciseFromOverview}
-            onDeleteSuperset={handleDeleteSupersetFromOverview}
-            groupExercisesBySuperset={(exercises) => {
-              const fullExercises = exercises.map((ex) => {
-                const section = workoutSchema.sections.find((s) =>
-                  s.exercises?.some((e) => e.instanceId === ex.instanceId)
-                );
-                return section?.exercises?.find((e) => e.instanceId === ex.instanceId);
-              }).filter((e): e is ExerciseWithSuperset => e !== undefined);
-              return groupExercisesBySuperset(fullExercises) as any;
-            }}
-            onExerciseClick={handleExerciseClickById}
-          />
+                      }),
+                    };
+                  }),
+                }));
+              }}
+              onDeleteSection={handleDeleteSection}
+              onDeleteExercise={handleDeleteExerciseFromOverview}
+              onDeleteSuperset={handleDeleteSupersetFromOverview}
+              groupExercisesBySuperset={(exercises) => {
+                const fullExercises = exercises.map((ex) => {
+                  const section = workoutSchema.sections.find((s) =>
+                    s.exercises?.some((e) => e.instanceId === ex.instanceId)
+                  );
+                  return section?.exercises?.find((e) => e.instanceId === ex.instanceId);
+                }).filter((e): e is ExerciseWithSuperset => e !== undefined);
+                return groupExercisesBySuperset(fullExercises) as any;
+              }}
+              onExerciseClick={handleExerciseClickById}
+            />
           </CardContent>
         </Card>
       </div>

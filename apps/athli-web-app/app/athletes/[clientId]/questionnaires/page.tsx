@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Plus, FileText, X, Trash2, ClipboardList } from 'lucide-react';
-import { deleteClientCheckIns, getClientQuestionnaires, type ClientQuestionnaire } from '@/lib/client/client-form-service';
+import { deleteClientCheckIns, getClientQuestionnaires, type ClientQuestionnaire } from '@/lib/api/client/client-form-service';
 import { AddQuestionnaireSidePanel } from '@/components/forms/add-questionnaire-side-panel';
 import { Badge } from '@/components/ui/badge';
 
@@ -171,10 +171,10 @@ const ClientQuestionnairesPage = () => {
         </div>
       ),
       renderCell: (row) => (
-        <Badge 
-          variant={row.status === 'completed' ? 'default' : 'outline'} 
-          className={row.status === 'completed' 
-            ? 'text-xs rounded-full bg-primary text-primary-foreground border-transparent' 
+        <Badge
+          variant={row.status === 'completed' ? 'default' : 'outline'}
+          className={row.status === 'completed'
+            ? 'text-xs rounded-full bg-primary text-primary-foreground border-transparent'
             : 'text-xs border-primary text-primary bg-transparent'}
         >
           {row.status === 'completed' ? t('athletes.profile.questionnaires.status.completed') : t('athletes.profile.questionnaires.status.pending')}

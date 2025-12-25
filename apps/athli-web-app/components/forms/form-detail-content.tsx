@@ -5,13 +5,16 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { type Form, addQuestion, reorderQuestions } from '@/lib/coach/coach-form-service';
+import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions } from '@/lib/api/coach/coach-check-in-service';
+import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions } from '@/lib/api/coach/coach-questionnaire-service';
+
+type Form = CheckIn | Questionnaire;
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel';
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
-import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
 
 export type Question = {
   id: string;
@@ -95,7 +98,10 @@ export const FormDetailContent = ({
 
   const handleAddQuestion = async (questionData: any) => {
     try {
-      const newQuestion = await addQuestion({
+      // Determine which service to use based on form ID prefix
+      const isCheckIn = formId.startsWith('checkin-');
+      const addQuestionFn = isCheckIn ? addCheckInQuestion : addQuestionnaireQuestion;
+      const newQuestion = await addQuestionFn({
         formId: formId,
         question: questionData.question,
         required: questionData.required,
@@ -106,13 +112,13 @@ export const FormDetailContent = ({
         mediaCount: questionData.mediaCount,
         metricId: questionData.metricId,
       });
-      
+
       // Ensure metricId is preserved if it exists in questionData
       const questionWithMetric = {
         ...newQuestion,
         metricId: questionData.metricId || newQuestion.metricId,
       };
-      
+
       setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);
@@ -204,7 +210,7 @@ export const FormDetailContent = ({
             </div>
           );
         }
-        
+
         // For non-metric questions, just show the question
         return (
           <span className="text-sm font-medium py-1">{row.question || ''}</span>
@@ -298,11 +304,11 @@ export const FormDetailContent = ({
     <>
       <div className="w-full h-full flex-1 px-4 min-h-0 py-4">
         <div className="w-full h-full flex gap-4">
-            <div
-              className="h-full flex flex-col"
-              style={{ width: 'calc(70% - 0.5rem)', flexShrink: 0 }}
-            >
-              <DataGrid
+          <div
+            className="h-full flex flex-col"
+            style={{ width: 'calc(70% - 0.5rem)', flexShrink: 0 }}
+          >
+            <DataGrid
               data={[
                 ...questions,
                 {
@@ -332,7 +338,7 @@ export const FormDetailContent = ({
               onReorder={handleReorder}
               fixedBottomRowFilter={(row: any) => row._isAddRow === true}
             />
-            </div>
+          </div>
           <Card
             className="flex flex-col items-center justify-center overflow-auto"
             style={{

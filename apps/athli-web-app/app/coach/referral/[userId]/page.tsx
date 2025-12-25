@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
-import { fetchUserById } from '@/lib/coach/coach-user-service';
+import { fetchUserById } from '@/lib/api/user/user-service';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -16,7 +16,7 @@ export default function CoachReferralPage() {
   const params = useParams<{ userId: string }>();
   const router = useRouter();
   const supabase = createClient();
-  
+
   const userId = Array.isArray(params.userId) ? params.userId[0] : params.userId;
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);

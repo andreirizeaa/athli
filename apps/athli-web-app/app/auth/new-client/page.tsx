@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { authAPI } from '@/lib/api/auth-api';
+import { authService } from '@/lib/api/auth/auth-service';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 
@@ -25,7 +25,7 @@ export default function NewClientPage() {
       try {
         // Get current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError || !session?.user) {
           toast.error('Please sign in first');
           router.push(`/client/invite/${coachId}`);
@@ -36,7 +36,7 @@ export default function NewClientPage() {
         const token = session.access_token;
 
         // Call the new-client API endpoint
-        const response = await authAPI.newClient(coachId, token);
+        const response = await authService.newClient(coachId, token);
 
         if (response.success) {
           // Redirect to welcome screen

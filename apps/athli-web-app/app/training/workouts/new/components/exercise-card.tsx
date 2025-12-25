@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Info, Play, Plus, RefreshCw, Trash2, X } from 'lucide-react';
-import { Exercise, searchExercises } from '@/lib/general/exercise-search';
+import { Exercise, searchExercises } from '@/lib/api/exercise/exercise-search';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -332,7 +332,7 @@ export const ExerciseCard = ({
     setAlternatives(updatedAlternatives);
     setIsAlternativesSearchOpen(false);
     setAlternativesSearchQuery('');
-    
+
     // Notify parent about updated alternatives
     onExerciseChange({
       ...exercise,
@@ -444,14 +444,14 @@ export const ExerciseCard = ({
       repsDrops:
         field === 'reps'
           ? dropsetData.repsDrops.map((drop, idx) =>
-              idx === dropIndex ? { ...drop, value } : drop
-            )
+            idx === dropIndex ? { ...drop, value } : drop
+          )
           : dropsetData.repsDrops,
       weightDrops:
         field === 'weight'
           ? dropsetData.weightDrops.map((drop, idx) =>
-              idx === dropIndex ? { ...drop, value } : drop
-            )
+            idx === dropIndex ? { ...drop, value } : drop
+          )
           : dropsetData.weightDrops,
     };
 
@@ -945,392 +945,392 @@ export const ExerciseCard = ({
       {(exercise.exerciseType === 'weight_reps' ||
         exercise.exerciseType === 'reps' ||
         exercise.exerciseType === 'distance_duration') && (
-        <div className="w-full border rounded-lg overflow-hidden">
-          <Table className="text-[11px] leading-tight">
-            <TableHeader className="bg-transparent">
-              <TableRow className="h-8">
-                <TableHead className="text-center h-8 py-1 px-2">Set</TableHead>
-                <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
-                {exercise.exerciseType === 'distance_duration' ? (
-                  <>
-                    <TableHead className="text-center h-8 py-1 px-2">Distance</TableHead>
-                    <TableHead className="text-center h-8 py-1 px-2">Duration</TableHead>
-                  </>
-                ) : (
-                  <>
-                    <TableHead className="text-center h-8 py-1 px-2">Reps</TableHead>
-                    {exercise.exerciseType === 'weight_reps' && (
-                      <TableHead className="text-center h-8 py-1 px-2">Weight</TableHead>
-                    )}
-                  </>
-                )}
-                <TableHead className="text-center h-8 py-1 px-2">Rest (s)</TableHead>
-                <TableHead className="w-[50px] h-8 py-1 px-2"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sets.map((set, index) => (
-                <TableRow key={index} className="h-10 bg-background">
-                  <TableCell className="font-medium text-center py-1 px-2">{index + 1}</TableCell>
-                  <TableCell className="py-1 px-2 w-[130px]">
-                    <div className="flex justify-center">
-                      <Select
-                        value={set.type}
-                        onValueChange={(value) =>
-                          handleSetChange(index, 'type', value as SetData['type'])
-                        }
-                      >
-                        <SelectTrigger
-                          className="h-6 w-[120px] py-0 px-2 text-[11px] [&>span]:leading-tight"
-                          style={{ minHeight: '24px', height: '24px' }}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="warmUp">Warm up</SelectItem>
-                          <SelectItem value="normal">Normal</SelectItem>
-                          <SelectItem value="failure">Failure</SelectItem>
-                          {exercise.exerciseType === 'weight_reps' && (
-                            <SelectItem value="dropset">Dropset</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </TableCell>
+          <div className="w-full border rounded-lg overflow-hidden">
+            <Table className="text-[11px] leading-tight">
+              <TableHeader className="bg-transparent">
+                <TableRow className="h-8">
+                  <TableHead className="text-center h-8 py-1 px-2">Set</TableHead>
+                  <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
                   {exercise.exerciseType === 'distance_duration' ? (
                     <>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex justify-center">
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            value={set.distance || ''}
-                            onChange={(e) =>
-                              handleNumericInput(e, (value) =>
-                                handleSetChange(index, 'distance', value)
-                              )
-                            }
-                            className={cn(
-                              'h-6 w-[70px] text-center text-[11px]',
-                              validationErrors?.[index]?.distance &&
-                                'border-destructive focus-visible:ring-destructive'
-                            )}
-                            placeholder="-"
-                            disabled={!!set.duration}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex justify-center">
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            value={set.duration || ''}
-                            onChange={(e) =>
-                              handleNumericInput(e, (value) =>
-                                handleSetChange(index, 'duration', value)
-                              )
-                            }
-                            className={cn(
-                              'h-6 w-[70px] text-center text-[11px]',
-                              validationErrors?.[index]?.duration &&
-                                'border-destructive focus-visible:ring-destructive'
-                            )}
-                            placeholder="-"
-                            disabled={!!set.distance}
-                          />
-                        </div>
-                      </TableCell>
-                    </>
-                  ) : set.type === 'dropset' && exercise.exerciseType === 'weight_reps' ? (
-                    <>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex justify-center">
-                          <Popover
-                            open={dropsetPopoverOpen === index}
-                            onOpenChange={(open) => {
-                              if (open) {
-                                handleDropsetInputClick(index);
-                              } else {
-                                setDropsetPopoverOpen(null);
-                                setDropsetData(null);
-                              }
-                            }}
-                          >
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                className={cn(
-                                  'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
-                                  set.reps ? 'w-auto min-w-[70px]' : 'w-[70px]',
-                                  validationErrors?.[index]?.reps &&
-                                    'border-destructive focus-visible:ring-destructive'
-                                )}
-                              >
-                                {set.reps || '-'}
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <div className="flex flex-col gap-3 p-4">
-                                <div className="border rounded-lg overflow-hidden">
-                                  <Table className="text-[11px] leading-tight">
-                                    <TableHeader>
-                                      <TableRow className="h-8">
-                                        <TableHead className="text-center h-8 py-1 px-2">
-                                          Drop
-                                        </TableHead>
-                                        <TableHead className="text-center h-8 py-1 px-2">
-                                          Reps
-                                        </TableHead>
-                                        <TableHead className="text-center h-8 py-1 px-2">
-                                          Weight
-                                        </TableHead>
-                                        <TableHead className="w-[50px] h-8 py-1 px-2"></TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {dropsetData?.setIndex === index &&
-                                        dropsetData.repsDrops.map((drop, dropIndex) => (
-                                          <TableRow key={dropIndex} className="h-10 bg-background">
-                                            <TableCell className="font-medium text-center py-1 px-2">
-                                              {drop.dropNumber}
-                                            </TableCell>
-                                            <TableCell className="py-1 px-2">
-                                              <div className="flex justify-center">
-                                                <Input
-                                                  type="text"
-                                                  inputMode="numeric"
-                                                  value={drop.value}
-                                                  onChange={(e) =>
-                                                    handleNumericInput(e, (value) =>
-                                                      handleDropsetValueChange(
-                                                        dropIndex,
-                                                        'reps',
-                                                        value
-                                                      )
-                                                    )
-                                                  }
-                                                  className="h-6 w-[70px] text-center text-[11px]"
-                                                  placeholder="-"
-                                                />
-                                              </div>
-                                            </TableCell>
-                                            <TableCell className="py-1 px-2">
-                                              <div className="flex justify-center">
-                                                <Input
-                                                  type="text"
-                                                  inputMode="numeric"
-                                                  value={
-                                                    dropsetData.weightDrops[dropIndex]?.value || ''
-                                                  }
-                                                  onChange={(e) =>
-                                                    handleNumericInput(e, (value) =>
-                                                      handleDropsetValueChange(
-                                                        dropIndex,
-                                                        'weight',
-                                                        value
-                                                      )
-                                                    )
-                                                  }
-                                                  className="h-6 w-[70px] text-center text-[11px]"
-                                                  placeholder="-"
-                                                />
-                                              </div>
-                                            </TableCell>
-                                            <TableCell className="w-[50px] py-1 px-2">
-                                              <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
-                                                onClick={() => handleRemoveDrop(dropIndex)}
-                                                aria-label={`Remove drop ${drop.dropNumber}`}
-                                              >
-                                                <X className="h-3.5 w-3.5" />
-                                              </Button>
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      <TableRow className="h-8 bg-background">
-                                        <TableCell colSpan={4} className="text-center py-1 px-2">
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={handleAddDrop}
-                                            className="mx-auto text-[11px] h-6"
-                                          >
-                                            Add drop
-                                          </Button>
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex justify-center">
-                          <button
-                            type="button"
-                            className={cn(
-                              'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
-                              set.weight ? 'w-auto min-w-[70px]' : 'w-[70px]',
-                              validationErrors?.[index]?.weight &&
-                                'border-destructive focus-visible:ring-destructive'
-                            )}
-                            onClick={() => {
-                              if (dropsetPopoverOpen !== index) {
-                                handleDropsetInputClick(index);
-                              }
-                            }}
-                          >
-                            {set.weight || '-'}
-                          </button>
-                        </div>
-                      </TableCell>
-                    </>
-                  ) : set.type === 'failure' &&
-                    (exercise.exerciseType === 'reps' ||
-                      exercise.exerciseType === 'weight_reps') ? (
-                    <>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex justify-center">
-                          <span className="text-xs text-muted-foreground">To failure</span>
-                        </div>
-                      </TableCell>
-                      {exercise.exerciseType === 'weight_reps' && (
-                        <TableCell className="py-1 px-2">
-                          <div className="flex justify-center">
-                            <Input
-                              type="text"
-                              inputMode="numeric"
-                              value={set.weight}
-                              onChange={(e) =>
-                                handleNumericInput(e, (value) =>
-                                  handleSetChange(index, 'weight', value)
-                                )
-                              }
-                              className={cn(
-                                'h-6 w-[70px] text-center text-[11px]',
-                                validationErrors?.[index]?.weight &&
-                                  'border-destructive focus-visible:ring-destructive'
-                              )}
-                              placeholder="-"
-                            />
-                          </div>
-                        </TableCell>
-                      )}
+                      <TableHead className="text-center h-8 py-1 px-2">Distance</TableHead>
+                      <TableHead className="text-center h-8 py-1 px-2">Duration</TableHead>
                     </>
                   ) : (
                     <>
-                      <TableCell className="py-1 px-2">
-                        <div className="flex justify-center">
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            value={set.reps}
-                            onChange={(e) =>
-                              handleNumericInput(e, (value) =>
-                                handleSetChange(index, 'reps', value)
-                              )
-                            }
-                            className={cn(
-                              'h-6 w-[70px] text-center text-[11px]',
-                              validationErrors?.[index]?.reps &&
-                                'border-destructive focus-visible:ring-destructive'
-                            )}
-                            placeholder="-"
-                          />
-                        </div>
-                      </TableCell>
+                      <TableHead className="text-center h-8 py-1 px-2">Reps</TableHead>
                       {exercise.exerciseType === 'weight_reps' && (
+                        <TableHead className="text-center h-8 py-1 px-2">Weight</TableHead>
+                      )}
+                    </>
+                  )}
+                  <TableHead className="text-center h-8 py-1 px-2">Rest (s)</TableHead>
+                  <TableHead className="w-[50px] h-8 py-1 px-2"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sets.map((set, index) => (
+                  <TableRow key={index} className="h-10 bg-background">
+                    <TableCell className="font-medium text-center py-1 px-2">{index + 1}</TableCell>
+                    <TableCell className="py-1 px-2 w-[130px]">
+                      <div className="flex justify-center">
+                        <Select
+                          value={set.type}
+                          onValueChange={(value) =>
+                            handleSetChange(index, 'type', value as SetData['type'])
+                          }
+                        >
+                          <SelectTrigger
+                            className="h-6 w-[120px] py-0 px-2 text-[11px] [&>span]:leading-tight"
+                            style={{ minHeight: '24px', height: '24px' }}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="warmUp">Warm up</SelectItem>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="failure">Failure</SelectItem>
+                            {exercise.exerciseType === 'weight_reps' && (
+                              <SelectItem value="dropset">Dropset</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TableCell>
+                    {exercise.exerciseType === 'distance_duration' ? (
+                      <>
                         <TableCell className="py-1 px-2">
                           <div className="flex justify-center">
                             <Input
                               type="text"
                               inputMode="numeric"
-                              value={set.weight}
+                              value={set.distance || ''}
                               onChange={(e) =>
                                 handleNumericInput(e, (value) =>
-                                  handleSetChange(index, 'weight', value)
+                                  handleSetChange(index, 'distance', value)
                                 )
                               }
                               className={cn(
                                 'h-6 w-[70px] text-center text-[11px]',
+                                validationErrors?.[index]?.distance &&
+                                'border-destructive focus-visible:ring-destructive'
+                              )}
+                              placeholder="-"
+                              disabled={!!set.duration}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
+                          <div className="flex justify-center">
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={set.duration || ''}
+                              onChange={(e) =>
+                                handleNumericInput(e, (value) =>
+                                  handleSetChange(index, 'duration', value)
+                                )
+                              }
+                              className={cn(
+                                'h-6 w-[70px] text-center text-[11px]',
+                                validationErrors?.[index]?.duration &&
+                                'border-destructive focus-visible:ring-destructive'
+                              )}
+                              placeholder="-"
+                              disabled={!!set.distance}
+                            />
+                          </div>
+                        </TableCell>
+                      </>
+                    ) : set.type === 'dropset' && exercise.exerciseType === 'weight_reps' ? (
+                      <>
+                        <TableCell className="py-1 px-2">
+                          <div className="flex justify-center">
+                            <Popover
+                              open={dropsetPopoverOpen === index}
+                              onOpenChange={(open) => {
+                                if (open) {
+                                  handleDropsetInputClick(index);
+                                } else {
+                                  setDropsetPopoverOpen(null);
+                                  setDropsetData(null);
+                                }
+                              }}
+                            >
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className={cn(
+                                    'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
+                                    set.reps ? 'w-auto min-w-[70px]' : 'w-[70px]',
+                                    validationErrors?.[index]?.reps &&
+                                    'border-destructive focus-visible:ring-destructive'
+                                  )}
+                                >
+                                  {set.reps || '-'}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <div className="flex flex-col gap-3 p-4">
+                                  <div className="border rounded-lg overflow-hidden">
+                                    <Table className="text-[11px] leading-tight">
+                                      <TableHeader>
+                                        <TableRow className="h-8">
+                                          <TableHead className="text-center h-8 py-1 px-2">
+                                            Drop
+                                          </TableHead>
+                                          <TableHead className="text-center h-8 py-1 px-2">
+                                            Reps
+                                          </TableHead>
+                                          <TableHead className="text-center h-8 py-1 px-2">
+                                            Weight
+                                          </TableHead>
+                                          <TableHead className="w-[50px] h-8 py-1 px-2"></TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {dropsetData?.setIndex === index &&
+                                          dropsetData.repsDrops.map((drop, dropIndex) => (
+                                            <TableRow key={dropIndex} className="h-10 bg-background">
+                                              <TableCell className="font-medium text-center py-1 px-2">
+                                                {drop.dropNumber}
+                                              </TableCell>
+                                              <TableCell className="py-1 px-2">
+                                                <div className="flex justify-center">
+                                                  <Input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={drop.value}
+                                                    onChange={(e) =>
+                                                      handleNumericInput(e, (value) =>
+                                                        handleDropsetValueChange(
+                                                          dropIndex,
+                                                          'reps',
+                                                          value
+                                                        )
+                                                      )
+                                                    }
+                                                    className="h-6 w-[70px] text-center text-[11px]"
+                                                    placeholder="-"
+                                                  />
+                                                </div>
+                                              </TableCell>
+                                              <TableCell className="py-1 px-2">
+                                                <div className="flex justify-center">
+                                                  <Input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={
+                                                      dropsetData.weightDrops[dropIndex]?.value || ''
+                                                    }
+                                                    onChange={(e) =>
+                                                      handleNumericInput(e, (value) =>
+                                                        handleDropsetValueChange(
+                                                          dropIndex,
+                                                          'weight',
+                                                          value
+                                                        )
+                                                      )
+                                                    }
+                                                    className="h-6 w-[70px] text-center text-[11px]"
+                                                    placeholder="-"
+                                                  />
+                                                </div>
+                                              </TableCell>
+                                              <TableCell className="w-[50px] py-1 px-2">
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
+                                                  onClick={() => handleRemoveDrop(dropIndex)}
+                                                  aria-label={`Remove drop ${drop.dropNumber}`}
+                                                >
+                                                  <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        <TableRow className="h-8 bg-background">
+                                          <TableCell colSpan={4} className="text-center py-1 px-2">
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={handleAddDrop}
+                                              className="mx-auto text-[11px] h-6"
+                                            >
+                                              Add drop
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
+                          <div className="flex justify-center">
+                            <button
+                              type="button"
+                              className={cn(
+                                'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
+                                set.weight ? 'w-auto min-w-[70px]' : 'w-[70px]',
                                 validationErrors?.[index]?.weight &&
+                                'border-destructive focus-visible:ring-destructive'
+                              )}
+                              onClick={() => {
+                                if (dropsetPopoverOpen !== index) {
+                                  handleDropsetInputClick(index);
+                                }
+                              }}
+                            >
+                              {set.weight || '-'}
+                            </button>
+                          </div>
+                        </TableCell>
+                      </>
+                    ) : set.type === 'failure' &&
+                      (exercise.exerciseType === 'reps' ||
+                        exercise.exerciseType === 'weight_reps') ? (
+                      <>
+                        <TableCell className="py-1 px-2">
+                          <div className="flex justify-center">
+                            <span className="text-xs text-muted-foreground">To failure</span>
+                          </div>
+                        </TableCell>
+                        {exercise.exerciseType === 'weight_reps' && (
+                          <TableCell className="py-1 px-2">
+                            <div className="flex justify-center">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                value={set.weight}
+                                onChange={(e) =>
+                                  handleNumericInput(e, (value) =>
+                                    handleSetChange(index, 'weight', value)
+                                  )
+                                }
+                                className={cn(
+                                  'h-6 w-[70px] text-center text-[11px]',
+                                  validationErrors?.[index]?.weight &&
                                   'border-destructive focus-visible:ring-destructive'
+                                )}
+                                placeholder="-"
+                              />
+                            </div>
+                          </TableCell>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <TableCell className="py-1 px-2">
+                          <div className="flex justify-center">
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              value={set.reps}
+                              onChange={(e) =>
+                                handleNumericInput(e, (value) =>
+                                  handleSetChange(index, 'reps', value)
+                                )
+                              }
+                              className={cn(
+                                'h-6 w-[70px] text-center text-[11px]',
+                                validationErrors?.[index]?.reps &&
+                                'border-destructive focus-visible:ring-destructive'
                               )}
                               placeholder="-"
                             />
                           </div>
                         </TableCell>
-                      )}
-                    </>
-                  )}
-                  <TableCell className="py-1 px-2">
-                    <div className="flex justify-center">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={set.rest}
-                        onChange={(e) =>
-                          handleNumericInput(e, (value) => handleSetChange(index, 'rest', value))
-                        }
-                        className={cn(
-                          'h-6 w-[70px] text-center text-[11px]',
-                          validationErrors?.[index]?.rest &&
-                            'border-destructive focus-visible:ring-destructive'
+                        {exercise.exerciseType === 'weight_reps' && (
+                          <TableCell className="py-1 px-2">
+                            <div className="flex justify-center">
+                              <Input
+                                type="text"
+                                inputMode="numeric"
+                                value={set.weight}
+                                onChange={(e) =>
+                                  handleNumericInput(e, (value) =>
+                                    handleSetChange(index, 'weight', value)
+                                  )
+                                }
+                                className={cn(
+                                  'h-6 w-[70px] text-center text-[11px]',
+                                  validationErrors?.[index]?.weight &&
+                                  'border-destructive focus-visible:ring-destructive'
+                                )}
+                                placeholder="-"
+                              />
+                            </div>
+                          </TableCell>
                         )}
-                        placeholder="1"
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-1 px-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
-                      onClick={() => {
-                        setSets((prev) => prev.filter((_, i) => i !== index));
-                      }}
-                      aria-label={`Remove set ${index + 1}`}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!isSingleSetOnly && (
-                <TableRow
-                  className="h-8 bg-background cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={handleAddSet}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleAddSet();
-                    }
-                  }}
-                  aria-label="Add set"
-                >
-                  <TableCell
-                    colSpan={exercise.exerciseType === 'reps' ? 5 : 6}
-                    className="text-center py-1 text-[11px]"
+                      </>
+                    )}
+                    <TableCell className="py-1 px-2">
+                      <div className="flex justify-center">
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={set.rest}
+                          onChange={(e) =>
+                            handleNumericInput(e, (value) => handleSetChange(index, 'rest', value))
+                          }
+                          className={cn(
+                            'h-6 w-[70px] text-center text-[11px]',
+                            validationErrors?.[index]?.rest &&
+                            'border-destructive focus-visible:ring-destructive'
+                          )}
+                          placeholder="1"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-1 px-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
+                        onClick={() => {
+                          setSets((prev) => prev.filter((_, i) => i !== index));
+                        }}
+                        aria-label={`Remove set ${index + 1}`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {!isSingleSetOnly && (
+                  <TableRow
+                    className="h-8 bg-background cursor-pointer hover:bg-accent/50 transition-colors"
+                    onClick={handleAddSet}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleAddSet();
+                      }
+                    }}
+                    aria-label="Add set"
                   >
-                    Add set
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                    <TableCell
+                      colSpan={exercise.exerciseType === 'reps' ? 5 : 6}
+                      className="text-center py-1 text-[11px]"
+                    >
+                      Add set
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
         <DialogContent
           className="w-full max-w-[60vw] sm:max-w-[60vw] max-h-[85vh] flex flex-col overflow-y-auto"

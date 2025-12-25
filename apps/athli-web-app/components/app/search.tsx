@@ -26,7 +26,10 @@ import {
   mockMessages,
 } from './mock-data';
 import type { Athlete, Contact, Workout, Program, Exercise } from './types';
-import { getForms, type Form } from '@/lib/coach/coach-form-service';
+import { getCheckIns, type CheckIn } from '@/lib/api/coach/coach-check-in-service';
+import { getQuestionnaires, type Questionnaire } from '@/lib/api/coach/coach-questionnaire-service';
+
+type Form = CheckIn | Questionnaire;
 import { FileText } from 'lucide-react';
 
 type FileItem = {
@@ -174,7 +177,11 @@ export function SearchComponent() {
     setIsClient(true);
     const loadForms = async () => {
       try {
-        const formsData = await getForms();
+        const [checkIns, questionnaires] = await Promise.all([
+          getCheckIns(),
+          getQuestionnaires(),
+        ]);
+        const formsData = [...checkIns, ...questionnaires];
         setForms(formsData);
       } catch (error) {
         console.error('Failed to load forms:', error);
@@ -717,10 +724,10 @@ export function SearchComponent() {
                         <>
                           {(athleteSearchResults.length > 0 ||
                             workoutSearchResults.length > 0) && (
-                            <div className="px-3 pt-4 pb-1">
-                              <div className="h-px bg-border" />
-                            </div>
-                          )}
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
                           <div className="px-3 pb-1 pt-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t('sidebar.search.programs')}
@@ -787,10 +794,10 @@ export function SearchComponent() {
                           {(athleteSearchResults.length > 0 ||
                             workoutSearchResults.length > 0 ||
                             programSearchResults.length > 0) && (
-                            <div className="px-3 pt-4 pb-1">
-                              <div className="h-px bg-border" />
-                            </div>
-                          )}
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
                           <div className="px-3 pb-1 pt-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t('sidebar.search.exercises')}
@@ -855,10 +862,10 @@ export function SearchComponent() {
                             workoutSearchResults.length > 0 ||
                             programSearchResults.length > 0 ||
                             exerciseSearchResults.length > 0) && (
-                            <div className="px-3 pt-4 pb-1">
-                              <div className="h-px bg-border" />
-                            </div>
-                          )}
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
                           <div className="px-3 pb-1 pt-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t('sidebar.search.files')}
@@ -924,10 +931,10 @@ export function SearchComponent() {
                             programSearchResults.length > 0 ||
                             exerciseSearchResults.length > 0 ||
                             fileSearchResults.length > 0) && (
-                            <div className="px-3 pt-4 pb-1">
-                              <div className="h-px bg-border" />
-                            </div>
-                          )}
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
                           <div className="px-3 pb-1 pt-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t('sidebar.search.forms')}
@@ -990,10 +997,10 @@ export function SearchComponent() {
                             exerciseSearchResults.length > 0 ||
                             fileSearchResults.length > 0 ||
                             formSearchResults.length > 0) && (
-                            <div className="px-3 pt-4 pb-1">
-                              <div className="h-px bg-border" />
-                            </div>
-                          )}
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
                           <div className="px-3 pb-1 pt-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t('sidebar.search.habits')}
@@ -1059,10 +1066,10 @@ export function SearchComponent() {
                             fileSearchResults.length > 0 ||
                             formSearchResults.length > 0 ||
                             habitSearchResults.length > 0) && (
-                            <div className="px-3 pt-4 pb-1">
-                              <div className="h-px bg-border" />
-                            </div>
-                          )}
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
                           <div className="px-3 pb-1 pt-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t('sidebar.search.flows')}
@@ -1127,10 +1134,10 @@ export function SearchComponent() {
                             formSearchResults.length > 0 ||
                             habitSearchResults.length > 0 ||
                             flowSearchResults.length > 0) && (
-                            <div className="px-3 pt-4 pb-1">
-                              <div className="h-px bg-border" />
-                            </div>
-                          )}
+                              <div className="px-3 pt-4 pb-1">
+                                <div className="h-px bg-border" />
+                              </div>
+                            )}
                           <div className="px-3 pb-1 pt-2">
                             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {t('sidebar.search.messages')}

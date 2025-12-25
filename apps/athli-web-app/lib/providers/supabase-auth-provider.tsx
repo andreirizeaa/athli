@@ -20,9 +20,9 @@ interface AuthContextType {
   supabaseUser: User | null;
   isLoading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
-  verifyOTP: (email: string, token: string) => Promise<void>;
+  verifyOTP: (email: string, token: string) => Promise<any>;
   resendOTP: (email: string) => Promise<void>;
   resetPasswordForEmail: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
@@ -89,7 +89,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
               email: currentUser.email || '',
               name: (currentUser.user_metadata?.name as string) || '',
               profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
-                                 (currentUser.user_metadata?.picture as string) || null,
+                (currentUser.user_metadata?.picture as string) || null,
               signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
               isActive: true,
             });
@@ -127,7 +127,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         email: currentUser.email || '',
         name: (currentUser.user_metadata?.name as string) || '',
         profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
-                           (currentUser.user_metadata?.picture as string) || null,
+          (currentUser.user_metadata?.picture as string) || null,
         signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
         isActive: true,
       });

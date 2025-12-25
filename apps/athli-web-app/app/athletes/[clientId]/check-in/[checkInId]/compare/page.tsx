@@ -27,8 +27,8 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/client/client-form-service';
-import type { Question, QuestionAnswer } from '@/lib/client/client-form-service';
+import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/api/client/client-form-service';
+import type { Question, QuestionAnswer } from '@/lib/api/client/client-form-service';
 import { cn } from '@/lib/general/utils';
 import Image from 'next/image';
 
@@ -226,9 +226,8 @@ const ComparePage = () => {
             {[1, 2, 3, 4, 5].map((star) => (
               <svg
                 key={star}
-                className={`w-5 h-5 ${
-                  star <= (answer.answer as number) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                }`}
+                className={`w-5 h-5 ${star <= (answer.answer as number) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+                  }`}
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"

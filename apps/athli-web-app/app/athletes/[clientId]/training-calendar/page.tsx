@@ -57,7 +57,7 @@ import {
   getTrainingCalendar,
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
-} from '@/lib/client/client-athlete-service';
+} from '@/lib/api/client/client-service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -118,7 +118,7 @@ const ClientTrainingCalendarPage = () => {
   const [workoutStatus, setWorkoutStatus] = useState<{
     [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
   }>({});
-  
+
   // Track set completion status
   // Format: { [workoutId]: { [exerciseInstanceId]: { [setNumber]: 'not_started' | 'completed' } } }
   const [setStatus, setSetStatus] = useState<{
@@ -338,19 +338,19 @@ const ClientTrainingCalendarPage = () => {
   const handleToday = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Calculate the difference in days between today and startDate
     const diffTime = today.getTime() - startDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
+
     // Calculate which week contains today
     // Week 1 starts at startDate (Monday)
     const weekNumber = Math.floor(diffDays / 7) + 1;
-    
+
     // Allow week numbers from any past date up to totalWeeks
     // Only clamp the upper bound to prevent going too far into the future
     const maxWeek = totalWeeks;
-    
+
     if (weekNumber <= maxWeek) {
       setCurrentWeek(weekNumber);
     } else {
@@ -393,41 +393,41 @@ const ClientTrainingCalendarPage = () => {
   }): { [date: string]: Array<Workout & { id: string }> } => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const oneYearAgo = new Date(today);
     oneYearAgo.setFullYear(today.getFullYear() - 1);
-    
+
     const oneYearFromNow = new Date(today);
     oneYearFromNow.setFullYear(today.getFullYear() + 1);
-    
+
     // Initialize schema with all days from -1 year to +1 year
     const schema: { [date: string]: Array<Workout & { id: string }> } = {};
-    
+
     const currentDate = new Date(oneYearAgo);
     while (currentDate <= oneYearFromNow) {
       const dateKey = formatDateForSchema(currentDate);
       schema[dateKey] = [];
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     // Populate workouts into their respective days
     Object.keys(workouts).forEach((dateKey) => {
       // dateKey is in YYYY-MM-DD format
       const [year, month, day] = dateKey.split('-').map(Number);
       const date = new Date(year, month - 1, day);
       date.setHours(0, 0, 0, 0);
-      
+
       // Only include dates within the range
       if (date >= oneYearAgo && date <= oneYearFromNow) {
         const formattedDate = formatDateForSchema(date);
-        
+
         if (schema[formattedDate]) {
           // Add all workouts for this date
           schema[formattedDate].push(...workouts[dateKey]);
         }
       }
     });
-    
+
     return schema;
   };
 
@@ -439,12 +439,12 @@ const ClientTrainingCalendarPage = () => {
       try {
         // Load training calendar
         const calendar = await getTrainingCalendar(clientId);
-        
+
         // Convert calendar format from dd-mm-yyyy to YYYY-MM-DD
         const convertedCalendar: {
           [dateKey: string]: Array<Workout & { id: string }>;
         } = {};
-        
+
         Object.keys(calendar).forEach((dateKey) => {
           // dateKey is in dd-mm-yyyy format
           const [day, month, year] = dateKey.split('-').map(Number);
@@ -455,21 +455,21 @@ const ClientTrainingCalendarPage = () => {
             id: workout.id,
           }));
         });
-        
+
         setWorkoutsByDate(convertedCalendar);
 
         // Load completion logs
         const completionLogs = await getTrainingCalendarCompletionLogs(clientId);
-        
+
         // Convert completion logs to state format
         const workoutStatusMap: {
           [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
         } = {};
-        
+
         completionLogs.workouts.forEach((workout) => {
           workoutStatusMap[workout.workoutId] = workout.status;
         });
-        
+
         setWorkoutStatus(workoutStatusMap);
 
         const setStatusMap: {
@@ -479,7 +479,7 @@ const ClientTrainingCalendarPage = () => {
             };
           };
         } = {};
-        
+
         completionLogs.sets.forEach((set) => {
           if (!setStatusMap[set.workoutId]) {
             setStatusMap[set.workoutId] = {};
@@ -489,7 +489,7 @@ const ClientTrainingCalendarPage = () => {
           }
           setStatusMap[set.workoutId][set.exerciseInstanceId][set.setNumber] = set.status;
         });
-        
+
         setSetStatus(setStatusMap);
 
         // Load section completion status (for AMRAP and timed sections)
@@ -498,14 +498,14 @@ const ClientTrainingCalendarPage = () => {
             [sectionId: string]: 'not_started' | 'in_progress' | 'completed';
           };
         } = {};
-        
+
         completionLogs.sections?.forEach((section) => {
           if (!sectionStatusMap[section.workoutId]) {
             sectionStatusMap[section.workoutId] = {};
           }
           sectionStatusMap[section.workoutId][section.sectionId] = section.status;
         });
-        
+
         setSectionStatus(sectionStatusMap);
       } catch (error) {
         console.error('Failed to load training data:', error);
@@ -560,7 +560,7 @@ const ClientTrainingCalendarPage = () => {
       if (workoutId && workoutName) {
         // Open workout modal for today's date
         setSelectedDateForWorkout(today);
-        
+
         // Find and select the workout first
         const workout = mockWorkouts.find((w) => w.id === workoutId);
         if (workout) {
@@ -569,11 +569,11 @@ const ClientTrainingCalendarPage = () => {
           setWorkoutSearchQuery(decodedWorkoutName);
           setSelectedWorkout(workout);
         }
-        
+
         // Prevent auto-focus when opened via query params
         setPreventAutoFocus(true);
         setIsAddWorkoutModalOpen(true);
-        
+
         // Clean up URL params
         const newSearchParams = new URLSearchParams(searchParams.toString());
         newSearchParams.delete('openModal');
@@ -583,7 +583,7 @@ const ClientTrainingCalendarPage = () => {
       } else if (programId && programName) {
         // Open program modal for today's date
         setProgramStartDate(today);
-        
+
         // Find and select the program first
         const program = mockPrograms.find((p) => p.id === programId);
         if (program) {
@@ -592,11 +592,11 @@ const ClientTrainingCalendarPage = () => {
           setProgramSearchQuery(decodedProgramName);
           setSelectedProgram(program);
         }
-        
+
         // Prevent auto-focus when opened via query params
         setPreventAutoFocus(true);
         setIsAddProgramModalOpen(true);
-        
+
         // Clean up URL params
         const newSearchParams = new URLSearchParams(searchParams.toString());
         newSearchParams.delete('openModal');
@@ -608,7 +608,7 @@ const ClientTrainingCalendarPage = () => {
         setSelectedDateForWorkout(today);
         setPreventAutoFocus(true);
         setIsAddWorkoutModalOpen(true);
-        
+
         // Clean up URL params
         const newSearchParams = new URLSearchParams(searchParams.toString());
         newSearchParams.delete('openModal');
@@ -619,7 +619,7 @@ const ClientTrainingCalendarPage = () => {
         setProgramStartDate(today);
         setPreventAutoFocus(true);
         setIsAddProgramModalOpen(true);
-        
+
         // Clean up URL params
         const newSearchParams = new URLSearchParams(searchParams.toString());
         newSearchParams.delete('openModal');
@@ -633,7 +633,7 @@ const ClientTrainingCalendarPage = () => {
   useEffect(() => {
     const schema = buildTrainingCalendarSchema(workoutsByDate);
     console.log('Training Calendar Schema:', schema);
-    
+
     // Call the service to update the training calendar
     if (clientId) {
       updateTrainingCalendar(clientId, schema).catch((error) => {
@@ -665,15 +665,15 @@ const ClientTrainingCalendarPage = () => {
 
   const getWeekRange = () => {
     const weeksView = parseInt(selectedWeek, 10);
-    
+
     // Get the first Monday (start of first week)
     const startDate = calendarDates[0]?.[0];
     if (!startDate) return '';
-    
+
     // Get the last Sunday (end of last week) - index 6 is Sunday
     const endDate = calendarDates[weeksView - 1]?.[6];
     if (!endDate) return '';
-    
+
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
@@ -758,14 +758,14 @@ const ClientTrainingCalendarPage = () => {
   ): 'not_started' | 'in_progress' | 'completed' => {
     // Get explicit workout status from API (handles case where user clicked start but hasn't completed sets)
     const explicitStatus = workoutStatus[workoutId];
-    
+
     if (!workoutSchema) {
       // If no schema, use explicit status or check tracked sets
       const workoutSets = setStatus[workoutId];
       if (!workoutSets) {
         return explicitStatus || 'not_started';
       }
-      
+
       // Fallback: use sets that have status tracked
       const allSetStatuses: Array<'not_started' | 'completed'> = [];
       Object.values(workoutSets).forEach((exerciseSets) => {
@@ -773,25 +773,25 @@ const ClientTrainingCalendarPage = () => {
           allSetStatuses.push(setStatusValue);
         });
       });
-      
+
       if (allSetStatuses.length === 0) {
         return explicitStatus || 'not_started';
       }
-      
+
       const allCompleted = allSetStatuses.every((status) => status === 'completed');
       if (allCompleted) return 'completed';
-      
+
       const allNotStarted = allSetStatuses.every((status) => status === 'not_started');
       if (allNotStarted) {
         return explicitStatus === 'in_progress' ? 'in_progress' : 'not_started';
       }
-      
+
       return 'in_progress';
     }
-    
+
     // Collect status for all sections
     const sectionStatuses: Array<'not_started' | 'in_progress' | 'completed'> = [];
-    
+
     workoutSchema.forEach((section) => {
       if (section.type === 'amrap' || section.type === 'timed') {
         // For AMRAP and timed sections, use section-level status
@@ -806,14 +806,14 @@ const ClientTrainingCalendarPage = () => {
             setStatuses.push(status);
           });
         });
-        
+
         // Convert set statuses to section status
         if (setStatuses.length === 0) {
           sectionStatuses.push('not_started');
         } else {
           const allCompleted = setStatuses.every((status) => status === 'completed');
           const allNotStarted = setStatuses.every((status) => status === 'not_started');
-          
+
           if (allCompleted) {
             sectionStatuses.push('completed');
           } else if (allNotStarted) {
@@ -824,24 +824,24 @@ const ClientTrainingCalendarPage = () => {
         }
       }
     });
-    
+
     if (sectionStatuses.length === 0) {
       return explicitStatus || 'not_started';
     }
-    
+
     // Check if all sections are completed
     const allCompleted = sectionStatuses.every((status) => status === 'completed');
     if (allCompleted) {
       return 'completed';
     }
-    
+
     // Check if all sections are not_started
     const allNotStarted = sectionStatuses.every((status) => status === 'not_started');
     if (allNotStarted) {
       // If explicit status is 'in_progress', user started the workout but hasn't completed any sections
       return explicitStatus === 'in_progress' ? 'in_progress' : 'not_started';
     }
-    
+
     // Mixed state: some completed, some not → in_progress
     return 'in_progress';
   };
@@ -1041,7 +1041,7 @@ const ClientTrainingCalendarPage = () => {
             current.setDate(current.getDate() + daysInterval);
           }
         } else {
-      addToDate(selectedDateForWorkout);
+          addToDate(selectedDateForWorkout);
         }
       } else if (selectedScheduleOption === 'weekly' && weeklyDayInput) {
         const dayOfWeek = parseInt(weeklyDayInput, 10);
@@ -1087,15 +1087,15 @@ const ClientTrainingCalendarPage = () => {
     const [year, month, day] = dateKey.split('-').map(Number);
     const workoutDate = new Date(year, month - 1, day);
     workoutDate.setHours(0, 0, 0, 0);
-    
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // If workout is in the future, navigate to edit page instead of opening side panel
     if (workoutDate > today) {
       // Build workout schema
       const workoutSchema = buildWorkoutSchema(workout);
-      
+
       // Store workout schema and view state in localStorage
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('oneninety_workout_schema', JSON.stringify({ sections: workoutSchema }));
@@ -1114,12 +1114,12 @@ const ClientTrainingCalendarPage = () => {
         // Store workout date for breadcrumb
         window.localStorage.setItem('oneninety_workout_date', dateKey);
       }
-      
+
       // Navigate to edit page
       router.push(`/athletes/${clientId}/training-calendar/${workout.id}/edit`);
       return;
     }
-    
+
     // For past or today workouts, open side panel as before
     setSelectedWorkoutDetails({ dateKey, workout });
   };
@@ -1263,22 +1263,22 @@ const ClientTrainingCalendarPage = () => {
       setSelectedCalendarDate(undefined);
       return;
     }
-    
+
     const selectedDate = new Date(date);
     selectedDate.setHours(0, 0, 0, 0);
     setSelectedCalendarDate(selectedDate);
-    
+
     // Find the Monday of the week that contains the selected date
     const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Convert to Monday = 0
     const mondayOfSelectedWeek = new Date(selectedDate);
     mondayOfSelectedWeek.setDate(selectedDate.getDate() + daysToMonday);
     mondayOfSelectedWeek.setHours(0, 0, 0, 0);
-    
+
     // Calculate the difference in days between the Monday of selected week and startDate
     const diffTime = mondayOfSelectedWeek.getTime() - startDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    
+
     // Calculate which week contains the selected date
     // Week 1 starts at startDate (Monday)
     // For dates before startDate, weekNumber can be 0 or negative
@@ -1292,11 +1292,11 @@ const ClientTrainingCalendarPage = () => {
       // Math.ceil(-7/7) = -1, so -1 + 1 = 0 (correct for 1 week before)
       weekNumber = Math.ceil(diffDays / 7) + 1;
     }
-    
+
     // Allow week numbers from any past date up to totalWeeks
     // Only clamp the upper bound to prevent going too far into the future
     const maxWeek = totalWeeks;
-    
+
     const finalWeekNumber = weekNumber <= maxWeek ? weekNumber : maxWeek;
     setCurrentWeek(finalWeekNumber);
     setIsCalendarOpen(false);
@@ -1307,155 +1307,155 @@ const ClientTrainingCalendarPage = () => {
       <Card className="w-full flex flex-col p-0 rounded-none border-0 shadow-none" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
         <div className="w-full relative flex-shrink-0">
           <div className="w-full px-3 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3 px-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleToday}
-              className="h-8 border-primary"
-              aria-label={t('athletes.trainingCalendar.goToToday')}
-            >
-              {t('athletes.trainingCalendar.today')}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handlePreviousWeek}
-              className="h-8 w-8"
-              aria-label={t('athletes.trainingCalendar.previousWeek')}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <div className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
-                  <Calendar className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{getWeekRange()}</span>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  key={`${currentWeek}-${calendarDates[0]?.[0]?.getTime()}`}
-                  mode="single"
-                  selected={selectedCalendarDate || calendarDates[0]?.[0]}
-                  onSelect={handleDateSelect}
-                  defaultMonth={calendarDates[0]?.[0]}
-                  initialFocus
-                  captionLayout="dropdown"
-                  fromYear={2020}
-                  toYear={2030}
-                />
-              </PopoverContent>
-            </Popover>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleNextWeek}
-              disabled={
-                (() => {
-                  const weeksView = parseInt(selectedWeek, 10);
-                  const maxStartWeek = totalWeeks - weeksView + 1;
-                  return currentWeek >= maxStartWeek;
-                })()
-              }
-              className="h-8 w-8"
-              aria-label={t('athletes.trainingCalendar.nextWeek')}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleUndo}
-              disabled={historyIndex <= 0}
-              className="h-8 w-8 p-0"
-              aria-label={t('athletes.trainingCalendar.undo')}
-            >
-              <Undo className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
-              className="h-8 w-8 p-0"
-              aria-label={t('athletes.trainingCalendar.redo')}
-            >
-              <Redo className="size-4" />
-            </Button>
-          </div>
-          <Tabs value={selectedWeek} onValueChange={setSelectedWeek}>
-            <TabsList className="w-auto">
-              <TabsTrigger
-                value="1"
-                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                title={t('athletes.trainingCalendar.showOneWeek')}
+            <div className="flex items-center gap-3 px-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleToday}
+                className="h-8 border-primary"
+                aria-label={t('athletes.trainingCalendar.goToToday')}
               >
-                {t('athletes.trainingCalendar.oneWeek')}
-              </TabsTrigger>
-              <TabsTrigger
-                value="2"
-                disabled={!is2WeeksAvailable}
-                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                title={
-                  is2WeeksAvailable
-                    ? t('athletes.trainingCalendar.showTwoWeeks')
-                    : t('athletes.trainingCalendar.twoWeeksRequirement')
+                {t('athletes.trainingCalendar.today')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handlePreviousWeek}
+                className="h-8 w-8"
+                aria-label={t('athletes.trainingCalendar.previousWeek')}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <div className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
+                    <Calendar className="size-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{getWeekRange()}</span>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    key={`${currentWeek}-${calendarDates[0]?.[0]?.getTime()}`}
+                    mode="single"
+                    selected={selectedCalendarDate || calendarDates[0]?.[0]}
+                    onSelect={handleDateSelect}
+                    defaultMonth={calendarDates[0]?.[0]}
+                    initialFocus
+                    captionLayout="dropdown"
+                    fromYear={2020}
+                    toYear={2030}
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleNextWeek}
+                disabled={
+                  (() => {
+                    const weeksView = parseInt(selectedWeek, 10);
+                    const maxStartWeek = totalWeeks - weeksView + 1;
+                    return currentWeek >= maxStartWeek;
+                  })()
                 }
+                className="h-8 w-8"
+                aria-label={t('athletes.trainingCalendar.nextWeek')}
               >
-                {t('athletes.trainingCalendar.twoWeeks')}
-              </TabsTrigger>
-              <TabsTrigger
-                value="4"
-                disabled={!is4WeeksAvailable}
-                className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                title={
-                  is4WeeksAvailable
-                    ? t('athletes.trainingCalendar.showFourWeeks')
-                    : t('athletes.trainingCalendar.fourWeeksRequirement')
-                }
+                <ChevronRight className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleUndo}
+                disabled={historyIndex <= 0}
+                className="h-8 w-8 p-0"
+                aria-label={t('athletes.trainingCalendar.undo')}
               >
-                {t('athletes.trainingCalendar.fourWeeks')}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
-      <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col">
-        {/* Day names header - only at the top */}
-        <div className="flex gap-4 flex-shrink-0 mb-1">
-          {calendarDates[0]?.map((date, dayIndex) => (
-            <div key={dayIndex} className="flex-1">
-              <div className="px-3">
-                <span className="text-xs uppercase text-muted-foreground">{dayNames[dayIndex]}</span>
-              </div>
+                <Undo className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRedo}
+                disabled={historyIndex >= history.length - 1}
+                className="h-8 w-8 p-0"
+                aria-label={t('athletes.trainingCalendar.redo')}
+              >
+                <Redo className="size-4" />
+              </Button>
             </div>
-          ))}
+            <Tabs value={selectedWeek} onValueChange={setSelectedWeek}>
+              <TabsList className="w-auto">
+                <TabsTrigger
+                  value="1"
+                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                  title={t('athletes.trainingCalendar.showOneWeek')}
+                >
+                  {t('athletes.trainingCalendar.oneWeek')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="2"
+                  disabled={!is2WeeksAvailable}
+                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    is2WeeksAvailable
+                      ? t('athletes.trainingCalendar.showTwoWeeks')
+                      : t('athletes.trainingCalendar.twoWeeksRequirement')
+                  }
+                >
+                  {t('athletes.trainingCalendar.twoWeeks')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="4"
+                  disabled={!is4WeeksAvailable}
+                  className="data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    is4WeeksAvailable
+                      ? t('athletes.trainingCalendar.showFourWeeks')
+                      : t('athletes.trainingCalendar.fourWeeksRequirement')
+                  }
+                >
+                  {t('athletes.trainingCalendar.fourWeeks')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        {/* Calendar rows - one row per week */}
-        <div className="flex-1 flex flex-col min-h-0" style={{ gap: '1rem' }}>
-          {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
-            const weekDates = calendarDates[rowIndex] || [];
-            const rowsCount = getRowsCount();
-            // Calculate height: (100% - gaps) / rowsCount
-            // Each gap is 1rem, so we calculate: calc((100% - (n-1) * 1rem) / n)
-            const gapCount = rowsCount - 1;
-            return (
-              <div 
-                key={rowIndex} 
-                className="flex gap-4 min-h-0 flex-shrink-0" 
-                style={{ 
-                  height: gapCount > 0 
-                    ? `calc((100% - ${gapCount} * 1rem) / ${rowsCount})`
-                    : '100%'
-                }}
-              >
+        <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col">
+          {/* Day names header - only at the top */}
+          <div className="flex gap-4 flex-shrink-0 mb-1">
+            {calendarDates[0]?.map((date, dayIndex) => (
+              <div key={dayIndex} className="flex-1">
+                <div className="px-3">
+                  <span className="text-xs uppercase text-muted-foreground">{dayNames[dayIndex]}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Calendar rows - one row per week */}
+          <div className="flex-1 flex flex-col min-h-0" style={{ gap: '1rem' }}>
+            {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
+              const weekDates = calendarDates[rowIndex] || [];
+              const rowsCount = getRowsCount();
+              // Calculate height: (100% - gaps) / rowsCount
+              // Each gap is 1rem, so we calculate: calc((100% - (n-1) * 1rem) / n)
+              const gapCount = rowsCount - 1;
+              return (
+                <div
+                  key={rowIndex}
+                  className="flex gap-4 min-h-0 flex-shrink-0"
+                  style={{
+                    height: gapCount > 0
+                      ? `calc((100% - ${gapCount} * 1rem) / ${rowsCount})`
+                      : '100%'
+                  }}
+                >
                   {weekDates.map((date, dayIndex) => {
                     const dateKey = getDateKey(date);
                     const workoutsForDate = workoutsByDate[dateKey] ?? [];
@@ -1586,34 +1586,34 @@ const ClientTrainingCalendarPage = () => {
               );
             })}
           </div>
-      </div>
-      <Dialog
-        open={isAddWorkoutModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseAddWorkoutModal();
-            setPreventAutoFocus(false);
-          } else {
-            setIsAddWorkoutModalOpen(open);
-          }
-        }}
-      >
-        <DialogContent 
-          className="max-w-6xl sm:max-w-6xl h-[600px] flex flex-col"
-          onOpenAutoFocus={(e) => {
-            if (preventAutoFocus) {
-              e.preventDefault();
+        </div>
+        <Dialog
+          open={isAddWorkoutModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              handleCloseAddWorkoutModal();
               setPreventAutoFocus(false);
+            } else {
+              setIsAddWorkoutModalOpen(open);
             }
           }}
         >
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>
-              {selectedDateForWorkout ? t('athletes.trainingCalendar.addWorkoutModalWithDate', { date: formatDate(selectedDateForWorkout) }) : t('athletes.trainingCalendar.addWorkoutModal')}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-1 min-h-0 gap-4">
-            <div className="flex-[2] flex flex-col gap-4 min-h-0">
+          <DialogContent
+            className="max-w-6xl sm:max-w-6xl h-[600px] flex flex-col"
+            onOpenAutoFocus={(e) => {
+              if (preventAutoFocus) {
+                e.preventDefault();
+                setPreventAutoFocus(false);
+              }
+            }}
+          >
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle>
+                {selectedDateForWorkout ? t('athletes.trainingCalendar.addWorkoutModalWithDate', { date: formatDate(selectedDateForWorkout) }) : t('athletes.trainingCalendar.addWorkoutModal')}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-1 min-h-0 gap-4">
+              <div className="flex-[2] flex flex-col gap-4 min-h-0">
                 <div className="relative w-full flex-shrink-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                   <Input
@@ -1632,16 +1632,16 @@ const ClientTrainingCalendarPage = () => {
                         .split(',')
                         .map((item) => item.trim())
                         .filter((item) => item !== '');
-                    const isSelected = selectedWorkout?.id === workout.id;
+                      const isSelected = selectedWorkout?.id === workout.id;
                       return (
                         <div
                           key={workout.id}
-                        className={cn(
-                          'p-3 rounded-lg border cursor-pointer transition-colors',
-                          isSelected
-                            ? 'border-primary bg-primary/5 shadow-sm'
-                            : 'border-border hover:bg-accent',
-                        )}
+                          className={cn(
+                            'p-3 rounded-lg border cursor-pointer transition-colors',
+                            isSelected
+                              ? 'border-primary bg-primary/5 shadow-sm'
+                              : 'border-border hover:bg-accent',
+                          )}
                           role="button"
                           tabIndex={0}
                           aria-label={t('athletes.trainingCalendar.selectWorkout', { name: workout.program })}
@@ -1687,11 +1687,11 @@ const ClientTrainingCalendarPage = () => {
                     </div>
                   )}
                 </div>
-                    </div>
-            <Separator orientation="vertical" />
-            <div className="flex-[1] flex flex-col gap-4 min-h-0">
-                  <h3 className="text-sm font-medium">{t('athletes.trainingCalendar.addConfigurations')}</h3>
-              <div className={cn('flex flex-col gap-4 flex-1 overflow-y-auto', !selectedWorkout && 'opacity-50 pointer-events-none')}>
+              </div>
+              <Separator orientation="vertical" />
+              <div className="flex-[1] flex flex-col gap-4 min-h-0">
+                <h3 className="text-sm font-medium">{t('athletes.trainingCalendar.addConfigurations')}</h3>
+                <div className={cn('flex flex-col gap-4 flex-1 overflow-y-auto', !selectedWorkout && 'opacity-50 pointer-events-none')}>
                   <Card
                     className={cn(
                       'p-4 border rounded-lg cursor-pointer transition-colors',
@@ -1700,18 +1700,18 @@ const ClientTrainingCalendarPage = () => {
                         : 'bg-background hover:bg-accent/30',
                     )}
                     role="button"
-                  tabIndex={selectedWorkout ? 0 : -1}
+                    tabIndex={selectedWorkout ? 0 : -1}
                     aria-label={t('athletes.trainingCalendar.addOnlyForThisDayAria')}
-                  aria-disabled={!selectedWorkout}
+                    aria-disabled={!selectedWorkout}
                     onKeyDown={(e) => {
-                    if (!selectedWorkout) return;
+                      if (!selectedWorkout) return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         setSelectedScheduleOption('once');
                       }
                     }}
                     onClick={() => {
-                    if (!selectedWorkout) return;
+                      if (!selectedWorkout) return;
                       setSelectedScheduleOption('once');
                     }}
                   >
@@ -1751,13 +1751,13 @@ const ClientTrainingCalendarPage = () => {
                           className="w-24"
                           value={everyDaysInput}
                           onChange={(e) => {
-                          if (!selectedWorkout) return;
+                            if (!selectedWorkout) return;
                             setEveryDaysInput(e.target.value);
                             if (e.target.value) {
                               setSelectedScheduleOption('every');
                             }
                           }}
-                        disabled={!selectedWorkout}
+                          disabled={!selectedWorkout}
                           aria-label={t('athletes.trainingCalendar.numberOfDays')}
                         />
                         <span className="text-sm text-muted-foreground">{t('athletes.trainingCalendar.days')}</span>
@@ -1768,21 +1768,21 @@ const ClientTrainingCalendarPage = () => {
                           selectedScheduleOption === 'every'
                             ? 'border-primary bg-primary/10'
                             : 'border-input bg-background',
-                        !selectedWorkout && 'cursor-not-allowed opacity-50',
+                          !selectedWorkout && 'cursor-not-allowed opacity-50',
                         )}
                         role="button"
-                      tabIndex={selectedWorkout ? 0 : -1}
+                        tabIndex={selectedWorkout ? 0 : -1}
                         aria-label={t('athletes.trainingCalendar.selectRepeatEveryDays')}
-                      aria-disabled={!selectedWorkout}
+                        aria-disabled={!selectedWorkout}
                         onKeyDown={(e) => {
-                        if (!selectedWorkout) return;
+                          if (!selectedWorkout) return;
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             setSelectedScheduleOption('every');
                           }
                         }}
                         onClick={() => {
-                        if (!selectedWorkout) return;
+                          if (!selectedWorkout) return;
                           setSelectedScheduleOption('every');
                         }}
                       >
@@ -1811,13 +1811,13 @@ const ClientTrainingCalendarPage = () => {
                           className="w-24"
                           value={weeklyDayInput}
                           onChange={(e) => {
-                          if (!selectedWorkout) return;
+                            if (!selectedWorkout) return;
                             setWeeklyDayInput(e.target.value);
                             if (e.target.value) {
                               setSelectedScheduleOption('weekly');
                             }
                           }}
-                        disabled={!selectedWorkout}
+                          disabled={!selectedWorkout}
                           aria-label={t('athletes.trainingCalendar.dayOfWeek')}
                         />
                       </div>
@@ -1827,21 +1827,21 @@ const ClientTrainingCalendarPage = () => {
                           selectedScheduleOption === 'weekly'
                             ? 'border-primary bg-primary/10'
                             : 'border-input bg-background',
-                        !selectedWorkout && 'cursor-not-allowed opacity-50',
+                          !selectedWorkout && 'cursor-not-allowed opacity-50',
                         )}
                         role="button"
-                      tabIndex={selectedWorkout ? 0 : -1}
+                        tabIndex={selectedWorkout ? 0 : -1}
                         aria-label={t('athletes.trainingCalendar.selectRepeatWeekly')}
-                      aria-disabled={!selectedWorkout}
+                        aria-disabled={!selectedWorkout}
                         onKeyDown={(e) => {
-                        if (!selectedWorkout) return;
+                          if (!selectedWorkout) return;
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
                             setSelectedScheduleOption('weekly');
                           }
                         }}
                         onClick={() => {
-                        if (!selectedWorkout) return;
+                          if (!selectedWorkout) return;
                           setSelectedScheduleOption('weekly');
                         }}
                       >
@@ -1853,8 +1853,8 @@ const ClientTrainingCalendarPage = () => {
                   </Card>
                 </div>
               </div>
-          </div>
-          <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-2">
+            </div>
+            <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-2">
               <Button
                 type="button"
                 variant="outline"
@@ -1863,423 +1863,423 @@ const ClientTrainingCalendarPage = () => {
               >
                 {t('general.cancel')}
               </Button>
-            <Button
-              type="button"
-              onClick={handleAddWorkoutConfirm}
-              disabled={!selectedWorkout}
-              aria-label={t('athletes.trainingCalendar.addAria')}
-            >
-              {t('athletes.trainingCalendar.add')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <SidePanel
-        open={!!selectedWorkoutDetails}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseWorkoutDetails();
-          }
-        }}
-        title={selectedWorkoutDetails?.workout.program || ''}
-        contentClassName="w-full sm:w-[800px] sm:max-w-[800px]"
-      >
+              <Button
+                type="button"
+                onClick={handleAddWorkoutConfirm}
+                disabled={!selectedWorkout}
+                aria-label={t('athletes.trainingCalendar.addAria')}
+              >
+                {t('athletes.trainingCalendar.add')}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <SidePanel
+          open={!!selectedWorkoutDetails}
+          onOpenChange={(open) => {
+            if (!open) {
+              handleCloseWorkoutDetails();
+            }
+          }}
+          title={selectedWorkoutDetails?.workout.program || ''}
+          contentClassName="w-full sm:w-[800px] sm:max-w-[800px]"
+        >
           {selectedWorkoutDetails && (() => {
             const workoutSchema = buildWorkoutSchema(selectedWorkoutDetails.workout);
             return (
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="p-2">
-                      {workoutSchema.length > 0 ? (
-                        <div className="flex flex-col gap-2 w-full">
-                          {workoutSchema.map((section) => (
-                            <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
-                              <Card className="bg-background w-full flex flex-col relative">
-                                <CardHeader className="border-b p-0 pb-1">
-                                  <div className="flex items-center justify-between px-2 pt-1">
-                                    <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
-                                      {section.type === 'regular' ? t('athletes.trainingCalendar.section.regular') : section.type === 'amrap' ? t('athletes.trainingCalendar.section.amrap') : t('athletes.trainingCalendar.section.timed')}{' '}
-                                      <span className="font-normal text-xs">
-                                        ({section.exercises ? section.exercises.length : 0})
-                                      </span>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Info className="size-4 text-foreground translate-y-[1px]" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {section.type === 'regular'
-                                            ? t('athletes.trainingCalendar.section.regularDescription')
-                                            : section.type === 'amrap'
-                                              ? t('athletes.trainingCalendar.section.amrapDescription')
-                                              : t('athletes.trainingCalendar.section.timedDescription')}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </CardTitle>
-                                    <div className="flex items-center gap-2">
-                                      {(section.type === 'amrap' || section.type === 'timed') && (
-                                        <>
-                                          <div className="flex items-center gap-2 text-xs">
-                                            <span className="font-medium">
-                                              {section.type === 'amrap' ? t('athletes.trainingCalendar.section.timeSeconds') : t('athletes.trainingCalendar.section.rounds')}
-                                            </span>
-                                            <span className="text-muted-foreground">
-                                              {section.type === 'amrap'
-                                                ? section.roundDurationSec || '—'
-                                                : section.targetRounds || '—'}
-                                            </span>
-                                          </div>
-                                          {selectedWorkoutDetails && (
-                                            <div className="flex items-center">
-                                              {renderWorkoutStatusIcon(
-                                                getSectionStatus(
-                                                  selectedWorkoutDetails.workout.id,
-                                                  section.id
-                                                )
-                                              )}
-                                            </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="p-2">
+                  {workoutSchema.length > 0 ? (
+                    <div className="flex flex-col gap-2 w-full">
+                      {workoutSchema.map((section) => (
+                        <div key={section.id} className="relative flex w-full items-stretch flex-shrink-0">
+                          <Card className="bg-background w-full flex flex-col relative">
+                            <CardHeader className="border-b p-0 pb-1">
+                              <div className="flex items-center justify-between px-2 pt-1">
+                                <CardTitle className="uppercase tracking-wide text-sm font-medium flex items-center gap-2">
+                                  {section.type === 'regular' ? t('athletes.trainingCalendar.section.regular') : section.type === 'amrap' ? t('athletes.trainingCalendar.section.amrap') : t('athletes.trainingCalendar.section.timed')}{' '}
+                                  <span className="font-normal text-xs">
+                                    ({section.exercises ? section.exercises.length : 0})
+                                  </span>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info className="size-4 text-foreground translate-y-[1px]" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {section.type === 'regular'
+                                        ? t('athletes.trainingCalendar.section.regularDescription')
+                                        : section.type === 'amrap'
+                                          ? t('athletes.trainingCalendar.section.amrapDescription')
+                                          : t('athletes.trainingCalendar.section.timedDescription')}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </CardTitle>
+                                <div className="flex items-center gap-2">
+                                  {(section.type === 'amrap' || section.type === 'timed') && (
+                                    <>
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <span className="font-medium">
+                                          {section.type === 'amrap' ? t('athletes.trainingCalendar.section.timeSeconds') : t('athletes.trainingCalendar.section.rounds')}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                          {section.type === 'amrap'
+                                            ? section.roundDurationSec || '—'
+                                            : section.targetRounds || '—'}
+                                        </span>
+                                      </div>
+                                      {selectedWorkoutDetails && (
+                                        <div className="flex items-center">
+                                          {renderWorkoutStatusIcon(
+                                            getSectionStatus(
+                                              selectedWorkoutDetails.workout.id,
+                                              section.id
+                                            )
                                           )}
-                                        </>
+                                        </div>
                                       )}
-                                    </div>
-                                  </div>
-                                </CardHeader>
-                                <CardContent className="flex-1 flex flex-col px-2 py-1">
-                                  <div className="flex-1 w-full flex flex-col gap-0">
-                                    {section.exercises && section.exercises.length > 0 ? (
-                                      <div className="w-full flex flex-col gap-0">
-                                        {section.exercises.map((exercise, exerciseIndex) => {
-                                          const nextExercise = section.exercises?.[exerciseIndex + 1];
-                                          const prevExercise =
-                                            exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
-                                          const isLinkedToNext = !!(
-                                            exercise.supersetGroupId &&
-                                            nextExercise?.supersetGroupId === exercise.supersetGroupId
-                                          );
-                                          const isLinkedToPrev = !!(
-                                            exercise.supersetGroupId &&
-                                            prevExercise?.supersetGroupId === exercise.supersetGroupId
-                                          );
-                                          return (
-                                            <div
-                                              key={exercise.instanceId}
-                                              className={cn(
-                                                'flex flex-col',
-                                                isLinkedToNext ? 'gap-0' : 'gap-2',
-                                                exerciseIndex === 0
-                                                  ? ''
-                                                  : isLinkedToPrev
-                                                    ? '-mt-px'
-                                                    : isLinkedToNext
-                                                      ? 'mt-0'
-                                                      : 'mt-1'
-                                              )}
-                                            >
-                                              <div
-                                                className={cn(
-                                                  'relative flex flex-col gap-2 p-2 bg-background dark:bg-transparent border',
-                                                  isLinkedToPrev && isLinkedToNext
-                                                    ? 'rounded-none border-y-0'
-                                                    : isLinkedToPrev
-                                                      ? 'rounded-b-lg rounded-t-none border-t-0'
-                                                      : isLinkedToNext
-                                                        ? 'rounded-t-lg rounded-b-none border-b-0'
-                                                        : 'rounded-lg'
-                                                )}
-                                              >
-                                                <div className="flex items-center gap-2">
-                                                  <span className="text-sm font-medium flex-1 truncate">
-                                                    {exercise.name}
-                                                  </span>
-                                                </div>
-                                                {(exercise.exerciseType === 'weight_reps' ||
-                                                  exercise.exerciseType === 'reps' ||
-                                                  exercise.exerciseType === 'distance_duration') &&
-                                                  exercise.sets &&
-                                                  exercise.sets.length > 0 && (
-                                                    <div className="w-full border rounded-lg overflow-hidden">
-                                                      <Table className="text-[11px] leading-tight">
-                                                        <TableHeader className="bg-sidebar">
-                                                          <TableRow className="h-8">
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="flex-1 flex flex-col px-2 py-1">
+                              <div className="flex-1 w-full flex flex-col gap-0">
+                                {section.exercises && section.exercises.length > 0 ? (
+                                  <div className="w-full flex flex-col gap-0">
+                                    {section.exercises.map((exercise, exerciseIndex) => {
+                                      const nextExercise = section.exercises?.[exerciseIndex + 1];
+                                      const prevExercise =
+                                        exerciseIndex > 0 ? section.exercises?.[exerciseIndex - 1] : null;
+                                      const isLinkedToNext = !!(
+                                        exercise.supersetGroupId &&
+                                        nextExercise?.supersetGroupId === exercise.supersetGroupId
+                                      );
+                                      const isLinkedToPrev = !!(
+                                        exercise.supersetGroupId &&
+                                        prevExercise?.supersetGroupId === exercise.supersetGroupId
+                                      );
+                                      return (
+                                        <div
+                                          key={exercise.instanceId}
+                                          className={cn(
+                                            'flex flex-col',
+                                            isLinkedToNext ? 'gap-0' : 'gap-2',
+                                            exerciseIndex === 0
+                                              ? ''
+                                              : isLinkedToPrev
+                                                ? '-mt-px'
+                                                : isLinkedToNext
+                                                  ? 'mt-0'
+                                                  : 'mt-1'
+                                          )}
+                                        >
+                                          <div
+                                            className={cn(
+                                              'relative flex flex-col gap-2 p-2 bg-background dark:bg-transparent border',
+                                              isLinkedToPrev && isLinkedToNext
+                                                ? 'rounded-none border-y-0'
+                                                : isLinkedToPrev
+                                                  ? 'rounded-b-lg rounded-t-none border-t-0'
+                                                  : isLinkedToNext
+                                                    ? 'rounded-t-lg rounded-b-none border-b-0'
+                                                    : 'rounded-lg'
+                                            )}
+                                          >
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-sm font-medium flex-1 truncate">
+                                                {exercise.name}
+                                              </span>
+                                            </div>
+                                            {(exercise.exerciseType === 'weight_reps' ||
+                                              exercise.exerciseType === 'reps' ||
+                                              exercise.exerciseType === 'distance_duration') &&
+                                              exercise.sets &&
+                                              exercise.sets.length > 0 && (
+                                                <div className="w-full border rounded-lg overflow-hidden">
+                                                  <Table className="text-[11px] leading-tight">
+                                                    <TableHeader className="bg-sidebar">
+                                                      <TableRow className="h-8">
+                                                        <TableHead className="text-center h-8 py-1 px-2">
+                                                          {t('athletes.trainingCalendar.table.set')}
+                                                        </TableHead>
+                                                        <TableHead className="text-center h-8 py-1 px-2 w-[130px]">
+                                                          {t('athletes.trainingCalendar.table.type')}
+                                                        </TableHead>
+                                                        {exercise.exerciseType === 'distance_duration' ? (
+                                                          <>
                                                             <TableHead className="text-center h-8 py-1 px-2">
-                                                              {t('athletes.trainingCalendar.table.set')}
+                                                              {t('athletes.trainingCalendar.table.distance')}
                                                             </TableHead>
-                                                            <TableHead className="text-center h-8 py-1 px-2 w-[130px]">
-                                                              {t('athletes.trainingCalendar.table.type')}
+                                                            <TableHead className="text-center h-8 py-1 px-2">
+                                                              {t('athletes.trainingCalendar.table.duration')}
                                                             </TableHead>
+                                                          </>
+                                                        ) : (
+                                                          <>
+                                                            <TableHead className="text-center h-8 py-1 px-2">
+                                                              {t('athletes.trainingCalendar.table.reps')}
+                                                            </TableHead>
+                                                            {exercise.exerciseType === 'weight_reps' && (
+                                                              <TableHead className="text-center h-8 py-1 px-2">
+                                                                {t('athletes.trainingCalendar.table.weight')}
+                                                              </TableHead>
+                                                            )}
+                                                          </>
+                                                        )}
+                                                        <TableHead className="text-center h-8 py-1 px-2">
+                                                          {t('athletes.trainingCalendar.table.restSeconds')}
+                                                        </TableHead>
+                                                        {/* Only show status column for regular sections, not AMRAP/timed */}
+                                                        {section.type !== 'amrap' && section.type !== 'timed' && (
+                                                          <TableHead className="text-center h-8 py-1 px-2">
+                                                            {t('athletes.trainingCalendar.table.status')}
+                                                          </TableHead>
+                                                        )}
+                                                      </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                      {exercise.sets.map((set, index) => {
+                                                        const isAmrapOrTimed = section.type === 'amrap' || section.type === 'timed';
+
+                                                        return (
+                                                          <TableRow key={index} className="h-10">
+                                                            <TableCell className="font-medium text-center py-1 px-2">
+                                                              {index + 1}
+                                                            </TableCell>
+                                                            <TableCell className="py-1 px-2 w-[130px]">
+                                                              <div className="flex justify-center">
+                                                                <span className="text-[11px] capitalize">
+                                                                  {set.type === 'warmUp'
+                                                                    ? t('athletes.trainingCalendar.table.warmUp')
+                                                                    : set.type === 'dropset'
+                                                                      ? t('athletes.trainingCalendar.table.dropset')
+                                                                      : set.type}
+                                                                </span>
+                                                              </div>
+                                                            </TableCell>
                                                             {exercise.exerciseType === 'distance_duration' ? (
                                                               <>
-                                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                                  {t('athletes.trainingCalendar.table.distance')}
-                                                                </TableHead>
-                                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                                  {t('athletes.trainingCalendar.table.duration')}
-                                                                </TableHead>
+                                                                <TableCell className="py-1 px-2 text-center">
+                                                                  {set.distance || '—'}
+                                                                </TableCell>
+                                                                <TableCell className="py-1 px-2 text-center">
+                                                                  {set.duration || '—'}
+                                                                </TableCell>
                                                               </>
                                                             ) : (
                                                               <>
-                                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                                  {t('athletes.trainingCalendar.table.reps')}
-                                                                </TableHead>
+                                                                <TableCell className="py-1 px-2 text-center">
+                                                                  {set.reps || '—'}
+                                                                </TableCell>
                                                                 {exercise.exerciseType === 'weight_reps' && (
-                                                                  <TableHead className="text-center h-8 py-1 px-2">
-                                                                    {t('athletes.trainingCalendar.table.weight')}
-                                                                  </TableHead>
+                                                                  <TableCell className="py-1 px-2 text-center">
+                                                                    {set.weight || '—'}
+                                                                  </TableCell>
                                                                 )}
                                                               </>
                                                             )}
-                                                            <TableHead className="text-center h-8 py-1 px-2">
-                                                              {t('athletes.trainingCalendar.table.restSeconds')}
-                                                            </TableHead>
-                                                            {/* Only show status column for regular sections, not AMRAP/timed */}
-                                                            {section.type !== 'amrap' && section.type !== 'timed' && (
-                                                              <TableHead className="text-center h-8 py-1 px-2">
-                                                                {t('athletes.trainingCalendar.table.status')}
-                                                              </TableHead>
+                                                            <TableCell className="py-1 px-2 text-center">
+                                                              {set.rest || '—'}
+                                                            </TableCell>
+                                                            {/* Only show status cell for regular sections, not AMRAP/timed */}
+                                                            {!isAmrapOrTimed && (
+                                                              <TableCell className="py-1 px-2 text-center">
+                                                                <div className="flex justify-center">
+                                                                  {renderSetStatusIcon(
+                                                                    getSetStatus(
+                                                                      selectedWorkoutDetails.workout.id,
+                                                                      exercise.instanceId,
+                                                                      set.setNumber
+                                                                    )
+                                                                  )}
+                                                                </div>
+                                                              </TableCell>
                                                             )}
                                                           </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                          {exercise.sets.map((set, index) => {
-                                                            const isAmrapOrTimed = section.type === 'amrap' || section.type === 'timed';
-                                                            
-                                                            return (
-                                                              <TableRow key={index} className="h-10">
-                                                                <TableCell className="font-medium text-center py-1 px-2">
-                                                                  {index + 1}
-                                                                </TableCell>
-                                                                <TableCell className="py-1 px-2 w-[130px]">
-                                                                  <div className="flex justify-center">
-                                                                    <span className="text-[11px] capitalize">
-                                                                      {set.type === 'warmUp'
-                                                                        ? t('athletes.trainingCalendar.table.warmUp')
-                                                                        : set.type === 'dropset'
-                                                                          ? t('athletes.trainingCalendar.table.dropset')
-                                                                          : set.type}
-                                                                    </span>
-                                                                  </div>
-                                                                </TableCell>
-                                                                {exercise.exerciseType === 'distance_duration' ? (
-                                                                  <>
-                                                                    <TableCell className="py-1 px-2 text-center">
-                                                                      {set.distance || '—'}
-                                                                    </TableCell>
-                                                                    <TableCell className="py-1 px-2 text-center">
-                                                                      {set.duration || '—'}
-                                                                    </TableCell>
-                                                                  </>
-                                                                ) : (
-                                                                  <>
-                                                                    <TableCell className="py-1 px-2 text-center">
-                                                                      {set.reps || '—'}
-                                                                    </TableCell>
-                                                                    {exercise.exerciseType === 'weight_reps' && (
-                                                                      <TableCell className="py-1 px-2 text-center">
-                                                                        {set.weight || '—'}
-                                                                      </TableCell>
-                                                                    )}
-                                                                  </>
-                                                                )}
-                                                                <TableCell className="py-1 px-2 text-center">
-                                                                  {set.rest || '—'}
-                                                                </TableCell>
-                                                                {/* Only show status cell for regular sections, not AMRAP/timed */}
-                                                                {!isAmrapOrTimed && (
-                                                                  <TableCell className="py-1 px-2 text-center">
-                                                                    <div className="flex justify-center">
-                                                                      {renderSetStatusIcon(
-                                                                        getSetStatus(
-                                                                          selectedWorkoutDetails.workout.id,
-                                                                          exercise.instanceId,
-                                                                          set.setNumber
-                                                                        )
-                                                                      )}
-                                                                    </div>
-                                                                  </TableCell>
-                                                                )}
-                                                              </TableRow>
-                                                            );
-                                                          })}
-                                                        </TableBody>
-                                                      </Table>
-                                                    </div>
-                                                  )}
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center justify-center w-full my-4 py-3 border-2 border-dashed rounded-lg border-muted">
-                                        <p className="text-muted-foreground text-sm text-center">
-                                          {t('athletes.trainingCalendar.noExercises')}
-                                        </p>
-                                      </div>
-                                    )}
+                                                        );
+                                                      })}
+                                                    </TableBody>
+                                                  </Table>
+                                                </div>
+                                              )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                </CardContent>
-                              </Card>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full gap-4">
-                          <p className="text-muted-foreground text-center">{t('athletes.trainingCalendar.noSections')}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-            );
-          })()}
-      </SidePanel>
-      <Dialog
-        open={isAddProgramModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseAddProgramModal();
-            setPreventAutoFocus(false);
-          } else {
-            setIsAddProgramModalOpen(open);
-          }
-        }}
-      >
-        <DialogContent 
-          className="max-w-4xl sm:max-w-4xl h-[600px] flex flex-col"
-          onOpenAutoFocus={(e) => {
-            if (preventAutoFocus) {
-              e.preventDefault();
-              setPreventAutoFocus(false);
-            }
-          }}
-        >
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>{t('athletes.trainingCalendar.addProgramModal')}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 flex-1 min-h-0">
-            <div className="flex flex-1 min-h-0 gap-4">
-              <div className="flex-[2] flex flex-col min-w-0">
-                <div className="relative w-full flex-shrink-0 mb-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    type="text"
-                    placeholder={t('athletes.trainingCalendar.searchProgramsPlaceholder')}
-                    className="w-full pl-9"
-                    aria-label={t('athletes.trainingCalendar.searchPrograms')}
-                    value={programSearchQuery}
-                    onChange={(event) => setProgramSearchQuery(event.target.value)}
-                  />
-                </div>
-                <div className="flex-1 overflow-y-auto min-h-0">
-                  {filteredPrograms.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {filteredPrograms.map((program) => {
-                        const isActive = selectedProgram?.id === program.id;
-                        return (
-                          <Card
-                            key={program.id}
-                            className={cn(
-                              'p-3 border rounded-lg cursor-pointer transition-colors',
-                              isActive
-                                ? 'border-primary bg-primary/5'
-                                : 'bg-background hover:bg-accent/30',
-                            )}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={t('athletes.trainingCalendar.selectProgram', { name: program.program })}
-                            onClick={() => setSelectedProgram(program)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                setSelectedProgram(program);
-                              }
-                            }}
-                          >
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-medium truncate">
-                                  {program.program}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {program.length}
-                                </span>
-                              </div>
-                              {program.description && (
-                                <span className="text-xs text-muted-foreground line-clamp-2">
-                                  {program.description}
-                                </span>
-                              )}
-                              <div className="flex flex-wrap gap-1">
-                                <Badge variant="outline" className="text-xs">
-                                  {t('athletes.trainingCalendar.table.type')}: {program.type}
-                                </Badge>
-                                {program.equipment && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {program.equipment}
-                                  </Badge>
+                                ) : (
+                                  <div className="flex items-center justify-center w-full my-4 py-3 border-2 border-dashed rounded-lg border-muted">
+                                    <p className="text-muted-foreground text-sm text-center">
+                                      {t('athletes.trainingCalendar.noExercises')}
+                                    </p>
+                                  </div>
                                 )}
                               </div>
-                            </div>
+                            </CardContent>
                           </Card>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground py-8 text-center">
-                      {t('athletes.trainingCalendar.noProgramsFound')}
+                    <div className="flex flex-col items-center justify-center h-full gap-4">
+                      <p className="text-muted-foreground text-center">{t('athletes.trainingCalendar.noSections')}</p>
                     </div>
                   )}
                 </div>
               </div>
-              <div className="flex-[1.5] flex flex-col gap-4 min-w-0">
-                <Card className="p-4 border rounded-lg bg-background">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-2">
-                      <span className="text-xs font-medium text-muted-foreground">{t('athletes.trainingCalendar.startDate')}</span>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full justify-start text-left text-xs font-normal"
-                            aria-label={t('athletes.trainingCalendar.programStartDate')}
-                          >
-                            <Calendar className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-                            {programStartDate ? formatDate(programStartDate) : t('athletes.trainingCalendar.selectStartDate')}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={programStartDate ?? undefined}
-                            onSelect={(date) => {
-                              if (!date) {
-                                setProgramStartDate(null);
-                                return;
-                              }
-                              const normalized = new Date(date);
-                              normalized.setHours(0, 0, 0, 0);
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              const finalDate = normalized < today ? today : normalized;
-                              setProgramStartDate(finalDate);
-                            }}
-                            disabled={(date) => {
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              return date < today;
-                            }}
-                            defaultMonth={programStartDate ?? new Date()}
-                            initialFocus
-                            captionLayout="dropdown"
-                            fromYear={2020}
-                            toYear={2030}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-medium text-muted-foreground">{t('athletes.trainingCalendar.endDate')}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {selectedProgram && programStartDate
-                          ? (() => {
+            );
+          })()}
+        </SidePanel>
+        <Dialog
+          open={isAddProgramModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              handleCloseAddProgramModal();
+              setPreventAutoFocus(false);
+            } else {
+              setIsAddProgramModalOpen(open);
+            }
+          }}
+        >
+          <DialogContent
+            className="max-w-4xl sm:max-w-4xl h-[600px] flex flex-col"
+            onOpenAutoFocus={(e) => {
+              if (preventAutoFocus) {
+                e.preventDefault();
+                setPreventAutoFocus(false);
+              }
+            }}
+          >
+            <DialogHeader className="flex-shrink-0">
+              <DialogTitle>{t('athletes.trainingCalendar.addProgramModal')}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 flex-1 min-h-0">
+              <div className="flex flex-1 min-h-0 gap-4">
+                <div className="flex-[2] flex flex-col min-w-0">
+                  <div className="relative w-full flex-shrink-0 mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      type="text"
+                      placeholder={t('athletes.trainingCalendar.searchProgramsPlaceholder')}
+                      className="w-full pl-9"
+                      aria-label={t('athletes.trainingCalendar.searchPrograms')}
+                      value={programSearchQuery}
+                      onChange={(event) => setProgramSearchQuery(event.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    {filteredPrograms.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {filteredPrograms.map((program) => {
+                          const isActive = selectedProgram?.id === program.id;
+                          return (
+                            <Card
+                              key={program.id}
+                              className={cn(
+                                'p-3 border rounded-lg cursor-pointer transition-colors',
+                                isActive
+                                  ? 'border-primary bg-primary/5'
+                                  : 'bg-background hover:bg-accent/30',
+                              )}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={t('athletes.trainingCalendar.selectProgram', { name: program.program })}
+                              onClick={() => setSelectedProgram(program)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault();
+                                  setSelectedProgram(program);
+                                }
+                              }}
+                            >
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-medium truncate">
+                                    {program.program}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {program.length}
+                                  </span>
+                                </div>
+                                {program.description && (
+                                  <span className="text-xs text-muted-foreground line-clamp-2">
+                                    {program.description}
+                                  </span>
+                                )}
+                                <div className="flex flex-wrap gap-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {t('athletes.trainingCalendar.table.type')}: {program.type}
+                                  </Badge>
+                                  {program.equipment && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {program.equipment}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground py-8 text-center">
+                        {t('athletes.trainingCalendar.noProgramsFound')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-[1.5] flex flex-col gap-4 min-w-0">
+                  <Card className="p-4 border rounded-lg bg-background">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">{t('athletes.trainingCalendar.startDate')}</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full justify-start text-left text-xs font-normal"
+                              aria-label={t('athletes.trainingCalendar.programStartDate')}
+                            >
+                              <Calendar className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                              {programStartDate ? formatDate(programStartDate) : t('athletes.trainingCalendar.selectStartDate')}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={programStartDate ?? undefined}
+                              onSelect={(date) => {
+                                if (!date) {
+                                  setProgramStartDate(null);
+                                  return;
+                                }
+                                const normalized = new Date(date);
+                                normalized.setHours(0, 0, 0, 0);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const finalDate = normalized < today ? today : normalized;
+                                setProgramStartDate(finalDate);
+                              }}
+                              disabled={(date) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                return date < today;
+                              }}
+                              defaultMonth={programStartDate ?? new Date()}
+                              initialFocus
+                              captionLayout="dropdown"
+                              fromYear={2020}
+                              toYear={2030}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-medium text-muted-foreground">{t('athletes.trainingCalendar.endDate')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedProgram && programStartDate
+                            ? (() => {
                               const start = new Date(programStartDate);
                               const weeksText = selectedProgram.length.split(' ')[0];
                               const weeksNumber = parseInt(weeksText, 10);
@@ -2291,34 +2291,34 @@ const ClientTrainingCalendarPage = () => {
                               end.setDate(start.getDate() + totalProgramWeeks * 7 - 1);
                               return formatDate(end);
                             })()
-                          : t('athletes.trainingCalendar.selectProgramAndStartDate')}
-                      </span>
+                            : t('athletes.trainingCalendar.selectProgramAndStartDate')}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center justify-end gap-2 pt-2 flex-shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseAddProgramModal}
-              aria-label={t('athletes.trainingCalendar.cancelAddProgram')}
-            >
-              {t('general.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleAddProgramConfirm}
-              disabled={!selectedProgram || !programStartDate}
-              aria-label={t('athletes.trainingCalendar.addProgramAria')}
-            >
-              {t('athletes.trainingCalendar.add')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <div className="flex items-center justify-end gap-2 pt-2 flex-shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseAddProgramModal}
+                aria-label={t('athletes.trainingCalendar.cancelAddProgram')}
+              >
+                {t('general.cancel')}
+              </Button>
+              <Button
+                type="button"
+                onClick={handleAddProgramConfirm}
+                disabled={!selectedProgram || !programStartDate}
+                aria-label={t('athletes.trainingCalendar.addProgramAria')}
+              >
+                {t('athletes.trainingCalendar.add')}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </Card>
     </div>
   );

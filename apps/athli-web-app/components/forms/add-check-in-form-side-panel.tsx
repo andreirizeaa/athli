@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
-import { addForm, type AddFormData } from '@/lib/coach/coach-form-service';
+import { addCheckIn, type AddCheckInData as AddFormData } from '@/lib/api/coach/coach-check-in-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 
@@ -58,7 +58,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
 
   // Filter templates to only show check-in templates
   const checkInTemplates = useMemo(() => {
-    return formTemplates.filter((template) => 
+    return formTemplates.filter((template) =>
       template.schedule?.type === 'check-in' || !template.schedule
     );
   }, []);
@@ -93,7 +93,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
 
   const handleSave = async (values: FormFormValues) => {
     try {
-      const newForm = await addForm(values);
+      const newForm = await addCheckIn(values);
       if (onSave) {
         onSave(newForm);
       }
@@ -107,11 +107,11 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
     setSelectedTemplate(template);
     form.setValue('name', template.name, { shouldValidate: true });
     form.setValue('description', template.description || '', { shouldValidate: true });
-    
+
     // Apply scheduling defaults from template
     if (template.schedule?.frequency) {
       setCheckInFrequency(template.schedule.frequency);
-      
+
       if (template.schedule.selectedDays) {
         setSelectedDays(new Set(template.schedule.selectedDays));
       } else if (template.schedule.frequency === 'daily') {
@@ -119,11 +119,11 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
       } else if (template.schedule.frequency === 'weekly' || template.schedule.frequency === 'biweekly') {
         setSelectedDays(new Set(['sunday']));
       }
-      
+
       if (template.schedule.monthlyOption) {
         setMonthlyOption(template.schedule.monthlyOption);
       }
-      
+
       if (template.schedule.specificDay) {
         setSpecificDay(template.schedule.specificDay);
       }
@@ -147,7 +147,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
         description: selectedTemplate.description || '',
       };
       try {
-        const newForm = await addForm(values);
+        const newForm = await addCheckIn(values);
         if (onSave) {
           onSave(newForm, selectedTemplate.questions);
         }
@@ -185,7 +185,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
     return '';
   };
 
-  const isValid = activeTab === 'new' 
+  const isValid = activeTab === 'new'
     ? form.formState.isValid && form.watch('name').trim() !== ''
     : selectedTemplate !== null;
 

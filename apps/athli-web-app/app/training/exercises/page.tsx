@@ -44,8 +44,8 @@ import {
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/lib/coach/coach-program-service';
-import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/lib/coach/coach-exercise-service';
+import { starPrograms, archivePrograms, deletePrograms } from '@/lib/api/coach/coach-program-service';
+import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/lib/api/coach/coach-exercise-service';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
 
@@ -174,7 +174,7 @@ const ExercisesPage = () => {
     try {
       const fetchedExercises = await getExercises();
       const exercise = fetchedExercises.find((ex) => ex.id === exerciseId);
-    if (exercise) {
+      if (exercise) {
         setEditingExercise(exercise);
         setIsEditExerciseOpen(true);
       }
@@ -340,7 +340,7 @@ const ExercisesPage = () => {
   };
 
   const handleSaveExercise = async () => {
-      await loadExercises();
+    await loadExercises();
   };
 
   const handleExerciseRowKeyDown = (
@@ -430,9 +430,9 @@ const ExercisesPage = () => {
             renderCell: (row) => {
               const category = (row as any).category || '';
               return (
-              <div className="flex items-center h-full">
+                <div className="flex items-center h-full">
                   <span className="text-sm">{category}</span>
-              </div>
+                </div>
               );
             },
           };
@@ -457,20 +457,20 @@ const ExercisesPage = () => {
             renderCell: (row) => {
               const muscleGroup = (row as any).muscleGroup || '';
               return (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center h-full min-w-0 w-full">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center h-full min-w-0 w-full">
                       <span className="text-sm truncate block min-w-0 w-full">{muscleGroup}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="max-w-[200px] break-words"
-                  side="top"
-                  align="start"
-                >
-                  <p>{muscleGroup}</p>
-                </TooltipContent>
-              </Tooltip>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="max-w-[200px] break-words"
+                    side="top"
+                    align="start"
+                  >
+                    <p>{muscleGroup}</p>
+                  </TooltipContent>
+                </Tooltip>
               );
             },
           };
@@ -497,7 +497,7 @@ const ExercisesPage = () => {
               return (
                 <div className="flex items-center h-full">
                   <span className="text-sm">{modality}</span>
-              </div>
+                </div>
               );
             },
           };
@@ -522,20 +522,20 @@ const ExercisesPage = () => {
             renderCell: (row) => {
               const equipment = (row as any).equipment || row.equipment || '';
               return (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center h-full min-w-0 w-full">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center h-full min-w-0 w-full">
                       <span className="text-sm truncate block min-w-0 w-full">{equipment}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="max-w-[200px] break-words"
-                  side="top"
-                  align="start"
-                >
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="max-w-[200px] break-words"
+                    side="top"
+                    align="start"
+                  >
                     <p>{equipment}</p>
-                </TooltipContent>
-              </Tooltip>
+                  </TooltipContent>
+                </Tooltip>
               );
             },
           };
@@ -928,7 +928,7 @@ const ExercisesPage = () => {
       <AddExerciseSidePanel
         open={isCreateExerciseOpen}
         onOpenChange={(open) => {
-            setIsCreateExerciseOpen(open);
+          setIsCreateExerciseOpen(open);
         }}
         onSave={handleSaveExercise}
       />
@@ -938,8 +938,8 @@ const ExercisesPage = () => {
           setIsEditExerciseOpen(open);
           if (!open) {
             setEditingExercise(null);
-                }
-              }}
+          }
+        }}
         exercise={editingExercise}
         onSave={handleSaveExercise}
       />

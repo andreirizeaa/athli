@@ -24,8 +24,8 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { mockAthletes } from '@/components/app/app-shell';
-import { addHabit, type Habit } from '@/lib/coach/coach-habit-service';
-import { assignHabit, deleteClientHabits } from '@/lib/client/client-habit-service';
+import { addHabit, type Habit } from '@/lib/api/coach/coach-habit-service';
+import { assignHabit, deleteClientHabits } from '@/lib/api/client/client-habit-service';
 
 // Mock data - in production this would be filtered by clientId
 const mockHabits: Habit[] = [
@@ -138,7 +138,7 @@ const ClientHabitsPage = () => {
   // Filter logs by time period
   const getFilteredLogsByTime = useMemo(() => {
     if (!selectedHabitId) return [];
-    
+
     const allLogs = habitLogs
       .filter((log) => log.habitId === selectedHabitId)
       .sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime());
@@ -193,27 +193,27 @@ const ClientHabitsPage = () => {
     // For weekly habits, calculate based on weeks in period
     const now = new Date();
     let expectedCompletions = 0;
-    
+
     if (timeFilter === 'all-time') {
       // Use habit creation date
       const daysSinceCreation = Math.floor((now.getTime() - selectedHabit.createdAt) / (24 * 60 * 60 * 1000));
       expectedCompletions = selectedHabit.period === 'daily' ? daysSinceCreation : Math.floor(daysSinceCreation / 7);
     } else {
-      const cutoffDate = timeFilter === 'last-week' 
+      const cutoffDate = timeFilter === 'last-week'
         ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
         : timeFilter === 'last-2-weeks'
-        ? new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-        : timeFilter === 'last-month'
-        ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        : timeFilter === 'last-3-months'
-        ? new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-        : timeFilter === 'last-6-months'
-        ? new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
-        : new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          ? new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+          : timeFilter === 'last-month'
+            ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            : timeFilter === 'last-3-months'
+              ? new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+              : timeFilter === 'last-6-months'
+                ? new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
+                : new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
       const daysInPeriod = Math.floor((now.getTime() - cutoffDate.getTime()) / (24 * 60 * 60 * 1000));
       expectedCompletions = selectedHabit.period === 'daily' ? daysInPeriod : Math.floor(daysInPeriod / 7);
     }
-    
+
     if (expectedCompletions === 0) return 0;
     return (selectedHabitLogs.length / expectedCompletions) * 100;
   }, [selectedHabit, selectedHabitLogs, timeFilter]);
@@ -283,13 +283,13 @@ const ClientHabitsPage = () => {
     const yesterdayKey = getDateKey(new Date(now.getTime() - 24 * 60 * 60 * 1000));
 
     // Find starting point (today, yesterday, or most recent)
-    let startKey = dateKeys.includes(todayKey) ? todayKey : 
-                   dateKeys.includes(yesterdayKey) ? yesterdayKey : 
-                   dateKeys[dateKeys.length - 1];
-    
+    let startKey = dateKeys.includes(todayKey) ? todayKey :
+      dateKeys.includes(yesterdayKey) ? yesterdayKey :
+        dateKeys[dateKeys.length - 1];
+
     let currentStreak = 0;
     let checkDate = new Date(now);
-    
+
     // If we found today or yesterday, start from there; otherwise start from most recent log date
     if (startKey === todayKey || startKey === yesterdayKey) {
       checkDate = startKey === todayKey ? now : new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -324,7 +324,7 @@ const ClientHabitsPage = () => {
     for (let i = 1; i < dateKeys.length; i++) {
       const prevKey = dateKeys[i - 1];
       const currentKey = dateKeys[i];
-      
+
       // Parse keys to check if consecutive
       const isConsecutive = (() => {
         if (selectedHabit.period === 'daily') {
@@ -336,7 +336,7 @@ const ClientHabitsPage = () => {
           // For weekly, parse YYYY-WW format
           const [prevYear, prevWeek] = prevKey.split('-W').map(Number);
           const [currYear, currWeek] = currentKey.split('-W').map(Number);
-          
+
           if (currYear === prevYear) {
             return currWeek === prevWeek + 1;
           } else if (currYear === prevYear + 1 && currWeek === 1) {
@@ -383,21 +383,21 @@ const ClientHabitsPage = () => {
   const calculateNiceInterval = (min: number, max: number) => {
     const range = max - min;
     if (range === 0) return { min: min - 1, max: max + 1, step: 1 };
-    
+
     // Calculate a nice step size
     const magnitude = Math.pow(10, Math.floor(Math.log10(range)));
     const normalizedRange = range / magnitude;
     let step = magnitude;
-    
+
     if (normalizedRange <= 1) step = magnitude * 0.1;
     else if (normalizedRange <= 2) step = magnitude * 0.2;
     else if (normalizedRange <= 5) step = magnitude * 0.5;
     else step = magnitude;
-    
+
     // Round min down and max up to nice values
     const niceMin = Math.floor(min / step) * step;
     const niceMax = Math.ceil(max / step) * step;
-    
+
     return { min: niceMin, max: niceMax, step };
   };
 
@@ -410,13 +410,13 @@ const ClientHabitsPage = () => {
     const min = Math.min(...values);
     const max = Math.max(...values);
     const { min: niceMin, max: niceMax, step } = calculateNiceInterval(min, max);
-    
+
     // Generate tick values
     const ticks: number[] = [];
     for (let value = niceMin; value <= niceMax; value += step) {
       ticks.push(value);
     }
-    
+
     return { yAxisDomain: [niceMin, niceMax], yAxisTicks: ticks };
   }, [selectedHabitLogs]);
 
@@ -482,17 +482,17 @@ const ClientHabitsPage = () => {
 
   const handleSaveHabit = async (values: HabitFormValues) => {
     if (!clientId) return;
-    
+
     try {
       // Create the habit
       const newHabit = await addHabit(values);
-      
+
       // Assign it to this client
       await assignHabit({
         habitIds: [newHabit.id],
         clientIds: [clientId],
       });
-      
+
       // Add to local state
       setHabits((prev) => [...prev, newHabit]);
       // TODO: Show success toast
@@ -537,7 +537,7 @@ const ClientHabitsPage = () => {
         habitIds: [selectedHabitId],
         clientId: clientId,
       });
-      
+
       setHabits((prev) => prev.filter((h) => h.id !== selectedHabitId));
       setSelectedHabitId(null);
     } catch (error) {
@@ -670,8 +670,8 @@ const ClientHabitsPage = () => {
                         movement?.percentage === 0 || movement === null
                           ? 'text-foreground'
                           : movement.isUp
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                            ? 'text-green-600'
+                            : 'text-red-600'
                       )}
                     >
                       {movement?.isUp === true && movement.percentage !== 0 && <ArrowUp className="size-4" />}
@@ -785,111 +785,111 @@ const ClientHabitsPage = () => {
                   <DataGrid
                     data={selectedHabitLogs}
                     columns={[
-                        {
-                          id: 'date',
-                          label: 'Date',
-                          sortable: true,
-                          width: { class: 'w-[200px]', pixel: '200px' },
-                          getSortValue: (row) => row.completedAt.getTime(),
-                          renderCell: (row) => (
-                            <div className="flex items-center w-full">
-                              <span className="text-sm text-foreground">
-                                {format(row.completedAt, 'd MMM, yy')}
-                              </span>
-                            </div>
-                          ),
-                        },
-                        {
-                          id: 'value',
-                          label: 'Log',
-                          sortable: true,
-                          width: { class: 'w-full', pixel: '100%' },
-                          getSortValue: (row) => row.value,
-                          renderCell: (row) => {
-                            if (editingLogId === row.id) {
-                              return (
-                                <div className="flex items-center gap-2 w-full" data-no-row-link="true">
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-8 w-8 flex-shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteLog(row.id);
-                                    }}
-                                    aria-label="Delete log"
-                                  >
-                                    <Trash2 className="size-4" />
-                                  </Button>
-                                  <Input
-                                    type="number"
-                                    value={editingLogValue}
-                                    onChange={(e) => setEditingLogValue(e.target.value)}
-                                    className="flex-1 h-8"
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleSaveLog(row.id);
-                                      } else if (e.key === 'Escape') {
-                                        e.preventDefault();
-                                        handleCancelEditLog();
-                                      }
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                  <Button
-                                    size="icon"
-                                    variant="default"
-                                    className="h-8 w-8 flex-shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSaveLog(row.id);
-                                    }}
-                                    aria-label="Save log"
-                                  >
-                                    <Check className="size-4" />
-                                  </Button>
-                                </div>
-                              );
-                            }
+                      {
+                        id: 'date',
+                        label: 'Date',
+                        sortable: true,
+                        width: { class: 'w-[200px]', pixel: '200px' },
+                        getSortValue: (row) => row.completedAt.getTime(),
+                        renderCell: (row) => (
+                          <div className="flex items-center w-full">
+                            <span className="text-sm text-foreground">
+                              {format(row.completedAt, 'd MMM, yy')}
+                            </span>
+                          </div>
+                        ),
+                      },
+                      {
+                        id: 'value',
+                        label: 'Log',
+                        sortable: true,
+                        width: { class: 'w-full', pixel: '100%' },
+                        getSortValue: (row) => row.value,
+                        renderCell: (row) => {
+                          if (editingLogId === row.id) {
                             return (
-                              <div className="flex items-center justify-between w-full" data-no-row-link="true">
-                                <span className="text-sm text-foreground">
-                                  {row.value} <span className="text-muted-foreground">{t(`habits.form.units.${selectedHabit.unit as any}`)}</span>
-                                </span>
+                              <div className="flex items-center gap-2 w-full" data-no-row-link="true">
                                 <Button
                                   size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
+                                  variant="outline"
+                                  className="h-8 w-8 flex-shrink-0"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleEditLog(row.id);
+                                    handleDeleteLog(row.id);
                                   }}
-                                  aria-label="Edit log"
+                                  aria-label="Delete log"
                                 >
-                                  <Edit className="size-4" />
+                                  <Trash2 className="size-4" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  value={editingLogValue}
+                                  onChange={(e) => setEditingLogValue(e.target.value)}
+                                  className="flex-1 h-8"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleSaveLog(row.id);
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      handleCancelEditLog();
+                                    }
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <Button
+                                  size="icon"
+                                  variant="default"
+                                  className="h-8 w-8 flex-shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSaveLog(row.id);
+                                  }}
+                                  aria-label="Save log"
+                                >
+                                  <Check className="size-4" />
                                 </Button>
                               </div>
                             );
-                          },
+                          }
+                          return (
+                            <div className="flex items-center justify-between w-full" data-no-row-link="true">
+                              <span className="text-sm text-foreground">
+                                {row.value} <span className="text-muted-foreground">{t(`habits.form.units.${selectedHabit.unit as any}`)}</span>
+                              </span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditLog(row.id);
+                                }}
+                                aria-label="Edit log"
+                              >
+                                <Edit className="size-4" />
+                              </Button>
+                            </div>
+                          );
                         },
-                      ]}
-                      getRowId={(row) => row.id}
-                      gridKey={`habit-logs-${selectedHabitId}`}
-                      enableSearch={false}
-                      showPagination={false}
-                      gridPadding={false}
-                      emptyMessage={t('habits.noLogsMessage')}
-                      onRowClick={(row, e) => {
-                        // Prevent row click when clicking edit button
-                        if ((e.target as HTMLElement).closest('[data-no-row-link="true"]')) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }
-                      }}
-                    />
-                  </div>
+                      },
+                    ]}
+                    getRowId={(row) => row.id}
+                    gridKey={`habit-logs-${selectedHabitId}`}
+                    enableSearch={false}
+                    showPagination={false}
+                    gridPadding={false}
+                    emptyMessage={t('habits.noLogsMessage')}
+                    onRowClick={(row, e) => {
+                      // Prevent row click when clicking edit button
+                      if ((e.target as HTMLElement).closest('[data-no-row-link="true"]')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                  />
+                </div>
               </>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">

@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Edit, Plus, X } from 'lucide-react';
-import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
 
 type QuestionFormat = {
   id: string;

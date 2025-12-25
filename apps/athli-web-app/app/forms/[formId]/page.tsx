@@ -16,7 +16,10 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, Trash2, GripVertical, Edit } from 'lucide-react';
-import { type Form, addQuestion, reorderQuestions } from '@/lib/coach/coach-form-service';
+import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions } from '@/lib/api/coach/coach-check-in-service';
+import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions } from '@/lib/api/coach/coach-questionnaire-service';
+
+type Form = CheckIn | Questionnaire;
 import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
@@ -24,7 +27,7 @@ import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { EditFormSidePanel } from '@/components/forms/edit-form-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
-import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
 
 // Mock forms data - in production this would come from an API
 const mockForms: Form[] = [
@@ -84,7 +87,7 @@ const FormDetailPage = () => {
   // Load questions from sessionStorage on client side
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     // Check for questions from template in sessionStorage
     const storedQuestions = sessionStorage.getItem(`form-questions-${formId}`);
     if (storedQuestions) {
@@ -110,7 +113,7 @@ const FormDetailPage = () => {
         console.error('Failed to parse stored questions:', error);
       }
     }
-    
+
     // Mock questions for Initial Assessment
     if (formId === 'form-1') {
       setQuestions([
@@ -196,13 +199,15 @@ const FormDetailPage = () => {
   const handleToggleReorder = async () => {
     const wasInReorderMode = isReorderMode;
     setIsReorderMode(!isReorderMode);
-    
+
     // If we're exiting reorder mode, save the new order
     if (wasInReorderMode) {
       try {
         // Use the ref if available (from handleReorder), otherwise use state
         const questionsToReorder = reorderedQuestionsRef.current || questions;
-        await reorderQuestions({
+        const isCheckIn = formType === 'check-in';
+        const reorderFn = isCheckIn ? reorderCheckInQuestions : reorderQuestionnaireQuestions;
+        await reorderFn({
           formId: formId,
           questionIds: questionsToReorder.map((q) => q.id),
         });
@@ -227,7 +232,9 @@ const FormDetailPage = () => {
 
   const handleAddQuestion = async (questionData: any) => {
     try {
-      const newQuestion = await addQuestion({
+      const isCheckIn = formType === 'check-in';
+      const addQuestionFn = isCheckIn ? addCheckInQuestion : addQuestionnaireQuestion;
+      const newQuestion = await addQuestionFn({
         formId: formId,
         question: questionData.question,
         required: questionData.required,
@@ -238,13 +245,13 @@ const FormDetailPage = () => {
         mediaCount: questionData.mediaCount,
         metricId: questionData.metricId,
       });
-      
+
       // Ensure metricId is preserved if it exists in questionData
       const questionWithMetric = {
         ...newQuestion,
         metricId: questionData.metricId || newQuestion.metricId,
       };
-      
+
       setQuestions([...questions, questionWithMetric]);
       // Navigate to the newly added question in preview
       setPreviewQuestionIndex(questions.length);
@@ -339,7 +346,7 @@ const FormDetailPage = () => {
             </div>
           );
         }
-        
+
         // For non-metric questions, just show the question
         return (
           <span className="text-sm font-medium py-1">{row.question || ''}</span>

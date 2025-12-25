@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { createClient } from '@/lib/supabase/client';
-import { fetchUserById } from '@/lib/coach/coach-user-service';
+import { fetchUserById } from '@/lib/api/user/user-service';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -18,7 +18,7 @@ export default function ClientInvitePage() {
   const router = useRouter();
   const { signIn, signInWithGoogle } = useSupabaseAuth();
   const supabase = createClient();
-  
+
   const coachId = Array.isArray(params.coachId) ? params.coachId[0] : params.coachId;
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -109,7 +109,7 @@ export default function ClientInvitePage() {
             if (signInResult?.session?.user) {
               // Wait for session to be established
               await new Promise((resolve) => setTimeout(resolve, 500));
-              
+
               // Ensure client profile exists
               await handleExistingUser(signInResult.session.user.id);
               return;
