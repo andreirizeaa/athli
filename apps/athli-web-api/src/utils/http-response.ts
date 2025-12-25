@@ -44,3 +44,10 @@ export function unauthorized(res: Response, payload: ResponseData): void {
   });
 }
 
+export function notFound(res: Response, payload: ResponseData): void {
+  res.status(404).json({
+    success: false,
+    ...payload,
+  });
+}
+

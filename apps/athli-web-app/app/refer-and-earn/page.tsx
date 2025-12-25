@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Copy, Check } from 'lucide-react';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
+import { useGlobalData } from '@/providers/global-data-provider';
 import { toast } from 'sonner';
 
 type ReferralData = {
@@ -49,6 +50,7 @@ const formatDate = (date: Date): string => {
 const ReferAndEarnPage = () => {
   const t = useTranslations('referAndEarn');
   const { user } = useSupabaseAuth();
+  const { uniqueCode } = useGlobalData();
   const [isCopied, setIsCopied] = useState(false);
 
   const steps = [
@@ -75,18 +77,18 @@ const ReferAndEarnPage = () => {
   ];
 
   const handleCopyReferralLink = async () => {
-    if (!user?.id) {
+    if (!uniqueCode) {
       toast.error('Unable to generate referral link. Please try again.');
       return;
     }
 
-    const referralLink = `${window.location.origin}/coach/referral/${user.id}`;
-    
+    const referralLink = `${window.location.origin}/coach/referral/${uniqueCode}`;
+
     try {
       await navigator.clipboard.writeText(referralLink);
       setIsCopied(true);
       toast.success(t('referralLinkCopied'));
-      
+
       setTimeout(() => {
         setIsCopied(false);
       }, 2000);
@@ -215,7 +217,7 @@ const ReferAndEarnPage = () => {
             })}
           </div>
         </div>
-      
+
         {/* Right side - DataGrid */}
         <div className="w-1/2 flex-shrink-0 px-4">
           <DataGrid

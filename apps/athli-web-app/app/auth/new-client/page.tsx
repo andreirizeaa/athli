@@ -6,6 +6,7 @@ import { createClient } from '@/supabase/client';
 import { authService } from '@/api/auth/auth-service';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
+import { getCoachCodeById } from '@/api/coach/coach-public-service';
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -18,9 +19,19 @@ export default function NewClientPage() {
     const handleNewClient = async () => {
       if (!coachId) {
         toast.error('Missing coach ID');
-        router.push('/client/get-started');
+        router.push('/');
         return;
       }
+
+      const redirectToInvite = async () => {
+        try {
+          const code = await getCoachCodeById(coachId);
+          router.push(`/client/invite/${code}`);
+        } catch (error) {
+          console.error('Failed to get coach code, defaulting to coach ID', error);
+          router.push(`/client/invite/${coachId}`);
+        }
+      };
 
       try {
         // Get current session
@@ -28,7 +39,7 @@ export default function NewClientPage() {
 
         if (sessionError || !session?.user) {
           toast.error('Please sign in first');
-          router.push(`/client/invite/${coachId}`);
+          await redirectToInvite();
           return;
         }
 
@@ -47,14 +58,14 @@ export default function NewClientPage() {
       } catch (error: any) {
         console.error('Error handling new client:', error);
         toast.error(error.message || 'Failed to process your signup. Please try again.');
-        router.push(`/client/invite/${coachId}`);
+        await redirectToInvite();
       } finally {
         setIsLoading(false);
       }
     };
 
     handleNewClient();
-  }, [coachId, router]);
+  }, [coachId, router, supabase.auth]);
 
   if (isLoading) {
     return (

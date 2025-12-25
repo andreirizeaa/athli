@@ -6,7 +6,10 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { updateNotifications, type NotificationSettings } from '@/api/settings/settings-service';
+import { type NotificationSettings } from '@/api/settings/settings-service'; // Keep for legacy types if needed, or remove? let's keep NotificationSettings or map it.
+// Actually, let's import NotificationEvent from service
+import { type NotificationEvent } from '@/api/settings/coach/coach-notifications-service';
+import { useGlobalData } from '@/providers/global-data-provider';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { toast } from 'sonner';
 
@@ -29,9 +32,29 @@ interface NotificationGroup {
   }>;
 }
 
+const UI_TO_DB_KEY: Record<NotificationKey, string> = {
+  newClientSignup: 'new_client_signup',
+  clientActivity: 'client_activity',
+  clientMessages: 'client_messages',
+  preAppointmentInformation: 'pre_appointment_info',
+  systemDowntimes: 'system_downtime',
+  newFeatures: 'new_features',
+};
+
+const DB_TO_UI_KEY: Record<string, NotificationKey> = {
+  new_client_signup: 'newClientSignup',
+  client_activity: 'clientActivity',
+  client_messages: 'clientMessages',
+  pre_appointment_info: 'preAppointmentInformation',
+  system_downtime: 'systemDowntimes',
+  new_features: 'newFeatures',
+};
+
 const NotificationsPage = () => {
   const t = useTranslations();
   const { setHasUnsavedChanges: setContextHasUnsavedChanges } = useUnsavedChanges();
+  const { notifications: globalNotifications, toggleNotification, isLoading } = useGlobalData();
+
   const [notifications, setNotifications] = useState<Record<NotificationKey, boolean>>({
     newClientSignup: false,
     clientActivity: false,
@@ -50,6 +73,30 @@ const NotificationsPage = () => {
   });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize from global data
+  useEffect(() => {
+    if (globalNotifications && globalNotifications.length > 0) {
+      const newNotifications: Record<NotificationKey, boolean> = {
+        newClientSignup: false,
+        clientActivity: false,
+        clientMessages: false,
+        preAppointmentInformation: false,
+        systemDowntimes: false,
+        newFeatures: false,
+      };
+
+      globalNotifications.forEach(n => {
+        const uiKey = DB_TO_UI_KEY[n.event_key];
+        if (uiKey) {
+          newNotifications[uiKey] = n.enabled;
+        }
+      });
+
+      setNotifications(newNotifications);
+      setSavedNotifications(newNotifications);
+    }
+  }, [globalNotifications]);
 
   const notificationGroups: NotificationGroup[] = [
     {
@@ -96,7 +143,11 @@ const NotificationsPage = () => {
 
   // Check if there are unsaved changes
   useEffect(() => {
-    const hasChanges = JSON.stringify(notifications) !== JSON.stringify(savedNotifications);
+    // Basic shallow comparison
+    const hasChanges = Object.keys(notifications).some(
+      key => notifications[key as NotificationKey] !== savedNotifications[key as NotificationKey]
+    );
+
     setHasUnsavedChanges(hasChanges);
     setContextHasUnsavedChanges(hasChanges);
   }, [notifications, savedNotifications, setContextHasUnsavedChanges]);
@@ -124,7 +175,23 @@ const NotificationsPage = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateNotifications(notifications as NotificationSettings);
+      // Find changes and update
+      const promises: Promise<void>[] = [];
+      const keys = Object.keys(notifications) as NotificationKey[];
+
+      for (const key of keys) {
+        if (notifications[key] !== savedNotifications[key]) {
+          // Find ID from globalNotifications
+          const dbKey = UI_TO_DB_KEY[key];
+          const notification = globalNotifications?.find(n => n.event_key === dbKey);
+          if (notification) {
+            promises.push(toggleNotification({ eventId: notification.event_id, enabled: notifications[key] }));
+          }
+        }
+      }
+
+      await Promise.all(promises);
+
       setSavedNotifications(notifications);
       setHasUnsavedChanges(false);
       setContextHasUnsavedChanges(false);
@@ -183,10 +250,10 @@ const NotificationsPage = () => {
                     <div
                       key={option.id}
                       className={`grid grid-cols-[1fr_auto] gap-4 ${optionIndex === 0
-                          ? 'pb-2 pt-[-1px] px-4 border-b items-center'
-                          : isLast
-                            ? 'pt-2 px-4 items-center'
-                            : 'py-2 px-4 border-b items-center'
+                        ? 'pb-2 pt-[-1px] px-4 border-b items-center'
+                        : isLast
+                          ? 'pt-2 px-4 items-center'
+                          : 'py-2 px-4 border-b items-center'
                         }`}
                     >
                       <label

@@ -1,31 +1,9 @@
-import { createClient } from '@/supabase/client';
+import axiosInstance from '@/lib/axios';
 
 /**
  * URL and API configuration
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || 'http://localhost:3000';
-const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION?.replace(/^\/+|\/+$/g, '') || 'api/v1';
-
-/**
- * The full API URL constructed from environment variables
- */
-export const API_URL = `${API_BASE_URL}/${API_VERSION}`;
-
-/**
- * Get the current Supabase access token
- */
-export async function getAccessToken(): Promise<string | null> {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token ?? null;
-}
-
-/**
- * Enhanced fetch options for the API client
- */
-export interface ApiRequestOptions extends RequestInit {
-    authenticated?: boolean;
-}
+export const API_URL = axiosInstance.defaults.baseURL;
 
 /**
  * Common API Response wrapper
@@ -37,9 +15,16 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * Unified API fetch utility
- * - Prepends the API base URL and version
- * - Automatically injects JWT token if authenticated
+ * Enhanced fetch options for the API client
+ */
+export interface ApiRequestOptions extends RequestInit {
+    authenticated?: boolean;
+    params?: Record<string, any>;
+}
+
+/**
+ * Unified API fetch utility using Axios
+ * - Automatically injects JWT token (via axios interceptor)
  * - Handles JSON serialization/deserialization
  * - Provides unified error handling
  */
@@ -47,54 +32,33 @@ export async function apiFetch<T = any>(
     endpoint: string,
     options: ApiRequestOptions = {}
 ): Promise<T> {
-    const { authenticated = true, ...fetchOptions } = options;
-
-    // Construct the full URL
-    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${API_URL}${path}`;
-
-    // Build headers
-    const headers = new Headers(fetchOptions.headers);
-    if (!headers.has('Content-Type')) {
-        headers.set('Content-Type', 'application/json');
-    }
-
-    // Inject JWT token if required
-    if (authenticated) {
-        const token = await getAccessToken();
-        if (token) {
-            headers.set('Authorization', `Bearer ${token}`);
-        }
-    }
+    const { authenticated = true, params, ...fetchOptions } = options;
 
     try {
-        const response = await fetch(url, {
-            ...fetchOptions,
-            headers,
+        const response = await axiosInstance.request<T>({
+            url: endpoint,
+            method: fetchOptions.method || 'GET',
+            data: fetchOptions.body,
+            params: params,
+            headers: fetchOptions.headers as any,
+            // You can pass custom config to interceptors if needed, 
+            // but for now we rely on the interceptor logic checking for session.
         });
 
-        // Parse JSON response
-        let data;
-        try {
-            data = await response.json();
-        } catch {
-            // Handle cases where response is not JSON
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status} ${response.statusText}`);
-            }
-            return {} as T;
-        }
+        // Backend seems to return { success, message, data: { user: ... } } 
+        // Axios wraps this in data, so response.data is the actual payload.
+        // However, existing calls expect `data.data.user` or similar.
+        // Let's check user-service usage:
+        // const data = await apiFetch('/user/me'); -> returns full response object
+        // return data.data.user;
 
-        if (!response.ok) {
-            throw new Error(data.message || `API Error: ${response.status} ${response.statusText}`);
+        return response.data;
+    } catch (error: any) {
+        if (error.response && error.response.data) {
+            // If the server returned an error message, throw that
+            const serverError = error.response.data;
+            throw new Error(serverError.message || `API Error: ${error.response.status}`);
         }
-
-        return data;
-    } catch (error) {
-        // Handle network errors or other issues
-        if (error instanceof Error) {
-            throw error;
-        }
-        throw new Error('An unexpected error occurred during the API request');
+        throw error;
     }
 }

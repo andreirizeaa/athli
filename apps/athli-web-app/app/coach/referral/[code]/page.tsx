@@ -7,78 +7,55 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { createClient } from '@/supabase/client';
-import { fetchUserById } from '@/api/user/user-service';
+import { getCoachByCode } from '@/api/coach/coach-public-service';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 
-export default function ClientInvitePage() {
-  const params = useParams<{ coachId: string }>();
+export default function CoachReferralPage() {
+  const params = useParams<{ code: string }>();
   const router = useRouter();
-  const { signIn, signInWithGoogle } = useSupabaseAuth();
   const supabase = createClient();
 
-  const coachId = Array.isArray(params.coachId) ? params.coachId[0] : params.coachId;
+  const code = Array.isArray(params.code) ? params.code[0] : params.code;
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [coachName, setCoachName] = useState<string | null>(null);
-  const [isLoadingCoach, setIsLoadingCoach] = useState(true);
 
-  // Fetch coach information on mount
+  const [referringCoachId, setReferringCoachId] = useState<string | null>(null);
+  const [referringUserName, setReferringUserName] = useState<string | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  // Fetch referring user information on mount
   useEffect(() => {
-    const fetchCoach = async () => {
-      if (!coachId) {
-        setIsLoadingCoach(false);
+    const fetchUser = async () => {
+      if (!code) {
+        setIsLoadingUser(false);
         return;
       }
 
       try {
-        const coach = await fetchUserById(coachId);
-        setCoachName(coach.name);
+        const response = await getCoachByCode(code);
+        if (response.data && response.data.coach) {
+          setReferringCoachId(response.data.coach.id);
+          setReferringUserName(response.data.coach.name);
+        }
       } catch (error: any) {
-        console.error('Error fetching coach:', error);
+        console.error('Error fetching referring user:', error);
         // Don't show error toast - just use fallback text
-        setCoachName(null);
+        setReferringUserName(null);
       } finally {
-        setIsLoadingCoach(false);
+        setIsLoadingUser(false);
       }
     };
 
-    fetchCoach();
-  }, [coachId]);
+    fetchUser();
+  }, [code]);
 
-  // Check if user is already signed in (e.g., from OAuth callback)
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // User is already signed in, check if they need to create client profile
-        handleExistingUser(session.user.id);
-      }
-    });
-
-    // Listen for auth state changes (e.g., OAuth callback)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user && _event === 'SIGNED_IN') {
-        // User just signed in (e.g., from OAuth), ensure client profile exists
-        handleExistingUser(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleExistingUser = async (userId: string) => {
-    // Redirect to new-client route which will handle the profile creation
-    router.push(`/auth/new-client?coach_id=${coachId}`);
-  };
-
-
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name || !email || !password) {
@@ -94,8 +71,8 @@ export default function ClientInvitePage() {
         options: {
           data: {
             name: name,
-            user_type: 'client',
-            coach_id: coachId,
+            user_type: 'coach',
+            referred_by: referringCoachId, // Track the referring user
           },
           emailRedirectTo: `${window.location.origin}/auth/verify-email`,
         },
@@ -105,13 +82,18 @@ export default function ClientInvitePage() {
         // If user already exists, try to sign them in instead
         if (error.message.includes('already registered') || error.message.includes('already exists')) {
           try {
-            const signInResult = await signIn(email, password);
-            if (signInResult?.session?.user) {
-              // Wait for session to be established
-              await new Promise((resolve) => setTimeout(resolve, 500));
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
 
-              // Ensure client profile exists
-              await handleExistingUser(signInResult.session.user.id);
+            if (signInError) {
+              throw new Error('An account with this email already exists. Please use the correct password or reset your password.');
+            }
+
+            if (signInData?.session?.user) {
+              toast.success('Signed in successfully!');
+              router.push('/home');
               return;
             }
           } catch (signInError: any) {
@@ -123,13 +105,12 @@ export default function ClientInvitePage() {
 
       // New account created successfully
       toast.success('Account created! Please check your email for verification code.');
-      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}&redirect=/auth/new-client&coach_id=${coachId}`);
+      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to create account');
       setIsSigningUp(false);
     }
   };
-
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
@@ -137,7 +118,7 @@ export default function ClientInvitePage() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?coach_id=${coachId}&redirect=/auth/new-client`,
+          redirectTo: `${window.location.origin}/auth/callback?referred_by=${referringCoachId}&redirect=/auth/verify-email`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -149,9 +130,13 @@ export default function ClientInvitePage() {
       if (error) throw error;
       // The redirect will happen automatically via OAuth
     } catch (err: any) {
-      toast.error(err.message || 'Failed to sign in with Google');
+      toast.error(err.message || 'Failed to sign up with Google');
       setIsGoogleLoading(false);
     }
+  };
+
+  const handleSignInClick = () => {
+    router.push('/auth/login');
   };
 
   return (
@@ -161,14 +146,14 @@ export default function ClientInvitePage() {
           width={1000}
           height={1000}
           src="/images/auth-image.jpg"
-          alt="Client invite page"
+          alt="Coach referral page"
           className="h-full w-full object-cover"
           unoptimized
         />
       </div>
 
       <div className="flex h-full w-full items-center justify-center lg:w-1/2 overflow-y-auto">
-        {isLoadingCoach ? (
+        {isLoadingUser ? (
           <div className="flex flex-col items-center justify-center gap-4">
             <Spinner className="size-8 text-primary" />
             <p className="text-sm text-muted-foreground">Loading...</p>
@@ -176,19 +161,19 @@ export default function ClientInvitePage() {
         ) : (
           <div className="w-full max-w-md space-y-8 px-4">
             <div className="text-center">
-              <h2 className="mt-6 text-3xl font-bold">
-                {coachName ? `Join ${coachName}'s Program` : 'Join Your Coach\'s Program'}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Create an account to get started with your personalized training program
-              </p>
+              <h2 className="mt-6 text-3xl font-bold">Create New Account</h2>
+              {referringUserName && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  You've been referred by {referringUserName}
+                </p>
+              )}
             </div>
 
-            <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
+            <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="name" className="sr-only">
-                    Your name
+                    Full name
                   </Label>
                   <Input
                     id="name"
@@ -196,7 +181,7 @@ export default function ClientInvitePage() {
                     type="text"
                     required
                     className="w-full"
-                    placeholder="Your name"
+                    placeholder="Full name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     disabled={isSigningUp || isGoogleLoading}
@@ -228,7 +213,7 @@ export default function ClientInvitePage() {
                       id="password"
                       name="password"
                       type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
+                      autoComplete="current-password"
                       required
                       className="w-full pr-10"
                       placeholder="Password"
@@ -259,10 +244,10 @@ export default function ClientInvitePage() {
                   {isSigningUp ? (
                     <>
                       <Loader2 className="size-4 animate-spin mr-2" />
-                      Creating account...
+                      Registering...
                     </>
                   ) : (
-                    'Create Account'
+                    'Register'
                   )}
                 </Button>
               </div>
@@ -300,6 +285,17 @@ export default function ClientInvitePage() {
                     </>
                   )}
                 </Button>
+              </div>
+
+              <div className="mt-6 text-center text-sm">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={handleSignInClick}
+                  className="underline"
+                >
+                  Sign in
+                </button>
               </div>
             </div>
           </div>

@@ -190,6 +190,8 @@ export const enMessages = {
       },
     },
     customisations: {
+      saveFailed: 'Failed to save customisations',
+      savedSuccessfully: 'Customisations saved successfully',
       preferences: {
         title: 'Preferences',
         language: {
@@ -428,6 +430,10 @@ export const enMessages = {
         specialitiesSearchPlaceholder: 'Search specialities...',
         savedSuccessfully: 'Company information saved successfully',
         saveFailed: 'Failed to save company information',
+        logoDialog: {
+          title: 'Update Company Logo',
+          description: 'Upload an image for your company logo',
+        },
       },
       team: {
         title: 'Team',
@@ -437,6 +443,9 @@ export const enMessages = {
         nonAdmin: 'Non admin',
         addTeamMember: 'Add team member',
       },
+    },
+    billing: {
+      title: 'Billing',
     },
   },
   sidebar: {

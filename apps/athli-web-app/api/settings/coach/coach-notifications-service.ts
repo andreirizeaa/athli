@@ -1,8 +1,8 @@
 import { apiFetch } from '@/api/api-client';
 
 export interface NotificationEvent {
-    id: string;
-    key: string;
+    event_id: string;
+    event_key: string;
     name: string;
     description: string;
     category: string;

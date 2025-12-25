@@ -24,6 +24,7 @@ import { availableLanguages } from '@/lib/providers/intl-provider';
 import { useThemeConfig } from '@/components/app/active-theme';
 import { DEFAULT_THEME, THEMES } from '@/lib/theme';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
+import { useGlobalData } from '@/providers/global-data-provider';
 
 type UserMenuProps = {
   isThemeMounted: boolean;
@@ -39,16 +40,18 @@ export function UserMenu({
   setIsLoggingOut,
 }: UserMenuProps) {
   const t = useTranslations();
-  const { user, signOut } = useSupabaseAuth();
+  const { signOut } = useSupabaseAuth();
+  const { user } = useGlobalData();
   const router = useRouter();
   const { resolvedTheme, setTheme, theme } = useTheme();
   const { theme: themeConfig, setTheme: setThemeConfig } = useThemeConfig();
+  const { user: globalUser, preferences, updatePreferences } = useGlobalData();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
 
-  const displayName = user
-    ? user.name || user.email
+  const displayName = globalUser
+    ? globalUser.name || globalUser.email
     : 'User';
-  const displayEmail = user?.email;
+  const displayEmail = globalUser?.email;
 
   const [initials, setInitials] = React.useState('U');
 
@@ -64,8 +67,42 @@ export function UserMenu({
 
   const currentTheme = theme || 'system';
 
+  const syncPreferences = async (overrides: {
+    theme?: string;
+    language?: string;
+    colorPreset?: string;
+  }) => {
+    // Calculate new values merging current state with overrides
+    const newTheme = overrides.theme || theme || 'system';
+    const newLanguage = overrides.language || currentLanguage;
+    const newColorPreset = overrides.colorPreset || themeConfig.preset;
+    const currentUnits = preferences?.units || 'metric';
+
+    try {
+      await updatePreferences({
+        theme: newTheme as 'light' | 'dark' | 'system',
+        language: newLanguage,
+        units: currentUnits,
+        color_preset: newColorPreset
+      });
+    } catch (error) {
+      console.error('Failed to sync preferences:', error);
+    }
+  };
+
+  const handleThemeChange = (value: string) => {
+    setTheme(value);
+    syncPreferences({ theme: value });
+  };
+
+  const handleLanguageChange = (value: string) => {
+    setCurrentLanguage(value);
+    syncPreferences({ language: value });
+  };
+
   const handlePreset = (value: string) => {
     setThemeConfig({ ...themeConfig, ...DEFAULT_THEME, preset: value as any });
+    syncPreferences({ colorPreset: value });
   };
 
   return (
@@ -77,8 +114,8 @@ export function UserMenu({
           aria-label={t('sidebar.profile.openAccountMenuAria')}
         >
           <Avatar className="h-8 w-8 rounded-md">
-            {user?.profilePictureUrl && (
-              <AvatarImage src={user.profilePictureUrl} alt={displayName} />
+            {globalUser?.profilePictureUrl && (
+              <AvatarImage src={globalUser.profilePictureUrl} alt={displayName} />
             )}
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
@@ -92,8 +129,8 @@ export function UserMenu({
       >
         <div className="flex items-center gap-3 px-3 py-3">
           <Avatar className="h-10 w-10 rounded-md">
-            {user?.profilePictureUrl && (
-              <AvatarImage src={user.profilePictureUrl} alt={displayName} />
+            {globalUser?.profilePictureUrl && (
+              <AvatarImage src={globalUser.profilePictureUrl} alt={displayName} />
             )}
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
@@ -118,7 +155,7 @@ export function UserMenu({
               <span className="flex-1">{t('sidebar.theme.label') || 'Theme'}</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              <DropdownMenuRadioGroup value={currentTheme} onValueChange={(value) => setTheme(value)}>
+              <DropdownMenuRadioGroup value={currentTheme} onValueChange={handleThemeChange}>
                 <DropdownMenuRadioItem
                   value="light"
                   className={cn(currentTheme === 'light' && 'bg-accent')}
@@ -203,7 +240,7 @@ export function UserMenu({
             <span className="flex-1">{t('sidebar.language.label') || 'Language'}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup value={currentLanguage} onValueChange={setCurrentLanguage}>
+            <DropdownMenuRadioGroup value={currentLanguage} onValueChange={handleLanguageChange}>
               {availableLanguages.map((language) => (
                 <DropdownMenuRadioItem
                   key={language.code}
