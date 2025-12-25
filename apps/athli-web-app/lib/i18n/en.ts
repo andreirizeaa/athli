@@ -2150,6 +2150,10 @@ export const enMessages = {
     },
     templateNotice: 'Template flows with placeholders require editing after creation. Edit the action nodes to select your specific content.',
     useTemplate: 'Use this template',
+    editor: {
+      deleteCheckTitle: 'Delete check',
+      deleteCheckDescription: 'Deleting this check node will also remove all actions and conditions within its branches. This action cannot be undone.',
+    },
   },
   metrics: {
     title: 'Metrics',

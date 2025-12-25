@@ -100,6 +100,20 @@ export const getLayoutedElements = async (nodes: Node[], edges: Edge[]) => {
         };
     });
 
+    // 4. Normalization: Anchor the layout to the Trigger node
+    // This prevents the graph from jumping when structural changes (like deletion) 
+    // shift Dagre's default coordinate origin.
+    const triggerNode = layoutedNodes.find(n => n.id === 'trigger');
+    if (triggerNode) {
+        const offsetX = triggerNode.position.x;
+        const offsetY = triggerNode.position.y;
+
+        layoutedNodes.forEach(node => {
+            node.position.x -= offsetX;
+            node.position.y -= offsetY;
+        });
+    }
+
     return {
         nodes: layoutedNodes,
         edges,
