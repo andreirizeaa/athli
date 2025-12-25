@@ -20,6 +20,7 @@ import { ChevronRight, MessageCircle, Users, Send, Copy, Check } from 'lucide-re
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { mockAthletes } from '@/components/app/app-shell';
+import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 
 type ClientProfileLayoutProps = {
   children: React.ReactNode;
@@ -30,6 +31,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
   const params = useParams<{ clientId: string }>();
+  const { user } = useSupabaseAuth();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   const [isInviteCopied, setIsInviteCopied] = useState<boolean>(false);
   const inviteCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,8 +154,12 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   };
 
   const handleCopyInvite = async () => {
-    // TODO: Get actual invite link for this specific client
-    const inviteLink = `https://app.athli.com/invite/${clientId}`;
+    if (!user?.id) {
+      toast.error('Unable to generate invite link. Please try again.');
+      return;
+    }
+
+    const inviteLink = `${window.location.origin}/client/invite/${user.id}`;
     try {
       await navigator.clipboard.writeText(inviteLink);
     } catch (err) {

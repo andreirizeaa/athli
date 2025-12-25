@@ -54,43 +54,17 @@ const CustomisationsPage = () => {
           <Separator className="w-full mt-[-8px] mb-[-4px]" />
           <div className="w-full">
             <div className="space-y-0">
-              <div className="grid grid-cols-[1fr_auto] gap-4 pb-2 px-4 border-b items-center -mt-0.5">
-                <label htmlFor="language" className="text-sm">
-                  {t('settings.customisations.preferences.language.label')}
-                </label>
-                <Select value={locale} onValueChange={setLocale}>
-                  <SelectTrigger id="language" className="w-[180px]">
-                    <SelectValue>
-                      <div className="flex items-center gap-2">
-                        <span>
-                          {availableLanguages.find((lang) => lang.code === locale)?.flag || '🇬🇧'}
-                        </span>
-                        <span>
-                          {availableLanguages.find((lang) => lang.code === locale)?.label || 'English'}
-                        </span>
-                      </div>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLanguages.map((lang) => (
-                      <SelectItem key={lang.code} value={lang.code}>
-                        <span className="mr-2">{lang.flag}</span>
-                        {lang.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="py-2 px-4 border-b">
+              <div className="pb-2 px-4 border-b">
                 <div className="space-y-1">
-                  <Label className="text-sm">
+                  <label className="text-sm">
                     {t('settings.customisations.preferences.theme.label')}
-                  </Label>
-                  <RadioGroup
-                    value={isMounted ? (theme || 'system') : 'system'}
-                    onValueChange={(value) => setTheme(value)}
-                    className="flex max-w-md gap-6 pt-2"
-                  >
+                  </label>
+                  <div className="flex justify-center items-center pt-2 w-full">
+                    <RadioGroup
+                      value={isMounted ? (theme || 'system') : 'system'}
+                      onValueChange={(value) => setTheme(value)}
+                      className="flex gap-6 justify-center"
+                    >
                     <div className="flex flex-col">
                       <Label
                         htmlFor="theme-light"
@@ -193,8 +167,36 @@ const CustomisationsPage = () => {
                         </span>
                       </Label>
                     </div>
-                  </RadioGroup>
+                    </RadioGroup>
+                  </div>
                 </div>
+              </div>
+              <div className="grid grid-cols-[1fr_auto] gap-4 pt-2 pb-2 px-4 border-b items-center -mt-0.5">
+                <label htmlFor="language" className="text-sm">
+                  {t('settings.customisations.preferences.language.label')}
+                </label>
+                <Select value={locale} onValueChange={setLocale}>
+                  <SelectTrigger id="language" className="w-[180px]">
+                    <SelectValue>
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {availableLanguages.find((lang) => lang.code === locale)?.flag || '🇬🇧'}
+                        </span>
+                        <span>
+                          {availableLanguages.find((lang) => lang.code === locale)?.label || 'English'}
+                        </span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLanguages.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        <span className="mr-2">{lang.flag}</span>
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-[1fr_auto] gap-4 py-2 px-4 border-b items-center">
                 <label htmlFor="colorTheme" className="text-sm">

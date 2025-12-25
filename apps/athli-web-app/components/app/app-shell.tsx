@@ -3,12 +3,13 @@
 import React from 'react';
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { UnsavedChangesProvider } from '@/app/settings/context/unsaved-changes-context';
 import { useLanguage } from '@/lib/providers/intl-provider';
 import { AppSidebar } from './app-sidebar';
 import { AppHeader } from './app-header';
+import { cn } from '@/lib/general/utils';
 
 // Re-export types for backward compatibility
 export type {
@@ -53,9 +54,9 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
   }, []);
 
   return (
-    <SidebarProvider defaultOpen={false} className="h-svh">
+    <SidebarProvider defaultOpen={false} className="h-svh bg-sidebar">
       <AppSidebar />
-      <SidebarInset className="flex-1 flex flex-col overflow-hidden">
+      <SidebarInsetWithBorder>
         <AppHeader
           isThemeMounted={isThemeMounted}
           currentLanguage={locale}
@@ -63,7 +64,7 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
           setIsLoggingOut={setIsLoggingOut}
         />
         <div className="flex-1 overflow-y-auto min-h-0">{children}</div>
-      </SidebarInset>
+      </SidebarInsetWithBorder>
       {isLoggingOut && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
@@ -73,5 +74,27 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
         </div>
       )}
     </SidebarProvider>
+  );
+};
+
+const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
+  const { state, isHovered } = useSidebar();
+  const isHoverExpanded = state === 'collapsed' && isHovered;
+  const shouldShowBorder = state === 'collapsed' || state === 'expanded';
+  const showBorder = shouldShowBorder && !isHoverExpanded;
+
+  return (
+    <SidebarInset
+      className={cn(
+        'flex-1 flex flex-col overflow-hidden bg-background',
+        showBorder && 'border-l border-sidebar-border'
+      )}
+      style={{
+        borderTopLeftRadius: '22px',
+        borderBottomLeftRadius: '22px',
+      }}
+    >
+      {children}
+    </SidebarInset>
   );
 };

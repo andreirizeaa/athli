@@ -4,8 +4,7 @@ export const registerSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
-    firstName: z.string().min(1, 'First name is required'),
-    lastName: z.string().min(1, 'Last name is required'),
+    name: z.string().min(1, 'Name is required'),
   }),
 });
 
@@ -59,5 +58,11 @@ export const verifySecurityOTPSchema = z.object({
   body: z.object({
     email: z.string().email('Invalid email address'),
     otp: z.string().min(6, 'OTP must be at least 6 characters'),
+  }),
+});
+
+export const newClientSchema = z.object({
+  body: z.object({
+    coachId: z.string().uuid('Invalid coach ID'),
   }),
 });

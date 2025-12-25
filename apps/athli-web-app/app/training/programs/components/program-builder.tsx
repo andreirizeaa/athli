@@ -30,6 +30,7 @@ import { mockWorkouts } from '@/components/app/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DiscardChangesDialog } from '@/app/training/workouts/new/components/discard-changes-dialog';
+import type { WorkoutPayload } from '@/app/training/workouts/new/workout-schema';
 
 type ProgramMeta = {
   name: string;
@@ -39,7 +40,11 @@ type ProgramMeta = {
   description: string;
 };
 
-type ProgramSchema = Array<{ day: number; workouts: string[] }>;
+// Each day in the program can have multiple workout schemas
+type ProgramSchema = Array<{
+  day: number;
+  workouts: WorkoutPayload[] // Full workout schemas instead of just IDs
+}>;
 
 type ProgramBuilderProps = {
   mode: 'new' | 'edit';
@@ -268,41 +273,57 @@ export const ProgramBuilder = ({
   };
 
   const handleSave = () => {
-    // Build the program schema: list of days with workout IDs
+    // Build the program schema: list of days with full workout schemas
     const programSchema: ProgramSchema = [];
-    
+
     // Iterate through all days (1 to totalWeeks * 7)
     for (let dayNum = 1; dayNum <= totalWeeks * 7; dayNum++) {
       const { week, day } = getWeekAndDay(dayNum);
       const workouts = workoutsByDay[week]?.[day] || [];
-      // Extract workout IDs (use the original workout.id, not the generated one)
-      const workoutIds = workouts.map((workout) => {
-        // The workout.id might be like "workout-id-timestamp", extract the original ID
-        const parts = workout.id.split('-');
-        // Remove the last 2 parts (timestamp and random) if they exist
-        return parts.length > 2 ? parts.slice(0, -2).join('-') : workout.id;
+
+      // Each workout should already be a WorkoutPayload
+      // Store the full workout schemas as-is
+      const workoutSchemas: WorkoutPayload[] = workouts.map((workout) => {
+        // In the future, workouts should be stored as WorkoutPayload objects
+        // For now, we need to fetch/construct them from the workout.id
+        // This assumes you'll have a way to retrieve the full WorkoutPayload
+        // by workout ID from your API or local storage
+
+        // Placeholder - replace with actual workout retrieval
+        // const storedWorkout = getWorkoutById(workout.id);
+        // return storedWorkout;
+
+        // Temporary placeholder that matches WorkoutPayload structure
+        return {
+          title: workout.program,
+          description: workout.description || '',
+          type: workout.type,
+          difficulty: 'intermediate',
+          equipment: workout.equipment ? workout.equipment.split(',').map(e => e.trim()).filter(e => e) : [],
+          sections: [],
+        };
       });
-      
-      if (workoutIds.length > 0) {
+
+      if (workoutSchemas.length > 0) {
         programSchema.push({
           day: dayNum,
-          workouts: workoutIds,
+          workouts: workoutSchemas,
         });
       }
     }
-    
+
     // Save schema to localStorage (in a real app, this would be saved to a database)
     if (mode === 'edit' && programId) {
       const programSchemaKey = `oneninety_program_schema_${programId}`;
       window.localStorage.setItem(programSchemaKey, JSON.stringify(programSchema));
     }
-    
+
     // eslint-disable-next-line no-console
     console.log('Program schema:', programSchema);
-    
+
     // Update initial state to reflect saved state
     setInitialState({ workoutsByDay, totalWeeks });
-    
+
     // Navigate back to programs page
     router.push('/training/programs');
   };

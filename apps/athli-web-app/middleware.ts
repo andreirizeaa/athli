@@ -2,13 +2,20 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 const publicRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password'];
-const restrictedAuthRoutes = ['/auth/reset-password', '/auth/verify-email', '/auth/callback'];
+const restrictedAuthRoutes = ['/auth/reset-password', '/auth/verify-email'];
+// OAuth callback must be publicly accessible for OAuth providers to redirect to
+const oauthCallbackRoutes = ['/auth/callback'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
   if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Allow OAuth callback routes (needed for Google OAuth redirect)
+  if (oauthCallbackRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 

@@ -116,6 +116,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
   const [modality, setModality] = useState<string>('');
   const [exerciseNameError, setExerciseNameError] = useState<string | null>(null);
   const [videoLinkError, setVideoLinkError] = useState<string | null>(null);
+  const [videoFileError, setVideoFileError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   const [muscleGroupsError, setMuscleGroupsError] = useState<string | null>(null);
   const [equipmentError, setEquipmentError] = useState<string | null>(null);
@@ -139,6 +140,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
     setModality('');
     setExerciseNameError(null);
     setVideoLinkError(null);
+    setVideoFileError(null);
     setCategoryError(null);
     setMuscleGroupsError(null);
     setEquipmentError(null);
@@ -204,8 +206,19 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
   // Handle video file selection
   const handleVideoFileSelect = (file: File) => {
     if (file.type !== 'video/mp4') {
+      setVideoFileError(t('exercises.addExercise.videoFileTypeError') || 'Only MP4 video files are allowed');
       return;
     }
+
+    // Check file size (50MB limit)
+    const maxSizeInBytes = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSizeInBytes) {
+      setVideoFileError(t('exercises.addExercise.videoFileSizeError') || 'Video file must be 50MB or less');
+      return;
+    }
+
+    // Clear any previous errors
+    setVideoFileError(null);
     setVideoFile(file);
     // Clear video link when file is selected
     setVideoLink('');
@@ -291,6 +304,19 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
       }
     } else {
       setVideoLinkError(null);
+    }
+
+    // Validate video file size if file is selected
+    if (videoFile) {
+      const maxSizeInBytes = 50 * 1024 * 1024; // 50MB
+      if (videoFile.size > maxSizeInBytes) {
+        setVideoFileError(t('exercises.addExercise.videoFileSizeError') || 'Video file must be 50MB or less');
+        hasError = true;
+      } else {
+        setVideoFileError(null);
+      }
+    } else {
+      setVideoFileError(null);
     }
 
     if (!category) {
@@ -614,6 +640,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
           )}
 
           {videoLinkError && <p className="text-sm text-destructive">{videoLinkError}</p>}
+          {videoFileError && <p className="text-sm text-destructive">{videoFileError}</p>}
         </div>
 
         <div className="flex flex-col gap-2">

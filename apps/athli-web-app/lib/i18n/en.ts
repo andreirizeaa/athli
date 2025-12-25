@@ -77,6 +77,8 @@ export const enMessages = {
     markComplete: 'Mark as complete',
     markIncomplete: 'Mark as incomplete',
     editTask: 'Edit task',
+    yourList: 'Your list',
+    athliAssistant: 'Athli assistant',
   },
   dashboard: {
     title: 'Dashboard',
@@ -240,6 +242,17 @@ export const enMessages = {
       connectAccountAria: 'Connect account',
       connectAccountError: 'Failed to connect account. Please try again.',
       noConnectedAccounts: 'No connected accounts',
+      profilePictureDialog: {
+        title: 'Update Profile Picture',
+        description: 'Upload an image for your profile picture',
+        clickToUpload: 'Click to upload or drag and drop',
+        fileTypes: 'PNG, JPG up to 5MB',
+        zoom: 'Zoom',
+        rotate: 'Rotate',
+        imageFileError: 'Please select an image file',
+        imageSizeError: 'Image size must be less than 5MB',
+        saveFailed: 'Failed to save profile picture',
+      },
       verification: {
         title: 'Additional verification required',
         description: 'Additional verification is required to connect external accounts. Please verify your identity through your account settings, then try connecting again.',
@@ -307,6 +320,11 @@ export const enMessages = {
         verifying: 'Verifying...',
         verifyFailed: 'Password verification failed',
       },
+      googleAccount: {
+        title: 'Manage your account with Google',
+        description: 'Your account is managed through Google. To change your password or email, please visit your Google Account settings.',
+        manageAccount: 'Manage Google Account',
+      },
       otpVerification: {
         title: 'Verify Your Identity',
         description: 'We sent a 6-digit verification code to {email}. Please enter it below to confirm your changes.',
@@ -343,6 +361,9 @@ export const enMessages = {
       email: 'Email',
       emailVerified: 'Email Verified',
       accountCreated: 'Account Created',
+      provider: 'Provider',
+      providerGoogle: 'Google',
+      providerEmail: 'Email',
       yes: 'Yes',
       no: 'No',
       accountIdCopied: 'Account ID copied to clipboard',
@@ -2199,6 +2220,45 @@ export const enMessages = {
     noMetricsSelected: 'No metrics selected',
     searchAthletes: 'Search athletes...',
     noAthletesFound: 'No athletes found.',
+  },
+  referAndEarn: {
+    title: 'Share Athli with your friends',
+    subtitle: 'Earn with no limits! For each successful referral, receive up to a free month.',
+    copyReferralLink: 'Copy Referral Link',
+    referralLinkCopied: 'Referral link copied to clipboard!',
+    copyFailed: 'Failed to copy referral link',
+    columns: {
+      coach: 'Coach',
+      date: 'Date',
+      status: 'Status',
+    },
+    status: {
+      signedUp: 'Signed up',
+      freeTrial: 'Free trial',
+      paidPlan: 'Paid Plan',
+    },
+    steps: {
+      referFriends: {
+        title: 'Refer friends',
+        description: 'Share your special link to other coaches',
+      },
+      friendSignsUp: {
+        title: 'Friend signs up',
+        description: 'Their free trial is now doubled to 30 days!',
+      },
+      coachJoinsPaidPlan: {
+        title: 'Coach joins a paid plan',
+        description: 'They complete their free month and purchase a plan',
+      },
+      rewardGifted: {
+        title: 'Reward is gifted',
+        description: 'You receive a pro-rated free month subject to their plan value',
+      },
+      referMoreCoaches: {
+        title: 'Refer more coaches',
+        description: 'Uncapped referral benefits!',
+      },
+    },
   },
 } as const;
 

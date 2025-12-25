@@ -43,6 +43,7 @@ export function AppSidebar() {
   const { state, isHovered } = useSidebar();
 
   const isCollapsed = state === 'collapsed' && !isHovered;
+  const isHoverExpanded = state === 'collapsed' && isHovered;
 
   // Normalize pathname by removing trailing slashes (except for root)
   const normalizedPathname = pathname && pathname !== '/' ? pathname.replace(/\/$/, '') : pathname;
@@ -118,7 +119,7 @@ export function AppSidebar() {
   ] as const;
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
+    <Sidebar collapsible="icon" className={isHoverExpanded ? 'border-r' : ''}>
       <SidebarHeader>
         {isCollapsed ? (
           <div className="flex items-center justify-center px-2 py-1 h-10">

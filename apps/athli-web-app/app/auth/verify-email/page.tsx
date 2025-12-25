@@ -14,10 +14,12 @@ export default function VerifyEmailPage() {
   const { verifyOTP, resendOTP } = useSupabaseAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = createClient();
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [otp, setOtp] = useState('');
   const email = searchParams.get('email') || '';
+  const redirectPath = searchParams.get('redirect') || '/home';
 
   useEffect(() => {
     if (!email) {
@@ -35,11 +37,19 @@ export default function VerifyEmailPage() {
     setIsVerifying(true);
     try {
       const result = await verifyOTP(email, otp);
-      if (result?.session) {
+      if (result?.session?.user) {
+        const coachId = searchParams.get('coach_id');
+        
         toast.success('Email verified successfully');
         // Wait for session to be fully established and cookies to be set
         await new Promise((resolve) => setTimeout(resolve, 500));
-        window.location.href = '/home';
+        
+        // If this is a client signup (has coach_id), redirect to new-client route
+        if (coachId) {
+          window.location.href = `/auth/new-client?coach_id=${coachId}`;
+        } else {
+          window.location.href = redirectPath;
+        }
       }
     } catch (err: any) {
       toast.error(err.message || 'Verification failed');
@@ -61,8 +71,8 @@ export default function VerifyEmailPage() {
   };
 
   return (
-    <div className="flex pb-8 lg:h-screen lg:pb-0">
-      <div className="hidden w-1/2 bg-gray-100 lg:block">
+    <div className="flex h-screen w-screen fixed inset-0">
+      <div className="hidden h-full w-1/2 bg-gray-100 lg:block">
         <Image
           width={1000}
           height={1000}
@@ -73,7 +83,7 @@ export default function VerifyEmailPage() {
         />
       </div>
 
-      <div className="flex w-full items-center justify-center lg:w-1/2">
+      <div className="flex h-full w-full items-center justify-center lg:w-1/2 overflow-y-auto">
         <div className="w-full max-w-md space-y-8 px-4">
           <div className="text-center">
             <h2 className="mt-6 text-3xl font-bold">Verify Your Email</h2>

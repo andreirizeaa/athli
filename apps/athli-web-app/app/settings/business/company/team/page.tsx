@@ -52,7 +52,7 @@ const TeamPage = () => {
                     <div className="grid grid-cols-[1fr_auto] gap-4 py-4 px-4 items-center">
                       <div className="flex items-center gap-3">
                         <Avatar className="size-8">
-                          <AvatarImage src={user?.profileImageUrl || undefined} alt={displayName} />
+                          <AvatarImage src={user?.profilePictureUrl || undefined} alt={displayName} />
                           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
