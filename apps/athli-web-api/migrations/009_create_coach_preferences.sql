@@ -10,12 +10,11 @@ CREATE TABLE public.coach_preferences (
   id           UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
   coach_id     UUID NOT NULL UNIQUE, -- One preferences record per coach
 
-  theme        TEXT NOT NULL DEFAULT 'light',
-  language     TEXT NOT NULL DEFAULT 'en',
-  timezone     TEXT,
-  
-  -- Flexible storage for additional preferences
-  custom_data  JSONB NOT NULL DEFAULT '{}'::jsonb,
+  theme         TEXT NOT NULL DEFAULT 'light',
+  language      TEXT NOT NULL DEFAULT 'en',
+  units         TEXT NOT NULL DEFAULT 'metric', -- 'metric' or 'imperial'
+  color_preset  TEXT NOT NULL DEFAULT 'default',
+  timezone      TEXT,
 
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),

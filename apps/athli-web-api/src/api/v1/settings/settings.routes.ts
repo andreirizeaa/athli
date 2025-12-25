@@ -122,3 +122,18 @@ settingsRouter.get('/coach/company', supabaseAuthenticate, settingsController.ge
  *         description: Company information updated successfully
  */
 settingsRouter.patch('/coach/company', supabaseAuthenticate, settingsController.updateCompany);
+
+// Unique Code
+/**
+ * @swagger
+ * /api/v1/settings/coach/unique-code:
+ *   get:
+ *     summary: Get coach unique code
+ *     tags: [Settings]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Coach unique code retrieved successfully
+ */
+settingsRouter.get('/coach/unique-code', supabaseAuthenticate, settingsController.getUniqueCode);

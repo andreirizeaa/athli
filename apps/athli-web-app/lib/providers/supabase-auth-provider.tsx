@@ -67,69 +67,18 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchUserProfile = async (userId: string, authUser?: User) => {
-    try {
-      // Wait a bit for session to be fully established
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        // Handle different error codes
-        if (error.code === 'PGRST116' || error.status === 406) {
-          // No rows returned or RLS blocking - use metadata from auth user
-          const currentUser = authUser || supabaseUser;
-          if (currentUser) {
-            setUser({
-              id: userId,
-              userType: 'coach', // Default to coach for /auth registration
-              email: currentUser.email || '',
-              name: (currentUser.user_metadata?.name as string) || '',
-              profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
-                (currentUser.user_metadata?.picture as string) || null,
-              signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
-              isActive: true,
-            });
-            setIsLoading(false);
-            return;
-          }
-        }
-        // For other errors, log but don't throw - use fallback
-        console.warn('Profile fetch error (using fallback):', error.message);
-      } else if (data) {
-        const currentUser = authUser || supabaseUser;
-        setUser({
-          id: userId,
-          userType: data.user_type as 'coach' | 'client',
-          email: data.email,
-          name: data.name,
-          profilePictureUrl: data.profile_picture_url,
-          signinMethod: data.signin_method as 'email' | 'google',
-          isActive: data.is_active,
-        });
-        setIsLoading(false);
-        return;
-      }
-    } catch (error: any) {
-      // Log but don't fail - use fallback
-      console.warn('Error fetching user profile (using fallback):', error?.message);
-    }
-
-    // Fallback to user metadata if profile fetch fails
+    // Rely solely on auth metadata to avoid direct DB access
     const currentUser = authUser || supabaseUser;
     if (currentUser) {
       setUser({
         id: userId,
-        userType: 'coach', // Default to coach for /auth registration
+        userType: (currentUser.user_metadata?.user_type as 'coach' | 'client') || 'coach',
         email: currentUser.email || '',
         name: (currentUser.user_metadata?.name as string) || '',
         profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
           (currentUser.user_metadata?.picture as string) || null,
         signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
-        isActive: true,
+        isActive: true, // Default to true since they are logged in
       });
     }
     setIsLoading(false);

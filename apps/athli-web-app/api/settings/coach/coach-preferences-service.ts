@@ -4,7 +4,8 @@ export interface CoachPreferences {
     theme: 'light' | 'dark' | 'system';
     language: string;
     timezone?: string;
-    custom_data?: Record<string, any>;
+    units: 'metric' | 'imperial';
+    color_preset: string;
 }
 
 export async function getCoachPreferences() {
