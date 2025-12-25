@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState, useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { getForms } from '@/lib/coach/coach-form-service';
 import { type Habit } from '@/lib/coach/coach-habit-service';
 import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
@@ -21,6 +22,16 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { getLayoutedElements } from '@/lib/coach/flow-layout';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Custom node components
 function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?: React.ComponentType<{ className?: string }>; onClick: () => void; onEdit?: () => void; onDelete?: () => void } }) {
@@ -300,9 +311,12 @@ type ActionNodeData = {
 
 export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
   const [panelType, setPanelType] = useState<PanelType>(null);
+  const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrigger, setSelectedTrigger] = useState<TriggerOption | null>(null);
   const [actionNodes, setActionNodes] = useState<ActionNodeData[]>([]);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+
   const [checkNodes, setCheckNodes] = useState<Array<{ id: string; linkedActionId: string; repeatActionId: string }>>([]);
   const reactFlowInstanceRef = useRef<any>(null);
 
@@ -455,10 +469,32 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
   }, []);
 
   const handleDeleteAction = useCallback((actionId: string) => {
-    // Also delete associated check node if it exists
-    setCheckNodes((prev) => prev.filter((c) => c.repeatActionId !== actionId));
-    setActionNodes((prev) => prev.filter((node) => node.id !== actionId));
-  }, []);
+    // Function to recursively find all actions and checks to delete
+    const findDescendants = (id: string, currentActions: ActionNodeData[], currentChecks: typeof checkNodes) => {
+      let actionsToDelete = [id];
+      let checksToDelete: string[] = [];
+
+      // Find checks that branch from this action
+      const checksFromThisAction = currentChecks.filter(c => c.repeatActionId === id);
+      checksFromThisAction.forEach(check => {
+        checksToDelete.push(check.id);
+        // Find actions that are in the branches of this check
+        const actionsInBranches = currentActions.filter(a => a.checkNodeId === check.id);
+        actionsInBranches.forEach(branchAction => {
+          const descendants = findDescendants(branchAction.id, currentActions, currentChecks);
+          actionsToDelete.push(...descendants.actionsToDelete);
+          checksToDelete.push(...descendants.checksToDelete);
+        });
+      });
+
+      return { actionsToDelete, checksToDelete };
+    };
+
+    const { actionsToDelete, checksToDelete } = findDescendants(actionId, actionNodes, checkNodes);
+
+    setCheckNodes((prev) => prev.filter((c) => !checksToDelete.includes(c.id)));
+    setActionNodes((prev) => prev.filter((node) => !actionsToDelete.includes(node.id)));
+  }, [actionNodes, checkNodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(DEFAULT_EDGES);
@@ -689,7 +725,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
           data: {
             label: 'Check',
             subtitle: 'Check in completed',
-            onDelete: () => handleDeleteAction(checkNode.repeatActionId),
+            onDelete: () => setDeleteConfirmationId(checkNode.repeatActionId),
           },
         });
 
@@ -1332,6 +1368,30 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
           <MiniMap />
         </ReactFlow>
       </div>
+
+      <AlertDialog open={!!deleteConfirmationId} onOpenChange={(open) => !open && setDeleteConfirmationId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('flows.editor.deleteCheckTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('flows.editor.deleteCheckDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('general.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmationId) {
+                  handleDeleteAction(deleteConfirmationId);
+                  setDeleteConfirmationId(null);
+                }
+              }}
+            >
+              {t('general.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Right Sidebar - Overlays on top */}
       <FlowEditorSidePanel
