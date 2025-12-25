@@ -24,8 +24,8 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { mockAthletes } from '@/components/app/app-shell';
-import { addHabit, type Habit } from '@/lib/api/coach/coach-habit-service';
-import { assignHabit, deleteClientHabits } from '@/lib/api/client/client-habit-service';
+import { addHabit, type Habit } from '@/api/coach/coach-habit-service';
+import { assignHabit, deleteClientHabits } from '@/api/client/client-habit-service';
 
 // Mock data - in production this would be filtered by clientId
 const mockHabits: Habit[] = [

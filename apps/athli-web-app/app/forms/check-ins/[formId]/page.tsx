@@ -15,7 +15,7 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, GripVertical, Edit } from 'lucide-react';
-import { type CheckIn as Form, addQuestion, reorderQuestions } from '@/lib/api/coach/coach-check-in-service';
+import { type CheckIn as Form, addQuestion, reorderQuestions } from '@/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';

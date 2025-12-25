@@ -26,8 +26,8 @@ import {
   mockMessages,
 } from './mock-data';
 import type { Athlete, Contact, Workout, Program, Exercise } from './types';
-import { getCheckIns, type CheckIn } from '@/lib/api/coach/coach-check-in-service';
-import { getQuestionnaires, type Questionnaire } from '@/lib/api/coach/coach-questionnaire-service';
+import { getCheckIns, type CheckIn } from '@/api/coach/coach-check-in-service';
+import { getQuestionnaires, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 
 type Form = CheckIn | Questionnaire;
 import { FileText } from 'lucide-react';

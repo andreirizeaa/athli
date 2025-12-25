@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { updateNotifications, type NotificationSettings } from '@/lib/general/settings-service';
+import { updateNotifications, type NotificationSettings } from '@/api/settings/settings-service';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { toast } from 'sonner';
 
@@ -145,8 +145,8 @@ const NotificationsPage = () => {
           <h1 className="text-[22px] font-semibold mb-2 mt-2">
             {t('settings.sections.notifications')}
           </h1>
-          <Button 
-            className="mb-2 mt-2" 
+          <Button
+            className="mb-2 mt-2"
             onClick={handleSave}
             disabled={!hasUnsavedChanges || isSaving}
           >
@@ -182,13 +182,12 @@ const NotificationsPage = () => {
                   return (
                     <div
                       key={option.id}
-                      className={`grid grid-cols-[1fr_auto] gap-4 ${
-                        optionIndex === 0
+                      className={`grid grid-cols-[1fr_auto] gap-4 ${optionIndex === 0
                           ? 'pb-2 pt-[-1px] px-4 border-b items-center'
                           : isLast
                             ? 'pt-2 px-4 items-center'
                             : 'py-2 px-4 border-b items-center'
-                      }`}
+                        }`}
                     >
                       <label
                         htmlFor={option.id}

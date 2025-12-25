@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
-import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
 

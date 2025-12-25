@@ -17,8 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile } from '@/lib/api/coach/coach-file-service';
-import { deleteClientFiles } from '@/lib/api/client/client-file-service';
+import { addFile, updateFile, deleteFile } from '@/api/coach/coach-file-service';
+import { deleteClientFiles } from '@/api/client/client-file-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { EditFileSidePanel } from '@/components/files/edit-file-side-panel';

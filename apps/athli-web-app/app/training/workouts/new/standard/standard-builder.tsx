@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/general/utils';
-import { searchExercises, type Exercise } from '@/lib/api/exercise/exercise-search';
+import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import { toast } from 'sonner';
 import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';

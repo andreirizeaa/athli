@@ -24,7 +24,7 @@ import { cn } from '@/lib/general/utils';
 import { mockAthletes, type Athlete } from '@/components/app/app-shell';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { broadcastMessage, type BroadcastMessageData } from '../../../lib/api/coach/coach-message-service';
+import { broadcastMessage, type BroadcastMessageData } from '../../../api/coach/coach-message-service';
 
 type BroadcastSidePanelProps = {
   open: boolean;

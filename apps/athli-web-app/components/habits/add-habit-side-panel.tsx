@@ -16,8 +16,8 @@ import { Info } from 'lucide-react';
 import Link from 'next/link';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { HabitFormManual } from './habit-form-manual';
-import { getAllHabits, type Habit } from '@/lib/api/coach/coach-habit-service';
-import { assignHabit } from '@/lib/api/client/client-habit-service';
+import { getAllHabits, type Habit } from '@/api/coach/coach-habit-service';
+import { assignHabit } from '@/api/client/client-habit-service';
 
 export type HabitFormValues = {
   name: string;

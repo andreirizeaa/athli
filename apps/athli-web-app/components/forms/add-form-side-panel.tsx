@@ -32,8 +32,8 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
-import { addCheckIn, type AddCheckInData } from '@/lib/api/coach/coach-check-in-service';
-import { addQuestionnaire, type AddQuestionnaireData } from '@/lib/api/coach/coach-questionnaire-service';
+import { addCheckIn, type AddCheckInData } from '@/api/coach/coach-check-in-service';
+import { addQuestionnaire, type AddQuestionnaireData } from '@/api/coach/coach-questionnaire-service';
 
 type AddFormData = AddCheckInData | AddQuestionnaireData;
 import { formTemplates, type FormTemplate } from '@/constants/forms';

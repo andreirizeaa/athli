@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
-import { addCheckIn, type AddCheckInData as AddFormData } from '@/lib/api/coach/coach-check-in-service';
+import { addCheckIn, type AddCheckInData as AddFormData } from '@/api/coach/coach-check-in-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 

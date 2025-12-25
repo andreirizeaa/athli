@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/client';
-import { apiFetch } from '@/lib/api/api-client';
+import { createClient } from '@/supabase/client';
+import { apiFetch } from '@/api/api-client';
 
 export interface UserProfile {
     id: string;

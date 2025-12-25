@@ -16,8 +16,8 @@ import {
   BreadcrumbPage,
 } from '@/components/ui/breadcrumb';
 import { ChevronRight, Plus, Trash2, GripVertical, Edit } from 'lucide-react';
-import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions } from '@/lib/api/coach/coach-check-in-service';
-import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions } from '@/lib/api/coach/coach-questionnaire-service';
+import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions } from '@/api/coach/coach-check-in-service';
+import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions } from '@/api/coach/coach-questionnaire-service';
 
 type Form = CheckIn | Questionnaire;
 import { formTemplates } from '@/constants/forms';
@@ -27,7 +27,7 @@ import { AddQuestionSidePanel } from '@/components/forms/add-question-side-panel
 import { EditQuestionSidePanel } from '@/components/forms/edit-question-side-panel';
 import { EditFormSidePanel } from '@/components/forms/edit-form-side-panel';
 import { FormPreviewContainer } from '@/components/forms/form-preview-container';
-import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
 // Mock forms data - in production this would come from an API
 const mockForms: Form[] = [

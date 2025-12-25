@@ -19,8 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile } from '@/lib/api/coach/coach-file-service';
-import { addFilesToClient } from '@/lib/api/client/client-file-service';
+import { addFile, updateFile, deleteFile } from '@/api/coach/coach-file-service';
+import { addFilesToClient } from '@/api/client/client-file-service';
 import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';

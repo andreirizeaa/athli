@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Edit, Plus, X } from 'lucide-react';
-import { getAthleteGoals, saveAthleteGoals } from '@/lib/api/client/client-service';
+import { getAthleteGoals, saveAthleteGoals } from '@/api/client/client-service';
 
 type GoalsCardProps = {
   clientId: string;

@@ -1,5 +1,5 @@
-import type { CheckIn } from '@/lib/api/coach/coach-check-in-service';
-import type { Questionnaire } from '@/lib/api/coach/coach-questionnaire-service';
+import type { CheckIn } from '@/api/coach/coach-check-in-service';
+import type { Questionnaire } from '@/api/coach/coach-questionnaire-service';
 
 type Form = CheckIn | Questionnaire;
 
@@ -417,10 +417,10 @@ export const duplicateForm = async (formId: string, originalForm: Form): Promise
   const isCheckIn = formId.startsWith('checkin-');
 
   if (isCheckIn) {
-    const { duplicateCheckIn } = await import('@/lib/api/coach/coach-check-in-service');
+    const { duplicateCheckIn } = await import('@/api/coach/coach-check-in-service');
     return await duplicateCheckIn(formId, originalForm as CheckIn);
   } else {
-    const { duplicateQuestionnaire } = await import('@/lib/api/coach/coach-questionnaire-service');
+    const { duplicateQuestionnaire } = await import('@/api/coach/coach-questionnaire-service');
     return await duplicateQuestionnaire(formId, originalForm as Questionnaire);
   }
 };

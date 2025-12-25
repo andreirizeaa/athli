@@ -1,5 +1,5 @@
-import type { Exercise } from '@/lib/api/exercise/exercise-search';
-import { searchExercises } from '@/lib/api/exercise/exercise-search';
+import type { Exercise } from '@/api/exercise/exercise-search';
+import { searchExercises } from '@/api/exercise/exercise-search';
 import type { MutableRefObject } from 'react';
 
 type ScrollOptions = {

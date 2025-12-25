@@ -13,7 +13,7 @@ import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useAccountSave } from '../context/account-save-context';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/supabase/client';
 import { PasswordConfirmationDialog } from './components/password-confirmation-dialog';
 import { EmailChangeDialog } from './components/email-change-dialog';
 
@@ -100,7 +100,7 @@ const SecurityPage = () => {
     try {
       const supabase = createClient();
       const { data: { session: currentSession } } = await supabase.auth.getSession();
-      
+
       if (!currentSession) {
         throw new Error('No active session');
       }
@@ -224,12 +224,12 @@ const SecurityPage = () => {
                   </p>
                 </div>
                 <div className="flex justify-end pt-2 px-4">
-                  <Button 
+                  <Button
                     asChild
                   >
-                    <a 
-                      href="https://myaccount.google.com/" 
-                      target="_blank" 
+                    <a
+                      href="https://myaccount.google.com/"
+                      target="_blank"
                       rel="noopener noreferrer"
                     >
                       {t('settings.security.googleAccount.manageAccount')}
@@ -244,123 +244,123 @@ const SecurityPage = () => {
         {/* Password Card - Only show for email provider */}
         {isEmailProvider && (
           <Card className="bg-background max-w-3xl w-full">
-          <CardHeader className="px-4">
-            <CardTitle>{t('settings.security.password')}</CardTitle>
-          </CardHeader>
-          <Separator className="w-full mt-[-8px]" />
-          <CardContent className="px-0">
-            <form onSubmit={(e) => { e.preventDefault(); handleSavePassword(); }}>
-              <div className="space-y-0">
-                {/* New Password */}
-                <div className="flex items-center justify-between w-full pb-2 border-b px-4">
-                  <div>
-                    <Label htmlFor="newPassword" className="text-sm block mb-1">{t('settings.security.newPassword')}</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t('settings.security.passwordRequirements')}
-                    </p>
+            <CardHeader className="px-4">
+              <CardTitle>{t('settings.security.password')}</CardTitle>
+            </CardHeader>
+            <Separator className="w-full mt-[-8px]" />
+            <CardContent className="px-0">
+              <form onSubmit={(e) => { e.preventDefault(); handleSavePassword(); }}>
+                <div className="space-y-0">
+                  {/* New Password */}
+                  <div className="flex items-center justify-between w-full pb-2 border-b px-4">
+                    <div>
+                      <Label htmlFor="newPassword" className="text-sm block mb-1">{t('settings.security.newPassword')}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t('settings.security.passwordRequirements')}
+                      </p>
+                    </div>
+                    <div className="relative w-64">
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        disabled={isSavingPassword}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        tabIndex={0}
+                        role="button"
+                        aria-label={showNewPassword ? t('settings.security.hidePasswordAria') : t('settings.security.showPasswordAria')}
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <div className="relative w-64">
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isSavingPassword}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      tabIndex={0}
-                      role="button"
-                      aria-label={showNewPassword ? t('settings.security.hidePasswordAria') : t('settings.security.showPasswordAria')}
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
 
-                {/* Confirm Password */}
-                <div className="flex items-center justify-between w-full pb-2 border-b pt-2 px-4">
-                  <Label htmlFor="confirmPassword" className="text-sm">{t('settings.security.confirmPassword')}</Label>
-                  <div className="relative w-64">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isSavingPassword}
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      tabIndex={0}
-                      role="button"
-                      aria-label={showConfirmPassword ? t('settings.security.hidePasswordAria') : t('settings.security.showPasswordAria')}
+                  {/* Confirm Password */}
+                  <div className="flex items-center justify-between w-full pb-2 border-b pt-2 px-4">
+                    <Label htmlFor="confirmPassword" className="text-sm">{t('settings.security.confirmPassword')}</Label>
+                    <div className="relative w-64">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isSavingPassword}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        tabIndex={0}
+                        role="button"
+                        aria-label={showConfirmPassword ? t('settings.security.hidePasswordAria') : t('settings.security.showPasswordAria')}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2 px-4">
+                    <Button
+                      type="submit"
+                      onClick={handleSavePassword}
+                      disabled={!hasPasswordChanges || isSavingPassword}
                     >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                      {isSavingPassword ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('settings.profile.saving')}</>
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        t('settings.profile.saveChanges')
                       )}
-                    </button>
+                    </Button>
                   </div>
                 </div>
-
-                {/* Save Button */}
-                <div className="flex justify-end pt-2 px-4">
-                  <Button 
-                    type="submit"
-                    onClick={handleSavePassword}
-                    disabled={!hasPasswordChanges || isSavingPassword}
-                  >
-                    {isSavingPassword ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('settings.profile.saving')}</>
-                    ) : (
-                      t('settings.profile.saveChanges')
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              </form>
+            </CardContent>
+          </Card>
         )}
 
         {/* Email Card - Only show for email provider */}
         {isEmailProvider && (
           <Card className="bg-background max-w-3xl w-full">
-          <CardHeader className="px-4">
-            <CardTitle>{t('settings.security.email')}</CardTitle>
-          </CardHeader>
-          <Separator className="w-full mt-[-8px]" />
-          <CardContent className="px-0">
-            <div className="space-y-0">
-              {/* Email Address */}
-              <div className="flex items-center justify-between w-full pb-2 border-b px-4">
-                <Label className="text-sm">{t('settings.security.emailAddress')}</Label>
-                <span className="text-sm text-muted-foreground">{user?.email || ''}</span>
-              </div>
+            <CardHeader className="px-4">
+              <CardTitle>{t('settings.security.email')}</CardTitle>
+            </CardHeader>
+            <Separator className="w-full mt-[-8px]" />
+            <CardContent className="px-0">
+              <div className="space-y-0">
+                {/* Email Address */}
+                <div className="flex items-center justify-between w-full pb-2 border-b px-4">
+                  <Label className="text-sm">{t('settings.security.emailAddress')}</Label>
+                  <span className="text-sm text-muted-foreground">{user?.email || ''}</span>
+                </div>
 
-              {/* Edit Button */}
-              <div className="flex justify-end pt-2 px-4">
-                <Button 
-                  onClick={handleEditEmail}
-                  disabled={isSavingEmail}
-                >
-                  {t('settings.security.editEmail')}
-                </Button>
+                {/* Edit Button */}
+                <div className="flex justify-end pt-2 px-4">
+                  <Button
+                    onClick={handleEditEmail}
+                    disabled={isSavingEmail}
+                  >
+                    {t('settings.security.editEmail')}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
         )}
       </div>
 

@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Trash2, Edit, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { format } from 'date-fns';
-import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/api/coach/coach-client-service';
+import { getNotes, createNote, editNote, deleteNote, type Note } from '@/api/coach/coach-client-service';
 
 type NotesCardProps = {
   clientId: string;

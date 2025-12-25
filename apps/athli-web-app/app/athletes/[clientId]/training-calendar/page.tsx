@@ -57,7 +57,7 @@ import {
   getTrainingCalendar,
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
-} from '@/lib/api/client/client-service';
+} from '@/api/client/client-service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

@@ -7,8 +7,8 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createClient } from '@/lib/supabase/client';
-import { fetchUserById } from '@/lib/api/user/user-service';
+import { createClient } from '@/supabase/client';
+import { fetchUserById } from '@/api/user/user-service';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 

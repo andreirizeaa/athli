@@ -27,7 +27,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
-import { generateWorkoutFromPrompt } from '@/lib/api/exercise/generate-exercise';
+import { generateWorkoutFromPrompt } from '@/api/exercise/generate-exercise';
 import { BasicInformation } from './new/basic-information';
 import {
   Search,
@@ -60,7 +60,7 @@ import {
 
 import type { Workout } from '@/components/app/app-shell';
 import { mockWorkouts } from '@/components/app/app-shell';
-import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/lib/api/coach/coach-workout-service';
+import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/api/coach/coach-workout-service';
 
 type ColumnId = 'description' | 'type' | 'totalExercises' | 'equipment' | 'created';
 

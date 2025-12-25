@@ -16,9 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/general/utils';
-import { searchExercises, type Exercise } from '@/lib/api/exercise/exercise-search';
-import type { GeneratedWorkout } from '@/lib/api/exercise/generate-exercise';
-import { generateWorkoutFromPrompt, prompt } from '@/lib/api/exercise/generate-exercise';
+import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
+import type { GeneratedWorkout } from '@/api/exercise/generate-exercise';
+import { generateWorkoutFromPrompt, prompt } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
 import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';

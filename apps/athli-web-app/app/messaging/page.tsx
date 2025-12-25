@@ -54,8 +54,8 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import { messageDraftStorage } from '@/lib/general/message-draft-storage';
-import { sendMessage } from '@/lib/api/coach/coach-message-service';
-import { searchNotes } from '@/lib/api/coach/coach-client-service';
+import { sendMessage } from '@/api/coach/coach-message-service';
+import { searchNotes } from '@/api/coach/coach-client-service';
 import {
   mockContacts,
   mockMessages,

@@ -9,8 +9,8 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@
 import { X, Loader2 } from 'lucide-react';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
-import { authService } from '@/lib/api/auth/auth-service';
+import { createClient } from '@/supabase/client';
+import { authService } from '@/api/auth/auth-service';
 
 const DangerPage = () => {
   const t = useTranslations();

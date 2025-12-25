@@ -18,7 +18,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Spinner } from '@/components/ui/spinner';
 import { X, Upload } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { editExercise, type Exercise } from '@/lib/api/coach/coach-exercise-service';
+import { editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
 
 const EXERCISE_CATEGORIES = ['Weight & Reps', 'Reps', 'Distance / Duration'] as const;
 

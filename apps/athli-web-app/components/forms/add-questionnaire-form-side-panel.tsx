@@ -22,7 +22,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
-import { addQuestionnaire, type AddQuestionnaireData as AddFormData } from '@/lib/api/coach/coach-questionnaire-service';
+import { addQuestionnaire, type AddQuestionnaireData as AddFormData } from '@/api/coach/coach-questionnaire-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 

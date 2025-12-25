@@ -2,9 +2,9 @@
 
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { getCheckIns } from '@/lib/api/coach/coach-check-in-service';
-import { getQuestionnaires } from '@/lib/api/coach/coach-questionnaire-service';
-import { type Habit } from '@/lib/api/coach/coach-habit-service';
+import { getCheckIns } from '@/api/coach/coach-check-in-service';
+import { getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
+import { type Habit } from '@/api/coach/coach-habit-service';
 import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
 import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
@@ -22,7 +22,7 @@ import ReactFlow, {
   type Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { getLayoutedElements } from '@/lib/api/coach/flow-layout';
+import { getLayoutedElements } from '@/api/coach/flow-layout';
 import {
   AlertDialog,
   AlertDialogAction,

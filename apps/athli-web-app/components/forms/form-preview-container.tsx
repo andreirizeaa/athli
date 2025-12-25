@@ -5,7 +5,7 @@ import { cn } from '@/lib/general/utils';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { PreviewQuestion } from './preview-question';
-import { getAllMetrics, type Metric } from '@/lib/api/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
 type Question = {
   id: string;

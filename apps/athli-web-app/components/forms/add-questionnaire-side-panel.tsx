@@ -7,8 +7,8 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Search, FileText, Info, Edit } from 'lucide-react';
-import { getQuestionnaires, type Questionnaire as Form } from '@/lib/api/coach/coach-questionnaire-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/api/client/client-form-service';
+import { getQuestionnaires, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
 

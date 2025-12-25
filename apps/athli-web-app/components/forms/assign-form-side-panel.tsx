@@ -19,11 +19,11 @@ import {
 } from '@/components/ui/select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Search, Edit, FileText, ChevronDownIcon, Info } from 'lucide-react';
-import { getCheckIns, type CheckIn } from '@/lib/api/coach/coach-check-in-service';
-import { getQuestionnaires, type Questionnaire } from '@/lib/api/coach/coach-questionnaire-service';
+import { getCheckIns, type CheckIn } from '@/api/coach/coach-check-in-service';
+import { getQuestionnaires, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 
 type Form = CheckIn | Questionnaire;
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/api/client/client-form-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { cn } from '@/lib/general/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';

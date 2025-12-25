@@ -16,7 +16,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/general/utils';
 import { AddFlowSidePanel } from '@/components/flows/add-flow-side-panel';
-import { duplicateFlow } from '@/lib/api/coach/coach-flow-service';
+import { duplicateFlow } from '@/api/coach/coach-flow-service';
 
 type Flow = {
   id: string;

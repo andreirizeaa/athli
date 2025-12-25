@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Edit } from 'lucide-react';
-import { getAthleteBio, saveAthleteBio } from '@/lib/api/client/client-service';
+import { getAthleteBio, saveAthleteBio } from '@/api/client/client-service';
 
 type ClientBioCardProps = {
   clientId: string;

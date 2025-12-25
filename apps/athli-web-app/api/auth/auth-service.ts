@@ -1,4 +1,4 @@
-import { apiFetch } from '@/lib/api/api-client';
+import { apiFetch } from '@/api/api-client';
 
 export interface AuthResponse {
     success: boolean;
