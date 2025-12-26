@@ -29,6 +29,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
@@ -61,10 +62,11 @@ import {
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { mockPrograms } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms, duplicateProgram } from '@/api/coach/coach-program-service';
+import { getPrograms, starPrograms, archivePrograms, deletePrograms, duplicateProgram, createProgram } from '@/api/coach/coach-program-service';
+import { toast } from 'sonner';
+import { useTrainingData } from '../training-data-context';
 
-type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'created';
+type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'actions';
 
 const COLUMN_ORDER: ColumnId[] = [
   'description',
@@ -72,7 +74,7 @@ const COLUMN_ORDER: ColumnId[] = [
   'length',
   'totalExercises',
   'equipment',
-  'created',
+  'actions',
 ];
 
 const PROGRAM_COLUMN_DEFINITIONS = [
@@ -81,7 +83,6 @@ const PROGRAM_COLUMN_DEFINITIONS = [
   { id: 'length', label: 'Length', icon: <Clock className="size-3" /> },
   { id: 'totalExercises', label: 'Total Exercises', icon: <Hash className="size-3" /> },
   { id: 'equipment', label: 'Equipment', icon: <Wrench className="size-3" /> },
-  { id: 'created', label: 'Created', icon: <Calendar className="size-3" /> },
 ];
 
 const PROGRAM_TYPES = [
@@ -107,7 +108,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     length: { class: 'min-w-[130px]', pixel: '130px' },
     totalExercises: { class: 'min-w-[170px]', pixel: '170px' },
     equipment: { class: 'min-w-[200px]', pixel: '200px' },
-    created: { class: 'min-w-[150px]', pixel: '150px' },
+    actions: { class: 'w-[100px]', pixel: '100px' },
   };
 
   return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
@@ -116,12 +117,12 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
 const ProgramsPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const { programs, isLoadingPrograms, setPrograms, refreshPrograms } = useTrainingData();
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
   const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
-  const [programs, setPrograms] = useState<Program[]>(mockPrograms);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
-  const [filteredCount, setFilteredCount] = useState<number>(mockPrograms.length);
+  const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const [isCreateProgramOpen, setIsCreateProgramOpen] = useState<boolean>(false);
   const [newProgramName, setNewProgramName] = useState<string>('');
@@ -133,9 +134,17 @@ const ProgramsPage = () => {
   const [newProgramTypeError, setNewProgramTypeError] = useState<string | null>(null);
   const [newProgramDifficultyError, setNewProgramDifficultyError] = useState<string | null>(null);
   const [isAssignProgramOpen, setIsAssignProgramOpen] = useState<boolean>(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [isAssignIndividualProgramOpen, setIsAssignIndividualProgramOpen] = useState<boolean>(false);
   const [selectedProgramForAssignment, setSelectedProgramForAssignment] = useState<Program | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Initialize filteredCount and starred programs from context data
+    setFilteredCount(programs.length);
+    const starred = new Set(programs.filter(p => (p as any).starred).map(p => p.id));
+    setStarredPrograms(starred);
+  }, [programs]);
 
   const handleToggleProgram = (programId: string) => {
     setSelectedPrograms((prev) => {
@@ -164,7 +173,7 @@ const ProgramsPage = () => {
   const handleToggleStar = async (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starPrograms(programId);
+      await starPrograms(programId, !starredPrograms.has(programId));
       setStarredPrograms((prev) => {
         const next = new Set(prev);
         if (next.has(programId)) {
@@ -195,7 +204,7 @@ const ProgramsPage = () => {
   const handleStarSelected = async () => {
     if (selectedPrograms.size === 0) return;
     try {
-      await starPrograms(Array.from(selectedPrograms));
+      await starPrograms(Array.from(selectedPrograms), true);
       // Update starred state for selected programs
       setStarredPrograms((prev) => {
         const next = new Set(prev);
@@ -216,7 +225,7 @@ const ProgramsPage = () => {
   const handleArchiveSelected = async () => {
     if (selectedPrograms.size === 0) return;
     try {
-      await archivePrograms(Array.from(selectedPrograms));
+      await archivePrograms(Array.from(selectedPrograms), true);
       // Clear selection after archiving
       setSelectedPrograms(new Set());
     } catch (error) {
@@ -224,10 +233,12 @@ const ProgramsPage = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleBulkDelete = async () => {
     if (selectedPrograms.size === 0) return;
     try {
       await deletePrograms(Array.from(selectedPrograms));
+      // Reload programs after deleting
+      await refreshPrograms();
       // Clear selection after deleting
       setSelectedPrograms(new Set());
     } catch (error) {
@@ -241,9 +252,9 @@ const ProgramsPage = () => {
     const program = programs.find((p) => p.id === programId);
     if (!program) return;
     try {
-      const duplicatedProgram = await duplicateProgram(programId, program);
-      // Add the duplicated program to the list
-      setPrograms((prev) => [...prev, duplicatedProgram]);
+      const duplicatedProgram = await duplicateProgram(programId);
+      // Reload programs to show the duplicated one
+      await refreshPrograms();
       // Clear selection after duplicating
       setSelectedPrograms(new Set());
     } catch (error) {
@@ -272,7 +283,7 @@ const ProgramsPage = () => {
     setIsCreateProgramOpen(false);
   };
 
-  const handleCreateProgramContinue = () => {
+  const handleCreateProgramContinue = async () => {
     if (!newProgramName.trim()) {
       setNewProgramError(t('programs.addProgram.programNameRequiredError'));
       return;
@@ -290,30 +301,30 @@ const ProgramsPage = () => {
 
     setIsNavigating(true);
 
-    const meta = {
+    const programData = {
       name: newProgramName.trim(),
       type: newProgramType,
       difficulty: newProgramDifficulty,
-      weeks: newProgramWeeks,
+      weeks: newProgramWeeks || '1',
       description: newProgramDescription.trim(),
     };
 
-    // Set localStorage synchronously before navigation
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('oneninety_new_program_meta', JSON.stringify(meta));
-        // Set access flag for program builder
-        window.localStorage.setItem('oneninety_program_builder_access', 'true');
-      } catch {
-        // Ignore storage errors
-      }
+    try {
+      await createProgram(programData);
+      toast.success(t('programs.new.toast.savedSuccessfully', { name: newProgramName }));
+
+      // Reload programs to show the new one
+      await refreshPrograms();
+
+      // Close side panel and reset state
+      setIsCreateProgramOpen(false);
+      resetCreateProgramState();
+    } catch (error) {
+      console.error('Failed to create program:', error);
+      toast.error(t('programs.builder.saveFailed'));
+    } finally {
+      setIsNavigating(false);
     }
-
-    // Close side panel
-    setIsCreateProgramOpen(false);
-
-    // Navigate immediately - localStorage is synchronous so it's already set
-    router.push('/training/programs/new');
   };
 
   const handleProgramRowKeyDown = (
@@ -343,7 +354,8 @@ const ProgramsPage = () => {
     handleNavigateToProgram(programId);
   };
 
-  const formatDate = (dateStr: string): string => {
+  const formatDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return '-';
     const [day, month, year] = dateStr.split('-');
     const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
     const months = [
@@ -389,7 +401,7 @@ const ProgramsPage = () => {
     return queryIndex === normalizedQuery.length;
   };
 
-  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId));
+  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId) && colId !== 'actions');
 
   const uniqueTypes = Array.from(new Set(programs.map((w) => w.type))).sort();
   const uniqueLengths = Array.from(new Set(programs.map((w) => w.length))).sort((a, b) => {
@@ -523,26 +535,6 @@ const ProgramsPage = () => {
               </Tooltip>
             ),
           };
-        case 'created':
-          return {
-            id: 'created',
-            label: t('general.created'),
-            icon: <Calendar className="size-3" />,
-            width: {
-              class: getColumnWidth('created', 'class'),
-              pixel: getColumnWidth('created', 'pixel'),
-            },
-            tooltip: t('programs.columnTooltips.created'),
-            getSortValue: (row) => {
-              const [day, month, year] = row.created.split('-').map(Number);
-              return new Date(2000 + year, month - 1, day).getTime();
-            },
-            renderCell: (row) => (
-              <div className="flex items-center h-full w-full pr-6">
-                <span className="text-sm">{formatDate(row.created)}</span>
-              </div>
-            ),
-          };
         default:
           return {
             id: columnId,
@@ -554,7 +546,36 @@ const ProgramsPage = () => {
     }),
   ];
 
-  const columns: ColumnDefinition<Program>[] = allColumns;
+  // Add actions column
+  const actionsColumn: ColumnDefinition<Program> = {
+    id: 'actions',
+    label: '',
+    sortable: false,
+    width: { class: 'w-[100px]', pixel: '100px' },
+    renderCell: (row) => (
+      <div className="flex items-center justify-end w-full" data-no-row-link="true">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={async (e) => {
+            e.stopPropagation();
+            try {
+              await deletePrograms([row.id]);
+              await refreshPrograms();
+            } catch (error) {
+              console.error('Failed to delete program:', error);
+            }
+          }}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label={`Delete ${row.program}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    ),
+  };
+
+  const columns: ColumnDefinition<Program>[] = [...allColumns, actionsColumn];
 
   // Create filter definitions
   const filters: FilterDefinition<Program>[] = [
@@ -847,7 +868,7 @@ const ProgramsPage = () => {
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    onClick={handleDeleteSelected}
+                    onClick={() => setIsBulkDeleteOpen(true)}
                     className="gap-2 text-destructive hover:text-destructive"
                     aria-label={t('programs.actions.deleteSelectedAria')}
                   >
@@ -887,6 +908,15 @@ const ProgramsPage = () => {
         gridPadding={true}
         compactPagination={true}
       />
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedPrograms.size}
+        itemName={t('programs.title').toLowerCase()}
+      />
+
       <SidePanel
         open={isAssignProgramOpen}
         onOpenChange={setIsAssignProgramOpen}

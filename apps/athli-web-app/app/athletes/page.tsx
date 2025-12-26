@@ -29,6 +29,7 @@ import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { PageHeader } from '@/components/app/page-header';
 import { Badge } from '@/components/ui/badge';
 import {
   User,
@@ -1097,14 +1098,10 @@ const AthletesPage = () => {
   };
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex flex-col">
-            <h1 className="text-[22px] font-semibold">{t('athletes.title')}</h1>
-            <p className="text-sm text-foreground">
-              {t('athletes.subtitle', { count: filteredCount })}
-            </p>
-          </div>
+      <PageHeader
+        title={t('athletes.title')}
+        subtitle={t('athletes.subtitle', { count: filteredCount })}
+        action={
           <div>
             <DropdownMenu>
               <ButtonGroup>
@@ -1141,9 +1138,8 @@ const AthletesPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
+        }
+      />
       <DataGrid
         data={mockAthletes}
         columns={columns}

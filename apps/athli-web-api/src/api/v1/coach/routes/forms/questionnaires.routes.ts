@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { coachQuestionnairesController } from '../../coach-questionnaires.controller';
+import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
 
 export const coachQuestionnaireRouter = Router();
 
@@ -14,9 +16,7 @@ export const coachQuestionnaireRouter = Router();
  *       200:
  *         description: Coach questionnaires retrieved successfully
  */
-coachQuestionnaireRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach questionnaire route' });
-});
+coachQuestionnaireRouter.get('/', supabaseAuthenticate, coachQuestionnairesController.getQuestionnaires);
 
 /**
  * @swagger
@@ -42,9 +42,7 @@ coachQuestionnaireRouter.get('/', (req, res) => {
  *       200:
  *         description: Coach questionnaire updated successfully
  */
-coachQuestionnaireRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach questionnaire updated', id: req.params.id });
-});
+coachQuestionnaireRouter.patch('/:id', supabaseAuthenticate, coachQuestionnairesController.updateQuestionnaire);
 
 /**
  * @swagger
@@ -80,10 +78,8 @@ coachQuestionnaireRouter.patch('/:id', (req, res) => {
  *       200:
  *         description: Coach questionnaire deleted successfully
  */
-coachQuestionnaireRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach questionnaire created' });
-});
+coachQuestionnaireRouter.get('/:id', supabaseAuthenticate, coachQuestionnairesController.getQuestionnaireById);
 
-coachQuestionnaireRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach questionnaire deleted', id: req.params.id });
-});
+coachQuestionnaireRouter.post('/', supabaseAuthenticate, coachQuestionnairesController.createQuestionnaire);
+
+coachQuestionnaireRouter.delete('/:id', supabaseAuthenticate, coachQuestionnairesController.deleteQuestionnaire);

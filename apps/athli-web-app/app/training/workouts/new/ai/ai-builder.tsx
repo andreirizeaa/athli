@@ -20,7 +20,6 @@ import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import type { GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { generateWorkoutFromPrompt, prompt } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
-import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
 import type {
   CircuitExerciseGroupPayload,
@@ -460,19 +459,21 @@ export const AiBuilder = ({ meta, onDirtyChange, saveSignal, onSaveSuccess }: Ai
     if (isEditMode || (!hasNewWorkoutMeta && !aiGenerated)) {
       const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
 
-      // Only load mock schema if no saved schema and no AI generated workout
+      // Only load empty schema if no saved schema and no AI generated workout
       if (!savedSchema && !aiGenerated) {
-        // Load shared mock schema for edit mode
-        window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
-        setWorkoutSchema(MOCK_WORKOUT_SCHEMA);
+        // Initialize with empty schema
+        const emptySchema: WorkoutProgramPayload = { sections: [] };
+        window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(emptySchema));
+        setWorkoutSchema(emptySchema);
       } else if (savedSchema && !aiGenerated) {
         // Load saved schema if no AI generated workout
         try {
           const parsed = JSON.parse(savedSchema);
           setWorkoutSchema(parsed);
         } catch {
-          // If parsing fails, use mock schema
-          setWorkoutSchema(MOCK_WORKOUT_SCHEMA);
+          // If parsing fails, use empty schema
+          const emptySchema: WorkoutProgramPayload = { sections: [] };
+          setWorkoutSchema(emptySchema);
         }
       }
     }

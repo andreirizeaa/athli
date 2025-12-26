@@ -19,6 +19,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
 import {
@@ -48,15 +49,18 @@ import { starPrograms, archivePrograms, deletePrograms } from '@/api/coach/coach
 import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
+import { useTrainingData } from '../training-data-context';
 
-type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment';
+type ColumnId = 'category' | 'muscleGroup' | 'modality' | 'equipment' | 'actions';
 
 const COLUMN_ORDER: ColumnId[] = [
   'category',
   'muscleGroup',
   'modality',
   'equipment',
+  'actions',
 ];
+const filteredColumnOrder = COLUMN_ORDER.filter((colId) => colId !== 'actions');
 
 
 const PROGRAM_TYPES = [
@@ -134,6 +138,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     muscleGroup: { class: 'min-w-[150px]', pixel: '150px' },
     modality: { class: 'min-w-[140px]', pixel: '140px' },
     equipment: { class: 'min-w-[200px]', pixel: '200px' },
+    actions: { class: 'w-[100px]', pixel: '100px' },
   };
 
   return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
@@ -143,10 +148,10 @@ const ExercisesPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { exercises: contextExercises, isLoadingExercises, refreshExercises } = useTrainingData();
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const [starredExercises, setStarredExercises] = useState<Set<string>>(new Set());
   const [exercises, setExercises] = useState<Program[]>([]);
-  const [isLoadingExercises, setIsLoadingExercises] = useState<boolean>(true);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const [filteredCount, setFilteredCount] = useState<number>(0);
@@ -155,6 +160,7 @@ const ExercisesPage = () => {
   const [isEditExerciseOpen, setIsEditExerciseOpen] = useState<boolean>(false);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [isAssignExerciseOpen, setIsAssignExerciseOpen] = useState<boolean>(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [isAssignIndividualExerciseOpen, setIsAssignIndividualExerciseOpen] = useState<boolean>(false);
   const [selectedExerciseForAssignment, setSelectedExerciseForAssignment] = useState<Program | null>(null);
 
@@ -191,37 +197,25 @@ const ExercisesPage = () => {
     setIsAssignExerciseOpen(true);
   };
 
-  const loadExercises = async () => {
-    setIsLoadingExercises(true);
-    try {
-      const fetchedExercises = await getExercises();
-      // Map Exercise type to Program type for compatibility
-      const mappedExercises: Program[] = fetchedExercises.map((ex) => ({
-        id: ex.id,
-        program: ex.program,
-        description: ex.description,
-        type: ex.category, // Map category to type for compatibility
-        length: '', // Not used for exercises
-        totalExercises: 0, // Not used for exercises
-        equipment: ex.equipment,
-        created: ex.created,
-        category: ex.category,
-        muscleGroup: ex.muscleGroup.join(', '), // Convert array to string for display
-        muscleGroups: ex.muscleGroup, // Keep array for filtering
-        modality: ex.modality,
-        videoLink: ex.videoLink,
-      }));
-      setExercises(mappedExercises);
-    } catch (error) {
-      console.error('Failed to load exercises:', error);
-    } finally {
-      setIsLoadingExercises(false);
-    }
-  };
-
+  // Map Exercise type from context to Program type for compatibility
   useEffect(() => {
-    loadExercises();
-  }, []);
+    const mappedExercises: Program[] = contextExercises.map((ex) => ({
+      id: ex.id,
+      program: ex.name,
+      description: ex.description || '',
+      type: ex.category || '', // Map category to type for compatibility
+      length: '', // Not used for exercises
+      totalExercises: 0, // Not used for exercises
+      equipment: ex.equipment || '',
+      created: ex.created_at,
+      category: ex.category || '',
+      muscleGroup: (ex.muscle_group || []).join(', '), // Convert array to string for display
+      muscleGroups: ex.muscle_group || [], // Keep array for filtering
+      modality: ex.modality || '',
+      videoLink: ex.video_link || '',
+    }));
+    setExercises(mappedExercises);
+  }, [contextExercises]);
 
   // Handle exerciseId from URL params (e.g., from search)
   useEffect(() => {
@@ -247,7 +241,7 @@ const ExercisesPage = () => {
   const handleToggleStar = async (exerciseId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starExercises(exerciseId);
+      await starExercises(exerciseId, !starredExercises.has(exerciseId));
       setStarredExercises((prev) => {
         const next = new Set(prev);
         if (next.has(exerciseId)) {
@@ -278,7 +272,7 @@ const ExercisesPage = () => {
   const handleStarSelected = async () => {
     if (selectedExercises.size === 0) return;
     try {
-      await starExercises(Array.from(selectedExercises));
+      await starExercises(Array.from(selectedExercises), true);
       // Update starred state for selected exercises
       setStarredExercises((prev) => {
         const next = new Set(prev);
@@ -299,7 +293,7 @@ const ExercisesPage = () => {
   const handleArchiveSelected = async () => {
     if (selectedExercises.size === 0) return;
     try {
-      await archiveExercises(Array.from(selectedExercises));
+      await archiveExercises(Array.from(selectedExercises), true);
       // Refresh exercises after archiving
       loadExercises();
       // Clear selection after archiving
@@ -309,12 +303,12 @@ const ExercisesPage = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleBulkDelete = async () => {
     if (selectedExercises.size === 0) return;
     try {
       await deleteExercisesService(Array.from(selectedExercises));
       // Refresh exercises after deleting
-      loadExercises();
+      await refreshExercises();
       // Clear selection after deleting
       setSelectedExercises(new Set());
     } catch (error) {
@@ -340,7 +334,7 @@ const ExercisesPage = () => {
   };
 
   const handleSaveExercise = async () => {
-    await loadExercises();
+    await refreshExercises();
   };
 
   const handleExerciseRowKeyDown = (
@@ -395,7 +389,7 @@ const ExercisesPage = () => {
     return queryIndex === normalizedQuery.length;
   };
 
-  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId));
+  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId) && colId !== 'actions');
 
   // Create column definitions for DataGrid
   // Add "exercise" column for sorting (not in filteredColumnOrder so it won't render)
@@ -550,7 +544,36 @@ const ExercisesPage = () => {
     }),
   ];
 
-  const columns: ColumnDefinition<Program>[] = allColumns;
+  // Add actions column
+  const actionsColumn: ColumnDefinition<Program> = {
+    id: 'actions',
+    label: '',
+    sortable: false,
+    width: { class: 'w-[100px]', pixel: '100px' },
+    renderCell: (row) => (
+      <div className="flex items-center justify-end w-full" data-no-row-link="true">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={async (e) => {
+            e.stopPropagation();
+            try {
+              await deleteExercisesService([row.id]);
+              await refreshExercises();
+            } catch (error) {
+              console.error('Failed to delete exercise:', error);
+            }
+          }}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label={`Delete ${row.program}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    ),
+  };
+
+  const columns: ColumnDefinition<Program>[] = [...allColumns, actionsColumn];
 
   // Create filter definitions
   const filters: FilterDefinition<Program>[] = [
@@ -833,7 +856,7 @@ const ExercisesPage = () => {
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    onClick={handleDeleteSelected}
+                    onClick={() => setIsBulkDeleteOpen(true)}
                     className="gap-2 text-destructive hover:text-destructive"
                     aria-label={t('exercises.actions.deleteSelectedAria')}
                   >
@@ -873,6 +896,15 @@ const ExercisesPage = () => {
         gridPadding={true}
         compactPagination={true}
       />
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedExercises.size}
+        itemName={t('exercises.title').toLowerCase()}
+      />
+
       <SidePanel
         open={isAssignExerciseOpen}
         onOpenChange={setIsAssignExerciseOpen}

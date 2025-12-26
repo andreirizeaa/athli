@@ -326,26 +326,29 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
       setCategoryError(null);
     }
 
-    if (muscleGroups.length === 0) {
-      setMuscleGroupsError(t('exercises.addExercise.muscleGroupsRequiredError'));
-      hasError = true;
-    } else {
-      setMuscleGroupsError(null);
-    }
+    // Muscle groups validation - Optional
+    // if (muscleGroups.length === 0) {
+    //   setMuscleGroupsError(t('exercises.addExercise.muscleGroupsRequiredError'));
+    //   hasError = true;
+    // } else {
+    //   setMuscleGroupsError(null);
+    // }
 
-    if (!equipment) {
-      setEquipmentError(t('exercises.addExercise.equipmentRequiredError'));
-      hasError = true;
-    } else {
-      setEquipmentError(null);
-    }
+    // Equipment validation - Optional
+    // if (!equipment) {
+    //   setEquipmentError(t('exercises.addExercise.equipmentRequiredError'));
+    //   hasError = true;
+    // } else {
+    //   setEquipmentError(null);
+    // }
 
-    if (!modality) {
-      setModalityError(t('exercises.addExercise.modalityRequiredError'));
-      hasError = true;
-    } else {
-      setModalityError(null);
-    }
+    // Modality validation - Optional
+    // if (!modality) {
+    //   setModalityError(t('exercises.addExercise.modalityRequiredError'));
+    //   hasError = true;
+    // } else {
+    //   setModalityError(null);
+    // }
 
     if (hasError) {
       return;
@@ -676,7 +679,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
 
           <div className="flex flex-col gap-2">
             <label htmlFor="muscle-groups" className="text-sm font-medium">
-              {t('exercises.addExercise.muscleGroups')}<RequiredAsterisk />
+              {t('exercises.addExercise.muscleGroups')}
             </label>
             <MultiAsyncSelect
               options={MUSCLE_GROUPS.map((group) => ({ label: group, value: group }))}
@@ -696,7 +699,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
 
           <div className="flex flex-col gap-2">
             <label htmlFor="equipment" className="text-sm font-medium">
-              {t('exercises.addExercise.equipment')}<RequiredAsterisk />
+              {t('exercises.addExercise.equipment')}
             </label>
             <Select
               value={equipment}
@@ -727,7 +730,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
 
           <div className="flex flex-col gap-2">
             <label htmlFor="modality" className="text-sm font-medium">
-              {t('exercises.addExercise.modality')}<RequiredAsterisk />
+              {t('exercises.addExercise.modality')}
             </label>
             <Select
               value={modality}

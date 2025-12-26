@@ -1,5 +1,8 @@
 import { Router } from 'express';
 
+import { coachProgramsController } from '../../coach-programs.controller';
+import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
+
 export const coachProgramRouter = Router();
 
 /**
@@ -14,9 +17,29 @@ export const coachProgramRouter = Router();
  *       200:
  *         description: Coach programs retrieved successfully
  */
-coachProgramRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach programs route' });
-});
+coachProgramRouter.get('/', supabaseAuthenticate, coachProgramsController.getPrograms);
+
+/**
+ * @swagger
+ * /api/v1/coach/training/programs/{id}:
+ *   get:
+ *     summary: Get coach program by ID
+ *     tags: [Coach]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Coach program retrieved successfully
+ *       404:
+ *         description: Program not found
+ */
+coachProgramRouter.get('/:id', supabaseAuthenticate, coachProgramsController.getProgramById);
 
 /**
  * @swagger
@@ -72,14 +95,10 @@ coachProgramRouter.get('/', (req, res) => {
  *       200:
  *         description: Coach program deleted successfully
  */
-coachProgramRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach program created' });
-});
+coachProgramRouter.post('/', supabaseAuthenticate, coachProgramsController.createProgram);
 
-coachProgramRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach program updated', id: req.params.id });
-});
+coachProgramRouter.patch('/:id', supabaseAuthenticate, coachProgramsController.updateProgram);
 
-coachProgramRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach program deleted', id: req.params.id });
-});
+coachProgramRouter.delete('/:id', supabaseAuthenticate, coachProgramsController.deleteProgram);
+
+coachProgramRouter.post('/:id/duplicate', supabaseAuthenticate, coachProgramsController.duplicateProgram);

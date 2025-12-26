@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy } from 'lucide-react';
+import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,43 +12,47 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddCheckInFormSidePanel } from '@/components/forms/add-check-in-form-side-panel';
-import { addCheckIn, duplicateCheckIn, type CheckIn as Form } from '@/api/coach/coach-check-in-service';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { addCheckIn, duplicateCheckIn, deleteCheckIn, getCheckIns, type CheckIn as Form } from '@/api/coach/coach-check-in-service';
 import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 
-// Mock forms data
-const mockForms: Form[] = [
-  {
-    id: 'form-1',
-    name: 'Initial Assessment',
-    description: 'Comprehensive initial assessment form for new clients',
-    questionCount: 0,
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: 'form-2',
-    name: 'Weekly Check-in',
-    description: 'Weekly progress check-in form',
-    questionCount: 0,
-    createdAt: Date.now() - 86400000 * 3,
-  },
-];
+// Removed mock forms as we fetch from the API
 
 const CheckInsPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const [forms, setForms] = useState<Form[]>(mockForms);
+  const [forms, setForms] = useState<Form[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAddCheckInOpen, setIsAddCheckInOpen] = useState<boolean>(false);
   const [selectedCheckIns, setSelectedCheckIns] = useState<Set<string>>(new Set());
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
   const [formsToAssign, setFormsToAssign] = useState<Form[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+
+  const fetchForms = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getCheckIns();
+      setForms(data);
+    } catch (error) {
+      console.error('Failed to fetch check-ins:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchForms();
+  }, []);
 
   const handleOpenAddCheckIn = () => {
     setIsAddCheckInOpen(true);
@@ -65,10 +69,38 @@ const CheckInsPage = () => {
     const formToDuplicate = selectedForms[0];
     try {
       const duplicatedForm = await duplicateCheckIn(formToDuplicate.id, formToDuplicate);
-      setForms((prev) => [...prev, duplicatedForm]);
+      fetchForms();
       setSelectedCheckIns(new Set());
     } catch (error) {
       console.error('Failed to duplicate form:', error);
+    }
+  };
+
+  const handleDeleteCheckIn = async (id: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteCheckIn(id);
+      fetchForms();
+
+      // Clear selection if deleted
+      if (selectedCheckIns.has(id)) {
+        const newSet = new Set(selectedCheckIns);
+        newSet.delete(id);
+        setSelectedCheckIns(newSet);
+      }
+    } catch (error) {
+      console.error('Failed to delete check-in:', error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const idsToDelete = Array.from(selectedCheckIns);
+      await Promise.all(idsToDelete.map((id) => deleteCheckIn(id)));
+      fetchForms();
+      setSelectedCheckIns(new Set());
+    } catch (error) {
+      console.error('Failed to bulk delete check-ins:', error);
     }
   };
 
@@ -158,7 +190,7 @@ const CheckInsPage = () => {
     scaleTo?: string;
     mediaCount?: number;
   }>) => {
-    setForms((prev) => [...prev, newForm]);
+    fetchForms();
 
     const template = formTemplates.find((t) => t.name === newForm.name);
     const formType = template?.schedule?.type || 'check-in';
@@ -257,10 +289,34 @@ const CheckInsPage = () => {
       icon: <FileText className="size-3" />,
       sortable: true,
       width: { class: 'w-[150px]', pixel: '150px' },
-      getSortValue: (row) => row.questionCount,
-      getSearchValue: (row) => row.questionCount.toString(),
+      getSortValue: (row) => row.questions?.length || 0,
+      getSearchValue: (row) => (row.questions?.length || 0).toString(),
       renderCell: (row) => (
-        <span className="text-sm text-foreground">{row.questionCount}</span>
+        <span className="text-sm text-foreground">{row.questions?.length || 0}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      label: '',
+      sortable: false,
+      width: { class: 'w-[80px]', pixel: '80px' },
+      renderCell: (row) => (
+        <div className="flex items-center justify-end w-full" data-no-row-link="true">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => handleDeleteCheckIn(row.id, e)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleDeleteCheckIn(row.id, e);
+              }
+            }}
+            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={`Delete ${row.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -337,6 +393,7 @@ const CheckInsPage = () => {
     };
   };
 
+
   const selectedCount = selectedCheckIns.size;
 
   return (
@@ -372,6 +429,18 @@ const CheckInsPage = () => {
         gridPadding={true}
         compactPagination={true}
         emptyMessage={t('forms.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('forms.checkIns.emptyState.title')}
+            subtitle={t('forms.checkIns.emptyState.subtitle')}
+            action={
+              <Button onClick={handleOpenAddCheckIn} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('forms.addCheckIn')}</span>
+              </Button>
+            }
+          />
+        }
         filterBarActions={
           <Button onClick={handleOpenAddCheckIn} className="gap-2">
             <Plus className="size-4" />
@@ -412,6 +481,15 @@ const CheckInsPage = () => {
                 <UserPlus className="size-4" />
                 <span>{t('forms.assignToClients')}</span>
               </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setIsBulkDeleteOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label={t('general.delete')}
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
             </div>
           ) : undefined
         }
@@ -438,6 +516,14 @@ const CheckInsPage = () => {
         open={isAddCheckInOpen}
         onOpenChange={setIsAddCheckInOpen}
         onSave={handleSaveForm}
+      />
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedCheckIns.size}
+        itemName={t('forms.checkIns.title').toLowerCase()}
       />
 
       <SidePanel

@@ -6,6 +6,7 @@ import { clientRouter } from '../client/client.routes';
 import { coachRouter } from '../coach/coach.routes';
 import { exercisesRouter } from '../exercises/exercises.routes';
 import { settingsRouter } from '../settings/settings.routes';
+import searchRouter from '../search';
 
 export const v1Router = Router();
 
@@ -16,4 +17,5 @@ v1Router.use('/client', clientRouter);
 v1Router.use('/coach', coachRouter);
 v1Router.use('/exercises', exercisesRouter);
 v1Router.use('/settings', settingsRouter);
+v1Router.use('/search', searchRouter);
 

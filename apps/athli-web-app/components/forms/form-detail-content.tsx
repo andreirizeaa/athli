@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
-import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions } from '@/api/coach/coach-check-in-service';
-import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions } from '@/api/coach/coach-questionnaire-service';
+import { type CheckIn, addQuestion as addCheckInQuestion, reorderQuestions as reorderCheckInQuestions, deleteQuestion as deleteCheckInQuestion } from '@/api/coach/coach-check-in-service';
+import { type Questionnaire, addQuestion as addQuestionnaireQuestion, reorderQuestions as reorderQuestionnaireQuestions, deleteQuestion as deleteQuestionnaireQuestion } from '@/api/coach/coach-questionnaire-service';
 
 type Form = CheckIn | Questionnaire;
 import { IphoneFrame } from '@/components/forms/iphone-mockup';
@@ -40,6 +40,8 @@ type FormDetailContentProps = {
   onToggleReorder: () => void;
   onOpenAddQuestion: () => void;
   onReorder?: (newData: any[]) => void;
+  isAddQuestionOpen?: boolean;
+  onAddQuestionOpenChange?: (open: boolean) => void;
 };
 
 export const FormDetailContent = ({
@@ -54,9 +56,14 @@ export const FormDetailContent = ({
   onToggleReorder,
   onOpenAddQuestion,
   onReorder,
+  isAddQuestionOpen: isAddQuestionOpenProp,
+  onAddQuestionOpenChange,
 }: FormDetailContentProps) => {
   const t = useTranslations();
-  const [isAddQuestionOpen, setIsAddQuestionOpen] = useState<boolean>(false);
+  const [isAddQuestionOpenLocal, setIsAddQuestionOpenLocal] = useState<boolean>(false);
+
+  const isAddQuestionOpen = isAddQuestionOpenProp !== undefined ? isAddQuestionOpenProp : isAddQuestionOpenLocal;
+  const setIsAddQuestionOpen = onAddQuestionOpenChange || setIsAddQuestionOpenLocal;
   const [isEditQuestionOpen, setIsEditQuestionOpen] = useState<boolean>(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [metrics, setMetrics] = useState<Metric[]>([]);
@@ -72,6 +79,14 @@ export const FormDetailContent = ({
     };
     fetchMetrics();
   }, []);
+
+  // Log schema for debugging as requested
+  useEffect(() => {
+    console.log('Form Schema:', {
+      form,
+      questions,
+    });
+  }, [form, questions]);
 
   const metricsMap = useMemo(() => {
     const map = new Map<string, Metric>();
@@ -98,9 +113,12 @@ export const FormDetailContent = ({
 
   const handleAddQuestion = async (questionData: any) => {
     try {
-      // Determine which service to use based on form ID prefix
-      const isCheckIn = formId.startsWith('checkin-');
+      // Determine which service to use based on form ID prefix or type
+      // Check if it's a check-in or questionnaire based on formId structure
+      const isCheckIn = formId.includes('checkin') || formId.includes('form-2'); // Simple heuristic, check-ins often have checkin in ID
+      // Actually Form type has different fields potentially, but let's check formId
       const addQuestionFn = isCheckIn ? addCheckInQuestion : addQuestionnaireQuestion;
+
       const newQuestion = await addQuestionFn({
         formId: formId,
         question: questionData.question,
@@ -132,12 +150,24 @@ export const FormDetailContent = ({
     setQuestions(questions.map((q) => (q.id === questionData.id ? questionData : q)));
   };
 
-  const handleDeleteQuestion = (questionId: string, e: React.MouseEvent) => {
+  const handleDeleteQuestion = async (questionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setQuestions(questions.filter((q) => q.id !== questionId));
-    // Adjust preview index if needed
-    if (previewQuestionIndex >= questions.length - 1 && previewQuestionIndex > 0) {
-      setPreviewQuestionIndex(previewQuestionIndex - 1);
+    try {
+      const isCheckIn = formId.includes('checkin') || formId.includes('form-2');
+      const deleteQuestionFn = isCheckIn ? deleteCheckInQuestion : deleteQuestionnaireQuestion;
+
+      await deleteQuestionFn({
+        formId: formId,
+        questionId: questionId,
+      });
+
+      setQuestions(questions.filter((q) => q.id !== questionId));
+      // Adjust preview index if needed
+      if (previewQuestionIndex >= questions.length - 1 && previewQuestionIndex > 0) {
+        setPreviewQuestionIndex(previewQuestionIndex - 1);
+      }
+    } catch (error) {
+      console.error('Failed to delete question:', error);
     }
   };
 
@@ -361,6 +391,7 @@ export const FormDetailContent = ({
         open={isAddQuestionOpen}
         onOpenChange={setIsAddQuestionOpen}
         onSave={handleAddQuestion}
+        questions={questions}
       />
 
       <EditQuestionSidePanel
@@ -368,6 +399,7 @@ export const FormDetailContent = ({
         onOpenChange={setIsEditQuestionOpen}
         question={editingQuestion}
         onSave={handleEditQuestion}
+        questions={questions}
       />
     </>
   );

@@ -33,14 +33,24 @@ export async function apiFetch<T = any>(
     options: ApiRequestOptions = {}
 ): Promise<T> {
     const { authenticated = true, params, ...fetchOptions } = options;
+    const body = fetchOptions.body;
+
+    const headers = {
+        ...(fetchOptions.headers as any),
+    };
+
+    // If body is NOT FormData, default Content-Type to application/json
+    if (body && !(body instanceof FormData) && !headers['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+    }
 
     try {
         const response = await axiosInstance.request<T>({
             url: endpoint,
             method: fetchOptions.method || 'GET',
-            data: fetchOptions.body,
+            data: body,
             params: params,
-            headers: fetchOptions.headers as any,
+            headers: headers,
             // You can pass custom config to interceptors if needed, 
             // but for now we rely on the interceptor logic checking for session.
         });

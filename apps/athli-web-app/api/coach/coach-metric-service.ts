@@ -1,75 +1,73 @@
+import { apiFetch } from '@/api/api-client';
+
 export interface Metric {
   id: string;
+  coach_id: string;
   name: string;
   unit: string;
   description?: string;
-  createdAt: number;
+  value_kind: 'number' | 'percent' | 'duration' | 'score';
+  min_value?: number;
+  max_value?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMetricInput {
+  name: string;
+  unit?: string;
+  description?: string;
+  value_kind?: 'number' | 'percent' | 'duration' | 'score';
+  min_value?: number;
+  max_value?: number;
 }
 
 /**
  * Service method to get all coach's metrics (library)
- * This will be connected to the backend in the future
  */
 export const getAllMetrics = async (): Promise<Metric[]> => {
-  // TODO: Connect to backend API
-  console.log('Getting all coach metrics');
+  const response = await apiFetch('/coach/metrics');
+  return response.data.metrics;
+};
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+/**
+ * Service method to create a new coach metric
+ */
+export const createMetric = async (metric: CreateMetricInput): Promise<Metric> => {
+  const response = await apiFetch('/coach/metrics', {
+    method: 'POST',
+    body: JSON.stringify(metric),
+  });
+  return response.data.metric;
+};
 
-  // Mock data - in production this would come from the backend
-  const mockMetrics: Metric[] = [
-    {
-      id: 'coach-metric-1',
-      name: 'Body Fat Percentage',
-      unit: '%',
-      description: 'Total body fat percentage',
-      createdAt: Date.now() - 86400000 * 30,
-    },
-    {
-      id: 'coach-metric-2',
-      name: 'Waist Circumference',
-      unit: 'cm',
-      description: 'Waist measurement',
-      createdAt: Date.now() - 86400000 * 25,
-    },
-    {
-      id: 'coach-metric-3',
-      name: 'Resting Heart Rate',
-      unit: 'bpm',
-      description: 'Resting heart rate measurement',
-      createdAt: Date.now() - 86400000 * 20,
-    },
-    {
-      id: 'coach-metric-4',
-      name: 'Sleep Duration',
-      unit: 'hours',
-      description: 'Average nightly sleep duration',
-      createdAt: Date.now() - 86400000 * 15,
-    },
-  ];
+/**
+ * Service method to update an existing coach metric
+ */
+export const updateMetric = async (id: string, updates: Partial<CreateMetricInput>): Promise<Metric> => {
+  const response = await apiFetch(`/coach/metrics/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+  return response.data.metric;
+};
 
-  return mockMetrics;
+/**
+ * Service method to delete a coach metric
+ */
+export const deleteMetric = async (id: string): Promise<void> => {
+  await apiFetch(`/coach/metrics/${id}`, {
+    method: 'DELETE',
+  });
 };
 
 /**
  * Duplicate a metric in coach's library
  * @param metricId - ID of the metric to duplicate
- * @param originalMetric - Original metric object to duplicate
  */
-export const duplicateMetric = async (metricId: string, originalMetric: Metric): Promise<Metric> => {
-  // TODO: Connect to backend API
-  console.log('Duplicating metric:', { metricId, originalMetric });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  const duplicatedMetric: Metric = {
-    ...originalMetric,
-    id: `metric-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    name: `${originalMetric.name} (Copy)`,
-    createdAt: Date.now(),
-  };
-
-  return duplicatedMetric;
+export const duplicateMetric = async (metricId: string): Promise<Metric> => {
+  const response = await apiFetch(`/coach/metrics/${metricId}/duplicate`, {
+    method: 'POST',
+  });
+  return response.data.metric;
 };

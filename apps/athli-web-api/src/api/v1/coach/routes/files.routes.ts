@@ -1,4 +1,15 @@
 import { Router } from 'express';
+import multer from 'multer';
+import { coachFilesController } from '../coach-files.controller';
+import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
+
+// Configure multer for memory storage
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit
+    },
+});
 
 export const coachFileRouter = Router();
 
@@ -6,67 +17,95 @@ export const coachFileRouter = Router();
  * @swagger
  * /api/v1/coach/files:
  *   get:
- *     summary: Get coach files
+ *     summary: Get all coach files
  *     tags: [Coach]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Coach files retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     files:
+ *                       type: array
  */
-coachFileRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach files route' });
-});
-
-/**
- * @swagger
- * /api/v1/coach/files/{id}:
- *   patch:
- *     summary: Update coach file
- *     tags: [Coach]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Coach file updated successfully
- */
-coachFileRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach file updated', id: req.params.id });
-});
+coachFileRouter.get('/', supabaseAuthenticate, coachFilesController.getFiles);
 
 /**
  * @swagger
  * /api/v1/coach/files:
  *   post:
- *     summary: Create coach file
+ *     summary: Upload a new file
  *     tags: [Coach]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - file
+ *               - filename
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               filename:
+ *                 type: string
+ *               tags:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: File uploaded successfully
+ */
+coachFileRouter.post('/', supabaseAuthenticate, upload.single('file'), coachFilesController.uploadFile);
+
+/**
+ * @swagger
+ * /api/v1/coach/files/{id}:
+ *   patch:
+ *     summary: Update file metadata
+ *     tags: [Coach]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - filename
+ *             properties:
+ *               filename:
+ *                 type: string
  *     responses:
- *       201:
- *         description: Coach file created successfully
- *
+ *       200:
+ *         description: File updated successfully
+ */
+coachFileRouter.patch('/:id', supabaseAuthenticate, coachFilesController.updateFile);
+
+/**
+ * @swagger
  * /api/v1/coach/files/{id}:
  *   delete:
- *     summary: Delete coach file
+ *     summary: Delete a file
  *     tags: [Coach]
  *     security:
  *       - bearerAuth: []
@@ -78,12 +117,26 @@ coachFileRouter.patch('/:id', (req, res) => {
  *           type: string
  *     responses:
  *       200:
- *         description: Coach file deleted successfully
+ *         description: File deleted successfully
  */
-coachFileRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach file created' });
-});
+coachFileRouter.delete('/:id', supabaseAuthenticate, coachFilesController.deleteFile);
 
-coachFileRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach file deleted', id: req.params.id });
-});
+/**
+ * @swagger
+ * /api/v1/coach/files/{id}/url:
+ *   get:
+ *     summary: Get signed URL for file access
+ *     tags: [Coach]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Signed URL generated successfully
+ */
+coachFileRouter.get('/:id/url', supabaseAuthenticate, coachFilesController.getFileUrl);

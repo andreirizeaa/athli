@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/general/utils';
 import { User, Building2, Search, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { UnsavedChangesProvider, useUnsavedChanges } from './context/unsaved-changes-context';
-import { DiscardChangesDialog } from './components/discard-changes-dialog';
+import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 
 interface SectionConfig {
   id: string;

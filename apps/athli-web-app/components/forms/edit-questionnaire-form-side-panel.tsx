@@ -19,14 +19,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
-import { editQuestionnaireDetails, type Questionnaire as FormType } from '@/api/coach/coach-questionnaire-service';
+import { Info, Trash2 } from 'lucide-react';
+import { editQuestionnaireDetails, deleteQuestionnaire, type Questionnaire as FormType } from '@/api/coach/coach-questionnaire-service';
 
 type EditQuestionnaireFormSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   form: FormType | null;
   onSave?: (form: FormType) => void;
+  onDelete?: (formId: string) => void;
 };
 
 type FormFormValues = {
@@ -34,7 +35,7 @@ type FormFormValues = {
   description?: string;
 };
 
-export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSave }: EditQuestionnaireFormSidePanelProps) => {
+export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSave, onDelete }: EditQuestionnaireFormSidePanelProps) => {
   const t = useTranslations();
 
   const formSchema = z.object({
@@ -86,6 +87,23 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
     }
   };
 
+  const handleDelete = async () => {
+    if (!form) return;
+
+    const confirmed = window.confirm(t('forms.form.deleteConfirm'));
+    if (!confirmed) return;
+
+    try {
+      await deleteQuestionnaire(form.id);
+      if (onDelete) {
+        onDelete(form.id);
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Failed to delete form:', error);
+    }
+  };
+
   const hasChanges = form && (
     reactForm.watch('name') !== form.name ||
     reactForm.watch('description') !== (form.description || '')
@@ -100,16 +118,27 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
       title={t('forms.editFormTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-between gap-2">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={reactForm.handleSubmit(handleSave)}
+              disabled={!reactForm.formState.isValid || !hasChanges}
+            >
+              {t('general.save')}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              {t('general.cancel')}
+            </Button>
+          </div>
           <Button
             type="button"
-            onClick={reactForm.handleSubmit(handleSave)}
-            disabled={!reactForm.formState.isValid || !hasChanges}
+            variant="ghost"
+            onClick={handleDelete}
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-2"
           >
-            {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
+            <Trash2 className="size-4" />
+            <span>{t('general.delete')}</span>
           </Button>
         </div>
       }

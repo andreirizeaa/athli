@@ -8,9 +8,7 @@ export const API_URL = `${API_BASE_URL}/${API_VERSION}`;
 
 const axiosInstance = axios.create({
     baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+    headers: {},
 });
 
 // Request interceptor to add Auth token

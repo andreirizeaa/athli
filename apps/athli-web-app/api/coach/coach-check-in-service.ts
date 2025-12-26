@@ -1,20 +1,26 @@
+import { apiFetch } from '@/api/api-client';
+
 export interface AddCheckInData {
   name: string;
   description?: string;
+  schedule_cron?: string;
 }
 
 export interface CheckIn {
   id: string;
   name: string;
   description?: string;
-  questionCount: number;
-  createdAt: number;
+  schedule_cron?: string;
+  questions: Question[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EditCheckInDetailsData {
   id: string;
   name: string;
   description?: string;
+  schedule_cron?: string;
 }
 
 export interface Question {
@@ -46,141 +52,152 @@ export interface ReorderQuestionsData {
   questionIds: string[];
 }
 
-// Mock check-ins data - in production this would come from an API
-const mockCheckIns: CheckIn[] = [
-  {
-    id: 'checkin-1',
-    name: 'Weekly Check-in',
-    description: 'Weekly progress check-in form',
-    questionCount: 3,
-    createdAt: Date.now() - 86400000 * 3,
-  },
-];
+export interface DeleteQuestionData {
+  formId: string;
+  questionId: string;
+}
 
 /**
  * Service method to get all check-ins from coach's library
- * This will be connected to the backend in the future
  */
 export const getCheckIns = async (): Promise<CheckIn[]> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  return mockCheckIns;
+  const response = await apiFetch<{ data: { checkIns: CheckIn[] } }>('/coach/forms/check-ins');
+  return response.data.checkIns;
 };
 
 /**
  * Service method to add a check-in to coach's library
- * This will be connected to the backend in the future
  */
 export const addCheckIn = async (data: AddCheckInData): Promise<CheckIn> => {
-  // TODO: Connect to backend API
-  console.log('Adding check-in:', {
-    name: data.name,
-    description: data.description,
+  const response = await apiFetch<{ data: { checkIn: CheckIn } }>('/coach/forms/check-ins', {
+    method: 'POST',
+    body: data as any,
   });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  const newCheckIn: CheckIn = {
-    id: `checkin-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    name: data.name,
-    description: data.description,
-    questionCount: 0,
-    createdAt: Date.now(),
-  };
-
-  return newCheckIn;
+  return response.data.checkIn;
 };
 
 /**
  * Service method to edit check-in details in coach's library
- * This will be connected to the backend in the future
  */
 export const editCheckInDetails = async (data: EditCheckInDetailsData): Promise<CheckIn> => {
-  // TODO: Connect to backend API
-  console.log('Editing check-in details:', {
-    id: data.id,
-    name: data.name,
-    description: data.description,
+  const { id, ...updates } = data;
+  const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${id}`, {
+    method: 'PATCH',
+    body: updates as any,
   });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  const updatedCheckIn: CheckIn = {
-    id: data.id,
-    name: data.name,
-    description: data.description,
-    questionCount: 0, // This would come from the backend
-    createdAt: Date.now(), // This would come from the backend
-  };
-
-  return updatedCheckIn;
+  return response.data.checkIn;
 };
 
 /**
  * Service method to add a question to a check-in in coach's library
- * This will be connected to the backend in the future
+ * Since questions are stored in a JSONB column, we fetch the check-in first,
+ * add the question, and then patch the entire check-in.
  */
 export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
-  console.log('Adding question to check-in:', {
-    formId: data.formId,
-    question: data.question,
-    format: data.format,
-  });
+  const { formId, ...questionData } = data;
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // Get current check-in to get existing questions
+  const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${formId}`);
+  const currentQuestions = response.data.checkIn.questions || [];
 
+  // Generate a sequential ID for the new question
+  const nextId = (currentQuestions.length + 1).toString();
   const newQuestion: Question = {
-    id: `q${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    question: data.question,
-    required: data.required,
-    format: data.format,
-    options: data.options,
-    scaleFrom: data.scaleFrom,
-    scaleTo: data.scaleTo,
-    mediaCount: data.mediaCount,
-    metricId: data.metricId,
+    ...questionData,
+    id: nextId,
   };
+
+  // Update check-in with new questions array
+  await apiFetch(`/coach/forms/check-ins/${formId}`, {
+    method: 'PATCH',
+    body: {
+      questions: [...currentQuestions, newQuestion],
+    } as any,
+  });
 
   return newQuestion;
 };
 
 /**
  * Service method to reorder questions in a check-in
- * This will be connected to the backend in the future
  */
 export const reorderQuestions = async (data: ReorderQuestionsData): Promise<void> => {
-  console.log('Reordering questions for check-in:', {
-    formId: data.formId,
-    questionIds: data.questionIds,
-  });
+  const { formId, questionIds } = data;
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // Get current check-in
+  const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${formId}`);
+  const currentQuestions = response.data.checkIn.questions || [];
+
+  // Create new ordered questions array and re-assign chronological IDs
+  const reorderedQuestions = questionIds.map(id =>
+    currentQuestions.find(q => q.id === id)
+  ).filter(Boolean) as Question[];
+
+  const reIdedQuestions = reorderedQuestions.map((q, index) => ({
+    ...q,
+    id: (index + 1).toString(),
+  }));
+
+  // Update check-in
+  await apiFetch(`/coach/forms/check-ins/${formId}`, {
+    method: 'PATCH',
+    body: {
+      questions: reIdedQuestions,
+    } as any,
+  });
+};
+
+/**
+ * Service method to delete a question from a check-in
+ */
+export const deleteQuestion = async (data: DeleteQuestionData): Promise<void> => {
+  const { formId, questionId } = data;
+
+  // Get current check-in
+  const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${formId}`);
+  const currentQuestions = response.data.checkIn.questions || [];
+
+  // Remove the question and re-assign chronological IDs
+  const updatedQuestions = currentQuestions
+    .filter(q => q.id !== questionId)
+    .map((q, index) => ({
+      ...q,
+      id: (index + 1).toString(),
+    }));
+
+  // Update check-in
+  await apiFetch(`/coach/forms/check-ins/${formId}`, {
+    method: 'PATCH',
+    body: {
+      questions: updatedQuestions,
+    } as any,
+  });
+};
+
+/**
+ * Service method to delete a check-in from coach's library
+ */
+export const deleteCheckIn = async (id: string): Promise<void> => {
+  await apiFetch(`/coach/forms/check-ins/${id}`, {
+    method: 'DELETE',
+  });
 };
 
 /**
  * Duplicate a check-in in coach's library
- * @param checkInId - ID of the check-in to duplicate
- * @param originalCheckIn - Original check-in object to duplicate
  */
 export const duplicateCheckIn = async (checkInId: string, originalCheckIn: CheckIn): Promise<CheckIn> => {
-  // TODO: Connect to backend API
-  console.log('Duplicating check-in:', { checkInId, originalCheckIn });
+  const { id, created_at, updated_at, ...dataToCopy } = originalCheckIn;
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  const response = await apiFetch<{ data: { checkIn: CheckIn } }>('/coach/forms/check-ins', {
+    method: 'POST',
+    body: {
+      ...dataToCopy,
+      name: `${originalCheckIn.name} (Copy)`,
+    } as any,
+  });
 
-  const duplicatedCheckIn: CheckIn = {
-    ...originalCheckIn,
-    id: `checkin-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    name: `${originalCheckIn.name} (Copy)`,
-    createdAt: Date.now(),
-  };
-
-  return duplicatedCheckIn;
+  return response.data.checkIn;
 };
-
