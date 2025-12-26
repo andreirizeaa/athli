@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { authAPI } from '../api/auth-api';
+import { authService } from '../../api/auth/auth-service';
 
 interface User {
   id: string;
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyToken = async (token: string) => {
     try {
-      const response = await authAPI.getCurrentUser(token);
+      const response = await authService.getCurrentUser(token);
       if (response.data?.user) {
         setUser(response.data.user);
         localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    const response = await authAPI.login({ email, password });
+    const response = await authService.login({ email, password });
     if (response.data?.token && response.data?.user) {
       saveAuth(response.data.token, response.data.user);
       router.push('/home');
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     firstName: string,
     lastName: string
   ): Promise<{ requiresVerification: boolean }> => {
-    const response = await authAPI.register({
+    const response = await authService.register({
       email,
       password,
       firstName,
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const verifyEmail = async (email: string, otp: string) => {
-    const response = await authAPI.verifyEmail({ email, otp });
+    const response = await authService.verifyEmail({ email, otp });
     if (response.data?.token && response.data?.user) {
       saveAuth(response.data.token, response.data.user);
       router.push('/home');
@@ -115,20 +115,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resendOTP = async (email: string) => {
-    await authAPI.resendOTP(email);
+    await authService.resendOTP(email);
   };
 
   const forgotPassword = async (email: string) => {
-    await authAPI.forgotPassword(email);
+    await authService.forgotPassword(email);
   };
 
   const resetPassword = async (email: string, otp: string, newPassword: string) => {
-    await authAPI.resetPassword({ email, otp, newPassword });
+    await authService.resetPassword({ email, otp, newPassword });
     router.push('/auth/login');
   };
 
   const googleAuth = async (credential: string) => {
-    const response = await authAPI.googleAuth(credential);
+    const response = await authService.googleAuth(credential);
     if (response.data?.token && response.data?.user) {
       saveAuth(response.data.token, response.data.user);
       router.push('/home');
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     if (token) {
       try {
-        await authAPI.logout(token);
+        await authService.logout(token);
       } catch (error) {
         console.error('Logout error:', error);
       }

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { defaultMetrics, type DefaultMetric } from '@/constants/metrics';
-import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
 
@@ -38,6 +38,7 @@ type AddMetricSidePanelProps = {
   onSave: (name: string, unit: string, description?: string) => Promise<void>;
   clientName?: string;
   clientId?: string;
+  showLibraryTab?: boolean;
 };
 
 export const AddMetricSidePanel = ({
@@ -46,9 +47,12 @@ export const AddMetricSidePanel = ({
   onSave,
   clientName,
   clientId,
+  showLibraryTab = true,
 }: AddMetricSidePanelProps) => {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = useState<'yourLibrary' | 'athliLibrary' | 'newMetric'>('yourLibrary');
+  const [activeTab, setActiveTab] = useState<'yourLibrary' | 'athliLibrary' | 'newMetric'>(
+    showLibraryTab ? 'yourLibrary' : 'athliLibrary'
+  );
   const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
   const [athliLibrarySearchQuery, setAthliLibrarySearchQuery] = useState<string>('');
   const [coachMetrics, setCoachMetrics] = useState<Metric[]>([]);
@@ -91,7 +95,7 @@ export const AddMetricSidePanel = ({
 
   const handleClose = () => {
     form.reset();
-    setActiveTab('yourLibrary');
+    setActiveTab(showLibraryTab ? 'yourLibrary' : 'athliLibrary');
     setLibrarySearchQuery('');
     setAthliLibrarySearchQuery('');
     setSelectedCoachMetric(null);
@@ -239,12 +243,14 @@ export const AddMetricSidePanel = ({
     >
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'yourLibrary' | 'athliLibrary' | 'newMetric')} className="w-full">
         <TabsList className="w-full mb-6">
-          <TabsTrigger
-            value="yourLibrary"
-            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-          >
-            {t('metrics.tabs.yourLibrary')}
-          </TabsTrigger>
+          {showLibraryTab && (
+            <TabsTrigger
+              value="yourLibrary"
+              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+            >
+              {t('metrics.tabs.yourLibrary')}
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="athliLibrary"
             className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
@@ -259,100 +265,102 @@ export const AddMetricSidePanel = ({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="yourLibrary" className="mt-0">
-          <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
-            {isLoadingMetrics ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>{t('general.loading')}</p>
-              </div>
-            ) : coachMetrics.length === 0 ? (
-              <Alert className="bg-primary/5 border-primary/20 text-primary">
-                <Info className="size-4" />
-                <AlertDescription className="min-w-0 line-clamp-4">
-                  {t('metrics.noLibraryMetrics')}{' '}
-                  <Link href="/metrics" className="underline hover:no-underline">
-                    <strong>{t('metrics.libraryLink')}</strong>
-                  </Link>
-                  .
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                <div className="relative mb-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder={t('metrics.searchPlaceholder')}
-                    value={librarySearchQuery}
-                    onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                    className="pl-9"
-                    aria-label={t('metrics.searchAria')}
-                  />
+        {showLibraryTab && (
+          <TabsContent value="yourLibrary" className="mt-0">
+            <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
+              {isLoadingMetrics ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{t('general.loading')}</p>
                 </div>
-                {filteredCoachMetrics.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>{t('metrics.emptyMessage')}</p>
+              ) : coachMetrics.length === 0 ? (
+                <Alert className="bg-primary/5 border-primary/20 text-primary">
+                  <Info className="size-4" />
+                  <AlertDescription className="min-w-0 line-clamp-4">
+                    {t('metrics.noLibraryMetrics')}{' '}
+                    <Link href="/metrics" className="underline hover:no-underline">
+                      <strong>{t('metrics.libraryLink')}</strong>
+                    </Link>
+                    .
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <>
+                  <div className="relative mb-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder={t('metrics.searchPlaceholder')}
+                      value={librarySearchQuery}
+                      onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                      className="pl-9"
+                      aria-label={t('metrics.searchAria')}
+                    />
                   </div>
-                ) : selectedCoachMetric ? (
-                  <>
-                    <Card className="p-4 ring-2 ring-primary">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex flex-col gap-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <FileText className="size-4 text-muted-foreground" />
-                            <h4 className="text-sm font-medium text-foreground">{selectedCoachMetric.name}</h4>
+                  {filteredCoachMetrics.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>{t('metrics.emptyMessage')}</p>
+                    </div>
+                  ) : selectedCoachMetric ? (
+                    <>
+                      <Card className="p-4 ring-2 ring-primary">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <FileText className="size-4 text-muted-foreground" />
+                              <h4 className="text-sm font-medium text-foreground">{selectedCoachMetric.name}</h4>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">{selectedCoachMetric.unit}</span>
+                              {selectedCoachMetric.description && (
+                                <span className="text-xs text-muted-foreground">• {selectedCoachMetric.description}</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">{selectedCoachMetric.unit}</span>
-                            {selectedCoachMetric.description && (
-                              <span className="text-xs text-muted-foreground">• {selectedCoachMetric.description}</span>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleDeselectCoachMetric}
-                          className="h-8 w-8 flex-shrink-0"
-                          aria-label={t('general.edit')}
-                        >
-                          <Info className="size-4" />
-                        </Button>
-                      </div>
-                    </Card>
-                  </>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {filteredCoachMetrics.map((metric) => (
-                      <Card
-                        key={metric.id}
-                        className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                        onClick={() => handleSelectCoachMetric(metric)}
-                        onKeyDown={(e) => handleCoachMetricCardKeyDown(e, metric)}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={`Select metric: ${metric.name}`}
-                      >
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <FileText className="size-4 text-muted-foreground" />
-                            <h4 className="text-sm font-medium text-foreground">{metric.name}</h4>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">{metric.unit}</span>
-                            {metric.description && (
-                              <span className="text-xs text-muted-foreground">• {metric.description}</span>
-                            )}
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDeselectCoachMetric}
+                            className="h-8 w-8 flex-shrink-0"
+                            aria-label={t('general.edit')}
+                          >
+                            <Info className="size-4" />
+                          </Button>
                         </div>
                       </Card>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </TabsContent>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredCoachMetrics.map((metric) => (
+                        <Card
+                          key={metric.id}
+                          className="p-4 cursor-pointer hover:bg-accent transition-colors"
+                          onClick={() => handleSelectCoachMetric(metric)}
+                          onKeyDown={(e) => handleCoachMetricCardKeyDown(e, metric)}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Select metric: ${metric.name}`}
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <FileText className="size-4 text-muted-foreground" />
+                              <h4 className="text-sm font-medium text-foreground">{metric.name}</h4>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">{metric.unit}</span>
+                              {metric.description && (
+                                <span className="text-xs text-muted-foreground">• {metric.description}</span>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="athliLibrary" className="mt-0">
           <div className="flex flex-col gap-6">

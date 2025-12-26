@@ -18,7 +18,6 @@ import {
   ClipboardList,
   Workflow,
   ClipboardCheck,
-  UtensilsCrossed,
   BarChart3,
   Rocket,
   Gift,
@@ -84,14 +83,14 @@ export function AppSidebar() {
       icon: Dumbbell,
     },
     {
+      href: '/forms',
+      labelKey: 'sidebar.links.forms',
+      icon: ClipboardList,
+    },
+    {
       href: '/metrics',
       labelKey: 'sidebar.links.metrics',
       icon: BarChart3,
-    },
-    {
-      href: '/files',
-      labelKey: 'sidebar.links.files',
-      icon: File,
     },
     {
       href: '/habits',
@@ -99,14 +98,9 @@ export function AppSidebar() {
       icon: Sprout,
     },
     {
-      href: '/forms',
-      labelKey: 'sidebar.links.forms',
-      icon: ClipboardList,
-    },
-    {
-      href: '/nutrition',
-      labelKey: 'sidebar.links.nutrition',
-      icon: UtensilsCrossed,
+      href: '/files',
+      labelKey: 'sidebar.links.files',
+      icon: File,
     },
   ] as const;
 
@@ -131,7 +125,7 @@ export function AppSidebar() {
           </div>
         )}
       </SidebarHeader>
-      <SidebarContent className="gap-0">
+      <SidebarContent className="gap-0 overflow-y-auto">
         <SidebarGroup className="pb-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
@@ -217,7 +211,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 let isActive = false;
-                if (href === '/training' || href === '/metrics' || href === '/files' || href === '/habits' || href === '/forms' || href === '/nutrition') {
+                if (href === '/training' || href === '/metrics' || href === '/files' || href === '/habits' || href === '/forms') {
                   // Check exact match or if path starts with the href followed by /
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
                 } else {

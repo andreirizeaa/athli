@@ -77,10 +77,12 @@ export type Workout = {
   program: string;
   description: string;
   type: string;
+  difficulty: string;
   length: string;
   totalExercises: number;
-  equipment: string;
+  equipment: string | string[];
   created: string; // dd-mm-yy format
+  workout_data?: any;
 };
 
 export type Program = {
@@ -92,6 +94,7 @@ export type Program = {
   totalExercises: number;
   equipment: string;
   created: string; // dd-mm-yy format
+  program_data?: any;
 };
 
 export type Exercise = {

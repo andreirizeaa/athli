@@ -5,18 +5,12 @@ import type { WorkoutSchema, ExerciseWithSuperset } from '../types/workout-build
  *
  * @param type - The type of section to add
  * @param currentSchema - The current workout schema
- * @param options - Optional callbacks
  * @returns Updated workout schema
  */
 export const handleSectionSelect = (
   type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary',
-  currentSchema: WorkoutSchema,
-  options?: {
-    onDirtyChange?: () => void;
-  }
+  currentSchema: WorkoutSchema
 ): WorkoutSchema => {
-  options?.onDirtyChange?.();
-
   const newSection = {
     id: `sec_${type}_${Date.now()}`,
     type,
@@ -40,18 +34,12 @@ export const handleSectionSelect = (
  *
  * @param sectionId - The ID of the section to delete
  * @param currentSchema - The current workout schema
- * @param options - Optional callbacks
  * @returns Updated workout schema and whether to switch to section mode
  */
 export const handleDeleteSection = (
   sectionId: string,
-  currentSchema: WorkoutSchema,
-  options?: {
-    onDirtyChange?: () => void;
-  }
+  currentSchema: WorkoutSchema
 ): { schema: WorkoutSchema; shouldSwitchToSectionMode: boolean } => {
-  options?.onDirtyChange?.();
-
   const updatedSections = currentSchema.sections.filter((section) => section.id !== sectionId);
   const shouldSwitchToSectionMode = updatedSections.length === 0;
 

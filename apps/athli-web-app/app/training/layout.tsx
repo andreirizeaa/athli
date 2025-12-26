@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Store } from 'lucide-react';
+import { TrainingDataProvider } from './training-data-context';
 
 type LibraryLayoutProps = {
   children: React.ReactNode;
@@ -51,38 +52,40 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      {shouldShowHeader && (
-        <div className="w-full px-4">
-          <div className="flex items-center justify-between mb-2 mt-2">
-            <h1 className="text-[22px] font-semibold">{t('library.title')}</h1>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="gap-2" aria-label={t('library.openMarketplace')}>
-                  <Store className="size-4" />
-                  {t('library.marketplace')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-80 bg-neutral-800 text-white dark:bg-white dark:text-neutral-800"
-              >
-                <div className="p-4 flex items-center justify-center min-h-[80px]">
-                  <p className="text-sm text-center">{t('library.marketplaceComingSoon')}</p>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+    <TrainingDataProvider>
+      <div className="h-full w-full flex flex-col">
+        {shouldShowHeader && (
+          <div className="w-full px-4">
+            <div className="flex items-center justify-between mb-2 mt-2">
+              <h1 className="text-[22px] font-semibold">{t('library.title')}</h1>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="gap-2" aria-label={t('library.openMarketplace')}>
+                    <Store className="size-4" />
+                    {t('library.marketplace')}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-80 bg-neutral-800 text-white dark:bg-white dark:text-neutral-800"
+                >
+                  <div className="p-4 flex items-center justify-center min-h-[80px]">
+                    <p className="text-sm text-center">{t('library.marketplaceComingSoon')}</p>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <PageTabs
+              tabs={tabs}
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="mt-1"
+            />
           </div>
-          <PageTabs
-            tabs={tabs}
-            value={activeTab}
-            onValueChange={handleTabChange}
-            className="mt-1"
-          />
-        </div>
-      )}
-      <div className="w-full flex-1 overflow-auto relative">{children}</div>
-    </div>
+        )}
+        <div className="w-full flex-1 overflow-auto relative">{children}</div>
+      </div>
+    </TrainingDataProvider>
   );
 };
 

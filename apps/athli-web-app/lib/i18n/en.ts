@@ -190,6 +190,8 @@ export const enMessages = {
       },
     },
     customisations: {
+      saveFailed: 'Failed to save customisations',
+      savedSuccessfully: 'Customisations saved successfully',
       preferences: {
         title: 'Preferences',
         language: {
@@ -428,6 +430,10 @@ export const enMessages = {
         specialitiesSearchPlaceholder: 'Search specialities...',
         savedSuccessfully: 'Company information saved successfully',
         saveFailed: 'Failed to save company information',
+        logoDialog: {
+          title: 'Update Company Logo',
+          description: 'Upload an image for your company logo',
+        },
       },
       team: {
         title: 'Team',
@@ -437,6 +443,9 @@ export const enMessages = {
         nonAdmin: 'Non admin',
         addTeamMember: 'Add team member',
       },
+    },
+    billing: {
+      title: 'Billing',
     },
   },
   sidebar: {
@@ -565,9 +574,14 @@ export const enMessages = {
     submit: 'Submit',
     reset: 'Reset',
     confirm: 'Confirm',
+    confirmDeletion: 'Confirm Deletion',
+    bulkDeleteConfirmation: 'Are you sure you want to delete {count} selected {item}? This action cannot be undone.',
+    assign: 'Assign',
     yes: 'Yes',
     no: 'No',
     loading: 'Loading',
+    alreadyUsed: 'Already used',
+    uploading: 'Uploading...',
     error: 'Error',
     success: 'Success',
     warning: 'Warning',
@@ -593,12 +607,12 @@ export const enMessages = {
     less: 'Less',
     all: 'All',
     none: 'None',
+    difficulty: 'Difficulty',
     profile: 'Profile',
     description: 'Description',
     type: 'Type',
     equipment: 'Equipment',
     created: 'Created',
-    assign: 'Assign',
   },
   messages: {
     title: 'Messages',
@@ -717,7 +731,7 @@ export const enMessages = {
     searchPlaceholder: 'Search...',
     workout: 'workout',
     workoutPlural: 'workouts',
-    continue: 'Continue',
+    continue: 'Save',
     generate: 'Generate',
     generateWorkout: 'Generate workout',
     backToWorkoutDetails: 'Back to workout details',
@@ -737,6 +751,8 @@ export const enMessages = {
     workoutNameRequired: 'Workout name is required',
     workoutTypeRequired: 'Workout type is required',
     difficultyRequired: 'Difficulty is required',
+    workoutCreatedSuccessfully: 'Workout "{name}" created successfully',
+    workoutCreationFailed: 'Failed to create workout. Please try again.',
   },
   programs: {
     title: 'Programs',
@@ -815,13 +831,18 @@ export const enMessages = {
       description: 'Description',
       descriptionOptional: '(Optional)',
       descriptionPlaceholder: 'Add a description for your program...',
-      continue: 'Continue',
-      continueAria: 'Continue creating program',
+      continue: 'Save',
+      continueAria: 'Save program',
       cancel: 'Cancel',
       cancelAria: 'Cancel creating program',
       programNameRequiredError: 'Program name is required',
       programTypeRequiredError: 'Program type is required',
       difficultyRequiredError: 'Difficulty is required',
+    },
+    new: {
+      toast: {
+        savedSuccessfully: 'Program "{name}" created successfully',
+      },
     },
     assigning: {
       title: 'Assigning {name}',
@@ -1044,6 +1065,7 @@ export const enMessages = {
       workout: 'The name of the workout',
       description: 'A brief overview of the workout program',
       type: 'The category or style of the workout program',
+      difficultyLevel: 'The difficulty level of the workout',
       totalExercises: 'The number of exercises in the workout program',
       equipment: 'The equipment required for this workout program',
       created: 'The date when the workout program was created',
@@ -1849,6 +1871,7 @@ export const enMessages = {
       pinned: 'Pinned',
       fileName: 'File name',
       type: 'Type',
+      size: 'Size',
       tags: 'Tags',
     },
     actions: {
@@ -1902,6 +1925,10 @@ export const enMessages = {
     emptyMessage: 'No habits found',
     noLibraryHabits: 'You have no habits in your library.',
     libraryLink: 'Library',
+    emptyState: {
+      title: 'No habits found',
+      subtitle: 'Get started by adding your first habit to your library.',
+    },
     columns: {
       name: 'Name',
     },
@@ -2019,6 +2046,20 @@ export const enMessages = {
       checkIns: 'Check Ins',
       questionnaires: 'Questionnaires',
     },
+    questionnaires: {
+      title: 'Questionnaires',
+      emptyState: {
+        title: 'No questionnaires found',
+        subtitle: 'Get started by creating your first questionnaire template.',
+      },
+    },
+    checkIns: {
+      title: 'Check-ins',
+      emptyState: {
+        title: 'No check-ins found',
+        subtitle: 'Get started by creating your first check-in template.',
+      },
+    },
     assignToClients: 'Assign to clients',
     assignToClientsTitle: 'Assign forms to clients',
     assignToOneClient: 'Assign to 1 client',
@@ -2116,6 +2157,7 @@ export const enMessages = {
         to: 'To',
         numberOfImages: 'Number of images',
         numberOfVideos: 'Number of videos',
+        pleaseAddMetric: 'Please add a metric',
       },
       editQuestion: {
         title: 'Edit question',
@@ -2150,6 +2192,10 @@ export const enMessages = {
     },
     templateNotice: 'Template flows with placeholders require editing after creation. Edit the action nodes to select your specific content.',
     useTemplate: 'Use this template',
+    editor: {
+      deleteCheckTitle: 'Delete check',
+      deleteCheckDescription: 'Deleting this check node will also remove all actions and conditions within its branches. This action cannot be undone.',
+    },
   },
   metrics: {
     title: 'Metrics',
@@ -2180,6 +2226,10 @@ export const enMessages = {
     searchPlaceholder: 'Search metrics...',
     searchAria: 'Search metrics',
     emptyMessage: 'No metrics found.',
+    emptyState: {
+      title: 'No metrics found',
+      subtitle: 'Get started by adding your first metric to your library.',
+    },
     noLogsMessage: 'No logs found for this period.',
     tabs: {
       newMetric: 'New metric',

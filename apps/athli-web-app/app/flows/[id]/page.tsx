@@ -16,7 +16,7 @@ import {
 import { ChevronRight, Pencil } from 'lucide-react';
 import { FlowEditor } from '@/components/flows/flow-editor';
 import { EditFlowSidePanel } from '@/components/flows/edit-flow-side-panel';
-import { updateFlowDetails } from '@/lib/coach/coach-flow-service';
+import { updateFlowDetails } from '@/api/coach/coach-flow-service';
 import type { Node, Edge } from 'reactflow';
 
 // Mock flow data - in production this would come from an API

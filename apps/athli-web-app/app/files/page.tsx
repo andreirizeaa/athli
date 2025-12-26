@@ -1,306 +1,188 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, FileText, Upload, X, Check, Tag as TagIcon, UserPlus, MoreHorizontal, Edit, Trash2 as Trash2Icon } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { SidePanel } from '@/components/app/side-panel';
-import { Input } from '@/components/ui/input';
-import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { PageHeader } from '@/components/app/page-header';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/general/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile } from '@/lib/coach/coach-file-service';
-import { addFilesToClient } from '@/lib/client/client-file-service';
-import { Trash2 } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, UserPlus } from 'lucide-react';
+import { useCoachFiles } from '@/hooks/use-coach-files';
+import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
+import { FilePreviewDialog } from '@/components/files/file-preview-dialog';
+import { getFileUrl, downloadFile, isPreviewable, getFileTypeFromMime, type CoachFile } from '@/api/coach/coach-file-service';
+import { SidePanel } from '@/components/app/side-panel';
+import { Input } from '@/components/ui/input';
+import { FileThumbnail } from '@/components/files/file-thumbnail';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';
-
-type FileType = 'pdf' | 'image' | 'video' | 'document' | 'spreadsheet' | 'other';
-
-type FileItem = {
-  id: string;
-  fileName: string;
-  type: FileType;
-  tags: string[];
-  pinned: boolean;
-};
-
-// Mock data
-const mockFiles: FileItem[] = [
-  {
-    id: '1',
-    fileName: 'Training Program Template.pdf',
-    type: 'pdf',
-    tags: ['Training', 'Program', 'Template'],
-    pinned: true,
-  },
-  {
-    id: '2',
-    fileName: 'Nutrition Guide.docx',
-    type: 'document',
-    tags: ['Nutrition', 'Education'],
-    pinned: false,
-  },
-  {
-    id: '3',
-    fileName: 'Recovery Protocol.pdf',
-    type: 'pdf',
-    tags: ['Recovery', 'Rehab'],
-    pinned: true,
-  },
-  {
-    id: '4',
-    fileName: 'Workout Video.mp4',
-    type: 'video',
-    tags: ['Training', 'Workout', 'Technique'],
-    pinned: false,
-  },
-  {
-    id: '5',
-    fileName: 'Progress Tracking.xlsx',
-    type: 'spreadsheet',
-    tags: ['Progress', 'Tracking', 'Assessment'],
-    pinned: false,
-  },
-];
-
-const TAG_OPTIONS: Option[] = [
-  { label: 'Training', value: 'Training' },
-  { label: 'Nutrition', value: 'Nutrition' },
-  { label: 'Recovery', value: 'Recovery' },
-  { label: 'Mobility', value: 'Mobility' },
-  { label: 'Rehab', value: 'Rehab' },
-  { label: 'Technique', value: 'Technique' },
-  { label: 'Mindset', value: 'Mindset' },
-  { label: 'Education', value: 'Education' },
-  { label: 'Assessment', value: 'Assessment' },
-  { label: 'Progress', value: 'Progress' },
-  { label: 'Checkin', value: 'Checkin' },
-  { label: 'Program', value: 'Program' },
-  { label: 'Workout', value: 'Workout' },
-  { label: 'Warmup', value: 'Warmup' },
-  { label: 'Cooldown', value: 'Cooldown' },
-  { label: 'Cardio', value: 'Cardio' },
-  { label: 'Strength', value: 'Strength' },
-  { label: 'Hypertrophy', value: 'Hypertrophy' },
-  { label: 'Conditioning', value: 'Conditioning' },
-  { label: 'Power', value: 'Power' },
-  { label: 'Endurance', value: 'Endurance' },
-  { label: 'Flexibility', value: 'Flexibility' },
-  { label: 'Lifestyle', value: 'Lifestyle' },
-  { label: 'Supplements', value: 'Supplements' },
-  { label: 'Recipes', value: 'Recipes' },
-  { label: 'Tracking', value: 'Tracking' },
-  { label: 'Form', value: 'Form' },
-  { label: 'Template', value: 'Template' },
-  { label: 'Admin', value: 'Admin' },
-];
+import { cn } from '@/lib/general/utils';
+import React from 'react';
 
 const FilesPage = () => {
   const t = useTranslations();
-  const [isAddFileOpen, setIsAddFileOpen] = useState<boolean>(false);
-  const [files, setFiles] = useState<FileItem[]>(mockFiles);
-  const [filteredCount, setFilteredCount] = useState<number>(mockFiles.length);
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  
-  // Side panel state
-  const [fileName, setFileName] = useState<string>('');
-  const [selectedFile, setSelectedFile] = useState<globalThis.File | null>(null);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const dragCounterRef = useRef(0);
-  
-  // Edit file state
-  const [editingFileId, setEditingFileId] = useState<string | null>(null);
-  const [editFileName, setEditFileName] = useState<string>('');
-  const [editSelectedTags, setEditSelectedTags] = useState<string[]>([]);
-  const [hasEditChanges, setHasEditChanges] = useState<boolean>(false);
-  const [rowMenuOpenId, setRowMenuOpenId] = useState<string | null>(null);
-  
-  // Add to clients side panel state
-  const [isAddToClientsOpen, setIsAddToClientsOpen] = useState<boolean>(false);
-  const [filesToAdd, setFilesToAdd] = useState<FileItem[]>([]);
-  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const { files, isLoading, uploadFile, updateFile, deleteFile: deleteFileMutation, isUploading } = useCoachFiles();
 
-  const itemsPerPage = 25;
+  const [isAddFileOpen, setIsAddFileOpen] = useState<boolean>(false);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+
+  // Preview dialog state
+  const [previewFile, setPreviewFile] = useState<CoachFile | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false);
+  const [isFetchingPreviewUrl, setIsFetchingPreviewUrl] = useState<boolean>(false);
+
+  // Edit file state
+  const [editingFile, setEditingFile] = useState<CoachFile | null>(null);
+  const [editFileName, setEditFileName] = useState<string>('');
+  const [hasEditChanges, setHasEditChanges] = useState<boolean>(false);
+
+  // Bulk delete and Assign state
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
+  const [filesToAssign, setFilesToAssign] = useState<CoachFile[]>([]);
+  const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
 
   const handleOpenAddFile = () => {
     setIsAddFileOpen(true);
-    setFileName('');
-    setSelectedFile(null);
-    setSelectedTags([]);
   };
 
   const handleCloseAddFile = () => {
     setIsAddFileOpen(false);
-    setFileName('');
-    setSelectedFile(null);
-    setSelectedTags([]);
-    setIsDragging(false);
-    dragCounterRef.current = 0;
   };
 
-  const handleSave = async () => {
-    if (!fileName.trim() || !selectedFile) {
-      return;
+  const handleFileUpload = async (file: File, fileName: string) => {
+    uploadFile({ file, fileName });
+    handleCloseAddFile();
+  };
+
+  const handleFileClick = async (file: CoachFile) => {
+    if (isPreviewable(file.mime_type)) {
+      // Open preview dialog
+      setPreviewFile(file);
+      setIsPreviewOpen(true);
+      setIsFetchingPreviewUrl(true);
+      try {
+        const fileWithUrl = await getFileUrl(file.id);
+        setPreviewUrl(fileWithUrl.url);
+      } catch (error) {
+        console.error('Failed to get file URL:', error);
+        setIsPreviewOpen(false);
+      } finally {
+        setIsFetchingPreviewUrl(false);
+      }
+    } else {
+      // Download directly
+      try {
+        await downloadFile(file.id, file.filename);
+      } catch (error) {
+        console.error('Failed to download file:', error);
+      }
     }
-    
-    try {
-      // Call the addFile service method
-      const fileId = await addFile({
-        fileName: fileName.trim(),
-        file: selectedFile,
-        tags: selectedTags,
+  };
+
+  const handleDownloadFromPreview = async () => {
+    if (previewFile) {
+      try {
+        await downloadFile(previewFile.id, previewFile.filename);
+      } catch (error) {
+        console.error('Failed to download file:', error);
+      }
+    }
+  };
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    setPreviewFile(null);
+    setPreviewUrl('');
+  };
+
+  const handleEditFile = (file: CoachFile) => {
+    setEditingFile(file);
+    setEditFileName(file.filename);
+    setHasEditChanges(false);
+  };
+
+  const handleCloseEdit = () => {
+    setEditingFile(null);
+    setEditFileName('');
+    setHasEditChanges(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingFile && hasEditChanges) {
+      updateFile({
+        fileId: editingFile.id,
+        fileName: editFileName.trim(),
       });
-      
-      // Add the file to the local state
-      const newFile: FileItem = {
-        id: fileId,
-        fileName: fileName.trim(),
-        type: getFileType(selectedFile.name),
-        tags: selectedTags,
-        pinned: false,
-      };
-      setFiles((prev) => [...prev, newFile]);
-      handleCloseAddFile();
-    } catch (error) {
-      console.error('Failed to add file:', error);
-      // TODO: Show error toast
+      handleCloseEdit();
     }
   };
 
-  const getFileType = (fileName: string): FileType => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf') return 'pdf';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '')) return 'image';
-    if (['mp4', 'mov', 'avi', 'webm'].includes(ext || '')) return 'video';
-    if (['doc', 'docx'].includes(ext || '')) return 'document';
-    if (['xls', 'xlsx', 'csv'].includes(ext || '')) return 'spreadsheet';
-    return 'other';
+  const handleDeleteFile = (fileId: string) => {
+    deleteFileMutation({ fileId });
   };
 
-  const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    if (!fileName.trim()) {
-      setFileName(file.name);
-    }
+  const handleToggleFile = (fileId: string) => {
+    setSelectedFiles((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileId)) {
+        newSet.delete(fileId);
+      } else {
+        newSet.add(fileId);
+      }
+      return newSet;
+    });
   };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current++;
-    if (dragCounterRef.current === 1) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounterRef.current--;
-    if (dragCounterRef.current === 0) {
-      setIsDragging(false);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    dragCounterRef.current = 0;
-
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      handleFileSelect(droppedFile);
-    }
-  };
-
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  };
-
 
   const handleClearSelected = () => {
     setSelectedFiles(new Set());
   };
 
-  const handleAddToClients = () => {
-    // Get selected files from the grid
-    const selectedFileItems = files.filter((file) => selectedFiles.has(file.id));
-    if (selectedFileItems.length === 0) {
-      return;
+  const handleBulkDelete = async () => {
+    try {
+      const idsToDelete = Array.from(selectedFiles);
+      await Promise.all(idsToDelete.map((id) => deleteFileMutation({ fileId: id })));
+      setSelectedFiles(new Set());
+    } catch (error) {
+      console.error('Failed to bulk delete files:', error);
     }
-    
-    setFilesToAdd(selectedFileItems);
-    setIsAddToClientsOpen(true);
+  };
+
+  const handleOpenAssignToClients = () => {
+    const selectedFileItems = files.filter((f) => selectedFiles.has(f.id));
+    if (selectedFileItems.length === 0) return;
+
+    setFilesToAssign(selectedFileItems);
+    setIsAssignToClientsOpen(true);
     setSelectedClientIds(new Set());
   };
 
-  const handleRemoveFileFromAddList = (fileId: string) => {
-    setFilesToAdd((prev) => {
-      const newList = prev.filter((file) => file.id !== fileId);
-      // Auto-close if no files remain
+  const handleRemoveFileFromAssignList = (fileId: string) => {
+    setFilesToAssign((prev) => {
+      const newList = prev.filter((f) => f.id !== fileId);
       if (newList.length === 0) {
-        setIsAddToClientsOpen(false);
+        setIsAssignToClientsOpen(false);
       }
       return newList;
     });
   };
 
-  const handleAddFilesToClients = async () => {
-    if (selectedClientIds.size === 0 || filesToAdd.length === 0) {
-      return;
-    }
-    
-    try {
-      const fileIds = filesToAdd.map((file) => file.id);
-      const clientIdsArray = Array.from(selectedClientIds);
-      
-      // Call the service for each client
-      await Promise.all(
-        clientIdsArray.map((clientId) =>
-          addFilesToClient({
-            fileIds,
-            clientId,
-          })
-        )
-      );
-      
-      // Close the side panel and clear selections
-      setIsAddToClientsOpen(false);
-      setFilesToAdd([]);
-      setSelectedFiles(new Set());
-      setSelectedClientIds(new Set());
-      // TODO: Show success toast
-    } catch (error) {
-      console.error('Failed to add files to clients:', error);
-      // TODO: Show error toast
-    }
-  };
-
-  const handleCloseAddToClients = () => {
-    setIsAddToClientsOpen(false);
-    setFilesToAdd([]);
+  const handleAssignFilesToClients = async () => {
+    // Mocked implementation as requested
+    console.log('Assigning files:', filesToAssign.map(f => f.id), 'to clients:', Array.from(selectedClientIds));
+    setIsAssignToClientsOpen(false);
+    setFilesToAssign([]);
+    setSelectedFiles(new Set());
     setSelectedClientIds(new Set());
   };
 
@@ -316,31 +198,14 @@ const FilesPage = () => {
     });
   };
 
-  const handleToggleFile = (fileId: string) => {
-    setSelectedFiles((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(fileId)) {
-        newSet.delete(fileId);
-      } else {
-        newSet.add(fileId);
-      }
-      return newSet;
-    });
-  };
+  // Track changes in edit mode
+  React.useEffect(() => {
+    if (editingFile) {
+      const hasChanges = editFileName.trim() !== editingFile.filename;
+      setHasEditChanges(hasChanges);
+    }
+  }, [editingFile, editFileName]);
 
-  const getFileTypeLabel = (type: FileType): string => {
-    const labels: Record<FileType, string> = {
-      pdf: 'PDF',
-      image: 'Image',
-      video: 'Video',
-      document: 'Document',
-      spreadsheet: 'Spreadsheet',
-      other: 'Other',
-    };
-    return labels[type] || 'Other';
-  };
-
-  // Render first column header with checkbox
   const renderFirstColumnHeader = ({
     isAllSelected,
     onToggleAll,
@@ -351,16 +216,12 @@ const FilesPage = () => {
     return (
       <div className="flex items-center gap-3 h-full w-full">
         <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        <div className="flex items-center gap-2">
-          <FileText className="size-3 text-muted-foreground" />
-          <span className="text-xs uppercase text-muted-foreground">{t('files.columns.fileName')}</span>
-        </div>
+        <span className="text-xs uppercase text-muted-foreground">{t('files.columns.fileName')}</span>
       </div>
     );
   };
 
-  // Render first column with checkbox
-  const renderFirstColumn = (row: FileItem, isSelected: boolean) => {
+  const renderFirstColumn = (row: CoachFile, isSelected: boolean) => {
     return (
       <div className="flex items-center gap-3 h-full w-full">
         <div
@@ -369,164 +230,58 @@ const FilesPage = () => {
         >
           <Checkbox checked={isSelected} onCheckedChange={() => handleToggleFile(row.id)} />
         </div>
-        <div className="flex items-center w-full min-w-0">
-          <span className="text-sm truncate">{row.fileName}</span>
+        <div className="flex items-center gap-3 w-full min-w-0">
+          <FileThumbnail file={row} />
+          <span className="text-sm truncate">{row.filename}</span>
         </div>
       </div>
     );
   };
 
-  const handleFileClick = (file: FileItem) => {
-    // Mock URL - in production this would come from the file service
-    const mockFileUrl = 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800';
-    
-    if (file.type === 'image' || file.type === 'video' || file.type === 'pdf') {
-      // Open in new tab
-      window.open(mockFileUrl, '_blank');
-    } else {
-      // Download
-      const link = document.createElement('a');
-      link.href = mockFileUrl;
-      link.download = file.fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  const handleEditFile = (file: FileItem) => {
-    setEditingFileId(file.id);
-    setEditFileName(file.fileName);
-    setEditSelectedTags([...file.tags]);
-    setHasEditChanges(false);
-    setRowMenuOpenId(null);
-  };
-
-  const handleDeleteFile = async (fileId: string) => {
-    try {
-      await deleteFile({ fileId });
-      setFiles((prev) => prev.filter((f) => f.id !== fileId));
-      setRowMenuOpenId(null);
-      // TODO: Show success toast
-    } catch (error) {
-      console.error('Failed to delete file:', error);
-      // TODO: Show error toast
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingFileId || !hasEditChanges) return;
-    
-    try {
-      await updateFile({
-        fileId: editingFileId,
-        fileName: editFileName.trim(),
-        tags: editSelectedTags,
-      });
-      
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === editingFileId
-            ? { ...f, fileName: editFileName.trim(), tags: editSelectedTags }
-            : f
-        )
-      );
-      
-      handleCloseEdit();
-      // TODO: Show success toast
-    } catch (error) {
-      console.error('Failed to update file:', error);
-      // TODO: Show error toast
-    }
-  };
-
-  const handleCloseEdit = () => {
-    setEditingFileId(null);
-    setEditFileName('');
-    setEditSelectedTags([]);
-    setHasEditChanges(false);
-  };
-
-  // Track changes in edit mode
-  React.useEffect(() => {
-    if (editingFileId) {
-      const originalFile = files.find((f) => f.id === editingFileId);
-      if (originalFile) {
-        const hasChanges =
-          editFileName.trim() !== originalFile.fileName ||
-          JSON.stringify([...editSelectedTags].sort()) !== JSON.stringify([...originalFile.tags].sort());
-        setHasEditChanges(hasChanges);
-      }
-    }
-  }, [editingFileId, editFileName, editSelectedTags, files]);
-
-  // Create column definitions
-  const columns: ColumnDefinition<FileItem>[] = [
-    {
-      id: 'fileName',
-      label: t('files.columns.fileName'),
-      icon: <FileText className="size-3" />,
-      width: { class: 'min-w-[300px]', pixel: '300px' },
-      renderCell: (row) => (
-        <div className="flex items-center w-full">
-          <span className="text-sm truncate">{row.fileName}</span>
-        </div>
-      ),
-      getSortValue: (row) => row.fileName.toLowerCase(),
-      getSearchValue: (row) => row.fileName,
-    },
+  const columns: ColumnDefinition<CoachFile>[] = [
     {
       id: 'type',
       label: t('files.columns.type'),
-      icon: <FileText className="size-3" />,
-      width: { class: 'min-w-[150px]', pixel: '150px' },
-      renderCell: (row) => (
-        <div className="flex items-center w-full">
-          <span className="text-sm">{getFileTypeLabel(row.type)}</span>
-        </div>
-      ),
-      getSortValue: (row) => row.type,
-      getSearchValue: (row) => getFileTypeLabel(row.type),
+      width: { class: 'w-[150px]', pixel: '150px' },
+      renderCell: (row) => {
+        const fileType = getFileTypeFromMime(row.mime_type);
+        const typeLabels = {
+          pdf: 'PDF',
+          image: 'Image',
+          video: 'Video',
+          other: 'Other',
+        };
+        return <span className="text-sm text-muted-foreground">{typeLabels[fileType]}</span>;
+      },
+      getSortValue: (row) => getFileTypeFromMime(row.mime_type),
+      getSearchValue: (row) => getFileTypeFromMime(row.mime_type),
     },
     {
-      id: 'tags',
-      label: t('files.columns.tags'),
-      icon: <TagIcon className="size-3" />,
-      width: { class: 'min-w-[250px]', pixel: '250px' },
-      renderCell: (row) => (
-        <div className="flex items-center gap-1 flex-wrap w-full">
-          {row.tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs border-primary text-primary">
-              {tag}
-            </Badge>
-          ))}
-          {row.tags.length > 3 && (
-            <Badge variant="outline" className="text-xs border-primary text-primary">
-              +{row.tags.length - 3}
-            </Badge>
-          )}
-        </div>
-      ),
-      getSortValue: (row) => row.tags.join(','),
-      getSearchValue: (row) => row.tags.join(' '),
+      id: 'size',
+      label: t('files.columns.size'),
+      width: { class: 'w-[120px]', pixel: '120px' },
+      renderCell: (row) => {
+        if (!row.size) return <span className="text-sm text-muted-foreground">-</span>;
+        const sizeInKB = row.size / 1024;
+        const sizeInMB = sizeInKB / 1024;
+        const displaySize = sizeInMB > 1 ? `${sizeInMB.toFixed(2)} MB` : `${sizeInKB.toFixed(2)} KB`;
+        return <span className="text-sm text-muted-foreground">{displaySize}</span>;
+      },
+      getSortValue: (row) => row.size || 0,
     },
     {
       id: 'actions',
       label: '',
-      width: { class: 'w-[26px]', pixel: '26px' },
+      width: { class: 'w-[50px]', pixel: '50px' },
       renderCell: (row) => (
-        <div className="flex items-center justify-end w-full" data-action-menu="true">
-          <DropdownMenu open={rowMenuOpenId === row.id} onOpenChange={(open) => setRowMenuOpenId(open ? row.id : null)}>
+        <div className="flex items-center justify-end w-full" data-no-row-link="true">
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRowMenuOpenId(row.id);
-                }}
-                aria-label={t('files.actions.moreOptions', { fileName: row.fileName })}
+                onClick={(e) => e.stopPropagation()}
               >
                 <MoreHorizontal className="size-4" />
               </Button>
@@ -548,7 +303,7 @@ const FilesPage = () => {
                 }}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2Icon className="size-4 mr-2" />
+                <Trash2 className="size-4 mr-2" />
                 <span>{t('general.delete')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -558,67 +313,62 @@ const FilesPage = () => {
     },
   ];
 
-  // Create filter definitions
-  const filters: FilterDefinition<FileItem>[] = [
-    {
-      id: 'tags',
-      label: t('files.filters.tags'),
-      icon: <TagIcon className="size-4" />,
-      options: TAG_OPTIONS.map((tag) => ({ value: tag.value, label: tag.label })),
-      getFilterValue: (row) => {
-        // Return comma-separated tags so DataGrid can match against them
-        return row.tags.join(',');
-      },
-      multiSelect: true,
-      searchPlaceholder: t('files.form.searchTags'),
-    },
-  ];
-
-  // Sort files - pinned first, then by fileName
-  const sortedFiles = useMemo(() => {
-    return [...files].sort((a, b) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      return a.fileName.localeCompare(b.fileName);
-    });
-  }, [files]);
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <h1 className="text-[22px] font-semibold">{t('files.title')}</h1>
+    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+      <PageHeader
+        title={t('files.title')}
+        action={
           <Button onClick={handleOpenAddFile} className="gap-2">
             <Plus className="size-4" />
             <span>{t('files.addFile')}</span>
           </Button>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
+        }
+      />
+
       <DataGrid
-        data={sortedFiles}
+        data={files}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="files"
-        itemsPerPage={itemsPerPage}
-        onFilteredDataChange={setFilteredCount}
-        enableSearch={true}
         searchPlaceholder={t('files.searchPlaceholder')}
-        searchFields={[(row) => `${row.fileName} ${row.tags.join(' ')}`]}
-        filters={filters}
+        enableSearch={true}
+        searchFields={['filename']}
         enableEditColumns={false}
-        showLastColumnDivider={false}
         enableExport={false}
         enableRowSelection={true}
         selectedRowIds={selectedFiles}
         onSelectionChange={setSelectedFiles}
-        firstColumnId="fileName"
+        onRowClick={(row, event) => {
+          const targetElement = event.target as HTMLElement;
+          if (targetElement.closest('[data-no-row-link="true"]')) {
+            return;
+          }
+          handleFileClick(row);
+        }}
+        onRowKeyDown={(row, event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            const targetElement = event.target as HTMLElement;
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return;
+            }
+            event.preventDefault();
+            handleFileClick(row);
+          }
+        }}
+        firstColumnId="filename"
         stickyFirstColumn={true}
         firstColumnWidth="350px"
+        hideFirstColumnBorder={false}
         renderFirstColumn={renderFirstColumn}
         renderFirstColumnHeader={renderFirstColumnHeader}
-        defaultColumnOrder={['fileName', 'type', 'tags', 'actions']}
-        defaultVisibleColumns={['fileName', 'type', 'tags', 'actions']}
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -636,151 +386,47 @@ const FilesPage = () => {
           />
         }
         selectionActions={
-          <div className="flex items-center gap-1">
+          selectedFiles.size > 0 ? (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 onClick={handleClearSelected}
                 className="gap-2"
-                aria-label={t('files.actions.clearSelected')}
               >
-                <X className="size-4" />
-                <span>
-                  Clear {selectedFiles.size} selected
-                </span>
+                <span>Clear {selectedFiles.size} selected</span>
               </Button>
-            <Button
-              variant="ghost"
-              onClick={handleAddToClients}
-              className="gap-2"
-              aria-label={t('files.actions.addToClients')}
-            >
-              <UserPlus className="size-4" />
-              <span>{t('files.actions.addToClients')}</span>
-            </Button>
-          </div>
+              <Button
+                variant="ghost"
+                onClick={handleOpenAssignToClients}
+                className="gap-2"
+              >
+                <UserPlus className="size-4" />
+                <span>{t('forms.assignToClients')}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setIsBulkDeleteOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
+            </div>
+          ) : undefined
         }
       />
-      <SidePanel
+
+      {/* Add File Side Panel */}
+      <AddFileSidePanel
         open={isAddFileOpen}
         onOpenChange={setIsAddFileOpen}
-        title={t('files.addFile')}
-        footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button type="button" onClick={handleSave} disabled={!fileName.trim() || !selectedFile}>
-              {t('general.save')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleCloseAddFile}>
-              {t('general.cancel')}
-            </Button>
-          </div>
-        }
-      >
-        <div
-          className="flex flex-col gap-6 flex-1 min-h-0 relative"
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          {/* Drag Overlay */}
-          {isDragging && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-              <p className="text-lg font-semibold text-primary">Drop file here</p>
-            </div>
-          )}
-          
-          {/* Form Content - hidden when dragging */}
-          <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
-            {/* File Name Input */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="file-name" className="text-sm font-medium">
-                {t('files.form.fileName')}
-              </label>
-              <Input
-                id="file-name"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                placeholder={t('files.form.fileNamePlaceholder')}
-              />
-            </div>
+        onUpload={handleFileUpload}
+        isUploading={isUploading}
+      />
 
-            {/* File Drop Area */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">{t('files.form.file')}</label>
-              <div
-                className={cn(
-                  'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                  selectedFile ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary'
-                )}
-              >
-              {selectedFile ? (
-                <>
-                  <Check className="size-10 text-green-500" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium mb-1">{(selectedFile as globalThis.File).name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {((selectedFile as globalThis.File).size / 1024).toFixed(2)} KB
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                      }
-                    }}
-                  >
-                    {t('files.form.changeFile')}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Upload className="size-10 text-muted-foreground" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
-                    <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
-                  </div>
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileInputChange}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {t('files.form.selectFile')}
-                  </Button>
-                </>
-              )}
-              </div>
-            </div>
-
-            {/* Tags Dropdown */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">{t('files.form.tags')}</label>
-              <MultiAsyncSelect
-                options={TAG_OPTIONS}
-                value={selectedTags}
-                onValueChange={setSelectedTags}
-                placeholder={t('files.form.selectTags')}
-                searchPlaceholder={t('files.form.searchTags')}
-                maxCount={3}
-                clearText={t('general.clear')}
-                closeText={t('general.close')}
-              />
-            </div>
-          </div>
-        </div>
-      </SidePanel>
-      
       {/* Edit File Side Panel */}
       <SidePanel
-        open={editingFileId !== null}
+        open={editingFile !== null}
         onOpenChange={(open) => {
           if (!open) {
             handleCloseEdit();
@@ -796,18 +442,6 @@ const FilesPage = () => {
             >
               {t('general.save')}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                if (editingFileId) {
-                  handleDeleteFile(editingFileId);
-                  handleCloseEdit();
-                }
-              }}
-            >
-              {t('general.delete')}
-            </Button>
             <Button type="button" variant="outline" onClick={handleCloseEdit}>
               {t('general.cancel')}
             </Button>
@@ -815,7 +449,6 @@ const FilesPage = () => {
         }
       >
         <div className="flex flex-col gap-6">
-          {/* File Name Input */}
           <div className="flex flex-col gap-2">
             <label htmlFor="edit-file-name" className="text-sm font-medium">
               {t('files.form.fileName')}
@@ -827,66 +460,70 @@ const FilesPage = () => {
               placeholder={t('files.form.fileNamePlaceholder')}
             />
           </div>
-
-          {/* Tags Dropdown */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">{t('files.form.tags')}</label>
-            <MultiAsyncSelect
-              options={TAG_OPTIONS}
-              value={editSelectedTags}
-              onValueChange={setEditSelectedTags}
-              placeholder={t('files.form.selectTags')}
-              searchPlaceholder={t('files.form.searchTags')}
-              maxCount={3}
-              clearText={t('general.clear')}
-              closeText={t('general.close')}
-            />
-          </div>
         </div>
       </SidePanel>
-      
-      {/* Add to Clients Side Panel */}
+
+      {/* File Preview Dialog */}
+      {isPreviewOpen && (
+        <FilePreviewDialog
+          open={isPreviewOpen}
+          onOpenChange={handleClosePreview}
+          fileUrl={previewUrl}
+          filename={previewFile?.filename || ''}
+          mimeType={previewFile?.mime_type || null}
+          isLoading={isFetchingPreviewUrl}
+        />
+      )}
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedFiles.size}
+        itemName={t('files.title').toLowerCase()}
+      />
+
+      {/* Assign to Clients Side Panel */}
       <SidePanel
-        open={isAddToClientsOpen}
-        onOpenChange={setIsAddToClientsOpen}
-        title={t('files.addToClients.title')}
+        open={isAssignToClientsOpen}
+        onOpenChange={setIsAssignToClientsOpen}
+        title={t('forms.assignToClientsTitle')}
         footer={
           <div className="flex w-full justify-start gap-2">
             <Button
               type="button"
-              onClick={handleAddFilesToClients}
-              disabled={selectedClientIds.size === 0 || filesToAdd.length === 0}
+              onClick={handleAssignFilesToClients}
+              disabled={selectedClientIds.size === 0 || filesToAssign.length === 0}
             >
               {selectedClientIds.size === 1
-                ? t('files.actions.addFilesToOneClient')
-                : t('files.actions.addFilesToClients', { count: selectedClientIds.size })}
+                ? t('forms.assignToOneClient')
+                : t('forms.assignToClientsCount', { count: selectedClientIds.size })}
             </Button>
-            <Button type="button" variant="outline" onClick={handleCloseAddToClients}>
+            <Button type="button" variant="outline" onClick={() => setIsAssignToClientsOpen(false)}>
               {t('general.cancel')}
             </Button>
           </div>
         }
       >
         <div className="flex flex-col gap-6 h-full">
-          {/* Files to be added */}
           <div className="flex flex-col gap-2 flex-shrink-0">
-            <label className="text-sm font-medium">{t('files.addToClients.filesToBeAdded')}</label>
-            {filesToAdd.length > 0 ? (
+            <label className="text-sm font-medium">{t('files.title')}</label>
+            {filesToAssign.length > 0 ? (
               <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                {filesToAdd.map((file) => (
+                {filesToAssign.map((file) => (
                   <div
                     key={file.id}
                     className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <FileText className="size-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm truncate">{file.fileName}</span>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileThumbnail file={file} />
+                      <span className="text-sm truncate">{file.filename}</span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleRemoveFileFromAddList(file.id)}
+                      onClick={() => handleRemoveFileFromAssignList(file.id)}
                       className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label={t('files.actions.removeFile', { fileName: file.fileName })}
+                      aria-label={`Remove ${file.filename}`}
                     >
                       <Trash2 className="size-4" />
                     </button>
@@ -895,12 +532,11 @@ const FilesPage = () => {
               </div>
             ) : (
               <div className="text-sm text-muted-foreground py-4 text-center">
-                {t('files.addToClients.noFiles')}
+                {t('forms.noFormsSelected')}
               </div>
             )}
           </div>
 
-          {/* Client Selection */}
           <div className="flex flex-col gap-2 flex-1 min-h-0">
             <label className="text-sm font-medium">{t('athletes.title')}</label>
             <div className="flex-1 min-h-0 overflow-hidden">
@@ -909,7 +545,7 @@ const FilesPage = () => {
                 columns={[
                   {
                     id: 'name',
-                    label: 'Athlete',
+                    label: t('athletes.title'),
                     icon: <UserPlus className="size-3" />,
                     width: { class: 'w-full', pixel: '100%' },
                     getSortValue: (row) => row.name.toLowerCase(),
@@ -917,8 +553,8 @@ const FilesPage = () => {
                   },
                 ]}
                 getRowId={(row) => row.id}
-                gridKey="add-files-to-clients"
-                searchPlaceholder="Search athletes..."
+                gridKey="assign-files-to-clients"
+                searchPlaceholder={t('forms.searchAthletes')}
                 enableSearch={true}
                 enableEditColumns={false}
                 enableExport={false}
@@ -979,12 +615,12 @@ const FilesPage = () => {
                       <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
                       <div className="flex items-center gap-2">
                         <UserPlus className="size-3 text-muted-foreground" />
-                        <span className="text-xs uppercase text-muted-foreground">Athlete</span>
+                        <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
                       </div>
                     </div>
                   );
                 }}
-                emptyMessage="No athletes found."
+                emptyMessage={t('forms.noAthletesFound')}
                 rowHeight="54px"
                 compactMode={true}
                 showPagination={true}

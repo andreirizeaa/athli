@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Edit, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
 type QuestionFormat = {
   id: string;
@@ -40,10 +41,12 @@ type AddQuestionSidePanelProps = {
     mediaCount?: number;
     metricId?: string;
   }) => void;
+  questions: any[];
 };
 
-export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestionSidePanelProps) => {
+export const AddQuestionSidePanel = ({ open, onOpenChange, onSave, questions }: AddQuestionSidePanelProps) => {
   const t = useTranslations();
+  const router = useRouter();
   const [questionText, setQuestionText] = useState<string>('');
   const [isRequired, setIsRequired] = useState<boolean>(true);
   const [selectedFormat, setSelectedFormat] = useState<string | null>(null);
@@ -60,6 +63,10 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
     { id: 'metrics', label: t('forms.detail.addQuestion.formats.metrics'), subtitle: t('forms.detail.addQuestion.formats.metricsSubtitle') },
   ];
 
+  const safeQuestions = questions || [];
+  const isProgressPhotoAlreadyUsed = safeQuestions.some(q => q.format === 'progressPhoto');
+  const usedMetricIds = new Set(safeQuestions.filter(q => q.format === 'metrics').map(q => q.metricId));
+
   const generalFormats: QuestionFormat[] = [
     { id: 'text', label: t('forms.detail.addQuestion.formats.text'), subtitle: t('forms.detail.addQuestion.formats.textSubtitle') },
     { id: 'number', label: t('forms.detail.addQuestion.formats.number'), subtitle: t('forms.detail.addQuestion.formats.numberSubtitle') },
@@ -74,6 +81,12 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
   ];
 
   const allFormats = [...syncsWithFormats, ...generalFormats];
+
+  const filteredSyncsWithFormats = syncsWithFormats.filter(
+    (format) => !(format.id === 'progressPhoto' && isProgressPhotoAlreadyUsed)
+  );
+
+  const filteredMetrics = metrics.filter((metric) => !usedMetricIds.has(metric.id));
 
   const resetForm = () => {
     setQuestionText('');
@@ -156,6 +169,9 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
   };
 
   const handleFormatSelect = (format: string) => {
+    if (format === 'progressPhoto' && isProgressPhotoAlreadyUsed) {
+      return;
+    }
     setSelectedFormat(format);
     if (format === 'multipleChoice') {
       if (options.length === 0 || options.every((opt) => opt.trim() === '')) {
@@ -291,8 +307,11 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
                   {t('forms.detail.addQuestion.syncsWith')}
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {syncsWithFormats.map((format) => (
+                <div className={cn(
+                  "grid gap-3",
+                  filteredSyncsWithFormats.length === 1 ? "grid-cols-1" : "grid-cols-2"
+                )}>
+                  {filteredSyncsWithFormats.map((format) => (
                     <Card
                       key={format.id}
                       role="button"
@@ -482,11 +501,24 @@ export const AddQuestionSidePanel = ({ open, onOpenChange, onSave }: AddQuestion
                 />
               </SelectTrigger>
               <SelectContent>
-                {metrics.map((metric) => (
-                  <SelectItem key={metric.id} value={metric.id}>
-                    {metric.name} {metric.unit && `(${metric.unit})`}
-                  </SelectItem>
-                ))}
+                {filteredMetrics.length > 0 ? (
+                  filteredMetrics.map((metric) => (
+                    <SelectItem key={metric.id} value={metric.id}>
+                      {metric.name} {metric.unit && `(${metric.unit})`}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="p-1">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-xs gap-2 h-8 px-2"
+                      onClick={() => router.push('/metrics')}
+                    >
+                      <Plus className="size-3" />
+                      {t('forms.detail.addQuestion.pleaseAddMetric')}
+                    </Button>
+                  </div>
+                )}
               </SelectContent>
             </Select>
           </div>

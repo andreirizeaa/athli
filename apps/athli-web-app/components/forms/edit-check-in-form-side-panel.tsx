@@ -29,8 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
-import { editFormDetails, type Form as FormType } from '@/lib/coach/coach-form-service';
+import { Info, Trash2 } from 'lucide-react';
+import { editCheckInDetails, deleteCheckIn, type CheckIn as FormType } from '@/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 
 type EditCheckInFormSidePanelProps = {
@@ -38,14 +38,16 @@ type EditCheckInFormSidePanelProps = {
   onOpenChange: (open: boolean) => void;
   form: FormType | null;
   onSave?: (form: FormType) => void;
+  onDelete?: (formId: string) => void;
 };
 
 type FormFormValues = {
   name: string;
   description?: string;
+  schedule_cron?: string;
 };
 
-export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: EditCheckInFormSidePanelProps) => {
+export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onDelete }: EditCheckInFormSidePanelProps) => {
   const t = useTranslations();
   const [checkInFrequency, setCheckInFrequency] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>('daily');
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
@@ -84,6 +86,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
       .min(1, t('forms.form.nameRequired'))
       .max(100, t('forms.form.nameMaxLength')),
     description: z.string().optional(),
+    schedule_cron: z.string().optional(),
   });
 
   const reactForm = useForm<FormFormValues>({
@@ -92,6 +95,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
     defaultValues: {
       name: '',
       description: '',
+      schedule_cron: '',
     },
   });
 
@@ -100,6 +104,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
       reactForm.reset({
         name: form.name,
         description: form.description || '',
+        schedule_cron: form.schedule_cron || '',
       });
     }
   }, [form, open, reactForm]);
@@ -113,10 +118,11 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
     if (!form) return;
 
     try {
-      const updatedForm = await editFormDetails({
+      const updatedForm = await editCheckInDetails({
         id: form.id,
         name: values.name,
         description: values.description,
+        schedule_cron: values.schedule_cron,
       });
       if (onSave) {
         onSave(updatedForm);
@@ -124,6 +130,23 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
       handleClose();
     } catch (error) {
       console.error('Failed to save form:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!form) return;
+
+    const confirmed = window.confirm(t('forms.form.deleteConfirm'));
+    if (!confirmed) return;
+
+    try {
+      await deleteCheckIn(form.id);
+      if (onDelete) {
+        onDelete(form.id);
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Failed to delete form:', error);
     }
   };
 
@@ -156,7 +179,8 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
 
   const hasChanges = form && (
     reactForm.watch('name') !== form.name ||
-    reactForm.watch('description') !== (form.description || '')
+    reactForm.watch('description') !== (form.description || '') ||
+    reactForm.watch('schedule_cron') !== (form.schedule_cron || '')
   );
 
   if (!form) return null;
@@ -168,16 +192,27 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
       title={t('forms.editDetailsAndSchedule')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-between gap-2">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={reactForm.handleSubmit(handleSave)}
+              disabled={!reactForm.formState.isValid || !hasChanges}
+            >
+              {t('general.save')}
+            </Button>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              {t('general.cancel')}
+            </Button>
+          </div>
           <Button
             type="button"
-            onClick={reactForm.handleSubmit(handleSave)}
-            disabled={!reactForm.formState.isValid || !hasChanges}
+            variant="ghost"
+            onClick={handleDelete}
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-2"
           >
-            {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
+            <Trash2 className="size-4" />
+            <span>{t('general.delete')}</span>
           </Button>
         </div>
       }
@@ -226,6 +261,23 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
                     aria-label={t('forms.form.description')}
                     rows={3}
                     className="resize-none"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={reactForm.control}
+            name="schedule_cron"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cron Expression</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="e.g. 0 8 * * 0"
                     {...field}
                   />
                 </FormControl>
@@ -377,6 +429,3 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave }: E
     </SidePanel>
   );
 };
-
-
-
