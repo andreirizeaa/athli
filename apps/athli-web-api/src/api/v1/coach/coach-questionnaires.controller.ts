@@ -65,7 +65,7 @@ export const coachQuestionnairesController = {
      */
     createQuestionnaire: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { name, description } = req.body;
+        const { name, description, questions, num_of_questions } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -83,7 +83,8 @@ export const coachQuestionnairesController = {
                 coach_id: userId,
                 name,
                 description,
-                questions: [],
+                questions: questions || [],
+                num_of_questions: num_of_questions || 0,
             })
             .select()
             .single();

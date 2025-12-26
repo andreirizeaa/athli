@@ -51,11 +51,13 @@ export const IphoneFrame = ({
 
       // Use the smaller scale to ensure it fits both dimensions
       const calculatedScale = Math.min(scaleByWidth, scaleByHeight, 1); // Don't scale up beyond 1x
-      setAutoScale(calculatedScale);
+
+      // Ensure we don't scale to 0 or negative
+      setAutoScale(Math.max(calculatedScale, 0.1));
     };
 
     // Initial calculation
-    const timeoutId = setTimeout(updateScale, 100);
+    const timeoutId = setTimeout(updateScale, 50);
 
     // Watch for container size changes
     const resizeObserver = new ResizeObserver(() => {
@@ -119,9 +121,9 @@ export const IphoneFrame = ({
             {/* Right side - Battery */}
             <div className="flex items-center gap-1.5">
               <svg width="25" height="12" viewBox="0 0 25 12" fill="none" className="text-foreground">
-                <rect x="0.5" y="0.5" width="20" height="11" rx="2.5" stroke="currentColor" opacity="0.4"/>
-                <path d="M23 4V8C24.1046 7.66122 24.1046 4.33878 23 4Z" fill="currentColor" opacity="0.4"/>
-                <rect x="2" y="2" width="17" height="8" rx="1.5" fill="currentColor"/>
+                <rect x="0.5" y="0.5" width="20" height="11" rx="2.5" stroke="currentColor" opacity="0.4" />
+                <path d="M23 4V8C24.1046 7.66122 24.1046 4.33878 23 4Z" fill="currentColor" opacity="0.4" />
+                <rect x="2" y="2" width="17" height="8" rx="1.5" fill="currentColor" />
               </svg>
             </div>
           </div>

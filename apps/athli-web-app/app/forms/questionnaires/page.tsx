@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -18,19 +18,22 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
 import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
-import { addQuestionnaire, duplicateQuestionnaire, deleteQuestionnaire, getQuestionnaires, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
+import { duplicateQuestionnaire, deleteQuestionnaire, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
 import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
+import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Removed mock forms as we fetch from the API
 
 const QuestionnairesPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const [forms, setForms] = useState<Form[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { questionnaires: forms, isLoading } = useCoachQuestionnaires();
+  const queryClient = useQueryClient();
+
   const [isAddQuestionnaireOpen, setIsAddQuestionnaireOpen] = useState<boolean>(false);
   const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<Set<string>>(new Set());
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
@@ -38,21 +41,9 @@ const QuestionnairesPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
 
-  const fetchForms = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getQuestionnaires();
-      setForms(data);
-    } catch (error) {
-      console.error('Failed to fetch questionnaires:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['coach-questionnaires'] });
   };
-
-  useEffect(() => {
-    fetchForms();
-  }, []);
 
   const handleOpenAddQuestionnaire = () => {
     setIsAddQuestionnaireOpen(true);
@@ -68,8 +59,8 @@ const QuestionnairesPage = () => {
 
     const formToDuplicate = selectedForms[0];
     try {
-      const duplicatedForm = await duplicateQuestionnaire(formToDuplicate.id, formToDuplicate);
-      fetchForms();
+      await duplicateQuestionnaire(formToDuplicate.id, formToDuplicate);
+      refresh();
       setSelectedQuestionnaires(new Set());
     } catch (error) {
       console.error('Failed to duplicate form:', error);
@@ -80,7 +71,7 @@ const QuestionnairesPage = () => {
     e.stopPropagation();
     try {
       await deleteQuestionnaire(id);
-      fetchForms();
+      refresh();
 
       // Clear selection if deleted
       if (selectedQuestionnaires.has(id)) {
@@ -97,7 +88,7 @@ const QuestionnairesPage = () => {
     try {
       const idsToDelete = Array.from(selectedQuestionnaires);
       await Promise.all(idsToDelete.map((id) => deleteQuestionnaire(id)));
-      fetchForms();
+      refresh();
       setSelectedQuestionnaires(new Set());
     } catch (error) {
       console.error('Failed to bulk delete questionnaires:', error);
@@ -177,7 +168,8 @@ const QuestionnairesPage = () => {
   };
 
   const questionnaireForms = useMemo(() => {
-    return forms.filter((form) => !form.name.includes('Check-in') && !form.name.includes('Weekly'));
+    // Return all forms - backend filters by type
+    return forms || [];
   }, [forms]);
 
   const handleSaveForm = async (newForm: Form, questions?: Array<{
@@ -189,7 +181,7 @@ const QuestionnairesPage = () => {
     scaleTo?: string;
     mediaCount?: number;
   }>) => {
-    fetchForms();
+    refresh();
 
     const template = formTemplates.find((t) => t.name === newForm.name);
     const formType = template?.schedule?.type || 'check-in';

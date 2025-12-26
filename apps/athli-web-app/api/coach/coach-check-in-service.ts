@@ -3,14 +3,21 @@ import { apiFetch } from '@/api/api-client';
 export interface AddCheckInData {
   name: string;
   description?: string;
-  schedule_cron?: string;
+  cron_expression?: string;
 }
 
 export interface CheckIn {
   id: string;
   name: string;
   description?: string;
-  schedule_cron?: string;
+  cron_expression?: string;
+  schedule_config?: {
+    type: 'check-in' | 'questionnaire';
+    frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly';
+    selectedDays?: string[];
+    monthlyOption?: 'first' | 'last' | 'specific';
+    specificDay?: number;
+  };
   questions: Question[];
   created_at: string;
   updated_at: string;
@@ -20,7 +27,8 @@ export interface EditCheckInDetailsData {
   id: string;
   name: string;
   description?: string;
-  schedule_cron?: string;
+  cron_expression?: string;
+  schedule_config?: Record<string, any>;
 }
 
 export interface Question {
@@ -49,7 +57,7 @@ export interface AddQuestionData {
 
 export interface ReorderQuestionsData {
   formId: string;
-  questionIds: string[];
+  questions: Question[];
 }
 
 export interface DeleteQuestionData {
@@ -102,8 +110,8 @@ export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
   const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${formId}`);
   const currentQuestions = response.data.checkIn.questions || [];
 
-  // Generate a sequential ID for the new question
-  const nextId = (currentQuestions.length + 1).toString();
+  // Generate a UUID for the new question
+  const nextId = crypto.randomUUID();
   const newQuestion: Question = {
     ...questionData,
     id: nextId,
@@ -123,28 +131,18 @@ export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
 /**
  * Service method to reorder questions in a check-in
  */
+/**
+ * Service method to reorder questions in a check-in
+ * Now acts as a "save all questions" method to ensure exact order persistence
+ */
 export const reorderQuestions = async (data: ReorderQuestionsData): Promise<void> => {
-  const { formId, questionIds } = data;
+  const { formId, questions } = data;
 
-  // Get current check-in
-  const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${formId}`);
-  const currentQuestions = response.data.checkIn.questions || [];
-
-  // Create new ordered questions array and re-assign chronological IDs
-  const reorderedQuestions = questionIds.map(id =>
-    currentQuestions.find(q => q.id === id)
-  ).filter(Boolean) as Question[];
-
-  const reIdedQuestions = reorderedQuestions.map((q, index) => ({
-    ...q,
-    id: (index + 1).toString(),
-  }));
-
-  // Update check-in
+  // Update check-in with the exact provided state
   await apiFetch(`/coach/forms/check-ins/${formId}`, {
     method: 'PATCH',
     body: {
-      questions: reIdedQuestions,
+      questions: questions,
     } as any,
   });
 };
@@ -159,13 +157,9 @@ export const deleteQuestion = async (data: DeleteQuestionData): Promise<void> =>
   const response = await apiFetch<{ data: { checkIn: CheckIn } }>(`/coach/forms/check-ins/${formId}`);
   const currentQuestions = response.data.checkIn.questions || [];
 
-  // Remove the question and re-assign chronological IDs
+  // Remove the question
   const updatedQuestions = currentQuestions
-    .filter(q => q.id !== questionId)
-    .map((q, index) => ({
-      ...q,
-      id: (index + 1).toString(),
-    }));
+    .filter(q => q.id !== questionId);
 
   // Update check-in
   await apiFetch(`/coach/forms/check-ins/${formId}`, {

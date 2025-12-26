@@ -313,13 +313,7 @@ const FilesPage = () => {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
