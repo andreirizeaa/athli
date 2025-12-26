@@ -1903,6 +1903,12 @@ export const esMessages = {
         subtitle: 'Comienza creando tu primera plantilla de check-in.',
       },
     },
+    toast: {
+      updateSuccess: 'Formulario actualizado exitosamente',
+      updateError: 'Error al actualizar el formulario',
+      deleteSuccess: 'Formulario eliminado exitosamente',
+      deleteError: 'Error al eliminar el formulario',
+    },
     detail: {
       notFound: 'Formulario no encontrado',
       notFoundDescription: 'El formulario que buscas no existe.',

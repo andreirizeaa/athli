@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { ButtonGroup } from '@/components/ui/button-group';
 import {
   Breadcrumb,
@@ -41,25 +42,24 @@ const CheckInFormDetailPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const reorderedQuestionsRef = useRef<Question[] | null>(null);
 
-  useEffect(() => {
-    const fetchForm = async () => {
-      try {
-        setIsLoading(true);
-        // We can use getCheckIns and find the one with the correct ID, or add getCheckInById to service
-        const allCheckIns = await getCheckIns();
-        const foundForm = allCheckIns.find(f => f.id === formId);
+  const fetchForm = async () => {
+    try {
+      setIsLoading(true);
+      const allCheckIns = await getCheckIns();
+      const foundForm = allCheckIns.find(f => f.id === formId);
 
-        if (foundForm) {
-          setCurrentForm(foundForm);
-          setQuestions(foundForm.questions || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch check-in:', error);
-      } finally {
-        setIsLoading(false);
+      if (foundForm) {
+        setCurrentForm(foundForm);
+        setQuestions(foundForm.questions || []);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch check-in:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchForm();
   }, [formId]);
 
@@ -84,14 +84,27 @@ const CheckInFormDetailPage = () => {
 
   const handleBreadcrumbClick = (path: string, tabType?: 'check-ins' | 'questionnaires') => {
     if (tabType) {
-      router.push(`${path}?tab=${tabType}`);
+      router.push(`/forms/${tabType}`);
     } else {
       router.push(path);
     }
   };
 
-  const handleEditForm = (updatedForm: Form) => {
+  const handleEditForm = async (updatedForm: Form) => {
+    // Update local state immediately for responsive UI
     setCurrentForm(updatedForm);
+
+    // Optionally refetch to ensure data consistency
+    try {
+      const allCheckIns = await getCheckIns();
+      const refreshedForm = allCheckIns.find(f => f.id === formId);
+      if (refreshedForm) {
+        setCurrentForm(refreshedForm);
+        setQuestions(refreshedForm.questions || []);
+      }
+    } catch (error) {
+      console.error('Failed to refresh check-in after edit:', error);
+    }
   };
 
   const handleToggleReorder = async () => {
@@ -105,11 +118,14 @@ const CheckInFormDetailPage = () => {
         const questionsToReorder = reorderedQuestionsRef.current || questions;
         await reorderQuestions({
           formId: formId,
-          questionIds: questionsToReorder.map((q) => q.id),
+          questions: questionsToReorder,
         });
+        toast.success(t('forms.reorder.success'));
         reorderedQuestionsRef.current = null;
+        // No need to refresh form data as IDs are now stable UUIDs
       } catch (error) {
         console.error('Failed to reorder questions:', error);
+        toast.error(t('general.error'));
       }
     }
   };
@@ -122,6 +138,13 @@ const CheckInFormDetailPage = () => {
   const handleReorder = (newData: any[]) => {
     // Filter out the add row before saving
     const filteredData = newData.filter((item) => !item._isAddRow) as Question[];
+
+    console.log('handleReorder (CheckIn)', {
+      inputLength: newData.length,
+      filteredLength: filteredData.length,
+      sampleIds: filteredData.slice(0, 3).map(q => q.id)
+    });
+
     setQuestions(filteredData);
     // Store in ref for use when exiting reorder mode
     reorderedQuestionsRef.current = filteredData;
@@ -213,7 +236,7 @@ const CheckInFormDetailPage = () => {
         onOpenChange={setIsEditFormOpen}
         form={currentForm}
         onSave={handleEditForm}
-        onDelete={() => router.push('/forms?tab=check-ins')}
+        onDelete={() => router.push('/forms/check-ins')}
       />
     </div>
   );

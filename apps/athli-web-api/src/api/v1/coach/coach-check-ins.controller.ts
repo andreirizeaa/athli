@@ -65,7 +65,7 @@ export const coachCheckInsController = {
      */
     createCheckIn: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { name, description } = req.body;
+        const { name, description, questions, schedule_config, cron_expression, num_of_questions } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -83,7 +83,10 @@ export const coachCheckInsController = {
                 coach_id: userId,
                 name,
                 description,
-                questions: [],
+                questions: questions || [],
+                schedule_config: schedule_config || {},
+                cron_expression: cron_expression || null,
+                num_of_questions: num_of_questions || 0,
             })
             .select()
             .single();

@@ -2029,6 +2029,12 @@ export const enMessages = {
   },
   forms: {
     title: 'Forms',
+    create: {
+      success: 'Successfully created {name}',
+    },
+    reorder: {
+      success: 'Successfully reordered questions',
+    },
     addForm: 'Add form',
     addFormTitle: 'Add form',
     addCheckIn: 'Add Check in',
@@ -2091,6 +2097,12 @@ export const enMessages = {
       checkIn: 'Check in',
       questionnaire: 'Questionnaire',
       questionnaireInfo: 'Questionnaires are one-time forms that can be assigned and sent immediately to athletes at any time',
+    },
+    toast: {
+      updateSuccess: 'Form updated successfully',
+      updateError: 'Failed to update form',
+      deleteSuccess: 'Form deleted successfully',
+      deleteError: 'Failed to delete form',
     },
     detail: {
       notFound: 'Form not found',

@@ -32,6 +32,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, Trash2 } from 'lucide-react';
 import { editCheckInDetails, deleteCheckIn, type CheckIn as FormType } from '@/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
+import { toast } from 'sonner';
 
 type EditCheckInFormSidePanelProps = {
   open: boolean;
@@ -44,7 +45,6 @@ type EditCheckInFormSidePanelProps = {
 type FormFormValues = {
   name: string;
   description?: string;
-  schedule_cron?: string;
 };
 
 export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onDelete }: EditCheckInFormSidePanelProps) => {
@@ -53,32 +53,40 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
   const [monthlyOption, setMonthlyOption] = useState<'first' | 'last' | 'specific'>('last');
   const [specificDay, setSpecificDay] = useState<number>(1);
+  const [scheduleChanged, setScheduleChanged] = useState(false);
 
-  // Get schedule from template
-  const templateSchedule = useMemo(() => {
+  // Get schedule from database or fallback to template
+  const scheduleData = useMemo(() => {
     if (!form) return null;
+
+    // First, check if form has schedule_config from database
+    if (form.schedule_config) {
+      return form.schedule_config;
+    }
+
+    // Fallback to template schedule
     const template = formTemplates.find((t) => t.name === form.name);
     return template?.schedule;
   }, [form]);
 
   useEffect(() => {
-    if (form && open && templateSchedule?.frequency) {
-      setCheckInFrequency(templateSchedule.frequency);
-      if (templateSchedule.selectedDays) {
-        setSelectedDays(new Set(templateSchedule.selectedDays));
-      } else if (templateSchedule.frequency === 'daily') {
+    if (form && open && scheduleData?.frequency) {
+      setCheckInFrequency(scheduleData.frequency);
+      if (scheduleData.selectedDays) {
+        setSelectedDays(new Set(scheduleData.selectedDays));
+      } else if (scheduleData.frequency === 'daily') {
         setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
-      } else if (templateSchedule.frequency === 'weekly' || templateSchedule.frequency === 'biweekly') {
+      } else if (scheduleData.frequency === 'weekly' || scheduleData.frequency === 'biweekly') {
         setSelectedDays(new Set(['sunday']));
       }
-      if (templateSchedule.monthlyOption) {
-        setMonthlyOption(templateSchedule.monthlyOption);
+      if (scheduleData.monthlyOption) {
+        setMonthlyOption(scheduleData.monthlyOption);
       }
-      if (templateSchedule.specificDay) {
-        setSpecificDay(templateSchedule.specificDay);
+      if (scheduleData.specificDay) {
+        setSpecificDay(scheduleData.specificDay);
       }
     }
-  }, [form, open, templateSchedule]);
+  }, [form, open, scheduleData]);
 
   const formSchema = z.object({
     name: z
@@ -86,7 +94,6 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
       .min(1, t('forms.form.nameRequired'))
       .max(100, t('forms.form.nameMaxLength')),
     description: z.string().optional(),
-    schedule_cron: z.string().optional(),
   });
 
   const reactForm = useForm<FormFormValues>({
@@ -95,7 +102,6 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
     defaultValues: {
       name: '',
       description: '',
-      schedule_cron: '',
     },
   });
 
@@ -104,8 +110,8 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
       reactForm.reset({
         name: form.name,
         description: form.description || '',
-        schedule_cron: form.schedule_cron || '',
       });
+      setScheduleChanged(false);
     }
   }, [form, open, reactForm]);
 
@@ -118,35 +124,52 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
     if (!form) return;
 
     try {
+      // Build schedule data and cron expression from UI state
+      const scheduleData = {
+        type: 'check-in' as const,
+        frequency: checkInFrequency,
+        selectedDays: Array.from(selectedDays),
+        monthlyOption,
+        specificDay,
+      };
+
+      // Import convertScheduleToCron dynamically
+      const { convertScheduleToCron } = await import('@/api/client/client-form-service');
+      const cronExpression = convertScheduleToCron(scheduleData);
+
       const updatedForm = await editCheckInDetails({
         id: form.id,
         name: values.name,
         description: values.description,
-        schedule_cron: values.schedule_cron,
+        cron_expression: cronExpression,
+        schedule_config: scheduleData,
       });
+
+      toast.success(t('forms.toast.updateSuccess'));
+
       if (onSave) {
         onSave(updatedForm);
       }
       handleClose();
     } catch (error) {
       console.error('Failed to save form:', error);
+      toast.error(t('forms.toast.updateError'));
     }
   };
 
   const handleDelete = async () => {
     if (!form) return;
 
-    const confirmed = window.confirm(t('forms.form.deleteConfirm'));
-    if (!confirmed) return;
-
     try {
       await deleteCheckIn(form.id);
+      toast.success(t('forms.toast.deleteSuccess'));
       if (onDelete) {
         onDelete(form.id);
       }
       handleClose();
     } catch (error) {
       console.error('Failed to delete form:', error);
+      toast.error(t('forms.toast.deleteError'));
     }
   };
 
@@ -180,7 +203,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
   const hasChanges = form && (
     reactForm.watch('name') !== form.name ||
     reactForm.watch('description') !== (form.description || '') ||
-    reactForm.watch('schedule_cron') !== (form.schedule_cron || '')
+    scheduleChanged
   );
 
   if (!form) return null;
@@ -192,27 +215,25 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
       title={t('forms.editDetailsAndSchedule')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-between gap-2">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              onClick={reactForm.handleSubmit(handleSave)}
-              disabled={!reactForm.formState.isValid || !hasChanges}
-            >
-              {t('general.save')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
-            </Button>
-          </div>
+        <div className="flex w-full gap-2">
           <Button
             type="button"
-            variant="ghost"
+            onClick={reactForm.handleSubmit(handleSave)}
+            disabled={!reactForm.formState.isValid || !hasChanges}
+          >
+            {t('general.save')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={handleDelete}
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-2"
+            className="gap-2"
           >
             <Trash2 className="size-4" />
             <span>{t('general.delete')}</span>
+          </Button>
+          <Button type="button" variant="outline" onClick={handleClose}>
+            {t('general.cancel')}
           </Button>
         </div>
       }
@@ -269,23 +290,6 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
             )}
           />
 
-          <FormField
-            control={reactForm.control}
-            name="schedule_cron"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cron Expression</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="e.g. 0 8 * * 0"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <div className="space-y-4">
             <Label>
               <span>
@@ -300,6 +304,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
                 if (value) {
                   const newFrequency = value as 'daily' | 'weekly' | 'biweekly' | 'monthly';
                   setCheckInFrequency(newFrequency);
+                  setScheduleChanged(true);
                   // Reset selected days based on frequency
                   if (newFrequency === 'daily') {
                     setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
@@ -343,24 +348,45 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
                     <Checkbox
                       checked={selectedDays.has(day)}
                       onCheckedChange={(checked) => {
-                        const newSelectedDays = new Set(selectedDays);
-                        if (checked) {
-                          newSelectedDays.add(day);
+                        if (checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') {
+                          // Single select behavior for weekly/biweekly
+                          if (checked) {
+                            setSelectedDays(new Set([day]));
+                            setScheduleChanged(true);
+                          }
+                          // Do nothing if trying to uncheck the only selected day
                         } else {
-                          newSelectedDays.delete(day);
+                          // Multi select behavior for daily
+                          const newSelectedDays = new Set(selectedDays);
+                          if (checked) {
+                            newSelectedDays.add(day);
+                          } else {
+                            newSelectedDays.delete(day);
+                          }
+                          setSelectedDays(newSelectedDays);
+                          setScheduleChanged(true);
                         }
-                        setSelectedDays(newSelectedDays);
                       }}
                       aria-label={t(`habits.form.${day}`)}
                     />
                     <Label className="text-sm font-normal cursor-pointer" onClick={() => {
-                      const newSelectedDays = new Set(selectedDays);
-                      if (selectedDays.has(day)) {
-                        newSelectedDays.delete(day);
+                      if (checkInFrequency === 'weekly' || checkInFrequency === 'biweekly') {
+                        // Single select behavior for weekly/biweekly
+                        if (!selectedDays.has(day)) {
+                          setSelectedDays(new Set([day]));
+                          setScheduleChanged(true);
+                        }
                       } else {
-                        newSelectedDays.add(day);
+                        // Multi select behavior for daily
+                        const newSelectedDays = new Set(selectedDays);
+                        if (selectedDays.has(day)) {
+                          newSelectedDays.delete(day);
+                        } else {
+                          newSelectedDays.add(day);
+                        }
+                        setSelectedDays(newSelectedDays);
+                        setScheduleChanged(true);
                       }
-                      setSelectedDays(newSelectedDays);
                     }}>
                       {t(`habits.form.${day}`)}
                     </Label>
@@ -376,6 +402,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
                   onValueChange={(value) => {
                     if (value) {
                       setMonthlyOption(value as 'first' | 'last' | 'specific');
+                      setScheduleChanged(true);
                     }
                   }}
                   variant="outline"
@@ -400,7 +427,10 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
                         <span className="text-destructive">*</span>
                       </span>
                     </Label>
-                    <Select value={specificDay.toString()} onValueChange={(value) => setSpecificDay(parseInt(value, 10))}>
+                    <Select value={specificDay.toString()} onValueChange={(value) => {
+                      setSpecificDay(parseInt(value, 10));
+                      setScheduleChanged(true);
+                    }}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>

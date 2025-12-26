@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { usePlatformSettings } from '@/hooks/use-platform-settings';
 import { UserProfile } from '@/api/user/user-service';
@@ -8,6 +8,16 @@ import { CoachPreferences } from '@/api/settings/coach/coach-preferences-service
 import { CoachCompanyInfo } from '@/api/settings/coach/coach-company-service';
 import { NotificationEvent } from '@/api/settings/coach/coach-notifications-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
+
+// Hooks for prefetching
+import { useCoachFiles } from '@/hooks/use-coach-files';
+import { useCoachHabits } from '@/hooks/use-coach-habits';
+import { useCoachMetrics } from '@/hooks/use-coach-metrics';
+import { useCoachCheckIns } from '@/hooks/use-coach-check-ins';
+import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
+import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
+import { useCoachPrograms } from '@/hooks/use-coach-programs';
+import { useCoachExercises } from '@/hooks/use-coach-exercises';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -44,6 +54,33 @@ const GlobalContext = createContext<GlobalContextType>({
 
 export const useGlobalData = () => useContext(GlobalContext);
 
+// Component to handle prefetching of coach data
+const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
+    const { isLoading: isFilesLoading } = useCoachFiles();
+    const { isLoading: isHabitsLoading } = useCoachHabits();
+    const { isLoading: isMetricsLoading } = useCoachMetrics();
+    const { isLoading: isCheckInsLoading } = useCoachCheckIns();
+    const { isLoading: isQuestionnairesLoading } = useCoachQuestionnaires();
+    const { isLoading: isWorkoutsLoading } = useCoachWorkouts();
+    const { isLoading: isProgramsLoading } = useCoachPrograms();
+    const { isLoading: isExercisesLoading } = useCoachExercises();
+
+    const isLoading = isFilesLoading ||
+        isHabitsLoading ||
+        isMetricsLoading ||
+        isCheckInsLoading ||
+        isQuestionnairesLoading ||
+        isWorkoutsLoading ||
+        isProgramsLoading ||
+        isExercisesLoading;
+
+    if (isLoading) {
+        return <FullScreenLoader />;
+    }
+
+    return <>{children}</>;
+};
+
 export default function GlobalDataProvider({ children }: { children: ReactNode }) {
     const { user: userProfile, isLoading: isUserLoading } = useUserProfile();
     const {
@@ -77,13 +114,22 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
         isUpdatingCompany
     }), [userProfile, preferences, company, notifications, uniqueCode, isLoading, updatePreferences, updateCompany, uploadAndSetCompanyLogo, toggleNotification, isUploadingLogo, isUpdatingCompany]);
 
-    // Optionally perform a hard block here if critical data is missing, 
-    // but usually better to let the UI skeleton load.
-
     if (isLoading) {
         return <FullScreenLoader />;
     }
 
+    // If user is logged in, wrap with prefetcher to ensure data is loaded
+    if (userProfile) {
+        return (
+            <GlobalContext.Provider value={value}>
+                <CoachDataPrefetcher>
+                    {children}
+                </CoachDataPrefetcher>
+            </GlobalContext.Provider>
+        );
+    }
+
+    // Not logged in, just provide context (likely null user) and children
     return (
         <GlobalContext.Provider value={value}>
             {children}

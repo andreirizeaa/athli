@@ -21,6 +21,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, Trash2 } from 'lucide-react';
 import { editQuestionnaireDetails, deleteQuestionnaire, type Questionnaire as FormType } from '@/api/coach/coach-questionnaire-service';
+import { toast } from 'sonner';
 
 type EditQuestionnaireFormSidePanelProps = {
   open: boolean;
@@ -78,29 +79,32 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
         name: values.name,
         description: values.description,
       });
+
+      toast.success(t('forms.toast.updateSuccess'));
+
       if (onSave) {
         onSave(updatedForm);
       }
       handleClose();
     } catch (error) {
       console.error('Failed to save form:', error);
+      toast.error(t('forms.toast.updateError'));
     }
   };
 
   const handleDelete = async () => {
     if (!form) return;
 
-    const confirmed = window.confirm(t('forms.form.deleteConfirm'));
-    if (!confirmed) return;
-
     try {
       await deleteQuestionnaire(form.id);
+      toast.success(t('forms.toast.deleteSuccess'));
       if (onDelete) {
         onDelete(form.id);
       }
       handleClose();
     } catch (error) {
       console.error('Failed to delete form:', error);
+      toast.error(t('forms.toast.deleteError'));
     }
   };
 
@@ -118,27 +122,25 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
       title={t('forms.editFormTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-between gap-2">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              onClick={reactForm.handleSubmit(handleSave)}
-              disabled={!reactForm.formState.isValid || !hasChanges}
-            >
-              {t('general.save')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
-            </Button>
-          </div>
+        <div className="flex w-full gap-2">
           <Button
             type="button"
-            variant="ghost"
+            onClick={reactForm.handleSubmit(handleSave)}
+            disabled={!reactForm.formState.isValid || !hasChanges}
+          >
+            {t('general.save')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={handleDelete}
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-2"
+            className="gap-2"
           >
             <Trash2 className="size-4" />
             <span>{t('general.delete')}</span>
+          </Button>
+          <Button type="button" variant="outline" onClick={handleClose}>
+            {t('general.cancel')}
           </Button>
         </div>
       }

@@ -25,11 +25,12 @@ import { Edit, Info } from 'lucide-react';
 import { addQuestionnaire, type AddQuestionnaireData as AddFormData } from '@/api/coach/coach-questionnaire-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
+import { toast } from 'sonner';
 
 type AddQuestionnaireFormSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (form: ReturnType<typeof addQuestionnaire> extends Promise<infer T> ? T : never, questions?: FormTemplate['questions']) => void;
+  onSave?: (form: any, questions?: FormTemplate['questions']) => void;
 };
 
 type FormFormValues = {
@@ -75,13 +76,21 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
 
   const handleSave = async (values: FormFormValues) => {
     try {
-      const newForm = await addQuestionnaire(values);
+      const questions = selectedTemplate?.questions || [];
+      const payload: any = {
+        ...values,
+        questions,
+        num_of_questions: questions.length,
+      };
+      const newForm = await addQuestionnaire(payload);
+      toast.success(t('forms.create.success', { name: newForm.name }));
       if (onSave) {
-        onSave(newForm);
+        onSave(newForm, selectedTemplate?.questions);
       }
       handleClose();
     } catch (error) {
       console.error('Failed to save form:', error);
+      toast.error(t('general.error'));
     }
   };
 
@@ -97,18 +106,22 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
 
   const handleSaveFromTemplate = async () => {
     if (selectedTemplate) {
-      const values: AddFormData = {
+      const values: any = {
         name: selectedTemplate.name,
         description: selectedTemplate.description || '',
+        questions: selectedTemplate.questions,
+        num_of_questions: selectedTemplate.questions.length,
       };
       try {
         const newForm = await addQuestionnaire(values);
+        toast.success(t('forms.create.success', { name: newForm.name }));
         if (onSave) {
           onSave(newForm, selectedTemplate.questions);
         }
         handleClose();
       } catch (error) {
         console.error('Failed to save form:', error);
+        toast.error(t('general.error'));
       }
     }
   };
