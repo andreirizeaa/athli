@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, ChevronRight, X } from 'lucide-react';
+import { Check, ChevronRight, X, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
@@ -18,9 +18,9 @@ import {
 } from '@/components/ui/breadcrumb';
 import { AiBuilder } from '../../../new/ai/ai-builder';
 import type { WorkoutProgramPayload } from '../../../new/workout-schema';
-import { DiscardChangesDialog } from '../../../new/components/discard-changes-dialog';
-import { mockWorkouts } from '@/components/app/app-shell';
-import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
+import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
+import { getWorkoutById, updateWorkoutDetails, deleteWorkouts } from '@/api/coach/coach-workout-service';
+import { EditWorkoutDetailsSidePanel } from '../../../components/edit-workout-details-side-panel';
 
 type WorkoutMeta = {
   title: string;
@@ -39,6 +39,7 @@ const EditAiWorkoutPage = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [saveSignal, setSaveSignal] = useState(0);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -58,34 +59,32 @@ const EditAiWorkoutPage = () => {
     }
 
     // If no meta in localStorage, load from workout data
-    const workout = mockWorkouts.find((w) => w.id === workoutId);
-    if (workout) {
-      setWorkoutMeta({
-        title: workout.program || 'Workout',
-        description: workout.description || '',
-        type: workout.type || 'Push',
-        difficulty: 'Intermediate',
-        builder: 'ai',
-      });
+    const fetchWorkout = async () => {
+      try {
+        const workout = await getWorkoutById(workoutId);
+        setWorkoutMeta({
+          title: workout.program || 'Workout',
+          description: workout.description || '',
+          type: workout.type || 'Push',
+          difficulty: workout.difficulty || 'intermediate',
+          builder: 'ai',
+        });
 
-      // Ensure workout schema is set in localStorage for edit mode
-      // Only set if no AI generated workout exists and no saved schema
-      const aiGenerated = window.localStorage.getItem('oneninety_ai_generated_workout');
-      const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
-      if (!aiGenerated && !savedSchema) {
-        // Set the shared mock schema if no schema exists
-        window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
-      }
+        // Ensure workout schema is set in localStorage for edit mode
+        if (workout.workout_data) {
+          window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(workout.workout_data));
+          window.localStorage.setItem('oneninety_ai_generated_workout', JSON.stringify(workout.workout_data));
+        }
 
-      // Set the access flag if not already set
-      const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
-      if (!accessFlag || accessFlag !== 'edit-ai') {
+        // Set the access flag
         window.localStorage.setItem('oneninety_workout_builder_access', 'edit-ai');
+      } catch (error) {
+        console.error('Failed to fetch workout:', error);
+        router.push('/training/workouts');
       }
-    } else {
-      // If workout not found, redirect back
-      router.push('/training/workouts');
-    }
+    };
+
+    fetchWorkout();
   }, [router, workoutId]);
 
   const navigateBackToWorkouts = () => {
@@ -133,6 +132,33 @@ const EditAiWorkoutPage = () => {
     setHasUnsavedChanges(false);
     navigateBackToWorkouts();
   };
+
+  const handleSaveDetails = async (details: { title: string; type: string; difficulty: string; description: string }) => {
+    // Update local state
+    setWorkoutMeta((prev) => prev ? ({ ...prev, ...details }) : null);
+
+    // Update backend immediately
+    try {
+      await updateWorkoutDetails(workoutId, details);
+      toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: details.title }));
+    } catch (error) {
+      console.error('Failed to update workout details:', error);
+      toast.error('Failed to update details');
+    }
+  };
+
+  const handleDeleteWorkout = async () => {
+    try {
+      await deleteWorkouts(workoutId);
+      toast.success('Workout deleted successfully');
+      router.push('/training/workouts');
+    } catch (error) {
+      console.error('Failed to delete workout:', error);
+      toast.error('Failed to delete workout');
+    }
+  };
+
+
 
   if (!workoutMeta) {
     return null;
@@ -195,9 +221,17 @@ const EditAiWorkoutPage = () => {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold truncate">{t('workouts.edit.title')}</h1>
+            <h1 className="text-[22px] font-semibold truncate">Editing {workoutMeta?.title}</h1>
           </div>
           <ButtonGroup className="flex-shrink-0">
+            <Button
+              variant="ghost"
+              onClick={() => setIsEditDetailsOpen(true)}
+              className="gap-2 border border-primary"
+            >
+              <Pencil className="size-4" />
+              <span>Edit details</span>
+            </Button>
             <Button
               variant="ghost"
               onClick={handleCancel}
@@ -223,6 +257,15 @@ const EditAiWorkoutPage = () => {
           onSaveSuccess={handleSaveSuccess}
         />
       </div>
+      {workoutMeta && (
+        <EditWorkoutDetailsSidePanel
+          open={isEditDetailsOpen}
+          onOpenChange={setIsEditDetailsOpen}
+          workoutMeta={workoutMeta}
+          onSave={handleSaveDetails}
+          onDelete={handleDeleteWorkout}
+        />
+      )}
       <DiscardChangesDialog
         open={isDiscardDialogOpen}
         onCancel={() => setIsDiscardDialogOpen(false)}

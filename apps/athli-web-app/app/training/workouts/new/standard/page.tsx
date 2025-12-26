@@ -18,7 +18,8 @@ import {
 } from '@/components/ui/breadcrumb';
 import { StandardBuilder } from './standard-builder';
 import type { WorkoutProgramPayload } from '../workout-schema';
-import { DiscardChangesDialog } from '../components/discard-changes-dialog';
+import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
+import { createWorkout } from '@/api/coach/coach-workout-service';
 
 type WorkoutMeta = {
   title: string;
@@ -41,7 +42,7 @@ const StandardWorkoutPage = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (hasInitialized.current) return;
-    
+
     // Check for access flag only once - if not present, redirect to workouts
     if (!hasCheckedAccess.current) {
       hasCheckedAccess.current = true;
@@ -51,10 +52,10 @@ const StandardWorkoutPage = () => {
         return;
       }
     }
-    
+
     // Mark as initialized to prevent re-running
     hasInitialized.current = true;
-    
+
     // Try to load meta from localStorage (if coming from create panel)
     const raw = window.localStorage.getItem('oneninety_new_workout_meta');
     if (raw) {
@@ -106,26 +107,24 @@ const StandardWorkoutPage = () => {
     setSaveSignal((prev) => prev + 1);
   };
 
-  const handleSaveSuccess = (payload: WorkoutProgramPayload) => {
-    // Styled console.log with green background
-    // eslint-disable-next-line no-console
-    console.log(
-      '%cWorkout payload',
-      'background: #16a34a; color: white; padding: 4px 8px; border-radius: 4px;'
-    );
-    // eslint-disable-next-line no-console
-    console.log(payload);
+  const handleSaveSuccess = async (payload: WorkoutProgramPayload) => {
+    try {
+      await createWorkout(payload);
 
-    toast.success(t('workouts.new.toast.savedSuccessfully', { name: payload.title, type: payload.type }), {
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
+      toast.success(t('workouts.new.toast.savedSuccessfully', { name: payload.title, type: payload.type }), {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
 
-    setHasUnsavedChanges(false);
-    navigateBackToWorkouts();
+      setHasUnsavedChanges(false);
+      navigateBackToWorkouts();
+    } catch (error) {
+      console.error('Failed to save workout:', error);
+      toast.error(t('general.error'));
+    }
   };
 
   if (!workoutMeta) {

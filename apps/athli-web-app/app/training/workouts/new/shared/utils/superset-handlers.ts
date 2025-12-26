@@ -47,19 +47,13 @@ export const groupExercisesBySuperset = (
  * @param sectionId - The ID of the section containing the exercises
  * @param exerciseIndex - The index of the first exercise in the superset
  * @param currentSchema - The current workout schema
- * @param options - Optional callbacks
  * @returns Updated workout schema
  */
 export const handleSupersetLink = (
   sectionId: string,
   exerciseIndex: number,
-  currentSchema: WorkoutSchema,
-  options?: {
-    onDirtyChange?: () => void;
-  }
+  currentSchema: WorkoutSchema
 ): WorkoutSchema => {
-  options?.onDirtyChange?.();
-
   return {
     ...currentSchema,
     sections: currentSchema.sections.map((section) => {
@@ -118,19 +112,13 @@ export const handleSupersetLink = (
  * @param sectionId - The ID of the section containing the exercises
  * @param exerciseIndex - The index of the first exercise in the link to break
  * @param currentSchema - The current workout schema
- * @param options - Optional callbacks
  * @returns Updated workout schema
  */
 export const handleSupersetUnlink = (
   sectionId: string,
   exerciseIndex: number,
-  currentSchema: WorkoutSchema,
-  options?: {
-    onDirtyChange?: () => void;
-  }
+  currentSchema: WorkoutSchema
 ): WorkoutSchema => {
-  options?.onDirtyChange?.();
-
   return {
     ...currentSchema,
     sections: currentSchema.sections.map((section) => {

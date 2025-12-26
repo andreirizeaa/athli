@@ -18,7 +18,11 @@ type DiscardChangesDialogProps = {
   onConfirm: () => void;
 };
 
-export const DiscardChangesDialog = ({ open, onCancel, onConfirm }: DiscardChangesDialogProps) => {
+export const DiscardChangesDialog = ({
+  open,
+  onCancel,
+  onConfirm,
+}: DiscardChangesDialogProps) => {
   const t = useTranslations();
   return (
     <AlertDialog
@@ -31,12 +35,12 @@ export const DiscardChangesDialog = ({ open, onCancel, onConfirm }: DiscardChang
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t('workouts.discardChanges.title')}</AlertDialogTitle>
-          <AlertDialogDescription>{t('workouts.discardChanges.description')}</AlertDialogDescription>
+          <AlertDialogTitle>{t('settings.discardChanges.title')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('settings.discardChanges.description')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>{t('workouts.discardChanges.cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>{t('workouts.discardChanges.confirm')}</AlertDialogAction>
+          <AlertDialogCancel onClick={onCancel}>{t('settings.discardChanges.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{t('settings.discardChanges.confirm')}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

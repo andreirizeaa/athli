@@ -51,3 +51,17 @@ export function notFound(res: Response, payload: ResponseData): void {
   });
 }
 
+
+export function forbidden(res: Response, payload: ResponseData): void {
+  res.status(403).json({
+    success: false,
+    ...payload,
+  });
+}
+
+export function internalError(res: Response, payload: ResponseData): void {
+  res.status(500).json({
+    success: false,
+    ...payload,
+  });
+}

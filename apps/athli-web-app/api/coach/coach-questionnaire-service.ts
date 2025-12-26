@@ -1,3 +1,5 @@
+import { apiFetch } from '@/api/api-client';
+
 export interface AddQuestionnaireData {
   name: string;
   description?: string;
@@ -7,8 +9,9 @@ export interface Questionnaire {
   id: string;
   name: string;
   description?: string;
-  questionCount: number;
-  createdAt: number;
+  questions: Question[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface EditQuestionnaireDetailsData {
@@ -46,148 +49,152 @@ export interface ReorderQuestionsData {
   questionIds: string[];
 }
 
-// Mock questionnaires data - in production this would come from an API
-const mockQuestionnaires: Questionnaire[] = [
-  {
-    id: 'questionnaire-1',
-    name: 'Initial Assessment',
-    description: 'Comprehensive initial assessment form for new clients',
-    questionCount: 5,
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: 'questionnaire-2',
-    name: 'Monthly Assessment',
-    description: 'Comprehensive monthly assessment',
-    questionCount: 12,
-    createdAt: Date.now() - 86400000 * 14,
-  },
-];
+export interface DeleteQuestionData {
+  formId: string;
+  questionId: string;
+}
 
 /**
  * Service method to get all questionnaires from coach's library
- * This will be connected to the backend in the future
  */
 export const getQuestionnaires = async (): Promise<Questionnaire[]> => {
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  return mockQuestionnaires;
+  const response = await apiFetch<{ data: { questionnaires: Questionnaire[] } }>('/coach/forms/questionnaires');
+  return response.data.questionnaires;
 };
 
 /**
  * Service method to add a questionnaire to coach's library
- * This will be connected to the backend in the future
  */
 export const addQuestionnaire = async (data: AddQuestionnaireData): Promise<Questionnaire> => {
-  // TODO: Connect to backend API
-  console.log('Adding questionnaire:', {
-    name: data.name,
-    description: data.description,
+  const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>('/coach/forms/questionnaires', {
+    method: 'POST',
+    body: data as any,
   });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  const newQuestionnaire: Questionnaire = {
-    id: `questionnaire-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    name: data.name,
-    description: data.description,
-    questionCount: 0,
-    createdAt: Date.now(),
-  };
-
-  return newQuestionnaire;
+  return response.data.questionnaire;
 };
 
 /**
  * Service method to edit questionnaire details in coach's library
- * This will be connected to the backend in the future
  */
 export const editQuestionnaireDetails = async (data: EditQuestionnaireDetailsData): Promise<Questionnaire> => {
-  // TODO: Connect to backend API
-  console.log('Editing questionnaire details:', {
-    id: data.id,
-    name: data.name,
-    description: data.description,
+  const { id, ...updates } = data;
+  const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>(`/coach/forms/questionnaires/${id}`, {
+    method: 'PATCH',
+    body: updates as any,
   });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  const updatedQuestionnaire: Questionnaire = {
-    id: data.id,
-    name: data.name,
-    description: data.description,
-    questionCount: 0, // This would come from the backend
-    createdAt: Date.now(), // This would come from the backend
-  };
-
-  return updatedQuestionnaire;
+  return response.data.questionnaire;
 };
 
 /**
  * Service method to add a question to a questionnaire in coach's library
- * This will be connected to the backend in the future
+ * Since questions are stored in a JSONB column, we fetch the questionnaire first,
+ * add the question, and then patch the entire questionnaire.
  */
 export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
-  console.log('Adding question to questionnaire:', {
-    formId: data.formId,
-    question: data.question,
-    format: data.format,
-  });
+  const { formId, ...questionData } = data;
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // Get current questionnaire
+  const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>(`/coach/forms/questionnaires/${formId}`);
+  const currentQuestions = response.data.questionnaire.questions || [];
 
+  // Generate a sequential ID for the new question
+  const nextId = (currentQuestions.length + 1).toString();
   const newQuestion: Question = {
-    id: `q${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    question: data.question,
-    required: data.required,
-    format: data.format,
-    options: data.options,
-    scaleFrom: data.scaleFrom,
-    scaleTo: data.scaleTo,
-    mediaCount: data.mediaCount,
-    metricId: data.metricId,
+    ...questionData,
+    id: nextId,
   };
+
+  // Update questionnaire
+  await apiFetch(`/coach/forms/questionnaires/${formId}`, {
+    method: 'PATCH',
+    body: {
+      questions: [...currentQuestions, newQuestion],
+    } as any,
+  });
 
   return newQuestion;
 };
 
 /**
  * Service method to reorder questions in a questionnaire
- * This will be connected to the backend in the future
  */
 export const reorderQuestions = async (data: ReorderQuestionsData): Promise<void> => {
-  console.log('Reordering questions for questionnaire:', {
-    formId: data.formId,
-    questionIds: data.questionIds,
-  });
+  const { formId, questionIds } = data;
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  // Get current questionnaire
+  const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>(`/coach/forms/questionnaires/${formId}`);
+  const currentQuestions = response.data.questionnaire.questions || [];
+
+  // Create new ordered questions array and re-assign chronological IDs
+  const reorderedQuestions = questionIds.map(id =>
+    currentQuestions.find(q => q.id === id)
+  ).filter(Boolean) as Question[];
+
+  const reIdedQuestions = reorderedQuestions.map((q, index) => ({
+    ...q,
+    id: (index + 1).toString(),
+  }));
+
+  // Update questionnaire
+  await apiFetch(`/coach/forms/questionnaires/${formId}`, {
+    method: 'PATCH',
+    body: {
+      questions: reIdedQuestions,
+    } as any,
+  });
+};
+
+/**
+ * Service method to delete a question from a questionnaire
+ */
+export const deleteQuestion = async (data: DeleteQuestionData): Promise<void> => {
+  const { formId, questionId } = data;
+
+  // Get current questionnaire
+  const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>(`/coach/forms/questionnaires/${formId}`);
+  const currentQuestions = response.data.questionnaire.questions || [];
+
+  // Remove the question and re-assign chronological IDs
+  const updatedQuestions = currentQuestions
+    .filter(q => q.id !== questionId)
+    .map((q, index) => ({
+      ...q,
+      id: (index + 1).toString(),
+    }));
+
+  // Update questionnaire
+  await apiFetch(`/coach/forms/questionnaires/${formId}`, {
+    method: 'PATCH',
+    body: {
+      questions: updatedQuestions,
+    } as any,
+  });
+};
+
+/**
+ * Service method to delete a questionnaire from coach's library
+ */
+export const deleteQuestionnaire = async (id: string): Promise<void> => {
+  await apiFetch(`/coach/forms/questionnaires/${id}`, {
+    method: 'DELETE',
+  });
 };
 
 /**
  * Duplicate a questionnaire in coach's library
- * @param questionnaireId - ID of the questionnaire to duplicate
- * @param originalQuestionnaire - Original questionnaire object to duplicate
  */
 export const duplicateQuestionnaire = async (questionnaireId: string, originalQuestionnaire: Questionnaire): Promise<Questionnaire> => {
-  // TODO: Connect to backend API
-  console.log('Duplicating questionnaire:', { questionnaireId, originalQuestionnaire });
+  const { id, created_at, updated_at, ...dataToCopy } = originalQuestionnaire;
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>('/coach/forms/questionnaires', {
+    method: 'POST',
+    body: {
+      ...dataToCopy,
+      name: `${originalQuestionnaire.name} (Copy)`,
+    } as any,
+  });
 
-  const duplicatedQuestionnaire: Questionnaire = {
-    ...originalQuestionnaire,
-    id: `questionnaire-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    name: `${originalQuestionnaire.name} (Copy)`,
-    createdAt: Date.now(),
-  };
-
-  return duplicatedQuestionnaire;
+  return response.data.questionnaire;
 };
-

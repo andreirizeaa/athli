@@ -17,7 +17,6 @@ import {
 import { cn } from '@/lib/general/utils';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import { toast } from 'sonner';
-import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
 import type {
   CircuitExerciseGroupPayload,
@@ -117,19 +116,27 @@ export const StandardBuilder = ({
 
     const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
     if (accessFlag === 'edit-standard') {
-      const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
-      if (savedSchema) {
-        try {
+      try {
+        const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+        if (savedSchema) {
           const parsed = JSON.parse(savedSchema);
           if (parsed.sections && parsed.sections.length > 0 && parsed.sections.some((s: any) => s.exercises && s.exercises.length > 0)) {
             return parsed;
           }
-        } catch {
-          // Fall through to use mock schema
         }
+      } catch (error) {
+        console.error('Error parsing workout schema from localStorage:', error);
       }
-      // Use mock schema for edit mode
-      return MOCK_WORKOUT_SCHEMA;
+      // Return empty schema if no saved schema found or error
+      return {
+        sections: [
+          {
+            id: `sec_regular_${Date.now()}`,
+            type: 'regular',
+            exercises: [],
+          },
+        ],
+      };
     }
 
     return {
@@ -197,14 +204,16 @@ export const StandardBuilder = ({
             setWorkoutSchema(parsed);
             return;
           }
-        } catch {
+        } catch (error) {
           // If parsing fails, fall through to use mock schema
+          console.error('Error parsing workout schema from localStorage:', error);
         }
       }
 
       // If no valid schema, use mock schema
-      window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
-      setWorkoutSchema(MOCK_WORKOUT_SCHEMA);
+      // MOCK_WORKOUT_SCHEMA is no longer used. The initial schema is handled by getInitialSchema.
+      // This useEffect now only attempts to load a saved schema if in edit mode.
+      // If no valid saved schema is found, the default initial schema (empty regular section) will be used.
     }
   }, []);
 
@@ -288,7 +297,8 @@ export const StandardBuilder = ({
       pendingScrollTopRef.current = contentScrollRef.current.scrollTop;
     }
 
-    setWorkoutSchema((prev) => selectSection(type, prev, { onDirtyChange }));
+    setWorkoutSchema((prev) => selectSection(type, prev));
+    onDirtyChange?.();
   };
 
   // After sections change (e.g. a new section is added), restore scroll position
@@ -300,11 +310,12 @@ export const StandardBuilder = ({
   }, [workoutSchema.sections.length]);
 
   const handleDeleteSection = (sectionId: string) => {
-    const result = deleteSection(sectionId, workoutSchema, { onDirtyChange });
+    const result = deleteSection(sectionId, workoutSchema);
     setWorkoutSchema(result.schema);
     if (result.shouldSwitchToSectionMode) {
       setBuilderMode('section');
     }
+    onDirtyChange?.();
   };
 
   const handleDeleteKeyDown = (e: React.KeyboardEvent, sectionId: string) => {
@@ -316,14 +327,16 @@ export const StandardBuilder = ({
 
   const handleDeleteExerciseFromOverview = (sectionId: string, exerciseId: string) => {
     setWorkoutSchema((prev) =>
-      deleteExerciseFromOverview(sectionId, exerciseId, prev, { onDirtyChange })
+      deleteExerciseFromOverview(sectionId, exerciseId, prev)
     );
+    onDirtyChange?.();
   };
 
   const handleDeleteSupersetFromOverview = (sectionId: string, exerciseIds: string[]) => {
     setWorkoutSchema((prev) =>
-      deleteSupersetFromOverview(sectionId, exerciseIds, prev, { onDirtyChange })
+      deleteSupersetFromOverview(sectionId, exerciseIds, prev)
     );
+    onDirtyChange?.();
   };
 
   // Fallback drop handler used for empty sections or when no specific slot is active.
@@ -331,8 +344,9 @@ export const StandardBuilder = ({
     e.preventDefault();
     if (draggedExercise) {
       setWorkoutSchema((prev) =>
-        dropExercise(sectionId, draggedExercise, prev, { onDirtyChange })
+        dropExercise(sectionId, draggedExercise, prev)
       );
+      onDirtyChange?.();
 
       // Clear empty-exercises validation for this section once an exercise is added
       setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
@@ -356,7 +370,8 @@ export const StandardBuilder = ({
   };
 
   const handleAddExercise = (sectionId: string) => {
-    setWorkoutSchema((prev) => addExercise(sectionId, prev, { onDirtyChange }));
+    setWorkoutSchema((prev) => addExercise(sectionId, prev));
+    onDirtyChange?.();
 
     // Clear empty-exercises validation when a manual exercise is added
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
@@ -368,21 +383,24 @@ export const StandardBuilder = ({
     if (!draggedExercise) return;
 
     setWorkoutSchema((prev) =>
-      handleSlotDrop(sectionId, slotIndex, draggedExercise, prev, { onDirtyChange })
+      handleSlotDrop(sectionId, slotIndex, draggedExercise, prev)
     );
 
     // Clear empty-exercises validation when an exercise is dropped into a section
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
 
+    onDirtyChange?.();
     handleDragEnd();
   };
 
   const handleSupersetLink = (sectionId: string, exerciseIndex: number) => {
-    setWorkoutSchema((prev) => linkSuperset(sectionId, exerciseIndex, prev, { onDirtyChange }));
+    setWorkoutSchema((prev) => linkSuperset(sectionId, exerciseIndex, prev));
+    onDirtyChange?.();
   };
 
   const handleSupersetUnlink = (sectionId: string, exerciseIndex: number) => {
-    setWorkoutSchema((prev) => unlinkSuperset(sectionId, exerciseIndex, prev, { onDirtyChange }));
+    setWorkoutSchema((prev) => unlinkSuperset(sectionId, exerciseIndex, prev));
+    onDirtyChange?.();
   };
 
   const activeExerciseIds = useMemo(() => {

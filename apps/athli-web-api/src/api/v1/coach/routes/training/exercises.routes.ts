@@ -1,5 +1,8 @@
 import { Router } from 'express';
 
+import { coachExercisesController } from '../../coach-exercises.controller';
+import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
+
 export const coachExerciseRouter = Router();
 
 /**
@@ -14,9 +17,7 @@ export const coachExerciseRouter = Router();
  *       200:
  *         description: Coach exercises retrieved successfully
  */
-coachExerciseRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach exercise route' });
-});
+coachExerciseRouter.get('/', supabaseAuthenticate, coachExercisesController.getExercises);
 
 /**
  * @swagger
@@ -42,9 +43,7 @@ coachExerciseRouter.get('/', (req, res) => {
  *       200:
  *         description: Coach exercise updated successfully
  */
-coachExerciseRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach exercise updated', id: req.params.id });
-});
+coachExerciseRouter.patch('/:id', supabaseAuthenticate, coachExercisesController.updateExercise);
 
 /**
  * @swagger
@@ -80,10 +79,6 @@ coachExerciseRouter.patch('/:id', (req, res) => {
  *       200:
  *         description: Coach exercise deleted successfully
  */
-coachExerciseRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach exercise created' });
-});
+coachExerciseRouter.post('/', supabaseAuthenticate, coachExercisesController.createExercise);
 
-coachExerciseRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach exercise deleted', id: req.params.id });
-});
+coachExerciseRouter.delete('/:id', supabaseAuthenticate, coachExercisesController.deleteExercise);

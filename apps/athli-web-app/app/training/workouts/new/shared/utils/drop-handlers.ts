@@ -7,19 +7,13 @@ import type { WorkoutSchema, ExerciseWithSuperset } from '../types/workout-build
  * @param sectionId - The ID of the section to drop into
  * @param draggedExercise - The exercise being dragged
  * @param currentSchema - The current workout schema
- * @param options - Optional callbacks
  * @returns Updated workout schema
  */
 export const handleDrop = (
   sectionId: string,
   draggedExercise: Exercise,
-  currentSchema: WorkoutSchema,
-  options?: {
-    onDirtyChange?: () => void;
-  }
+  currentSchema: WorkoutSchema
 ): WorkoutSchema => {
-  options?.onDirtyChange?.();
-
   return {
     ...currentSchema,
     sections: currentSchema.sections.map((section) => {
@@ -47,20 +41,14 @@ export const handleDrop = (
  * @param slotIndex - The index where the exercise should be inserted
  * @param draggedExercise - The exercise being dragged
  * @param currentSchema - The current workout schema
- * @param options - Optional callbacks
  * @returns Updated workout schema
  */
 export const handleSlotDrop = (
   sectionId: string,
   slotIndex: number,
   draggedExercise: Exercise,
-  currentSchema: WorkoutSchema,
-  options?: {
-    onDirtyChange?: () => void;
-  }
+  currentSchema: WorkoutSchema
 ): WorkoutSchema => {
-  options?.onDirtyChange?.();
-
   return {
     ...currentSchema,
     sections: currentSchema.sections.map((section) => {

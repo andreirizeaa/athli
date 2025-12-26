@@ -23,6 +23,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
@@ -59,17 +60,19 @@ import {
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
-import { mockWorkouts } from '@/components/app/app-shell';
-import { starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout } from '@/api/coach/coach-workout-service';
+import { getWorkouts, starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout, createWorkout } from '@/api/coach/coach-workout-service';
+import { toast } from 'sonner';
+import { useTrainingData } from '../training-data-context';
 
-type ColumnId = 'description' | 'type' | 'totalExercises' | 'equipment' | 'created';
+type ColumnId = 'description' | 'type' | 'difficulty' | 'totalExercises' | 'equipment' | 'actions';
 
 const COLUMN_ORDER: ColumnId[] = [
   'description',
   'type',
+  'difficulty',
   'totalExercises',
   'equipment',
-  'created',
+  'actions',
 ];
 
 // Column definitions will be created dynamically with translations
@@ -78,23 +81,44 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
     description: { class: 'min-w-[250px]', pixel: '250px' },
     type: { class: 'min-w-[140px]', pixel: '140px' },
+    difficulty: { class: 'min-w-[140px]', pixel: '140px' },
     totalExercises: { class: 'min-w-[170px]', pixel: '170px' },
     equipment: { class: 'min-w-[200px]', pixel: '200px' },
-    created: { class: 'min-w-[150px]', pixel: '150px' },
+    actions: { class: 'w-[100px]', pixel: '100px' },
   };
 
   return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
 };
 
+// Helper function to format workout type for display
+const formatWorkoutType = (type: string): string => {
+  if (!type) return '-';
+  // Convert snake_case or kebab-case to Title Case
+  return type
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Helper function to format difficulty for display
+const formatDifficulty = (difficulty: string): string => {
+  if (!difficulty) return '-';
+  // Convert all_levels to "All Levels", intermediate to "Intermediate", etc.
+  if (difficulty === 'all_levels') return 'All Levels';
+  return difficulty.charAt(0).toUpperCase() + difficulty.slice(1).toLowerCase();
+};
+
 const WorkoutsPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const { workouts, isLoadingWorkouts, setWorkouts, refreshWorkouts } = useTrainingData();
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set());
   const [starredWorkouts, setStarredWorkouts] = useState<Set<string>>(new Set());
-  const [workouts, setWorkouts] = useState<Workout[]>(mockWorkouts);
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
-  const [filteredCount, setFilteredCount] = useState<number>(mockWorkouts.length);
+  const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const [isCreateWorkoutOpen, setIsCreateWorkoutOpen] = useState<boolean>(false);
   const [newWorkoutName, setNewWorkoutName] = useState<string>('');
@@ -114,7 +138,15 @@ const WorkoutsPage = () => {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isGeneratingStandard, setIsGeneratingStandard] = useState<boolean>(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Initialize filteredCount and starred workouts from context data
+    setFilteredCount(workouts.length);
+    const starred = new Set(workouts.filter(w => (w as any).starred).map(w => w.id));
+    setStarredWorkouts(starred);
+  }, [workouts]);
 
   const handleToggleWorkout = (workoutId: string) => {
     setSelectedWorkouts((prev) => {
@@ -191,36 +223,42 @@ const WorkoutsPage = () => {
         return;
       }
 
-      // If standard builder, proceed directly to builder
+      // If standard builder, create workout directly without navigation
       setIsGeneratingStandard(true);
 
-      const meta = {
+      const workoutData = {
         title: newWorkoutName.trim(),
         description: newDescription.trim(),
         type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
-        builder: newSelectedBuilder,
+        equipment: [],
+        sections: [
+          {
+            id: `sec_regular_${Date.now()}`,
+            type: 'regular',
+            name: 'Main Section',
+            exercises: [],
+          }
+        ],
+        totalExercises: 0,
       };
 
       try {
-        window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify(meta));
-        // Set access flag for standard builder
-        window.localStorage.setItem('oneninety_workout_builder_access', 'standard');
-      } catch {
-        // Ignore storage errors
+        const createdWorkout = await createWorkout(workoutData);
+        toast.success(t('library.workoutCreatedSuccessfully', { name: newWorkoutName }));
+
+        // Reload workouts to show the new one
+        await refreshWorkouts();
+
+        // Close side panel and reset state
+        setIsCreateWorkoutOpen(false);
+        resetCreateWorkoutState();
+      } catch (error) {
+        console.error('Failed to create workout:', error);
+        toast.error(t('library.workoutCreationFailed'));
+      } finally {
+        setIsGeneratingStandard(false);
       }
-
-      // Wait 500ms before navigation
-      setTimeout(() => {
-        const targetPath = '/training/workouts/new/standard';
-        router.push(targetPath);
-
-        // Keep sidebar open during navigation, close after a brief delay
-        setTimeout(() => {
-          setIsCreateWorkoutOpen(false);
-          setIsGeneratingStandard(false);
-        }, 300);
-      }, 500);
     } else {
       // Step 2: Generate AI workout and navigate to builder
       setIsGenerating(true);
@@ -397,7 +435,7 @@ Focus on proper form and progressive overload.`;
     setAiPrompt(examplePrompt);
   };
 
-  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId));
+  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId) && colId !== 'actions');
 
   const handleWorkoutRowKeyDown = (
     event: React.KeyboardEvent<HTMLTableRowElement>,
@@ -426,7 +464,8 @@ Focus on proper form and progressive overload.`;
     handleNavigateToWorkout(workoutId);
   };
 
-  const formatDate = (dateStr: string): string => {
+  const formatDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return '-';
     const [day, month, year] = dateStr.split('-');
     const date = new Date(2000 + parseInt(year), parseInt(month) - 1, parseInt(day));
     const months = [
@@ -447,7 +486,7 @@ Focus on proper form and progressive overload.`;
   };
 
 
-  const uniqueTypes = Array.from(new Set(mockWorkouts.map((w) => w.type))).sort();
+  const uniqueTypes = Array.from(new Set(workouts.map((w) => w.type))).sort();
 
   // Create column definitions for DataGrid
   // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
@@ -504,7 +543,24 @@ Focus on proper form and progressive overload.`;
             getSortValue: (row) => row.type.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
-                <span className="text-sm">{row.type}</span>
+                <span className="text-sm">{formatWorkoutType(row.type)}</span>
+              </div>
+            ),
+          };
+        case 'difficulty':
+          return {
+            id: 'difficulty',
+            label: t('general.difficulty'),
+            icon: <Tag className="size-3" />,
+            width: {
+              class: getColumnWidth('difficulty', 'class'),
+              pixel: getColumnWidth('difficulty', 'pixel'),
+            },
+            tooltip: t('workouts.columnTooltips.difficultyLevel'),
+            getSortValue: (row) => row.difficulty.toLowerCase(),
+            renderCell: (row) => (
+              <div className="flex items-center h-full">
+                <span className="text-sm">{formatDifficulty(row.difficulty)}</span>
               </div>
             ),
           };
@@ -535,12 +591,12 @@ Focus on proper form and progressive overload.`;
               pixel: getColumnWidth('equipment', 'pixel'),
             },
             tooltip: t('library.equipmentRequiredWorkout'),
-            getSortValue: (row) => row.equipment.toLowerCase(),
+            getSortValue: (row) => (Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment).toLowerCase(),
             renderCell: (row) => (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center h-full min-w-0 w-full">
-                    <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
+                    <span className="text-sm truncate block min-w-0 w-full">{Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment}</span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent
@@ -548,29 +604,9 @@ Focus on proper form and progressive overload.`;
                   side="top"
                   align="start"
                 >
-                  <p>{row.equipment}</p>
+                  <p>{Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment}</p>
                 </TooltipContent>
               </Tooltip>
-            ),
-          };
-        case 'created':
-          return {
-            id: 'created',
-            label: t('general.created'),
-            icon: <Calendar className="size-3" />,
-            width: {
-              class: getColumnWidth('created', 'class'),
-              pixel: getColumnWidth('created', 'pixel'),
-            },
-            tooltip: t('library.dateCreatedWorkout'),
-            getSortValue: (row) => {
-              const [day, month, year] = row.created.split('-').map(Number);
-              return new Date(2000 + year, month - 1, day).getTime();
-            },
-            renderCell: (row) => (
-              <div className="flex items-center h-full w-full pr-6">
-                <span className="text-sm">{formatDate(row.created)}</span>
-              </div>
             ),
           };
         default:
@@ -584,7 +620,36 @@ Focus on proper form and progressive overload.`;
     }),
   ];
 
-  const columns: ColumnDefinition<Workout>[] = allColumns;
+  // Add actions column
+  const actionsColumn: ColumnDefinition<Workout> = {
+    id: 'actions',
+    label: '',
+    sortable: false,
+    width: { class: 'w-[100px]', pixel: '100px' },
+    renderCell: (row) => (
+      <div className="flex items-center justify-end w-full" data-no-row-link="true">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={async (e) => {
+            e.stopPropagation();
+            try {
+              await deleteWorkouts([row.id]);
+              await refreshWorkouts();
+            } catch (error) {
+              console.error('Failed to delete workout:', error);
+            }
+          }}
+          className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+          aria-label={`Delete ${row.program}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    ),
+  };
+
+  const columns: ColumnDefinition<Workout>[] = [...allColumns, actionsColumn];
 
   // Create filter definitions
   const filters: FilterDefinition<Workout>[] = [
@@ -610,7 +675,7 @@ Focus on proper form and progressive overload.`;
   const handleToggleStar = async (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starWorkouts(workoutId);
+      await starWorkouts(workoutId, !starredWorkouts.has(workoutId));
       setStarredWorkouts((prev) => {
         const next = new Set(prev);
         if (next.has(workoutId)) {
@@ -640,7 +705,7 @@ Focus on proper form and progressive overload.`;
   const handleStarSelected = async () => {
     if (selectedWorkouts.size === 0) return;
     try {
-      await starWorkouts(Array.from(selectedWorkouts));
+      await starWorkouts(Array.from(selectedWorkouts), true);
       // Update starred state for selected workouts
       setStarredWorkouts((prev) => {
         const next = new Set(prev);
@@ -661,7 +726,7 @@ Focus on proper form and progressive overload.`;
   const handleArchiveSelected = async () => {
     if (selectedWorkouts.size === 0) return;
     try {
-      await archiveWorkouts(Array.from(selectedWorkouts));
+      await archiveWorkouts(Array.from(selectedWorkouts), true);
       // Clear selection after archiving
       setSelectedWorkouts(new Set());
     } catch (error) {
@@ -669,10 +734,12 @@ Focus on proper form and progressive overload.`;
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleBulkDelete = async () => {
     if (selectedWorkouts.size === 0) return;
     try {
       await deleteWorkouts(Array.from(selectedWorkouts));
+      // Reload workouts after deleting
+      await refreshWorkouts();
       // Clear selection after deleting
       setSelectedWorkouts(new Set());
     } catch (error) {
@@ -686,9 +753,9 @@ Focus on proper form and progressive overload.`;
     const workout = workouts.find((w) => w.id === workoutId);
     if (!workout) return;
     try {
-      const duplicatedWorkout = await duplicateWorkout(workoutId, workout);
-      // Add the duplicated workout to the list
-      setWorkouts((prev) => [...prev, duplicatedWorkout]);
+      const duplicatedWorkout = await duplicateWorkout(workoutId);
+      // Reload workouts to show the duplicated one
+      await refreshWorkouts();
       // Clear selection after duplicating
       setSelectedWorkouts(new Set());
     } catch (error) {
@@ -966,7 +1033,7 @@ Focus on proper form and progressive overload.`;
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    onClick={handleDeleteSelected}
+                    onClick={() => setIsBulkDeleteOpen(true)}
                     className="gap-2 text-destructive hover:text-destructive"
                     aria-label={t('workouts.actions.deleteSelectedAria')}
                   >
@@ -1006,6 +1073,15 @@ Focus on proper form and progressive overload.`;
         gridPadding={true}
         compactPagination={true}
       />
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedWorkouts.size}
+        itemName={t('workouts.title').toLowerCase()}
+      />
+
       <SidePanel
         open={isCreateWorkoutOpen}
         onOpenChange={(open) => {
@@ -1030,7 +1106,7 @@ Focus on proper form and progressive overload.`;
                   !newDifficulty ||
                   !newSelectedBuilder)
               }
-              aria-label={isCreateWorkoutStep2 ? t('library.generateWorkout') : t('general.continue')}
+              aria-label={isCreateWorkoutStep2 ? t('library.generateWorkout') : t('library.continue')}
               className={cn(
                 ((isCreateWorkoutStep2 && isGenerating) || (!isCreateWorkoutStep2 && isGeneratingStandard)) &&
                 'min-w-[120px] justify-center'
@@ -1048,7 +1124,7 @@ Focus on proper form and progressive overload.`;
               ) : isGeneratingStandard ? (
                 <Spinner className="h-4 w-4" />
               ) : (
-                t('general.continue')
+                t('library.continue')
               )}
             </Button>
             {isCreateWorkoutStep2 && (

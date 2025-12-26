@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { coachMetricsController } from '../coach-metrics.controller';
+import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
 
 export const coachMetricRouter = Router();
 
@@ -14,9 +16,7 @@ export const coachMetricRouter = Router();
  *       200:
  *         description: Coach metrics retrieved successfully
  */
-coachMetricRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach metrics route' });
-});
+coachMetricRouter.get('/', supabaseAuthenticate, coachMetricsController.getMetrics);
 
 /**
  * @swagger
@@ -42,9 +42,7 @@ coachMetricRouter.get('/', (req, res) => {
  *       200:
  *         description: Coach metric updated successfully
  */
-coachMetricRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach metric updated', id: req.params.id });
-});
+coachMetricRouter.patch('/:id', supabaseAuthenticate, coachMetricsController.updateMetric);
 
 /**
  * @swagger
@@ -63,7 +61,11 @@ coachMetricRouter.patch('/:id', (req, res) => {
  *     responses:
  *       201:
  *         description: Coach metric created successfully
- *
+ */
+coachMetricRouter.post('/', supabaseAuthenticate, coachMetricsController.createMetric);
+
+/**
+ * @swagger
  * /api/v1/coach/metrics/{id}:
  *   delete:
  *     summary: Delete coach metric
@@ -80,10 +82,24 @@ coachMetricRouter.patch('/:id', (req, res) => {
  *       200:
  *         description: Coach metric deleted successfully
  */
-coachMetricRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach metric created' });
-});
+coachMetricRouter.delete('/:id', supabaseAuthenticate, coachMetricsController.deleteMetric);
 
-coachMetricRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach metric deleted', id: req.params.id });
-});
+/**
+ * @swagger
+ * /api/v1/coach/metrics/{id}/duplicate:
+ *   post:
+ *     summary: Duplicate coach metric
+ *     tags: [Coach]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Coach metric duplicated successfully
+ */
+coachMetricRouter.post('/:id/duplicate', supabaseAuthenticate, coachMetricsController.duplicateMetric);

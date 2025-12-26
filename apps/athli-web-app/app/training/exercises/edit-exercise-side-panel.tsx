@@ -137,25 +137,25 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
   // Populate form when exercise changes
   useEffect(() => {
     if (exercise && open) {
-      setExerciseName(exercise.program);
-      setExerciseInstructions(exercise.description);
-      setVideoLink(exercise.videoLink || '');
+      setExerciseName(exercise.name || '');
+      setExerciseInstructions(exercise.description || '');
+      setVideoLink(exercise.video_link || '');
       setVideoFile(null);
       setVideoPreview(null);
-      setCategory(exercise.category);
-      setMuscleGroups(exercise.muscleGroup);
-      setEquipment(exercise.equipment);
-      setModality(exercise.modality);
+      setCategory(exercise.category || '');
+      setMuscleGroups(exercise.muscle_group || []);
+      setEquipment(exercise.equipment || '');
+      setModality(exercise.modality || '');
 
       // Store original data for change detection
       setOriginalExerciseData({
-        name: exercise.program,
-        instructions: exercise.description,
-        videoLink: exercise.videoLink || '',
-        category: exercise.category,
-        muscleGroups: exercise.muscleGroup,
-        equipment: exercise.equipment,
-        modality: exercise.modality,
+        name: exercise.name || '',
+        instructions: exercise.description || '',
+        videoLink: exercise.video_link || '',
+        category: exercise.category || '',
+        muscleGroups: exercise.muscle_group || [],
+        equipment: exercise.equipment || '',
+        modality: exercise.modality || '',
       });
     }
   }, [exercise, open]);
@@ -345,26 +345,29 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
       setCategoryError(null);
     }
 
-    if (muscleGroups.length === 0) {
-      setMuscleGroupsError(t('exercises.addExercise.muscleGroupsRequiredError'));
-      hasError = true;
-    } else {
-      setMuscleGroupsError(null);
-    }
+    // Muscle groups validation - Optional
+    // if (muscleGroups.length === 0) {
+    //   setMuscleGroupsError(t('exercises.addExercise.muscleGroupsRequiredError'));
+    //   hasError = true;
+    // } else {
+    //   setMuscleGroupsError(null);
+    // }
 
-    if (!equipment) {
-      setEquipmentError(t('exercises.addExercise.equipmentRequiredError'));
-      hasError = true;
-    } else {
-      setEquipmentError(null);
-    }
+    // Equipment validation - Optional
+    // if (!equipment) {
+    //   setEquipmentError(t('exercises.addExercise.equipmentRequiredError'));
+    //   hasError = true;
+    // } else {
+    //   setEquipmentError(null);
+    // }
 
-    if (!modality) {
-      setModalityError(t('exercises.addExercise.modalityRequiredError'));
-      hasError = true;
-    } else {
-      setModalityError(null);
-    }
+    // Modality validation - Optional
+    // if (!modality) {
+    //   setModalityError(t('exercises.addExercise.modalityRequiredError'));
+    //   hasError = true;
+    // } else {
+    //   setModalityError(null);
+    // }
 
     if (hasError) {
       return;
@@ -696,7 +699,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
 
           <div className="flex flex-col gap-2">
             <label htmlFor="muscle-groups" className="text-sm font-medium">
-              {t('exercises.addExercise.muscleGroups')}<RequiredAsterisk />
+              {t('exercises.addExercise.muscleGroups')}
             </label>
             <MultiAsyncSelect
               options={MUSCLE_GROUPS.map((group) => ({ label: group, value: group }))}
@@ -716,7 +719,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
 
           <div className="flex flex-col gap-2">
             <label htmlFor="equipment" className="text-sm font-medium">
-              {t('exercises.addExercise.equipment')}<RequiredAsterisk />
+              {t('exercises.addExercise.equipment')}
             </label>
             <Select
               value={equipment}
@@ -747,7 +750,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
 
           <div className="flex flex-col gap-2">
             <label htmlFor="modality" className="text-sm font-medium">
-              {t('exercises.addExercise.modality')}<RequiredAsterisk />
+              {t('exercises.addExercise.modality')}
             </label>
             <Select
               value={modality}

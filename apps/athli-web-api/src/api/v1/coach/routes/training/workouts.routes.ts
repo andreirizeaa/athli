@@ -1,5 +1,8 @@
 import { Router } from 'express';
 
+import { coachWorkoutsController } from '../../coach-workouts.controller';
+import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
+
 export const coachWorkoutRouter = Router();
 
 /**
@@ -14,9 +17,7 @@ export const coachWorkoutRouter = Router();
  *       200:
  *         description: Coach workouts retrieved successfully
  */
-coachWorkoutRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach workouts route' });
-});
+coachWorkoutRouter.get('/', supabaseAuthenticate, coachWorkoutsController.getWorkouts);
 
 /**
  * @swagger
@@ -72,14 +73,10 @@ coachWorkoutRouter.get('/', (req, res) => {
  *       200:
  *         description: Coach workout deleted successfully
  */
-coachWorkoutRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach workout created' });
-});
+coachWorkoutRouter.post('/', supabaseAuthenticate, coachWorkoutsController.createWorkout);
 
-coachWorkoutRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach workout updated', id: req.params.id });
-});
+coachWorkoutRouter.patch('/:id', supabaseAuthenticate, coachWorkoutsController.updateWorkout);
 
-coachWorkoutRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach workout deleted', id: req.params.id });
-});
+coachWorkoutRouter.delete('/:id', supabaseAuthenticate, coachWorkoutsController.deleteWorkout);
+
+coachWorkoutRouter.post('/:id/duplicate', supabaseAuthenticate, coachWorkoutsController.duplicateWorkout);

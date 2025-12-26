@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { coachCheckInsController } from '../../coach-check-ins.controller';
+import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
 
 export const coachCheckInRouter = Router();
 
@@ -14,9 +16,27 @@ export const coachCheckInRouter = Router();
  *       200:
  *         description: Coach check-ins retrieved successfully
  */
-coachCheckInRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach check-in route' });
-});
+coachCheckInRouter.get('/', supabaseAuthenticate, coachCheckInsController.getCheckIns);
+
+/**
+ * @swagger
+ * /api/v1/coach/forms/check-ins/{id}:
+ *   get:
+ *     summary: Get coach check-in by ID
+ *     tags: [Coach]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Coach check-in retrieved successfully
+ */
+coachCheckInRouter.get('/:id', supabaseAuthenticate, coachCheckInsController.getCheckInById);
 
 /**
  * @swagger
@@ -42,9 +62,7 @@ coachCheckInRouter.get('/', (req, res) => {
  *       200:
  *         description: Coach check-in updated successfully
  */
-coachCheckInRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach check-in updated', id: req.params.id });
-});
+coachCheckInRouter.patch('/:id', supabaseAuthenticate, coachCheckInsController.updateCheckIn);
 
 /**
  * @swagger
@@ -63,7 +81,11 @@ coachCheckInRouter.patch('/:id', (req, res) => {
  *     responses:
  *       201:
  *         description: Coach check-in created successfully
- *
+ */
+coachCheckInRouter.post('/', supabaseAuthenticate, coachCheckInsController.createCheckIn);
+
+/**
+ * @swagger
  * /api/v1/coach/forms/check-ins/{id}:
  *   delete:
  *     summary: Delete coach check-in
@@ -80,10 +102,4 @@ coachCheckInRouter.patch('/:id', (req, res) => {
  *       200:
  *         description: Coach check-in deleted successfully
  */
-coachCheckInRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach check-in created' });
-});
-
-coachCheckInRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach check-in deleted', id: req.params.id });
-});
+coachCheckInRouter.delete('/:id', supabaseAuthenticate, coachCheckInsController.deleteCheckIn);
