@@ -12,11 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
-import { Upload, Trash2, Building2, Loader2 } from 'lucide-react';
-import { updateCompanyDetails, type CompanyDetails } from '@/lib/general/settings-service';
+import { Upload, Building2, Loader2 } from 'lucide-react';
+import { type CoachCompanyInfo } from '@/api/settings/coach/coach-company-service';
+import { useGlobalData } from '@/providers/global-data-provider';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useCompanySave } from '../context/company-save-context';
 import { toast } from 'sonner';
+import { ImageCropDialog } from '@/components/app/image-crop-dialog';
 
 const countries = [
   'United States',
@@ -93,79 +95,91 @@ const InformationPage = () => {
   const t = useTranslations();
   const { setHasUnsavedChanges: setContextHasUnsavedChanges } = useUnsavedChanges();
   const { setIsSaving: setContextIsSaving } = useCompanySave();
+  const { company, updateCompany, uploadAndSetCompanyLogo, isUploadingLogo, isLoading } = useGlobalData();
+
   const [companyName, setCompanyName] = useState('');
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
   const [location, setLocation] = useState('');
   const [specialities, setSpecialities] = useState<string[]>([]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const [savedData, setSavedData] = useState<CompanyDetails>({
-    companyName: '',
-    website: '',
-    linkedin: '',
-    location: '',
-    specialities: [],
-  });
+  const [savedData, setSavedData] = useState<CoachCompanyInfo | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Initialize form with company data when it loads
+  useEffect(() => {
+    if (company) {
+      setCompanyName(company.company_name || '');
+      setWebsite(company.website || '');
+      setLinkedin(company.linkedin || '');
+      setLocation(company.location || '');
+      setSpecialities(company.specialities || []);
+      setLogoPreview(company.logo_url || null);
 
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setSavedData({
+        company_name: company.company_name || '',
+        website: company.website || '',
+        linkedin: company.linkedin || '',
+        location: company.location || '',
+        specialities: company.specialities || [],
+        logo_url: company.logo_url || undefined
+      });
+    } else if (!isLoading && !company) {
+      // Handle case where no company exists yet (Create mode) - defaults are already set to empty
+      setSavedData({
+        company_name: '',
+        website: '',
+        linkedin: '',
+        location: '',
+        specialities: [],
+      });
     }
+  }, [company, isLoading]);
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  const handleImageSave = async (file: File) => {
+    try {
+      const publicUrl = await uploadAndSetCompanyLogo(file);
+      setLogoPreview(publicUrl);
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
+      // Update savedData to include the new logo URL so it doesn't count as an unsaved change
+      if (savedData) {
+        setSavedData(prev => prev ? { ...prev, logo_url: publicUrl } : prev);
+      }
 
-  const handleUploadKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleUploadClick();
-    }
-  };
-
-  const handleDeleteClick = () => {
-    setLogoPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleDeleteKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      handleDeleteClick();
+      toast.success(t('settings.company.information.savedSuccessfully'));
+    } catch (error) {
+      console.error(error);
+      toast.error(t('settings.company.information.saveFailed'));
     }
   };
 
   // Check if there are unsaved changes
   useEffect(() => {
-    const currentData: CompanyDetails = {
-      companyName,
-      website,
-      linkedin,
-      location,
-      specialities,
-      logo: logoPreview || undefined,
+    if (!savedData) return;
+
+    const currentData: CoachCompanyInfo = {
+      company_name: companyName,
+      website: website,
+      linkedin: linkedin,
+      location: location,
+      specialities: specialities,
+      logo_url: logoPreview || undefined,
     };
-    const hasChanges = JSON.stringify(currentData) !== JSON.stringify(savedData);
-    setHasUnsavedChanges(hasChanges);
-    setContextHasUnsavedChanges(hasChanges);
+
+    // We need to compare properties carefully because savedData might have more fields or nulls
+    const isDifferent =
+      currentData.company_name !== (savedData.company_name || '') ||
+      currentData.website !== (savedData.website || '') ||
+      currentData.linkedin !== (savedData.linkedin || '') ||
+      currentData.location !== (savedData.location || '') ||
+      JSON.stringify(currentData.specialities) !== JSON.stringify(savedData.specialities || []) ||
+      currentData.logo_url !== (savedData.logo_url || undefined);
+
+    setHasUnsavedChanges(isDifferent);
+    setContextHasUnsavedChanges(isDifferent);
   }, [companyName, website, linkedin, location, specialities, logoPreview, savedData, setContextHasUnsavedChanges]);
 
   // Handle browser navigation
@@ -203,101 +217,91 @@ const InformationPage = () => {
     setIsSaving(true);
     setContextIsSaving(true);
     try {
-      const data: CompanyDetails = {
-        companyName: companyNameRef.current,
+      const data: CoachCompanyInfo = {
+        company_name: companyNameRef.current,
         website: websiteRef.current,
         linkedin: linkedinRef.current,
         location: locationRef.current,
         specialities: specialitiesRef.current,
-        logo: logoPreviewRef.current || undefined,
+        logo_url: logoPreviewRef.current || undefined,
       };
-      await updateCompanyDetails(data);
+
+      await updateCompany(data);
+
       setSavedData(data);
       setHasUnsavedChanges(false);
       setContextHasUnsavedChanges(false);
       toast.success(t('settings.company.information.savedSuccessfully'));
     } catch (error) {
+      console.error(error);
       toast.error(t('settings.company.information.saveFailed'));
     } finally {
       setIsSaving(false);
       setContextIsSaving(false);
     }
-  }, [setContextHasUnsavedChanges, setContextIsSaving, t]);
-
-  // Don't register save handler with layout - save button is in the card
+  }, [setContextHasUnsavedChanges, setContextIsSaving, t, updateCompany]);
 
   return (
-    <div className="w-full h-full flex flex-col overflow-auto">
-      <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4">
-        <Card className="bg-background max-w-3xl w-full">
+    <>
+      <ImageCropDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSave={handleImageSave}
+        title={t('settings.company.information.logoDialog.title')}
+        description={t('settings.company.information.logoDialog.description')}
+      />
+
+      <div className="w-full h-full flex flex-col overflow-auto">
+        <div className="w-full flex-1 overflow-auto px-4 pt-4 pb-2 bg-background flex flex-col items-center gap-4">
+          <Card className="bg-background max-w-3xl w-full">
             <CardHeader className="px-4">
               <CardTitle>{t('settings.company.information.title')}</CardTitle>
             </CardHeader>
             <Separator className="w-full mt-[-8px]" />
             <CardContent className="px-0">
-              <div className="px-4">
-                <div className="flex flex-col gap-2 mb-6">
+              <div className="space-y-0">
+                {/* Company Logo Row */}
+                <div className="flex items-center justify-between w-full pb-2 border-b px-4">
                   <Label className="text-sm font-medium">
                     {t('settings.company.information.logo')}
                   </Label>
-                  <div className="flex items-start gap-4">
-                    <Avatar className="size-20">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-16 w-16">
                       {logoPreview ? (
                         <AvatarImage src={logoPreview} alt={t('settings.company.information.logo')} />
                       ) : (
                         <AvatarFallback className="bg-muted">
-                          <Building2 className="size-10 text-muted-foreground" />
+                          <Building2 className="size-8 text-muted-foreground" />
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <div className="flex flex-col gap-1.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleUploadClick}
-                        onKeyDown={handleUploadKeyDown}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={t('settings.company.information.uploadAria')}
-                        className="h-7 px-2 text-xs"
-                      >
-                        <Upload className="size-3 mr-1.5" />
-                        {t('settings.company.information.upload')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDeleteClick}
-                        onKeyDown={handleDeleteKeyDown}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={t('settings.company.information.deleteAria')}
-                        className="h-7 px-2 text-xs"
-                        disabled={!logoPreview}
-                      >
-                        <Trash2 className="size-3 mr-1.5" />
-                        {t('settings.company.information.delete')}
-                      </Button>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      aria-label={t('settings.company.information.uploadAria')}
-                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsDialogOpen(true)}
+                      disabled={isUploadingLogo}
+                    >
+                      {isUploadingLogo ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t('settings.profile.uploading')}
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          {t('settings.company.information.upload')}
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-4">
+                <div className="px-4 pt-4 space-y-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="companyName">
                       <span>
                         {t('settings.company.information.companyName')}
-                        <RequiredAsterisk />
                       </span>
                     </Label>
                     <Input
@@ -364,7 +368,7 @@ const InformationPage = () => {
                 </div>
 
                 {/* Save Button */}
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-4 px-4 pb-4">
                   <Button
                     onClick={handleSave}
                     disabled={!hasUnsavedChanges || isSaving}
@@ -382,8 +386,9 @@ const InformationPage = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

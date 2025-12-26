@@ -14,9 +14,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Info } from 'lucide-react';
 import Link from 'next/link';
-import { getForms } from '@/lib/coach/coach-form-service';
-import { type Habit } from '@/lib/coach/coach-habit-service';
-import { getAllMetrics, type Metric } from '@/lib/coach/coach-metric-service';
+// Forms are now split into check-ins and questionnaires services
+import { type Habit } from '@/api/coach/coach-habit-service';
+import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 import { Search, X, ChevronRight, UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, ArrowLeft, Clock, RotateCw, BarChart3 } from 'lucide-react';
 
 export type PanelType = 'trigger' | 'action' | null;
@@ -157,8 +157,8 @@ interface FlowEditorSidePanelProps {
   repeatLinkedActionId: string | null;
   onRepeatLinkedActionIdChange: (actionId: string | null) => void;
   initialRepeatLinkedActionId?: string | null;
-  actionNodes: Array<{ 
-    id: string; 
+  actionNodes: Array<{
+    id: string;
     option: ActionOption;
     messageText?: string;
     waitDuration?: number;
@@ -226,10 +226,10 @@ export function FlowEditorSidePanel({
   const sidePanelTitle = panelType === 'trigger'
     ? (selectedTrigger ? 'Edit Trigger' : 'Add Trigger')
     : isEditing
-    ? `Edit ${selectedActionOption?.name || 'Action'}`
-    : actionStep === 'list'
-    ? 'Add Action'
-    : selectedActionOption?.name || 'Add Action';
+      ? `Edit ${selectedActionOption?.name || 'Action'}`
+      : actionStep === 'list'
+        ? 'Add Action'
+        : selectedActionOption?.name || 'Add Action';
   const sidePanelSearchPlaceholder = panelType === 'trigger' ? 'Search triggers...' : 'Search actions...';
   const showBackButton = panelType === 'action' && actionStep !== 'list' && !isEditing;
 
@@ -257,9 +257,8 @@ export function FlowEditorSidePanel({
 
   return (
     <div
-      className={`absolute right-0 top-0 h-full flex flex-col border-l bg-background shadow-lg transition-all duration-300 ${
-        isSidePanelOpen ? 'w-[400px]' : 'w-0 border-l-0 overflow-hidden'
-      }`}
+      className={`absolute right-0 top-0 h-full flex flex-col border-l bg-background shadow-lg transition-all duration-300 ${isSidePanelOpen ? 'w-[400px]' : 'w-0 border-l-0 overflow-hidden'
+        }`}
     >
       {isSidePanelOpen && (
         <>
@@ -308,7 +307,7 @@ export function FlowEditorSidePanel({
           )}
 
           {/* Sidebar Content */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
             {panelType === 'trigger' ? (
               <div className="px-4 pb-4 space-y-4">
                 {filteredTriggerOptions.length > 0 ? (
@@ -847,9 +846,9 @@ export function FlowEditorSidePanel({
                       </Button>
                     )}
                     {onDeleteAction && (
-                      <Button 
-                        variant="outline" 
-                        onClick={onDeleteAction} 
+                      <Button
+                        variant="outline"
+                        onClick={onDeleteAction}
                         className="flex-1"
                       >
                         Delete
@@ -861,8 +860,8 @@ export function FlowEditorSidePanel({
                   </>
                 ) : actionStep === 'confirmation' || (selectedActionOption?.id === 'send-message' && actionStep === 'config') || (selectedActionOption?.id === 'wait' && actionStep === 'config') ? (
                   <>
-                    <Button 
-                      onClick={onSaveAction} 
+                    <Button
+                      onClick={onSaveAction}
                       className="flex-1"
                       disabled={
                         (selectedActionOption?.id === 'send-message' && !messageText.trim())

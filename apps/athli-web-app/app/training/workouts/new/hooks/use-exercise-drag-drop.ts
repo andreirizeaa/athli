@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import type { Exercise } from '@/lib/general/exercise-search';
+import type { Exercise } from '@/api/exercise/exercise-search';
 
 export type DragOverSlot = {
   sectionId: string;

@@ -22,7 +22,7 @@ import { format } from 'date-fns';
 import { Plus, GitCompare, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AddPhotoSidePanel } from '@/components/photos/add-photo-side-panel';
-import { addClientPhoto } from '@/lib/client/client-photo-service';
+import { addClientPhoto } from '@/api/client/client-photo-service';
 
 type PhotoView = 'all' | 'front' | 'back' | 'side';
 

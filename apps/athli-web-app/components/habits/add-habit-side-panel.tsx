@@ -16,8 +16,8 @@ import { Info } from 'lucide-react';
 import Link from 'next/link';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { HabitFormManual } from './habit-form-manual';
-import { getAllHabits, type Habit } from '@/lib/coach/coach-habit-service';
-import { assignHabit } from '@/lib/client/client-habit-service';
+import { getAllHabits, type Habit } from '@/api/coach/coach-habit-service';
+import { assignHabit } from '@/api/client/client-habit-service';
 
 export type HabitFormValues = {
   name: string;
@@ -159,7 +159,7 @@ export const AddHabitSidePanel = ({
     form.setValue('amount', habit.amount);
     form.setValue('unit', habit.unit);
     form.setValue('period', habit.period);
-    
+
     if (habit.duration) {
       form.setValue('duration', habit.duration);
       setEnableDuration(true);
@@ -167,7 +167,7 @@ export const AddHabitSidePanel = ({
       form.setValue('duration', undefined);
       setEnableDuration(false);
     }
-    
+
     if (habit.reminderTime) {
       form.setValue('reminderTime', habit.reminderTime);
       form.setValue('reminderMessage', habit.reminderMessage || '');
@@ -177,7 +177,7 @@ export const AddHabitSidePanel = ({
       form.setValue('reminderMessage', undefined);
       setEnableReminder(false);
     }
-    
+
     setActiveTab('newHabit');
   };
 
@@ -330,7 +330,7 @@ export const AddHabitSidePanel = ({
                       const unitLabel = t(`habits.form.units.${habit.unit as any}`);
                       const periodText = habit.period === 'daily' ? t('habits.form.daily') : t('habits.form.weekly');
                       const subtitle = `${habit.amount} ${unitLabel} / ${periodText}`;
-                      
+
                       return (
                         <Card
                           key={`${section.label}-${habit.name}`}
@@ -423,7 +423,7 @@ export const AddHabitSidePanel = ({
                       const unitLabel = t(`habits.form.units.${habit.unit as any}`);
                       const periodText = habit.period === 'daily' ? t('habits.form.daily') : t('habits.form.weekly');
                       const subtitle = `${habit.amount} ${unitLabel} / ${periodText}`;
-                      
+
                       return (
                         <Card
                           key={habit.id}

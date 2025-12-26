@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy } from 'lucide-react';
+import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,43 +12,47 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
-import { addForm, duplicateForm, type Form } from '@/lib/coach/coach-form-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/lib/client/client-form-service';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { addQuestionnaire, duplicateQuestionnaire, deleteQuestionnaire, getQuestionnaires, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
+import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 
-// Mock forms data
-const mockForms: Form[] = [
-  {
-    id: 'form-1',
-    name: 'Initial Assessment',
-    description: 'Comprehensive initial assessment form for new clients',
-    questionCount: 0,
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: 'form-2',
-    name: 'Weekly Check-in',
-    description: 'Weekly progress check-in form',
-    questionCount: 0,
-    createdAt: Date.now() - 86400000 * 3,
-  },
-];
+// Removed mock forms as we fetch from the API
 
 const QuestionnairesPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const [forms, setForms] = useState<Form[]>(mockForms);
+  const [forms, setForms] = useState<Form[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAddQuestionnaireOpen, setIsAddQuestionnaireOpen] = useState<boolean>(false);
   const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<Set<string>>(new Set());
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
   const [formsToAssign, setFormsToAssign] = useState<Form[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+
+  const fetchForms = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getQuestionnaires();
+      setForms(data);
+    } catch (error) {
+      console.error('Failed to fetch questionnaires:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchForms();
+  }, []);
 
   const handleOpenAddQuestionnaire = () => {
     setIsAddQuestionnaireOpen(true);
@@ -61,21 +65,49 @@ const QuestionnairesPage = () => {
   const handleDuplicateSelected = async () => {
     const selectedForms = questionnaireForms.filter((form) => selectedQuestionnaires.has(form.id));
     if (selectedForms.length !== 1) return;
-    
+
     const formToDuplicate = selectedForms[0];
     try {
-      const duplicatedForm = await duplicateForm(formToDuplicate.id, formToDuplicate);
-      setForms((prev) => [...prev, duplicatedForm]);
+      const duplicatedForm = await duplicateQuestionnaire(formToDuplicate.id, formToDuplicate);
+      fetchForms();
       setSelectedQuestionnaires(new Set());
     } catch (error) {
       console.error('Failed to duplicate form:', error);
     }
   };
 
+  const handleDeleteQuestionnaire = async (id: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteQuestionnaire(id);
+      fetchForms();
+
+      // Clear selection if deleted
+      if (selectedQuestionnaires.has(id)) {
+        const newSet = new Set(selectedQuestionnaires);
+        newSet.delete(id);
+        setSelectedQuestionnaires(newSet);
+      }
+    } catch (error) {
+      console.error('Failed to delete questionnaire:', error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const idsToDelete = Array.from(selectedQuestionnaires);
+      await Promise.all(idsToDelete.map((id) => deleteQuestionnaire(id)));
+      fetchForms();
+      setSelectedQuestionnaires(new Set());
+    } catch (error) {
+      console.error('Failed to bulk delete questionnaires:', error);
+    }
+  };
+
   const handleAssignToClients = () => {
     const selectedForms = questionnaireForms.filter((form) => selectedQuestionnaires.has(form.id));
     if (selectedForms.length === 0) return;
-    
+
     setFormsToAssign(selectedForms);
     setIsAssignToClientsOpen(true);
     setSelectedClientIds(new Set());
@@ -93,10 +125,10 @@ const QuestionnairesPage = () => {
 
   const handleAssignFormsToClients = async () => {
     if (selectedClientIds.size === 0 || formsToAssign.length === 0) return;
-    
+
     try {
       const clientIdsArray = Array.from(selectedClientIds);
-      
+
       await Promise.all(
         formsToAssign.flatMap((form) =>
           clientIdsArray.map(async (clientId) => {
@@ -104,9 +136,9 @@ const QuestionnairesPage = () => {
               type: 'one-time',
               sendNow: true,
             };
-            
+
             const cronExpression = convertScheduleToCron(scheduleData);
-            
+
             await assignForm({
               formId: form.id,
               clientId: clientId,
@@ -116,7 +148,7 @@ const QuestionnairesPage = () => {
           })
         )
       );
-      
+
       setIsAssignToClientsOpen(false);
       setFormsToAssign([]);
       setSelectedQuestionnaires(new Set());
@@ -157,11 +189,11 @@ const QuestionnairesPage = () => {
     scaleTo?: string;
     mediaCount?: number;
   }>) => {
-    setForms((prev) => [...prev, newForm]);
-    
+    fetchForms();
+
     const template = formTemplates.find((t) => t.name === newForm.name);
     const formType = template?.schedule?.type || 'check-in';
-    
+
     if (questions && questions.length > 0) {
       sessionStorage.setItem(`form-questions-${newForm.id}`, JSON.stringify(questions));
       if (formType === 'check-in') {
@@ -202,10 +234,34 @@ const QuestionnairesPage = () => {
       icon: <FileText className="size-3" />,
       sortable: true,
       width: { class: 'w-[150px]', pixel: '150px' },
-      getSortValue: (row) => row.questionCount,
-      getSearchValue: (row) => row.questionCount.toString(),
+      getSortValue: (row) => row.questions?.length || 0,
+      getSearchValue: (row) => (row.questions?.length || 0).toString(),
       renderCell: (row) => (
-        <span className="text-sm text-foreground">{row.questionCount}</span>
+        <span className="text-sm text-foreground">{row.questions?.length || 0}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      label: '',
+      sortable: false,
+      width: { class: 'w-[80px]', pixel: '80px' },
+      renderCell: (row) => (
+        <div className="flex items-center justify-end w-full" data-no-row-link="true">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => handleDeleteQuestionnaire(row.id, e)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleDeleteQuestionnaire(row.id, e);
+              }
+            }}
+            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={`Delete ${row.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -282,6 +338,7 @@ const QuestionnairesPage = () => {
     };
   };
 
+
   const selectedCount = selectedQuestionnaires.size;
 
   return (
@@ -317,6 +374,18 @@ const QuestionnairesPage = () => {
         gridPadding={true}
         compactPagination={true}
         emptyMessage={t('forms.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('forms.questionnaires.emptyState.title')}
+            subtitle={t('forms.questionnaires.emptyState.subtitle')}
+            action={
+              <Button onClick={handleOpenAddQuestionnaire} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('forms.addQuestionnaire')}</span>
+              </Button>
+            }
+          />
+        }
         filterBarActions={
           <Button onClick={handleOpenAddQuestionnaire} className="gap-2">
             <Plus className="size-4" />
@@ -357,6 +426,15 @@ const QuestionnairesPage = () => {
                 <UserPlus className="size-4" />
                 <span>{t('forms.assignToClients')}</span>
               </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setIsBulkDeleteOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label={t('general.delete')}
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
             </div>
           ) : undefined
         }
@@ -383,6 +461,14 @@ const QuestionnairesPage = () => {
         open={isAddQuestionnaireOpen}
         onOpenChange={setIsAddQuestionnaireOpen}
         onSave={handleSaveForm}
+      />
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedQuestionnaires.size}
+        itemName={t('forms.questionnaires.title').toLowerCase()}
       />
 
       <SidePanel

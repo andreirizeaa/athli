@@ -17,8 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile } from '@/lib/coach/coach-file-service';
-import { deleteClientFiles } from '@/lib/client/client-file-service';
+import { addFile, updateFile, deleteFile } from '@/api/coach/coach-file-service';
+import { deleteClientFiles } from '@/api/client/client-file-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { EditFileSidePanel } from '@/components/files/edit-file-side-panel';
@@ -94,15 +94,15 @@ const ClientFilesPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
-  
+
   const athlete = mockAthletes.find((item) => item.id === clientId);
   const clientName = athlete?.name || 'this client';
-  
+
   const [isAddFileOpen, setIsAddFileOpen] = useState<boolean>(false);
   const [files, setFiles] = useState<FileItem[]>(mockFiles);
   const [filteredCount, setFilteredCount] = useState<number>(mockFiles.length);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  
+
   // Edit file state
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
   const [rowMenuOpenId, setRowMenuOpenId] = useState<string | null>(null);
@@ -131,7 +131,7 @@ const ClientFilesPage = () => {
         file: file,
         tags: tags,
       });
-      
+
       // Add the file to the local state
       const newFile: FileItem = {
         id: fileId,
@@ -160,7 +160,7 @@ const ClientFilesPage = () => {
         fileIds: Array.from(selectedFiles),
         clientId: clientId,
       });
-      
+
       setFiles((prev) => prev.filter((f) => !selectedFiles.has(f.id)));
       setSelectedFiles(new Set());
     } catch (error) {
@@ -171,7 +171,7 @@ const ClientFilesPage = () => {
   const handleFileClick = (file: FileItem) => {
     // Mock URL - in production this would come from the file service
     const mockFileUrl = 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800';
-    
+
     if (file.type === 'image' || file.type === 'video' || file.type === 'pdf') {
       // Open in new tab
       window.open(mockFileUrl, '_blank');
@@ -205,14 +205,14 @@ const ClientFilesPage = () => {
 
   const handleSaveEdit = async (fileName: string, tags: string[]) => {
     if (!editingFileId) return;
-    
+
     try {
       await updateFile({
         fileId: editingFileId,
         fileName: fileName.trim(),
         tags: tags,
       });
-      
+
       setFiles((prev) =>
         prev.map((f) =>
           f.id === editingFileId
@@ -421,75 +421,75 @@ const ClientFilesPage = () => {
     <div className="h-full w-full flex flex-col flex-1 min-h-0">
       <DataGrid
         data={sortedFiles}
-          columns={columns}
-          getRowId={(row) => row.id}
-          gridKey={`client-files-${clientId}`}
-          itemsPerPage={itemsPerPage}
-          onFilteredDataChange={setFilteredCount}
-          enableSearch={true}
-          searchPlaceholder={t('files.searchPlaceholder')}
-          searchFields={[(row) => `${row.fileName} ${row.tags.join(' ')}`]}
-          filters={filters}
-          showLastColumnDivider={false}
-          filterBarActions={
-            <Button onClick={handleOpenAddFile} className="gap-2">
-              <Plus className="size-4" />
-              <span>{t('files.addFile')}</span>
+        columns={columns}
+        getRowId={(row) => row.id}
+        gridKey={`client-files-${clientId}`}
+        itemsPerPage={itemsPerPage}
+        onFilteredDataChange={setFilteredCount}
+        enableSearch={true}
+        searchPlaceholder={t('files.searchPlaceholder')}
+        searchFields={[(row) => `${row.fileName} ${row.tags.join(' ')}`]}
+        filters={filters}
+        showLastColumnDivider={false}
+        filterBarActions={
+          <Button onClick={handleOpenAddFile} className="gap-2">
+            <Plus className="size-4" />
+            <span>{t('files.addFile')}</span>
+          </Button>
+        }
+        enableEditColumns={false}
+        enableExport={false}
+        enableRowSelection={true}
+        selectedRowIds={selectedFiles}
+        onSelectionChange={setSelectedFiles}
+        firstColumnId="fileName"
+        stickyFirstColumn={true}
+        firstColumnWidth="350px"
+        renderFirstColumn={renderFirstColumn}
+        renderFirstColumnHeader={renderFirstColumnHeader}
+        defaultColumnOrder={['fileName', 'type', 'tags', 'actions']}
+        defaultVisibleColumns={['fileName', 'type', 'tags', 'actions']}
+        showPagination={true}
+        gridPadding={true}
+        compactPagination={true}
+        emptyMessage={t('files.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('files.emptyState.title')}
+            subtitle={t('files.emptyState.subtitle')}
+            action={
+              <Button onClick={handleOpenAddFile} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('files.addFile')}</span>
+              </Button>
+            }
+          />
+        }
+        selectionActions={
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              onClick={handleClearSelected}
+              className="gap-2"
+              aria-label={t('files.actions.clearSelected')}
+            >
+              <X className="size-4" />
+              <span>
+                {t('files.actions.clearSelected')} {selectedFiles.size}
+              </span>
             </Button>
-          }
-          enableEditColumns={false}
-          enableExport={false}
-          enableRowSelection={true}
-          selectedRowIds={selectedFiles}
-          onSelectionChange={setSelectedFiles}
-          firstColumnId="fileName"
-          stickyFirstColumn={true}
-          firstColumnWidth="350px"
-          renderFirstColumn={renderFirstColumn}
-          renderFirstColumnHeader={renderFirstColumnHeader}
-          defaultColumnOrder={['fileName', 'type', 'tags', 'actions']}
-          defaultVisibleColumns={['fileName', 'type', 'tags', 'actions']}
-          showPagination={true}
-          gridPadding={true}
-          compactPagination={true}
-          emptyMessage={t('files.emptyMessage')}
-          emptyState={
-            <EmptyGridState
-              title={t('files.emptyState.title')}
-              subtitle={t('files.emptyState.subtitle')}
-              action={
-                <Button onClick={handleOpenAddFile} className="gap-2">
-                  <Plus className="size-4" />
-                  <span>{t('files.addFile')}</span>
-                </Button>
-              }
-            />
-          }
-          selectionActions={
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                onClick={handleClearSelected}
-                className="gap-2"
-                aria-label={t('files.actions.clearSelected')}
-              >
-                <X className="size-4" />
-                <span>
-                  {t('files.actions.clearSelected')} {selectedFiles.size}
-                </span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={handleDeleteSelected}
-                className="gap-2"
-                aria-label={t('files.actions.deleteSelected')}
-              >
-                <Trash2Icon className="size-4" />
-                <span>{t('general.delete')}</span>
-              </Button>
-            </div>
-          }
-        />
+            <Button
+              variant="ghost"
+              onClick={handleDeleteSelected}
+              className="gap-2"
+              aria-label={t('files.actions.deleteSelected')}
+            >
+              <Trash2Icon className="size-4" />
+              <span>{t('general.delete')}</span>
+            </Button>
+          </div>
+        }
+      />
       <AddFileSidePanel
         open={isAddFileOpen}
         onOpenChange={setIsAddFileOpen}
@@ -497,7 +497,7 @@ const ClientFilesPage = () => {
         clientName={clientName}
         clientId={clientId}
       />
-      
+
       {editingFile && (
         <EditFileSidePanel
           open={editingFileId !== null}

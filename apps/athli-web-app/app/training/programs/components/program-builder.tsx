@@ -15,7 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
@@ -26,11 +26,14 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import type { Workout } from '@/components/app/app-shell';
-import { mockWorkouts } from '@/components/app/app-shell';
+import { getWorkouts } from '@/api/coach/coach-workout-service';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DiscardChangesDialog } from '@/app/training/workouts/new/components/discard-changes-dialog';
-import type { WorkoutPayload } from '@/app/training/workouts/new/workout-schema';
+import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
+import type { WorkoutPayload, WorkoutSectionPayload } from '@/app/training/workouts/new/workout-schema';
+import { createProgram, editProgram, deletePrograms, updateProgramDetails, type ProgramData } from '@/api/coach/coach-program-service';
+import { toast } from 'sonner';
+import { EditProgramDetailsSidePanel } from './edit-program-details-side-panel';
 
 type ProgramMeta = {
   name: string;
@@ -96,6 +99,10 @@ export const ProgramBuilder = ({
     day: number;
     workout: Workout & { id: string };
   } | null>(null);
+  const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
+  const [isLoadingAvailableWorkouts, setIsLoadingAvailableWorkouts] = useState<boolean>(false);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
+
 
   type PreviewExercise = {
     id: string;
@@ -237,10 +244,10 @@ export const ProgramBuilder = ({
     const currentWorkoutsStr = JSON.stringify(workoutsByDay);
     const initialWorkoutsStr = JSON.stringify(initialState.workoutsByDay);
     const workoutsChanged = currentWorkoutsStr !== initialWorkoutsStr;
-    
+
     // Check if totalWeeks has changed
     const weeksChanged = totalWeeks !== initialState.totalWeeks;
-    
+
     return workoutsChanged || weeksChanged;
   };
 
@@ -272,7 +279,9 @@ export const ProgramBuilder = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!programMeta) return;
+
     // Build the program schema: list of days with full workout schemas
     const programSchema: ProgramSchema = [];
 
@@ -284,23 +293,15 @@ export const ProgramBuilder = ({
       // Each workout should already be a WorkoutPayload
       // Store the full workout schemas as-is
       const workoutSchemas: WorkoutPayload[] = workouts.map((workout) => {
-        // In the future, workouts should be stored as WorkoutPayload objects
-        // For now, we need to fetch/construct them from the workout.id
-        // This assumes you'll have a way to retrieve the full WorkoutPayload
-        // by workout ID from your API or local storage
-
-        // Placeholder - replace with actual workout retrieval
-        // const storedWorkout = getWorkoutById(workout.id);
-        // return storedWorkout;
-
         // Temporary placeholder that matches WorkoutPayload structure
         return {
           title: workout.program,
           description: workout.description || '',
           type: workout.type,
           difficulty: 'intermediate',
-          equipment: workout.equipment ? workout.equipment.split(',').map(e => e.trim()).filter(e => e) : [],
-          sections: [],
+          equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : [],
+          sections: [] as WorkoutSectionPayload[], // In a real app, this would be the actual workout data
+          totalExercises: workout.totalExercises,
         };
       });
 
@@ -312,24 +313,54 @@ export const ProgramBuilder = ({
       }
     }
 
-    // Save schema to localStorage (in a real app, this would be saved to a database)
-    if (mode === 'edit' && programId) {
-      const programSchemaKey = `oneninety_program_schema_${programId}`;
-      window.localStorage.setItem(programSchemaKey, JSON.stringify(programSchema));
+    const programData: ProgramData = {
+      name: programMeta.name,
+      description: programMeta.description,
+      type: programMeta.type,
+      difficulty: programMeta.difficulty,
+      weeks: totalWeeks.toString(),
+      // We store the full schema in program_data via the service
+    };
+
+    try {
+      if (mode === 'edit' && programId) {
+        await editProgram(programId, programData);
+      } else {
+        await createProgram(programData);
+      }
+
+      toast.success(t('programs.new.toast.savedSuccessfully', { name: programMeta.name }));
+
+      // Update initial state to reflect saved state
+      setInitialState({ workoutsByDay, totalWeeks });
+
+      // Navigate back to programs page
+      router.push('/training/programs');
+    } catch (error) {
+      console.error('Failed to save program:', error);
+      toast.error(t('programs.builder.saveFailed'));
     }
-
-    // eslint-disable-next-line no-console
-    console.log('Program schema:', programSchema);
-
-    // Update initial state to reflect saved state
-    setInitialState({ workoutsByDay, totalWeeks });
-
-    // Navigate back to programs page
-    router.push('/training/programs');
   };
 
-  const handleSaveClick = () => {
-    handleSave();
+  useEffect(() => {
+    const fetchAvailableWorkouts = async () => {
+      setIsLoadingAvailableWorkouts(true);
+      try {
+        const workouts = await getWorkouts();
+        setAvailableWorkouts(workouts);
+      } catch (error) {
+        console.error('Failed to fetch available workouts:', error);
+      } finally {
+        setIsLoadingAvailableWorkouts(false);
+      }
+    };
+
+    fetchAvailableWorkouts();
+  }, []);
+
+
+  const handleSaveClick = async () => {
+    await handleSave();
   };
 
   const handleBreadcrumbClick = (path: string) => {
@@ -409,6 +440,35 @@ export const ProgramBuilder = ({
       // Adjust current week if needed
       if (currentWeek > newTotalWeeks) {
         setCurrentWeek(Math.max(1, newTotalWeeks));
+      }
+    }
+  };
+
+  const handleSaveDetails = async (details: { name: string; type: string; difficulty: string; description: string }) => {
+    // Update local state
+    setProgramMeta((prev) => prev ? ({ ...prev, ...details }) : null);
+
+    // If editing an existing program, update backend immediately
+    if (mode === 'edit' && programId) {
+      try {
+        await updateProgramDetails(programId, details);
+        toast.success(t('programs.edit.toast.updatedSuccessfully', { name: details.name }));
+      } catch (error) {
+        console.error('Failed to update program details:', error);
+        toast.error('Failed to update details');
+      }
+    }
+  };
+
+  const handleDeleteProgram = async () => {
+    if (programId) {
+      try {
+        await deletePrograms(programId);
+        toast.success(t('programs.delete.toast.success'));
+        router.push('/training/programs');
+      } catch (error) {
+        console.error('Failed to delete program:', error);
+        toast.error(t('programs.delete.toast.error'));
       }
     }
   };
@@ -563,7 +623,7 @@ export const ProgramBuilder = ({
   };
 
   // Filter workouts based on search query
-  const filteredWorkouts = mockWorkouts.filter((workout) => {
+  const filteredWorkouts = availableWorkouts.filter((workout) => {
     if (!workoutSearchQuery.trim()) {
       return true;
     }
@@ -572,7 +632,7 @@ export const ProgramBuilder = ({
       workout.program.toLowerCase().includes(query) ||
       workout.description.toLowerCase().includes(query) ||
       workout.type.toLowerCase().includes(query) ||
-      workout.equipment.toLowerCase().includes(query)
+      (typeof workout.equipment === 'string' ? workout.equipment.toLowerCase() : '').includes(query)
     );
   });
 
@@ -610,7 +670,9 @@ export const ProgramBuilder = ({
     return null;
   }
 
-  const pageTitle = mode === 'new' ? t('programs.builder.newProgram') : t('programs.builder.editProgram');
+  const pageTitle = mode === 'new'
+    ? t('programs.builder.newProgram')
+    : `Editing ${programMeta.name}`;
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -643,14 +705,22 @@ export const ProgramBuilder = ({
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {pageTitle}
+                    {mode === 'new' ? t('programs.builder.newProgram') : t('programs.builder.editProgram')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold truncate">{programMeta.name}</h1>
+            <h1 className="text-[22px] font-semibold truncate">{pageTitle}</h1>
           </div>
           <ButtonGroup className="flex-shrink-0">
+            <Button
+              variant="ghost"
+              onClick={() => setIsEditDetailsOpen(true)}
+              className="gap-2 border border-primary"
+            >
+              <Pencil className="size-4" />
+              <span>Edit details</span>
+            </Button>
             <Button
               variant="ghost"
               onClick={handleCancel}
@@ -773,6 +843,18 @@ export const ProgramBuilder = ({
             </TabsList>
           </Tabs>
         </div>
+
+
+        {programMeta && (
+          <EditProgramDetailsSidePanel
+            open={isEditDetailsOpen}
+            onOpenChange={setIsEditDetailsOpen}
+            programMeta={programMeta}
+            onSave={handleSaveDetails}
+            onDelete={mode === 'edit' ? handleDeleteProgram : undefined}
+          />
+        )}
+
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 overflow-auto bg-background p-4">
@@ -964,10 +1046,9 @@ export const ProgramBuilder = ({
                 <div className="flex flex-col gap-2 flex-1 overflow-y-auto min-h-0">
                   {filteredWorkouts.length > 0 ? (
                     filteredWorkouts.map((workout) => {
-                      const equipmentList = workout.equipment
-                        .split(',')
-                        .map((item) => item.trim())
-                        .filter((item) => item !== '');
+                      const equipmentList = typeof workout.equipment === 'string'
+                        ? workout.equipment.split(',').map((item: string) => item.trim()).filter((item: string) => item !== '')
+                        : Array.isArray(workout.equipment) ? workout.equipment : [];
                       return (
                         <div
                           key={workout.id}
@@ -1034,9 +1115,9 @@ export const ProgramBuilder = ({
                         <Badge variant="secondary" className="text-xs">
                           {t('general.type')}: {selectedWorkout.type}
                         </Badge>
-                        {selectedWorkout.equipment && selectedWorkout.equipment.split(',').filter((item) => item.trim() !== '').length > 0 && (
+                        {selectedWorkout.equipment && (typeof selectedWorkout.equipment === 'string' ? selectedWorkout.equipment.split(',').filter((item: string) => item.trim() !== '').length > 0 : false) && (
                           <Badge variant="secondary" className="text-xs">
-                            {t('general.equipment')}: {selectedWorkout.equipment.split(',').map((item) => item.trim()).filter((item) => item !== '').join(', ')}
+                            {t('general.equipment')}: {typeof selectedWorkout.equipment === 'string' ? selectedWorkout.equipment.split(',').map((item: string) => item.trim()).filter((item: string) => item !== '').join(', ') : ''}
                           </Badge>
                         )}
                       </div>
@@ -1276,15 +1357,15 @@ export const ProgramBuilder = ({
                             {t('general.type')}: {selectedWorkoutDetails.workout.type}
                           </Badge>
                           {selectedWorkoutDetails.workout.equipment &&
-                            selectedWorkoutDetails.workout.equipment
+                            (typeof selectedWorkoutDetails.workout.equipment === 'string' ? selectedWorkoutDetails.workout.equipment
                               .split(',')
-                              .filter((item) => item.trim() !== '').length > 0 && (
+                              .filter((item: string) => item.trim() !== '').length > 0 : false) && (
                               <Badge variant="secondary" className="text-xs">
-                                {selectedWorkoutDetails.workout.equipment
+                                {typeof selectedWorkoutDetails.workout.equipment === 'string' ? selectedWorkoutDetails.workout.equipment
                                   .split(',')
-                                  .map((item) => item.trim())
-                                  .filter((item) => item !== '')
-                                  .join(', ')}
+                                  .map((item: string) => item.trim())
+                                  .filter((item: string) => item !== '')
+                                  .join(', ') : ''}
                               </Badge>
                             )}
                         </div>
@@ -1372,7 +1453,7 @@ export const ProgramBuilder = ({
         onCancel={handleCancelDiscard}
         onConfirm={handleConfirmDiscard}
       />
-    </div>
+    </div >
   );
 };
 

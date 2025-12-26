@@ -11,10 +11,11 @@ import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-selec
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Info } from 'lucide-react';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
-import { getAllFiles, type CoachFile } from '@/lib/coach/coach-file-service';
-import { addFilesToClient } from '@/lib/client/client-file-service';
+import { getAllFiles, type CoachFile } from '@/api/coach/coach-file-service';
+import { addFilesToClient } from '@/api/client/client-file-service';
 
 const TAG_OPTIONS: Option[] = [
   { label: 'Training', value: 'Training' },
@@ -47,7 +48,8 @@ const TAG_OPTIONS: Option[] = [
 type AddFileSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (fileName: string, file: File, tags: string[]) => Promise<void>;
+  onUpload: (file: File, fileName: string) => Promise<void>;
+  isUploading?: boolean;
   clientName?: string;
   clientId?: string;
 };
@@ -55,7 +57,8 @@ type AddFileSidePanelProps = {
 export const AddFileSidePanel = ({
   open,
   onOpenChange,
-  onSave,
+  onUpload,
+  isUploading = false,
   clientName,
   clientId,
 }: AddFileSidePanelProps) => {
@@ -122,7 +125,7 @@ export const AddFileSidePanel = ({
 
   const handleSave = async () => {
     if (!fileName.trim() || !selectedFile) return;
-    await onSave(fileName.trim(), selectedFile, selectedTags);
+    await onUpload(selectedFile, fileName.trim());
     handleClose();
   };
 
@@ -166,17 +169,19 @@ export const AddFileSidePanel = ({
 
     const query = librarySearchQuery.trim().toLowerCase();
     return coachFiles.filter(
-      (file) =>
-        isFuzzyMatch(file.fileName, query) ||
-        file.tags.some((tag) => isFuzzyMatch(tag, query))
+      (file) => isFuzzyMatch(file.filename, query)
     );
   }, [coachFiles, librarySearchQuery]);
 
   const handleFileSelect = (file: File) => {
-    setSelectedFile(file);
-    if (!fileName.trim()) {
-      setFileName(file.name);
+    // Validate file size (50MB limit)
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    if (file.size > maxSize) {
+      alert('File size exceeds 50MB limit. Please select a smaller file.');
+      return;
     }
+
+    setSelectedFile(file);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -222,17 +227,22 @@ export const AddFileSidePanel = ({
   };
 
   const showAlert = !!clientName;
-  const isValid = activeTab === 'yourLibrary'
+  const isValid = clientId && activeTab === 'yourLibrary'
     ? selectedLibraryFile !== null
-    : fileName.trim() && selectedFile !== null;
+    : fileName.trim() !== '' && selectedFile !== null;
 
   return (
     <SidePanel
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(isOpen) => {
+        onOpenChange(isOpen);
+        if (!isOpen) {
+          handleClose();
+        }
+      }}
       title={t('files.addFile')}
       footer={
-        activeTab === 'yourLibrary' ? (
+        clientId && activeTab === 'yourLibrary' ? (
           <div className="flex w-full justify-start gap-2">
             <Button type="button" onClick={handleSaveFromYourLibrary} disabled={!selectedLibraryFile}>
               {t('general.save')}
@@ -243,8 +253,8 @@ export const AddFileSidePanel = ({
           </div>
         ) : (
           <div className="flex w-full justify-start gap-2">
-            <Button type="button" onClick={handleSave} disabled={!isValid}>
-              {t('general.save')}
+            <Button type="button" onClick={handleSave} disabled={!isValid || isUploading}>
+              {isUploading ? t('general.uploading') : t('general.save')}
             </Button>
             <Button type="button" variant="outline" onClick={handleClose}>
               {t('general.cancel')}
@@ -253,252 +263,324 @@ export const AddFileSidePanel = ({
         )
       }
     >
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'yourLibrary')} className="w-full">
-        <TabsList className="w-full mb-6">
-          <TabsTrigger
-            value="yourLibrary"
-            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-          >
-            {t('files.yourLibrary')}
-          </TabsTrigger>
-          <TabsTrigger
-            value="new"
-            className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-          >
-            {t('files.newFile')}
-          </TabsTrigger>
-        </TabsList>
+      {clientId ? (
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'yourLibrary')} className="w-full">
+          <TabsList className="w-full mb-6">
+            <TabsTrigger
+              value="yourLibrary"
+              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+            >
+              {t('files.yourLibrary')}
+            </TabsTrigger>
+            <TabsTrigger
+              value="new"
+              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+            >
+              {t('files.newFile')}
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="yourLibrary" className="mt-0">
-          <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
-            {isLoadingFiles ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>{t('general.loading')}</p>
-              </div>
-            ) : coachFiles.length === 0 ? (
-              <Alert className="bg-primary/5 border-primary/20 text-primary">
-                <Info className="size-4" />
-                <AlertDescription className="min-w-0 line-clamp-4">
-                  {t('files.noLibraryFiles')}{' '}
-                  <Link href="/files" className="underline hover:no-underline">
-                    <strong>{t('files.libraryLink')}</strong>
-                  </Link>
-                  .
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                <div className="relative mb-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder={t('files.searchPlaceholder')}
-                    value={librarySearchQuery}
-                    onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                    className="pl-9"
-                    aria-label={t('files.searchPlaceholder')}
-                  />
+          <TabsContent value="yourLibrary" className="mt-0">
+            <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
+              {isLoadingFiles ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{t('general.loading')}</p>
                 </div>
-                {filteredLibraryFiles.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>{t('files.emptyMessage')}</p>
-                  </div>
-                ) : selectedLibraryFile ? (
-                  <>
-                    <Card className="p-4 ring-2 ring-primary">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex flex-col gap-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <FileText className="size-4 text-muted-foreground" />
-                            <h4 className="text-sm font-medium text-foreground">{selectedLibraryFile.fileName}</h4>
-                          </div>
-                          {selectedLibraryFile.tags.length > 0 && (
-                            <div className="flex items-center gap-1 flex-wrap mt-1">
-                              {selectedLibraryFile.tags.slice(0, 3).map((tag) => (
-                                <span key={tag} className="text-xs text-muted-foreground">
-                                  {tag}
-                                </span>
-                              ))}
-                              {selectedLibraryFile.tags.length > 3 && (
-                                <span className="text-xs text-muted-foreground">
-                                  +{selectedLibraryFile.tags.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleDeselectLibraryFile}
-                          className="h-8 w-8 flex-shrink-0"
-                          aria-label={t('general.edit')}
-                        >
-                          <Info className="size-4" />
-                        </Button>
-                      </div>
-                    </Card>
-                  </>
-                ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {filteredLibraryFiles.map((file) => (
-                      <Card
-                        key={file.id}
-                        className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                        onClick={() => handleSelectLibraryFile(file)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleSelectLibraryFile(file);
-                          }
-                        }}
-                        tabIndex={0}
-                        role="button"
-                        aria-label={`Select file: ${file.fileName}`}
-                      >
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <FileText className="size-4 text-muted-foreground" />
-                            <h4 className="text-sm font-medium text-foreground">{file.fileName}</h4>
-                          </div>
-                          {file.tags.length > 0 && (
-                            <div className="flex items-center gap-1 flex-wrap mt-1">
-                              {file.tags.slice(0, 3).map((tag) => (
-                                <span key={tag} className="text-xs text-muted-foreground">
-                                  {tag}
-                                </span>
-                              ))}
-                              {file.tags.length > 3 && (
-                                <span className="text-xs text-muted-foreground">
-                                  +{file.tags.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="new" className="mt-0">
-          <div
-            className="flex flex-col gap-6 flex-1 min-h-0 relative"
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            {/* Drag Overlay */}
-            {isDragging && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-                <p className="text-lg font-semibold text-primary">Drop file here</p>
-              </div>
-            )}
-            
-            {/* Form Content - hidden when dragging */}
-            <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
-              {showAlert && (
-                <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
+              ) : coachFiles.length === 0 ? (
+                <Alert className="bg-primary/5 border-primary/20 text-primary">
                   <Info className="size-4" />
                   <AlertDescription className="min-w-0 line-clamp-4">
-                    Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
+                    {t('files.noLibraryFiles')}{' '}
+                    <Link href="/files" className="underline hover:no-underline">
+                      <strong>{t('files.libraryLink')}</strong>
+                    </Link>
+                    .
                   </AlertDescription>
                 </Alert>
-              )}
-              {/* File Name Input */}
-              <div className="flex flex-col gap-2">
-                <label htmlFor="file-name" className="text-sm font-medium">
-                  {t('files.form.fileName')}
-                </label>
-                <Input
-                  id="file-name"
-                  value={fileName}
-                  onChange={(e) => setFileName(e.target.value)}
-                  placeholder={t('files.form.fileNamePlaceholder')}
-                />
-              </div>
-
-              {/* File Drop Area */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium">{t('files.form.file')}</label>
-                <div
-                  className={cn(
-                    'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                    'border-muted hover:border-primary',
-                    selectedFile && 'border-primary bg-primary/5'
-                  )}
-                >
-                  {selectedFile ? (
+              ) : (
+                <>
+                  <div className="relative mb-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder={t('files.searchPlaceholder')}
+                      value={librarySearchQuery}
+                      onChange={(e) => setLibrarySearchQuery(e.target.value)}
+                      className="pl-9"
+                      aria-label={t('files.searchPlaceholder')}
+                    />
+                  </div>
+                  {filteredLibraryFiles.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>{t('files.emptyMessage')}</p>
+                    </div>
+                  ) : selectedLibraryFile ? (
                     <>
-                      <Check className="size-10 text-green-500" />
-                      <div className="text-center">
-                        <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(selectedFile.size / 1024).toFixed(2)} KB
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedFile(null);
-                          if (fileInputRef.current) {
-                            fileInputRef.current.value = '';
-                          }
-                        }}
-                      >
-                        {t('files.form.changeFile')}
-                      </Button>
+                      <Card className="p-4 ring-2 ring-primary">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <FileText className="size-4 text-muted-foreground" />
+                              <h4 className="text-sm font-medium text-foreground">{selectedLibraryFile.filename}</h4>
+                            </div>
+
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDeselectLibraryFile}
+                            className="h-8 w-8 flex-shrink-0"
+                            aria-label={t('general.edit')}
+                          >
+                            <Info className="size-4" />
+                          </Button>
+                        </div>
+                      </Card>
                     </>
                   ) : (
-                    <>
-                      <Upload className="size-10 text-muted-foreground" />
-                      <div className="text-center">
-                        <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
-                        <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
-                      </div>
-                      <Input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileInputChange}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {t('files.form.selectFile')}
-                      </Button>
-                    </>
+                    <div className="grid grid-cols-1 gap-3">
+                      {filteredLibraryFiles.map((file) => (
+                        <Card
+                          key={file.id}
+                          className="p-4 cursor-pointer hover:bg-accent transition-colors"
+                          onClick={() => handleSelectLibraryFile(file)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleSelectLibraryFile(file);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Select file: ${file.filename}`}
+                        >
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <FileText className="size-4 text-muted-foreground" />
+                              <h4 className="text-sm font-medium text-foreground">{file.filename}</h4>
+                            </div>
+
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
                   )}
+                </>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="new" className="mt-0">
+            <div
+              className="flex flex-col gap-6 flex-1 min-h-0 relative"
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
+              {/* Drag Overlay */}
+              {isDragging && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+                  <p className="text-lg font-semibold text-primary">Drop file here</p>
+                </div>
+              )}
+
+              {/* Form Content - hidden when dragging */}
+              <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
+                {showAlert && (
+                  <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
+                    <Info className="size-4" />
+                    <AlertDescription className="min-w-0 line-clamp-4">
+                      Files added here are specific to <strong>{clientName}</strong>. If you want this to be saved as a general file, navigate to the respective main page in <Link href="/files" className="underline hover:no-underline"><strong>Library</strong></Link>.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {/* File Name Input */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="file-name" className="text-sm font-medium">
+                    {t('files.form.fileName')}
+                    <RequiredAsterisk />
+                  </label>
+                  <Input
+                    id="file-name"
+                    value={fileName}
+                    onChange={(e) => setFileName(e.target.value)}
+                    placeholder={t('files.form.fileNamePlaceholder')}
+                  />
+                </div>
+
+                {/* File Drop Area */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">
+                    {t('files.form.file')}
+                    <RequiredAsterisk />
+                  </label>
+                  <div
+                    className={cn(
+                      'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
+                      'border-muted hover:border-primary',
+                      selectedFile && 'border-primary bg-primary/5'
+                    )}
+                  >
+                    {selectedFile ? (
+                      <>
+                        <Check className="size-10 text-green-500" />
+                        <div className="text-center">
+                          <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(selectedFile.size / 1024).toFixed(2)} KB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedFile(null);
+                            if (fileInputRef.current) {
+                              fileInputRef.current.value = '';
+                            }
+                          }}
+                        >
+                          {t('files.form.changeFile')}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="size-10 text-muted-foreground" />
+                        <div className="text-center">
+                          <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
+                          <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
+                        </div>
+                        <Input
+                          ref={fileInputRef}
+                          type="file"
+                          className="hidden"
+                          onChange={handleFileInputChange}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          {t('files.form.selectFile')}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tags Dropdown */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium">{t('files.form.tags')}</label>
+                  <MultiAsyncSelect
+                    options={TAG_OPTIONS}
+                    value={selectedTags}
+                    onValueChange={setSelectedTags}
+                    placeholder={t('files.form.selectTags')}
+                    searchPlaceholder={t('files.form.searchTags')}
+                    maxCount={3}
+                    clearText={t('general.clear')}
+                    closeText={t('general.close')}
+                  />
                 </div>
               </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div
+          className="flex flex-col gap-6 flex-1 min-h-0 relative"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* Drag Overlay */}
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+              <p className="text-lg font-semibold text-primary">Drop file here</p>
+            </div>
+          )}
 
-              {/* Tags Dropdown */}
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium">{t('files.form.tags')}</label>
-                <MultiAsyncSelect
-                  options={TAG_OPTIONS}
-                  value={selectedTags}
-                  onValueChange={setSelectedTags}
-                  placeholder={t('files.form.selectTags')}
-                  searchPlaceholder={t('files.form.searchTags')}
-                  maxCount={3}
-                  clearText={t('general.clear')}
-                  closeText={t('general.close')}
-                />
+          {/* Form Content - hidden when dragging */}
+          <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
+            {/* File Name Input */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="file-name" className="text-sm font-medium">
+                {t('files.form.fileName')}
+                <RequiredAsterisk />
+              </label>
+              <Input
+                id="file-name"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                placeholder={t('files.form.fileNamePlaceholder')}
+              />
+            </div>
+
+            {/* File Drop Area */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">
+                {t('files.form.file')}
+                <RequiredAsterisk />
+              </label>
+              <div
+                className={cn(
+                  'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
+                  'border-muted hover:border-primary',
+                  selectedFile && 'border-primary bg-primary/5'
+                )}
+              >
+                {selectedFile ? (
+                  <>
+                    <Check className="size-10 text-green-500" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(selectedFile.size / 1024).toFixed(2)} KB
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = '';
+                        }
+                      }}
+                    >
+                      {t('files.form.changeFile')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-10 text-muted-foreground" />
+                    <div className="text-center">
+                      <p className="text-sm font-medium mb-1">{t('files.form.dropFileHere')}</p>
+                      <p className="text-xs text-muted-foreground">{t('files.form.orClickToSelect')}</p>
+                    </div>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileInputChange}
+                      accept="*/*"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {t('files.form.selectFile')}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </SidePanel>
   );
 };
-

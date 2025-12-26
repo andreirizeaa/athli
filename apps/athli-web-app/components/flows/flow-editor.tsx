@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useState, useEffect, useRef } from 'react';
-import { getForms } from '@/lib/coach/coach-form-service';
-import { type Habit } from '@/lib/coach/coach-habit-service';
+import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { getCheckIns } from '@/api/coach/coach-check-in-service';
+import { getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
+import { type Habit } from '@/api/coach/coach-habit-service';
 import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
 import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
@@ -20,7 +22,17 @@ import ReactFlow, {
   type Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { getLayoutedElements } from '@/lib/coach/flow-layout';
+import { getLayoutedElements } from '@/api/coach/flow-layout';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Custom node components
 function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?: React.ComponentType<{ className?: string }>; onClick: () => void; onEdit?: () => void; onDelete?: () => void } }) {
@@ -215,8 +227,8 @@ function CheckNode({ data }: { data: { label: string; subtitle?: string; onDelet
             style={{ top: '-8px' }}
           />
         )}
-        <Handle type="source" position={Position.Bottom} id="yes" style={{ left: '30%' }} className="!bg-green-500" />
-        <Handle type="source" position={Position.Bottom} id="no" style={{ left: '70%' }} className="!bg-red-500" />
+        <Handle type="source" position={Position.Bottom} id="yes" className="!bg-green-500" />
+        <Handle type="source" position={Position.Bottom} id="no" className="!bg-red-500" />
       </div>
     </div>
   );
@@ -294,15 +306,28 @@ type ActionNodeData = {
   selectedCheckIns?: Set<string>;
   selectedFiles?: Set<string>;
   selectedHabits?: Set<string>;
+  selectedMetrics?: Set<string>;
   branch?: 'yes' | 'no' | null;
   checkNodeId?: string;
+
+  // Structured data for automation execution
+  actionSchema?: {
+    type: string;
+    payload: string | number | string[] | null;
+    nextId?: string | null;
+    yesId?: string | null;
+    noId?: string | null;
+  };
 };
 
 export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
   const [panelType, setPanelType] = useState<PanelType>(null);
+  const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrigger, setSelectedTrigger] = useState<TriggerOption | null>(null);
   const [actionNodes, setActionNodes] = useState<ActionNodeData[]>([]);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+
   const [checkNodes, setCheckNodes] = useState<Array<{ id: string; linkedActionId: string; repeatActionId: string }>>([]);
   const reactFlowInstanceRef = useRef<any>(null);
 
@@ -382,11 +407,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
     setIsLoadingData(true);
     try {
       if (selectedActionOption.id === 'assign-questionnaire' || selectedActionOption.id === 'assign-check-in') {
-        const allForms = await getForms();
-        // Filter forms - questionnaires are non-check-in forms, check-ins are check-in forms
-        // Using the same logic as forms page
-        const checkInForms = allForms.filter((form) => form.name.includes('Check-in') || form.name.includes('Weekly'));
-        const questionnaireForms = allForms.filter((form) => !form.name.includes('Check-in') && !form.name.includes('Weekly'));
+        const [checkInForms, questionnaireForms] = await Promise.all([
+          getCheckIns(),
+          getQuestionnaires(),
+        ]);
 
         setCheckIns(checkInForms.map((form) => ({ id: form.id, name: form.name })));
         setQuestionnaires(questionnaireForms.map((form) => ({ id: form.id, name: form.name })));
@@ -455,10 +479,32 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
   }, []);
 
   const handleDeleteAction = useCallback((actionId: string) => {
-    // Also delete associated check node if it exists
-    setCheckNodes((prev) => prev.filter((c) => c.repeatActionId !== actionId));
-    setActionNodes((prev) => prev.filter((node) => node.id !== actionId));
-  }, []);
+    // Function to recursively find all actions and checks to delete
+    const findDescendants = (id: string, currentActions: ActionNodeData[], currentChecks: typeof checkNodes) => {
+      let actionsToDelete = [id];
+      let checksToDelete: string[] = [];
+
+      // Find checks that branch from this action
+      const checksFromThisAction = currentChecks.filter(c => c.repeatActionId === id);
+      checksFromThisAction.forEach(check => {
+        checksToDelete.push(check.id);
+        // Find actions that are in the branches of this check
+        const actionsInBranches = currentActions.filter(a => a.checkNodeId === check.id);
+        actionsInBranches.forEach(branchAction => {
+          const descendants = findDescendants(branchAction.id, currentActions, currentChecks);
+          actionsToDelete.push(...descendants.actionsToDelete);
+          checksToDelete.push(...descendants.checksToDelete);
+        });
+      });
+
+      return { actionsToDelete, checksToDelete };
+    };
+
+    const { actionsToDelete, checksToDelete } = findDescendants(actionId, actionNodes, checkNodes);
+
+    setCheckNodes((prev) => prev.filter((c) => !checksToDelete.includes(c.id)));
+    setActionNodes((prev) => prev.filter((node) => !actionsToDelete.includes(node.id)));
+  }, [actionNodes, checkNodes]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(DEFAULT_EDGES);
@@ -545,7 +591,9 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
                 ? (actionNode.selectedFiles?.size || 0)
                 : actionNode.option.id === 'add-habit'
                   ? (actionNode.selectedHabits?.size || 0)
-                  : 0;
+                  : actionNode.option.id === 'add-metric'
+                    ? (actionNode.selectedMetrics?.size || 0)
+                    : 0;
 
           if (count > 0) {
             const baseName = actionNode.option.name.replace(/^Add /i, '').replace(/^Assign /i, '');
@@ -590,6 +638,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
                 setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
                 setSelectedFiles(actionNode.selectedFiles || new Set());
                 setSelectedHabits(actionNode.selectedHabits || new Set());
+                setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
                 fetchData();
               }
@@ -611,6 +660,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
                 setSelectedCheckIns(actionNode.selectedCheckIns || new Set());
                 setSelectedFiles(actionNode.selectedFiles || new Set());
                 setSelectedHabits(actionNode.selectedHabits || new Set());
+                setSelectedMetrics(actionNode.selectedMetrics || new Set());
                 setActionStep('confirmation');
                 fetchData();
               }
@@ -689,7 +739,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
           data: {
             label: 'Check',
             subtitle: 'Check in completed',
-            onDelete: () => handleDeleteAction(checkNode.repeatActionId),
+            onDelete: () => setDeleteConfirmationId(checkNode.repeatActionId),
           },
         });
 
@@ -823,6 +873,69 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
     return { logicalNodes, logicalEdges };
   }, [selectedTrigger, actionNodes, checkNodes, handleOpenTriggerPanel, handleOpenActionPanel, handleDeleteTrigger, handleDeleteAction, fetchData]);
 
+  // Derived schema for automation execution - easy for backend to implement
+  const automationSchema = useMemo(() => {
+    if (!selectedTrigger) return null;
+
+    const findNextExecutionNode = (sourceId: string, branch?: 'yes' | 'no') => {
+      const { logicalEdges } = buildLogicalGraph();
+
+      // Find direct edge from this source
+      let edge = logicalEdges.find(e =>
+        e.source === sourceId && (!branch || e.sourceHandle === branch)
+      );
+
+      // Skip 'addAction' nodes - they are UI placeholders
+      while (edge && edge.target.startsWith('add-action')) {
+        const nextEdge = logicalEdges.find(e => e.source === edge?.target);
+        if (!nextEdge) return null;
+        edge = nextEdge;
+      }
+
+      if (!edge || edge.target === 'end' || edge.target.startsWith('end-')) return null;
+
+      return edge.target;
+    };
+
+    return {
+      trigger: {
+        id: 'trigger',
+        type: selectedTrigger.id,
+        nextId: findNextExecutionNode('trigger'),
+      },
+      actions: actionNodes.reduce((acc, node) => {
+        const isCheck = node.option.id === 'check';
+        const checkNode = checkNodes.find(c => c.repeatActionId === node.id);
+        const sourceId = isCheck && checkNode ? checkNode.id : node.id;
+
+        acc[node.id] = {
+          type: node.option.id,
+          payload: node.actionSchema?.payload ?? (
+            isCheck ? 'check-in-completed' :
+              (node.option.id === 'wait' ? (node.waitDuration || 1) * (
+                node.waitUnit === 'days' ? 1440 :
+                  node.waitUnit === 'hours' ? 60 : 1
+              ) : null)
+          ),
+          // Traversal links
+          nextId: !isCheck ? findNextExecutionNode(sourceId) : undefined,
+          yesId: isCheck ? findNextExecutionNode(sourceId, 'yes') : undefined,
+          noId: isCheck ? findNextExecutionNode(sourceId, 'no') : undefined,
+        };
+        return acc;
+      }, {} as Record<string, any>)
+    };
+  }, [selectedTrigger, actionNodes, checkNodes, buildLogicalGraph]);
+
+  // Log schema for development and API readiness
+  useEffect(() => {
+    if (automationSchema) {
+      console.log('--- Current Flow Automation Schema ---');
+      console.log(JSON.stringify(automationSchema, null, 2));
+      console.log('--------------------------------------');
+    }
+  }, [automationSchema]);
+
   // Handle auto-layout
   useEffect(() => {
     let isMounted = true;
@@ -836,22 +949,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
 
-      // Center viewport on trigger
-      if (reactFlowInstanceRef.current && layoutedNodes.length > 0) {
-        const instance = reactFlowInstanceRef.current;
-        const triggerNode = layoutedNodes.find((n) => n.id === 'trigger');
-        if (triggerNode) {
-          const flowBounds = document.querySelector('.react-flow__renderer');
-          if (flowBounds) {
-            const containerWidth = flowBounds.clientWidth;
-            const nodeWidth = 300;
-            const centerX = (containerWidth / 2) - (nodeWidth / 2) - triggerNode.position.x;
-            const topPadding = 40;
-            const topY = -triggerNode.position.y + topPadding;
-            instance.setViewport({ x: centerX, y: topY, zoom: instance.getViewport().zoom }, { duration: 200 });
-          }
-        }
-      }
+      // Viewport centering is handled only once on initial load (onInit).
+      // We removed the auto-centering here to prevent the view from jumping 
+      // back to the top whenever nodes are added or edited.
+
     };
 
     layout();
@@ -1095,6 +1196,23 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
               selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
               selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
               selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
+              selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
+              actionSchema: {
+                type: selectedActionOption.id,
+                payload: selectedActionOption.id === 'send-message' ? messageText
+                  : selectedActionOption.id === 'wait' ? (
+                    waitUnit === 'days' ? waitDuration * 24 * 60 :
+                      waitUnit === 'hours' ? waitDuration * 60 :
+                        waitDuration
+                  ) : selectedActionOption.id === 'check' ? 'check-in-completed'
+                    : ['assign-questionnaire', 'assign-check-in', 'add-file', 'add-habit', 'add-metric'].includes(selectedActionOption.id) ? (
+                      selectedActionOption.id === 'assign-questionnaire' ? Array.from(selectedQuestionnaires)
+                        : selectedActionOption.id === 'assign-check-in' ? Array.from(selectedCheckIns)
+                          : selectedActionOption.id === 'add-file' ? Array.from(selectedFiles)
+                            : selectedActionOption.id === 'add-habit' ? Array.from(selectedHabits)
+                              : Array.from(selectedMetrics)
+                    ) : null,
+              }
             }
             : node
         )
@@ -1129,6 +1247,23 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
         selectedCheckIns: selectedActionOption.id === 'assign-check-in' ? selectedCheckIns : undefined,
         selectedFiles: selectedActionOption.id === 'add-file' ? selectedFiles : undefined,
         selectedHabits: selectedActionOption.id === 'add-habit' ? selectedHabits : undefined,
+        selectedMetrics: selectedActionOption.id === 'add-metric' ? selectedMetrics : undefined,
+        actionSchema: {
+          type: selectedActionOption.id,
+          payload: selectedActionOption.id === 'send-message' ? messageText
+            : selectedActionOption.id === 'wait' ? (
+              waitUnit === 'days' ? waitDuration * 24 * 60 :
+                waitUnit === 'hours' ? waitDuration * 60 :
+                  waitDuration
+            ) : selectedActionOption.id === 'check' ? 'check-in-completed'
+              : ['assign-questionnaire', 'assign-check-in', 'add-file', 'add-habit', 'add-metric'].includes(selectedActionOption.id) ? (
+                selectedActionOption.id === 'assign-questionnaire' ? Array.from(selectedQuestionnaires)
+                  : selectedActionOption.id === 'assign-check-in' ? Array.from(selectedCheckIns)
+                    : selectedActionOption.id === 'add-file' ? Array.from(selectedFiles)
+                      : selectedActionOption.id === 'add-habit' ? Array.from(selectedHabits)
+                        : Array.from(selectedMetrics)
+              ) : null,
+        },
         branch: currentBranch || undefined,
         checkNodeId: currentCheckNodeId || undefined,
       };
@@ -1300,7 +1435,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
           onConnect={onConnect}
           onNodeDrag={onNodeDrag}
           nodeTypes={nodeTypes}
-          nodesDraggable={true}
+          nodesDraggable={false}
           nodesConnectable={false}
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           onInit={(reactFlowInstance) => {
@@ -1344,6 +1479,30 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
           <MiniMap />
         </ReactFlow>
       </div>
+
+      <AlertDialog open={!!deleteConfirmationId} onOpenChange={(open) => !open && setDeleteConfirmationId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('flows.editor.deleteCheckTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('flows.editor.deleteCheckDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('general.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirmationId) {
+                  handleDeleteAction(deleteConfirmationId);
+                  setDeleteConfirmationId(null);
+                }
+              }}
+            >
+              {t('general.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Right Sidebar - Overlays on top */}
       <FlowEditorSidePanel

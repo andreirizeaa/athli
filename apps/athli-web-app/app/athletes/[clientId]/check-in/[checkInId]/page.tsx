@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getClientCheckInsForForm } from '@/lib/client/client-form-service';
+import { getClientCheckInsForForm } from '@/api/client/client-form-service';
 
 type CheckInDetailPageProps = {
   params: Promise<{ clientId: string; checkInId: string }>;

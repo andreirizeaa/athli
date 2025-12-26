@@ -54,8 +54,8 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import { messageDraftStorage } from '@/lib/general/message-draft-storage';
-import { sendMessage } from '@/lib/coach/coach-message-service';
-import { searchNotes } from '@/lib/coach/coach-note-service';
+import { sendMessage } from '@/api/coach/coach-message-service';
+import { searchNotes } from '@/api/coach/coach-client-service';
 import {
   mockContacts,
   mockMessages,
@@ -186,7 +186,7 @@ const MessagingPage = () => {
       if (selectedContactId) {
         await searchNotes(selectedContactId, noteSearchQuery);
       }
-      
+
       // Client-side filtering
       const query = noteSearchQuery.toLowerCase();
       const filtered = notes.filter(
@@ -238,11 +238,11 @@ const MessagingPage = () => {
       prevNotes.map((note) =>
         note.id === selectedNote.id
           ? {
-              ...note,
-              title: editingNoteTitle,
-              body: editingNoteBody,
-              updatedAt: Date.now(),
-            }
+            ...note,
+            title: editingNoteTitle,
+            body: editingNoteBody,
+            updatedAt: Date.now(),
+          }
           : note
       )
     );
@@ -654,13 +654,13 @@ const MessagingPage = () => {
             ? { pdf: existingDraft.pdf }
             : currentPdf
               ? {
-                  pdf: {
-                    name: currentPdf.name,
-                    data: '', // Will be filled when FileReader completes
-                    type: currentPdf.type,
-                    size: currentPdf.size,
-                  },
-                }
+                pdf: {
+                  name: currentPdf.name,
+                  data: '', // Will be filled when FileReader completes
+                  type: currentPdf.type,
+                  size: currentPdf.size,
+                },
+              }
               : {}),
           images: currentImages.map((img) => ({
             name: img.name,
@@ -930,13 +930,13 @@ const MessagingPage = () => {
 
       const replyToData = replyingToMessage
         ? {
-            id: replyingToMessage.id,
-            text: replyingToMessage.text,
-            isSent: replyingToMessage.isSent,
-            pdf: replyingToMessage.pdf,
-            images: replyingToMessage.images,
-            video: replyingToMessage.video,
-          }
+          id: replyingToMessage.id,
+          text: replyingToMessage.text,
+          isSent: replyingToMessage.isSent,
+          pdf: replyingToMessage.pdf,
+          images: replyingToMessage.images,
+          video: replyingToMessage.video,
+        }
         : undefined;
 
       const newMessages: Message[] = [];
@@ -1649,7 +1649,7 @@ const MessagingPage = () => {
             </Button>
           </div>
         </div>
-        <Separator className="mb-4"/>
+        <Separator className="mb-4" />
       </div>
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
@@ -2618,10 +2618,10 @@ const MessagingPage = () => {
                         accept="video/mp4,.mp4"
                       />
                       {(!textareaHeight || textareaHeight <= 36) &&
-                      !replyingToMessage &&
-                      !attachedPdf &&
-                      !attachedVideo &&
-                      attachedImages.length === 0 ? (
+                        !replyingToMessage &&
+                        !attachedPdf &&
+                        !attachedVideo &&
+                        attachedImages.length === 0 ? (
                         <TooltipProvider>
                           <Tooltip>
                             <DropdownMenu>
@@ -2716,9 +2716,9 @@ const MessagingPage = () => {
                               </Tooltip>
                             </TooltipProvider>
                             {messageInput.trim() ||
-                            attachedPdf ||
-                            attachedVideo ||
-                            attachedImages.length > 0 ? (
+                              attachedPdf ||
+                              attachedVideo ||
+                              attachedImages.length > 0 ? (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>

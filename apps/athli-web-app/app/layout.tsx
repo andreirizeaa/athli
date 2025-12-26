@@ -6,6 +6,8 @@ import { ThemeProvider } from '@/lib/providers/theme-provider';
 import { IntlProvider } from '@/lib/providers/intl-provider';
 import SupabaseProvider from '@/lib/providers/supabase-provider';
 import { SupabaseAuthProvider } from '@/lib/providers/supabase-auth-provider';
+import QueryProvider from '@/providers/query-provider';
+import GlobalDataProvider from '@/providers/global-data-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { ConditionalAppShell } from '@/components/app/conditional-app-shell';
 import { IntercomProvider } from '@/components/intercom-provider';
@@ -62,15 +64,19 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <ActiveThemeProvider initialTheme={themeSettings}>
-            <SupabaseAuthProvider>
-              <IntercomProvider />
-              <SupabaseProvider>
-                <IntlProvider>
-                  <ConditionalAppShell>{children}</ConditionalAppShell>
-                </IntlProvider>
-              </SupabaseProvider>
-            </SupabaseAuthProvider>
-            <Toaster position="bottom-right" />
+            <QueryProvider>
+              <SupabaseAuthProvider>
+                <IntercomProvider />
+                <SupabaseProvider>
+                  <IntlProvider>
+                    <GlobalDataProvider>
+                      <ConditionalAppShell>{children}</ConditionalAppShell>
+                    </GlobalDataProvider>
+                  </IntlProvider>
+                </SupabaseProvider>
+              </SupabaseAuthProvider>
+              <Toaster position="bottom-right" />
+            </QueryProvider>
           </ActiveThemeProvider>
         </ThemeProvider>
       </body>

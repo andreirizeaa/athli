@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
+import { useGlobalData } from '@/providers/global-data-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +29,7 @@ import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { PageHeader } from '@/components/app/page-header';
 import { Badge } from '@/components/ui/badge';
 import {
   User,
@@ -150,6 +152,7 @@ const AthletesPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const { user } = useSupabaseAuth();
+  const { uniqueCode } = useGlobalData();
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
   const [copiedFields, setCopiedFields] = useState<Set<string>>(new Set());
@@ -161,6 +164,7 @@ const AthletesPage = () => {
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const copyTimeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const inviteLinkCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   const handleToggleAthlete = (athleteId: string) => {
     setSelectedAthletes((prev) => {
@@ -225,8 +229,6 @@ const AthletesPage = () => {
   };
 
 
-
-
   const handleClearSelected = () => {
     setSelectedAthletes(new Set());
   };
@@ -241,9 +243,9 @@ const AthletesPage = () => {
       [t('athletes.export.email')]: row.email,
       [t('athletes.export.phone')]: row.phone,
       [t('athletes.export.country')]: row.country,
-      [t('athletes.export.category')]: 
-        row.category === 'online' 
-          ? t('athletes.filters.online') 
+      [t('athletes.export.category')]:
+        row.category === 'online'
+          ? t('athletes.filters.online')
           : row.category === 'in-person'
             ? t('athletes.filters.inPerson')
             : row.category === 'hybrid'
@@ -461,12 +463,12 @@ const AthletesPage = () => {
   };
 
   const handleCopyInviteLink = async () => {
-    if (!user?.id) {
+    if (!uniqueCode) {
       toast.error('Unable to generate invite link. Please try again.');
       return;
     }
 
-    const inviteLink = `${window.location.origin}/client/invite/${user.id}`;
+    const inviteLink = `${window.location.origin}/client/invite/${uniqueCode}`;
     try {
       await navigator.clipboard.writeText(inviteLink);
     } catch (err) {
@@ -525,9 +527,9 @@ const AthletesPage = () => {
             icon: <ClockAlert className="size-3" />,
             width: getColumnWidth('lastActivity', 'pixel')
               ? {
-                  class: getColumnWidth('lastActivity', 'class'),
-                  pixel: getColumnWidth('lastActivity', 'pixel'),
-                }
+                class: getColumnWidth('lastActivity', 'class'),
+                pixel: getColumnWidth('lastActivity', 'pixel'),
+              }
               : undefined,
             tooltip: t('athletes.columnTooltips.lastActivity'),
             getSortValue: (row) => row.lastActivity,
@@ -1096,14 +1098,10 @@ const AthletesPage = () => {
   };
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <div className="flex flex-col">
-            <h1 className="text-[22px] font-semibold">{t('athletes.title')}</h1>
-            <p className="text-sm text-foreground">
-              {t('athletes.subtitle', { count: filteredCount })}
-            </p>
-          </div>
+      <PageHeader
+        title={t('athletes.title')}
+        subtitle={t('athletes.subtitle', { count: filteredCount })}
+        action={
           <div>
             <DropdownMenu>
               <ButtonGroup>
@@ -1140,9 +1138,8 @@ const AthletesPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
+        }
+      />
       <DataGrid
         data={mockAthletes}
         columns={columns}
@@ -1162,14 +1159,14 @@ const AthletesPage = () => {
           [t('athletes.export.email')]: row.email,
           [t('athletes.export.phone')]: row.phone,
           [t('athletes.export.country')]: row.country,
-          [t('athletes.export.category')]: 
-        row.category === 'online' 
-          ? t('athletes.filters.online') 
-          : row.category === 'in-person'
-            ? t('athletes.filters.inPerson')
-            : row.category === 'hybrid'
-              ? t('athletes.filters.hybrid')
-              : row.category,
+          [t('athletes.export.category')]:
+            row.category === 'online'
+              ? t('athletes.filters.online')
+              : row.category === 'in-person'
+                ? t('athletes.filters.inPerson')
+                : row.category === 'hybrid'
+                  ? t('athletes.filters.hybrid')
+                  : row.category,
           [t('athletes.export.connected')]:
             row.connected === true
               ? t('athletes.status.connected')

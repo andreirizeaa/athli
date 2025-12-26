@@ -5,45 +5,33 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, FileText, Trash2, X, UserPlus, Copy } from 'lucide-react';
+import { Plus, FileText, Trash2, X, UserPlus, Copy, Loader2 } from 'lucide-react';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { PageHeader } from '@/components/app/page-header';
 import { SidePanel } from '@/components/app/side-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
-import { duplicateMetric } from '@/lib/coach/coach-metric-service';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { useCoachMetrics } from '@/hooks/use-coach-metrics';
+import { Metric } from '@/api/coach/coach-metric-service';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 
-type Metric = {
-  id: string;
-  name: string;
-  unit: string;
-  description?: string;
-  createdAt: number;
-};
-
-// Mock metrics data
-const mockMetrics: Metric[] = [
-  {
-    id: 'metric-1',
-    name: 'Body Fat',
-    unit: '%',
-    description: 'Percentage of body weight that is fat tissue',
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: 'metric-2',
-    name: 'Bicep',
-    unit: 'cm',
-    description: 'Circumference measurement of the bicep muscle',
-    createdAt: Date.now() - 86400000 * 3,
-  },
-];
+/* Metric type is imported from service */
 
 const MetricsPage = () => {
   const t = useTranslations();
-  const [metrics, setMetrics] = useState<Metric[]>(mockMetrics);
+  const {
+    metrics,
+    isLoading,
+    createMetric,
+    updateMetric,
+    deleteMetric,
+    duplicateMetric
+  } = useCoachMetrics();
+
   const [isAddMetricOpen, setIsAddMetricOpen] = useState<boolean>(false);
   const [isEditMetricOpen, setIsEditMetricOpen] = useState<boolean>(false);
   const [editingMetric, setEditingMetric] = useState<Metric | null>(null);
@@ -51,6 +39,15 @@ const MetricsPage = () => {
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
   const [metricsToAssign, setMetricsToAssign] = useState<Metric[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const columns: ColumnDefinition<Metric>[] = [
     {
@@ -129,31 +126,46 @@ const MetricsPage = () => {
   };
 
   const handleSaveMetric = async (name: string, unit: string, description?: string) => {
-    if (editingMetric) {
-      // Update existing metric
-      setMetrics((prev) =>
-        prev.map((m) =>
-          m.id === editingMetric.id ? { ...m, name, unit, description } : m
-        )
-      );
-      handleCloseEditMetric();
-    } else {
-      // Add new metric
-      const newMetric: Metric = {
-        id: `metric-${Date.now()}`,
-        name,
-        unit,
-        description,
-        createdAt: Date.now(),
-      };
-      setMetrics((prev) => [...prev, newMetric]);
-      handleCloseAddMetric();
+    try {
+      if (editingMetric) {
+        // Update existing metric
+        await updateMetric({
+          id: editingMetric.id,
+          updates: { name, unit, description }
+        });
+        handleCloseEditMetric();
+      } else {
+        // Add new metric
+        await createMetric({
+          name,
+          unit,
+          description,
+          value_kind: 'number' // Default
+        });
+        handleCloseAddMetric();
+      }
+    } catch (error) {
+      console.error('Failed to save metric:', error);
     }
   };
 
-  const handleDeleteMetric = (metricId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+  const handleDeleteMetric = async (metricId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    setMetrics((prev) => prev.filter((m) => m.id !== metricId));
+    try {
+      await deleteMetric(metricId);
+    } catch (error) {
+      console.error('Failed to delete metric:', error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const idsToDelete = Array.from(selectedMetrics);
+      await Promise.all(idsToDelete.map((id) => deleteMetric(id)));
+      setSelectedMetrics(new Set());
+    } catch (error) {
+      console.error('Failed to bulk delete metrics:', error);
+    }
   };
 
   const handleDeleteKeyDown = (metricId: string, e: React.KeyboardEvent) => {
@@ -171,11 +183,8 @@ const MetricsPage = () => {
   const handleDuplicateSelected = async () => {
     if (selectedMetrics.size !== 1) return;
     const metricId = Array.from(selectedMetrics)[0];
-    const metric = metrics.find((m) => m.id === metricId);
-    if (!metric) return;
     try {
-      const duplicatedMetric = await duplicateMetric(metricId, metric);
-      setMetrics((prev) => [...prev, duplicatedMetric]);
+      await duplicateMetric(metricId);
       setSelectedMetrics(new Set());
     } catch (error) {
       console.error('Failed to duplicate metric:', error);
@@ -187,7 +196,7 @@ const MetricsPage = () => {
     if (selectedMetricItems.length === 0) {
       return;
     }
-    
+
     setMetricsToAssign(selectedMetricItems);
     setIsAssignToClientsOpen(true);
     setSelectedClientIds(new Set());
@@ -207,14 +216,14 @@ const MetricsPage = () => {
     if (selectedClientIds.size === 0 || metricsToAssign.length === 0) {
       return;
     }
-    
+
     try {
       // TODO: Call service to assign metrics to clients
       // await assignMetricsToClients({
       //   metricIds: metricsToAssign.map((m) => m.id),
       //   clientIds: Array.from(selectedClientIds),
       // });
-      
+
       setIsAssignToClientsOpen(false);
       setMetricsToAssign([]);
       setSelectedMetrics(new Set());
@@ -282,16 +291,15 @@ const MetricsPage = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
-      <div className="w-full relative flex-shrink-0">
-        <div className="pl-4 pr-4 flex items-center justify-between mb-2 mt-2">
-          <h1 className="text-[22px] font-semibold">{t('metrics.title')}</h1>
+      <PageHeader
+        title={t('metrics.title')}
+        action={
           <Button onClick={handleOpenAddMetric} className="gap-2">
             <Plus className="size-4" />
             <span>{t('metrics.addMetric')}</span>
           </Button>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
+        }
+      />
 
       <DataGrid
         data={metrics}
@@ -324,6 +332,18 @@ const MetricsPage = () => {
         gridPadding={true}
         compactPagination={true}
         emptyMessage={t('metrics.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('metrics.emptyState.title')}
+            subtitle={t('metrics.emptyState.subtitle')}
+            action={
+              <Button onClick={handleOpenAddMetric} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('metrics.addMetric')}</span>
+              </Button>
+            }
+          />
+        }
         selectionActions={
           selectedMetrics.size > 0 ? (
             <div className="flex items-center gap-1">
@@ -358,6 +378,15 @@ const MetricsPage = () => {
                 <UserPlus className="size-4" />
                 <span>{t('metrics.actions.assignToClients')}</span>
               </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setIsBulkDeleteOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label={t('general.delete')}
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
             </div>
           ) : undefined
         }
@@ -384,20 +413,29 @@ const MetricsPage = () => {
         open={isAddMetricOpen}
         onOpenChange={setIsAddMetricOpen}
         onSave={async (name, unit, description) => await handleSaveMetric(name, unit, description)}
+        showLibraryTab={false}
       />
 
       {editingMetric && (
         <EditMetricSidePanel
           open={isEditMetricOpen}
           onOpenChange={setIsEditMetricOpen}
-          metric={editingMetric}
+          metric={editingMetric as any /* temporary cast if there are slight mismatches in expected props */}
           onSave={handleSaveMetric}
           onDelete={async (metricId) => {
-            setMetrics((prev) => prev.filter((m) => m.id !== metricId));
+            await deleteMetric(metricId);
             handleCloseEditMetric();
           }}
         />
       )}
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedMetrics.size}
+        itemName={t('metrics.title').toLowerCase()}
+      />
 
       {/* Assign to Clients Side Panel */}
       <SidePanel

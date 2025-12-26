@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Trash2, Edit, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { format } from 'date-fns';
-import { getNotes, createNote, editNote, deleteNote, type Note } from '@/lib/coach/coach-note-service';
+import { getNotes, createNote, editNote, deleteNote, type Note } from '@/api/coach/coach-client-service';
 
 type NotesCardProps = {
   clientId: string;
@@ -209,16 +209,16 @@ export const NotesCard = ({ clientId }: NotesCardProps) => {
                   aria-label="Search notes"
                 />
               </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCreateNoteOpen(true)}
-              className="h-7 text-xs"
-              aria-label={t('messages.createNote')}
-            >
-              <Plus className="h-3 w-3" />
-              {t('messages.createNote')}
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCreateNoteOpen(true)}
+                className="h-7 text-xs"
+                aria-label={t('messages.createNote')}
+              >
+                <Plus className="h-3 w-3" />
+                {t('messages.createNote')}
+              </Button>
             </div>
           </div>
         </CardHeader>

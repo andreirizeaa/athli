@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { StandardBuilder } from '@/app/training/workouts/new/standard/standard-builder';
 import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
-import { DiscardChangesDialog } from '@/app/training/workouts/new/components/discard-changes-dialog';
+import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { mockWorkouts } from '@/components/app/app-shell';
 import { MOCK_WORKOUT_SCHEMA } from '@/constants/mock-workout-schema';
 

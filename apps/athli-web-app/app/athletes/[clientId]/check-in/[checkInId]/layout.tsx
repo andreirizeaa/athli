@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { usePathname, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
-import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/lib/client/client-form-service';
+import { getClientCheckInsForForm, getCheckInInstance, type CheckInInstance } from '@/api/client/client-form-service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -297,52 +297,52 @@ const CheckInLayout = ({ children }: CheckInLayoutProps) => {
           </div>
 
           {/* Main content area with sidebar and content */}
-        <div className="flex h-full w-full flex-1 min-h-0">
-          {/* Left sidebar navigation */}
-          <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
-            <div className="flex-1 overflow-y-auto flex flex-col">
-              {/* Instances list */}
-              <div className="space-y-0 flex-1 overflow-y-auto">
-                {sortedInstances.map((instance, index) => {
-                  const instanceHref = `/athletes/${clientId}/check-in/${checkInId}/${instance.id}`;
-                  const isActive = pathname === instanceHref;
-                  const isLast = index === sortedInstances.length - 1;
+          <div className="flex h-full w-full flex-1 min-h-0">
+            {/* Left sidebar navigation */}
+            <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
+              <div className="flex-1 overflow-y-auto flex flex-col">
+                {/* Instances list */}
+                <div className="space-y-0 flex-1 overflow-y-auto">
+                  {sortedInstances.map((instance, index) => {
+                    const instanceHref = `/athletes/${clientId}/check-in/${checkInId}/${instance.id}`;
+                    const isActive = pathname === instanceHref;
+                    const isLast = index === sortedInstances.length - 1;
 
-                  return (
-                    <React.Fragment key={instance.id}>
-                      <Link
-                        href={instanceHref}
-                        className={cn(
-                          'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
-                          isActive
-                            ? 'bg-accent text-accent-foreground'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                        )}
-                      >
-                        <div className="flex flex-col gap-1 min-w-0 flex-1">
-                          <span className="text-sm font-medium">{formatScheduledDate(instance.scheduledDate)}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {getStatusLabel(instance.status)}
-                          </span>
-                        </div>
-                        <Badge 
-                          variant={getStatusVariant(instance.status)} 
-                          className={cn("text-xs flex-shrink-0", getStatusClassName(instance.status))}
+                    return (
+                      <React.Fragment key={instance.id}>
+                        <Link
+                          href={instanceHref}
+                          className={cn(
+                            'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
+                            isActive
+                              ? 'bg-accent text-accent-foreground'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                          )}
                         >
-                          {getStatusLabel(instance.status)}
-                        </Badge>
-                      </Link>
-                      {!isLast && <Separator className="w-full" />}
-                    </React.Fragment>
-                  );
-                })}
+                          <div className="flex flex-col gap-1 min-w-0 flex-1">
+                            <span className="text-sm font-medium">{formatScheduledDate(instance.scheduledDate)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {getStatusLabel(instance.status)}
+                            </span>
+                          </div>
+                          <Badge
+                            variant={getStatusVariant(instance.status)}
+                            className={cn("text-xs flex-shrink-0", getStatusClassName(instance.status))}
+                          >
+                            {getStatusLabel(instance.status)}
+                          </Badge>
+                        </Link>
+                        {!isLast && <Separator className="w-full" />}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Main content */}
-          <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
-        </div>
+            {/* Main content */}
+            <div className="flex-1 flex flex-col overflow-hidden">{children}</div>
+          </div>
         </>
       )}
     </div>

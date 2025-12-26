@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
-import { type Habit } from '@/lib/coach/coach-habit-service';
+import { type Habit } from '@/api/coach/coach-habit-service';
 import { HabitFormManual } from './habit-form-manual';
 import { type HabitFormValues } from './add-habit-side-panel';
 
@@ -67,7 +67,7 @@ export const EditHabitSidePanel = ({
       form.setValue('amount', habit.amount);
       form.setValue('unit', habit.unit);
       form.setValue('period', habit.period);
-      
+
       if (habit.duration) {
         form.setValue('duration', habit.duration);
         setEnableDuration(true);
@@ -75,7 +75,7 @@ export const EditHabitSidePanel = ({
         form.setValue('duration', undefined);
         setEnableDuration(false);
       }
-      
+
       if (habit.reminderTime) {
         form.setValue('reminderTime', habit.reminderTime);
         form.setValue('reminderMessage', habit.reminderMessage || '');

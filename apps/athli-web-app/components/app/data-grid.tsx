@@ -1375,15 +1375,30 @@ export function DataGrid<T extends Record<string, any>>({
                 paginatedData.length === 0 ? 'overflow-y-auto overflow-x-hidden' : ''
               )}
             >
-          {paginatedData.length === 0 && (emptyState || emptyMessage) && (
-            <div className="absolute inset-0 z-40 flex items-center justify-center bg-background">
-              {emptyState || (
-                <div className="text-sm text-muted-foreground text-center">
-                  {emptyMessage}
-                </div>
-              )}
-            </div>
-          )}
+          {paginatedData.length === 0 && (emptyState || emptyMessage) && (() => {
+            // Check if any filters or search are active
+            const hasActiveFilters = searchQuery.trim() !== '' ||
+              Object.values(filterValues).some(value =>
+                value !== null && value !== '' &&
+                (Array.isArray(value) ? value.length > 0 : true)
+              );
+
+            return (
+              <div className="absolute inset-0 z-40 flex items-center justify-center bg-background">
+                {hasActiveFilters ? (
+                  <div className="text-sm text-muted-foreground text-center">
+                    No results found
+                  </div>
+                ) : (
+                  emptyState || (
+                    <div className="text-sm text-muted-foreground text-center">
+                      {emptyMessage}
+                    </div>
+                  )
+                )}
+              </div>
+            );
+          })()}
           {!disableLoadingOverlay && isPageLoading && paginatedData.length > 0 && (
             <div
               className="sticky top-0 left-0 right-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"

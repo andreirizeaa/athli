@@ -62,7 +62,7 @@ export function EmailChangeDialog({
 
     try {
       // Verify password by attempting to sign in
-      const supabase = (await import('@/lib/supabase/client')).createClient();
+      const supabase = (await import('@/supabase/client')).createClient();
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       if (!currentSession) {
         throw new Error('No active session');

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { userController } from './user.controller';
 import { validate } from '../../../middlewares/validate';
 import { supabaseAuthenticate } from '../../../middlewares/supabase-auth';
-import { updateProfileSchema, ensureClientProfileSchema } from './user.schemas';
+import { updateProfileSchema, ensureClientProfileSchema, newClientSchema } from './user.schemas';
 
 export const userRouter = Router();
 
@@ -89,3 +89,43 @@ userRouter.post('/ensure-client-profile', supabaseAuthenticate, validate(ensureC
  *         description: User profile retrieved successfully
  */
 userRouter.get('/fetch/:id', userController.fetchUser);
+
+/**
+ * @swagger
+ * /api/v1/user/delete-account:
+ *   delete:
+ *     summary: Delete user account
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ */
+userRouter.delete('/delete-account', supabaseAuthenticate, userController.deleteAccount);
+
+/**
+ * @swagger
+ * /api/v1/user/new-client:
+ *   post:
+ *     summary: Handle new client signup
+ *     tags: [User]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - coachId
+ *             properties:
+ *               coachId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       200:
+ *         description: Client profile ready
+ */
+userRouter.post('/new-client', supabaseAuthenticate, userController.newClient);

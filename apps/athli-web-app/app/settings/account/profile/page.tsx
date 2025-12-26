@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Upload, Loader2 } from 'lucide-react';
-import { useUserProfile } from '@/lib/hooks/use-user-profile';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { useUnsavedChanges } from '@/app/settings/context/unsaved-changes-context';
 import { useAccountSave } from '../context/account-save-context';
 import { toast } from 'sonner';

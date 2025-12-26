@@ -199,8 +199,8 @@ class UserService {
     const userEmail = authUser.user.email || '';
     const userName = authUser.user.user_metadata?.name || userEmail.split('@')[0];
     const signinMethod = authUser.user.app_metadata?.provider === 'google' ? 'google' : 'email';
-    const profilePictureUrl = authUser.user.user_metadata?.avatar_url || 
-                              authUser.user.user_metadata?.picture || null;
+    const profilePictureUrl = authUser.user.user_metadata?.avatar_url ||
+      authUser.user.user_metadata?.picture || null;
 
     const { data: newProfile, error: insertError } = await supabase
       .from('user_profiles')
@@ -261,6 +261,34 @@ class UserService {
       isActive: newProfile.is_active,
       createdAt: authUser.user.created_at,
       updatedAt: newProfile.updated_at,
+    };
+  }
+
+  /**
+   * Delete user account
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const supabase = getSupabaseClient();
+
+    // Delete user profile from user_profiles table
+    const { error: profileError } = await supabase
+      .from('user_profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (profileError) {
+      throw new Error(`Failed to delete user profile: ${profileError.message}`);
+    }
+  }
+
+  /**
+   * Alias for ensureClientProfile to keep controller logic clean
+   */
+  async handleNewClient(userId: string, coachId: string) {
+    const profile = await this.ensureClientProfile(userId, coachId);
+    return {
+      profile,
+      isNew: true, // simplified for now
     };
   }
 }

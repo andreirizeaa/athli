@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { type Habit } from '@/lib/coach/coach-habit-service';
+import { type Habit } from '@/api/coach/coach-habit-service';
 
 type LogHabitFormValues = {
   habitId: string;

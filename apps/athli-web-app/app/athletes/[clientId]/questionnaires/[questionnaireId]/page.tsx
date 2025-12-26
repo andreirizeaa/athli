@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
-import { type Form } from '@/lib/coach/coach-form-service';
-import { getClientQuestionnaire, type ClientQuestionnaireDetail, type Question, type QuestionAnswer } from '@/lib/client/client-form-service';
+import { type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
+import { getClientQuestionnaire, type ClientQuestionnaireDetail, type Question, type QuestionAnswer } from '@/api/client/client-form-service';
 import { Separator } from '@/components/ui/separator';
 import {
   Breadcrumb,
@@ -191,9 +191,8 @@ const QuestionnaireDetailPage = () => {
             {[1, 2, 3, 4, 5].map((star) => (
               <svg
                 key={star}
-                className={`w-5 h-5 ${
-                  star <= (answer.answer as number) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                }`}
+                className={`w-5 h-5 ${star <= (answer.answer as number) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+                  }`}
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"

@@ -7,8 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X, Copy } from 'lucide-react';
+import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X, Copy, Loader2 } from 'lucide-react';
 import { SidePanel } from '@/components/app/side-panel';
+import { PageHeader } from '@/components/app/page-header';
 import {
   Form,
   FormControl,
@@ -36,9 +37,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
 import { cn } from '@/lib/general/utils';
-import { addHabit, editHabit, deleteHabit, duplicateHabit, type Habit } from '@/lib/coach/coach-habit-service';
-import { assignHabit } from '@/lib/client/client-habit-service';
+import { Habit } from '@/api/coach/coach-habit-service';
+import { useCoachHabits } from '@/hooks/use-coach-habits';
+import { assignHabit } from '@/api/client/client-habit-service';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
 import { mockAthletes } from '@/components/app/app-shell';
 
@@ -73,58 +76,26 @@ const unitOptions = [
   'mg',
 ] as const;
 
-// Mock habits data
-const mockHabits: Habit[] = [
-  {
-    id: '1',
-    name: 'Daily steps',
-    description: 'Track your daily step count to stay active',
-    amount: 10000,
-    unit: 'steps',
-    period: 'daily',
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: '2',
-    name: 'Drink water',
-    description: 'Stay hydrated throughout the day',
-    amount: 8,
-    unit: 'cups',
-    period: 'daily',
-    reminderTime: '08:00',
-    reminderMessage: 'Time to hydrate!',
-    createdAt: Date.now() - 86400000 * 5,
-  },
-  {
-    id: '3',
-    name: 'Meditate',
-    description: 'Take time for mindfulness and mental clarity',
-    amount: 10,
-    unit: 'min',
-    period: 'daily',
-    duration: 10,
-    reminderTime: '07:00',
-    reminderMessage: 'Start your day with mindfulness',
-    createdAt: Date.now() - 86400000 * 3,
-  },
-  {
-    id: '4',
-    name: 'Mobility work',
-    description: 'Improve flexibility and prevent injury',
-    amount: 15,
-    unit: 'min',
-    period: 'daily',
-    duration: 15,
-    createdAt: Date.now() - 86400000 * 2,
-  },
-];
+// HabitsPage uses useCoachHabits hook which fetches data from the API
 
 const HabitsPage = () => {
   const t = useTranslations();
-  const [habits, setHabits] = useState<Habit[]>(mockHabits);
+  const {
+    habits,
+    isLoading,
+    createHabit,
+    updateHabit,
+    deleteHabit,
+    duplicateHabit,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    isDuplicating
+  } = useCoachHabits();
+
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
-  const [filteredCount, setFilteredCount] = useState<number>(mockHabits.length);
-  
+  const [filteredCount, setFilteredCount] = useState<number>(0);
+
   // Add habit side panel state
   const [isAddHabitOpen, setIsAddHabitOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'manual' | 'library'>('library');
@@ -138,6 +109,7 @@ const HabitsPage = () => {
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
   const [habitsToAssign, setHabitsToAssign] = useState<Habit[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
 
   const habitSchema = z
     .object({
@@ -179,7 +151,7 @@ const HabitsPage = () => {
 
   const textualRepresentation = useMemo(() => {
     if (!amount || amount === 0 || !unit) return '';
-    const unitLabel = t(`habits.form.units.${unit as any}`);
+    const unitLabel = t(`habits.form.units.${unit as string}`);
     const periodText =
       period === 'daily'
         ? t('habits.form.textualRepresentationDaily')
@@ -216,7 +188,7 @@ const HabitsPage = () => {
     form.setValue('amount', habit.amount);
     form.setValue('unit', habit.unit);
     form.setValue('period', habit.period);
-    
+
     if (habit.duration) {
       form.setValue('duration', habit.duration);
       setEnableDuration(true);
@@ -224,7 +196,7 @@ const HabitsPage = () => {
       form.setValue('duration', undefined);
       setEnableDuration(false);
     }
-    
+
     if (habit.reminderTime) {
       form.setValue('reminderTime', habit.reminderTime);
       form.setValue('reminderMessage', habit.reminderMessage || '');
@@ -234,7 +206,7 @@ const HabitsPage = () => {
       form.setValue('reminderMessage', undefined);
       setEnableReminder(false);
     }
-    
+
     setIsEditHabitOpen(true);
   };
 
@@ -249,18 +221,10 @@ const HabitsPage = () => {
   const handleSaveHabit = async (values: HabitFormValues) => {
     try {
       if (editingHabitId) {
-        await editHabit({ id: editingHabitId, ...values });
-        setHabits((prev) =>
-          prev.map((h) =>
-            h.id === editingHabitId
-              ? { ...h, ...values, duration: values.duration, reminderTime: values.reminderTime, reminderMessage: values.reminderMessage }
-              : h
-          )
-        );
+        await updateHabit({ id: editingHabitId, ...values });
         handleCloseEditHabit();
       } else {
-        const newHabit = await addHabit(values);
-        setHabits((prev) => [...prev, newHabit]);
+        await createHabit(values);
         handleCloseAddHabit();
       }
     } catch (error) {
@@ -270,13 +234,21 @@ const HabitsPage = () => {
 
   const handleDeleteHabit = async () => {
     if (!editingHabitId) return;
-    
+
     try {
-      await deleteHabit({ id: editingHabitId });
-      setHabits((prev) => prev.filter((h) => h.id !== editingHabitId));
+      await deleteHabit(editingHabitId);
       handleCloseEditHabit();
     } catch (error) {
       console.error('Failed to delete habit:', error);
+    }
+  };
+
+  const handleDeleteFromGrid = async (habitId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteHabit(habitId);
+    } catch (error) {
+      console.error('Failed to delete habit from grid:', error);
     }
   };
 
@@ -286,7 +258,7 @@ const HabitsPage = () => {
     form.setValue('amount', habit.amount);
     form.setValue('unit', habit.unit);
     form.setValue('period', habit.period);
-    
+
     if (habit.duration) {
       form.setValue('duration', habit.duration);
       setEnableDuration(true);
@@ -294,7 +266,7 @@ const HabitsPage = () => {
       form.setValue('duration', undefined);
       setEnableDuration(false);
     }
-    
+
     if (habit.reminderTime) {
       form.setValue('reminderTime', habit.reminderTime);
       form.setValue('reminderMessage', habit.reminderMessage || '');
@@ -304,7 +276,7 @@ const HabitsPage = () => {
       form.setValue('reminderMessage', undefined);
       setEnableReminder(false);
     }
-    
+
     setActiveTab('manual');
   };
 
@@ -346,14 +318,14 @@ const HabitsPage = () => {
     }
 
     const query = librarySearchQuery.trim().toLowerCase();
-    
+
     return defaultHabits
       .map((section) => {
         const filteredHabitsInSection = section.habits.filter((habit) => {
           const matchesName = isFuzzyMatch(habit.name, query);
           const matchesDescription = habit.description ? isFuzzyMatch(habit.description, query) : false;
           const matchesSection = isFuzzyMatch(section.label, query);
-          
+
           return matchesName || matchesDescription || matchesSection;
         });
 
@@ -388,14 +360,21 @@ const HabitsPage = () => {
   const handleDuplicateSelected = async () => {
     if (selectedHabits.size !== 1) return;
     const habitId = Array.from(selectedHabits)[0];
-    const habit = habits.find((h) => h.id === habitId);
-    if (!habit) return;
     try {
-      const duplicatedHabit = await duplicateHabit(habitId, habit);
-      setHabits((prev) => [...prev, duplicatedHabit]);
+      await duplicateHabit(habitId);
       setSelectedHabits(new Set());
     } catch (error) {
       console.error('Failed to duplicate habit:', error);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const idsToDelete = Array.from(selectedHabits);
+      await Promise.all(idsToDelete.map((id) => deleteHabit(id)));
+      setSelectedHabits(new Set());
+    } catch (error) {
+      console.error('Failed to bulk delete habits:', error);
     }
   };
 
@@ -424,16 +403,16 @@ const HabitsPage = () => {
     if (selectedClientIds.size === 0 || habitsToAssign.length === 0) {
       return;
     }
-    
+
     try {
       const habitIds = habitsToAssign.map((habit) => habit.id);
       const clientIdsArray = Array.from(selectedClientIds);
-      
+
       await assignHabit({
         habitIds,
         clientIds: clientIdsArray,
       });
-      
+
       setIsAssignToClientsOpen(false);
       setHabitsToAssign([]);
       setSelectedHabits(new Set());
@@ -462,7 +441,7 @@ const HabitsPage = () => {
   };
 
   const getAimText = (habit: Habit): string => {
-    const unitLabel = t(`habits.form.units.${habit.unit as any}`);
+    const unitLabel = t(`habits.form.units.${habit.unit as string}`);
     const periodText = habit.period === 'daily' ? t('habits.form.daily') : t('habits.form.weekly');
     return `${habit.amount} ${unitLabel} / ${periodText}`;
   };
@@ -530,6 +509,30 @@ const HabitsPage = () => {
       ),
       renderCell: (row) => (
         <span className="text-sm text-muted-foreground">{getReminderText(row)}</span>
+      ),
+    },
+    {
+      id: 'actions',
+      label: '',
+      sortable: false,
+      width: { class: 'w-[80px]', pixel: '80px' },
+      renderCell: (row) => (
+        <div className="flex items-center justify-end w-full" data-no-row-link="true">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => handleDeleteFromGrid(row.id, e)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleDeleteFromGrid(row.id, e);
+              }
+            }}
+            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={`Delete ${row.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -838,33 +841,39 @@ const HabitsPage = () => {
     </Form>
   );
 
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex items-center justify-between mb-2 mt-2">
-          <h1 className="text-[22px] font-semibold">{t('habits.title')}</h1>
+    <div className="h-full w-full flex flex-col bg-background overflow-auto">
+      <PageHeader
+        title={t('habits.title')}
+        action={
           <Button onClick={handleOpenAddHabit} className="gap-2">
             <Plus className="size-4" />
             <span>{t('habits.addHabit')}</span>
           </Button>
-        </div>
-        <Separator className="absolute bottom-[-1px] left-0 right-0" />
-      </div>
+        }
+      />
 
       <DataGrid
         data={habits}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="habits"
-        searchPlaceholder="Search habits..."
+        searchPlaceholder={t('habits.searchPlaceholder')}
         enableSearch={true}
-        searchFields={['name', 'description']}
+        searchFields={['name']}
         enableEditColumns={false}
         enableExport={false}
         enableRowSelection={true}
         selectedRowIds={selectedHabits}
         onSelectionChange={setSelectedHabits}
-        onFilteredDataChange={setFilteredCount}
         onRowClick={(row, event) => {
           const targetElement = event.target as HTMLElement;
           if (targetElement.closest('[data-no-row-link="true"]')) {
@@ -891,6 +900,19 @@ const HabitsPage = () => {
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
+        emptyMessage={t('habits.emptyMessage')}
+        emptyState={
+          <EmptyGridState
+            title={t('habits.emptyState.title')}
+            subtitle={t('habits.emptyState.subtitle')}
+            action={
+              <Button onClick={handleOpenAddHabit} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('habits.addHabit')}</span>
+              </Button>
+            }
+          />
+        }
         selectionActions={
           <div className="flex items-center gap-1">
             <Button
@@ -901,7 +923,7 @@ const HabitsPage = () => {
             >
               <X className="size-4" />
               <span>
-                Clear {selectedHabits.size} selected
+                {t('habits.actions.clearSelected')} {selectedHabits.size}
               </span>
             </Button>
             {selectedHabits.size === 1 && (
@@ -910,8 +932,9 @@ const HabitsPage = () => {
                 onClick={handleDuplicateSelected}
                 className="gap-2"
                 aria-label={t('habits.actions.duplicateAria')}
+                disabled={isDuplicating}
               >
-                <Copy className="size-4" />
+                {isDuplicating ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}
                 <span>{t('habits.actions.duplicate')}</span>
               </Button>
             )}
@@ -924,9 +947,26 @@ const HabitsPage = () => {
               <UserPlus className="size-4" />
               <span>{t('habits.actions.addToClients')}</span>
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsBulkDeleteOpen(true)}
+              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              aria-label={t('general.delete')}
+            >
+              <Trash2 className="size-4" />
+              <span>{t('general.delete')}</span>
+            </Button>
           </div>
         }
-        emptyMessage="No habits found."
+        rowHeight="54px"
+      />
+
+      <BulkDeleteConfirmationDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedHabits.size}
+        itemName={t('habits.title').toLowerCase()}
       />
 
       {/* Add Habit Side Panel */}
@@ -986,7 +1026,7 @@ const HabitsPage = () => {
               </div>
               {filteredLibraryHabits.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>No habits found matching "{librarySearchQuery}"</p>
+                  <p>No habits found matching &quot;{librarySearchQuery}&quot;</p>
                 </div>
               ) : (
                 filteredLibraryHabits.map((section) => (
@@ -994,10 +1034,10 @@ const HabitsPage = () => {
                     <h3 className="text-sm font-semibold text-foreground">{section.label}</h3>
                     <div className="grid grid-cols-2 gap-3">
                       {section.habits.map((habit) => {
-                        const unitLabel = t(`habits.form.units.${habit.unit as any}`);
+                        const unitLabel = t(`habits.form.units.${habit.unit as string}`);
                         const periodText = habit.period === 'daily' ? t('habits.form.daily') : t('habits.form.weekly');
                         const subtitle = `${habit.amount} ${unitLabel} / ${periodText}`;
-                        
+
                         return (
                           <Card
                             key={`${section.label}-${habit.name}`}
