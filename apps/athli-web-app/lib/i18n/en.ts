@@ -578,6 +578,8 @@ export const enMessages = {
     reset: 'Reset',
     confirm: 'Confirm',
     confirmDeletion: 'Confirm Deletion',
+    confirmArchive: 'Confirm Archive',
+    clearSelected: 'Clear {count} selected',
     bulkDeleteConfirmation: 'Are you sure you want to delete {count} selected {item}? This action cannot be undone.',
     assign: 'Assign',
     yes: 'Yes',
@@ -1868,6 +1870,7 @@ export const enMessages = {
       changeImage: 'Change image',
       takenAt: 'Taken at',
       selectDate: 'Select date',
+      notesPlaceholder: 'Add some notes about these progress photos...',
     },
     deleteDialog: {
       title: 'Delete photo',
@@ -2071,6 +2074,8 @@ export const enMessages = {
     template: 'Template',
     searchPlaceholder: 'Search forms...',
     emptyMessage: 'No forms found.',
+    questions: 'questions',
+    question: 'question',
     tabs: {
       checkIns: 'Check Ins',
       questionnaires: 'Questionnaires',

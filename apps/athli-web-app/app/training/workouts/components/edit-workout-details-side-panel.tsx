@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SidePanel } from '@/components/app/side-panel';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,6 +62,7 @@ export const EditWorkoutDetailsSidePanel = ({
     const [titleError, setTitleError] = useState<string | null>(null);
     const [typeError, setTypeError] = useState<string | null>(null);
     const [difficultyError, setDifficultyError] = useState<string | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     // Track original values to detect changes
     const [originalValues, setOriginalValues] = useState({
@@ -135,139 +137,151 @@ export const EditWorkoutDetailsSidePanel = ({
     };
 
     return (
-        <SidePanel
-            open={open}
-            onOpenChange={onOpenChange}
-            title="Edit Workout Details"
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            footer={
-                <div className="flex w-full justify-start gap-2">
-                    <Button onClick={handleSave} disabled={!isSaveEnabled}>
-                        {isSaving ? 'Saving...' : 'Save'}
-                    </Button>
-                    {onDelete && (
-                        <Button
-                            variant="outline"
-                            onClick={onDelete}
-                        >
-                            Delete
+        <>
+            <SidePanel
+                open={open}
+                onOpenChange={onOpenChange}
+                title="Edit Workout Details"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                footer={
+                    <div className="flex w-full justify-start gap-2">
+                        <Button onClick={handleSave} disabled={!isSaveEnabled}>
+                            {isSaving ? 'Saving...' : 'Save'}
                         </Button>
-                    )}
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                        Cancel
-                    </Button>
-                </div>
-            }
-        >
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-4">
+                        {onDelete && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                            >
+                                Delete
+                            </Button>
+                        )}
+                        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+                            Cancel
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="workout-title" className="text-sm font-medium">
+                                {t('workouts.addWorkout.workoutName')}<RequiredAsterisk />
+                            </label>
+                            <Input
+                                id="workout-title"
+                                type="text"
+                                placeholder={t('workouts.addWorkout.workoutNamePlaceholder')}
+                                value={title}
+                                onChange={(e) => {
+                                    setTitle(e.target.value);
+                                    if (titleError) {
+                                        setTitleError(null);
+                                    }
+                                }}
+                                className={cn(
+                                    'w-full',
+                                    titleError && 'border-destructive aria-invalid:border-destructive'
+                                )}
+                                aria-invalid={!!titleError}
+                            />
+                            {titleError && <p className="text-sm text-destructive">{titleError}</p>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="workout-type" className="text-sm font-medium">
+                                {t('workouts.addWorkout.type')}<RequiredAsterisk />
+                            </label>
+                            <Select
+                                value={type}
+                                onValueChange={(value) => {
+                                    setType(value);
+                                    if (typeError) {
+                                        setTypeError(null);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="workout-type"
+                                    className={cn(
+                                        'w-full',
+                                        typeError && 'border-destructive aria-invalid:border-destructive'
+                                    )}
+                                    aria-invalid={!!typeError}
+                                >
+                                    <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {WORKOUT_TYPES.map((workoutType) => (
+                                        <SelectItem key={workoutType.value} value={workoutType.value}>
+                                            {workoutType.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {typeError && <p className="text-sm text-destructive">{typeError}</p>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="workout-difficulty" className="text-sm font-medium">
+                                {t('workouts.addWorkout.difficulty')}<RequiredAsterisk />
+                            </label>
+                            <Select
+                                value={difficulty}
+                                onValueChange={(value) => {
+                                    setDifficulty(value);
+                                    if (difficultyError) {
+                                        setDifficultyError(null);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="workout-difficulty"
+                                    className={cn(
+                                        'w-full',
+                                        difficultyError && 'border-destructive aria-invalid:border-destructive'
+                                    )}
+                                    aria-invalid={!!difficultyError}
+                                >
+                                    <SelectValue placeholder={t('workouts.addWorkout.difficultyPlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DIFFICULTY_LEVELS.map((level) => (
+                                        <SelectItem key={level.value} value={level.value}>
+                                            {level.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+                        </div>
+                    </div>
+
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="workout-title" className="text-sm font-medium">
-                            {t('workouts.addWorkout.workoutName')}<RequiredAsterisk />
+                        <label htmlFor="workout-description" className="text-sm font-medium">
+                            {t('workouts.addWorkout.description')} <span className="text-muted-foreground font-normal">{t('workouts.addWorkout.descriptionOptional')}</span>
                         </label>
-                        <Input
-                            id="workout-title"
-                            type="text"
-                            placeholder={t('workouts.addWorkout.workoutNamePlaceholder')}
-                            value={title}
-                            onChange={(e) => {
-                                setTitle(e.target.value);
-                                if (titleError) {
-                                    setTitleError(null);
-                                }
-                            }}
-                            className={cn(
-                                'w-full',
-                                titleError && 'border-destructive aria-invalid:border-destructive'
-                            )}
-                            aria-invalid={!!titleError}
+                        <Textarea
+                            id="workout-description"
+                            placeholder={t('workouts.addWorkout.descriptionPlaceholder')}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={4}
+                            className="resize-none"
                         />
-                        {titleError && <p className="text-sm text-destructive">{titleError}</p>}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="workout-type" className="text-sm font-medium">
-                            {t('workouts.addWorkout.type')}<RequiredAsterisk />
-                        </label>
-                        <Select
-                            value={type}
-                            onValueChange={(value) => {
-                                setType(value);
-                                if (typeError) {
-                                    setTypeError(null);
-                                }
-                            }}
-                        >
-                            <SelectTrigger
-                                id="workout-type"
-                                className={cn(
-                                    'w-full',
-                                    typeError && 'border-destructive aria-invalid:border-destructive'
-                                )}
-                                aria-invalid={!!typeError}
-                            >
-                                <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {WORKOUT_TYPES.map((workoutType) => (
-                                    <SelectItem key={workoutType.value} value={workoutType.value}>
-                                        {workoutType.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="workout-difficulty" className="text-sm font-medium">
-                            {t('workouts.addWorkout.difficulty')}<RequiredAsterisk />
-                        </label>
-                        <Select
-                            value={difficulty}
-                            onValueChange={(value) => {
-                                setDifficulty(value);
-                                if (difficultyError) {
-                                    setDifficultyError(null);
-                                }
-                            }}
-                        >
-                            <SelectTrigger
-                                id="workout-difficulty"
-                                className={cn(
-                                    'w-full',
-                                    difficultyError && 'border-destructive aria-invalid:border-destructive'
-                                )}
-                                aria-invalid={!!difficultyError}
-                            >
-                                <SelectValue placeholder={t('workouts.addWorkout.difficultyPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {DIFFICULTY_LEVELS.map((level) => (
-                                    <SelectItem key={level.value} value={level.value}>
-                                        {level.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
                     </div>
                 </div>
-
-                <div className="flex flex-col gap-2">
-                    <label htmlFor="workout-description" className="text-sm font-medium">
-                        {t('workouts.addWorkout.description')} <span className="text-muted-foreground font-normal">{t('workouts.addWorkout.descriptionOptional')}</span>
-                    </label>
-                    <Textarea
-                        id="workout-description"
-                        placeholder={t('workouts.addWorkout.descriptionPlaceholder')}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={4}
-                        className="resize-none"
-                    />
-                </div>
-            </div>
-        </SidePanel>
+            </SidePanel>
+            <ConfirmDeleteDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                onConfirm={() => {
+                    setIsDeleteDialogOpen(false);
+                    onDelete?.();
+                }}
+                itemName={title}
+                itemType="workout"
+            />
+        </>
     );
 };

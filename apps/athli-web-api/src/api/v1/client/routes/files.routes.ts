@@ -1,6 +1,14 @@
 import { Router } from 'express';
 import { clientFilesController } from '../client-files.controller';
 import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
+import multer from 'multer';
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit
+    },
+});
 
 export const clientFileRouter = Router();
 
@@ -10,35 +18,43 @@ export const clientFileRouter = Router();
  *   get:
  *     summary: Get client files
  *     tags: [Client Files]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Client files retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         assignments:
- *                           type: array
- *                           items:
- *                             type: object
- *                             properties:
- *                               id: { type: 'string' }
- *                               file:
- *                                 type: object
- *                                 properties:
- *                                   id: { type: 'string' }
- *                                   name: { type: 'string' }
- *                                   file_url: { type: 'string' }
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ *   post:
+ *     summary: Assign files to client (Coach only)
+ *     tags: [Client Files]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *   delete:
+ *     summary: Unassign files from client (Coach only)
+ *     tags: [Client Files]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
  */
 clientFileRouter.get('/', supabaseAuthenticate, clientFilesController.getFiles);
+clientFileRouter.post('/', supabaseAuthenticate, clientFilesController.assignFile);
+clientFileRouter.post('/upload', supabaseAuthenticate, upload.single('file'), clientFilesController.uploadFile);
+clientFileRouter.delete('/', supabaseAuthenticate, clientFilesController.deleteAssignment);
 
 /**
  * @swagger
@@ -46,37 +62,16 @@ clientFileRouter.get('/', supabaseAuthenticate, clientFilesController.getFiles);
  *   get:
  *     summary: Get signed URL for file
  *     tags: [Client Files]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema: { type: string }
- *     responses:
- *       200:
- *         description: URL generated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: object
- *                   properties:
- *                     url: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
  */
 clientFileRouter.get('/:id/url', supabaseAuthenticate, clientFilesController.getFileUrl);
-
-/**
- * @swagger
- * /api/v1/client/files:
- *   post:
- *     summary: Assign files to client
- *     tags: [Client Files]
- *   delete:
- *     summary: Unassign files from client
- *     tags: [Client Files]
- */
-clientFileRouter.post('/', supabaseAuthenticate, clientFilesController.assignFile);
-clientFileRouter.delete('/', supabaseAuthenticate, clientFilesController.deleteAssignment);

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Copy } from 'lucide-react';
+import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Copy, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,14 +21,18 @@ import { useCoachFlows } from '@/hooks/use-coach-flows';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { Button as UIButton } from '@/components/ui/button';
 
 
 const FlowsPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const { flows, isLoading, duplicateFlow: duplicateFlowMutation } = useCoachFlows();
+  const { flows, isLoading, duplicateFlow: duplicateFlowMutation, deleteFlow: deleteFlowMutation } = useCoachFlows();
   const [isAddFlowOpen, setIsAddFlowOpen] = useState<boolean>(false);
   const [selectedFlows, setSelectedFlows] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [flowToDelete, setFlowToDelete] = useState<string | null>(null);
 
   // Data is now fetched and cached by useCoachFlows hook
 
@@ -39,8 +43,49 @@ const FlowsPage = () => {
       icon: <FileText className="size-3" />,
       sortable: true,
       width: { class: 'w-[350px]', pixel: '350px' },
-      getSortValue: (row) => row.name.toLowerCase(),
-      getSearchValue: (row) => row.name,
+      getSortValue: (row) => (row.name || '').toLowerCase(),
+      getSearchValue: (row) => row.name || '',
+      renderHeader: ({ isSorted, isAscending, isDescending, onSort, isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+            <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
+                <span className="text-xs uppercase text-muted-foreground">{t('flows.columns.name')}</span>
+                {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+                {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => onSort('asc')} className={cn(isAscending && 'bg-accent')}>
+                <ArrowUpNarrowWide className="size-4 mr-2" />
+                <span className="flex-1">Sort ascending</span>
+                {isAscending && <Check className="ml-2 size-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSort('desc')} className={cn(isDescending && 'bg-accent')}>
+                <ArrowDownWideNarrow className="size-4 mr-2" />
+                <span className="flex-1">Sort descending</span>
+                {isDescending && <Check className="ml-2 size-4" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+            <Checkbox checked={isSelected} onCheckedChange={() => {
+              const newSet = new Set(selectedFlows);
+              if (newSet.has(row.id)) newSet.delete(row.id);
+              else newSet.add(row.id);
+              setSelectedFlows(newSet);
+            }} />
+          </div>
+          <span className="text-sm font-medium truncate">{row.name}</span>
+        </div>
+      ),
     },
     {
       id: 'description',
@@ -68,6 +113,35 @@ const FlowsPage = () => {
         <span className="text-sm text-foreground">{row.flow_data?.nodes?.length || 0}</span>
       ),
     },
+    {
+      id: 'actions',
+      label: '',
+      sortable: false,
+      width: { class: 'w-[80px]', pixel: '80px' },
+      renderCell: (row) => (
+        <div className="flex items-center justify-end w-full" data-no-row-link="true">
+          <UIButton
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFlowToDelete(row.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                e.preventDefault();
+                setFlowToDelete(row.id);
+              }
+            }}
+            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
+            aria-label={`Delete ${row.name}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </UIButton>
+        </div>
+      ),
+    },
   ];
 
   const handleClearSelected = () => {
@@ -86,77 +160,27 @@ const FlowsPage = () => {
     }
   };
 
-  const renderFirstColumnHeader = ({
-    isSorted,
-    isAscending,
-    isDescending,
-    onSort,
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isSorted: boolean;
-    isAscending: boolean;
-    isDescending: boolean;
-    onSort: (direction: 'asc' | 'desc') => void;
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
-              <span className="text-xs uppercase text-muted-foreground">
-                {t('flows.columns.name')}
-              </span>
-              {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
-              {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem
-              onClick={() => onSort('asc')}
-              className={cn(isAscending && 'bg-accent')}
-            >
-              <ArrowUpNarrowWide className="size-4 mr-2" />
-              <span className="flex-1">Sort ascending</span>
-              {isAscending && <Check className="ml-2 size-4" />}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onSort('desc')}
-              className={cn(isDescending && 'bg-accent')}
-            >
-              <ArrowDownWideNarrow className="size-4 mr-2" />
-              <span className="flex-1">Sort descending</span>
-              {isDescending && <Check className="ml-2 size-4" />}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
+  const handleBulkDelete = async () => {
+    try {
+      const idsToDelete = Array.from(selectedFlows);
+      await Promise.all(idsToDelete.map((id) => deleteFlowMutation(id)));
+      setSelectedFlows(new Set());
+    } catch (error) {
+      console.error('Failed to bulk delete flows:', error);
+    }
   };
 
-  const createRenderFirstColumn = (onToggleRow: (id: string) => void) => {
-    return (row: Flow, isSelected: boolean) => {
-      return (
-        <div className="flex items-center gap-3 h-full w-full">
-          <div
-            className="flex items-center justify-center h-full flex-shrink-0"
-            data-no-row-link="true"
-          >
-            <Checkbox checked={isSelected} onCheckedChange={() => onToggleRow(row.id)} />
-          </div>
-          <span className="text-sm font-medium truncate">{row.name}</span>
-        </div>
-      );
-    };
+  const handleDeleteSingle = async () => {
+    if (!flowToDelete) return;
+    try {
+      await deleteFlowMutation(flowToDelete);
+      setFlowToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete flow:', error);
+    }
   };
+
+
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
@@ -190,20 +214,7 @@ const FlowsPage = () => {
             enableRowSelection={true}
             selectedRowIds={selectedFlows}
             onSelectionChange={setSelectedFlows}
-            firstColumnId="name"
-            stickyFirstColumn={true}
-            firstColumnWidth="350px"
-            hideFirstColumnBorder={false}
-            renderFirstColumn={createRenderFirstColumn((id) => {
-              const newSet = new Set(selectedFlows);
-              if (newSet.has(id)) {
-                newSet.delete(id);
-              } else {
-                newSet.add(id);
-              }
-              setSelectedFlows(newSet);
-            })}
-            renderFirstColumnHeader={renderFirstColumnHeader}
+
             showPagination={true}
             gridPadding={true}
             compactPagination={true}
@@ -231,7 +242,7 @@ const FlowsPage = () => {
                   >
                     <X className="size-4" />
                     <span>
-                      {t('flows.actions.clearSelected')} {selectedFlows.size}
+                      {t('general.clearSelected', { count: selectedFlows.size })}
                     </span>
                   </Button>
                   {selectedFlows.size === 1 && (
@@ -245,6 +256,15 @@ const FlowsPage = () => {
                       <span>{t('flows.actions.duplicate')}</span>
                     </Button>
                   )}
+                  <Button
+                    variant="ghost"
+                    onClick={() => setIsBulkDeleteOpen(true)}
+                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    aria-label="Delete selected flows"
+                  >
+                    <Trash2 className="size-4" />
+                    <span>{t('general.delete')}</span>
+                  </Button>
                 </div>
               ) : undefined
             }
@@ -272,6 +292,22 @@ const FlowsPage = () => {
       <AddFlowSidePanel
         open={isAddFlowOpen}
         onOpenChange={setIsAddFlowOpen}
+      />
+
+      <ConfirmDeleteDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={setIsBulkDeleteOpen}
+        onConfirm={handleBulkDelete}
+        count={selectedFlows.size}
+        itemType={t('flows.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={flowToDelete !== null}
+        onOpenChange={(open) => !open && setFlowToDelete(null)}
+        onConfirm={handleDeleteSingle}
+        itemName={flows.find(f => f.id === flowToDelete)?.name}
+        itemType="flow"
       />
     </div>
   );

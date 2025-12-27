@@ -10,27 +10,42 @@ export const clientQuestionnaireRouter = Router();
  *   get:
  *     summary: Get client questionnaire assignments
  *     tags: [Client Forms]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Client questionnaires retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         assignments:
- *                           type: array
- *                           items:
- *                             $ref: '#/components/schemas/ClientQuestionnaire'
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ *   post:
+ *     summary: Assign questionnaires to client (Coach only)
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *   delete:
+ *     summary: Unassign questionnaires from client (Coach only)
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
  */
 clientQuestionnaireRouter.get('/', supabaseAuthenticate, clientQuestionnairesController.getQuestionnaires);
+clientQuestionnaireRouter.post('/', supabaseAuthenticate, clientQuestionnairesController.assignQuestionnaire);
+clientQuestionnaireRouter.delete('/', supabaseAuthenticate, clientQuestionnairesController.deleteAssignment);
 
 /**
  * @swagger
@@ -38,43 +53,23 @@ clientQuestionnaireRouter.get('/', supabaseAuthenticate, clientQuestionnairesCon
  *   post:
  *     summary: Submit a questionnaire
  *     tags: [Client Forms]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/SubmitFormInput'
- *     responses:
- *       200:
- *         description: Questionnaire submitted successfully
+ *     responses: { 200: { description: 'Success' } }
  */
 clientQuestionnaireRouter.post('/:id/submit', supabaseAuthenticate, clientQuestionnairesController.submitQuestionnaire);
-
-/**
- * @swagger
- * /api/v1/client/questionnaires/{id}:
- *   delete:
- *     summary: Unassign (Hide) a questionnaire
- *     tags: [Client Forms]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       204:
- *         description: Questionnaire unassigned successfully
- */
-clientQuestionnaireRouter.delete('/:id', supabaseAuthenticate, clientQuestionnairesController.deleteAssignment);
-clientQuestionnaireRouter.delete('/', supabaseAuthenticate, clientQuestionnairesController.deleteAssignment);

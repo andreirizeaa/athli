@@ -10,27 +10,42 @@ export const clientCheckInRouter = Router();
  *   get:
  *     summary: Get client check-in assignments
  *     tags: [Client Forms]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Client check-ins retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         assignments:
- *                           type: array
- *                           items:
- *                             $ref: '#/components/schemas/ClientCheckIn'
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ *   post:
+ *     summary: Assign check-ins to client (Coach only)
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *   delete:
+ *     summary: Unassign check-ins from client (Coach only)
+ *     tags: [Client Forms]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
  */
 clientCheckInRouter.get('/', supabaseAuthenticate, clientCheckInsController.getCheckIns);
+clientCheckInRouter.post('/', supabaseAuthenticate, clientCheckInsController.assignCheckIn);
+clientCheckInRouter.delete('/', supabaseAuthenticate, clientCheckInsController.deleteAssignment);
 
 /**
  * @swagger
@@ -38,43 +53,23 @@ clientCheckInRouter.get('/', supabaseAuthenticate, clientCheckInsController.getC
  *   post:
  *     summary: Submit a check-in
  *     tags: [Client Forms]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/SubmitFormInput'
- *     responses:
- *       200:
- *         description: Check-in submitted successfully
+ *     responses: { 200: { description: 'Success' } }
  */
 clientCheckInRouter.post('/:id/submit', supabaseAuthenticate, clientCheckInsController.submitCheckIn);
-
-/**
- * @swagger
- * /api/v1/client/check-ins/{id}:
- *   delete:
- *     summary: Unassign (Hide) a check-in
- *     tags: [Client Forms]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       204:
- *         description: Check-in unassigned successfully
- */
-clientCheckInRouter.delete('/:id', supabaseAuthenticate, clientCheckInsController.deleteAssignment);
-clientCheckInRouter.delete('/', supabaseAuthenticate, clientCheckInsController.deleteAssignment);

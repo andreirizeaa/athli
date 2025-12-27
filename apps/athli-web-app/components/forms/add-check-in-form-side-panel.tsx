@@ -37,6 +37,8 @@ import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { cn } from '@/lib/general/utils';
 import { toast } from 'sonner';
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { FileText } from 'lucide-react';
 
 type AddCheckInFormSidePanelProps = {
   open: boolean;
@@ -226,6 +228,30 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
     ? form.formState.isValid && form.watch('name').trim() !== ''
     : selectedTemplate !== null;
 
+  const templateColumns: ColumnDefinition<FormTemplate>[] = useMemo(() => [
+    {
+      id: 'name',
+      label: t('forms.form.name'),
+      width: { class: 'min-w-[300px]', pixel: '300px' },
+      renderCell: (row) => (
+        <div className="flex items-center gap-3 w-full min-w-0">
+          <FileText className="size-4 text-muted-foreground" />
+          <span className="truncate text-sm font-medium">{row.name}</span>
+        </div>
+      ),
+    },
+    {
+      id: 'questions',
+      label: 'Questions',
+      width: { class: 'min-w-[120px]', pixel: '120px' },
+      renderCell: (row) => (
+        <span className="truncate text-sm text-muted-foreground">
+          {row.questions.length} {row.questions.length === 1 ? 'question' : 'questions'}
+        </span>
+      ),
+    },
+  ], [t]);
+
   return (
     <SidePanel
       open={open}
@@ -247,7 +273,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
         </div>
       }
     >
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'templates')} className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'templates')} className="w-full flex-1 flex flex-col min-h-0">
         <TabsList className="w-full mb-6">
           <TabsTrigger
             value="new"
@@ -494,49 +520,38 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
           </Form>
         </TabsContent>
 
-        <TabsContent value="templates" className="mt-0">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
+        <TabsContent value="templates" className="mt-0 h-full flex-1 flex flex-col min-h-0">
+          <div className="flex flex-col gap-6 flex-1 min-h-0">
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
               <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 <span>
                   {t('forms.template')}
                   <RequiredAsterisk />
                 </span>
               </label>
-              <div className="flex flex-col gap-3 max-h-[calc(100vh-300px)] overflow-y-auto px-1 pt-1">
-                {checkInTemplates.map((template) => (
-                  <Card
-                    key={template.name}
-                    className={cn(
-                      'p-4 cursor-pointer hover:bg-accent transition-colors w-full',
-                      selectedTemplate?.name === template.name && 'ring-2 ring-primary'
-                    )}
-                    onClick={() => {
-                      handleSelectTemplate(template);
-                      setActiveTab('new');
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleSelectTemplate(template);
-                        setActiveTab('new');
-                      }
-                    }}
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Select template: ${template.name}`}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <h4 className="text-sm font-medium text-foreground">{template.name}</h4>
-                      {template.description && (
-                        <p className="text-xs text-muted-foreground">{template.description}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {template.questions.length} {template.questions.length === 1 ? 'question' : 'questions'}
-                      </p>
-                    </div>
-                  </Card>
-                ))}
+              <div className="flex-1 min-h-0">
+                <DataGrid
+                  data={checkInTemplates}
+                  columns={templateColumns}
+                  getRowId={(row) => row.name}
+                  gridKey="check-in-templates"
+                  searchPlaceholder={t('forms.searchPlaceholder')}
+                  searchFields={[(row) => `${row.name} ${row.description || ''}`]}
+                  enableSearch={true}
+                  enableEditColumns={false}
+                  enableExport={false}
+                  enableRowSelection={false}
+                  selectOnRowClick={true}
+                  onRowClick={(row) => {
+                    handleSelectTemplate(row);
+                    setActiveTab('new');
+                  }}
+                  emptyMessage={t('forms.emptyMessage')}
+                  rowHeight="54px"
+                  compactMode={true}
+                  showPagination={false}
+                  gridPadding={false}
+                />
               </div>
             </div>
           </div>

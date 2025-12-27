@@ -62,47 +62,4 @@ export const clientProfileController = {
         });
     },
 
-    /**
-     * Resend invitation email to client
-     */
-    resendInvite: async (req: Request, res: Response) => {
-        const userId = (req as any).userId;
-        const { clientId } = req.body;
-
-        if (!userId) {
-            unauthorized(res, { message: 'User not authenticated' });
-            return;
-        }
-
-        if (!clientId) {
-            return res.status(400).json({ success: false, message: 'clientId is required' });
-        }
-
-        const supabase = getSupabaseClient();
-
-        // Fetch client details to get email and invitation token
-        const { data: client, error } = await supabase
-            .from('coach_clients_view')
-            .select('email, invitation_token, full_name')
-            .eq('coach_id', userId)
-            .eq('client_id', clientId)
-            .single();
-
-        if (error || !client) {
-            console.error('Error fetching client for resend invite:', error, { userId, clientId });
-            return notFound(res, { message: 'Client not found' });
-        }
-
-        // TODO: Send invitation email to client.email with client.invitation_token
-        // Email should include:
-        // - Client name (client.full_name)
-        // - Invitation link with token
-        // - Coach information
-        console.log(`TODO: Send invitation email to ${client.email} with token ${client.invitation_token}`);
-
-        success(res, {
-            message: 'Invitation resent successfully',
-            data: { email: client.email }
-        });
-    },
 };

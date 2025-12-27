@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SidePanel } from '@/components/app/side-panel';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -76,6 +77,7 @@ export const EditProgramDetailsSidePanel = ({
     const [nameError, setNameError] = useState<string | null>(null);
     const [typeError, setTypeError] = useState<string | null>(null);
     const [difficultyError, setDifficultyError] = useState<string | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     // Track original values to detect changes
     const [originalValues, setOriginalValues] = useState({
@@ -154,139 +156,151 @@ export const EditProgramDetailsSidePanel = ({
     };
 
     return (
-        <SidePanel
-            open={open}
-            onOpenChange={onOpenChange}
-            title="Edit Program Details"
-            onOpenAutoFocus={(e) => e.preventDefault()}
-            footer={
-                <div className="flex w-full justify-start gap-2">
-                    <Button onClick={handleSave} disabled={!isSaveEnabled}>
-                        {isSaving ? 'Saving...' : 'Save'}
-                    </Button>
-                    {onDelete && (
-                        <Button
-                            variant="outline"
-                            onClick={onDelete}
-                        >
-                            Delete
+        <>
+            <SidePanel
+                open={open}
+                onOpenChange={onOpenChange}
+                title="Edit Program Details"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                footer={
+                    <div className="flex w-full justify-start gap-2">
+                        <Button onClick={handleSave} disabled={!isSaveEnabled}>
+                            {isSaving ? 'Saving...' : 'Save'}
                         </Button>
-                    )}
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                        Cancel
-                    </Button>
-                </div>
-            }
-        >
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-4">
+                        {onDelete && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsDeleteDialogOpen(true)}
+                            >
+                                Delete
+                            </Button>
+                        )}
+                        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+                            Cancel
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="program-name" className="text-sm font-medium">
+                                {t('programs.addProgram.programName')}<RequiredAsterisk />
+                            </label>
+                            <Input
+                                id="program-name"
+                                type="text"
+                                placeholder={t('programs.addProgram.programNamePlaceholder')}
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    if (nameError) {
+                                        setNameError(null);
+                                    }
+                                }}
+                                className={cn(
+                                    'w-full',
+                                    nameError && 'border-destructive aria-invalid:border-destructive'
+                                )}
+                                aria-invalid={!!nameError}
+                            />
+                            {nameError && <p className="text-sm text-destructive">{nameError}</p>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="program-type" className="text-sm font-medium">
+                                {t('programs.addProgram.type')}<RequiredAsterisk />
+                            </label>
+                            <Select
+                                value={type}
+                                onValueChange={(value) => {
+                                    setType(value);
+                                    if (typeError) {
+                                        setTypeError(null);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="program-type"
+                                    className={cn(
+                                        'w-full',
+                                        typeError && 'border-destructive aria-invalid:border-destructive'
+                                    )}
+                                    aria-invalid={!!typeError}
+                                >
+                                    <SelectValue placeholder={t('programs.addProgram.typePlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PROGRAM_TYPES.map((programType) => (
+                                        <SelectItem key={programType.value} value={programType.value}>
+                                            {programType.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {typeError && <p className="text-sm text-destructive">{typeError}</p>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="program-difficulty" className="text-sm font-medium">
+                                {t('programs.addProgram.difficulty')}<RequiredAsterisk />
+                            </label>
+                            <Select
+                                value={difficulty}
+                                onValueChange={(value) => {
+                                    setDifficulty(value);
+                                    if (difficultyError) {
+                                        setDifficultyError(null);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="program-difficulty"
+                                    className={cn(
+                                        'w-full',
+                                        difficultyError && 'border-destructive aria-invalid:border-destructive'
+                                    )}
+                                    aria-invalid={!!difficultyError}
+                                >
+                                    <SelectValue placeholder={t('programs.addProgram.difficultyPlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DIFFICULTY_LEVELS.map((level) => (
+                                        <SelectItem key={level.value} value={level.value}>
+                                            {level.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+                        </div>
+                    </div>
+
                     <div className="flex flex-col gap-2">
-                        <label htmlFor="program-name" className="text-sm font-medium">
-                            {t('programs.addProgram.programName')}<RequiredAsterisk />
+                        <label htmlFor="program-description" className="text-sm font-medium">
+                            {t('programs.addProgram.description')} <span className="text-muted-foreground font-normal">{t('programs.addProgram.descriptionOptional')}</span>
                         </label>
-                        <Input
-                            id="program-name"
-                            type="text"
-                            placeholder={t('programs.addProgram.programNamePlaceholder')}
-                            value={name}
-                            onChange={(e) => {
-                                setName(e.target.value);
-                                if (nameError) {
-                                    setNameError(null);
-                                }
-                            }}
-                            className={cn(
-                                'w-full',
-                                nameError && 'border-destructive aria-invalid:border-destructive'
-                            )}
-                            aria-invalid={!!nameError}
+                        <Textarea
+                            id="program-description"
+                            placeholder={t('programs.addProgram.descriptionPlaceholder')}
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={4}
+                            className="resize-none"
                         />
-                        {nameError && <p className="text-sm text-destructive">{nameError}</p>}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="program-type" className="text-sm font-medium">
-                            {t('programs.addProgram.type')}<RequiredAsterisk />
-                        </label>
-                        <Select
-                            value={type}
-                            onValueChange={(value) => {
-                                setType(value);
-                                if (typeError) {
-                                    setTypeError(null);
-                                }
-                            }}
-                        >
-                            <SelectTrigger
-                                id="program-type"
-                                className={cn(
-                                    'w-full',
-                                    typeError && 'border-destructive aria-invalid:border-destructive'
-                                )}
-                                aria-invalid={!!typeError}
-                            >
-                                <SelectValue placeholder={t('programs.addProgram.typePlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {PROGRAM_TYPES.map((programType) => (
-                                    <SelectItem key={programType.value} value={programType.value}>
-                                        {programType.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="program-difficulty" className="text-sm font-medium">
-                            {t('programs.addProgram.difficulty')}<RequiredAsterisk />
-                        </label>
-                        <Select
-                            value={difficulty}
-                            onValueChange={(value) => {
-                                setDifficulty(value);
-                                if (difficultyError) {
-                                    setDifficultyError(null);
-                                }
-                            }}
-                        >
-                            <SelectTrigger
-                                id="program-difficulty"
-                                className={cn(
-                                    'w-full',
-                                    difficultyError && 'border-destructive aria-invalid:border-destructive'
-                                )}
-                                aria-invalid={!!difficultyError}
-                            >
-                                <SelectValue placeholder={t('programs.addProgram.difficultyPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {DIFFICULTY_LEVELS.map((level) => (
-                                    <SelectItem key={level.value} value={level.value}>
-                                        {level.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
                     </div>
                 </div>
-
-                <div className="flex flex-col gap-2">
-                    <label htmlFor="program-description" className="text-sm font-medium">
-                        {t('programs.addProgram.description')} <span className="text-muted-foreground font-normal">{t('programs.addProgram.descriptionOptional')}</span>
-                    </label>
-                    <Textarea
-                        id="program-description"
-                        placeholder={t('programs.addProgram.descriptionPlaceholder')}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={4}
-                        className="resize-none"
-                    />
-                </div>
-            </div>
-        </SidePanel>
+            </SidePanel>
+            <ConfirmDeleteDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                onConfirm={() => {
+                    setIsDeleteDialogOpen(false);
+                    onDelete?.();
+                }}
+                itemName={name}
+                itemType="program"
+            />
+        </>
     );
 };

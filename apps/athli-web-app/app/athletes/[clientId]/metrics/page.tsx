@@ -9,7 +9,7 @@ import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2 } from 'lucide-react';
+import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Trash } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -24,8 +24,13 @@ import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { useClientMetrics } from '@/hooks/use-client-metrics';
+import { useClientProfileContext } from '../client-profile-context';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { getAllMetrics } from '@/api/coach/coach-metric-service';
+import { assignMetric, addMetric as addClientMetric, removeMetric } from '@/api/client/client-metric-service';
+import { useClientMetrics } from '@/hooks/use-client-metrics';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 
 type Metric = {
   id: string;
@@ -48,7 +53,12 @@ const ClientMetricsPage = () => {
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const { metrics: rawMetrics, isLoading } = useClientMetrics(clientId);
+  const { user } = useUserProfile();
+  const { metrics: rawMetrics, isLoading: isLoadingContext, refreshData } = useClientProfileContext();
+  const { metrics: metricsFromHook, isLoading: isLoadingHook, refetch } = useClientMetrics(clientId);
+
+  const rawData = rawMetrics.length > 0 ? rawMetrics : metricsFromHook;
+  const isLoading = isLoadingContext || isLoadingHook;
 
   const [isAddMetricOpen, setIsAddMetricOpen] = useState<boolean>(false);
   const [isLogMetricOpen, setIsLogMetricOpen] = useState<boolean>(false);
@@ -58,17 +68,18 @@ const ClientMetricsPage = () => {
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editingLogValue, setEditingLogValue] = useState<string>('');
   const [timeFilter, setTimeFilter] = useState<string>('all-time');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
   const metrics = useMemo(() => {
-    return rawMetrics.map((item: any) => ({
+    return rawData.map((item: any) => ({
       id: item.id,
       name: item.name,
       unit: item.unit,
       description: item.description,
       metricId: item.id,
-      assignmentId: item.assignment_id
+      assignmentId: item.assignment_id || item.id
     }));
-  }, [rawMetrics]);
+  }, [rawData]);
 
   const clientName = '';
 
@@ -89,7 +100,7 @@ const ClientMetricsPage = () => {
     }
     const query = searchQuery.toLowerCase();
     return metrics.filter(
-      (metric) =>
+      (metric: any) =>
         metric.name.toLowerCase().includes(query) ||
         metric.unit.toLowerCase().includes(query) ||
         (metric.description && metric.description.toLowerCase().includes(query))
@@ -97,7 +108,7 @@ const ClientMetricsPage = () => {
   }, [searchQuery, metrics]);
 
   const selectedMetric = selectedMetricId
-    ? metrics.find((metric) => metric.id === selectedMetricId)
+    ? metrics.find((metric: any) => metric.id === selectedMetricId)
     : null;
 
   // Map filter values to translation keys
@@ -298,10 +309,37 @@ const ClientMetricsPage = () => {
     setIsEditMetricOpen(false);
   };
 
-  const handleSaveMetric = async (name: string, unit: string, description?: string) => {
-    // TODO: Implement save metric for client
-    console.log('Saving metric for client:', { clientId, name, unit, description });
-    handleCloseAddMetric();
+  const handleSaveMetric = async (name: string, unit: string, description?: string, existingMetricId?: string) => {
+    if (!clientId || !user?.id) return;
+
+    try {
+      let metricId = existingMetricId;
+
+      if (!metricId) {
+        // Create new private metric
+        await addClientMetric({
+          name,
+          unit,
+          description,
+          clientId,
+          coachId: user.id
+        });
+      } else {
+        // Assign existing
+        await assignMetric({
+          metricIds: [metricId],
+          clientId,
+          coachId: user.id
+        });
+      }
+
+      // Refetch
+      refetch();
+      refreshData?.();
+      handleCloseAddMetric();
+    } catch (error) {
+      console.error('Failed to save metric:', error);
+    }
   };
 
   const handleSaveLogMetric = async (metricId: string, value: number) => {
@@ -315,12 +353,30 @@ const ClientMetricsPage = () => {
     handleCloseEditMetric();
   };
 
-  const handleDeleteMetric = async (metricId: string) => {
-    // TODO: Implement delete metric for client
-    console.log('Deleting metric for client:', { clientId, metricId });
-    if (selectedMetricId === metricId) {
+  const handleDeleteMetric = async () => {
+    if (!clientId || !user?.id || !selectedMetricId) return;
+
+    try {
+      // Find the metric to get the assignment ID if needed,
+      // but removeMetric usually takes metric IDs for simplicity or as specified.
+      // Based on controller, it uses metric_id in removal.
+      await removeMetric({
+        metricIds: [selectedMetricId],
+        clientId,
+        coachId: user.id
+      });
+
+      refetch();
+      refreshData?.();
       setSelectedMetricId(null);
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to delete metric:', error);
     }
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setIsDeleteDialogOpen(true);
   };
 
   if (isLoading) {
@@ -388,9 +444,10 @@ const ClientMetricsPage = () => {
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Metrics list */}
             <div className="space-y-0 flex-1 overflow-y-auto">
-              {filteredMetrics.map((metric, index) => {
+              {filteredMetrics.map((metric: any, index: number) => {
                 const isSelected = selectedMetricId === metric.id;
                 const isLast = index === filteredMetrics.length - 1;
+                const isOnlyItem = filteredMetrics.length === 1;
 
                 return (
                   <React.Fragment key={metric.id}>
@@ -410,7 +467,7 @@ const ClientMetricsPage = () => {
                         </span>
                       </div>
                     </button>
-                    {!isLast && <Separator className="w-full" />}
+                    {(!isLast || isOnlyItem) && <Separator className="w-full" />}
                   </React.Fragment>
                 );
               })}
@@ -430,11 +487,11 @@ const ClientMetricsPage = () => {
                   className="gap-2 rounded-r-none border-r-0"
                 >
                   <FileText className="size-4" />
-                  <span>{t('metrics.logMetric')}</span>
+                  <span>Log a Metric</span>
                 </Button>
                 <Button onClick={handleOpenAddMetric} className="gap-2 rounded-l-none">
                   <Plus className="size-4" />
-                  <span>{t('metrics.addMetric')}</span>
+                  <span>Assign Metric</span>
                 </Button>
               </ButtonGroup>
             </div>
@@ -481,10 +538,21 @@ const ClientMetricsPage = () => {
                       {movement !== null ? `${movement.percentage.toFixed(1)}%` : '0%'}
                     </div>
                   </div>
-                  <Button onClick={handleOpenEditMetric} className="gap-2" variant="outline">
-                    <Edit className="size-4" />
-                    <span>{t('metrics.editMetricTitle')}</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => {
+                      setIsLogMetricOpen(true);
+                    }} className="gap-2" variant="outline">
+                      <FileText className="size-4" />
+                      <span>Enter a Log</span>
+                    </Button>
+                    <Button onClick={handleOpenEditMetric} className="gap-2" variant="outline">
+                      <Edit className="size-4" />
+                      <span>{t('metrics.editMetricTitle')}</span>
+                    </Button>
+                    <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
+                      <Trash className="size-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Line Chart */}
@@ -543,7 +611,7 @@ const ClientMetricsPage = () => {
                 </div>
 
                 {/* Logs DataGrid */}
-                <div className="w-full metric-logs-no-scroll">
+                <div className="w-full min-h-[200px] metric-logs-no-scroll">
                   <style
                     dangerouslySetInnerHTML={{
                       __html: `
@@ -559,6 +627,10 @@ const ClientMetricsPage = () => {
                     .metric-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-auto"]),
                     .metric-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-hidden"]) {
                       flex: none !important;
+                    }
+                    .metric-logs-no-scroll > div > div:first-child {
+                      border-top-left-radius: 0.5rem !important;
+                      border-top-right-radius: 0.5rem !important;
                     }
                   `,
                     }}
@@ -661,7 +733,11 @@ const ClientMetricsPage = () => {
                     enableSearch={false}
                     showPagination={false}
                     gridPadding={false}
-                    emptyMessage={t('metrics.noLogsMessage')}
+                    emptyState={
+                      <div className="flex items-center justify-center min-h-[150px] text-sm text-muted-foreground">
+                        {t('metrics.noLogsMessage')}
+                      </div>
+                    }
                     onRowClick={(row, e) => {
                       // Prevent row click when clicking edit button
                       if ((e.target as HTMLElement).closest('[data-no-row-link="true"]')) {
@@ -669,6 +745,7 @@ const ClientMetricsPage = () => {
                         e.stopPropagation();
                       }
                     }}
+                    alwaysShowHeaders={true}
                   />
                 </div>
               </>
@@ -702,9 +779,20 @@ const ClientMetricsPage = () => {
           onOpenChange={setIsEditMetricOpen}
           metric={selectedMetric}
           onSave={handleSaveEditMetric}
-          onDelete={handleDeleteMetric}
+          onDelete={async (_metricId) => {
+            setIsEditMetricOpen(false);
+            setIsDeleteDialogOpen(true);
+          }}
         />
       )}
+
+      <ConfirmDeleteDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteMetric}
+        itemName={selectedMetric?.name}
+        itemType="metric"
+      />
     </div>
   );
 };

@@ -10,27 +10,42 @@ export const clientMetricRouter = Router();
  *   get:
  *     summary: Get client metrics
  *     tags: [Client Metrics]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Client metrics retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         assignments:
- *                           type: array
- *                           items:
- *                             $ref: '#/components/schemas/ClientMetric'
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ *   post:
+ *     summary: Assign metrics to client (Coach only)
+ *     tags: [Client Metrics]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *   delete:
+ *     summary: Remove metrics from client (Coach only)
+ *     tags: [Client Metrics]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
  */
 clientMetricRouter.get('/', supabaseAuthenticate, clientMetricsController.getMetrics);
+clientMetricRouter.post('/', supabaseAuthenticate, clientMetricsController.assignMetric);
+clientMetricRouter.delete('/', supabaseAuthenticate, clientMetricsController.deleteAssignment);
 
 /**
  * @swagger
@@ -38,38 +53,16 @@ clientMetricRouter.get('/', supabaseAuthenticate, clientMetricsController.getMet
  *   post:
  *     summary: Record client metric value
  *     tags: [Client Metrics]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [value]
- *             properties:
- *               value:
- *                 type: string
- *     responses:
- *       200:
- *         description: Client metric recorded successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         assignment:
- *                           $ref: '#/components/schemas/ClientMetric'
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
  */
 clientMetricRouter.post('/:id', supabaseAuthenticate, clientMetricsController.recordMetric);

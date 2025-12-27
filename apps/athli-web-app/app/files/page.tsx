@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -23,6 +24,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { FileThumbnail } from '@/components/files/file-thumbnail';
 import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
@@ -51,6 +53,10 @@ const FilesPage = () => {
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
   const [filesToAssign, setFilesToAssign] = useState<CoachFile[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
+
+  // Single delete state
+  const [fileToDelete, setFileToDelete] = useState<CoachFile | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
   const handleOpenAddFile = () => {
     setIsAddFileOpen(true);
@@ -128,8 +134,16 @@ const FilesPage = () => {
     }
   };
 
-  const handleDeleteFile = (fileId: string) => {
-    deleteFileMutation({ fileId });
+  const handleDeleteFile = (file: CoachFile) => {
+    setFileToDelete(file);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (fileToDelete) {
+      deleteFileMutation({ fileId: fileToDelete.id });
+      setFileToDelete(null);
+    }
   };
 
   const handleToggleFile = (fileId: string) => {
@@ -206,39 +220,34 @@ const FilesPage = () => {
     }
   }, [editingFile, editFileName]);
 
-  const renderFirstColumnHeader = ({
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        <span className="text-xs uppercase text-muted-foreground">{t('files.columns.fileName')}</span>
-      </div>
-    );
-  };
 
-  const renderFirstColumn = (row: CoachFile, isSelected: boolean) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleFile(row.id)} />
-        </div>
-        <div className="flex items-center gap-3 w-full min-w-0">
-          <FileThumbnail file={row} />
-          <span className="text-sm truncate">{row.filename}</span>
-        </div>
-      </div>
-    );
-  };
 
   const columns: ColumnDefinition<CoachFile>[] = [
+    {
+      id: 'filename',
+      label: t('files.columns.fileName'),
+      width: { class: 'w-[350px]', pixel: '350px' },
+      renderHeader: ({ isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          <span className="text-xs uppercase text-muted-foreground">{t('files.columns.fileName')}</span>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div
+            className="flex items-center justify-center h-full flex-shrink-0"
+            data-no-row-link="true"
+          >
+            <Checkbox checked={isSelected} onCheckedChange={() => handleToggleFile(row.id)} />
+          </div>
+          <div className="flex items-center gap-3 w-full min-w-0">
+            <FileThumbnail file={row} />
+            <span className="text-sm truncate">{row.filename}</span>
+          </div>
+        </div>
+      ),
+    },
     {
       id: 'type',
       label: t('files.columns.type'),
@@ -299,7 +308,7 @@ const FilesPage = () => {
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDeleteFile(row.id);
+                  handleDeleteFile(row);
                 }}
                 className="text-destructive focus:text-destructive"
               >
@@ -357,12 +366,7 @@ const FilesPage = () => {
             handleFileClick(row);
           }
         }}
-        firstColumnId="filename"
-        stickyFirstColumn={true}
-        firstColumnWidth="350px"
-        hideFirstColumnBorder={false}
-        renderFirstColumn={renderFirstColumn}
-        renderFirstColumnHeader={renderFirstColumnHeader}
+
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -477,6 +481,15 @@ const FilesPage = () => {
         itemName={t('files.title').toLowerCase()}
       />
 
+      {/* Single Delete Confirmation Dialog */}
+      <ConfirmDeleteDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={fileToDelete?.filename}
+        itemType="file"
+      />
+
       {/* Assign to Clients Side Panel */}
       <SidePanel
         open={isAssignToClientsOpen}
@@ -544,6 +557,42 @@ const FilesPage = () => {
                     width: { class: 'w-full', pixel: '100%' },
                     getSortValue: (row) => row.name.toLowerCase(),
                     getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
+                    renderHeader: ({ isAllSelected, onToggleAll }) => (
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="size-3 text-muted-foreground" />
+                          <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
+                        </div>
+                      </div>
+                    ),
+                    renderCell: (row, isSelected) => {
+                      const initials = row.name
+                        .split(' ')
+                        .map((part) => part.charAt(0).toUpperCase())
+                        .slice(0, 2)
+                        .join('');
+                      return (
+                        <div className="flex items-center gap-3 h-full w-full">
+                          <div
+                            className="flex items-center justify-center h-full flex-shrink-0"
+                            data-no-row-link="true"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleToggleClient(row.id)}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={row.avatar} alt={row.name} />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
+                          </div>
+                        </div>
+                      );
+                    },
                   },
                 ]}
                 getRowId={(row) => row.id}
@@ -572,48 +621,7 @@ const FilesPage = () => {
                     handleToggleClient(row.id);
                   }
                 }}
-                firstColumnId="name"
-                stickyFirstColumn={true}
-                firstColumnWidth="100%"
-                hideFirstColumnBorder={true}
-                renderFirstColumn={(row, isSelected) => {
-                  const initials = row.name
-                    .split(' ')
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join('');
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <div
-                        className="flex items-center justify-center h-full flex-shrink-0"
-                        data-no-row-link="true"
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleToggleClient(row.id)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={row.avatar} alt={row.name} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
-                      </div>
-                    </div>
-                  );
-                }}
-                renderFirstColumnHeader={({ isAllSelected, onToggleAll }) => {
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                      <div className="flex items-center gap-2">
-                        <UserPlus className="size-3 text-muted-foreground" />
-                        <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
-                      </div>
-                    </div>
-                  );
-                }}
+
                 emptyMessage={t('forms.noAthletesFound')}
                 rowHeight="54px"
                 compactMode={true}

@@ -17,13 +17,14 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
-import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { duplicateQuestionnaire, deleteQuestionnaire, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
 import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import { useQueryClient } from '@tanstack/react-query';
 
 // Removed mock forms as we fetch from the API
@@ -32,6 +33,7 @@ const QuestionnairesPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const { questionnaires: forms, isLoading } = useCoachQuestionnaires();
+  const { user } = useUserProfile();
   const queryClient = useQueryClient();
 
   const [isAddQuestionnaireOpen, setIsAddQuestionnaireOpen] = useState<boolean>(false);
@@ -40,6 +42,7 @@ const QuestionnairesPage = () => {
   const [formsToAssign, setFormsToAssign] = useState<Form[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [formToDelete, setFormToDelete] = useState<string | null>(null);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['coach-questionnaires'] });
@@ -67,18 +70,19 @@ const QuestionnairesPage = () => {
     }
   };
 
-  const handleDeleteQuestionnaire = async (id: string, e: React.MouseEvent | React.KeyboardEvent) => {
-    e.stopPropagation();
+  const handleConfirmSingleDelete = async () => {
+    if (!formToDelete) return;
     try {
-      await deleteQuestionnaire(id);
+      await deleteQuestionnaire(formToDelete);
       refresh();
 
       // Clear selection if deleted
-      if (selectedQuestionnaires.has(id)) {
+      if (selectedQuestionnaires.has(formToDelete)) {
         const newSet = new Set(selectedQuestionnaires);
-        newSet.delete(id);
+        newSet.delete(formToDelete);
         setSelectedQuestionnaires(newSet);
       }
+      setFormToDelete(null);
     } catch (error) {
       console.error('Failed to delete questionnaire:', error);
     }
@@ -117,6 +121,9 @@ const QuestionnairesPage = () => {
   const handleAssignFormsToClients = async () => {
     if (selectedClientIds.size === 0 || formsToAssign.length === 0) return;
 
+    // Check if user (coach) exists
+    if (!user?.id) return;
+
     try {
       const clientIdsArray = Array.from(selectedClientIds);
 
@@ -133,6 +140,8 @@ const QuestionnairesPage = () => {
             await assignForm({
               formId: form.id,
               clientId: clientId,
+              coachId: user.id,
+              formType: 'questionnaire',
               cronExpression: cronExpression,
               scheduleData: scheduleData,
             });
@@ -205,6 +214,47 @@ const QuestionnairesPage = () => {
       width: { class: 'w-[350px]', pixel: '350px' },
       getSortValue: (row) => row.name.toLowerCase(),
       getSearchValue: (row) => row.name,
+      renderHeader: ({ isSorted, isAscending, isDescending, onSort, isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+            <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
+                <span className="text-xs uppercase text-muted-foreground">{t('forms.columns.name')}</span>
+                {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+                {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => onSort('asc')} className={cn(isAscending && 'bg-accent')}>
+                <ArrowUpNarrowWide className="size-4 mr-2" />
+                <span className="flex-1">Sort ascending</span>
+                {isAscending && <Check className="ml-2 size-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onSort('desc')} className={cn(isDescending && 'bg-accent')}>
+                <ArrowDownWideNarrow className="size-4 mr-2" />
+                <span className="flex-1">Sort descending</span>
+                {isDescending && <Check className="ml-2 size-4" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+            <Checkbox checked={isSelected} onCheckedChange={() => {
+              const newSet = new Set(selectedQuestionnaires);
+              if (newSet.has(row.id)) newSet.delete(row.id);
+              else newSet.add(row.id);
+              setSelectedQuestionnaires(newSet);
+            }} />
+          </div>
+          <span className="text-sm font-medium truncate">{row.name}</span>
+        </div>
+      ),
     },
     {
       id: 'description',
@@ -242,11 +292,9 @@ const QuestionnairesPage = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={(e) => handleDeleteQuestionnaire(row.id, e)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleDeleteQuestionnaire(row.id, e);
-              }
+            onClick={(e) => {
+              e.stopPropagation();
+              setFormToDelete(row.id);
             }}
             className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
             aria-label={`Delete ${row.name}`}
@@ -258,77 +306,7 @@ const QuestionnairesPage = () => {
     },
   ];
 
-  const renderFirstColumnHeader = ({
-    isSorted,
-    isAscending,
-    isDescending,
-    onSort,
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isSorted: boolean;
-    isAscending: boolean;
-    isDescending: boolean;
-    onSort: (direction: 'asc' | 'desc') => void;
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex items-center gap-2 cursor-pointer h-full flex-1">
-              <span className="text-xs uppercase text-muted-foreground">
-                {t('forms.columns.name')}
-              </span>
-              {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
-              {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem
-              onClick={() => onSort('asc')}
-              className={cn(isAscending && 'bg-accent')}
-            >
-              <ArrowUpNarrowWide className="size-4 mr-2" />
-              <span className="flex-1">Sort ascending</span>
-              {isAscending && <Check className="ml-2 size-4" />}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onSort('desc')}
-              className={cn(isDescending && 'bg-accent')}
-            >
-              <ArrowDownWideNarrow className="size-4 mr-2" />
-              <span className="flex-1">Sort descending</span>
-              {isDescending && <Check className="ml-2 size-4" />}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
-  };
 
-  const createRenderFirstColumn = (onToggleRow: (id: string) => void) => {
-    return (row: Form, isSelected: boolean) => {
-      return (
-        <div className="flex items-center gap-3 h-full w-full">
-          <div
-            className="flex items-center justify-center h-full flex-shrink-0"
-            data-no-row-link="true"
-          >
-            <Checkbox checked={isSelected} onCheckedChange={() => onToggleRow(row.id)} />
-          </div>
-          <span className="text-sm font-medium truncate">{row.name}</span>
-        </div>
-      );
-    };
-  };
 
 
   const selectedCount = selectedQuestionnaires.size;
@@ -348,20 +326,7 @@ const QuestionnairesPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedQuestionnaires}
         onSelectionChange={setSelectedQuestionnaires}
-        firstColumnId="name"
-        stickyFirstColumn={true}
-        firstColumnWidth="350px"
-        hideFirstColumnBorder={false}
-        renderFirstColumn={createRenderFirstColumn((id) => {
-          const newSet = new Set(selectedQuestionnaires);
-          if (newSet.has(id)) {
-            newSet.delete(id);
-          } else {
-            newSet.add(id);
-          }
-          setSelectedQuestionnaires(newSet);
-        })}
-        renderFirstColumnHeader={renderFirstColumnHeader}
+
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -395,7 +360,7 @@ const QuestionnairesPage = () => {
               >
                 <X className="size-4" />
                 <span>
-                  {t('forms.clearSelected')} {selectedCount}
+                  {t('general.clearSelected', { count: selectedCount })}
                 </span>
               </Button>
               {selectedCount === 1 && (
@@ -455,12 +420,20 @@ const QuestionnairesPage = () => {
         onSave={handleSaveForm}
       />
 
-      <BulkDeleteConfirmationDialog
+      <ConfirmDeleteDialog
         open={isBulkDeleteOpen}
         onOpenChange={setIsBulkDeleteOpen}
         onConfirm={handleBulkDelete}
         count={selectedQuestionnaires.size}
-        itemName={t('forms.questionnaires.title').toLowerCase()}
+        itemType={t('forms.questionnaires.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={formToDelete !== null}
+        onOpenChange={(open) => !open && setFormToDelete(null)}
+        onConfirm={handleConfirmSingleDelete}
+        itemName={forms?.find(f => f.id === formToDelete)?.name}
+        itemType="questionnaire"
       />
 
       <SidePanel
@@ -528,6 +501,42 @@ const QuestionnairesPage = () => {
                     width: { class: 'w-full', pixel: '100%' },
                     getSortValue: (row) => row.name.toLowerCase(),
                     getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
+                    renderHeader: ({ isAllSelected, onToggleAll }) => (
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="size-3 text-muted-foreground" />
+                          <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
+                        </div>
+                      </div>
+                    ),
+                    renderCell: (row, isSelected) => {
+                      const initials = row.name
+                        .split(' ')
+                        .map((part) => part.charAt(0).toUpperCase())
+                        .slice(0, 2)
+                        .join('');
+                      return (
+                        <div className="flex items-center gap-3 h-full w-full">
+                          <div
+                            className="flex items-center justify-center h-full flex-shrink-0"
+                            data-no-row-link="true"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleToggleClient(row.id)}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={row.avatar} alt={row.name} />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
+                          </div>
+                        </div>
+                      );
+                    },
                   },
                 ]}
                 getRowId={(row) => row.id}
@@ -556,48 +565,7 @@ const QuestionnairesPage = () => {
                     handleToggleClient(row.id);
                   }
                 }}
-                firstColumnId="name"
-                stickyFirstColumn={true}
-                firstColumnWidth="100%"
-                hideFirstColumnBorder={true}
-                renderFirstColumn={(row, isSelected) => {
-                  const initials = row.name
-                    .split(' ')
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join('');
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <div
-                        className="flex items-center justify-center h-full flex-shrink-0"
-                        data-no-row-link="true"
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleToggleClient(row.id)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={row.avatar} alt={row.name} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
-                      </div>
-                    </div>
-                  );
-                }}
-                renderFirstColumnHeader={({ isAllSelected, onToggleAll }) => {
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                      <div className="flex items-center gap-2">
-                        <UserPlus className="size-3 text-muted-foreground" />
-                        <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
-                      </div>
-                    </div>
-                  );
-                }}
+
                 emptyMessage={t('forms.noAthletesFound')}
                 rowHeight="54px"
                 compactMode={true}

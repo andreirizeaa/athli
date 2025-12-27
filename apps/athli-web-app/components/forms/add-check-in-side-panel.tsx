@@ -13,12 +13,15 @@ import { formTemplates } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 
 type AddCheckInSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave?: (formId: string, scheduleData: any) => Promise<void>;
   clientId?: string;
+  coachId?: string;
 };
 
 export const AddCheckInSidePanel = ({
@@ -26,12 +29,13 @@ export const AddCheckInSidePanel = ({
   onOpenChange,
   onSave,
   clientId,
+  coachId,
 }: AddCheckInSidePanelProps) => {
   const t = useTranslations();
   const [forms, setForms] = useState<Form[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedForm, setSelectedForm] = useState<Form | null>(null);
+  const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
@@ -52,17 +56,9 @@ export const AddCheckInSidePanel = ({
   };
 
   const handleClose = () => {
-    setSelectedForm(null);
+    setSelectedForms(new Set());
     setSearchQuery('');
     onOpenChange(false);
-  };
-
-  const handleSelectForm = (form: Form) => {
-    setSelectedForm(form);
-  };
-
-  const handleDeselectForm = () => {
-    setSelectedForm(null);
   };
 
   const getDefaultScheduleData = (form: Form): AssignFormScheduleData => {
@@ -115,29 +111,89 @@ export const AddCheckInSidePanel = ({
   };
 
   const handleSave = async () => {
-    if (!selectedForm || !clientId) return;
-
-    const scheduleData = getDefaultScheduleData(selectedForm);
-    const cronExpression = convertScheduleToCron(scheduleData);
+    if (selectedForms.size === 0 || !clientId || !coachId) return;
 
     try {
-      await assignForm({
-        formId: selectedForm.id,
-        clientId: clientId,
-        cronExpression: cronExpression,
-        scheduleData: scheduleData,
-      });
+      for (const formId of selectedForms) {
+        const form = forms.find(f => f.id === formId);
+        if (!form) continue;
 
-      if (onSave) {
-        await onSave(selectedForm.id, scheduleData);
+        const scheduleData = getDefaultScheduleData(form);
+        const cronExpression = convertScheduleToCron(scheduleData);
+
+        await assignForm({
+          formId: form.id,
+          clientId: clientId,
+          coachId: coachId,
+          formType: 'check-in',
+          cronExpression: cronExpression,
+          scheduleData: scheduleData,
+        });
+
+        if (onSave) {
+          await onSave(form.id, scheduleData);
+        }
       }
 
       handleClose();
     } catch (error) {
-      console.error('Failed to assign form:', error);
-      // TODO: Show error toast to user
+      console.error('Failed to assign forms:', error);
     }
   };
+
+
+  const columns: ColumnDefinition<Form>[] = useMemo(() => [
+    {
+      id: 'name',
+      label: t('forms.detail.addQuestion.question'),
+      width: { class: 'min-w-[300px]', pixel: '300px' },
+      renderHeader: ({ isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          <div className="flex items-center gap-2">
+            <FileText className="size-3 text-muted-foreground" />
+            <span className="text-xs uppercase text-muted-foreground">{t('forms.detail.addQuestion.question')}</span>
+          </div>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div
+            className="flex items-center justify-center h-full flex-shrink-0"
+            data-no-row-link="true"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedForms((prev) => {
+                const newSet = new Set(prev);
+                if (newSet.has(row.id)) {
+                  newSet.delete(row.id);
+                } else {
+                  newSet.add(row.id);
+                }
+                return newSet;
+              });
+            }}
+          >
+            <Checkbox checked={isSelected} />
+          </div>
+          <div className="flex items-center gap-3 w-full min-w-0">
+            <FileText className="size-4 text-muted-foreground" />
+            <span className="truncate text-sm">{row.name}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'questions',
+      label: 'Questions',
+      width: { class: 'min-w-[120px]', pixel: '120px' },
+      renderCell: (row) => (
+        <span className="truncate text-sm">
+          {row.questionCount ?? row.questions?.length ?? 0} {t('forms.questions')}
+        </span>
+      ),
+    },
+  ], [t, setSelectedForms]);
 
   const isFuzzyMatch = (text: string, query: string): boolean => {
     const normalizedText = text.toLowerCase();
@@ -187,18 +243,18 @@ export const AddCheckInSidePanel = ({
           onOpenChange(true);
         }
       }}
-      title={t('athletes.profile.checkIns.addCheckIn')}
+      title={clientId ? t('general.assign') + ' Check-in' : t('athletes.profile.checkIns.addCheckIn')}
       onOpenAutoFocus={(e) => e.preventDefault()}
-      contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
+      contentClassName="w-full sm:w-[600px] sm:max-w-[600px] h-full flex flex-col"
       footer={
         forms.length > 0 ? (
           <div className="flex w-full justify-start gap-2">
             <Button
               type="button"
               onClick={handleSave}
-              disabled={!selectedForm}
+              disabled={selectedForms.size === 0}
             >
-              {t('general.save')}
+              {selectedForms.size > 0 ? `${t('general.assign')} ${selectedForms.size} ${selectedForms.size === 1 ? 'Check-in' : 'Check-ins'}` : t('general.assign')}
             </Button>
             <Button type="button" variant="outline" onClick={handleClose}>
               {t('general.cancel')}
@@ -207,7 +263,7 @@ export const AddCheckInSidePanel = ({
         ) : null
       }
     >
-      <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
+      <div className="flex flex-col gap-6 flex-1 min-h-0 px-1 pt-1">
         {!isLoading && forms.length === 0 && (
           <Alert className="bg-primary/5 border-primary/20 text-primary">
             <Info className="size-4" />
@@ -220,95 +276,33 @@ export const AddCheckInSidePanel = ({
             </AlertDescription>
           </Alert>
         )}
-        {forms.length > 0 && (
-          <div className="relative mb-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t('forms.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-              aria-label={t('forms.searchPlaceholder')}
-            />
-          </div>
-        )}
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             <p>{t('general.loading')}</p>
           </div>
         ) : forms.length > 0 ? (
-          filteredForms.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>{t('forms.emptyMessage')}</p>
-            </div>
-          ) : selectedForm ? (
-            <>
-              <Card className="p-4 ring-2 ring-primary">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
-                      <h4 className="text-sm font-medium text-foreground">{selectedForm.name}</h4>
-                    </div>
-                    {selectedForm.description && (
-                      <p className="text-xs text-muted-foreground">{selectedForm.description}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {selectedForm.questionCount} {selectedForm.questionCount === 1 ? t('athletes.profile.checkIns.questions', { count: selectedForm.questionCount }) : t('athletes.profile.checkIns.questionsPlural', { count: selectedForm.questionCount })}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleDeselectForm}
-                    className="h-8 w-8 flex-shrink-0"
-                    aria-label={t('general.edit')}
-                  >
-                    <Edit className="size-4" />
-                  </Button>
-                </div>
-              </Card>
-              <div className="flex items-start gap-2 rounded-md border bg-primary/5 border-primary/20 p-3">
-                <Info className="size-4 mt-0.5 text-primary flex-shrink-0" />
-                <p className="text-sm text-primary">
-                  {t('athletes.profile.checkIns.schedule.reminder')} {getScheduleReminderText(selectedForm)}
-                </p>
-              </div>
-            </>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {filteredForms.map((form) => (
-                <Card
-                  key={form.id}
-                  className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                  onClick={() => handleSelectForm(form)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleSelectForm(form);
-                    }
-                  }}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Select form: ${form.name}`}
-                >
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
-                      <h4 className="text-sm font-medium text-foreground">{form.name}</h4>
-                    </div>
-                    {form.description && (
-                      <p className="text-xs text-muted-foreground">{form.description}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {form.questionCount} {form.questionCount === 1 ? t('athletes.profile.checkIns.questions', { count: form.questionCount }) : t('athletes.profile.checkIns.questionsPlural', { count: form.questionCount })}
-                    </p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )
+          <div className="flex-1 min-h-0 h-full">
+            <DataGrid
+              data={forms}
+              columns={columns}
+              getRowId={(row) => row.id}
+              gridKey="add-check-in-library"
+              searchPlaceholder={t('forms.searchPlaceholder')}
+              searchFields={[(row) => `${row.name} ${row.description || ''}`]}
+              enableSearch={true}
+              enableEditColumns={false}
+              enableExport={false}
+              enableRowSelection={true}
+              selectOnRowClick={true}
+              selectedRowIds={selectedForms}
+              onSelectionChange={setSelectedForms}
+              emptyMessage={t('forms.emptyMessage')}
+              rowHeight="54px"
+              compactMode={true}
+              showPagination={false}
+              gridPadding={false}
+            />
+          </div>
         ) : null}
       </div>
     </SidePanel>

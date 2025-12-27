@@ -19,7 +19,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
 import {
@@ -161,6 +161,7 @@ const ExercisesPage = () => {
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [isAssignExerciseOpen, setIsAssignExerciseOpen] = useState<boolean>(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
   const [isAssignIndividualExerciseOpen, setIsAssignIndividualExerciseOpen] = useState<boolean>(false);
   const [selectedExerciseForAssignment, setSelectedExerciseForAssignment] = useState<Program | null>(null);
 
@@ -295,7 +296,7 @@ const ExercisesPage = () => {
     try {
       await archiveExercises(Array.from(selectedExercises), true);
       // Refresh exercises after archiving
-      loadExercises();
+      await refreshExercises();
       // Clear selection after archiving
       setSelectedExercises(new Set());
     } catch (error) {
@@ -313,6 +314,17 @@ const ExercisesPage = () => {
       setSelectedExercises(new Set());
     } catch (error) {
       console.error('Failed to delete exercises:', error);
+    }
+  };
+
+  const handleConfirmSingleDelete = async () => {
+    if (!exerciseToDelete) return;
+    try {
+      await deleteExercisesService([exerciseToDelete]);
+      await refreshExercises();
+      setExerciseToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete exercise:', error);
     }
   };
 
@@ -555,14 +567,9 @@ const ExercisesPage = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={async (e) => {
+          onClick={(e) => {
             e.stopPropagation();
-            try {
-              await deleteExercisesService([row.id]);
-              await refreshExercises();
-            } catch (error) {
-              console.error('Failed to delete exercise:', error);
-            }
+            setExerciseToDelete(row.id);
           }}
           className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
           aria-label={`Delete ${row.program}`}
@@ -897,12 +904,20 @@ const ExercisesPage = () => {
         compactPagination={true}
       />
 
-      <BulkDeleteConfirmationDialog
+      <ConfirmDeleteDialog
         open={isBulkDeleteOpen}
         onOpenChange={setIsBulkDeleteOpen}
         onConfirm={handleBulkDelete}
         count={selectedExercises.size}
-        itemName={t('exercises.title').toLowerCase()}
+        itemType={t('exercises.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={exerciseToDelete !== null}
+        onOpenChange={(open) => !open && setExerciseToDelete(null)}
+        onConfirm={handleConfirmSingleDelete}
+        itemName={exercises.find(e => e.id === exerciseToDelete)?.program}
+        itemType="exercise"
       />
 
       <SidePanel

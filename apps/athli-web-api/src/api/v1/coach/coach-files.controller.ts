@@ -80,7 +80,7 @@ export const coachFilesController = {
                     file_path: filePath,
                     filename: filename,
                     mime_type: file.mimetype,
-                    size: file.size,
+                    size: file.size
                 })
                 .select()
                 .single();

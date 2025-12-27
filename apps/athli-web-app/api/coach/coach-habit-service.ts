@@ -9,6 +9,7 @@ export interface AddHabitData {
   duration?: number;
   reminderTime?: string;
   reminderMessage?: string;
+  clientId?: string;
 }
 
 export interface EditHabitData extends AddHabitData {
@@ -30,6 +31,7 @@ export interface Habit {
   reminderTime?: string;
   reminderMessage?: string;
   createdAt: number;
+  clientId?: string;
 }
 
 // Database response type
@@ -53,6 +55,7 @@ interface DBHabit {
   };
   created_at: string;
   updated_at: string;
+  client_id: string | null;
 }
 
 const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
@@ -67,6 +70,7 @@ const mapDBHabitToHabit = (dbHabit: DBHabit): Habit => {
     reminderTime: dbHabit.times_of_day?.[0]?.substring(0, 5), // HH:mm
     reminderMessage: dbHabit.schedule_config?.reminder_message,
     createdAt: new Date(dbHabit.created_at).getTime(),
+    clientId: dbHabit.client_id ?? undefined,
   };
 };
 
@@ -82,6 +86,7 @@ const mapHabitDataToDB = (data: AddHabitData) => {
       duration: data.duration,
       reminder_message: data.reminderMessage,
     },
+    client_id: data.clientId,
   };
 };
 
@@ -90,6 +95,16 @@ const mapHabitDataToDB = (data: AddHabitData) => {
  * This will be connected to the backend in the future
  */
 export const addHabit = async (data: AddHabitData): Promise<Habit> => {
+  const { clientId, ...rest } = data;
+
+  if (clientId) {
+    const response = await apiFetch<{ data: { habit: DBHabit } }>(`/clients/${clientId}/habits`, {
+      method: 'POST',
+      body: JSON.stringify(mapHabitDataToDB(rest as AddHabitData)) as any,
+    });
+    return mapDBHabitToHabit(response.data.habit);
+  }
+
   const response = await apiFetch<{ data: { habit: DBHabit } }>('/coach/habits', {
     method: 'POST',
     body: JSON.stringify(mapHabitDataToDB(data)) as any,

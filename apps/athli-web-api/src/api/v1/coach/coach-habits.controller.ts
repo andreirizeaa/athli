@@ -69,7 +69,7 @@ export const coachHabitsController = {
                 timezone: timezone || 'UTC',
                 start_date,
                 end_date,
-                schedule_config: schedule_config || {},
+                schedule_config: schedule_config || {}
             })
             .select()
             .single();

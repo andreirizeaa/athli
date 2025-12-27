@@ -27,7 +27,7 @@ export const FilePreviewDialog = ({
     const renderPreview = () => {
         if (isLoading) {
             return (
-                <div className="w-full h-[85vh] flex flex-col items-center justify-center bg-muted/20 rounded-lg">
+                <div className="w-full h-[70vh] flex flex-col items-center justify-center bg-muted/20 rounded-lg">
                     <Loader2 className="size-10 animate-spin text-primary" />
                 </div>
             );
@@ -36,22 +36,24 @@ export const FilePreviewDialog = ({
         switch (fileType) {
             case 'image':
                 return (
-                    <div className="flex items-center justify-center bg-muted/20 rounded-lg p-4">
+                    <div className="flex items-center justify-center bg-muted/20 rounded-lg">
                         <img
                             src={fileUrl}
                             alt={filename}
-                            className="max-w-full max-h-[80vh] object-contain"
+                            className="max-w-full max-h-[80vh] w-auto h-auto object-contain"
+                            style={{ display: 'block' }}
                         />
                     </div>
                 );
 
             case 'video':
                 return (
-                    <div className="flex items-center justify-center bg-muted/20 rounded-lg p-4">
+                    <div className="flex items-center justify-center bg-muted/20 rounded-lg">
                         <video
                             src={fileUrl}
                             controls
-                            className="max-w-full max-h-[80vh]"
+                            className="max-w-full max-h-[80vh] w-auto h-auto"
+                            style={{ display: 'block' }}
                         >
                             Your browser does not support the video tag.
                         </video>
@@ -82,15 +84,15 @@ export const FilePreviewDialog = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-6xl max-h-[95vh] overflow-auto">
-                <DialogHeader>
+            <DialogContent className="max-w-fit max-h-[95vh] p-0 gap-0 overflow-hidden">
+                <DialogHeader className="px-6 pt-6 pb-4">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="text-lg font-semibold truncate pr-8">
                             {filename}
                         </DialogTitle>
                     </div>
                 </DialogHeader>
-                <div className="mt-4">
+                <div className="px-6 pb-6">
                     {renderPreview()}
                 </div>
             </DialogContent>
