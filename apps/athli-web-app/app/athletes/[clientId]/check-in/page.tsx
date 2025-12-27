@@ -11,38 +11,19 @@ import { Plus, FileText, X, Trash2, ClipboardList } from 'lucide-react';
 import { deleteClientCheckIns, getClientCheckIns, type ClientCheckIn } from '@/api/client/client-form-service';
 import { AddCheckInSidePanel } from '@/components/forms/add-check-in-side-panel';
 
+import { useClientCheckIns } from '@/hooks/use-client-check-ins';
+
 const ClientCheckInPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const [checkIns, setCheckIns] = useState<ClientCheckIn[]>([]);
+  const { checkIns, isLoading, refetch } = useClientCheckIns(clientId);
+  const itemsPerPage = 25;
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const [selectedCheckIns, setSelectedCheckIns] = useState<Set<string>>(new Set());
   const [isAddCheckInOpen, setIsAddCheckInOpen] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const itemsPerPage = 25;
-
-  useEffect(() => {
-    const fetchCheckIns = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const data = await getClientCheckIns(clientId);
-        setCheckIns(data);
-        setFilteredCount(data.length);
-      } catch (error) {
-        console.error('Failed to fetch check-ins:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCheckIns();
-  }, [clientId]);
 
   const handleAddCheckIn = () => {
     setIsAddCheckInOpen(true);
@@ -52,10 +33,7 @@ const ClientCheckInPage = () => {
     // This callback is called after the form is successfully assigned via the assignForm service
     // The service call and logging happens in AddCheckInSidePanel's handleSave function
     // Refresh the check-ins list
-    if (clientId) {
-      const data = await getClientCheckIns(clientId);
-      setCheckIns(data);
-    }
+    refetch();
   };
 
   const handleClearSelected = () => {
@@ -71,7 +49,7 @@ const ClientCheckInPage = () => {
         clientId: clientId,
       });
 
-      setCheckIns((prev) => prev.filter((c) => !selectedCheckIns.has(c.id)));
+      refetch();
       setSelectedCheckIns(new Set());
     } catch (error) {
       console.error('Failed to delete check-ins:', error);

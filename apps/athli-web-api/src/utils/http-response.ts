@@ -65,3 +65,7 @@ export function internalError(res: Response, payload: ResponseData): void {
     ...payload,
   });
 }
+
+export function noContent(res: Response): void {
+  res.status(204).send();
+}

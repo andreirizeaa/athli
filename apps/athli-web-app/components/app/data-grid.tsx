@@ -56,7 +56,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { restrictToVerticalAxis, restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers';
 
 export type ColumnDefinition<T = any> = {
   id: string;
@@ -1396,7 +1396,7 @@ export function DataGrid<T extends Record<string, any>>({
                     collisionDetection={closestCenter}
                     onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
-                    modifiers={[restrictToVerticalAxis]}
+                    modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
                   >
                     <SortableContext
                       items={draggableRows.map((row) => getRowId(row))}

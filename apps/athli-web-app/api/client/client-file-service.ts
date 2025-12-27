@@ -1,3 +1,5 @@
+import { apiFetch } from '../api-client';
+
 export interface AddFilesToClientData {
   fileIds: string[];
   clientId: string;
@@ -13,14 +15,11 @@ export interface DeleteClientFilesData {
  * This will be connected to the backend in the future
  */
 export const addFilesToClient = async (data: AddFilesToClientData): Promise<void> => {
-  // TODO: Connect to backend API
-  console.log('Adding files to client:', {
-    fileIds: data.fileIds,
-    clientId: data.clientId,
+  await apiFetch(`/client/files`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId },
+    body: JSON.stringify({ fileIds: data.fileIds }),
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
 };
 
 /**
@@ -28,11 +27,9 @@ export const addFilesToClient = async (data: AddFilesToClientData): Promise<void
  * This will be connected to the backend in the future
  */
 export const deleteClientFiles = async (data: DeleteClientFilesData): Promise<void> => {
-  console.log('Deleting client files:', {
-    fileIds: data.fileIds,
-    clientId: data.clientId,
+  await apiFetch(`/client/files`, {
+    method: 'DELETE',
+    headers: { 'x-client-id': data.clientId },
+    body: JSON.stringify({ fileIds: data.fileIds }),
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
 };

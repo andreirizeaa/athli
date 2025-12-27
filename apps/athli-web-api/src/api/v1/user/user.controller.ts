@@ -83,14 +83,14 @@ export class UserController {
    */
   newClient = asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).userId;
-    const { coachId } = req.body;
+    const { coachId, invitationToken } = req.body;
 
     if (!userId) {
       unauthorized(res, { message: 'User not authenticated' });
       return;
     }
 
-    const result = await userService.handleNewClient(userId, coachId);
+    const result = await userService.handleNewClient(userId, coachId, invitationToken);
 
     success(res, {
       message: result.isNew ? 'Client profile created successfully' : 'Client profile already exists',

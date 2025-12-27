@@ -12,23 +12,29 @@ const ClientOverviewPage = () => {
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
   return (
-    <div className="h-full w-full flex flex-col flex-1 min-h-0 p-4 gap-4">
+    <div className="h-full w-full flex flex-col flex-1 min-h-0 p-4 gap-4 overflow-hidden">
       {clientId && (
-        <>
-          <div className="w-full flex gap-4 items-stretch">
-            <div className="flex flex-col gap-4" style={{ width: 'calc(50% - 0.67rem)', flexShrink: 0 }}>
-            <ClientBioCard clientId={clientId} />
+        <div className="w-full h-full flex gap-4 items-stretch">
+          <div className="flex flex-col gap-4 h-full" style={{ width: 'calc(50% - 0.67rem)', flexShrink: 0 }}>
+            <div className="h-1/2 min-h-0 flex">
+              <ClientBioCard clientId={clientId} />
+            </div>
+            <div className="h-1/2 min-h-0 flex">
               <AthleteWorkoutsCard clientId={clientId} />
             </div>
-            <div className="flex flex-col gap-4" style={{ width: 'calc(30% - 0.67rem)', flexShrink: 0 }}>
+          </div>
+          <div className="flex flex-col gap-4 h-full" style={{ width: 'calc(30% - 0.67rem)', flexShrink: 0 }}>
+            <div className="h-1/2 min-h-0 flex">
               <GoalsCard clientId={clientId} />
+            </div>
+            <div className="h-1/2 min-h-0 flex">
               <InjuryCard clientId={clientId} />
             </div>
-            <div className="flex flex-col gap-4" style={{ width: 'calc(20% - 0.67rem)', flexShrink: 0 }}>
+          </div>
+          <div className="flex flex-col gap-4 h-full" style={{ width: 'calc(20% - 0.67rem)', flexShrink: 0 }}>
             <ClientDetailsCard clientId={clientId} />
           </div>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );

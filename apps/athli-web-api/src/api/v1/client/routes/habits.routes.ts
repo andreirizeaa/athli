@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { clientHabitsController } from '../client-habits.controller';
+import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
 
 export const clientHabitRouter = Router();
 
@@ -7,23 +9,35 @@ export const clientHabitRouter = Router();
  * /api/v1/client/habits:
  *   get:
  *     summary: Get client habits
- *     tags: [Client]
+ *     tags: [Client Habits]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Client habits retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         assignments:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/ClientHabit'
  */
-clientHabitRouter.get('/', (req, res) => {
-    res.json({ message: 'Client habits route' });
-});
+clientHabitRouter.get('/', supabaseAuthenticate, clientHabitsController.getHabits);
 
 /**
  * @swagger
  * /api/v1/client/habits/{id}:
  *   patch:
- *     summary: Update client habit
- *     tags: [Client]
+ *     summary: Update client habit status
+ *     tags: [Client Habits]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -38,52 +52,24 @@ clientHabitRouter.get('/', (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, completed]
  *     responses:
  *       200:
  *         description: Client habit updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         assignment:
+ *                           $ref: '#/components/schemas/ClientHabit'
  */
-clientHabitRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Client habit updated', id: req.params.id });
-});
-
-/**
- * @swagger
- * /api/v1/client/habits:
- *   post:
- *     summary: Create client habit
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       201:
- *         description: Client habit created successfully
- *
- * /api/v1/client/habits/{id}:
- *   delete:
- *     summary: Delete client habit
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Client habit deleted successfully
- */
-clientHabitRouter.post('/', (req, res) => {
-    res.json({ message: 'Client habit created' });
-});
-
-clientHabitRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Client habit deleted', id: req.params.id });
-});
+clientHabitRouter.patch('/:id', supabaseAuthenticate, clientHabitsController.updateHabitStatus);

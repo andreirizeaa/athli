@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { clientQuestionnairesController } from '../../client-questionnaires.controller';
+import { supabaseAuthenticate } from '../../../../../middlewares/supabase-auth';
 
 export const clientQuestionnaireRouter = Router();
 
@@ -6,68 +8,62 @@ export const clientQuestionnaireRouter = Router();
  * @swagger
  * /api/v1/client/forms/questionnaires:
  *   get:
- *     summary: Get client questionnaires
- *     tags: [Client]
+ *     summary: Get client questionnaire assignments
+ *     tags: [Client Forms]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Client questionnaires retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         assignments:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/ClientQuestionnaire'
  */
-clientQuestionnaireRouter.get('/', (req, res) => {
-    res.json({ message: 'Client questionnaire route' });
-});
+clientQuestionnaireRouter.get('/', supabaseAuthenticate, clientQuestionnairesController.getQuestionnaires);
 
 /**
  * @swagger
- * /api/v1/client/forms/questionnaires/{id}:
- *   patch:
- *     summary: Update client questionnaire
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Client questionnaire updated successfully
- */
-clientQuestionnaireRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Client questionnaire updated', id: req.params.id });
-});
-
-/**
- * @swagger
- * /api/v1/client/forms/questionnaires:
+ * /api/v1/client/forms/questionnaires/{id}/submit:
  *   post:
- *     summary: Create client questionnaire
- *     tags: [Client]
+ *     summary: Submit a questionnaire
+ *     tags: [Client Forms]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             $ref: '#/components/schemas/SubmitFormInput'
  *     responses:
- *       201:
- *         description: Client questionnaire created successfully
- *
- * /api/v1/client/forms/questionnaires/{id}:
+ *       200:
+ *         description: Questionnaire submitted successfully
+ */
+clientQuestionnaireRouter.post('/:id/submit', supabaseAuthenticate, clientQuestionnairesController.submitQuestionnaire);
+
+/**
+ * @swagger
+ * /api/v1/client/questionnaires/{id}:
  *   delete:
- *     summary: Delete client questionnaire
- *     tags: [Client]
+ *     summary: Unassign (Hide) a questionnaire
+ *     tags: [Client Forms]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -77,13 +73,8 @@ clientQuestionnaireRouter.patch('/:id', (req, res) => {
  *         schema:
  *           type: string
  *     responses:
- *       200:
- *         description: Client questionnaire deleted successfully
+ *       204:
+ *         description: Questionnaire unassigned successfully
  */
-clientQuestionnaireRouter.post('/', (req, res) => {
-    res.json({ message: 'Client questionnaire created' });
-});
-
-clientQuestionnaireRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Client questionnaire deleted', id: req.params.id });
-});
+clientQuestionnaireRouter.delete('/:id', supabaseAuthenticate, clientQuestionnairesController.deleteAssignment);
+clientQuestionnaireRouter.delete('/', supabaseAuthenticate, clientQuestionnairesController.deleteAssignment);

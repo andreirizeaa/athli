@@ -46,8 +46,11 @@ export default function NewClientPage() {
         // Get access token
         const token = session.access_token;
 
+        // Get invitation token from URL
+        const invitationToken = searchParams.get('invitation_token') || undefined;
+
         // Call the new-client API endpoint
-        const response = await authService.newClient(coachId, token);
+        const response = await authService.newClient(coachId, token, invitationToken);
 
         if (response.success) {
           // Redirect to welcome screen

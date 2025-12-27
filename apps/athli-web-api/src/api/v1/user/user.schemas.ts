@@ -16,5 +16,6 @@ export const ensureClientProfileSchema = z.object({
 export const newClientSchema = z.object({
   body: z.object({
     coachId: z.string().uuid('Invalid coach ID'),
+    invitationToken: z.string().min(8).max(8).optional(),
   }),
 });

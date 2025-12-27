@@ -1,5 +1,6 @@
 import type { CheckIn } from '@/api/coach/coach-check-in-service';
 import type { Questionnaire } from '@/api/coach/coach-questionnaire-service';
+import { apiFetch } from '@/api/api-client';
 
 type Form = CheckIn | Questionnaire;
 
@@ -103,19 +104,16 @@ const mockClientQuestionnaires: ClientQuestionnaire[] = [
  * This will be connected to the backend in the future
  */
 export const getClientCheckIns = async (clientId: string): Promise<ClientCheckIn[]> => {
-  console.log('Getting check-ins for client:', clientId);
+  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/check-ins`, { headers: { 'x-client-id': clientId } });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${clientId}/check-ins`, {
-  //   method: 'GET',
-  // })
-  // if (!response.ok) throw new Error('Failed to get client check-ins')
-  // return await response.json()
-
-  return mockClientCheckIns;
+  return response.data.assignments.map((c: any) => ({
+    id: c.id, // Use assignment ID
+    name: c.check_in?.name || 'Unknown Check-in',
+    questionCount: c.check_in?.num_of_questions || 0,
+    schedule: c.schedule_config?.frequency || 'Manual',
+    nextScheduledAt: new Date(c.created_at), // Placeholder
+    description: c.check_in?.description,
+  }));
 };
 
 /**
@@ -123,19 +121,17 @@ export const getClientCheckIns = async (clientId: string): Promise<ClientCheckIn
  * This will be connected to the backend in the future
  */
 export const getClientQuestionnaires = async (clientId: string): Promise<ClientQuestionnaire[]> => {
-  console.log('Getting questionnaires for client:', clientId);
+  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/questionnaires`, { headers: { 'x-client-id': clientId } });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${clientId}/questionnaires`, {
-  //   method: 'GET',
-  // })
-  // if (!response.ok) throw new Error('Failed to get client questionnaires')
-  // return await response.json()
-
-  return mockClientQuestionnaires;
+  return response.data.assignments.map((q: any) => ({
+    id: q.id,
+    name: q.questionnaire?.name || 'Unknown Questionnaire',
+    questionCount: q.questionnaire?.num_of_questions || 0,
+    status: q.status || 'pending',
+    sentAt: new Date(q.assigned_at || q.created_at),
+    completedAt: q.completed_at ? new Date(q.completed_at) : undefined,
+    description: q.questionnaire?.description,
+  }));
 };
 
 /**
@@ -247,22 +243,25 @@ export interface DeleteClientCheckInsData {
  * This will be connected to the backend in the future
  */
 export const deleteClientCheckIns = async (data: DeleteClientCheckInsData): Promise<void> => {
-  console.log('Deleting client check-ins:', {
-    checkInIds: data.checkInIds,
-    clientId: data.clientId,
+  await apiFetch(`/client/check-ins`, {
+    method: 'DELETE',
+    headers: { 'x-client-id': data.clientId },
+    body: JSON.stringify({ checkInIds: data.checkInIds }),
   });
+};
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${data.clientId}/check-ins`, {
-  //   method: 'DELETE',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ checkInIds: data.checkInIds }),
-  // })
-  // if (!response.ok) throw new Error('Failed to delete client check-ins')
+export interface DeleteClientQuestionnairesData {
+  questionnaireIds: string[];
+  clientId: string;
 }
+
+export const deleteClientQuestionnaires = async (data: DeleteClientQuestionnairesData): Promise<void> => {
+  await apiFetch(`/client/questionnaires`, {
+    method: 'DELETE',
+    headers: { 'x-client-id': data.clientId },
+    body: JSON.stringify({ questionnaireIds: data.questionnaireIds }),
+  });
+};
 
 export interface AssignFormScheduleData {
   type: 'check-in' | 'one-time';

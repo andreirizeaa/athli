@@ -127,3 +127,20 @@ export const isPreviewable = (mimeType: string | null): boolean => {
   const type = getFileTypeFromMime(mimeType);
   return type === 'pdf' || type === 'image' || type === 'video';
 };
+
+export interface ClientFileAssignment extends CoachFile {
+  assignment_id: string;
+  display_name?: string;
+  sort_order: number;
+}
+
+export const getClientFiles = async (clientId: string): Promise<ClientFileAssignment[]> => {
+  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/files?clientId=${clientId}`);
+  return response.data.assignments.map((a: any) => ({
+    ...a.file,
+    id: a.file.id,
+    assignment_id: a.id,
+    display_name: a.display_name,
+    sort_order: a.sort_order || 0
+  }));
+};

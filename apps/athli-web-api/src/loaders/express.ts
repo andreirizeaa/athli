@@ -23,13 +23,13 @@ export function createExpressApp() {
   // Security
   app.disable('x-powered-by');
   app.use(helmet());
-  
+
   // CORS configuration - must specify origin when using credentials
   const corsOptions = {
     origin: env.CORS_ORIGIN || 'http://localhost:3001',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id'],
   };
   app.use(cors(corsOptions));
 
@@ -52,7 +52,7 @@ export function createExpressApp() {
           // Redact sensitive fields from body
           const sensitiveFields = ['password', 'newPassword', 'otp', 'token', 'credential'];
           let sanitizedBody = req.body;
-          
+
           if (req.body && typeof req.body === 'object') {
             sanitizedBody = { ...req.body };
             for (const field of sensitiveFields) {
@@ -68,7 +68,7 @@ export function createExpressApp() {
             const bodyStr = typeof sanitizedBody === 'string'
               ? sanitizedBody
               : JSON.stringify(sanitizedBody);
-            
+
             if (bodyStr.length > 500) {
               bodyLog = `${bodyStr.substring(0, 500)}... [truncated ${bodyStr.length - 500} chars]`;
             }
