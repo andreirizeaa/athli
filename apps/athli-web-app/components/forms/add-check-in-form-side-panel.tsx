@@ -34,12 +34,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Edit, Info } from 'lucide-react';
 import { addCheckIn, type AddCheckInData as AddFormData } from '@/api/coach/coach-check-in-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
+import { convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { cn } from '@/lib/general/utils';
+import { toast } from 'sonner';
 
 type AddCheckInFormSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave?: (form: ReturnType<typeof addForm> extends Promise<infer T> ? T : never, questions?: FormTemplate['questions']) => void;
+  onSave?: (form: any, questions?: FormTemplate['questions']) => void;
 };
 
 type FormFormValues = {
@@ -91,15 +93,43 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
     onOpenChange(false);
   };
 
+  const buildScheduleData = (): { scheduleConfig: Record<string, any>; cronExpression: string } => {
+    const scheduleData: AssignFormScheduleData = {
+      type: 'check-in',
+      frequency: checkInFrequency,
+      selectedDays: Array.from(selectedDays),
+      monthlyOption,
+      specificDay,
+    };
+
+    const cronExpression = convertScheduleToCron(scheduleData);
+
+    return {
+      scheduleConfig: scheduleData as Record<string, any>,
+      cronExpression,
+    };
+  };
+
   const handleSave = async (values: FormFormValues) => {
     try {
-      const newForm = await addCheckIn(values);
+      const { scheduleConfig, cronExpression } = buildScheduleData();
+      const questions = selectedTemplate?.questions || [];
+      const payload: any = {
+        ...values,
+        schedule_config: scheduleConfig,
+        cron_expression: cronExpression,
+        questions,
+        num_of_questions: questions.length,
+      };
+      const newForm = await addCheckIn(payload);
+      toast.success(t('forms.create.success', { name: newForm.name }));
       if (onSave) {
-        onSave(newForm);
+        onSave(newForm, selectedTemplate?.questions);
       }
       handleClose();
     } catch (error) {
       console.error('Failed to save form:', error);
+      toast.error(t('general.error'));
     }
   };
 
@@ -142,18 +172,25 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
 
   const handleSaveFromTemplate = async () => {
     if (selectedTemplate) {
-      const values: AddFormData = {
+      const { scheduleConfig, cronExpression } = buildScheduleData();
+      const values: any = {
         name: selectedTemplate.name,
         description: selectedTemplate.description || '',
+        schedule_config: scheduleConfig,
+        cron_expression: cronExpression,
+        questions: selectedTemplate.questions,
+        num_of_questions: selectedTemplate.questions.length,
       };
       try {
         const newForm = await addCheckIn(values);
+        toast.success(t('forms.create.success', { name: newForm.name }));
         if (onSave) {
           onSave(newForm, selectedTemplate.questions);
         }
         handleClose();
       } catch (error) {
         console.error('Failed to save form:', error);
+        toast.error(t('general.error'));
       }
     }
   };

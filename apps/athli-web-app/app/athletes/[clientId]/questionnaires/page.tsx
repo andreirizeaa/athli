@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Plus, FileText, X, Trash2, ClipboardList } from 'lucide-react';
-import { deleteClientCheckIns, getClientQuestionnaires, type ClientQuestionnaire } from '@/api/client/client-form-service';
+import { deleteClientQuestionnaires, getClientQuestionnaires, type ClientQuestionnaire } from '@/api/client/client-form-service';
 import { AddQuestionnaireSidePanel } from '@/components/forms/add-questionnaire-side-panel';
 import { Badge } from '@/components/ui/badge';
+
+import { useClientQuestionnaires } from '@/hooks/use-client-questionnaires';
 
 const ClientQuestionnairesPage = () => {
   const t = useTranslations();
@@ -18,32 +20,11 @@ const ClientQuestionnairesPage = () => {
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const [questionnaires, setQuestionnaires] = useState<ClientQuestionnaire[]>([]);
+  const { questionnaires, isLoading, refetch } = useClientQuestionnaires(clientId);
+  const itemsPerPage = 25;
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<Set<string>>(new Set());
   const [isAddQuestionnaireOpen, setIsAddQuestionnaireOpen] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  const itemsPerPage = 25;
-
-  useEffect(() => {
-    const fetchQuestionnaires = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const data = await getClientQuestionnaires(clientId);
-        setQuestionnaires(data);
-        setFilteredCount(data.length);
-      } catch (error) {
-        console.error('Failed to fetch questionnaires:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchQuestionnaires();
-  }, [clientId]);
 
   const handleAddQuestionnaire = () => {
     setIsAddQuestionnaireOpen(true);
@@ -53,10 +34,7 @@ const ClientQuestionnairesPage = () => {
     // This callback is called after the form is successfully assigned via the assignForm service
     // The service call and logging happens in AddQuestionnaireSidePanel's handleSave function
     // Refresh the questionnaires list
-    if (clientId) {
-      const data = await getClientQuestionnaires(clientId);
-      setQuestionnaires(data);
-    }
+    refetch();
   };
 
   const handleClearSelected = () => {
@@ -67,12 +45,12 @@ const ClientQuestionnairesPage = () => {
     if (selectedQuestionnaires.size === 0 || !clientId) return;
 
     try {
-      await deleteClientCheckIns({
-        checkInIds: Array.from(selectedQuestionnaires),
+      await deleteClientQuestionnaires({
+        questionnaireIds: Array.from(selectedQuestionnaires),
         clientId: clientId,
       });
 
-      setQuestionnaires((prev) => prev.filter((q) => !selectedQuestionnaires.has(q.id)));
+      refetch();
       setSelectedQuestionnaires(new Set());
     } catch (error) {
       console.error('Failed to delete questionnaires:', error);

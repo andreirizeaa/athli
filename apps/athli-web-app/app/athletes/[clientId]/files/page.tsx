@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -17,9 +17,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { addFile, updateFile, deleteFile } from '@/api/coach/coach-file-service';
-import { deleteClientFiles } from '@/api/client/client-file-service';
-import { mockAthletes } from '@/components/app/app-shell';
+import { uploadFile, updateFile, deleteFile } from '@/api/coach/coach-file-service';
+import { deleteClientFiles, addFilesToClient } from '@/api/client/client-file-service';
+import { getClientFiles } from '@/api/coach/coach-client-service';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { EditFileSidePanel } from '@/components/files/edit-file-side-panel';
 
@@ -33,30 +33,7 @@ type FileItem = {
   pinned: boolean;
 };
 
-// Mock data - in production this would be filtered by clientId
-const mockFiles: FileItem[] = [
-  {
-    id: '1',
-    fileName: 'Training Program Template.pdf',
-    type: 'pdf',
-    tags: ['Training', 'Program', 'Template'],
-    pinned: true,
-  },
-  {
-    id: '2',
-    fileName: 'Nutrition Guide.docx',
-    type: 'document',
-    tags: ['Nutrition', 'Education'],
-    pinned: false,
-  },
-  {
-    id: '3',
-    fileName: 'Recovery Protocol.pdf',
-    type: 'pdf',
-    tags: ['Recovery', 'Rehab'],
-    pinned: true,
-  },
-];
+// Mock data removed
 
 const TAG_OPTIONS: Option[] = [
   { label: 'Training', value: 'Training' },
@@ -90,18 +67,31 @@ const TAG_OPTIONS: Option[] = [
   { label: 'Admin', value: 'Admin' },
 ];
 
+import { useClientFiles } from '@/hooks/use-client-files';
+
 const ClientFilesPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const athlete = mockAthletes.find((item) => item.id === clientId);
-  const clientName = athlete?.name || 'this client';
+  const { files: rawFiles, isLoading, refetch } = useClientFiles(clientId);
 
   const [isAddFileOpen, setIsAddFileOpen] = useState<boolean>(false);
-  const [files, setFiles] = useState<FileItem[]>(mockFiles);
-  const [filteredCount, setFilteredCount] = useState<number>(mockFiles.length);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [filteredCount, setFilteredCount] = useState<number>(0);
+
+  const files = useMemo(() => {
+    return rawFiles.map((item: any) => ({
+      id: item.assignment_id || item.id,
+      fileName: item.name,
+      type: getFileType(item.name),
+      tags: item.tags || [],
+      pinned: item.is_pinned || false,
+      url: item.url
+    }));
+  }, [rawFiles]);
+
+  const clientName = '';
 
   // Edit file state
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
@@ -123,24 +113,24 @@ const ClientFilesPage = () => {
     return 'other';
   };
 
-  const handleSaveFile = async (fileName: string, file: File, tags: string[]) => {
+  const handleSaveFile = async (file: File, fileName: string, tags: string[]) => {
     try {
-      // Call the addFile service method
-      const fileId = await addFile({
+      // 1. Upload to coach library
+      const uploadedFile = await uploadFile({
         fileName: fileName.trim(),
         file: file,
         tags: tags,
       });
 
-      // Add the file to the local state
-      const newFile: FileItem = {
-        id: fileId,
-        fileName: fileName.trim(),
-        type: getFileType(file.name),
-        tags: tags,
-        pinned: false,
-      };
-      setFiles((prev) => [...prev, newFile]);
+      // 2. Assign to client
+      await addFilesToClient({
+        fileIds: [uploadedFile.id],
+        clientId: clientId as string
+      });
+
+      // 3. Update local state
+      refetch();
+
       // TODO: Show success toast
     } catch (error) {
       console.error('Failed to add file:', error);
@@ -161,7 +151,7 @@ const ClientFilesPage = () => {
         clientId: clientId,
       });
 
-      setFiles((prev) => prev.filter((f) => !selectedFiles.has(f.id)));
+      refetch();
       setSelectedFiles(new Set());
     } catch (error) {
       console.error('Failed to delete files:', error);
@@ -194,7 +184,7 @@ const ClientFilesPage = () => {
   const handleDeleteFile = async (fileId: string) => {
     try {
       await deleteFile({ fileId });
-      setFiles((prev) => prev.filter((f) => f.id !== fileId));
+      refetch();
       setRowMenuOpenId(null);
       // TODO: Show success toast
     } catch (error) {
@@ -210,16 +200,10 @@ const ClientFilesPage = () => {
       await updateFile({
         fileId: editingFileId,
         fileName: fileName.trim(),
-        tags: tags,
+        // tags: tags, // Update service doesn't support tags yet
       });
 
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === editingFileId
-            ? { ...f, fileName: fileName.trim(), tags: tags }
-            : f
-        )
-      );
+      refetch();
       // TODO: Show success toast
     } catch (error) {
       console.error('Failed to update file:', error);
@@ -417,6 +401,18 @@ const ClientFilesPage = () => {
     });
   }, [files]);
 
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // If no files and no loading, show empty state inside DataGrid via emptyState prop or wrapper.
+  // The DataGrid supports emptyState. But currently `files` is empty array, so DataGrid will show emptyMessage or emptyState.
+  // The current code passes `emptyState` to DataGrid. So validation should be fine.
+
   return (
     <div className="h-full w-full flex flex-col flex-1 min-h-0">
       <DataGrid
@@ -493,7 +489,7 @@ const ClientFilesPage = () => {
       <AddFileSidePanel
         open={isAddFileOpen}
         onOpenChange={setIsAddFileOpen}
-        onSave={handleSaveFile}
+        onUpload={handleSaveFile}
         clientName={clientName}
         clientId={clientId}
       />

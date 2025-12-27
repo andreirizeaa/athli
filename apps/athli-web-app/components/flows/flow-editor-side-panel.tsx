@@ -173,6 +173,8 @@ interface FlowEditorSidePanelProps {
   onTriggerKeyDown: (event: React.KeyboardEvent, option: TriggerOption) => void;
   onActionKeyDown: (event: React.KeyboardEvent, option: ActionOption) => void;
   isPreviousActionCheck?: boolean;
+  excludeTriggers?: string[];
+  hideWaitActions?: boolean;
 }
 
 export function FlowEditorSidePanel({
@@ -220,6 +222,8 @@ export function FlowEditorSidePanel({
   onTriggerKeyDown,
   onActionKeyDown,
   isPreviousActionCheck = false,
+  excludeTriggers = [],
+  hideWaitActions = false,
 }: FlowEditorSidePanelProps) {
   const isSidePanelOpen = panelType !== null;
   const isEditing = editingActionNodeId !== null;
@@ -235,11 +239,13 @@ export function FlowEditorSidePanel({
 
   const filteredTriggerOptions = TRIGGER_OPTIONS.filter((option) =>
     option.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ).filter((option) => !excludeTriggers.includes(option.id));
 
-  const filteredGeneralActions = GENERAL_ACTION_OPTIONS.filter((option) =>
-    option.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredGeneralActions = hideWaitActions
+    ? []
+    : GENERAL_ACTION_OPTIONS.filter((option) =>
+      option.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   const filteredCheckInActions = CHECK_IN_ACTION_OPTIONS.filter((option) =>
     option.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -355,7 +361,7 @@ export function FlowEditorSidePanel({
             ) : actionStep === 'list' ? (
               <div className="px-4 pb-4 space-y-4">
                 {/* General Actions Card */}
-                {(filteredGeneralActions.length > 0 || searchQuery) && (
+                {filteredGeneralActions.length > 0 && (
                   <Card className="bg-background pb-0">
                     <CardHeader className="px-4">
                       <CardTitle className="text-sm">General</CardTitle>
@@ -429,7 +435,7 @@ export function FlowEditorSidePanel({
                 )}
 
                 {/* Client Actions Card */}
-                {(filteredClientActions.length > 0 || searchQuery) && (
+                {filteredClientActions.length > 0 && (
                   <Card className="bg-background pb-0">
                     <CardHeader className="px-4">
                       <CardTitle className="text-sm">Client actions</CardTitle>
@@ -815,7 +821,7 @@ export function FlowEditorSidePanel({
           </div>
 
           {/* Footer Buttons */}
-          {panelType === 'action' && actionStep !== 'list' && (
+          {(panelType === 'action' && actionStep !== 'list') && (
             <div className="flex-shrink-0 p-4">
               <div className="flex gap-2">
                 {isEditing ? (

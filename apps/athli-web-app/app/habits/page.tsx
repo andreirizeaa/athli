@@ -841,13 +841,7 @@ const HabitsPage = () => {
     </Form>
   );
 
-  if (isLoading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
@@ -904,7 +898,7 @@ const HabitsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('habits.emptyState.title')}
-            subtitle={t('habits.emptyState.subtitle')}
+            subtitle="Create daily habits to help your clients build consistency and track their progress over time"
             action={
               <Button onClick={handleOpenAddHabit} className="gap-2">
                 <Plus className="size-4" />

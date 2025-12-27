@@ -12,24 +12,31 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Trash2, Edit, Plus, MoreHorizontal, FileText, X } from 'lucide-react';
+
+import { Trash2, Plus, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { getNotes, createNote, editNote, deleteNote, type Note } from '@/api/coach/coach-client-service';
-import { deleteClientNotes } from '@/api/client/client-note-service';
+import { useClientNotes } from '@/hooks/use-client-notes';
+import { type Note } from '@/api/coach/coach-client-service';
 
 const ClientNotesPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const itemsPerPage = 25;
 
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    notes,
+    isLoading,
+    refetch,
+    createNote: createNoteMutation,
+    updateNote: updateNoteMutation,
+    deleteNote: deleteNoteMutation,
+    deleteNotes: deleteNotesMutation,
+    isCreating,
+    isUpdating,
+    isDeleting
+  } = useClientNotes(clientId);
+
   const [isViewNoteOpen, setIsViewNoteOpen] = useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -39,32 +46,8 @@ const ClientNotesPage = () => {
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
-  const [rowMenuOpenId, setRowMenuOpenId] = useState<string | null>(null);
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const noteTitleInputRef = useRef<HTMLInputElement>(null);
-
-  const itemsPerPage = 25;
-
-  useEffect(() => {
-    const fetchNotes = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const fetchedNotes = await getNotes(clientId);
-        setNotes(fetchedNotes);
-        setFilteredCount(fetchedNotes.length);
-      } catch (error) {
-        console.error('Failed to fetch notes:', error);
-        setNotes([]);
-        setFilteredCount(0);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchNotes();
-  }, [clientId]);
 
   useEffect(() => {
     if (isViewNoteOpen) {
@@ -96,18 +79,13 @@ const ClientNotesPage = () => {
     if (!selectedNote || !clientId) return;
 
     try {
-      const updatedNote = await editNote({
+      await updateNoteMutation({
         noteId: selectedNote.id,
         contactId: clientId,
         title: editingNoteTitle,
         body: editingNoteBody,
       });
 
-      setNotes((prevNotes) =>
-        prevNotes.map((note) =>
-          note.id === selectedNote.id ? updatedNote : note
-        )
-      );
       setHasNoteChanges(false);
       setIsViewNoteOpen(false);
       setSelectedNote(null);
@@ -132,20 +110,16 @@ const ClientNotesPage = () => {
     setEditingNoteBody(note.body);
     setHasNoteChanges(false);
     setIsViewNoteOpen(true);
-    setRowMenuOpenId(null);
   };
 
   const handleDeleteNote = async (noteId: string) => {
     if (!clientId) return;
 
     try {
-      await deleteNote({
+      await deleteNoteMutation({
         noteId,
         contactId: clientId,
       });
-
-      setNotes((prevNotes) => prevNotes.filter((n) => n.id !== noteId));
-      setRowMenuOpenId(null);
     } catch (error) {
       console.error('Failed to delete note:', error);
     }
@@ -155,12 +129,11 @@ const ClientNotesPage = () => {
     if (!selectedNote || !clientId) return;
 
     try {
-      await deleteNote({
+      await deleteNoteMutation({
         noteId: selectedNote.id,
         contactId: clientId,
       });
 
-      setNotes((prevNotes) => prevNotes.filter((note) => note.id !== selectedNote.id));
       setIsViewNoteOpen(false);
       setSelectedNote(null);
       setHasNoteChanges(false);
@@ -173,13 +146,12 @@ const ClientNotesPage = () => {
     if (!noteTitle.trim() || !clientId) return;
 
     try {
-      const newNote = await createNote({
+      await createNoteMutation({
         contactId: clientId,
         title: noteTitle,
         body: noteContent,
       });
 
-      setNotes((prevNotes) => [newNote, ...prevNotes]);
       setIsCreateNoteOpen(false);
       setNoteTitle('');
       setNoteContent('');
@@ -208,12 +180,11 @@ const ClientNotesPage = () => {
     if (selectedNotes.size === 0 || !clientId) return;
 
     try {
-      await deleteClientNotes({
+      await deleteNotesMutation({
         noteIds: Array.from(selectedNotes),
-        clientId: clientId,
+        contactId: clientId,
       });
 
-      setNotes((prev) => prev.filter((n) => !selectedNotes.has(n.id)));
       setSelectedNotes(new Set());
     } catch (error) {
       console.error('Failed to delete notes:', error);
@@ -294,7 +265,7 @@ const ClientNotesPage = () => {
       ),
       renderCell: (row) => (
         <div className="flex items-center w-full min-w-0">
-          <span className="text-sm text-muted-foreground truncate">{row.body || ''}</span>
+          <span className="text-sm text-muted-foreground truncate">{row.body || '--'}</span>
         </div>
       ),
       getSortValue: (row) => (row.body || '').toLowerCase(),
@@ -316,46 +287,21 @@ const ClientNotesPage = () => {
     {
       id: 'actions',
       label: '',
-      width: { class: 'w-[26px]', pixel: '26px' },
+      width: { class: 'w-[50px]', pixel: '50px' },
       renderCell: (row) => (
         <div className="flex items-center justify-end w-full" data-action-menu="true">
-          <DropdownMenu open={rowMenuOpenId === row.id} onOpenChange={(open) => setRowMenuOpenId(open ? row.id : null)}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRowMenuOpenId(row.id);
-                }}
-                aria-label={t('messages.viewNoteAria', { title: row.title })}
-              >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditNote(row);
-                }}
-              >
-                <Edit className="size-4 mr-2" />
-                <span>{t('general.edit')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteNote(row.id);
-                }}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="size-4 mr-2" />
-                <span>{t('general.delete')}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteNote(row.id);
+            }}
+            aria-label={t('general.delete')}
+          >
+            <Trash2 className="size-4" />
+          </Button>
         </div>
       ),
     },
@@ -480,7 +426,7 @@ const ClientNotesPage = () => {
         }
       >
         {selectedNote && (
-          <div className="flex-1 flex flex-col min-h-0 gap-4">
+          <div className="flex-1 flex flex-col min-h-0 gap-4 px-1 pb-1">
             <div className="space-y-2">
               <Label htmlFor="view-note-title">
                 <span>{t('messages.noteTitle')}<RequiredAsterisk /></span>
@@ -550,7 +496,7 @@ const ClientNotesPage = () => {
           </div>
         }
       >
-        <div className="flex-1 flex flex-col min-h-0 gap-4">
+        <div className="flex-1 flex flex-col min-h-0 gap-4 px-1 pb-1">
           <div className="space-y-2">
             <Label htmlFor="note-title">
               <span>{t('messages.noteTitle')}<RequiredAsterisk /></span>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { format } from 'date-fns';
@@ -26,40 +26,10 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { mockAthletes } from '@/components/app/app-shell';
 import { addHabit, type Habit } from '@/api/coach/coach-habit-service';
 import { assignHabit, deleteClientHabits } from '@/api/client/client-habit-service';
+import { getClientHabits } from '@/api/coach/coach-client-service';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 
-// Mock data - in production this would be filtered by clientId
-const mockHabits: Habit[] = [
-  {
-    id: '1',
-    name: 'Daily steps',
-    description: 'Track your daily step count to stay active',
-    amount: 10000,
-    unit: 'steps',
-    period: 'daily',
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: '2',
-    name: 'Drink water',
-    description: 'Stay hydrated throughout the day',
-    amount: 8,
-    unit: 'cups',
-    period: 'daily',
-    reminderTime: '08:00',
-    reminderMessage: 'Time to hydrate!',
-    createdAt: Date.now() - 86400000 * 5,
-  },
-  {
-    id: '3',
-    name: 'Meditate',
-    description: 'Take time for mindfulness and mental clarity',
-    amount: 10,
-    unit: 'min',
-    period: 'daily',
-    duration: 30,
-    createdAt: Date.now() - 86400000 * 3,
-  },
-];
+// Mock habits removed
 
 type HabitLog = {
   id: string;
@@ -87,22 +57,39 @@ const mockHabitLogs: HabitLog[] = [
   { id: 'log-15', habitId: '3', value: 10, completedAt: new Date(2024, 11, 22) },
 ];
 
+import { useClientHabits } from '@/hooks/use-client-habits';
+
 const ClientHabitsPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
-  const athlete = mockAthletes.find((item) => item.id === clientId);
-  const clientName = athlete?.name || 'this client';
-  const [habits, setHabits] = useState<Habit[]>(mockHabits);
+
+  const { habits: rawHabits, isLoading, refetch } = useClientHabits(clientId);
+  const clientName = '';
+
   const [isAddHabitOpen, setIsAddHabitOpen] = useState<boolean>(false);
   const [isLogHabitOpen, setIsLogHabitOpen] = useState<boolean>(false);
   const [isEditHabitOpen, setIsEditHabitOpen] = useState<boolean>(false);
+
+  const habits = useMemo(() => {
+    return rawHabits.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      amount: item.amount,
+      unit: item.unit,
+      period: item.period,
+      createdAt: new Date(item.created_at || Date.now()).getTime(),
+      assignmentId: item.assignment_id,
+      customSchedule: item.custom_schedule
+    }));
+  }, [rawHabits]);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editingLogValue, setEditingLogValue] = useState<string>('');
   const [timeFilter, setTimeFilter] = useState<string>('all-time');
-  const [habitLogs, setHabitLogs] = useState<HabitLog[]>(mockHabitLogs);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]); // Initialize empty logs
 
   const filteredHabits = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -493,8 +480,8 @@ const ClientHabitsPage = () => {
         clientIds: [clientId],
       });
 
-      // Add to local state
-      setHabits((prev) => [...prev, newHabit]);
+      // Invalidate and refetch
+      refetch();
       // TODO: Show success toast
     } catch (error) {
       console.error('Failed to add habit:', error);
@@ -518,13 +505,10 @@ const ClientHabitsPage = () => {
     // TODO: Implement update habit for client
     console.log('Updating habit for client:', { clientId, habitId: selectedHabitId, values });
     if (selectedHabitId) {
-      setHabits((prev) =>
-        prev.map((habit) =>
-          habit.id === selectedHabitId
-            ? { ...habit, ...values, id: habit.id, createdAt: habit.createdAt }
-            : habit
-        )
-      );
+      // In production, this would be a mutation. 
+      // For now we just refetch if we hit the backend, 
+      // but since it's TODO, we'll just log and maybe refetch.
+      refetch();
     }
     handleCloseEditHabit();
   };
@@ -538,7 +522,7 @@ const ClientHabitsPage = () => {
         clientId: clientId,
       });
 
-      setHabits((prev) => prev.filter((h) => h.id !== selectedHabitId));
+      refetch();
       setSelectedHabitId(null);
     } catch (error) {
       console.error('Failed to delete habit:', error);
@@ -550,6 +534,38 @@ const ClientHabitsPage = () => {
     const periodText = habit.period === 'daily' ? t('habits.form.daily') : t('habits.form.weekly');
     return `${habit.amount} ${unitLabel} / ${periodText}`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (habits.length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center p-8">
+        <EmptyGridState
+          title="No habits assigned"
+          subtitle="This client hasn't been assigned any habits yet."
+          action={
+            <Button onClick={handleOpenAddHabit} className="gap-2">
+              <Plus className="size-4" />
+              <span>Assign Habit</span>
+            </Button>
+          }
+        />
+        <AddHabitSidePanel
+          open={isAddHabitOpen}
+          onOpenChange={setIsAddHabitOpen}
+          onSave={handleSaveHabit}
+          clientId={clientId}
+          clientName={clientName}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full flex flex-col flex-1 min-h-0">

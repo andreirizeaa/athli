@@ -3,9 +3,10 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { getCheckIns } from '@/api/coach/coach-check-in-service';
+import { updateFlow, type Flow } from '@/api/coach/coach-flow-service';
 import { getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
 import { type Habit } from '@/api/coach/coach-habit-service';
-import { X, Plus, Play, Pencil, Trash2 } from 'lucide-react';
+import { X, Plus, Play, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
   Background,
@@ -35,8 +36,12 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // Custom node components
-function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?: React.ComponentType<{ className?: string }>; onClick: () => void; onEdit?: () => void; onDelete?: () => void } }) {
-  const IconComponent = data.icon || Play;
+function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?: any; onClick: () => void; onEdit?: () => void; onDelete?: () => void; isOnboarding?: boolean } }) {
+  // Safety check for icon: JSON serialization/deserialization can turn components into empty objects
+  let IconComponent = data.icon;
+  if (!IconComponent || (typeof IconComponent === 'object' && !IconComponent.$$typeof)) {
+    IconComponent = data.isOnboarding ? UserPlus : Play;
+  }
   const hasSelection = !!data.subtitle;
 
   return (
@@ -96,8 +101,12 @@ function TriggerNode({ data }: { data: { label: string; subtitle?: string; icon?
   );
 }
 
-function ActionNode({ data }: { data: { label: string; subtitle?: string; icon?: React.ComponentType<{ className?: string }>; onClick: () => void; onEdit?: () => void; onDelete?: () => void; isWait?: boolean; isRepeat?: boolean; isDisconnected?: boolean; isOrphanRoot?: boolean } }) {
-  const IconComponent = data.icon || Play;
+function ActionNode({ data }: { data: { label: string; subtitle?: string; icon?: any; onClick: () => void; onEdit?: () => void; onDelete?: () => void; isWait?: boolean; isRepeat?: boolean; isDisconnected?: boolean; isOrphanRoot?: boolean } }) {
+  // Safety check for icon
+  let IconComponent = data.icon;
+  if (!IconComponent || (typeof IconComponent === 'object' && !IconComponent.$$typeof)) {
+    IconComponent = Play;
+  }
   const hasSelection = !!data.subtitle;
   const isWait = data.isWait || false;
   const isRepeat = data.isRepeat || false;
@@ -254,8 +263,12 @@ const nodeTypes = {
 };
 
 interface FlowEditorProps {
+  flow?: Flow | null;
+  onFlowChange?: (nodes: Node[], edges: Edge[]) => void;
   onTriggerClick?: () => void;
   onActionClick?: () => void;
+  isOnboardingMode?: boolean;
+  onSaveFlow?: (data: { nodes: Node[]; edges: Edge[] }) => Promise<void>;
 }
 
 const DEFAULT_NODES: Node[] = [
@@ -320,7 +333,7 @@ type ActionNodeData = {
   };
 };
 
-export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
+export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, isOnboardingMode = false, onSaveFlow }: FlowEditorProps) => {
   const [panelType, setPanelType] = useState<PanelType>(null);
   const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
@@ -356,6 +369,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
   const [habits, setHabits] = useState<Array<{ id: string; name: string }>>([]);
   const [metrics, setMetrics] = useState<Array<{ id: string; name: string }>>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
+
+  // Flow initialization and auto-save state
+  const [isInitialized, setIsInitialized] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mock data for habits and files (matching the pages)
   const mockHabits: Habit[] = [
@@ -476,7 +493,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
 
   const handleDeleteTrigger = useCallback(() => {
     setSelectedTrigger(null);
-  }, []);
+    if (!isOnboardingMode) {
+      setPendingSave(true);
+    }
+  }, [isOnboardingMode]);
 
   const handleDeleteAction = useCallback((actionId: string) => {
     // Function to recursively find all actions and checks to delete
@@ -504,10 +524,75 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
 
     setCheckNodes((prev) => prev.filter((c) => !checksToDelete.includes(c.id)));
     setActionNodes((prev) => prev.filter((node) => !actionsToDelete.includes(node.id)));
-  }, [actionNodes, checkNodes]);
+
+    if (!isOnboardingMode) {
+      setPendingSave(true);
+    }
+  }, [actionNodes, checkNodes, isOnboardingMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(DEFAULT_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(DEFAULT_EDGES);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [pendingSave, setPendingSave] = useState(false);
+
+  // Load initial nodes and edges from flow data
+  useEffect(() => {
+    if (flow && flow.flow_data && !isInitialized) {
+      const { nodes: flowNodes, edges: flowEdges } = flow.flow_data;
+      if (flowNodes && flowNodes.length > 0) {
+        setNodes(flowNodes);
+        setEdges(flowEdges || []);
+      }
+      setIsInitialized(true);
+    }
+  }, [flow, isInitialized, setNodes, setEdges]);
+
+  // For onboarding mode, set the trigger to "New client sign up" automatically
+  useEffect(() => {
+    if (isOnboardingMode && !selectedTrigger) {
+      const newClientTrigger = {
+        id: 'new-client-signup',
+        name: 'New client sign up',
+        icon: UserPlus,
+      };
+      setSelectedTrigger(newClientTrigger as TriggerOption);
+    }
+  }, [isOnboardingMode, selectedTrigger, setSelectedTrigger]);
+
+  // Auto-save flow changes with debouncing - ONLY in onboarding mode
+  useEffect(() => {
+    if (!flow || !isInitialized || !isOnboardingMode) return;
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout to save after 1 second of inactivity
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (onSaveFlow) {
+          // Use custom save function (for onboarding mode)
+          await onSaveFlow({ nodes, edges });
+        }
+        onFlowChange?.(nodes, edges);
+      } catch (error) {
+        console.error('Failed to auto-save flow:', error);
+      }
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [nodes, edges, flow, isInitialized, onFlowChange, onSaveFlow, isOnboardingMode]);
+
+  const handleManualSave = async () => {
+    if (!flow || isSaving) return;
+    setPendingSave(true);
+  };
 
   // Function to build the logical graph nodes and edges
   const buildLogicalGraph = useCallback(() => {
@@ -523,9 +608,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
         label: selectedTrigger ? 'Trigger' : 'Create Trigger',
         subtitle: selectedTrigger?.name,
         icon: selectedTrigger?.icon,
-        onClick: handleOpenTriggerPanel,
-        onEdit: selectedTrigger ? handleOpenTriggerPanel : undefined,
-        onDelete: selectedTrigger ? handleDeleteTrigger : undefined,
+        isOnboarding: isOnboardingMode,
+        onClick: isOnboardingMode ? undefined : handleOpenTriggerPanel,
+        onEdit: isOnboardingMode ? undefined : (selectedTrigger ? handleOpenTriggerPanel : undefined),
+        onDelete: isOnboardingMode ? undefined : (selectedTrigger ? handleDeleteTrigger : undefined),
       },
     });
 
@@ -949,10 +1035,26 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
 
-      // Viewport centering is handled only once on initial load (onInit).
-      // We removed the auto-centering here to prevent the view from jumping 
-      // back to the top whenever nodes are added or edited.
-
+      if (pendingSave && !isOnboardingMode && flow) {
+        try {
+          setIsSaving(true);
+          if (onSaveFlow) {
+            await onSaveFlow({ nodes: layoutedNodes, edges: layoutedEdges });
+          } else {
+            await updateFlow({
+              id: flow.id,
+              nodes: layoutedNodes,
+              edges: layoutedEdges,
+            });
+          }
+          onFlowChange?.(layoutedNodes, layoutedEdges);
+        } catch (error) {
+          console.error('Failed to save flow after edit:', error);
+        } finally {
+          setIsSaving(false);
+          setPendingSave(false);
+        }
+      }
     };
 
     layout();
@@ -960,7 +1062,7 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
     return () => {
       isMounted = false;
     };
-  }, [buildLogicalGraph, setNodes, setEdges]);
+  }, [buildLogicalGraph, setNodes, setEdges, pendingSave, flow, isOnboardingMode, onSaveFlow, onFlowChange]);
 
 
   const onConnect = useCallback(
@@ -1078,6 +1180,9 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
   const handleTriggerOptionClick = (option: TriggerOption) => {
     setSelectedTrigger(option);
     handleCloseSidePanel();
+    if (!isOnboardingMode) {
+      setPendingSave(true);
+    }
   };
 
   const handleActionOptionClick = (option: ActionOption) => {
@@ -1138,6 +1243,10 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
       // Reset and close
       handleBackToActionList();
       handleCloseSidePanel();
+
+      if (!isOnboardingMode) {
+        setPendingSave(true);
+      }
     } else if (option.id === 'send-message' || option.id === 'wait') {
       // For message and wait, go directly to config step
       setSelectedActionOption(option);
@@ -1317,6 +1426,11 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
     // Reset and close
     handleBackToActionList();
     handleCloseSidePanel();
+
+    // Trigger save if not in onboarding mode
+    if (!isOnboardingMode) {
+      setPendingSave(true);
+    }
   };
 
   const handleDeleteActionFromEdit = () => {
@@ -1325,6 +1439,11 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
       setEditingActionNodeId(null);
       handleBackToActionList();
       handleCloseSidePanel();
+
+      // Trigger save if not in onboarding mode
+      if (!isOnboardingMode) {
+        setPendingSave(true);
+      }
     }
   };
 
@@ -1570,6 +1689,8 @@ export function FlowEditor({ onTriggerClick, onActionClick }: FlowEditorProps) {
             return false;
           })()
         }
+        hideWaitActions={isOnboardingMode}
+        excludeTriggers={!isOnboardingMode ? ['new-client-signup'] : []}
       />
     </div>
   );

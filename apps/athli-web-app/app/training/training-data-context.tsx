@@ -1,9 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getWorkouts } from '@/api/coach/coach-workout-service';
-import { getPrograms } from '@/api/coach/coach-program-service';
-import { getExercises } from '@/api/coach/coach-exercise-service';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
+import { useCoachPrograms } from '@/hooks/use-coach-programs';
+import { useCoachExercises } from '@/hooks/use-coach-exercises';
 import type { Workout, Program } from '@/components/app/app-shell';
 import type { Exercise } from '@/api/coach/coach-exercise-service';
 
@@ -37,68 +38,54 @@ type TrainingDataProviderProps = {
 };
 
 export const TrainingDataProvider = ({ children }: TrainingDataProviderProps) => {
+  const queryClient = useQueryClient();
+
+  // Use hooks to fetch data (will use cache if preloaded)
+  const { workouts: cachedWorkouts, isLoading: isWLoading } = useCoachWorkouts();
+  const { programs: cachedPrograms, isLoading: isPLoading } = useCoachPrograms();
+  const { exercises: cachedExercises, isLoading: isELoading } = useCoachExercises();
+
+  // Maintain local state for context consumers (compatibility)
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [isLoadingWorkouts, setIsLoadingWorkouts] = useState(true);
-  const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
-  const [isLoadingExercises, setIsLoadingExercises] = useState(true);
 
-  const loadWorkouts = async () => {
-    try {
-      setIsLoadingWorkouts(true);
-      const data = await getWorkouts();
-      setWorkouts(data);
-    } catch (error) {
-      console.error('Failed to load workouts:', error);
-    } finally {
-      setIsLoadingWorkouts(false);
-    }
-  };
-
-  const loadPrograms = async () => {
-    try {
-      setIsLoadingPrograms(true);
-      const data = await getPrograms();
-      setPrograms(data);
-    } catch (error) {
-      console.error('Failed to load programs:', error);
-    } finally {
-      setIsLoadingPrograms(false);
-    }
-  };
-
-  const loadExercises = async () => {
-    try {
-      setIsLoadingExercises(true);
-      const data = await getExercises();
-      setExercises(data);
-    } catch (error) {
-      console.error('Failed to load exercises:', error);
-    } finally {
-      setIsLoadingExercises(false);
-    }
-  };
+  // Sync cache to local state
+  useEffect(() => {
+    if (cachedWorkouts) setWorkouts(cachedWorkouts);
+  }, [cachedWorkouts]);
 
   useEffect(() => {
-    // Load all three datasets in parallel on mount
-    Promise.all([
-      loadWorkouts(),
-      loadPrograms(),
-      loadExercises(),
-    ]);
-  }, []);
+    if (cachedPrograms) setPrograms(cachedPrograms);
+  }, [cachedPrograms]);
+
+  useEffect(() => {
+    if (cachedExercises) setExercises(cachedExercises);
+  }, [cachedExercises]);
+
+  // Refresh functions invalidate queries to trigger refetch
+  const refreshWorkouts = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['coach-workouts'] });
+  };
+
+  const refreshPrograms = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['coach-programs'] });
+  };
+
+  const refreshExercises = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['coach-exercises'] });
+  };
 
   const value = {
     workouts,
     programs,
     exercises,
-    isLoadingWorkouts,
-    isLoadingPrograms,
-    isLoadingExercises,
-    refreshWorkouts: loadWorkouts,
-    refreshPrograms: loadPrograms,
-    refreshExercises: loadExercises,
+    isLoadingWorkouts: isWLoading,
+    isLoadingPrograms: isPLoading,
+    isLoadingExercises: isELoading,
+    refreshWorkouts,
+    refreshPrograms,
+    refreshExercises,
     setWorkouts,
     setPrograms,
     setExercises,

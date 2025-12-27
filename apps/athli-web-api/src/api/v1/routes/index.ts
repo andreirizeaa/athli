@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { authRouter } from '../auth/auth.routes';
+import { coachAuthRouter } from '../auth/coach-auth.routes';
+import { clientAuthRouter } from '../auth/client-auth.routes';
 import { intercomRouter } from '../intercom/intercom.routes';
 import { userRouter } from '../user/user.routes';
 import { clientRouter } from '../client/client.routes';
@@ -10,7 +12,11 @@ import searchRouter from '../search';
 
 export const v1Router = Router();
 
+// Auth routes: shared + type-specific
 v1Router.use('/auth', authRouter);
+v1Router.use('/auth/coach', coachAuthRouter);
+v1Router.use('/auth/client', clientAuthRouter);
+
 v1Router.use('/intercom', intercomRouter);
 v1Router.use('/user', userRouter);
 v1Router.use('/client', clientRouter);
@@ -18,4 +24,3 @@ v1Router.use('/coach', coachRouter);
 v1Router.use('/exercises', exercisesRouter);
 v1Router.use('/settings', settingsRouter);
 v1Router.use('/search', searchRouter);
-

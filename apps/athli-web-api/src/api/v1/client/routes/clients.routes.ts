@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { clientProfileController } from '../client-profile.controller';
+import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
 
 export const clientBaseRouter = Router();
 
@@ -7,23 +9,33 @@ export const clientBaseRouter = Router();
  * /api/v1/client:
  *   get:
  *     summary: Get client profile
- *     tags: [Client]
+ *     tags: [Client Profile]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Client profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         profile:
+ *                           $ref: '#/components/schemas/ClientProfile'
  */
-clientBaseRouter.get('/', (req, res) => {
-    res.json({ message: 'Client base route' });
-});
+clientBaseRouter.get('/', supabaseAuthenticate, clientProfileController.getProfile);
 
 /**
  * @swagger
  * /api/v1/client:
  *   patch:
  *     summary: Update client profile
- *     tags: [Client]
+ *     tags: [Client Profile]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -31,45 +43,22 @@ clientBaseRouter.get('/', (req, res) => {
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             $ref: '#/components/schemas/ClientProfile'
  *     responses:
  *       200:
  *         description: Client profile updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         profile:
+ *                           $ref: '#/components/schemas/ClientProfile'
  */
-clientBaseRouter.patch('/', (req, res) => {
-    res.json({ message: 'Client profile updated' });
-});
+clientBaseRouter.patch('/', supabaseAuthenticate, clientProfileController.updateProfile);
 
-/**
- * @swagger
- * /api/v1/client:
- *   post:
- *     summary: Create client profile
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       201:
- *         description: Client profile created successfully
- *   delete:
- *     summary: Delete client profile
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Client profile deleted successfully
- */
-clientBaseRouter.post('/', (req, res) => {
-    res.json({ message: 'Client profile created' });
-});
-
-clientBaseRouter.delete('/', (req, res) => {
-    res.json({ message: 'Client profile deleted' });
-});

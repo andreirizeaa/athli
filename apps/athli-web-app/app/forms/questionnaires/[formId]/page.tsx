@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { ButtonGroup } from '@/components/ui/button-group';
 import {
   Breadcrumb,
@@ -40,24 +41,30 @@ const QuestionnaireFormDetailPage = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const reorderedQuestionsRef = useRef<Question[] | null>(null);
 
-  useEffect(() => {
-    const fetchForm = async () => {
-      try {
-        setIsLoading(true);
-        const allQuestionnaires = await getQuestionnaires();
-        const foundForm = allQuestionnaires.find(f => f.id === formId);
+  const fetchForm = async () => {
+    try {
+      setIsLoading(true);
+      const allQuestionnaires = await getQuestionnaires();
+      const foundForm = allQuestionnaires.find(f => f.id === formId);
 
-        if (foundForm) {
-          setCurrentForm(foundForm);
-          setQuestions(foundForm.questions || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch questionnaire:', error);
-      } finally {
-        setIsLoading(false);
+      console.log('fetchForm (Questionnaire)', {
+        foundForm,
+        questions: foundForm?.questions,
+        firstQ: foundForm?.questions?.[0]
+      });
+
+      if (foundForm) {
+        setCurrentForm(foundForm);
+        setQuestions(foundForm.questions || []);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch questionnaire:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchForm();
   }, [formId]);
 
@@ -91,14 +98,27 @@ const QuestionnaireFormDetailPage = () => {
 
   const handleBreadcrumbClick = (path: string, tabType?: 'check-ins' | 'questionnaires') => {
     if (tabType) {
-      router.push(`${path}?tab=${tabType}`);
+      router.push(`/forms/${tabType}`);
     } else {
       router.push(path);
     }
   };
 
-  const handleEditForm = (updatedForm: Form) => {
+  const handleEditForm = async (updatedForm: Form) => {
+    // Update local state immediately for responsive UI
     setCurrentForm(updatedForm);
+
+    // Optionally refetch to ensure data consistency
+    try {
+      const allQuestionnaires = await getQuestionnaires();
+      const refreshedForm = allQuestionnaires.find(f => f.id === formId);
+      if (refreshedForm) {
+        setCurrentForm(refreshedForm);
+        setQuestions(refreshedForm.questions || []);
+      }
+    } catch (error) {
+      console.error('Failed to refresh questionnaire after edit:', error);
+    }
   };
 
   const handleToggleReorder = async () => {
@@ -112,11 +132,14 @@ const QuestionnaireFormDetailPage = () => {
         const questionsToReorder = reorderedQuestionsRef.current || questions;
         await reorderQuestions({
           formId: formId,
-          questionIds: questionsToReorder.map((q) => q.id),
+          questions: questionsToReorder,
         });
+        toast.success(t('forms.reorder.success'));
         reorderedQuestionsRef.current = null;
+        // No need to refresh form data as IDs are now stable UUIDs
       } catch (error) {
         console.error('Failed to reorder questions:', error);
+        toast.error(t('general.error'));
       }
     }
   };
@@ -129,6 +152,13 @@ const QuestionnaireFormDetailPage = () => {
   const handleReorder = (newData: any[]) => {
     // Filter out the add row before saving
     const filteredData = newData.filter((item) => !item._isAddRow) as Question[];
+
+    console.log('handleReorder (Questionnaire)', {
+      inputLength: newData.length,
+      filteredLength: filteredData.length,
+      sampleIds: filteredData.slice(0, 3).map(q => q.id)
+    });
+
     setQuestions(filteredData);
     // Store in ref for use when exiting reorder mode
     reorderedQuestionsRef.current = filteredData;
@@ -220,7 +250,7 @@ const QuestionnaireFormDetailPage = () => {
         onOpenChange={setIsEditFormOpen}
         form={currentForm}
         onSave={handleEditForm}
-        onDelete={() => router.push('/forms?tab=questionnaires')}
+        onDelete={() => router.push('/forms/questionnaires')}
       />
     </div>
   );

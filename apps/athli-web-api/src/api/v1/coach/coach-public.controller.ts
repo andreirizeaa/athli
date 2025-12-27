@@ -16,18 +16,34 @@ export const coachPublicController = {
 
         const supabase = getSupabaseClient();
 
-        // 1. Look up coach_id from unique code
-        const { data: codeData, error: codeError } = await supabase
+        // 1. Look up coach_id from unique code or invitation token
+        let coachId: string | null = null;
+
+        // Try unique code first
+        const { data: codeData } = await supabase
             .from('coach_unique_codes')
             .select('coach_id')
             .eq('code', code)
-            .single();
+            .maybeSingle();
 
-        if (codeError || !codeData) {
-            return notFound(res, { message: 'Invalid coach code' });
+        if (codeData) {
+            coachId = codeData.coach_id;
+        } else {
+            // Try invitation token
+            const { data: assignmentData } = await supabase
+                .from('coach_client_assignments')
+                .select('coach_id')
+                .eq('invitation_token', code)
+                .maybeSingle();
+
+            if (assignmentData) {
+                coachId = assignmentData.coach_id;
+            }
         }
 
-        const coachId = codeData.coach_id;
+        if (!coachId) {
+            return notFound(res, { message: 'Invalid coach code or invitation token' });
+        }
 
         // 2. Fetch coach profile and company info
         // We fetching profile name/picture and company name to display on invite page

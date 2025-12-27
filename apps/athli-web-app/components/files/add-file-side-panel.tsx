@@ -48,7 +48,7 @@ const TAG_OPTIONS: Option[] = [
 type AddFileSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (file: File, fileName: string) => Promise<void>;
+  onUpload: (file: File, fileName: string, tags: string[]) => Promise<void>;
   isUploading?: boolean;
   clientName?: string;
   clientId?: string;
@@ -125,7 +125,7 @@ export const AddFileSidePanel = ({
 
   const handleSave = async () => {
     if (!fileName.trim() || !selectedFile) return;
-    await onUpload(selectedFile, fileName.trim());
+    await onUpload(selectedFile, fileName.trim(), selectedTags);
     handleClose();
   };
 

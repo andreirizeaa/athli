@@ -69,6 +69,100 @@ BEGIN
     FROM public.available_notification_events
     ON CONFLICT (coach_id, event_id) DO NOTHING;
 
+    -- 5. Create default onboarding flow
+    -- We check if the table exists because it's created in a later migration (029)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'coach_onboarding') THEN
+      INSERT INTO public.coach_onboarding (coach_id, flow_data, is_active)
+      VALUES (
+        NEW.id,
+        '{
+          "edges": [
+            {
+              "id": "trigger-to-add-trigger",
+              "type": "smoothstep",
+              "source": "trigger",
+              "target": "add-action-trigger"
+            },
+            {
+              "id": "add-trigger-to-end",
+              "type": "smoothstep",
+              "source": "add-action-trigger",
+              "target": "end"
+            }
+          ],
+          "nodes": [
+            {
+              "id": "trigger",
+              "data": {
+                "icon": {},
+                "label": "Trigger",
+                "subtitle": "New client sign up",
+                "isOnboarding": true
+              },
+              "type": "trigger",
+              "dagre": {
+                "x": 150,
+                "y": 32,
+                "rank": 0,
+                "width": 300,
+                "height": 64
+              },
+              "width": 300,
+              "height": 56,
+              "position": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "id": "add-action-trigger",
+              "data": {
+                "metadata": {
+                  "index": 0
+                }
+              },
+              "type": "addAction",
+              "dagre": {
+                "x": 150,
+                "y": 114,
+                "rank": 2,
+                "width": 300,
+                "height": 40
+              },
+              "width": 300,
+              "height": 40,
+              "position": {
+                "x": 0,
+                "y": 94
+              }
+            },
+            {
+              "id": "end",
+              "data": {
+                "label": "End"
+              },
+              "type": "end",
+              "dagre": {
+                "x": 150,
+                "y": 184,
+                "rank": 4,
+                "width": 300,
+                "height": 40
+              },
+              "width": 300,
+              "height": 30,
+              "position": {
+                "x": 0,
+                "y": 164
+              }
+            }
+          ]
+        }'::jsonb,
+        false
+      )
+      ON CONFLICT (coach_id) DO NOTHING;
+    END IF;
+
   END IF;
 
   RETURN NEW;

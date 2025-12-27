@@ -12,10 +12,15 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
                     queries: {
                         // With SSR, we usually want to set some default staleTime
                         // above 0 to avoid refetching immediately on the client
-                        staleTime: 5 * 60 * 1000,
+                        staleTime: 5 * 60 * 1000, // 5 minutes
+                        // Keep data in cache for 10 minutes after it becomes unused
+                        gcTime: 10 * 60 * 1000, // 10 minutes
                         // Retry twice on failure
                         retry: 2,
-                        refetchOnWindowFocus: false, // Optional: customize based on preference
+                        // Don't refetch when component remounts (data is still fresh)
+                        refetchOnMount: false,
+                        // Optional: customize based on preference
+                        refetchOnWindowFocus: false,
                     },
                 },
             })

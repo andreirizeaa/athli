@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -18,19 +18,22 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddCheckInFormSidePanel } from '@/components/forms/add-check-in-form-side-panel';
 import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
-import { addCheckIn, duplicateCheckIn, deleteCheckIn, getCheckIns, type CheckIn as Form } from '@/api/coach/coach-check-in-service';
+import { deleteCheckIn, duplicateCheckIn, type CheckIn as Form } from '@/api/coach/coach-check-in-service';
 import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
+import { useCoachCheckIns } from '@/hooks/use-coach-check-ins';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Removed mock forms as we fetch from the API
 
 const CheckInsPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const [forms, setForms] = useState<Form[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { checkIns: forms, isLoading } = useCoachCheckIns();
+  const queryClient = useQueryClient();
+
   const [isAddCheckInOpen, setIsAddCheckInOpen] = useState<boolean>(false);
   const [selectedCheckIns, setSelectedCheckIns] = useState<Set<string>>(new Set());
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
@@ -38,21 +41,9 @@ const CheckInsPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
 
-  const fetchForms = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getCheckIns();
-      setForms(data);
-    } catch (error) {
-      console.error('Failed to fetch check-ins:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['coach-check-ins'] });
   };
-
-  useEffect(() => {
-    fetchForms();
-  }, []);
 
   const handleOpenAddCheckIn = () => {
     setIsAddCheckInOpen(true);
@@ -68,8 +59,8 @@ const CheckInsPage = () => {
 
     const formToDuplicate = selectedForms[0];
     try {
-      const duplicatedForm = await duplicateCheckIn(formToDuplicate.id, formToDuplicate);
-      fetchForms();
+      await duplicateCheckIn(formToDuplicate.id, formToDuplicate);
+      refresh();
       setSelectedCheckIns(new Set());
     } catch (error) {
       console.error('Failed to duplicate form:', error);
@@ -80,7 +71,7 @@ const CheckInsPage = () => {
     e.stopPropagation();
     try {
       await deleteCheckIn(id);
-      fetchForms();
+      refresh();
 
       // Clear selection if deleted
       if (selectedCheckIns.has(id)) {
@@ -97,7 +88,7 @@ const CheckInsPage = () => {
     try {
       const idsToDelete = Array.from(selectedCheckIns);
       await Promise.all(idsToDelete.map((id) => deleteCheckIn(id)));
-      fetchForms();
+      refresh();
       setSelectedCheckIns(new Set());
     } catch (error) {
       console.error('Failed to bulk delete check-ins:', error);
@@ -178,7 +169,8 @@ const CheckInsPage = () => {
   };
 
   const checkInForms = useMemo(() => {
-    return forms.filter((form) => form.name.includes('Check-in') || form.name.includes('Weekly'));
+    // Return all forms - backend filters by type
+    return forms || [];
   }, [forms]);
 
   const handleSaveForm = async (newForm: Form, questions?: Array<{
@@ -190,7 +182,7 @@ const CheckInsPage = () => {
     scaleTo?: string;
     mediaCount?: number;
   }>) => {
-    fetchForms();
+    refresh();
 
     const template = formTemplates.find((t) => t.name === newForm.name);
     const formType = template?.schedule?.type || 'check-in';
@@ -206,15 +198,25 @@ const CheckInsPage = () => {
   };
 
   const formatScheduleText = (form: Form): string => {
-    const template = formTemplates.find((t) => t.name === form.name);
+    // First try to get schedule from database
+    let schedule = form.schedule_config;
 
-    if (!template?.schedule || template.schedule.type !== 'check-in') {
+    // Fallback to template if no schedule_config in database
+    if (!schedule) {
+      const template = formTemplates.find((t) => t.name === form.name);
+      schedule = template?.schedule;
+    }
+
+    if (!schedule || schedule.type !== 'check-in') {
       return '-';
     }
 
-    const schedule = template.schedule;
-
     if (schedule.frequency === 'daily') {
+      // If all 7 days are selected, just say "Daily"
+      if (schedule.selectedDays && schedule.selectedDays.length === 7) {
+        return t('athletes.profile.checkIns.schedule.frequency.daily');
+      }
+      // Otherwise show the specific days
       if (schedule.selectedDays && schedule.selectedDays.length > 0) {
         const dayNames = schedule.selectedDays.map(day => t(`habits.form.${day}`)).join(', ');
         return t('athletes.profile.checkIns.schedule.frequency.daily') + ` (${dayNames})`;
@@ -262,7 +264,7 @@ const CheckInsPage = () => {
       label: t('forms.columns.description'),
       icon: <FileText className="size-3" />,
       sortable: true,
-      width: { class: 'w-[400px]', pixel: '400px' },
+      width: { class: 'w-[350px]', pixel: '350px' },
       getSortValue: (row) => row.description || '',
       getSearchValue: (row) => row.description || '',
       renderCell: (row) => (
@@ -276,7 +278,7 @@ const CheckInsPage = () => {
       label: t('athletes.profile.checkIns.columns.schedule'),
       icon: <FileText className="size-3" />,
       sortable: true,
-      width: { class: 'w-[200px]', pixel: '200px' },
+      width: { class: 'w-[250px]', pixel: '250px' },
       getSortValue: (row) => formatScheduleText(row).toLowerCase(),
       getSearchValue: (row) => formatScheduleText(row),
       renderCell: (row) => (
@@ -432,7 +434,7 @@ const CheckInsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('forms.checkIns.emptyState.title')}
-            subtitle={t('forms.checkIns.emptyState.subtitle')}
+            subtitle="Create check-in forms to regularly collect feedback and monitor your clients' progress"
             action={
               <Button onClick={handleOpenAddCheckIn} className="gap-2">
                 <Plus className="size-4" />

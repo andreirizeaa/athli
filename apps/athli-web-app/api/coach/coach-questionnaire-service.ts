@@ -46,7 +46,7 @@ export interface AddQuestionData {
 
 export interface ReorderQuestionsData {
   formId: string;
-  questionIds: string[];
+  questions: Question[];
 }
 
 export interface DeleteQuestionData {
@@ -99,8 +99,8 @@ export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
   const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>(`/coach/forms/questionnaires/${formId}`);
   const currentQuestions = response.data.questionnaire.questions || [];
 
-  // Generate a sequential ID for the new question
-  const nextId = (currentQuestions.length + 1).toString();
+  // Generate a UUID for the new question
+  const nextId = crypto.randomUUID();
   const newQuestion: Question = {
     ...questionData,
     id: nextId,
@@ -120,28 +120,18 @@ export const addQuestion = async (data: AddQuestionData): Promise<Question> => {
 /**
  * Service method to reorder questions in a questionnaire
  */
+/**
+ * Service method to reorder questions in a questionnaire
+ * Now acts as a "save all questions" method to ensure exact order persistence
+ */
 export const reorderQuestions = async (data: ReorderQuestionsData): Promise<void> => {
-  const { formId, questionIds } = data;
+  const { formId, questions } = data;
 
-  // Get current questionnaire
-  const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>(`/coach/forms/questionnaires/${formId}`);
-  const currentQuestions = response.data.questionnaire.questions || [];
-
-  // Create new ordered questions array and re-assign chronological IDs
-  const reorderedQuestions = questionIds.map(id =>
-    currentQuestions.find(q => q.id === id)
-  ).filter(Boolean) as Question[];
-
-  const reIdedQuestions = reorderedQuestions.map((q, index) => ({
-    ...q,
-    id: (index + 1).toString(),
-  }));
-
-  // Update questionnaire
+  // Update questionnaire with the exact provided state
   await apiFetch(`/coach/forms/questionnaires/${formId}`, {
     method: 'PATCH',
     body: {
-      questions: reIdedQuestions,
+      questions: questions,
     } as any,
   });
 };
@@ -156,13 +146,9 @@ export const deleteQuestion = async (data: DeleteQuestionData): Promise<void> =>
   const response = await apiFetch<{ data: { questionnaire: Questionnaire } }>(`/coach/forms/questionnaires/${formId}`);
   const currentQuestions = response.data.questionnaire.questions || [];
 
-  // Remove the question and re-assign chronological IDs
+  // Remove the question
   const updatedQuestions = currentQuestions
-    .filter(q => q.id !== questionId)
-    .map((q, index) => ({
-      ...q,
-      id: (index + 1).toString(),
-    }));
+    .filter(q => q.id !== questionId);
 
   // Update questionnaire
   await apiFetch(`/coach/forms/questionnaires/${formId}`, {

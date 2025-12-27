@@ -78,7 +78,9 @@ export const enMessages = {
     markIncomplete: 'Mark as incomplete',
     editTask: 'Edit task',
     yourList: 'Your list',
+    yourListEmptyStateTitle: 'No tasks in your list',
     athliAssistant: 'Athli assistant',
+    athliAssistantEmptyStateTitle: 'Athli Assistant is resting',
   },
   dashboard: {
     title: 'Dashboard',
@@ -474,6 +476,7 @@ export const enMessages = {
       habits: 'Habits',
       forms: 'Forms',
       nutrition: 'Nutrition',
+      onboarding: 'Onboarding',
       flows: 'Flows',
       checkIns: 'Check Ins',
       referAndEarn: 'Refer and Earn',
@@ -1372,7 +1375,7 @@ export const enMessages = {
       lastActivity: 'Time since last logged on to app',
       last7DaysTraining: 'How much they trained in the last 7 days out of their total assigned schedule',
       last30DaysTraining: 'How much they trained in the last 30 days out of their total assigned schedule',
-      category: 'Whether or not they are online or in person',
+      category: 'Whether they are online, in-person, or hybrid',
       connected: 'The status of the user\'s app, i.e. if they have connected to the app',
       clientFor: 'How long they have been a client',
     },
@@ -1417,6 +1420,7 @@ export const enMessages = {
       hideEmail: 'Hide email for {name}',
       revealPhone: 'Reveal phone for {name}',
       hidePhone: 'Hide phone for {name}',
+      restoreClient: 'Restore client',
     },
     export: {
       name: 'Name',
@@ -1494,6 +1498,23 @@ export const enMessages = {
       close: 'Close',
       invalidCsv: 'Invalid CSV file',
       errorProcessing: 'Error processing CSV file',
+    },
+    restorePanel: {
+      title: 'Restore Client',
+      subtitle: 'Select an archived client to restore',
+      searchPlaceholder: 'Search archived clients...',
+      emptyState: 'No archived clients found',
+      restoreButton: 'Restore',
+      columns: {
+        name: 'Name',
+        email: 'Email',
+      },
+    },
+    notifications: {
+      archiveSuccess: 'Client archived successfully',
+      archiveError: 'Failed to archive client',
+      restoreSuccess: 'Client restored successfully',
+      restoreError: 'Failed to restore client',
     },
     profile: {
       athletes: 'Athletes',
@@ -1617,6 +1638,7 @@ export const enMessages = {
       message: 'Message',
       messageAria: 'Open message with this client',
       resendInvite: 'Resend invite',
+      resendInviteSuccess: 'Invite resent to {email}',
       resendInviteAria: 'Resend invite to this client',
       copyInvite: 'Copy invite',
       copyInviteAria: 'Copy invite link for this client',
@@ -1647,6 +1669,7 @@ export const enMessages = {
       injuryPlaceholder: 'Enter injury...',
       addInjury: 'Add injury',
       athleteDetails: 'Athlete details',
+      athleteName: 'Name',
       detailsComingSoon: 'Details coming soon',
       athleteTraining: 'Athlete training',
       trainingComingSoon: 'Training information coming soon',
@@ -1817,7 +1840,7 @@ export const enMessages = {
     emptyMessage: 'No photos found',
     emptyState: {
       title: 'No photos yet',
-      subtitle: 'Get started by adding your first photo',
+      subtitle: 'Start tracking your client\'s progress with photos',
     },
     columns: {
       fileName: 'File name',
@@ -2029,6 +2052,12 @@ export const enMessages = {
   },
   forms: {
     title: 'Forms',
+    create: {
+      success: 'Successfully created {name}',
+    },
+    reorder: {
+      success: 'Successfully reordered questions',
+    },
     addForm: 'Add form',
     addFormTitle: 'Add form',
     addCheckIn: 'Add Check in',
@@ -2091,6 +2120,12 @@ export const enMessages = {
       checkIn: 'Check in',
       questionnaire: 'Questionnaire',
       questionnaireInfo: 'Questionnaires are one-time forms that can be assigned and sent immediately to athletes at any time',
+    },
+    toast: {
+      updateSuccess: 'Form updated successfully',
+      updateError: 'Failed to update form',
+      deleteSuccess: 'Form deleted successfully',
+      deleteError: 'Failed to delete form',
     },
     detail: {
       notFound: 'Form not found',
@@ -2195,6 +2230,41 @@ export const enMessages = {
     editor: {
       deleteCheckTitle: 'Delete check',
       deleteCheckDescription: 'Deleting this check node will also remove all actions and conditions within its branches. This action cannot be undone.',
+    },
+  },
+  onboarding: {
+    title: 'Onboarding',
+    addOnboarding: 'Add onboarding',
+    editOnboarding: 'Edit onboarding',
+    searchPlaceholder: 'Search onboarding flows...',
+    emptyMessage: 'No onboarding flows found.',
+    notFound: 'Onboarding not found',
+    notFoundDescription: 'The onboarding flow you are looking for does not exist.',
+    columns: {
+      name: 'Name',
+      description: 'Description',
+      stepCount: '# Steps',
+      status: 'Status',
+    },
+    status: {
+      published: 'Published',
+      draft: 'Draft',
+    },
+    publish: 'Publish',
+    unpublish: 'Unpublish',
+    publishing: 'Publishing...',
+    unpublishing: 'Unpublishing...',
+    form: {
+      name: 'Onboarding name',
+      namePlaceholder: 'Enter onboarding name...',
+      nameRequired: 'Onboarding name is required',
+      nameMaxLength: 'Onboarding name must be less than 100 characters',
+      description: 'Description',
+      descriptionPlaceholder: 'Enter description...',
+    },
+    emptyState: {
+      title: 'No onboarding flows yet',
+      subtitle: 'Create an onboarding flow to automatically welcome new clients',
     },
   },
   metrics: {
@@ -2308,6 +2378,14 @@ export const enMessages = {
         title: 'Refer more coaches',
         description: 'Uncapped referral benefits!',
       },
+    },
+  },
+  checkInReviews: {
+    title: 'Review Check-ins',
+    emptyMessage: 'No check-ins awaiting review.',
+    emptyState: {
+      title: 'All caught up!',
+      subtitle: 'No check-ins are currently awaiting your review. Great work!',
     },
   },
 } as const;

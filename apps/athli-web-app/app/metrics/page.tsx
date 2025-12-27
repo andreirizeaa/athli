@@ -41,13 +41,7 @@ const MetricsPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   const columns: ColumnDefinition<Metric>[] = [
     {
@@ -335,7 +329,7 @@ const MetricsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('metrics.emptyState.title')}
-            subtitle={t('metrics.emptyState.subtitle')}
+            subtitle="Define custom metrics to track and measure your clients' performance and progress"
             action={
               <Button onClick={handleOpenAddMetric} className="gap-2">
                 <Plus className="size-4" />

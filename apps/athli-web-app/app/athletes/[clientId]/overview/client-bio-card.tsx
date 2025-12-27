@@ -83,7 +83,7 @@ export const ClientBioCard = ({ clientId }: ClientBioCardProps) => {
 
   return (
     <>
-      <Card className="bg-background flex flex-col w-full" style={{ height: '240px', minHeight: '240px', maxHeight: '240px' }}>
+      <Card className="bg-background flex flex-col w-full h-full">
         <CardHeader className="px-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle>{t('athletes.profile.athleteBio')}</CardTitle>
@@ -140,7 +140,7 @@ export const ClientBioCard = ({ clientId }: ClientBioCardProps) => {
           </div>
         }
       >
-        <div className="flex-1 flex flex-col min-h-0 gap-4">
+        <div className="flex-1 flex flex-col min-h-0 gap-4 px-1 pb-1">
           <div className="flex-1 flex flex-col min-h-0 space-y-2">
             <Textarea
               ref={bioTextareaRef}

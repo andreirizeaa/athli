@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
+import { coachClientController } from '../coach-clients.controller';
 
 export const coachClientRouter = Router();
 
@@ -6,84 +8,48 @@ export const coachClientRouter = Router();
  * @swagger
  * /api/v1/coach/clients:
  *   get:
- *     summary: Get coach clients
- *     tags: [Coach]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Coach clients retrieved successfully
+ *     summary: Get all clients for the authenticated coach
+ *     tags: [Coach Clients]
  */
-coachClientRouter.get('/', (req, res) => {
-    res.json({ message: 'Coach clients route' });
-});
+coachClientRouter.get('/', supabaseAuthenticate, coachClientController.getClients);
+coachClientRouter.get('/:id', supabaseAuthenticate, coachClientController.getClient);
+
+/**
+ * @swagger
+ * /api/v1/coach/clients/new:
+ *   post:
+ *     summary: Create/Invite new clients
+ *     tags: [Coach Clients]
+ */
+coachClientRouter.post('/new', supabaseAuthenticate, coachClientController.createClients);
 
 /**
  * @swagger
  * /api/v1/coach/clients/{id}:
  *   patch:
- *     summary: Update coach client
- *     tags: [Coach]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Coach client updated successfully
+ *     summary: Update client status/details
+ *     tags: [Coach Clients]
+ *   delete:
+ *     summary: Remove client from coach
+ *     tags: [Coach Clients]
  */
-coachClientRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Coach client updated', id: req.params.id });
-});
+coachClientRouter.patch('/:id', supabaseAuthenticate, coachClientController.updateClient);
+coachClientRouter.delete('/:id', supabaseAuthenticate, coachClientController.deleteClient);
 
 /**
  * @swagger
- * /api/v1/coach/clients:
- *   post:
- *     summary: Create coach client
- *     tags: [Coach]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       201:
- *         description: Coach client created successfully
- *
- * /api/v1/coach/clients/{id}:
- *   delete:
- *     summary: Delete coach client
- *     tags: [Coach]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Coach client deleted successfully
+ * /api/v1/coach/clients/archived:
+ *   get:
+ *     summary: Get all archived clients for the authenticated coach
+ *     tags: [Coach Clients]
  */
-coachClientRouter.post('/', (req, res) => {
-    res.json({ message: 'Coach client created' });
-});
+coachClientRouter.get('/archived', supabaseAuthenticate, coachClientController.getArchivedClients);
 
-coachClientRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Coach client deleted', id: req.params.id });
-});
+/**
+ * @swagger
+ * /api/v1/coach/clients/{id}/restore:
+ *   post:
+ *     summary: Restore an archived client
+ *     tags: [Coach Clients]
+ */
+coachClientRouter.post('/:id/restore', supabaseAuthenticate, coachClientController.restoreClient);

@@ -96,6 +96,48 @@ export const FormDetailContent = ({
     return map;
   }, [metrics]);
 
+  /* Repair logic for questions with missing or duplicate IDs */
+  useEffect(() => {
+    if (!questions || questions.length === 0) return;
+
+    const seenIds = new Set<string>();
+    let needsRepair = false;
+
+    // Check for issues
+    for (const q of questions) {
+      if (!q.id) {
+        needsRepair = true;
+        break;
+      }
+      if (seenIds.has(q.id)) {
+        needsRepair = true;
+        break;
+      }
+      seenIds.add(q.id);
+    }
+
+    if (needsRepair) {
+      console.warn('FormDetailContent: Repairing questions with missing or duplicate IDs');
+      const repairedQuestions = questions.map((q) => {
+        // If ID is missing or duplicate, generate a temporary local one
+        // Note: This effectively "forks" the question from the DB ID until saved
+        // but it prevents the UI from crashing or checking duplicates out of existence.
+        // We use a prefix to identify it.
+        const isDuplicate = seenIds.has(q.id);
+        if (!q.id || isDuplicate) {
+          return { ...q, id: `repaired-${crypto.randomUUID()}` };
+        }
+        seenIds.add(q.id);
+        return q;
+      });
+
+      // Update parent state with repaired questions
+      // We must be careful not to trigger infinite loops, but setQuestions changes reference
+      // so we should check deep equality or just trust the needsRepair flag.
+      setQuestions(repairedQuestions);
+    }
+  }, [questions, setQuestions]);
+
   const handleReorder = (newData: any[]) => {
     // Filter out the add row before saving
     const filteredData = newData.filter((item) => !item._isAddRow) as Question[];
@@ -351,7 +393,11 @@ export const FormDetailContent = ({
                 },
               ]}
               columns={columns}
-              getRowId={(row) => row.id || Math.random().toString()}
+              getRowId={(row) => {
+                if (row.id) return row.id;
+                console.warn('Row missing ID in FormDetailContent:', row);
+                return `temp-${JSON.stringify(row)}`;
+              }}
               gridKey="form-questions"
               enableSearch={false}
               enableEditColumns={false}
@@ -370,19 +416,21 @@ export const FormDetailContent = ({
             />
           </div>
           <Card
-            className="flex flex-col items-center justify-center overflow-auto"
+            className="flex flex-col items-center justify-center overflow-hidden relative"
             style={{
               width: 'calc(30% - 0.5rem)',
               flexShrink: 0
             }}
           >
-            <IphoneFrame>
-              <FormPreviewContainer
-                questions={questions}
-                currentQuestionIndex={previewQuestionIndex}
-                onNavigate={handlePreviewNavigate}
-              />
-            </IphoneFrame>
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <IphoneFrame>
+                <FormPreviewContainer
+                  questions={questions}
+                  currentQuestionIndex={previewQuestionIndex}
+                  onNavigate={handlePreviewNavigate}
+                />
+              </IphoneFrame>
+            </div>
           </Card>
         </div>
       </div>
