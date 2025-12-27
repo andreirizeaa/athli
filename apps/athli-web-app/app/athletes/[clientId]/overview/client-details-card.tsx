@@ -20,7 +20,9 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { CountrySelect } from '@/components/ui/country-select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit, User, Mail, Users, Phone, MapPin, ArrowUp10 } from 'lucide-react';
-import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/api/client/client-service';
+import { useClientProfileContext } from '../client-profile-context';
+import { useUpdateClientDetails } from '@/hooks/use-client-details';
+import type { AthleteDetails } from '@/api/client/client-service';
 import { parsePhoneNumber } from 'react-phone-number-input';
 import type { Value as PhoneValue, Country } from 'react-phone-number-input';
 
@@ -30,10 +32,9 @@ type ClientDetailsCardProps = {
 
 export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
   const t = useTranslations();
+  const { details, isLoading } = useClientProfileContext();
+  const updateDetailsMutation = useUpdateClientDetails();
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
-  const [details, setDetails] = useState<AthleteDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  // const athlete = mockAthletes.find((item) => item.id === clientId); // Removed mock
   const [formData, setFormData] = useState<AthleteDetails>({
     firstName: '',
     lastName: '',
@@ -52,38 +53,16 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
   const convertPhoneToE164 = (phone: string): PhoneValue | undefined => {
     if (!phone) return undefined;
     try {
-      // If it's already in E.164 format, return it
       const cleaned = phone.replace(/\s/g, '').replace(/[()-]/g, '');
       if (cleaned.startsWith('+') && /^\+[1-9]\d{1,14}$/.test(cleaned)) {
         return cleaned as PhoneValue;
       }
-      // Try to parse the formatted phone number
       const parsed = parsePhoneNumber(phone);
       return parsed?.number as PhoneValue | undefined;
     } catch {
-      // If parsing fails, return undefined
       return undefined;
     }
   };
-
-  useEffect(() => {
-    const fetchDetails = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const fetchedDetails = await getAthleteDetails(clientId);
-        setDetails(fetchedDetails);
-        setFormData(fetchedDetails);
-      } catch (error) {
-        console.error('Failed to fetch details:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchDetails();
-  }, [clientId]);
 
   useEffect(() => {
     if (isEditDetailsOpen && firstNameInputRef.current) {
@@ -112,8 +91,7 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
     if (!clientId) return;
 
     try {
-      await saveAthleteDetails(clientId, formData);
-      setDetails(formData);
+      await updateDetailsMutation.mutateAsync({ clientId, details: formData });
       setHasChanges(false);
       setIsEditDetailsOpen(false);
     } catch (error) {

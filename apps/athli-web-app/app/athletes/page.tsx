@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { archiveUser, type Athlete } from '@/api/coach/coach-client-service';
+import { archiveUser, archiveUser as archiveClient, type Athlete } from '@/api/coach/coach-client-service';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
@@ -33,6 +33,7 @@ import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/compon
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmArchiveDialog } from '@/components/app/confirm-archive-dialog';
 import {
   User,
   Users,
@@ -81,19 +82,6 @@ const COLUMN_ORDER: ColumnId[] = [
   'country',
   'age',
   'clientFor',
-];
-
-const ATHLETE_COLUMN_DEFINITIONS = [
-  { id: 'lastActivity', label: 'Last activity', icon: <ClockAlert className="size-3" /> },
-  { id: 'last7DaysTraining', label: 'L7D Training', icon: <Dumbbell className="size-3" /> },
-  { id: 'last30DaysTraining', label: 'L30D Training', icon: <Dumbbell className="size-3" /> },
-  { id: 'category', label: 'Category', icon: <Grid2x2 className="size-3" /> },
-  { id: 'connected', label: 'Connected?', icon: <HeartPulse className="size-3" /> },
-  { id: 'email', label: 'Email', icon: <Mail className="size-3" /> },
-  { id: 'phone', label: 'Phone', icon: <Phone className="size-3" /> },
-  { id: 'country', label: 'Country', icon: <Globe className="size-3" /> },
-  { id: 'age', label: 'Age', icon: <User className="size-3" /> },
-  { id: 'clientFor', label: 'Client For', icon: <ClockAlert className="size-3" /> },
 ];
 
 const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
@@ -154,7 +142,6 @@ const AthleteNameTooltip = ({ name }: { name: string }) => {
 const AthletesPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const { user } = useSupabaseAuth();
   const { uniqueCode } = useGlobalData();
   const { clients: athletes, isLoading, archiveClient } = useCoachClients();
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
@@ -164,6 +151,7 @@ const AthletesPage = () => {
   const [isUploadClientsOpen, setIsUploadClientsOpen] = useState<boolean>(false);
   const [isRestoreClientsOpen, setIsRestoreClientsOpen] = useState<boolean>(false);
   const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false);
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState<boolean>(false);
   const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -278,17 +266,20 @@ const AthletesPage = () => {
     exportToCSV(exportData, 'selected-athletes.csv');
   };
 
-  const handleArchiveSelected = async () => {
+  const handleArchiveSelected = () => {
     if (selectedAthletes.size === 0) return;
+    setIsArchiveConfirmOpen(true);
+  };
 
+  const handleConfirmArchive = async () => {
     try {
       const athleteIds = Array.from(selectedAthletes);
       await Promise.all(athleteIds.map(id => archiveClient(id)));
       toast.success(t('athletes.notifications.archiveSuccess'));
       setSelectedAthletes(new Set());
-      // Cache is automatically updated by the mutation
+      setIsArchiveConfirmOpen(false);
     } catch (error) {
-      toast.error(t('athletes.notifications.archiveError'));
+      toast.error(t('athletes.notifications.archiveError', { defaultValue: 'Failed to archive athlete(s)' }));
       console.error(error);
     }
   };
@@ -539,7 +530,7 @@ const AthletesPage = () => {
       getSearchValue: (row) =>
         `${row.name || ''} ${row.email || ''} ${row.phone || ''} ${row.country || ''} ${row.category || ''}`,
     },
-    ...COLUMN_ORDER.map((columnId): ColumnDefinition<Athlete> => {
+    ...COLUMN_ORDER.map((columnId: ColumnId): ColumnDefinition<Athlete> => {
       switch (columnId) {
         case 'lastActivity':
           return {
@@ -1186,7 +1177,7 @@ const AthletesPage = () => {
         onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('athletes.searchPlaceholder')}
-        searchFields={[(row) => `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`]}
+        searchFields={[(row: Athlete) => `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`]}
         filters={filters}
         enableEditColumns={true}
         enableExport={true}
@@ -1218,7 +1209,7 @@ const AthletesPage = () => {
         })}
         enableRowSelection={true}
         selectedRowIds={selectedAthletes}
-        onSelectionChange={setSelectedAthletes}
+        onSelectionChange={(next: Set<string>) => setSelectedAthletes(next)}
         onRowClick={(row, event) => {
           const targetElement = event.target as HTMLElement;
           if (targetElement.closest('[data-no-row-link="true"]')) {
@@ -1252,7 +1243,7 @@ const AthletesPage = () => {
                   >
                     <X className="size-4" />
                     <span>
-                      Clear {selectedAthletes.size} selected
+                      {t('general.clearSelected', { count: selectedAthletes.size })}
                     </span>
                   </Button>
                 </TooltipTrigger>
@@ -1356,6 +1347,12 @@ const AthletesPage = () => {
       <RestoreClientsSidePanel
         open={isRestoreClientsOpen}
         onOpenChange={setIsRestoreClientsOpen}
+      />
+      <ConfirmArchiveDialog
+        open={isArchiveConfirmOpen}
+        onOpenChange={setIsArchiveConfirmOpen}
+        onConfirm={handleConfirmArchive}
+        count={selectedAthletes.size}
       />
     </div>
   );

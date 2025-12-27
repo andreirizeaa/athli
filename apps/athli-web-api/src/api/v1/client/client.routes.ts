@@ -15,14 +15,10 @@ export const clientRouter = Router();
 
 // Flattened routes
 clientRouter.get('/ping', (req, res) => res.status(200).send('pong'));
-clientRouter.post('/resend-invite', (req, res, next) => {
-    console.log('Hit resend-invite route');
-    next();
-}, supabaseAuthenticate, clientProfileController.resendInvite);
 clientRouter.use('/', clientBaseRouter);
 clientRouter.use('/files', clientFileRouter);
-clientRouter.use('/check-ins', clientCheckInRouter);
-clientRouter.use('/questionnaires', clientQuestionnaireRouter);
+clientRouter.use('/forms/check-ins', clientCheckInRouter);
+clientRouter.use('/forms/questionnaires', clientQuestionnaireRouter);
 clientRouter.use('/habits', clientHabitRouter);
 clientRouter.use('/metrics', clientMetricRouter);
 clientRouter.use('/photos', clientPhotoRouter);

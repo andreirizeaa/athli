@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -99,9 +100,10 @@ type EditExerciseSidePanelProps = {
   onOpenChange: (open: boolean) => void;
   exercise: Exercise | null;
   onSave: () => void;
+  onDelete?: () => void;
 };
 
-export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: EditExerciseSidePanelProps) => {
+export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, onDelete }: EditExerciseSidePanelProps) => {
   const t = useTranslations();
   const [exerciseName, setExerciseName] = useState<string>('');
   const [exerciseInstructions, setExerciseInstructions] = useState<string>('');
@@ -122,6 +124,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
   const [equipmentError, setEquipmentError] = useState<string | null>(null);
   const [modalityError, setModalityError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [originalExerciseData, setOriginalExerciseData] = useState<{
     name: string;
     instructions: string;
@@ -400,165 +403,143 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
   if (!exercise) return null;
 
   return (
-    <SidePanel
-      open={open}
-      onOpenChange={onOpenChange}
-      onOpenAutoFocus={(e) => {
-        e.preventDefault();
-      }}
-      title={t('exercises.addExercise.editTitle')}
-      footer={
-        <div className="flex w-full justify-start gap-2">
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving || !hasFormChanged()}
-            aria-label={t('exercises.addExercise.saveAria')}
-            className={cn(isSaving && 'min-w-[120px] justify-center')}
-          >
-            {isSaving ? <Spinner className="h-4 w-4" /> : t('general.save')}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isSaving}
-            aria-label={t('exercises.addExercise.cancelAria')}
-          >
-            {t('general.cancel')}
-          </Button>
-        </div>
-      }
-    >
-      <div
-        className="flex flex-col gap-6 flex-1 min-h-0 relative"
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {/* Drag Overlay */}
-        {isDragging && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-            <p className="text-lg font-semibold text-primary">Drop video here</p>
-          </div>
-        )}
-
-        {/* Form Content - hidden when dragging */}
-        <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="exercise-name" className="text-sm font-medium">
-              {t('exercises.addExercise.exerciseName')}<RequiredAsterisk />
-            </label>
-            <Input
-              id="exercise-name"
-              type="text"
-              placeholder={t('exercises.addExercise.exerciseNamePlaceholder')}
-              value={exerciseName}
-              onChange={(event) => {
-                setExerciseName(event.target.value);
-                if (exerciseNameError) {
-                  setExerciseNameError(null);
-                }
-              }}
-              className="w-full"
-              aria-invalid={!!exerciseNameError}
-            />
-            {exerciseNameError && <p className="text-sm text-destructive">{exerciseNameError}</p>}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="exercise-instructions" className="text-sm font-medium">
-              {t('exercises.addExercise.instructions')}
-            </label>
-            <Textarea
-              id="exercise-instructions"
-              value={exerciseInstructions}
-              onChange={(event) => {
-                setExerciseInstructions(event.target.value);
-              }}
-              placeholder={t('exercises.addExercise.instructionsPlaceholder')}
-              rows={3}
-              className="resize-none"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="video-link" className="text-sm font-medium">
-              {t('exercises.addExercise.video')}<RequiredAsterisk />
-            </label>
-
-            {/* Video Link Input - shown when no file is selected */}
-            {!videoFile && (
-              <div className="relative">
-                <Input
-                  id="video-link"
-                  type="text"
-                  placeholder={t('exercises.addExercise.videoLinkPlaceholder')}
-                  value={videoLink}
-                  onChange={(event) => {
-                    setVideoLink(event.target.value);
-                    if (videoLinkError) {
-                      setVideoLinkError(null);
-                    }
-                  }}
-                  className={cn('w-full pr-8', videoLinkError && 'border-destructive aria-invalid:border-destructive')}
-                  aria-invalid={!!videoLinkError}
-                />
-                {videoLink && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVideoLink('');
-                      setVimeoThumbnail(null);
-                      setIsLoadingVimeoThumbnail(false);
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                    aria-label={t('exercises.addExercise.clearVideoLink')}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+    <>
+      <SidePanel
+        open={open}
+        onOpenChange={onOpenChange}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+        }}
+        title={t('exercises.addExercise.editTitle')}
+        footer={
+          <div className="flex w-full justify-start gap-2">
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving || !hasFormChanged()}
+              aria-label={t('exercises.addExercise.saveAria')}
+              className={cn(isSaving && 'min-w-[120px] justify-center')}
+            >
+              {isSaving ? <Spinner className="h-4 w-4" /> : t('general.save')}
+            </Button>
+            {onDelete && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={isSaving}
+              >
+                Delete
+              </Button>
             )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSaving}
+              aria-label={t('exercises.addExercise.cancelAria')}
+            >
+              {t('general.cancel')}
+            </Button>
+          </div>
+        }
+      >
+        <div
+          className="flex flex-col gap-6 flex-1 min-h-0 relative"
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          {/* Drag Overlay */}
+          {isDragging && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+              <p className="text-lg font-semibold text-primary">Drop video here</p>
+            </div>
+          )}
 
-            {/* Video Link Preview */}
-            {!videoFile && (() => {
-              const { id, type } = extractVideoId(videoLink);
-              if (id && type === 'youtube') {
-                return (
-                  <div className="mt-2">
-                    <a
-                      href={videoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
+          {/* Form Content - hidden when dragging */}
+          <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="exercise-name" className="text-sm font-medium">
+                {t('exercises.addExercise.exerciseName')}<RequiredAsterisk />
+              </label>
+              <Input
+                id="exercise-name"
+                type="text"
+                placeholder={t('exercises.addExercise.exerciseNamePlaceholder')}
+                value={exerciseName}
+                onChange={(event) => {
+                  setExerciseName(event.target.value);
+                  if (exerciseNameError) {
+                    setExerciseNameError(null);
+                  }
+                }}
+                className="w-full"
+                aria-invalid={!!exerciseNameError}
+              />
+              {exerciseNameError && <p className="text-sm text-destructive">{exerciseNameError}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="exercise-instructions" className="text-sm font-medium">
+                {t('exercises.addExercise.instructions')}
+              </label>
+              <Textarea
+                id="exercise-instructions"
+                value={exerciseInstructions}
+                onChange={(event) => {
+                  setExerciseInstructions(event.target.value);
+                }}
+                placeholder={t('exercises.addExercise.instructionsPlaceholder')}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="video-link" className="text-sm font-medium">
+                {t('exercises.addExercise.video')}<RequiredAsterisk />
+              </label>
+
+              {/* Video Link Input - shown when no file is selected */}
+              {!videoFile && (
+                <div className="relative">
+                  <Input
+                    id="video-link"
+                    type="text"
+                    placeholder={t('exercises.addExercise.videoLinkPlaceholder')}
+                    value={videoLink}
+                    onChange={(event) => {
+                      setVideoLink(event.target.value);
+                      if (videoLinkError) {
+                        setVideoLinkError(null);
+                      }
+                    }}
+                    className={cn('w-full pr-8', videoLinkError && 'border-destructive aria-invalid:border-destructive')}
+                    aria-invalid={!!videoLinkError}
+                  />
+                  {videoLink && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoLink('');
+                        setVimeoThumbnail(null);
+                        setIsLoadingVimeoThumbnail(false);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                      aria-label={t('exercises.addExercise.clearVideoLink')}
                     >
-                      <img
-                        src={`https://img.youtube.com/vi/${id}/maxresdefault.jpg`}
-                        alt="Video thumbnail"
-                        className="w-full rounded-md border border-border"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
-                        }}
-                      />
-                    </a>
-                  </div>
-                );
-              }
-              if (id && type === 'vimeo') {
-                if (isLoadingVimeoThumbnail) {
-                  return (
-                    <div className="mt-2">
-                      <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
-                        <Spinner className="h-4 w-4" />
-                      </div>
-                    </div>
-                  );
-                }
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
 
-                if (vimeoThumbnail) {
+              {/* Video Link Preview */}
+              {!videoFile && (() => {
+                const { id, type } = extractVideoId(videoLink);
+                if (id && type === 'youtube') {
                   return (
                     <div className="mt-2">
                       <a
@@ -568,219 +549,263 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave }: 
                         className="block"
                       >
                         <img
-                          src={vimeoThumbnail}
+                          src={`https://img.youtube.com/vi/${id}/maxresdefault.jpg`}
                           alt="Video thumbnail"
                           className="w-full rounded-md border border-border"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+                          }}
                         />
                       </a>
                     </div>
                   );
                 }
+                if (id && type === 'vimeo') {
+                  if (isLoadingVimeoThumbnail) {
+                    return (
+                      <div className="mt-2">
+                        <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
+                          <Spinner className="h-4 w-4" />
+                        </div>
+                      </div>
+                    );
+                  }
 
-                return (
-                  <div className="mt-2">
-                    <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
-                      <p className="text-sm text-muted-foreground">
-                        {t('exercises.addExercise.vimeoThumbnailPlaceholder')}
-                      </p>
+                  if (vimeoThumbnail) {
+                    return (
+                      <div className="mt-2">
+                        <a
+                          href={videoLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <img
+                            src={vimeoThumbnail}
+                            alt="Video thumbnail"
+                            className="w-full rounded-md border border-border"
+                          />
+                        </a>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="mt-2">
+                      <div className="w-full aspect-video rounded-md border border-border bg-muted flex items-center justify-center">
+                        <p className="text-sm text-muted-foreground">
+                          {t('exercises.addExercise.vimeoThumbnailPlaceholder')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-
-            {/* OR divider - shown when neither link nor file is selected */}
-            {!videoLink.trim() && !videoFile && (
-              <div className="flex items-center gap-2 my-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-sm text-muted-foreground">OR</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-            )}
-
-            {/* Video File Upload Area - shown when no link is entered */}
-            {!videoLink.trim() && (
-              <div
-                className={cn(
-                  'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                  videoFile ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary'
-                )}
-              >
-                {videoFile && videoPreview ? (
-                  <>
-                    <video
-                      src={videoPreview}
-                      className="w-full max-w-md rounded-md"
-                      controls
-                    />
-                    <div className="text-center">
-                      <p className="text-sm font-medium mb-1">{videoFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(videoFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setVideoFile(null);
-                        if (videoPreview) {
-                          URL.revokeObjectURL(videoPreview);
-                        }
-                        setVideoPreview(null);
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
-                        }
-                      }}
-                    >
-                      {t('general.change')}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-10 text-muted-foreground" />
-                    <div className="text-center">
-                      <p className="text-sm font-medium mb-1">Drop MP4 video here</p>
-                      <p className="text-xs text-muted-foreground">or click to select</p>
-                    </div>
-                    <Input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="video/mp4"
-                      className="hidden"
-                      onChange={handleFileInputChange}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {t('general.select')}
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-
-            {videoLinkError && <p className="text-sm text-destructive">{videoLinkError}</p>}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="category" className="text-sm font-medium">
-              {t('exercises.addExercise.category')}<RequiredAsterisk />
-            </label>
-            <Select
-              value={category}
-              onValueChange={(value) => {
-                setCategory(value);
-                if (categoryError) {
-                  setCategoryError(null);
+                  );
                 }
-              }}
-            >
-              <SelectTrigger
-                id="category"
-                className={cn('w-full', categoryError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!categoryError}
-              >
-                <SelectValue placeholder={t('general.select')} />
-              </SelectTrigger>
-              <SelectContent>
-                {EXERCISE_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {categoryError && <p className="text-sm text-destructive">{categoryError}</p>}
-          </div>
+                return null;
+              })()}
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="muscle-groups" className="text-sm font-medium">
-              {t('exercises.addExercise.muscleGroups')}
-            </label>
-            <MultiAsyncSelect
-              options={MUSCLE_GROUPS.map((group) => ({ label: group, value: group }))}
-              value={muscleGroups}
-              onValueChange={(values) => {
-                setMuscleGroups(values);
-                if (muscleGroupsError) {
-                  setMuscleGroupsError(null);
-                }
-              }}
-              placeholder={t('exercises.addExercise.muscleGroupsPlaceholder')}
-              searchPlaceholder={t('exercises.addExercise.searchMuscleGroups')}
-              className={cn(muscleGroupsError && 'border-destructive')}
-            />
-            {muscleGroupsError && <p className="text-sm text-destructive">{muscleGroupsError}</p>}
-          </div>
+              {/* OR divider - shown when neither link nor file is selected */}
+              {!videoLink.trim() && !videoFile && (
+                <div className="flex items-center gap-2 my-2">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-sm text-muted-foreground">OR</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              )}
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="equipment" className="text-sm font-medium">
-              {t('exercises.addExercise.equipment')}
-            </label>
-            <Select
-              value={equipment}
-              onValueChange={(value) => {
-                setEquipment(value);
-                if (equipmentError) {
-                  setEquipmentError(null);
-                }
-              }}
-            >
-              <SelectTrigger
-                id="equipment"
-                className={cn('w-full', equipmentError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!equipmentError}
-              >
-                <SelectValue placeholder={t('general.select')} />
-              </SelectTrigger>
-              <SelectContent>
-                {EQUIPMENT_OPTIONS.map((eq) => (
-                  <SelectItem key={eq} value={eq}>
-                    {eq}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {equipmentError && <p className="text-sm text-destructive">{equipmentError}</p>}
-          </div>
+              {/* Video File Upload Area - shown when no link is entered */}
+              {!videoLink.trim() && (
+                <div
+                  className={cn(
+                    'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
+                    videoFile ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary'
+                  )}
+                >
+                  {videoFile && videoPreview ? (
+                    <>
+                      <video
+                        src={videoPreview}
+                        className="w-full max-w-md rounded-md"
+                        controls
+                      />
+                      <div className="text-center">
+                        <p className="text-sm font-medium mb-1">{videoFile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {(videoFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setVideoFile(null);
+                          if (videoPreview) {
+                            URL.revokeObjectURL(videoPreview);
+                          }
+                          setVideoPreview(null);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = '';
+                          }
+                        }}
+                      >
+                        {t('general.change')}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="size-10 text-muted-foreground" />
+                      <div className="text-center">
+                        <p className="text-sm font-medium mb-1">Drop MP4 video here</p>
+                        <p className="text-xs text-muted-foreground">or click to select</p>
+                      </div>
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="video/mp4"
+                        className="hidden"
+                        onChange={handleFileInputChange}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {t('general.select')}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="modality" className="text-sm font-medium">
-              {t('exercises.addExercise.modality')}
-            </label>
-            <Select
-              value={modality}
-              onValueChange={(value) => {
-                setModality(value);
-                if (modalityError) {
-                  setModalityError(null);
-                }
-              }}
-            >
-              <SelectTrigger
-                id="modality"
-                className={cn('w-full', modalityError && 'border-destructive aria-invalid:border-destructive')}
-                aria-invalid={!!modalityError}
+              {videoLinkError && <p className="text-sm text-destructive">{videoLinkError}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="category" className="text-sm font-medium">
+                {t('exercises.addExercise.category')}<RequiredAsterisk />
+              </label>
+              <Select
+                value={category}
+                onValueChange={(value) => {
+                  setCategory(value);
+                  if (categoryError) {
+                    setCategoryError(null);
+                  }
+                }}
               >
-                <SelectValue placeholder={t('general.select')} />
-              </SelectTrigger>
-              <SelectContent>
-                {MODALITY_OPTIONS.map((mod) => (
-                  <SelectItem key={mod} value={mod}>
-                    {mod}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {modalityError && <p className="text-sm text-destructive">{modalityError}</p>}
+                <SelectTrigger
+                  id="category"
+                  className={cn('w-full', categoryError && 'border-destructive aria-invalid:border-destructive')}
+                  aria-invalid={!!categoryError}
+                >
+                  <SelectValue placeholder={t('general.select')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXERCISE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {categoryError && <p className="text-sm text-destructive">{categoryError}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="muscle-groups" className="text-sm font-medium">
+                {t('exercises.addExercise.muscleGroups')}
+              </label>
+              <MultiAsyncSelect
+                options={MUSCLE_GROUPS.map((group) => ({ label: group, value: group }))}
+                value={muscleGroups}
+                onValueChange={(values) => {
+                  setMuscleGroups(values);
+                  if (muscleGroupsError) {
+                    setMuscleGroupsError(null);
+                  }
+                }}
+                placeholder={t('exercises.addExercise.muscleGroupsPlaceholder')}
+                searchPlaceholder={t('exercises.addExercise.searchMuscleGroups')}
+                className={cn(muscleGroupsError && 'border-destructive')}
+              />
+              {muscleGroupsError && <p className="text-sm text-destructive">{muscleGroupsError}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="equipment" className="text-sm font-medium">
+                {t('exercises.addExercise.equipment')}
+              </label>
+              <Select
+                value={equipment}
+                onValueChange={(value) => {
+                  setEquipment(value);
+                  if (equipmentError) {
+                    setEquipmentError(null);
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="equipment"
+                  className={cn('w-full', equipmentError && 'border-destructive aria-invalid:border-destructive')}
+                  aria-invalid={!!equipmentError}
+                >
+                  <SelectValue placeholder={t('general.select')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {EQUIPMENT_OPTIONS.map((eq) => (
+                    <SelectItem key={eq} value={eq}>
+                      {eq}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {equipmentError && <p className="text-sm text-destructive">{equipmentError}</p>}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label htmlFor="modality" className="text-sm font-medium">
+                {t('exercises.addExercise.modality')}
+              </label>
+              <Select
+                value={modality}
+                onValueChange={(value) => {
+                  setModality(value);
+                  if (modalityError) {
+                    setModalityError(null);
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="modality"
+                  className={cn('w-full', modalityError && 'border-destructive aria-invalid:border-destructive')}
+                  aria-invalid={!!modalityError}
+                >
+                  <SelectValue placeholder={t('general.select')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODALITY_OPTIONS.map((mod) => (
+                    <SelectItem key={mod} value={mod}>
+                      {mod}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {modalityError && <p className="text-sm text-destructive">{modalityError}</p>}
+            </div>
           </div>
         </div>
-      </div>
-    </SidePanel>
+      </SidePanel>
+      <ConfirmDeleteDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={() => {
+          setIsDeleteDialogOpen(false);
+          onDelete?.();
+        }}
+        itemName={exerciseName}
+        itemType="exercise"
+      />
+    </>
   );
 };
 

@@ -29,10 +29,11 @@ type Metric = {
   name: string;
   unit: string;
   description?: string;
+  assignmentId?: string;
 };
 
 type LogMetricFormValues = {
-  metricId: string;
+  assignmentId: string;
   value: string;
 };
 
@@ -40,7 +41,7 @@ type LogMetricSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   metrics: Metric[];
-  onSave: (metricId: string, value: number) => Promise<void>;
+  onSave: (assignmentId: string, value: number) => Promise<void>;
 };
 
 export const LogMetricSidePanel = ({
@@ -52,7 +53,7 @@ export const LogMetricSidePanel = ({
   const t = useTranslations();
 
   const logMetricSchema = z.object({
-    metricId: z.string().min(1, t('metrics.logMetricForm.metricRequired')),
+    assignmentId: z.string().min(1, t('metrics.logMetricForm.metricRequired')),
     value: z.string().min(1, t('metrics.logMetricForm.valueRequired')).refine(
       (val) => !isNaN(Number(val)) && Number(val) > 0,
       t('metrics.logMetricForm.valueInvalid')
@@ -63,7 +64,7 @@ export const LogMetricSidePanel = ({
     resolver: zodResolver(logMetricSchema),
     mode: 'onChange',
     defaultValues: {
-      metricId: '',
+      assignmentId: '',
       value: '',
     },
   });
@@ -71,7 +72,7 @@ export const LogMetricSidePanel = ({
   useEffect(() => {
     if (open) {
       form.reset({
-        metricId: '',
+        assignmentId: '',
         value: '',
       });
     }
@@ -83,9 +84,11 @@ export const LogMetricSidePanel = ({
   };
 
   const handleSave = async (values: LogMetricFormValues) => {
-    await onSave(values.metricId, Number(values.value));
+    await onSave(values.assignmentId, Number(values.value));
     handleClose();
   };
+
+  const isSaveDisabled = !form.watch('assignmentId') || !form.watch('value');
 
   return (
     <SidePanel
@@ -94,7 +97,7 @@ export const LogMetricSidePanel = ({
       title={t('metrics.logMetricTitle')}
       footer={
         <div className="flex items-center justify-start gap-2">
-          <Button onClick={form.handleSubmit(handleSave)}>
+          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled}>
             {t('general.save')}
           </Button>
           <Button variant="outline" onClick={handleClose}>
@@ -107,7 +110,7 @@ export const LogMetricSidePanel = ({
         <form className="flex flex-col gap-4">
           <FormField
             control={form.control}
-            name="metricId"
+            name="assignmentId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
@@ -120,11 +123,14 @@ export const LogMetricSidePanel = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {metrics.map((metric) => (
-                      <SelectItem key={metric.id} value={metric.id}>
-                        {metric.name} {metric.unit && `(${metric.unit})`}
-                      </SelectItem>
-                    ))}
+                    {metrics.map((metric) => {
+                      const value = metric.assignmentId || metric.id;
+                      return (
+                        <SelectItem key={value} value={value}>
+                          {metric.name} {metric.unit && `(${metric.unit})`}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </FormItem>

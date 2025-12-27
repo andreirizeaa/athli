@@ -56,36 +56,31 @@ export const EditFileSidePanel = ({
 }: EditFileSidePanelProps) => {
   const t = useTranslations();
   const [editFileName, setEditFileName] = useState<string>(initialFileName);
-  const [editSelectedTags, setEditSelectedTags] = useState<string[]>(initialTags);
   const [hasEditChanges, setHasEditChanges] = useState<boolean>(false);
 
   useEffect(() => {
     if (open && fileId) {
       setEditFileName(initialFileName);
-      setEditSelectedTags([...initialTags]);
       setHasEditChanges(false);
     }
-  }, [open, fileId, initialFileName, initialTags]);
+  }, [open, fileId, initialFileName]);
 
   useEffect(() => {
     if (fileId && open) {
-      const hasChanges =
-        editFileName.trim() !== initialFileName ||
-        JSON.stringify([...editSelectedTags].sort()) !== JSON.stringify([...initialTags].sort());
+      const hasChanges = editFileName.trim() !== initialFileName;
       setHasEditChanges(hasChanges);
     }
-  }, [fileId, editFileName, editSelectedTags, initialFileName, initialTags, open]);
+  }, [fileId, editFileName, initialFileName, open]);
 
   const handleClose = () => {
     onOpenChange(false);
     setEditFileName(initialFileName);
-    setEditSelectedTags([...initialTags]);
     setHasEditChanges(false);
   };
 
   const handleSave = async () => {
     if (!hasEditChanges) return;
-    await onSave(editFileName.trim(), editSelectedTags);
+    await onSave(editFileName.trim(), initialTags);
     handleClose();
   };
 
@@ -134,25 +129,11 @@ export const EditFileSidePanel = ({
             placeholder={t('files.form.fileNamePlaceholder')}
           />
         </div>
-
-        {/* Tags Dropdown */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">{t('files.form.tags')}</label>
-          <MultiAsyncSelect
-            options={TAG_OPTIONS}
-            value={editSelectedTags}
-            onValueChange={setEditSelectedTags}
-            placeholder={t('files.form.selectTags')}
-            searchPlaceholder={t('files.form.searchTags')}
-            maxCount={3}
-            clearText={t('general.clear')}
-            closeText={t('general.close')}
-          />
-        </div>
       </div>
     </SidePanel>
   );
 };
+
 
 
 

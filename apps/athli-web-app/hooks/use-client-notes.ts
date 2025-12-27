@@ -8,6 +8,7 @@ export function useClientNotes(clientId: string | undefined) {
     const {
         data: notes,
         isLoading,
+        isFetching,
         error,
         refetch
     } = useQuery({
@@ -72,6 +73,7 @@ export function useClientNotes(clientId: string | undefined) {
     return {
         notes: notes || [],
         isLoading,
+        isFetching,
         error,
         refetch,
         createNote: createMutation.mutateAsync,

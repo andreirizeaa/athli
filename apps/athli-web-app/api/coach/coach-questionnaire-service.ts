@@ -10,6 +10,7 @@ export interface Questionnaire {
   name: string;
   description?: string;
   questions: Question[];
+  questionCount?: number;
   created_at: string;
   updated_at: string;
 }

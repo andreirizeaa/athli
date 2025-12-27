@@ -1,17 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, ChevronDownIcon } from 'lucide-react';
+import { Upload, ChevronDownIcon, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Popover,
   PopoverContent,
@@ -20,14 +13,16 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
+import { AddClientPhotosData } from '@/api/client/client-photo-service';
 
-type PhotoType = 'front' | 'back' | 'side';
+type PhotoType = 'front' | 'side' | 'back';
 
 type AddPhotoSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (type: PhotoType, file: File, takenAt: Date) => Promise<void>;
+  onSave: (data: AddClientPhotosData) => Promise<void>;
   clientId: string;
 };
 
@@ -38,51 +33,99 @@ export const AddPhotoSidePanel = ({
   clientId,
 }: AddPhotoSidePanelProps) => {
   const t = useTranslations();
-  const [photoType, setPhotoType] = useState<PhotoType>('front');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [takenAt, setTakenAt] = useState<Date | undefined>(new Date());
-  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [photos, setPhotos] = useState<{
+    front: { file: File | null; preview: string | null };
+    side: { file: File | null; preview: string | null };
+    back: { file: File | null; preview: string | null };
+  }>({
+    front: { file: null, preview: null },
+    side: { file: null, preview: null },
+    back: { file: null, preview: null },
+  });
+  const [recordedAt, setRecordedAt] = useState<Date | undefined>(new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverType, setDragOverType] = useState<PhotoType | null>(null);
   const dragCounterRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const fileInputRefs = {
+    front: useRef<HTMLInputElement>(null),
+    side: useRef<HTMLInputElement>(null),
+    back: useRef<HTMLInputElement>(null),
+  };
+
+  const cleanupPreviews = () => {
+    Object.values(photos).forEach((p) => {
+      if (p.preview) URL.revokeObjectURL(p.preview);
+    });
+  };
 
   const handleClose = () => {
     onOpenChange(false);
-    setPhotoType('front');
-    setSelectedFile(null);
-    setImagePreview(null);
-    setTakenAt(new Date());
-    setIsDragging(false);
-    dragCounterRef.current = 0;
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    cleanupPreviews();
+    setPhotos({
+      front: { file: null, preview: null },
+      side: { file: null, preview: null },
+      back: { file: null, preview: null },
+    });
+    setRecordedAt(new Date());
+    setIsSaving(false);
+  };
+
+  useEffect(() => {
+    if (!open) {
+      cleanupPreviews();
     }
-    // Clean up object URL
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
+    return cleanupPreviews;
+  }, [open]);
+
+  const handleFileSelect = (type: PhotoType, file: File) => {
+    if (!file.type.startsWith('image/')) return;
+
+    const preview = URL.createObjectURL(file);
+    setPhotos((prev) => {
+      if (prev[type].preview) URL.revokeObjectURL(prev[type].preview!);
+      return {
+        ...prev,
+        [type]: { file, preview },
+      };
+    });
+  };
+
+  const handleRemovePhoto = (type: PhotoType) => {
+    setPhotos((prev) => {
+      if (prev[type].preview) URL.revokeObjectURL(prev[type].preview!);
+      return {
+        ...prev,
+        [type]: { file: null, preview: null },
+      };
+    });
+    if (fileInputRefs[type].current) {
+      fileInputRefs[type].current!.value = '';
     }
   };
 
   const handleSave = async () => {
-    if (!selectedFile || !takenAt) return;
-    await onSave(photoType, selectedFile, takenAt);
-    handleClose();
-  };
+    if (!recordedAt || isSaving) return;
+    if (!photos.front.file && !photos.side.file && !photos.back.file) return;
 
-  const handleFileSelect = (file: File) => {
-    // Only allow image files
-    if (!file.type.startsWith('image/')) {
-      return;
+    setIsSaving(true);
+    try {
+      await onSave({
+        clientId,
+        frontFile: photos.front.file,
+        sideFile: photos.side.file,
+        backFile: photos.back.file,
+        recordedAt,
+      });
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save photos:', error);
+    } finally {
+      setIsSaving(false);
     }
-    setSelectedFile(file);
-    // Create preview URL
-    const previewUrl = URL.createObjectURL(file);
-    // Clean up previous preview if exists
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
-    setImagePreview(previewUrl);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -100,31 +143,98 @@ export const AddPhotoSidePanel = ({
     dragCounterRef.current--;
     if (dragCounterRef.current === 0) {
       setIsDragging(false);
+      setDragOverType(null);
     }
+  };
+
+  const getDropType = (clientX: number): PhotoType | null => {
+    if (!containerRef.current) return null;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const width = rect.width;
+
+    if (x < width / 3) return 'front';
+    if (x < (width * 2) / 3) return 'side';
+    return 'back';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const type = getDropType(e.clientX);
+    setDragOverType(type);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    setDragOverType(null);
     dragCounterRef.current = 0;
 
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && droppedFile.type.startsWith('image/')) {
-      handleFileSelect(droppedFile);
+    const type = getDropType(e.clientX);
+    const file = e.dataTransfer.files[0];
+    if (type && file) {
+      handleFileSelect(type, file);
     }
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
+  const hasAnyPhoto = photos.front.file || photos.side.file || photos.back.file;
+
+  const PhotoUploadBox = ({ type, label }: { type: PhotoType, label: string }) => {
+    const photo = photos[type];
+    return (
+      <div className="flex flex-col gap-2">
+        <Label className="text-xs text-muted-foreground uppercase px-1 font-semibold">{label}</Label>
+        <div
+          className={cn(
+            'relative aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition-all overflow-hidden group',
+            photo.file ? 'border-primary bg-primary/5' : 'border-muted-foreground/30 hover:border-primary/50'
+          )}
+        >
+          {photo.preview ? (
+            <>
+              <img
+                src={photo.preview}
+                alt={label}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={() => handleRemovePhoto(type)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="w-full h-full flex flex-col items-center justify-center gap-2"
+              onClick={() => fileInputRefs[type].current?.click()}
+            >
+              <div className="p-2 rounded-full bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                <Plus className="h-5 w-5" />
+              </div>
+              <span className="text-[11px] text-muted-foreground font-medium">{t('photos.form.selectImage')}</span>
+            </button>
+          )}
+          <Input
+            ref={fileInputRefs[type]}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFileSelect(type, file);
+            }}
+          />
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -137,9 +247,10 @@ export const AddPhotoSidePanel = ({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={!selectedFile || !takenAt}
+            disabled={!hasAnyPhoto || !recordedAt || isSaving}
+            className="min-w-[80px]"
           >
-            {t('general.save')}
+            {isSaving ? t('general.saving') : t('general.save')}
           </Button>
           <Button type="button" variant="outline" onClick={handleClose}>
             {t('general.cancel')}
@@ -148,7 +259,8 @@ export const AddPhotoSidePanel = ({
       }
     >
       <div
-        className="flex flex-col gap-6 flex-1 min-h-0 relative"
+        ref={containerRef}
+        className="flex flex-col gap-8 flex-1 relative min-h-0"
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
@@ -156,118 +268,81 @@ export const AddPhotoSidePanel = ({
       >
         {/* Drag Overlay */}
         {isDragging && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
-            <p className="text-lg font-semibold text-primary">Drop image here</p>
-          </div>
-        )}
-        
-        {/* Form Content - hidden when dragging */}
-        <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
-          {/* Type Dropdown */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="photo-type" className="px-1">
-              {t('photos.form.type')}
-            </Label>
-            <Select value={photoType} onValueChange={(value) => setPhotoType(value as PhotoType)}>
-              <SelectTrigger id="photo-type" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="front">{t('photos.form.front')}</SelectItem>
-                <SelectItem value="back">{t('photos.form.back')}</SelectItem>
-                <SelectItem value="side">{t('photos.form.side')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Image Selection */}
-          <div className="flex flex-col gap-2">
-            <Label className="px-1">{t('photos.form.image')}</Label>
+          <div className="absolute inset-0 z-50 flex h-full gap-2 p-2 bg-background/60 backdrop-blur-[2px]">
             <div
               className={cn(
-                'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                selectedFile ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary'
+                'flex-1 flex flex-col items-center justify-center border-2 border-dashed transition-colors rounded-xl p-4 text-center',
+                dragOverType === 'front'
+                  ? 'bg-primary/20 border-primary'
+                  : 'bg-background/80 border-muted-foreground/20'
               )}
             >
-              {selectedFile && imagePreview ? (
-                <>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="size-20 object-cover rounded-md"
-                  />
-                  <div className="text-center">
-                    <p className="text-sm font-medium mb-1">{selectedFile.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(selectedFile.size / 1024).toFixed(2)} KB
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (imagePreview) {
-                        URL.revokeObjectURL(imagePreview);
-                      }
-                      setImagePreview(null);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                      }
-                    }}
-                  >
-                    {t('photos.form.changeImage')}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Upload className="size-10 text-muted-foreground" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium mb-1">{t('photos.form.dropImageHere')}</p>
-                    <p className="text-xs text-muted-foreground">{t('photos.form.orClickToSelect')}</p>
-                  </div>
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileInputChange}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {t('photos.form.selectImage')}
-                  </Button>
-                </>
-              )}
+              <Upload className={cn('size-10 mb-4', dragOverType === 'front' ? 'text-primary' : 'text-muted-foreground')} />
+              <p className={cn('text-sm font-bold uppercase mb-1', dragOverType === 'front' ? 'text-primary' : 'text-muted-foreground')}>FRONT</p>
+              <p className={cn('text-xs font-medium', dragOverType === 'front' ? 'text-primary/80' : 'text-muted-foreground/70')}>Drop front photo here</p>
             </div>
+            <div
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center border-2 border-dashed transition-colors rounded-xl p-4 text-center',
+                dragOverType === 'side'
+                  ? 'bg-primary/20 border-primary'
+                  : 'bg-background/80 border-muted-foreground/20'
+              )}
+            >
+              <Upload className={cn('size-10 mb-4', dragOverType === 'side' ? 'text-primary' : 'text-muted-foreground')} />
+              <p className={cn('text-sm font-bold uppercase mb-1', dragOverType === 'side' ? 'text-primary' : 'text-muted-foreground')}>SIDE</p>
+              <p className={cn('text-xs font-medium', dragOverType === 'side' ? 'text-primary/80' : 'text-muted-foreground/70')}>Drop side photo here</p>
+            </div>
+            <div
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center border-2 border-dashed transition-colors rounded-xl p-4 text-center',
+                dragOverType === 'back'
+                  ? 'bg-primary/20 border-primary'
+                  : 'bg-background/80 border-muted-foreground/20'
+              )}
+            >
+              <Upload className={cn('size-10 mb-4', dragOverType === 'back' ? 'text-primary' : 'text-muted-foreground')} />
+              <p className={cn('text-sm font-bold uppercase mb-1', dragOverType === 'back' ? 'text-primary' : 'text-muted-foreground')}>BACK</p>
+              <p className={cn('text-xs font-medium', dragOverType === 'back' ? 'text-primary/80' : 'text-muted-foreground/70')}>Drop back photo here</p>
+            </div>
+          </div>
+        )}
+
+        <div className={cn('flex flex-col gap-8 flex-1', isDragging && 'opacity-0 pointer-events-none')}>
+          {/* Photos Grid */}
+          <div className="grid grid-cols-3 gap-4">
+            <PhotoUploadBox type="front" label={t('photos.form.front')} />
+            <PhotoUploadBox type="side" label={t('photos.form.side')} />
+            <PhotoUploadBox type="back" label={t('photos.form.back')} />
           </div>
 
           {/* Date Picker */}
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="date" className="px-1">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="date" className="text-xs text-muted-foreground uppercase px-1 font-semibold flex items-center">
               {t('photos.form.takenAt')}
+              <RequiredAsterisk />
             </Label>
             <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   id="date"
-                  className="w-full justify-between font-normal bg-sidebar"
+                  className="w-full justify-between font-normal bg-sidebar border-muted-foreground/20 hover:border-primary/50 transition-colors"
+                  aria-label={t('photos.form.selectDate')}
                 >
-                  {takenAt ? takenAt.toLocaleDateString() : t('photos.form.selectDate')}
-                  <ChevronDownIcon className="h-4 w-4" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{recordedAt ? recordedAt.toLocaleDateString() : t('photos.form.selectDate')}</span>
+                  </div>
+                  <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                 <CalendarComponent
                   mode="single"
-                  selected={takenAt}
+                  selected={recordedAt}
                   captionLayout="dropdown"
                   onSelect={(date) => {
-                    setTakenAt(date);
+                    setRecordedAt(date);
                     setIsCalendarOpen(false);
                   }}
                 />

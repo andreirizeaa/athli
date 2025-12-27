@@ -9,8 +9,6 @@ export const clientPhotosController = {
     getPhotos: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        // Photos might not track coach_id for visibility, typically they are just client's photos.
-        // But if needed, we could filter. For now, just allow reading client's photos.
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -22,105 +20,123 @@ export const clientPhotosController = {
             .from('client_photo_logs')
             .select('*')
             .eq('client_id', targetClientId)
-            .order('created_at', { ascending: false });
+            .order('recorded_date', { ascending: false });
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
         }
 
+        // Helper to extract relative path from full URL if needed
+        const extractPath = (urlOrPath: string | null) => {
+            if (!urlOrPath) return null;
+            if (urlOrPath.startsWith('http')) {
+                // Extracts everything after 'client_photos/'
+                const parts = urlOrPath.split('client_photos/');
+                return parts.length > 1 ? parts[1] : urlOrPath;
+            }
+            return urlOrPath;
+        };
+
+        // Generate signed URLs for all photo paths
+        const photosWithSignedUrls = await Promise.all((photos || []).map(async (log) => {
+            const getSigned = async (path: string | null) => {
+                const relativePath = extractPath(path);
+                if (!relativePath) return null;
+
+                const { data, error: signedError } = await supabase.storage
+                    .from('client_photos')
+                    .createSignedUrl(relativePath, 60 * 60 * 24); // 24 hours
+                return data?.signedUrl || null;
+            };
+
+            return {
+                ...log,
+                front_photo_url: await getSigned(log.front_photo_path),
+                side_photo_url: await getSigned(log.side_photo_path),
+                back_photo_url: await getSigned(log.back_photo_path),
+            };
+        }));
+
         success(res, {
             message: 'Client progress photos retrieved successfully',
-            data: { photos },
+            data: { photos: photosWithSignedUrls },
         });
     },
 
     /**
-     * Upload a progress photo
+     * Upload progress photos
      */
     uploadPhoto: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const { category } = req.body;
-        // Support both JSON body photo_url and Multipart file
-        let photo_url = req.body.photo_url;
-        const file = (req as any).file;
+        const { recorded_date, notes } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
         }
 
+        const files = (req as any).files as { [fieldname: string]: Express.Multer.File[] } | undefined;
         const supabase = getSupabaseClient();
 
-        // Handle file upload if provided
-        if (file) {
-            try {
-                // Determine bucket - assuming 'client_photo_logs' 
-                // Using random filename strategy from coach-files
-                const fileExtension = file.originalname.split('.').pop() || 'jpg';
-                const uniqueFileName = `${targetClientId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
+        // Helper to upload a single file
+        const uploadFile = async (file: Express.Multer.File, category: string) => {
+            const fileExtension = file.originalname.split('.').pop() || 'jpg';
+            const dateStr = recorded_date || new Date().toISOString().split('T')[0];
+            const uniqueFileName = `${targetClientId}/${dateStr}/${category}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
 
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('client_photo_logs')
-                    .upload(uniqueFileName, file.buffer, {
-                        contentType: file.mimetype,
-                        upsert: false,
-                    });
+            const { error: uploadError } = await supabase.storage
+                .from('client_photos')
+                .upload(uniqueFileName, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: false,
+                });
 
-                if (uploadError) {
-                    // Try fallback bucket 'client_photos' or 'public_files' if needed? 
-                    // Or just return error. Returning error is better.
-                    return res.status(500).json({ success: false, message: `Upload failed: ${uploadError.message}` });
-                }
-
-                // Construct public URL or keys
-                // If the bucket is private, we store the path and generate signed URLs on get...
-                // But getPhotos currently returns `photo_url`.
-                // If existing data has full URLs, then maybe public?
-                // Or maybe we store the path and `getPhotos` should generate signed URLs.
-                // Looking at getPhotos (Step 971): `select('*')`.
-                // It returns whatever is in the column `photo_url`.
-                // If we store the path here, the frontend might break if it expects a full URL.
-                // Assuming we store the PATH for now and `getPhotos` or frontend handles it?
-                // OR we generate a Signed URL immediately? But that expires.
-                // OR it's a public bucket.
-                // Let's assume we store the path in `photo_url` column same as `coach-files` stores in `file_path`.
-                // Wait, `coach-files` has separate `file_path` column.
-                // `client_photo_logs` has `photo_url`.
-                // I will try to get the public URL.
-                const { data: publicUrlData } = supabase.storage
-                    .from('client_photo_logs')
-                    .getPublicUrl(uniqueFileName);
-
-                photo_url = publicUrlData.publicUrl;
-
-            } catch (err: any) {
-                return res.status(500).json({ success: false, message: `Processing failed: ${err.message}` });
+            if (uploadError) {
+                throw new Error(`Upload failed: ${uploadError.message}`);
             }
+
+            return uniqueFileName;
+        };
+
+        try {
+            const photoPaths: { front_photo_path?: string, side_photo_path?: string, back_photo_path?: string } = {};
+
+            if (files) {
+                if (files['front']?.[0]) photoPaths.front_photo_path = await uploadFile(files['front'][0], 'front');
+                if (files['side']?.[0]) photoPaths.side_photo_path = await uploadFile(files['side'][0], 'side');
+                if (files['back']?.[0]) photoPaths.back_photo_path = await uploadFile(files['back'][0], 'back');
+            }
+
+            if (Object.keys(photoPaths).length === 0) {
+                return res.status(400).json({ success: false, message: 'At least one photo is required' });
+            }
+
+            // Insert a single log entry for all photos uploaded in this session
+            const { data, error } = await supabase
+                .from('client_photo_logs')
+                .insert({
+                    client_id: targetClientId,
+                    coach_id: userId,
+                    recorded_date: recorded_date || new Date().toISOString().split('T')[0],
+                    ...photoPaths,
+                    notes: notes || null,
+                })
+                .select()
+                .single();
+
+            if (error) {
+                return res.status(500).json({ success: false, message: error.message });
+            }
+
+            created(res, {
+                message: 'Progress photos uploaded successfully',
+                data: { log: data },
+            });
+
+        } catch (err: any) {
+            return res.status(500).json({ success: false, message: `Processing failed: ${err.message}` });
         }
-
-        if (!photo_url) {
-            return res.status(400).json({ success: false, message: 'Photo URL or File is required' });
-        }
-
-        const { data, error } = await supabase
-            .from('client_photo_logs')
-            .insert({
-                client_id: targetClientId,
-                photo_url,
-                category,
-            })
-            .select()
-            .single();
-
-        if (error) {
-            return res.status(500).json({ success: false, message: error.message });
-        }
-
-        created(res, {
-            message: 'Progress photo uploaded successfully',
-            data: { photo: data },
-        });
     },
 
     /**
@@ -145,6 +161,95 @@ export const clientPhotosController = {
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
+        }
+
+        noContent(res);
+    },
+
+    /**
+     * Delete a specific photo angle (front, back, or side)
+     */
+    deletePhotoAngle: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const { id, angle } = req.params;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        // Validate angle parameter
+        if (!['front', 'back', 'side'].includes(angle)) {
+            return res.status(400).json({ success: false, message: 'Invalid angle. Must be front, back, or side.' });
+        }
+
+        const fieldName = `${angle}_photo_path` as 'front_photo_path' | 'back_photo_path' | 'side_photo_path';
+
+        const supabase = getSupabaseClient();
+
+        // First, get the current photo path so we can delete the storage file
+        const { data: currentRow, error: fetchError } = await supabase
+            .from('client_photo_logs')
+            .select('front_photo_path, side_photo_path, back_photo_path')
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (fetchError) {
+            return res.status(500).json({ success: false, message: fetchError.message });
+        }
+
+        // Delete the storage file if it exists
+        const photoPath = currentRow?.[fieldName];
+        if (photoPath) {
+            // Extract relative path if it's a full URL
+            const extractPath = (urlOrPath: string) => {
+                if (urlOrPath.startsWith('http')) {
+                    const parts = urlOrPath.split('client_photos/');
+                    return parts.length > 1 ? parts[1] : urlOrPath;
+                }
+                return urlOrPath;
+            };
+
+            const relativePath = extractPath(photoPath);
+            await supabase.storage
+                .from('client_photos')
+                .remove([relativePath]);
+        }
+
+        // Now update the database to set the path to null
+        const { error } = await supabase
+            .from('client_photo_logs')
+            .update({ [fieldName]: null })
+            .eq('id', id)
+            .eq('client_id', targetClientId);
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        // Check if all photo angles are now null, if so delete the entire row
+        const { data: updatedRow, error: checkError } = await supabase
+            .from('client_photo_logs')
+            .select('front_photo_path, side_photo_path, back_photo_path')
+            .eq('id', id)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (!checkError && updatedRow) {
+            const allPhotosNull = !updatedRow.front_photo_path &&
+                !updatedRow.side_photo_path &&
+                !updatedRow.back_photo_path;
+
+            if (allPhotosNull) {
+                // Delete the entire row since no photos remain
+                await supabase
+                    .from('client_photo_logs')
+                    .delete()
+                    .eq('id', id)
+                    .eq('client_id', targetClientId);
+            }
         }
 
         noContent(res);

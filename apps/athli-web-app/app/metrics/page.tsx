@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, FileText, Trash2, X, UserPlus, Copy, Loader2 } from 'lucide-react';
+import { Button as UIButton } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
@@ -13,7 +14,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddMetricSidePanel } from '@/components/metrics/add-metric-side-panel';
 import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel';
-import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useCoachMetrics } from '@/hooks/use-coach-metrics';
 import { Metric } from '@/api/coach/coach-metric-service';
 import { mockAthletes } from '@/components/app/app-shell';
@@ -40,6 +41,7 @@ const MetricsPage = () => {
   const [metricsToAssign, setMetricsToAssign] = useState<Metric[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [metricToDelete, setMetricToDelete] = useState<string | null>(null);
 
 
 
@@ -52,6 +54,29 @@ const MetricsPage = () => {
       width: { class: 'w-[350px]', pixel: '350px' },
       getSortValue: (row) => row.name.toLowerCase(),
       getSearchValue: (row) => row.name,
+      renderHeader: ({ isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+            <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          </div>
+          <span className="text-xs uppercase text-muted-foreground">
+            {t('metrics.columns.name')}
+          </span>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+            <Checkbox checked={isSelected} onCheckedChange={() => {
+              const newSet = new Set(selectedMetrics);
+              if (newSet.has(row.id)) newSet.delete(row.id);
+              else newSet.add(row.id);
+              setSelectedMetrics(newSet);
+            }} />
+          </div>
+          <span className="text-sm font-medium truncate">{row.name}</span>
+        </div>
+      ),
     },
     {
       id: 'unit',
@@ -89,9 +114,11 @@ const MetricsPage = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={(e) => handleDeleteMetric(row.id, e)}
-            onKeyDown={(e) => handleDeleteKeyDown(row.id, e)}
-            className="h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMetricToDelete(row.id);
+            }}
+            className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
             aria-label={t('metrics.actions.deleteAria', { name: row.name })}
           >
             <Trash2 className="h-4 w-4" />
@@ -145,11 +172,7 @@ const MetricsPage = () => {
 
   const handleDeleteMetric = async (metricId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    try {
-      await deleteMetric(metricId);
-    } catch (error) {
-      console.error('Failed to delete metric:', error);
-    }
+    setMetricToDelete(metricId);
   };
 
   const handleBulkDelete = async () => {
@@ -159,6 +182,16 @@ const MetricsPage = () => {
       setSelectedMetrics(new Set());
     } catch (error) {
       console.error('Failed to bulk delete metrics:', error);
+    }
+  };
+
+  const handleDeleteSingle = async () => {
+    if (!metricToDelete) return;
+    try {
+      await deleteMetric(metricToDelete);
+      setMetricToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete metric:', error);
     }
   };
 
@@ -245,43 +278,7 @@ const MetricsPage = () => {
     });
   };
 
-  const renderFirstColumnHeader = ({
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        </div>
-        <span className="text-xs uppercase text-muted-foreground">
-          {t('metrics.columns.name')}
-        </span>
-      </div>
-    );
-  };
 
-  const createRenderFirstColumn = (onToggleRow: (id: string) => void) => {
-    return (row: Metric, isSelected: boolean) => {
-      return (
-        <div className="flex items-center gap-3 h-full w-full">
-          <div
-            className="flex items-center justify-center h-full flex-shrink-0"
-            data-no-row-link="true"
-          >
-            <Checkbox checked={isSelected} onCheckedChange={() => onToggleRow(row.id)} />
-          </div>
-          <span className="text-sm font-medium truncate">{row.name}</span>
-        </div>
-      );
-    };
-  };
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
@@ -308,20 +305,7 @@ const MetricsPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedMetrics}
         onSelectionChange={setSelectedMetrics}
-        firstColumnId="name"
-        stickyFirstColumn={true}
-        firstColumnWidth="350px"
-        hideFirstColumnBorder={false}
-        renderFirstColumn={createRenderFirstColumn((id) => {
-          const newSet = new Set(selectedMetrics);
-          if (newSet.has(id)) {
-            newSet.delete(id);
-          } else {
-            newSet.add(id);
-          }
-          setSelectedMetrics(newSet);
-        })}
-        renderFirstColumnHeader={renderFirstColumnHeader}
+
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -349,7 +333,7 @@ const MetricsPage = () => {
               >
                 <X className="size-4" />
                 <span>
-                  {t('metrics.actions.clearSelected')} {selectedMetrics.size}
+                  {t('general.clearSelected', { count: selectedMetrics.size })}
                 </span>
               </Button>
               {selectedMetrics.size === 1 && (
@@ -423,12 +407,20 @@ const MetricsPage = () => {
         />
       )}
 
-      <BulkDeleteConfirmationDialog
+      <ConfirmDeleteDialog
         open={isBulkDeleteOpen}
         onOpenChange={setIsBulkDeleteOpen}
         onConfirm={handleBulkDelete}
         count={selectedMetrics.size}
-        itemName={t('metrics.title').toLowerCase()}
+        itemType={t('metrics.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={metricToDelete !== null}
+        onOpenChange={(open) => !open && setMetricToDelete(null)}
+        onConfirm={handleDeleteSingle}
+        itemName={metrics.find(m => m.id === metricToDelete)?.name}
+        itemType="metric"
       />
 
       {/* Assign to Clients Side Panel */}
@@ -499,6 +491,42 @@ const MetricsPage = () => {
                     width: { class: 'w-full', pixel: '100%' },
                     getSortValue: (row) => row.name.toLowerCase(),
                     getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
+                    renderHeader: ({ isAllSelected, onToggleAll }) => (
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="size-3 text-muted-foreground" />
+                          <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
+                        </div>
+                      </div>
+                    ),
+                    renderCell: (row, isSelected) => {
+                      const initials = row.name
+                        .split(' ')
+                        .map((part) => part.charAt(0).toUpperCase())
+                        .slice(0, 2)
+                        .join('');
+                      return (
+                        <div className="flex items-center gap-3 h-full w-full">
+                          <div
+                            className="flex items-center justify-center h-full flex-shrink-0"
+                            data-no-row-link="true"
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => handleToggleClient(row.id)}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={row.avatar} alt={row.name} />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
+                          </div>
+                        </div>
+                      );
+                    },
                   },
                 ]}
                 getRowId={(row) => row.id}
@@ -527,48 +555,7 @@ const MetricsPage = () => {
                     handleToggleClient(row.id);
                   }
                 }}
-                firstColumnId="name"
-                stickyFirstColumn={true}
-                firstColumnWidth="100%"
-                hideFirstColumnBorder={true}
-                renderFirstColumn={(row, isSelected) => {
-                  const initials = row.name
-                    .split(' ')
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join('');
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <div
-                        className="flex items-center justify-center h-full flex-shrink-0"
-                        data-no-row-link="true"
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleToggleClient(row.id)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={row.avatar} alt={row.name} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
-                      </div>
-                    </div>
-                  );
-                }}
-                renderFirstColumnHeader={({ isAllSelected, onToggleAll }) => {
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                      <div className="flex items-center gap-2">
-                        <UserPlus className="size-3 text-muted-foreground" />
-                        <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
-                      </div>
-                    </div>
-                  );
-                }}
+
                 emptyMessage={t('metrics.noAthletesFound')}
                 rowHeight="54px"
                 compactMode={true}

@@ -26,15 +26,15 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { type Habit } from '@/api/coach/coach-habit-service';
 
 type LogHabitFormValues = {
-  habitId: string;
+  assignmentId: string;
   value: string;
 };
 
 type LogHabitSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  habits: Habit[];
-  onSave: (habitId: string, value: number) => Promise<void>;
+  habits: (Habit & { assignmentId?: string })[];
+  onSave: (assignmentId: string, value: number) => Promise<void>;
 };
 
 export const LogHabitSidePanel = ({
@@ -46,7 +46,7 @@ export const LogHabitSidePanel = ({
   const t = useTranslations();
 
   const logHabitSchema = z.object({
-    habitId: z.string().min(1, t('habits.logHabitForm.habitRequired')),
+    assignmentId: z.string().min(1, t('habits.logHabitForm.habitRequired')),
     value: z.string().min(1, t('habits.logHabitForm.valueRequired')).refine(
       (val) => !isNaN(Number(val)) && Number(val) > 0,
       t('habits.logHabitForm.valueInvalid')
@@ -57,7 +57,7 @@ export const LogHabitSidePanel = ({
     resolver: zodResolver(logHabitSchema),
     mode: 'onChange',
     defaultValues: {
-      habitId: '',
+      assignmentId: '',
       value: '',
     },
   });
@@ -65,7 +65,7 @@ export const LogHabitSidePanel = ({
   useEffect(() => {
     if (open) {
       form.reset({
-        habitId: '',
+        assignmentId: '',
         value: '',
       });
     }
@@ -77,9 +77,11 @@ export const LogHabitSidePanel = ({
   };
 
   const handleSave = async (values: LogHabitFormValues) => {
-    await onSave(values.habitId, Number(values.value));
+    await onSave(values.assignmentId, Number(values.value));
     handleClose();
   };
+
+  const isSaveDisabled = !form.watch('assignmentId') || !form.watch('value');
 
   return (
     <SidePanel
@@ -88,7 +90,7 @@ export const LogHabitSidePanel = ({
       title={t('habits.logHabitTitle')}
       footer={
         <div className="flex items-center justify-start gap-2">
-          <Button onClick={form.handleSubmit(handleSave)}>
+          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled}>
             {t('general.save')}
           </Button>
           <Button variant="outline" onClick={handleClose}>
@@ -101,7 +103,7 @@ export const LogHabitSidePanel = ({
         <form className="flex flex-col gap-4">
           <FormField
             control={form.control}
-            name="habitId"
+            name="assignmentId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
@@ -116,8 +118,9 @@ export const LogHabitSidePanel = ({
                   <SelectContent>
                     {habits.map((habit) => {
                       const unitLabel = t(`habits.form.units.${habit.unit as any}`);
+                      const value = habit.assignmentId || habit.id;
                       return (
-                        <SelectItem key={habit.id} value={habit.id}>
+                        <SelectItem key={value} value={value}>
                           {habit.name} {habit.amount && `(${habit.amount} ${unitLabel})`}
                         </SelectItem>
                       );

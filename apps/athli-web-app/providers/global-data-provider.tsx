@@ -19,6 +19,7 @@ import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
 import { useCoachPrograms } from '@/hooks/use-coach-programs';
 import { useCoachExercises } from '@/hooks/use-coach-exercises';
 import { useCoachTodo } from '@/hooks/use-coach-todo';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -55,8 +56,11 @@ const GlobalContext = createContext<GlobalContextType>({
 
 export const useGlobalData = () => useContext(GlobalContext);
 
+import { usePathname } from 'next/navigation';
+
 // Component to handle prefetching of coach data
 const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
+    const pathname = usePathname();
     const { isLoading: isFilesLoading } = useCoachFiles();
     const { isLoading: isHabitsLoading } = useCoachHabits();
     const { isLoading: isMetricsLoading } = useCoachMetrics();
@@ -66,6 +70,7 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoading: isProgramsLoading } = useCoachPrograms();
     const { isLoading: isExercisesLoading } = useCoachExercises();
     const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo();
+    const { isLoading: isClientsLoading } = useCoachClients();
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||
@@ -76,16 +81,23 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
         isProgramsLoading ||
         isExercisesLoading ||
         isOwnTodoLoading ||
-        isAutoTodoLoading;
+        isAutoTodoLoading ||
+        isClientsLoading;
 
-    if (isLoading) {
-        return <FullScreenLoader />;
+    // We only show the full screen loader for prefetching if we are NOT on a specific athlete's page
+    // This allows the athlete profile to load its own data without being blocked by global coach data loading
+    const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
+    const shouldShowLoader = isLoading && !isAthleteProfile;
+
+    if (shouldShowLoader) {
+        return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
     }
 
     return <>{children}</>;
 };
 
 export default function GlobalDataProvider({ children }: { children: ReactNode }) {
+    const pathname = usePathname();
     const { user: userProfile, isLoading: isUserLoading } = useUserProfile();
     const {
         preferences,
@@ -118,8 +130,13 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
         isUpdatingCompany
     }), [userProfile, preferences, company, notifications, uniqueCode, isLoading, updatePreferences, updateCompany, uploadAndSetCompanyLogo, toggleNotification, isUploadingLogo, isUpdatingCompany]);
 
-    if (isLoading) {
-        return <FullScreenLoader />;
+    // We only show the full screen loader for global auth/settings if we are NOT on a specific athlete's page
+    // This allows the athlete profile to load its own data without being blocked by global user loading
+    const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
+    const shouldShowLoader = isLoading && !isAthleteProfile;
+
+    if (shouldShowLoader) {
+        return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
     }
 
     // If user is logged in, wrap with prefetcher to ensure data is loaded

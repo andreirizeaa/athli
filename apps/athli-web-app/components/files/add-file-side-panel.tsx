@@ -2,20 +2,22 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Check, Search, FileText } from 'lucide-react';
+import { Upload, Check, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Info } from 'lucide-react';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import Link from 'next/link';
 import { cn } from '@/lib/general/utils';
 import { getAllFiles, type CoachFile } from '@/api/coach/coach-file-service';
 import { addFilesToClient } from '@/api/client/client-file-service';
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const TAG_OPTIONS: Option[] = [
   { label: 'Training', value: 'Training' },
@@ -49,6 +51,7 @@ type AddFileSidePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUpload: (file: File, fileName: string, tags: string[]) => Promise<void>;
+  onSave?: (fileIds: string[]) => Promise<void>;
   isUploading?: boolean;
   clientName?: string;
   clientId?: string;
@@ -58,11 +61,13 @@ export const AddFileSidePanel = ({
   open,
   onOpenChange,
   onUpload,
+  onSave,
   isUploading = false,
   clientName,
   clientId,
 }: AddFileSidePanelProps) => {
   const t = useTranslations();
+  const { user } = useUserProfile();
   const [fileName, setFileName] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -70,8 +75,7 @@ export const AddFileSidePanel = ({
   const [activeTab, setActiveTab] = useState<'new' | 'yourLibrary'>('yourLibrary');
   const [coachFiles, setCoachFiles] = useState<CoachFile[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState<boolean>(false);
-  const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
-  const [selectedLibraryFile, setSelectedLibraryFile] = useState<CoachFile | null>(null);
+  const [selectedLibraryFiles, setSelectedLibraryFiles] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
@@ -100,8 +104,7 @@ export const AddFileSidePanel = ({
     setSelectedTags([]);
     setIsDragging(false);
     setActiveTab('yourLibrary');
-    setLibrarySearchQuery('');
-    setSelectedLibraryFile(null);
+    setSelectedLibraryFiles(new Set());
     dragCounterRef.current = 0;
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -109,16 +112,22 @@ export const AddFileSidePanel = ({
   };
 
   const handleSaveFromYourLibrary = async () => {
-    if (selectedLibraryFile && clientId) {
-      // Assign file from library to client
+    if (selectedLibraryFiles.size > 0 && clientId) {
+      // Assign files from library to client
       try {
-        await addFilesToClient({
-          fileIds: [selectedLibraryFile.id],
-          clientId: clientId,
-        });
+        const fileIds = Array.from(selectedLibraryFiles);
+        if (onSave) {
+          await onSave(fileIds);
+        } else {
+          await addFilesToClient({
+            fileIds: fileIds,
+            clientId: clientId,
+            coachId: user?.id || '',
+          });
+        }
         handleClose();
       } catch (error) {
-        console.error('Failed to assign file:', error);
+        console.error('Failed to assign files:', error);
       }
     }
   };
@@ -129,49 +138,44 @@ export const AddFileSidePanel = ({
     handleClose();
   };
 
-  const handleSelectLibraryFile = (file: CoachFile) => {
-    setSelectedLibraryFile(file);
-  };
-
-  const handleDeselectLibraryFile = () => {
-    setSelectedLibraryFile(null);
-  };
-
-  const isFuzzyMatch = (text: string, query: string): boolean => {
-    const normalizedText = text.toLowerCase();
-    const normalizedQuery = query.toLowerCase().trim();
-
-    if (!normalizedQuery) {
-      return true;
-    }
-
-    if (normalizedText.includes(normalizedQuery)) {
-      return true;
-    }
-
-    let textIndex = 0;
-    let queryIndex = 0;
-
-    while (textIndex < normalizedText.length && queryIndex < normalizedQuery.length) {
-      if (normalizedText[textIndex] === normalizedQuery[queryIndex]) {
-        queryIndex += 1;
-      }
-      textIndex += 1;
-    }
-
-    return queryIndex === normalizedQuery.length;
-  };
-
-  const filteredLibraryFiles = useMemo(() => {
-    if (!librarySearchQuery.trim()) {
-      return coachFiles;
-    }
-
-    const query = librarySearchQuery.trim().toLowerCase();
-    return coachFiles.filter(
-      (file) => isFuzzyMatch(file.filename, query)
+  const renderFirstColumnHeader = ({
+    isAllSelected,
+    onToggleAll,
+  }: {
+    isAllSelected: boolean;
+    onToggleAll: () => void;
+    enableRowSelection: boolean;
+  }) => {
+    return (
+      <div className="flex items-center gap-3 h-full w-full">
+        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+        <div className="flex items-center gap-2">
+          <FileText className="size-3 text-muted-foreground" />
+          <span className="text-xs uppercase text-muted-foreground">{t('files.form.fileName')}</span>
+        </div>
+      </div>
     );
-  }, [coachFiles, librarySearchQuery]);
+  };
+
+  const renderFirstColumn = (row: CoachFile, isSelected: boolean, onToggle: () => void) => {
+    return (
+      <div className="flex items-center gap-3 h-full w-full">
+        <div
+          className="flex items-center justify-center h-full flex-shrink-0"
+          data-no-row-link="true"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox checked={isSelected} onCheckedChange={onToggle} />
+        </div>
+        <div className="flex items-center gap-3 w-full min-w-0">
+          <FileText className="size-4 text-muted-foreground" />
+          <span className="truncate text-sm">{row.filename}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const columns: ColumnDefinition<CoachFile>[] = [];
 
   const handleFileSelect = (file: File) => {
     // Validate file size (50MB limit)
@@ -228,8 +232,16 @@ export const AddFileSidePanel = ({
 
   const showAlert = !!clientName;
   const isValid = clientId && activeTab === 'yourLibrary'
-    ? selectedLibraryFile !== null
+    ? selectedLibraryFiles.size > 0
     : fileName.trim() !== '' && selectedFile !== null;
+
+  const getButtonText = () => {
+    if (activeTab === 'yourLibrary') {
+      const count = selectedLibraryFiles.size;
+      return count > 0 ? `Add ${count} ${count === 1 ? 'File' : 'Files'}` : 'Add';
+    }
+    return 'Add';
+  };
 
   return (
     <SidePanel
@@ -244,8 +256,8 @@ export const AddFileSidePanel = ({
       footer={
         clientId && activeTab === 'yourLibrary' ? (
           <div className="flex w-full justify-start gap-2">
-            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={!selectedLibraryFile}>
-              {t('general.save')}
+            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedLibraryFiles.size === 0}>
+              {getButtonText()}
             </Button>
             <Button type="button" variant="outline" onClick={handleClose}>
               {t('general.cancel')}
@@ -254,7 +266,7 @@ export const AddFileSidePanel = ({
         ) : (
           <div className="flex w-full justify-start gap-2">
             <Button type="button" onClick={handleSave} disabled={!isValid || isUploading}>
-              {isUploading ? t('general.uploading') : t('general.save')}
+              {isUploading ? t('general.uploading') : 'Add'}
             </Button>
             <Button type="button" variant="outline" onClick={handleClose}>
               {t('general.cancel')}
@@ -264,7 +276,7 @@ export const AddFileSidePanel = ({
       }
     >
       {clientId ? (
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'yourLibrary')} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'new' | 'yourLibrary')} className="w-full flex-1 flex flex-col min-h-0">
           <TabsList className="w-full mb-6">
             <TabsTrigger
               value="yourLibrary"
@@ -280,97 +292,53 @@ export const AddFileSidePanel = ({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="yourLibrary" className="mt-0">
-            <div className="flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto px-1 pt-1">
-              {isLoadingFiles ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>{t('general.loading')}</p>
-                </div>
-              ) : coachFiles.length === 0 ? (
-                <Alert className="bg-primary/5 border-primary/20 text-primary">
-                  <Info className="size-4" />
-                  <AlertDescription className="min-w-0 line-clamp-4">
-                    {t('files.noLibraryFiles')}{' '}
-                    <Link href="/files" className="underline hover:no-underline">
-                      <strong>{t('files.libraryLink')}</strong>
-                    </Link>
-                    .
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <>
-                  <div className="relative mb-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      placeholder={t('files.searchPlaceholder')}
-                      value={librarySearchQuery}
-                      onChange={(e) => setLibrarySearchQuery(e.target.value)}
-                      className="pl-9"
-                      aria-label={t('files.searchPlaceholder')}
-                    />
-                  </div>
-                  {filteredLibraryFiles.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>{t('files.emptyMessage')}</p>
-                    </div>
-                  ) : selectedLibraryFile ? (
-                    <>
-                      <Card className="p-4 ring-2 ring-primary">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex flex-col gap-1 flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <FileText className="size-4 text-muted-foreground" />
-                              <h4 className="text-sm font-medium text-foreground">{selectedLibraryFile.filename}</h4>
-                            </div>
-
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={handleDeselectLibraryFile}
-                            className="h-8 w-8 flex-shrink-0"
-                            aria-label={t('general.edit')}
-                          >
-                            <Info className="size-4" />
-                          </Button>
-                        </div>
-                      </Card>
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3">
-                      {filteredLibraryFiles.map((file) => (
-                        <Card
-                          key={file.id}
-                          className="p-4 cursor-pointer hover:bg-accent transition-colors"
-                          onClick={() => handleSelectLibraryFile(file)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleSelectLibraryFile(file);
-                            }
-                          }}
-                          tabIndex={0}
-                          role="button"
-                          aria-label={`Select file: ${file.filename}`}
-                        >
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <FileText className="size-4 text-muted-foreground" />
-                              <h4 className="text-sm font-medium text-foreground">{file.filename}</h4>
-                            </div>
-
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+          <TabsContent value="yourLibrary" className="mt-0 h-full flex flex-col min-h-0">
+            {isLoadingFiles ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>{t('general.loading')}</p>
+              </div>
+            ) : coachFiles.length === 0 ? (
+              <Alert className="bg-primary/5 border-primary/20 text-primary">
+                <Info className="size-4" />
+                <AlertDescription className="min-w-0 line-clamp-4">
+                  {t('files.noLibraryFiles')}{' '}
+                  <Link href="/files" className="underline hover:no-underline">
+                    <strong>{t('files.libraryLink')}</strong>
+                  </Link>
+                  .
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="flex-1 min-h-0 h-full">
+                <DataGrid
+                  data={coachFiles}
+                  columns={columns}
+                  getRowId={(row) => row.id}
+                  gridKey="add-file-library"
+                  searchPlaceholder={t('files.searchPlaceholder')}
+                  searchFields={[(row) => row.filename]}
+                  enableSearch={true}
+                  enableEditColumns={false}
+                  enableExport={false}
+                  enableRowSelection={true}
+                  selectOnRowClick={true}
+                  selectedRowIds={selectedLibraryFiles}
+                  onSelectionChange={setSelectedLibraryFiles}
+                  stickyFirstColumn={true}
+                  firstColumnWidth="300px"
+                  renderFirstColumn={renderFirstColumn}
+                  renderFirstColumnHeader={renderFirstColumnHeader}
+                  emptyMessage={t('files.emptyMessage')}
+                  rowHeight="54px"
+                  compactMode={true}
+                  showPagination={false}
+                  gridPadding={false}
+                />
+              </div>
+            )}
           </TabsContent>
 
-          <TabsContent value="new" className="mt-0">
+          <TabsContent value="new" className="mt-0 flex-1 flex flex-col min-h-0">
             <div
               className="flex flex-col gap-6 flex-1 min-h-0 relative"
               onDragEnter={handleDragEnter}
@@ -386,7 +354,7 @@ export const AddFileSidePanel = ({
               )}
 
               {/* Form Content - hidden when dragging */}
-              <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
+              <div className={cn('flex flex-col gap-6 flex-1 min-h-0', isDragging && 'opacity-0 pointer-events-none')}>
                 {showAlert && (
                   <Alert className="bg-primary/5 border-primary/20 text-primary mb-6">
                     <Info className="size-4" />
@@ -410,15 +378,15 @@ export const AddFileSidePanel = ({
                 </div>
 
                 {/* File Drop Area */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 flex-1 min-h-0">
                   <label className="text-sm font-medium">
                     {t('files.form.file')}
                     <RequiredAsterisk />
                   </label>
                   <div
                     className={cn(
-                      'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                      'border-muted hover:border-primary',
+                      'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors flex-1 min-h-0',
+                      'border-muted-foreground/30 hover:border-primary',
                       selectedFile && 'border-primary bg-primary/5'
                     )}
                   >
@@ -469,20 +437,22 @@ export const AddFileSidePanel = ({
                   </div>
                 </div>
 
-                {/* Tags Dropdown */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">{t('files.form.tags')}</label>
-                  <MultiAsyncSelect
-                    options={TAG_OPTIONS}
-                    value={selectedTags}
-                    onValueChange={setSelectedTags}
-                    placeholder={t('files.form.selectTags')}
-                    searchPlaceholder={t('files.form.searchTags')}
-                    maxCount={3}
-                    clearText={t('general.clear')}
-                    closeText={t('general.close')}
-                  />
-                </div>
+                {/* Tags Dropdown - only for non-client files */}
+                {!clientId && (
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-medium">{t('files.form.tags')}</label>
+                    <MultiAsyncSelect
+                      options={TAG_OPTIONS}
+                      value={selectedTags}
+                      onValueChange={setSelectedTags}
+                      placeholder={t('files.form.selectTags')}
+                      searchPlaceholder={t('files.form.searchTags')}
+                      maxCount={3}
+                      clearText={t('general.clear')}
+                      closeText={t('general.close')}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>
@@ -503,7 +473,7 @@ export const AddFileSidePanel = ({
           )}
 
           {/* Form Content - hidden when dragging */}
-          <div className={cn('flex flex-col gap-6', isDragging && 'opacity-0 pointer-events-none')}>
+          <div className={cn('flex flex-col gap-6 flex-1 min-h-0', isDragging && 'opacity-0 pointer-events-none')}>
             {/* File Name Input */}
             <div className="flex flex-col gap-2">
               <label htmlFor="file-name" className="text-sm font-medium">
@@ -519,15 +489,15 @@ export const AddFileSidePanel = ({
             </div>
 
             {/* File Drop Area */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 flex-1 min-h-0">
               <label className="text-sm font-medium">
                 {t('files.form.file')}
                 <RequiredAsterisk />
               </label>
               <div
                 className={cn(
-                  'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors',
-                  'border-muted hover:border-primary',
+                  'border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-4 transition-colors flex-1 min-h-0',
+                  'border-muted-foreground/30 hover:border-primary',
                   selectedFile && 'border-primary bg-primary/5'
                 )}
               >
@@ -579,8 +549,8 @@ export const AddFileSidePanel = ({
               </div>
             </div>
           </div>
-        </div>
+        </div >
       )}
-    </SidePanel>
+    </SidePanel >
   );
 };

@@ -10,27 +10,42 @@ export const clientHabitRouter = Router();
  *   get:
  *     summary: Get client habits
  *     tags: [Client Habits]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Client habits retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         assignments:
- *                           type: array
- *                           items:
- *                             $ref: '#/components/schemas/ClientHabit'
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ *     responses: { 200: { description: 'Success' } }
+ *   post:
+ *     summary: Assign habits to client (Coach only)
+ *     tags: [Client Habits]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
+ *   delete:
+ *     summary: Remove habits from client (Coach only)
+ *     tags: [Client Habits]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         required: true
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         required: true
+ *         schema: { type: string }
  */
 clientHabitRouter.get('/', supabaseAuthenticate, clientHabitsController.getHabits);
+clientHabitRouter.post('/', supabaseAuthenticate, clientHabitsController.assignHabit);
+clientHabitRouter.delete('/', supabaseAuthenticate, clientHabitsController.deleteAssignment);
 
 /**
  * @swagger
@@ -38,38 +53,16 @@ clientHabitRouter.get('/', supabaseAuthenticate, clientHabitsController.getHabit
  *   patch:
  *     summary: Update client habit status
  *     tags: [Client Habits]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [pending, completed]
- *     responses:
- *       200:
- *         description: Client habit updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/SuccessResponse'
- *                 - type: object
- *                   properties:
- *                     data:
- *                       type: object
- *                       properties:
- *                         assignment:
- *                           $ref: '#/components/schemas/ClientHabit'
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
  */
 clientHabitRouter.patch('/:id', supabaseAuthenticate, clientHabitsController.updateHabitStatus);

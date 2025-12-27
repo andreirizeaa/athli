@@ -29,7 +29,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
@@ -135,6 +135,7 @@ const ProgramsPage = () => {
   const [newProgramDifficultyError, setNewProgramDifficultyError] = useState<string | null>(null);
   const [isAssignProgramOpen, setIsAssignProgramOpen] = useState<boolean>(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [programToDelete, setProgramToDelete] = useState<string | null>(null);
   const [isAssignIndividualProgramOpen, setIsAssignIndividualProgramOpen] = useState<boolean>(false);
   const [selectedProgramForAssignment, setSelectedProgramForAssignment] = useState<Program | null>(null);
   const [isNavigating, setIsNavigating] = useState<boolean>(false);
@@ -243,6 +244,17 @@ const ProgramsPage = () => {
       setSelectedPrograms(new Set());
     } catch (error) {
       console.error('Failed to delete programs:', error);
+    }
+  };
+
+  const handleConfirmSingleDelete = async () => {
+    if (!programToDelete) return;
+    try {
+      await deletePrograms([programToDelete]);
+      await refreshPrograms();
+      setProgramToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete program:', error);
     }
   };
 
@@ -557,14 +569,9 @@ const ProgramsPage = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={async (e) => {
+          onClick={(e) => {
             e.stopPropagation();
-            try {
-              await deletePrograms([row.id]);
-              await refreshPrograms();
-            } catch (error) {
-              console.error('Failed to delete program:', error);
-            }
+            setProgramToDelete(row.id);
           }}
           className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
           aria-label={`Delete ${row.program}`}
@@ -909,12 +916,20 @@ const ProgramsPage = () => {
         compactPagination={true}
       />
 
-      <BulkDeleteConfirmationDialog
+      <ConfirmDeleteDialog
         open={isBulkDeleteOpen}
         onOpenChange={setIsBulkDeleteOpen}
         onConfirm={handleBulkDelete}
         count={selectedPrograms.size}
-        itemName={t('programs.title').toLowerCase()}
+        itemType={t('programs.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={programToDelete !== null}
+        onOpenChange={(open) => !open && setProgramToDelete(null)}
+        onConfirm={handleConfirmSingleDelete}
+        itemName={programs.find(p => p.id === programToDelete)?.program}
+        itemType="program"
       />
 
       <SidePanel

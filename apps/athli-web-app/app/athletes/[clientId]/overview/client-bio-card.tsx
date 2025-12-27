@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Edit } from 'lucide-react';
-import { getAthleteBio, saveAthleteBio } from '@/api/client/client-service';
+import { useClientProfileContext } from '../client-profile-context';
+import { useUpdateClientBio } from '@/hooks/use-client-bio';
 
 type ClientBioCardProps = {
   clientId: string;
@@ -16,33 +17,12 @@ type ClientBioCardProps = {
 
 export const ClientBioCard = ({ clientId }: ClientBioCardProps) => {
   const t = useTranslations();
-  const [bio, setBio] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const { bio, isLoading } = useClientProfileContext();
+  const updateBioMutation = useUpdateClientBio();
   const [isEditBioOpen, setIsEditBioOpen] = useState(false);
   const [editingBio, setEditingBio] = useState('');
   const [hasBioChanges, setHasBioChanges] = useState(false);
   const bioTextareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const fetchBio = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const fetchedBio = await getAthleteBio(clientId);
-        setBio(fetchedBio);
-        setEditingBio(fetchedBio);
-      } catch (error) {
-        console.error('Failed to fetch bio:', error);
-        setBio('');
-        setEditingBio('');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBio();
-  }, [clientId]);
 
   useEffect(() => {
     if (isEditBioOpen && bioTextareaRef.current) {
@@ -60,8 +40,7 @@ export const ClientBioCard = ({ clientId }: ClientBioCardProps) => {
     if (!clientId) return;
 
     try {
-      await saveAthleteBio(clientId, editingBio);
-      setBio(editingBio);
+      await updateBioMutation.mutateAsync({ clientId, bio: editingBio });
       setHasBioChanges(false);
       setIsEditBioOpen(false);
     } catch (error) {

@@ -180,7 +180,7 @@ export const saveAthleteInjuries = async (athleteId: string, injuries: string[])
 };
 
 export const getAthleteDetails = async (athleteId: string): Promise<AthleteDetails> => {
-  const response = await apiFetch(`/coach/clients/${athleteId}`);
+  const response = await apiFetch(`/clients/${athleteId}`);
   const client = response.data.client;
 
   if (!client) {
@@ -228,7 +228,7 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
     // Let's assume we pass `metadata: { category: ... }` for category.
   };
 
-  await apiFetch(`/coach/clients/${athleteId}`, {
+  await apiFetch(`/clients/${athleteId}`, {
     method: 'PATCH',
     body: JSON.stringify(updatePayload),
   });

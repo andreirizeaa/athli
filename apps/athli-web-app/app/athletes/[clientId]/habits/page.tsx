@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame } from 'lucide-react';
+import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Trash } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -24,10 +24,14 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { mockAthletes } from '@/components/app/app-shell';
-import { addHabit, type Habit } from '@/api/coach/coach-habit-service';
-import { assignHabit, deleteClientHabits } from '@/api/client/client-habit-service';
+import { getAllHabits, type Habit } from '@/api/coach/coach-habit-service';
+import { assignHabit, addHabit as addClientHabit, deleteClientHabits, logHabit } from '@/api/client/client-habit-service';
 import { getClientHabits } from '@/api/coach/coach-client-service';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { useClientHabits } from '@/hooks/use-client-habits';
+import { useClientProfileContext } from '../client-profile-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 
 // Mock habits removed
 
@@ -38,33 +42,17 @@ type HabitLog = {
   completedAt: Date;
 };
 
-// Mock habit logs data
-const mockHabitLogs: HabitLog[] = [
-  { id: 'log-1', habitId: '1', value: 8500, completedAt: new Date(2024, 11, 20) },
-  { id: 'log-2', habitId: '1', value: 10200, completedAt: new Date(2024, 11, 21) },
-  { id: 'log-3', habitId: '1', value: 9800, completedAt: new Date(2024, 11, 22) },
-  { id: 'log-4', habitId: '1', value: 11500, completedAt: new Date(2024, 11, 23) },
-  { id: 'log-5', habitId: '1', value: 10500, completedAt: new Date(2024, 11, 24) },
-  { id: 'log-6', habitId: '1', value: 12000, completedAt: new Date(2024, 11, 25) },
-  { id: 'log-7', habitId: '1', value: 11000, completedAt: new Date(2024, 11, 26) },
-  { id: 'log-8', habitId: '1', value: 10000, completedAt: new Date(2024, 11, 27) },
-  { id: 'log-9', habitId: '2', value: 8, completedAt: new Date(2024, 11, 20) },
-  { id: 'log-10', habitId: '2', value: 7, completedAt: new Date(2024, 11, 21) },
-  { id: 'log-11', habitId: '2', value: 9, completedAt: new Date(2024, 11, 22) },
-  { id: 'log-12', habitId: '2', value: 8, completedAt: new Date(2024, 11, 23) },
-  { id: 'log-13', habitId: '3', value: 10, completedAt: new Date(2024, 11, 20) },
-  { id: 'log-14', habitId: '3', value: 12, completedAt: new Date(2024, 11, 21) },
-  { id: 'log-15', habitId: '3', value: 10, completedAt: new Date(2024, 11, 22) },
-];
-
-import { useClientHabits } from '@/hooks/use-client-habits';
-
 const ClientHabitsPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const { habits: rawHabits, isLoading, refetch } = useClientHabits(clientId);
+  const { user } = useUserProfile();
+  const { habits: habitsFromContext, isLoading: isLoadingContext, refreshData } = useClientProfileContext();
+  const { habits: habitsFromHook, isLoading: isLoadingHook, refetch } = useClientHabits(clientId);
+
+  const rawData = habitsFromContext.length > 0 ? habitsFromContext : habitsFromHook;
+  const isLoading = isLoadingContext || isLoadingHook;
   const clientName = '';
 
   const [isAddHabitOpen, setIsAddHabitOpen] = useState<boolean>(false);
@@ -72,7 +60,7 @@ const ClientHabitsPage = () => {
   const [isEditHabitOpen, setIsEditHabitOpen] = useState<boolean>(false);
 
   const habits = useMemo(() => {
-    return rawHabits.map((item: any) => ({
+    return rawData.map((item: any) => ({
       id: item.id,
       name: item.name,
       description: item.description,
@@ -80,16 +68,17 @@ const ClientHabitsPage = () => {
       unit: item.unit,
       period: item.period,
       createdAt: new Date(item.created_at || Date.now()).getTime(),
-      assignmentId: item.assignment_id,
+      assignmentId: item.assignment_id || item.id,
       customSchedule: item.custom_schedule
     }));
-  }, [rawHabits]);
+  }, [rawData]);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editingLogValue, setEditingLogValue] = useState<string>('');
   const [timeFilter, setTimeFilter] = useState<string>('all-time');
   const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]); // Initialize empty logs
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
   const filteredHabits = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -97,7 +86,7 @@ const ClientHabitsPage = () => {
     }
     const query = searchQuery.toLowerCase();
     return habits.filter(
-      (habit) =>
+      (habit: any) =>
         habit.name.toLowerCase().includes(query) ||
         habit.description?.toLowerCase().includes(query) ||
         habit.unit.toLowerCase().includes(query)
@@ -105,7 +94,7 @@ const ClientHabitsPage = () => {
   }, [searchQuery, habits]);
 
   const selectedHabit = selectedHabitId
-    ? habits.find((habit) => habit.id === selectedHabitId)
+    ? habits.find((habit: any) => habit.id === selectedHabitId)
     : null;
 
   // Map filter values to translation keys
@@ -467,21 +456,32 @@ const ClientHabitsPage = () => {
     setIsEditHabitOpen(false);
   };
 
-  const handleSaveHabit = async (values: HabitFormValues) => {
-    if (!clientId) return;
+  const handleSaveHabit = async (values: HabitFormValues, existingHabitId?: string) => {
+    if (!clientId || !user?.id) return;
 
     try {
-      // Create the habit
-      const newHabit = await addHabit(values);
+      let habitId = existingHabitId;
 
-      // Assign it to this client
-      await assignHabit({
-        habitIds: [newHabit.id],
-        clientIds: [clientId],
-      });
+      if (!habitId) {
+        // Create new private habit
+        await addClientHabit({
+          ...values,
+          clientId,
+          coachId: user.id
+        });
+      } else {
+        // Assign existing habit
+        await assignHabit({
+          habitIds: [habitId],
+          clientId,
+          coachId: user.id
+        });
+      }
 
       // Invalidate and refetch
       refetch();
+      refreshData?.();
+      handleCloseAddHabit();
       // TODO: Show success toast
     } catch (error) {
       console.error('Failed to add habit:', error);
@@ -489,50 +489,62 @@ const ClientHabitsPage = () => {
     }
   };
 
-  const handleSaveLogHabit = async (habitId: string, value: number) => {
-    // TODO: Implement save log habit for client
-    console.log('Saving log habit for client:', { clientId, habitId, value });
-    const newLog: HabitLog = {
-      id: `log-${Date.now()}`,
-      habitId,
-      value,
-      completedAt: new Date(),
-    };
-    setHabitLogs((prev) => [...prev, newLog]);
+  const handleSaveLogHabit = async (assignmentId: string, value: number) => {
+    if (!user?.id) return;
+    try {
+      await logHabit({
+        assignmentId,
+        status: 'completed',
+        value,
+        date: new Date(),
+        clientId,
+        coachId: user.id
+      });
+      refreshData(); // Refresh context to get new logs if needed
+      // TODO: Show success toast
+    } catch (error) {
+      console.error('Failed to log habit:', error);
+      // TODO: Show error toast
+    }
   };
 
   const handleSaveEditHabit = async (values: HabitFormValues) => {
     // TODO: Implement update habit for client
     console.log('Updating habit for client:', { clientId, habitId: selectedHabitId, values });
     if (selectedHabitId) {
-      // In production, this would be a mutation. 
-      // For now we just refetch if we hit the backend, 
-      // but since it's TODO, we'll just log and maybe refetch.
       refetch();
     }
     handleCloseEditHabit();
   };
 
   const handleDeleteHabit = async () => {
-    if (!clientId || !selectedHabitId) return;
+    if (!clientId || !selectedHabitId || !user?.id) return;
 
     try {
       await deleteClientHabits({
         habitIds: [selectedHabitId],
         clientId: clientId,
+        coachId: user.id
       });
 
       refetch();
+      refreshData?.();
       setSelectedHabitId(null);
+      setIsDeleteDialogOpen(false);
     } catch (error) {
       console.error('Failed to delete habit:', error);
     }
   };
 
+  const handleOpenDeleteDialog = () => {
+    setIsDeleteDialogOpen(true);
+  };
+
   const getAimText = (habit: Habit): string => {
-    const unitLabel = t(`habits.form.units.${habit.unit as any}`);
+    const unitKey = habit.unit || 'times'; // Default to 'times' if unit is undefined
+    const unitLabel = t(`habits.form.units.${unitKey}` as any);
     const periodText = habit.period === 'daily' ? t('habits.form.daily') : t('habits.form.weekly');
-    return `${habit.amount} ${unitLabel} / ${periodText}`;
+    return `${habit.amount || 0} ${unitLabel} / ${periodText}`;
   };
 
   if (isLoading) {
@@ -600,9 +612,10 @@ const ClientHabitsPage = () => {
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Habits list */}
             <div className="space-y-0 flex-1 overflow-y-auto">
-              {filteredHabits.map((habit, index) => {
+              {filteredHabits.map((habit: any, index: number) => {
                 const isSelected = selectedHabitId === habit.id;
                 const isLast = index === filteredHabits.length - 1;
+                const isOnlyItem = filteredHabits.length === 1;
 
                 return (
                   <React.Fragment key={habit.id}>
@@ -622,7 +635,7 @@ const ClientHabitsPage = () => {
                         </span>
                       </div>
                     </button>
-                    {!isLast && <Separator className="w-full" />}
+                    {(!isLast || isOnlyItem) && <Separator className="w-full" />}
                   </React.Fragment>
                 );
               })}
@@ -642,11 +655,11 @@ const ClientHabitsPage = () => {
                   className="gap-2 rounded-r-none border-r-0"
                 >
                   <FileText className="size-4" />
-                  <span>{t('habits.logHabit')}</span>
+                  <span>Log a Habit</span>
                 </Button>
                 <Button onClick={handleOpenAddHabit} className="gap-2 rounded-l-none">
                   <Plus className="size-4" />
-                  <span>{t('habits.addHabit')}</span>
+                  <span>Assign Habit</span>
                 </Button>
               </ButtonGroup>
             </div>
@@ -677,7 +690,7 @@ const ClientHabitsPage = () => {
                     </Select>
                     {averageValue !== null && (
                       <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
-                        Average: {averageValue.toFixed(1)} {t(`habits.form.units.${selectedHabit.unit as any}`)}
+                        Average: {averageValue.toFixed(1)} {t(`habits.form.units.${selectedHabit.unit || 'times'}` as any)}
                       </div>
                     )}
                     <div
@@ -695,10 +708,21 @@ const ClientHabitsPage = () => {
                       {movement !== null ? `${movement.percentage.toFixed(1)}%` : '0%'}
                     </div>
                   </div>
-                  <Button onClick={handleOpenEditHabit} className="gap-2" variant="outline">
-                    <Edit className="size-4" />
-                    <span>{t('habits.editHabitTitle')}</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => {
+                      setIsLogHabitOpen(true);
+                    }} className="gap-2" variant="outline">
+                      <FileText className="size-4" />
+                      <span>Enter a Log</span>
+                    </Button>
+                    <Button onClick={handleOpenEditHabit} className="gap-2" variant="outline">
+                      <Edit className="size-4" />
+                      <span>{t('habits.editHabitTitle')}</span>
+                    </Button>
+                    <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
+                      <Trash className="size-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Second row with completion rate and streaks */}
@@ -778,7 +802,7 @@ const ClientHabitsPage = () => {
                 </div>
 
                 {/* Logs DataGrid */}
-                <div className="w-full habit-logs-no-scroll">
+                <div className="w-full min-h-[200px] habit-logs-no-scroll">
                   <style
                     dangerouslySetInnerHTML={{
                       __html: `
@@ -794,6 +818,10 @@ const ClientHabitsPage = () => {
                     .habit-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-auto"]),
                     .habit-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-hidden"]) {
                       flex: none !important;
+                    }
+                    .habit-logs-no-scroll > div > div:first-child {
+                      border-top-left-radius: 0.5rem !important;
+                      border-top-right-radius: 0.5rem !important;
                     }
                   `,
                     }}
@@ -872,7 +900,7 @@ const ClientHabitsPage = () => {
                           return (
                             <div className="flex items-center justify-between w-full" data-no-row-link="true">
                               <span className="text-sm text-foreground">
-                                {row.value} <span className="text-muted-foreground">{t(`habits.form.units.${selectedHabit.unit as any}`)}</span>
+                                {row.value} <span className="text-muted-foreground">{t(`habits.form.units.${selectedHabit.unit || 'times'}` as any)}</span>
                               </span>
                               <Button
                                 size="icon"
@@ -896,7 +924,11 @@ const ClientHabitsPage = () => {
                     enableSearch={false}
                     showPagination={false}
                     gridPadding={false}
-                    emptyMessage={t('habits.noLogsMessage')}
+                    emptyState={
+                      <div className="flex items-center justify-center min-h-[150px] text-sm text-muted-foreground">
+                        {t('habits.noLogsMessage')}
+                      </div>
+                    }
                     onRowClick={(row, e) => {
                       // Prevent row click when clicking edit button
                       if ((e.target as HTMLElement).closest('[data-no-row-link="true"]')) {
@@ -904,6 +936,7 @@ const ClientHabitsPage = () => {
                         e.stopPropagation();
                       }
                     }}
+                    alwaysShowHeaders={true}
                   />
                 </div>
               </>
@@ -937,9 +970,20 @@ const ClientHabitsPage = () => {
           onOpenChange={setIsEditHabitOpen}
           habit={selectedHabit}
           onSave={handleSaveEditHabit}
-          onDelete={handleDeleteHabit}
+          onDelete={async () => {
+            setIsEditHabitOpen(false);
+            setIsDeleteDialogOpen(true);
+          }}
         />
       )}
+
+      <ConfirmDeleteDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDeleteHabit}
+        itemName={selectedHabit?.name}
+        itemType="habit"
+      />
     </div>
   );
 };
