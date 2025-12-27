@@ -346,7 +346,7 @@ class AuthService {
 
 
   /**
-   * Get user by ID
+   * Get user by ID - checks both coach_profiles and client_profiles
    */
   async getUserById(userId: string): Promise<User | null> {
     const supabase = getSupabaseClient();
@@ -358,36 +358,76 @@ class AuthService {
       return null;
     }
 
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    // Try to get coach profile first
+    const { data: coachProfile, error: coachError } = await supabase
+      .from('coach_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (coachProfile && !coachError) {
+      return {
+        id: authUser.user.id,
+        email: coachProfile.email,
+        name: coachProfile.name,
+        userType: 'coach',
+        profilePictureUrl: coachProfile.profile_picture_url,
+        signinMethod: coachProfile.signin_method,
+        isActive: coachProfile.is_active,
+        createdAt: authUser.user.created_at,
+      };
+    }
+
+    // Try client_profiles if not a coach
+    const { data: clientProfile, error: clientError } = await supabase
+      .from('client_profiles')
+      .select('*')
+      .eq('client_id', userId)
+      .single();
+
+    if (clientProfile && !clientError) {
+      return {
+        id: authUser.user.id,
+        email: clientProfile.email || authUser.user.email || '',
+        name: clientProfile.name || authUser.user.user_metadata?.name || '',
+        userType: 'client',
+        profilePictureUrl: clientProfile.profile_picture_url || authUser.user.user_metadata?.avatar_url || null,
+        signinMethod: clientProfile.signin_method || 'email',
+        isActive: clientProfile.is_active,
+        createdAt: authUser.user.created_at,
+      };
+    }
+
+    // Fallback: Try legacy user_profiles table for backward compatibility
+    const { data: legacyProfile, error: legacyError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single();
 
-    if (profileError) {
-      console.error('Profile fetch error:', profileError);
-      // Return user from metadata if profile doesn't exist
+    if (legacyProfile && !legacyError) {
       return {
         id: authUser.user.id,
-        email: authUser.user.email || '',
-        name: authUser.user.user_metadata?.name || '',
-        userType: (authUser.user.user_metadata?.user_type as 'coach' | 'client') || 'coach',
-        profilePictureUrl: authUser.user.user_metadata?.avatar_url || authUser.user.user_metadata?.picture || null,
-        signinMethod: (authUser.user.app_metadata?.provider as 'email' | 'google') || 'email',
-        isActive: true,
+        email: legacyProfile.email,
+        name: legacyProfile.name,
+        userType: legacyProfile.user_type,
+        profilePictureUrl: legacyProfile.profile_picture_url,
+        signinMethod: legacyProfile.signin_method,
+        isActive: legacyProfile.is_active,
         createdAt: authUser.user.created_at,
       };
     }
 
+    // Return user from metadata as last resort
+    console.error('Profile fetch error - no profile found in any table for user:', userId);
     return {
       id: authUser.user.id,
-      email: profile.email,
-      name: profile.name,
-      userType: profile.user_type,
-      profilePictureUrl: profile.profile_picture_url,
-      signinMethod: profile.signin_method,
-      isActive: profile.is_active,
+      email: authUser.user.email || '',
+      name: authUser.user.user_metadata?.name || '',
+      userType: (authUser.user.user_metadata?.user_type as 'coach' | 'client') || 'coach',
+      profilePictureUrl: authUser.user.user_metadata?.avatar_url || authUser.user.user_metadata?.picture || null,
+      signinMethod: (authUser.user.app_metadata?.provider as 'email' | 'google') || 'email',
+      isActive: true,
       createdAt: authUser.user.created_at,
     };
   }

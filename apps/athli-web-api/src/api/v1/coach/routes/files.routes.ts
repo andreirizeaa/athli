@@ -18,7 +18,7 @@ export const coachFileRouter = Router();
  * /api/v1/coach/files:
  *   get:
  *     summary: Get all coach files
- *     tags: [Coach]
+ *     tags: [Coach Files]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -27,15 +27,17 @@ export const coachFileRouter = Router();
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     files:
- *                       type: array
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         files:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/CoachFile'
  */
 coachFileRouter.get('/', supabaseAuthenticate, coachFilesController.getFiles);
 
@@ -44,7 +46,7 @@ coachFileRouter.get('/', supabaseAuthenticate, coachFilesController.getFiles);
  * /api/v1/coach/files:
  *   post:
  *     summary: Upload a new file
- *     tags: [Coach]
+ *     tags: [Coach Files]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -67,6 +69,18 @@ coachFileRouter.get('/', supabaseAuthenticate, coachFilesController.getFiles);
  *     responses:
  *       201:
  *         description: File uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         file:
+ *                           $ref: '#/components/schemas/CoachFile'
  */
 coachFileRouter.post('/', supabaseAuthenticate, upload.single('file'), coachFilesController.uploadFile);
 
@@ -75,7 +89,7 @@ coachFileRouter.post('/', supabaseAuthenticate, upload.single('file'), coachFile
  * /api/v1/coach/files/{id}:
  *   patch:
  *     summary: Update file metadata
- *     tags: [Coach]
+ *     tags: [Coach Files]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -98,6 +112,18 @@ coachFileRouter.post('/', supabaseAuthenticate, upload.single('file'), coachFile
  *     responses:
  *       200:
  *         description: File updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         file:
+ *                           $ref: '#/components/schemas/CoachFile'
  */
 coachFileRouter.patch('/:id', supabaseAuthenticate, coachFilesController.updateFile);
 
@@ -106,7 +132,7 @@ coachFileRouter.patch('/:id', supabaseAuthenticate, coachFilesController.updateF
  * /api/v1/coach/files/{id}:
  *   delete:
  *     summary: Delete a file
- *     tags: [Coach]
+ *     tags: [Coach Files]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -126,7 +152,7 @@ coachFileRouter.delete('/:id', supabaseAuthenticate, coachFilesController.delete
  * /api/v1/coach/files/{id}/url:
  *   get:
  *     summary: Get signed URL for file access
- *     tags: [Coach]
+ *     tags: [Coach Files]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -138,5 +164,17 @@ coachFileRouter.delete('/:id', supabaseAuthenticate, coachFilesController.delete
  *     responses:
  *       200:
  *         description: Signed URL generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         url:
+ *                           type: string
  */
 coachFileRouter.get('/:id/url', supabaseAuthenticate, coachFilesController.getFileUrl);

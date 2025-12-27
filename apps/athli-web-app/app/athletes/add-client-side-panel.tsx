@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -32,8 +33,13 @@ interface AddClientSidePanelProps {
   onOpenChange: (open: boolean) => void;
 }
 
+import { addClient } from '@/api/coach/coach-client-service';
+import { Spinner } from '@/components/ui/spinner';
+import { useState } from 'react';
+
 export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelProps) => {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const addAthleteSchema = z.object({
     firstName: z.string().min(1, t('athletes.addClient.firstNameRequiredError')),
     lastName: z.string().min(1, t('athletes.addClient.lastNameRequiredError')),
@@ -51,23 +57,34 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
     },
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmitInvitation = async (values: AddAthleteFormValues) => {
-    // Handle form submission here
-    console.log('Form values:', values);
-    onOpenChange(false);
-    form.reset();
-    toast.success(t('athletes.addClient.invitationSent'), {
-      description: t('athletes.addClient.invitationSentDescription', {
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
-      }),
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
+    setIsSubmitting(true);
+    try {
+      await addClient(values);
+      // Invalidate the coach-clients query to refresh the list
+      await queryClient.invalidateQueries({ queryKey: ['coach-clients'] });
+      onOpenChange(false);
+      form.reset();
+      toast.success(t('athletes.addClient.invitationSent'), {
+        description: t('athletes.addClient.invitationSentDescription', {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+        }),
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
+    } catch (error) {
+      toast.error(t('general.error'));
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -92,9 +109,10 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
           <Button
             type="button"
             onClick={form.handleSubmit(handleSubmitInvitation)}
-            disabled={!form.formState.isValid}
+            disabled={!form.formState.isValid || isSubmitting}
             aria-label={t('athletes.addClient.sendInvitationAria')}
           >
+            {isSubmitting ? <Spinner className="mr-2" /> : null}
             {t('athletes.addClient.sendInvitation')}
           </Button>
           <Button

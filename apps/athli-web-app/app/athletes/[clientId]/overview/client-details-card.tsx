@@ -17,12 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { CountrySelect } from '@/components/ui/country-select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Edit, User, Mail, Users, Phone, MapPin, ArrowUp10 } from 'lucide-react';
 import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/api/client/client-service';
-import { mockAthletes } from '@/components/app/app-shell';
 import { parsePhoneNumber } from 'react-phone-number-input';
-import type { Value as PhoneValue } from 'react-phone-number-input';
+import type { Value as PhoneValue, Country } from 'react-phone-number-input';
 
 type ClientDetailsCardProps = {
   clientId: string;
@@ -33,16 +33,18 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
   const [details, setDetails] = useState<AthleteDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const athlete = mockAthletes.find((item) => item.id === clientId);
+  // const athlete = mockAthletes.find((item) => item.id === clientId); // Removed mock
   const [formData, setFormData] = useState<AthleteDetails>({
     firstName: '',
     lastName: '',
     email: '',
     age: null,
     category: 'online',
-    gender: 'male',
+    gender: null,
     phone: '',
     country: '',
+    weight: null,
+    height: null,
   });
   const [hasChanges, setHasChanges] = useState(false);
   const firstNameInputRef = useRef<HTMLInputElement>(null);
@@ -160,85 +162,108 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
               <p className="text-xs text-muted-foreground">{t('general.loading')}</p>
             </div>
           ) : details ? (
-            <div className="flex flex-col gap-3 text-sm">
-              {athlete && (
-                <div className="flex justify-start mb-2">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                    <AvatarFallback className="text-lg">
-                      {details.firstName && details.lastName
-                        ? `${details.firstName.charAt(0).toUpperCase()}${details.lastName.charAt(0).toUpperCase()}`
-                        : details.firstName
-                          ? details.firstName.charAt(0).toUpperCase()
-                          : 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+            <div className="flex flex-col gap-4 text-sm mt-2">
+              <div className="flex justify-start mb-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={details.avatar} alt={`${details.firstName} ${details.lastName}`} />
+                  <AvatarFallback className="text-lg">
+                    {details.firstName && details.lastName
+                      ? `${details.firstName.charAt(0).toUpperCase()}${details.lastName.charAt(0).toUpperCase()}`
+                      : details.firstName
+                        ? details.firstName.charAt(0).toUpperCase()
+                        : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+
+              <div className="grid grid-cols-1 gap-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="text-xs text-foreground leading-tight">
-                      {`${details.firstName || ''} ${details.lastName || ''}`.trim() || '-'}
-                    </p>
+                    <span className="text-xs text-muted-foreground">{t('athletes.profile.athleteName')}</span>
                   </div>
-                  {details.age !== null && details.age !== undefined && (
-                    <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
-                      <ArrowUp10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <p className="text-xs text-foreground leading-tight">
-                        {details.age}
-                      </p>
-                    </div>
-                  )}
+                  <p className="text-xs text-foreground font-medium text-right">
+                    {`${details.firstName || ''} ${details.lastName || ''}`.trim() || '--'}
+                  </p>
                 </div>
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ArrowUp10 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">{t('athletes.profile.age')}</span>
+                  </div>
+                  <p className="text-xs text-foreground font-medium text-right">
+                    {details.age !== null && details.age !== undefined ? details.age : '--'}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="text-xs text-foreground leading-tight">
-                      {details.gender === 'male' ? t('athletes.profile.male') :
-                        details.gender === 'female' ? t('athletes.profile.female') :
-                          t('athletes.profile.preferNotToSay')}
-                    </p>
+                    <span className="text-xs text-muted-foreground">{t('athletes.profile.gender')}</span>
                   </div>
-                  <div className="flex items-center gap-2 flex-1" style={{ width: 'calc(50% - 0.5rem)' }}>
-                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="text-xs text-foreground leading-tight">
-                      {details.category === 'online'
-                        ? t('athletes.profile.online')
-                        : details.category === 'in-person'
-                          ? t('athletes.profile.inPerson')
-                          : details.category === 'hybrid'
-                            ? t('athletes.profile.hybrid')
-                            : details.category}
-                    </p>
-                  </div>
+                  <p className="text-xs text-foreground font-medium text-right">
+                    {details.gender === 'male' ? t('athletes.profile.male') :
+                      details.gender === 'female' ? t('athletes.profile.female') :
+                        details.gender === 'prefer-not-to-say' ? t('athletes.profile.preferNotToSay') : '--'}
+                  </p>
                 </div>
-                {details.country && (
-                  <div className="flex items-center gap-3 w-full">
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="text-xs text-foreground leading-tight">{details.country}</p>
+                    <span className="text-xs text-muted-foreground">{t('athletes.profile.category')}</span>
                   </div>
-                )}
-                {details.phone && (
-                  <div className="flex items-center gap-3 w-full">
+                  <p className="text-xs text-foreground font-medium text-right">
+                    {details.category === 'online'
+                      ? t('athletes.profile.online')
+                      : details.category === 'in-person'
+                        ? t('athletes.profile.inPerson')
+                        : details.category === 'hybrid'
+                          ? t('athletes.profile.hybrid')
+                          : details.category || '--'}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">{t('athletes.profile.country')}</span>
+                  </div>
+                  <p className="text-xs text-foreground font-medium text-right">
+                    {details.country || '--'}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="text-xs text-foreground leading-tight">{details.phone}</p>
+                    <span className="text-xs text-muted-foreground">{t('athletes.profile.phone')}</span>
                   </div>
-                )}
-                <div className="flex items-center gap-3 w-full">
-                  <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  {details.email ? (
-                    <a
-                      href={`mailto:${details.email}`}
-                      className="text-xs text-primary underline hover:text-primary/80 leading-tight"
-                    >
-                      {details.email}
-                    </a>
-                  ) : (
-                    <p className="text-xs text-foreground leading-tight">-</p>
-                  )}
+                  <p className="text-xs text-foreground font-medium text-right">
+                    {details.phone || '--'}
+                  </p>
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground">{t('athletes.profile.email')}</span>
+                  </div>
+                  <div className="text-right">
+                    {details.email ? (
+                      <a
+                        href={`mailto:${details.email}`}
+                        className="text-xs text-primary underline hover:text-primary/80 font-medium"
+                      >
+                        {details.email}
+                      </a>
+                    ) : (
+                      <p className="text-xs text-foreground font-medium">--</p>
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
           ) : (
@@ -266,21 +291,19 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
           </div>
         }
       >
-        <div className="flex-1 flex flex-col min-h-0 gap-4 overflow-y-auto">
-          {athlete && (
-            <div className="w-full flex mb-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                <AvatarFallback className="text-lg">
-                  {athlete.name
-                    .split(' ')
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join('')}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          )}
+        <div className="flex-1 flex flex-col min-h-0 gap-4 overflow-y-auto px-1">
+          <div className="w-full flex mb-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={details?.avatar} alt={`${details?.firstName} ${details?.lastName}`} />
+              <AvatarFallback className="text-lg">
+                {details?.firstName && details?.lastName
+                  ? `${details.firstName.charAt(0).toUpperCase()}${details.lastName.charAt(0).toUpperCase()}`
+                  : details?.firstName
+                    ? details.firstName.charAt(0).toUpperCase()
+                    : 'U'}
+              </AvatarFallback>
+            </Avatar>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="first-name">
@@ -367,7 +390,7 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
                 <span>{t('athletes.profile.gender')}<RequiredAsterisk /></span>
               </Label>
               <Select
-                value={formData.gender}
+                value={formData.gender || undefined}
                 onValueChange={(value: 'male' | 'female' | 'prefer-not-to-say') => setFormData({ ...formData, gender: value })}
               >
                 <SelectTrigger id="gender" className="w-full">
@@ -400,13 +423,10 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
             <Label htmlFor="country">
               <span>{t('athletes.profile.country')}</span>
             </Label>
-            <Input
-              id="country"
-              value={formData.country}
-              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+            <CountrySelect
+              value={formData.country as Country | undefined}
+              onChange={(country) => setFormData({ ...formData, country })}
               placeholder={t('athletes.profile.countryPlaceholder')}
-              autoFocus={false}
-              tabIndex={0}
             />
           </div>
         </div>

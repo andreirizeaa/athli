@@ -1,15 +1,22 @@
 import type { Node, Edge } from 'reactflow';
+import { apiFetch } from '@/api/api-client';
 
 type CreateFlowData = {
   name: string;
   description?: string;
 };
 
-type Flow = {
+export type Flow = {
   id: string;
-  name: string;
+  name?: string;
   description?: string;
-  createdAt: number;
+  flow_data?: {
+    nodes: Node[];
+    edges: Edge[];
+  };
+  is_active?: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 type UpdateFlowData = {
@@ -25,26 +32,39 @@ type UpdateFlowDetailsData = {
 };
 
 /**
+ * Get all flows for the coach
+ */
+export const getFlows = async (): Promise<Flow[]> => {
+  const response = await apiFetch<{ data: { flows: Flow[] } }>('/coach/flows');
+  return response.data.flows;
+};
+
+/**
+ * Get a single flow by ID
+ */
+export const getFlowById = async (id: string): Promise<Flow> => {
+  const response = await apiFetch<{ data: { flow: Flow } }>(`/coach/flows/${id}`);
+  return response.data.flow;
+};
+
+/**
  * Create a new flow in coach's library
  * @param data - Flow data from the form
  */
 export const createFlow = async (
   data: CreateFlowData
 ): Promise<Flow> => {
-  // TODO: Connect to backend API
-  console.log('Creating flow:', data);
+  const response = await apiFetch<{ data: { flow: Flow } }>('/coach/flows', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+      flow_data: { nodes: [], edges: [] },
+      is_active: true,
+    }),
+  });
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  const newFlow: Flow = {
-    id: Date.now().toString(),
-    name: data.name,
-    description: data.description,
-    createdAt: Date.now(),
-  };
-
-  return newFlow;
+  return response.data.flow;
 };
 
 /**
@@ -54,17 +74,15 @@ export const createFlow = async (
 export const updateFlow = async (
   data: UpdateFlowData
 ): Promise<void> => {
-  // TODO: Connect to backend API
-  console.log('Updating flow:', {
-    id: data.id,
-    nodeCount: data.nodes.length,
-    edgeCount: data.edges.length,
-    nodes: data.nodes,
-    edges: data.edges,
+  await apiFetch(`/coach/flows/${data.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      flow_data: {
+        nodes: data.nodes,
+        edges: data.edges,
+      },
+    }),
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
 };
 
 /**
@@ -74,35 +92,43 @@ export const updateFlow = async (
 export const updateFlowDetails = async (
   data: UpdateFlowDetailsData
 ): Promise<void> => {
-  // TODO: Connect to backend API
-  console.log('Updating flow details:', {
-    id: data.id,
-    name: data.name,
-    description: data.description,
+  await apiFetch(`/coach/flows/${data.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name: data.name,
+      description: data.description,
+    }),
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
 };
 
 /**
  * Duplicate a flow in coach's library
  * @param flowId - ID of the flow to duplicate
- * @param originalFlow - Original flow object to duplicate
  */
-export const duplicateFlow = async (flowId: string, originalFlow: Flow & { stepCount?: number }): Promise<Flow & { stepCount?: number }> => {
-  // TODO: Connect to backend API
-  console.log('Duplicating flow:', { flowId, originalFlow });
+export const duplicateFlow = async (flowId: string): Promise<Flow> => {
+  // First, get the original flow
+  const originalFlow = await getFlowById(flowId);
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  // Create a new flow with the same data but a new name
+  const response = await apiFetch<{ data: { flow: Flow } }>('/coach/flows', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: `${originalFlow.name} (Copy)`,
+      description: originalFlow.description,
+      flow_data: originalFlow.flow_data || { nodes: [], edges: [] },
+      is_active: originalFlow.is_active ?? true,
+    }),
+  });
 
-  const duplicatedFlow: Flow & { stepCount?: number } = {
-    ...originalFlow,
-    id: Date.now().toString(),
-    name: `${originalFlow.name} (Copy)`,
-    createdAt: Date.now(),
-  };
+  return response.data.flow;
+};
 
-  return duplicatedFlow;
+/**
+ * Delete a flow
+ * @param flowId - ID of the flow to delete
+ */
+export const deleteFlow = async (flowId: string): Promise<void> => {
+  await apiFetch(`/coach/flows/${flowId}`, {
+    method: 'DELETE',
+  });
 };

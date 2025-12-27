@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { coachClientRouter } from './routes/clients.routes';
 import { coachFileRouter } from './routes/files.routes';
-import { coachPublicController } from './coach-public.controller';
+import { coachCodeRouter } from './routes/code.routes';
 import { coachFlowRouter } from './routes/flows.routes';
+import { coachOnboardingRouter } from './routes/onboarding.routes';
 import { coachHabitRouter } from './routes/habits.routes';
 import { coachMetricRouter } from './routes/metrics.routes';
-import { coachNoteRouter } from './routes/notes.routes';
 import { coachExerciseRouter } from './routes/training/exercises.routes';
 import { coachWorkoutRouter } from './routes/training/workouts.routes';
 import { coachProgramRouter } from './routes/training/programs.routes';
 import { coachCheckInRouter } from './routes/forms/check-ins.routes';
 import { coachQuestionnaireRouter } from './routes/forms/questionnaires.routes';
+import { coachTodoRouter } from './routes/todo.routes';
 
 export const coachRouter = Router();
 
@@ -29,35 +30,9 @@ coachRouter.use('/clients', coachClientRouter);
 coachRouter.use('/training', trainingRouter);
 coachRouter.use('/files', coachFileRouter);
 coachRouter.use('/flows', coachFlowRouter);
+coachRouter.use('/onboarding', coachOnboardingRouter);
 coachRouter.use('/forms', formsRouter);
 coachRouter.use('/habits', coachHabitRouter);
 coachRouter.use('/metrics', coachMetricRouter);
-coachRouter.use('/notes', coachNoteRouter);
-
-/**
- * @swagger
- * /api/v1/coach/by-code/{code}:
- *   get:
- *     summary: Get coach profile by unique code (Public)
- *     tags: [Coach]
- *     parameters:
- *       - in: path
- *         name: code
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Coach profile retrieved successfully
- *       404:
- *         description: Invalid code
- */
-coachRouter.get(
-    '/by-code/:code',
-    coachPublicController.getCoachByCode
-);
-
-coachRouter.get(
-    '/code-by-id/:coachId',
-    coachPublicController.getCoachCodeById
-);
+coachRouter.use('/todo', coachTodoRouter);
+coachRouter.use('/', coachCodeRouter);

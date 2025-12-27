@@ -82,7 +82,9 @@ export default function ClientInvitePage() {
 
   const handleExistingUser = async (userId: string) => {
     // Redirect to new-client route which will handle the profile creation
-    router.push(`/auth/new-client?coach_id=${coachId}`);
+    // Always pass code as potential invitation_token; backend will check if it's a coach code or specific token
+    const url = `/auth/new-client?coach_id=${coachId}&invitation_token=${code}`;
+    router.push(url);
   };
 
 
@@ -131,7 +133,10 @@ export default function ClientInvitePage() {
 
       // New account created successfully
       toast.success('Account created! Please check your email for verification code.');
-      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}&redirect=/auth/new-client&coach_id=${coachId}`);
+
+      const redirectUrl = `/auth/new-client?coach_id=${coachId}&invitation_token=${code}`;
+
+      router.push(`/auth/verify-email?email=${encodeURIComponent(email)}&redirect=${encodeURIComponent(redirectUrl)}&coach_id=${coachId}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to create account');
       setIsSigningUp(false);
@@ -142,10 +147,12 @@ export default function ClientInvitePage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
+      const redirectUrl = `/auth/callback?coach_id=${coachId}&redirect=/auth/new-client%26invitation_token=${code}`;
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?coach_id=${coachId}&redirect=/auth/new-client`,
+          redirectTo: `${window.location.origin}${redirectUrl}`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

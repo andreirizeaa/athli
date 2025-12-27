@@ -21,6 +21,7 @@ import {
   BarChart3,
   Rocket,
   Gift,
+  WandSparkles,
 } from 'lucide-react';
 import { LogoIcon } from '@/components/logo';
 import {
@@ -105,6 +106,11 @@ export function AppSidebar() {
   ] as const;
 
   const automationsNavItems = [
+    {
+      href: '/onboarding',
+      labelKey: 'sidebar.links.onboarding',
+      icon: WandSparkles,
+    },
     {
       href: '/flows',
       labelKey: 'sidebar.links.flows',
@@ -254,7 +260,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/flows'
+                  href === '/flows' || href === '/onboarding'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);

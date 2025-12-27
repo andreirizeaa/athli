@@ -313,13 +313,7 @@ const FilesPage = () => {
     },
   ];
 
-  if (isLoading) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="h-full w-full flex flex-col bg-background overflow-auto">
@@ -376,7 +370,7 @@ const FilesPage = () => {
         emptyState={
           <EmptyGridState
             title={t('files.emptyState.title')}
-            subtitle={t('files.emptyState.subtitle')}
+            subtitle="Upload and organize files to share with your clients - training plans, nutrition guides, and resources"
             action={
               <Button onClick={handleOpenAddFile} className="gap-2">
                 <Plus className="size-4" />

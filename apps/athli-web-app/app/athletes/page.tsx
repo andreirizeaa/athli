@@ -21,12 +21,14 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { mockAthletes, type Athlete } from '@/components/app/app-shell';
+import { archiveUser, type Athlete } from '@/api/coach/coach-client-service';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
 import { toast } from 'sonner';
 import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
+import { RestoreClientsSidePanel } from './restore-clients-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { PageHeader } from '@/components/app/page-header';
@@ -53,6 +55,7 @@ import {
   ArrowDownWideNarrow,
   Download,
   Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 
 type ColumnId =
@@ -153,17 +156,26 @@ const AthletesPage = () => {
   const router = useRouter();
   const { user } = useSupabaseAuth();
   const { uniqueCode } = useGlobalData();
+  const { clients: athletes, isLoading, archiveClient } = useCoachClients();
   const [selectedAthletes, setSelectedAthletes] = useState<Set<string>>(new Set());
   const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
   const [copiedFields, setCopiedFields] = useState<Set<string>>(new Set());
   const [isAddAthleteOpen, setIsAddAthleteOpen] = useState<boolean>(false);
   const [isUploadClientsOpen, setIsUploadClientsOpen] = useState<boolean>(false);
+  const [isRestoreClientsOpen, setIsRestoreClientsOpen] = useState<boolean>(false);
   const [isInviteLinkCopied, setIsInviteLinkCopied] = useState<boolean>(false);
-  const [filteredCount, setFilteredCount] = useState<number>(mockAthletes.length);
+  const [filteredCount, setFilteredCount] = useState<number>(0);
   const itemsPerPage = 25;
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const copyTimeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const inviteLinkCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Data is now fetched and cached by useCoachClients hook
+  useEffect(() => {
+    if (athletes) {
+      setFilteredCount(athletes.length);
+    }
+  }, [athletes]);
 
 
   const handleToggleAthlete = (athleteId: string) => {
@@ -235,7 +247,7 @@ const AthletesPage = () => {
 
   const handleExportSelected = () => {
     if (selectedAthletes.size === 0) return;
-    const selectedAthletesData = mockAthletes.filter((athlete) =>
+    const selectedAthletesData = athletes.filter((athlete) =>
       selectedAthletes.has(athlete.id)
     );
     const exportData = selectedAthletesData.map((row) => ({
@@ -266,10 +278,19 @@ const AthletesPage = () => {
     exportToCSV(exportData, 'selected-athletes.csv');
   };
 
-  const handleArchiveSelected = () => {
+  const handleArchiveSelected = async () => {
     if (selectedAthletes.size === 0) return;
-    // TODO: Implement archive functionality
-    console.log('Archive selected athletes:', Array.from(selectedAthletes));
+
+    try {
+      const athleteIds = Array.from(selectedAthletes);
+      await Promise.all(athleteIds.map(id => archiveClient(id)));
+      toast.success(t('athletes.notifications.archiveSuccess'));
+      setSelectedAthletes(new Set());
+      // Cache is automatically updated by the mutation
+    } catch (error) {
+      toast.error(t('athletes.notifications.archiveError'));
+      console.error(error);
+    }
   };
 
 
@@ -514,9 +535,9 @@ const AthletesPage = () => {
       id: 'name',
       label: t('athletes.columns.athlete'),
       icon: <User className="size-3" />,
-      getSortValue: (row) => row.name.toLowerCase(),
+      getSortValue: (row) => (row.name || '').toLowerCase(),
       getSearchValue: (row) =>
-        `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
+        `${row.name || ''} ${row.email || ''} ${row.phone || ''} ${row.country || ''} ${row.category || ''}`,
     },
     ...COLUMN_ORDER.map((columnId): ColumnDefinition<Athlete> => {
       switch (columnId) {
@@ -537,7 +558,7 @@ const AthletesPage = () => {
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => (
               <div className="flex items-center w-full">
-                <span className="text-sm">{row.lastActivity}</span>
+                <span className="text-sm">{row.lastActivity || '--'}</span>
               </div>
             ),
           };
@@ -552,13 +573,15 @@ const AthletesPage = () => {
             },
             tooltip: t('athletes.columnTooltips.last7DaysTraining'),
             getSortValue: (row) => {
-              const [completed, total] = row.last7DaysTraining.split('/').map(Number);
+              const training = row.last7DaysTraining || '0/0';
+              const [completed, total] = training.split('/').map(Number);
               return total > 0 ? completed / total : 0;
             },
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
-              const [completed, total] = row.last7DaysTraining.split('/').map(Number);
+              const training = row.last7DaysTraining || '0/0';
+              const [completed, total] = training.split('/').map(Number);
               const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100);
               return (
                 <div className="flex items-center w-full gap-2">
@@ -579,13 +602,15 @@ const AthletesPage = () => {
             },
             tooltip: t('athletes.columnTooltips.last30DaysTraining'),
             getSortValue: (row) => {
-              const [completed, total] = row.last30DaysTraining.split('/').map(Number);
+              const training = row.last30DaysTraining || '0/0';
+              const [completed, total] = training.split('/').map(Number);
               return total > 0 ? completed / total : 0;
             },
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => {
-              const [completed, total] = row.last30DaysTraining.split('/').map(Number);
+              const training = row.last30DaysTraining || '0/0';
+              const [completed, total] = training.split('/').map(Number);
               const percentage = !total || total === 0 ? 0 : Math.round((completed / total) * 100);
               return (
                 <div className="flex items-center w-full gap-2">
@@ -693,55 +718,59 @@ const AthletesPage = () => {
                       }
                     }}
                   >
-                    {isRevealed ? row.email : censorEmail(row.email)}
+                    {isRevealed ? (row.email || '') : censorEmail(row.email || '')}
                   </a>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      aria-label={
-                        isRevealed ? t('athletes.actions.hideEmail', { name: row.name }) : t('athletes.actions.revealEmail', { name: row.name })
-                      }
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleReveal(row.id, 'email');
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleToggleReveal(row.id, 'email');
-                        }
-                      }}
-                      data-no-row-link="true"
-                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                    >
-                      {isRevealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </div>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      aria-label={t('athletes.actions.copyEmail', { name: row.name })}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopy(row.email, row.id, 'email');
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCopy(row.email, row.id, 'email');
-                        }
-                      }}
-                      data-no-row-link="true"
-                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                    >
-                      {isCopied ? (
-                        <Check className="size-4 text-green-500" />
-                      ) : (
-                        <Copy className="size-4" />
-                      )}
-                    </div>
+                    {row.email && (
+                      <>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={
+                            isRevealed ? t('athletes.actions.hideEmail', { name: row.name }) : t('athletes.actions.revealEmail', { name: row.name })
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleReveal(row.id, 'email');
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleToggleReveal(row.id, 'email');
+                            }
+                          }}
+                          data-no-row-link="true"
+                          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                        >
+                          {isRevealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </div>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t('athletes.actions.copyEmail', { name: row.name })}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopy(row.email, row.id, 'email');
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCopy(row.email, row.id, 'email');
+                            }
+                          }}
+                          data-no-row-link="true"
+                          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                        >
+                          {isCopied ? (
+                            <Check className="size-4 text-green-500" />
+                          ) : (
+                            <Copy className="size-4" />
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -756,7 +785,7 @@ const AthletesPage = () => {
               class: getColumnWidth('phone', 'class'),
               pixel: getColumnWidth('phone', 'pixel'),
             },
-            getSortValue: (row) => row.phone,
+            getSortValue: (row) => row.phone || '',
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row, isSelected) => {
@@ -766,55 +795,59 @@ const AthletesPage = () => {
               return (
                 <div className="flex items-center justify-between gap-2 w-full">
                   <span className="text-sm flex-1 min-w-0 truncate">
-                    {isRevealed ? row.phone : censorPhone(row.phone)}
+                    {row.phone ? (isRevealed ? row.phone : censorPhone(row.phone)) : '--'}
                   </span>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      aria-label={
-                        isRevealed ? t('athletes.actions.hidePhone', { name: row.name }) : t('athletes.actions.revealPhone', { name: row.name })
-                      }
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleReveal(row.id, 'phone');
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleToggleReveal(row.id, 'phone');
-                        }
-                      }}
-                      data-no-row-link="true"
-                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                    >
-                      {isRevealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </div>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      aria-label={t('athletes.actions.copyPhone', { name: row.name })}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopy(row.phone, row.id, 'phone');
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCopy(row.phone, row.id, 'phone');
-                        }
-                      }}
-                      data-no-row-link="true"
-                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                    >
-                      {isCopied ? (
-                        <Check className="size-4 text-green-500" />
-                      ) : (
-                        <Copy className="size-4" />
-                      )}
-                    </div>
+                    {row.phone && (
+                      <>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={
+                            isRevealed ? t('athletes.actions.hidePhone', { name: row.name }) : t('athletes.actions.revealPhone', { name: row.name })
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleReveal(row.id, 'phone');
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleToggleReveal(row.id, 'phone');
+                            }
+                          }}
+                          data-no-row-link="true"
+                          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                        >
+                          {isRevealed ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        </div>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t('athletes.actions.copyPhone', { name: row.name })}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopy(row.phone, row.id, 'phone');
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCopy(row.phone, row.id, 'phone');
+                            }
+                          }}
+                          data-no-row-link="true"
+                          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                        >
+                          {isCopied ? (
+                            <Check className="size-4 text-green-500" />
+                          ) : (
+                            <Copy className="size-4" />
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -829,12 +862,12 @@ const AthletesPage = () => {
               class: getColumnWidth('country', 'class'),
               pixel: getColumnWidth('country', 'pixel'),
             },
-            getSortValue: (row) => row.country,
+            getSortValue: (row) => row.country || '',
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => (
               <div className="flex items-center w-full">
-                <span className="text-sm">{row.country}</span>
+                <span className="text-sm">{row.country || '--'}</span>
               </div>
             ),
           };
@@ -844,12 +877,12 @@ const AthletesPage = () => {
             label: t('athletes.columns.age'),
             icon: <User className="size-3" />,
             width: { class: getColumnWidth('age', 'class'), pixel: getColumnWidth('age', 'pixel') },
-            getSortValue: (row) => row.age,
+            getSortValue: (row) => row.age || 0,
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => (
               <div className="flex items-center w-full">
-                <span className="text-sm">{row.age}</span>
+                <span className="text-sm">{row.age > 0 ? row.age : '--'}</span>
               </div>
             ),
           };
@@ -863,12 +896,12 @@ const AthletesPage = () => {
               pixel: getColumnWidth('clientFor', 'pixel'),
             },
             tooltip: t('athletes.columnTooltips.clientFor'),
-            getSortValue: (row) => row.clientFor,
+            getSortValue: (row) => row.clientFor || '',
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => (
               <div className="flex items-center w-full pr-6">
-                <span className="text-sm">{formatClientFor(row.clientFor)}</span>
+                <span className="text-sm">{formatClientFor(Number(row.clientFor))}</span>
               </div>
             ),
           };
@@ -1000,7 +1033,7 @@ const AthletesPage = () => {
         <div className="flex items-center justify-between gap-2 min-w-0 flex-1 w-full">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <Avatar className="h-8 w-8 flex-shrink-0">
-              <AvatarImage src={athlete.avatar} alt={athlete.name} />
+              <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <AthleteNameTooltip name={athlete.name} />
@@ -1135,13 +1168,17 @@ const AthletesPage = () => {
                   <Users className="size-4 mr-2" />
                   <span>{t('athletes.actions.uploadClients')}</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsRestoreClientsOpen(true)}>
+                  <ArchiveRestore className="size-4 mr-2" />
+                  <span>{t('athletes.actions.restoreClient')}</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         }
       />
       <DataGrid
-        data={mockAthletes}
+        data={athletes}
         columns={columns}
         getRowId={(row) => row.id}
         gridKey="athletes"
@@ -1171,8 +1208,8 @@ const AthletesPage = () => {
             row.connected === true
               ? t('athletes.status.connected')
               : row.connected === false
-                ? t('athletes.filters.notConnected')
-                : t('athletes.filters.invitationSent'),
+                ? t('athletes.status.notConnected')
+                : t('athletes.status.invitationSent'),
           [t('athletes.export.lastActivity')]: row.lastActivity,
           [t('athletes.export.last7DaysTraining')]: row.last7DaysTraining,
           [t('athletes.export.last30DaysTraining')]: row.last30DaysTraining,
@@ -1290,6 +1327,10 @@ const AthletesPage = () => {
                     <Users className="size-4 mr-2" />
                     <span>{t('athletes.actions.uploadClients')}</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsRestoreClientsOpen(true)}>
+                    <ArchiveRestore className="size-4 mr-2" />
+                    <span>{t('athletes.actions.restoreClient')}</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             }
@@ -1304,8 +1345,18 @@ const AthletesPage = () => {
         gridPadding={true}
         compactPagination={true}
       />
-      <AddClientSidePanel open={isAddAthleteOpen} onOpenChange={setIsAddAthleteOpen} />
-      <UploadClientsSidePanel open={isUploadClientsOpen} onOpenChange={setIsUploadClientsOpen} />
+      <AddClientSidePanel
+        open={isAddAthleteOpen}
+        onOpenChange={setIsAddAthleteOpen}
+      />
+      <UploadClientsSidePanel
+        open={isUploadClientsOpen}
+        onOpenChange={setIsUploadClientsOpen}
+      />
+      <RestoreClientsSidePanel
+        open={isRestoreClientsOpen}
+        onOpenChange={setIsRestoreClientsOpen}
+      />
     </div>
   );
 };

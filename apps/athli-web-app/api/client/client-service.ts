@@ -1,3 +1,5 @@
+import { apiFetch } from '../api-client';
+
 export interface AthleteDetails {
   firstName: string;
   lastName: string;
@@ -6,9 +8,10 @@ export interface AthleteDetails {
   weight: number | null; // in kg
   height: number | null; // in cm
   category: 'online' | 'in-person' | 'hybrid';
-  gender: 'male' | 'female' | 'prefer-not-to-say';
+  gender: 'male' | 'female' | 'prefer-not-to-say' | null;
   phone: string;
   country: string;
+  avatar?: string;
 }
 
 /**
@@ -176,74 +179,59 @@ export const saveAthleteInjuries = async (athleteId: string, injuries: string[])
   // return await response.json()
 };
 
-/**
- * Dummy athlete service method to get athlete details
- * This will be connected to the backend in the future
- */
 export const getAthleteDetails = async (athleteId: string): Promise<AthleteDetails> => {
-  console.log('Getting athlete details:', {
-    athleteId,
-  });
+  const response = await apiFetch(`/coach/clients/${athleteId}`);
+  const client = response.data.client;
 
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  if (athleteId === '1') {
-    return {
-      firstName: 'John',
-      lastName: 'Smith',
-      email: 'john.smith@example.com',
-      age: 32,
-      weight: 85, // kg
-      height: 180, // cm
-      category: 'in-person',
-      gender: 'male',
-      phone: '+1 (555) 123-4567',
-      country: 'United States',
-    };
+  if (!client) {
+    throw new Error('Client not found');
   }
 
+  // The backend coach_clients_view returns a flat structure
   return {
-    firstName: '',
-    lastName: '',
-    email: '',
-    age: null,
-    weight: null,
-    height: null,
-    category: 'online',
-    gender: 'male',
-    phone: '',
-    country: '',
+    firstName: client.full_name?.split(' ')[0] || '',
+    lastName: client.full_name?.split(' ').slice(1).join(' ') || '',
+    email: client.email || '',
+    age: client.date_of_birth ? new Date().getFullYear() - new Date(client.date_of_birth).getFullYear() : null,
+    weight: client.weight_kg || null,
+    height: client.height_cm || null,
+    category: client.category || 'online',
+    gender: client.gender || null,
+    phone: client.phone || '',
+    country: client.country || '',
+    avatar: client.avatar_url || null,
   };
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/details`, {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get athlete details')
-  // return await response.json()
 };
 
 /**
  * Dummy athlete service method to save athlete details
  * This will be connected to the backend in the future
  */
+/**
+ * Service method to save athlete details
+ */
 export const saveAthleteDetails = async (athleteId: string, details: AthleteDetails): Promise<void> => {
-  console.log('Saving athlete details:', {
-    athleteId,
-    details,
+  // Map AthleteDetails back to DB structure
+  // We'll update client_profiles mainly.
+
+  const updatePayload = {
+    first_name: details.firstName,
+    last_name: details.lastName,
+    phone: details.phone,
+    gender: details.gender,
+    country: details.country,
+    weight: details.weight,
+    height: details.height,
+    // age to birth_date is tricky if we don't have birth_date. 
+    // Ideally we should input birth_date. For now, we might skip age update if it's just a number, 
+    // or calculate a birth year.
+    // Let's assume we pass `metadata: { category: ... }` for category.
+  };
+
+  await apiFetch(`/coach/clients/${athleteId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updatePayload),
   });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/details`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(details),
-  // })
-  // if (!response.ok) throw new Error('Failed to save athlete details')
-  // return await response.json()
 };
 export interface TrainingCalendarSchema {
   [date: string]: Array<{
@@ -532,7 +520,7 @@ const mockJohnSmithCompletionLogs: TrainingCalendarCompletionLogs = (() => {
   const week2Monday = new Date(monday);
   const week2MondayKey = formatDateForSchema(week2Monday);
   const week2MondayWorkoutId = `1-${week2MondayKey}-strength`;
-  
+
   // If Monday is in the past, mark as completed
   if (week2Monday < today) {
     workouts.push({
@@ -557,7 +545,7 @@ const mockJohnSmithCompletionLogs: TrainingCalendarCompletionLogs = (() => {
   week2Wednesday.setDate(monday.getDate() + 2);
   const week2WednesdayKey = formatDateForSchema(week2Wednesday);
   const week2WednesdayWorkoutId = `2-${week2WednesdayKey}-hiit`;
-  
+
   // If Wednesday is today or in the past, mark as in progress
   if (week2Wednesday <= today) {
     workouts.push({
@@ -751,7 +739,7 @@ export const getStrengthOverview = async (
       // Later period: recovery and growth, but still with some drops
       strengthChange = (Math.random() - 0.3) * 20; // -10 to +10 percentage points
     }
-    
+
     currentStrength = Math.max(-100, Math.min(100, currentStrength + strengthChange));
 
     dataPoints.push({

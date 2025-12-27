@@ -344,7 +344,7 @@ export const NotesCard = ({ clientId }: NotesCardProps) => {
         }
       >
         {selectedNote && (
-          <div className="flex-1 flex flex-col min-h-0 gap-4">
+          <div className="flex-1 flex flex-col min-h-0 gap-4 px-1 pb-1">
             <div className="space-y-2">
               <Label htmlFor="view-note-title">
                 <span>{t('messages.noteTitle')}<RequiredAsterisk /></span>
@@ -414,7 +414,7 @@ export const NotesCard = ({ clientId }: NotesCardProps) => {
           </div>
         }
       >
-        <div className="flex-1 flex flex-col min-h-0 gap-4">
+        <div className="flex-1 flex flex-col min-h-0 gap-4 px-1 pb-1">
           <div className="space-y-2">
             <Label htmlFor="note-title">
               <span>{t('messages.noteTitle')}<RequiredAsterisk /></span>

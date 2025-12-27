@@ -173,7 +173,7 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
           </div>
         }
       >
-        <div className="flex-1 flex flex-col min-h-0 gap-4 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-0 gap-4 overflow-y-auto px-1">
           {editingInjuries.map((injury, index) => (
             <div key={index} className="space-y-2">
               <Label htmlFor={`injury-${index + 1}`}>

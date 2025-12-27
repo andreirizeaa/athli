@@ -76,7 +76,7 @@ export const AthleteWorkoutsCard = ({ clientId }: AthleteWorkoutsCardProps) => {
   };
 
   return (
-    <Card className="bg-background flex flex-col flex-1 min-w-0" style={{ height: '240px', minHeight: '240px', maxHeight: '240px' }}>
+    <Card className="bg-background flex flex-col flex-1 min-w-0 h-full">
       <CardHeader className="px-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle>Athlete Workouts</CardTitle>
@@ -93,106 +93,118 @@ export const AthleteWorkoutsCard = ({ clientId }: AthleteWorkoutsCardProps) => {
         </div>
       </CardHeader>
       <Separator className="w-full mt-[-8px] flex-shrink-0" />
-      <CardContent className="px-4 py-0 flex-1 mt-[-12px] -mb-[12px] flex overflow-y-auto">
-        <div className="flex-1 flex flex-col items-center mt-3">
-          <div className="text-xs font-semibold uppercase text-muted-foreground mb-2">Last 7 Days</div>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-xs text-muted-foreground">{t('general.loading')}</p>
+      <CardContent className="px-4 py-2 flex-1 overflow-y-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-xs text-muted-foreground">{t('general.loading')}</p>
+          </div>
+        ) : !last7DaysStats && !last30DaysStats && !nextWeekStats ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-xs text-muted-foreground">No data available</p>
+          </div>
+        ) : (
+          <div className="flex h-full mt-[-12px] -mb-[12px]">
+            <div className="flex-1 flex flex-col items-center mt-3">
+              <div className="text-xs font-semibold uppercase text-muted-foreground mb-2">Last 7 Days</div>
+              {last7DaysStats && getTotalWorkouts(last7DaysStats) > 0 ? (
+                <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[130px] w-full">
+                  <PieChart>
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                    <Pie
+                      data={formatDataForChart(last7DaysStats)}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={34}
+                    >
+                      <Label
+                        content={({ viewBox }) => {
+                          if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                            return (
+                              <text
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                              >
+                                <tspan
+                                  x={viewBox.cx}
+                                  y={viewBox.cy}
+                                  className="fill-foreground text-2xl font-semibold"
+                                >
+                                  {getTotalWorkouts(last7DaysStats)}
+                                </tspan>
+                              </text>
+                            );
+                          }
+                        }}
+                      />
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-xs text-muted-foreground">No data</p>
+                </div>
+              )}
             </div>
-          ) : last7DaysStats ? (
-            <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[130px] w-full">
-              <PieChart>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Pie
-                  data={formatDataForChart(last7DaysStats)}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={34}
-                >
-                  <Label
-                    content={({ viewBox }) => {
-                      if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
-                        return (
-                          <text
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                          >
-                            <tspan
-                              x={viewBox.cx}
-                              y={viewBox.cy}
-                              className="fill-foreground text-2xl font-semibold"
-                            >
-                              {getTotalWorkouts(last7DaysStats)}
-                            </tspan>
-                          </text>
-                        );
-                      }
-                    }}
-                  />
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-          ) : null}
-        </div>
-        <div className="flex-1 flex flex-col items-center mt-3">
-          <div className="text-xs font-semibold uppercase text-muted-foreground mb-2">Last 30 Days</div>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-xs text-muted-foreground">{t('general.loading')}</p>
+            <div className="flex-1 flex flex-col items-center mt-3">
+              <div className="text-xs font-semibold uppercase text-muted-foreground mb-2">Last 30 Days</div>
+              {last30DaysStats && getTotalWorkouts(last30DaysStats) > 0 ? (
+                <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[130px] w-full">
+                  <PieChart>
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                    <Pie
+                      data={formatDataForChart(last30DaysStats)}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={34}
+                    >
+                      <Label
+                        content={({ viewBox }) => {
+                          if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
+                            return (
+                              <text
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                              >
+                                <tspan
+                                  x={viewBox.cx}
+                                  y={viewBox.cy}
+                                  className="fill-foreground text-2xl font-semibold"
+                                >
+                                  {getTotalWorkouts(last30DaysStats)}
+                                </tspan>
+                              </text>
+                            );
+                          }
+                        }}
+                      />
+                    </Pie>
+                  </PieChart>
+                </ChartContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-xs text-muted-foreground">No data</p>
+                </div>
+              )}
             </div>
-          ) : last30DaysStats ? (
-            <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[130px] w-full">
-              <PieChart>
-                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                <Pie
-                  data={formatDataForChart(last30DaysStats)}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={34}
-                >
-                  <Label
-                    content={({ viewBox }) => {
-                      if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
-                        return (
-                          <text
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                          >
-                            <tspan
-                              x={viewBox.cx}
-                              y={viewBox.cy}
-                              className="fill-foreground text-2xl font-semibold"
-                            >
-                              {getTotalWorkouts(last30DaysStats)}
-                            </tspan>
-                          </text>
-                        );
-                      }
-                    }}
-                  />
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-          ) : null}
-        </div>
-        <div className="flex-1 flex flex-col items-center mt-3">
-          <div className="text-xs font-semibold uppercase text-muted-foreground mb-2">Next Week</div>
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-xs text-muted-foreground">{t('general.loading')}</p>
+            <div className="flex-1 flex flex-col items-center mt-3">
+              <div className="text-xs font-semibold uppercase text-muted-foreground mb-2">Next Week</div>
+              {nextWeekStats && getTotalWorkouts(nextWeekStats) > 0 ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <p className="text-2xl font-semibold text-foreground">{getTotalWorkouts(nextWeekStats)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">ASSIGNED</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-xs text-muted-foreground">No data</p>
+                </div>
+              )}
             </div>
-          ) : nextWeekStats ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <p className="text-2xl font-semibold text-foreground">{getTotalWorkouts(nextWeekStats)}</p>
-              <p className="text-xs text-muted-foreground mt-1">ASSIGNED</p>
-            </div>
-          ) : null}
-        </div>
+          </div>
+        )}
       </CardContent>
       <Separator className="w-full" />
     </Card>

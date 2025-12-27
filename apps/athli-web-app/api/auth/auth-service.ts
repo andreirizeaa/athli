@@ -51,8 +51,45 @@ class AuthService {
         });
     }
 
+    /**
+     * Register a new coach account
+     */
     async register(data: RegisterData): Promise<AuthResponse> {
-        return this.authRequest('/register', {
+        return this.authRequest('/coach/register', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    /**
+     * Google OAuth login/registration for coaches
+     */
+    async googleAuth(credential: string): Promise<AuthResponse> {
+        return this.authRequest('/coach/google', {
+            method: 'POST',
+            body: JSON.stringify({ credential }),
+        });
+    }
+
+    /**
+     * Get coach info by invite code (for client signup page)
+     */
+    async getCoachByInviteCode(code: string): Promise<AuthResponse> {
+        return this.authRequest(`/client/invite/${code}`, {
+            method: 'GET',
+        });
+    }
+
+    /**
+     * Accept coach invitation and create client account
+     */
+    async acceptClientInvite(data: {
+        inviteCode: string;
+        email: string;
+        password: string;
+        name: string;
+    }): Promise<AuthResponse> {
+        return this.authRequest('/client/accept-invite', {
             method: 'POST',
             body: JSON.stringify(data),
         });
@@ -90,13 +127,6 @@ class AuthService {
         return this.authRequest('/reset-password', {
             method: 'POST',
             body: JSON.stringify(data),
-        });
-    }
-
-    async googleAuth(credential: string): Promise<AuthResponse> {
-        return this.authRequest('/google', {
-            method: 'POST',
-            body: JSON.stringify({ credential }),
         });
     }
 
@@ -146,12 +176,12 @@ class AuthService {
         });
     }
 
-    async newClient(coachId: string, token?: string): Promise<AuthResponse> {
+    async newClient(coachId: string, token?: string, invitationToken?: string): Promise<AuthResponse> {
         return apiFetch('/user/new-client', {
             method: 'POST',
             authenticated: !token,
             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            body: JSON.stringify({ coachId }),
+            body: JSON.stringify({ coachId, invitationToken }),
         });
     }
 }

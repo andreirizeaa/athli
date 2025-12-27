@@ -65,7 +65,7 @@ export const coachQuestionnairesController = {
      */
     createQuestionnaire: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { name, description } = req.body;
+        const { name, description, questions, num_of_questions } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -83,7 +83,8 @@ export const coachQuestionnairesController = {
                 coach_id: userId,
                 name,
                 description,
-                questions: [],
+                questions: questions || [],
+                num_of_questions: num_of_questions || 0,
             })
             .select()
             .single();
@@ -170,6 +171,55 @@ export const coachQuestionnairesController = {
 
         success(res, {
             message: 'Coach questionnaire deleted successfully',
+        });
+    },
+
+    /**
+     * Duplicate an existing coach questionnaire
+     */
+    duplicateQuestionnaire: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Fetch original questionnaire
+        const { data: original, error: fetchError } = await supabase
+            .from('coach_questionnaires')
+            .select('*')
+            .eq('id', id)
+            .eq('coach_id', userId)
+            .single();
+
+        if (fetchError || !original) {
+            return res.status(404).json({ success: false, message: 'Questionnaire not found' });
+        }
+
+        // 2. Insert as new questionnaire
+        const { id: _, created_at: __, updated_at: ___, ...rest } = original;
+        const { data: duplicated, error: insertError } = await supabase
+            .from('coach_questionnaires')
+            .insert({
+                ...rest,
+                name: `${original.name} (Copy)`,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+        if (insertError) {
+            return res.status(500).json({ success: false, message: insertError.message });
+        }
+
+        created(res, {
+            message: 'Coach questionnaire duplicated successfully',
+            data: { questionnaire: duplicated },
         });
     },
 };
