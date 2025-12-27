@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { format } from 'date-fns';
@@ -24,13 +24,16 @@ import { EditMetricSidePanel } from '@/components/metrics/edit-metric-side-panel
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { mockAthletes } from '@/components/app/app-shell';
+import { useClientMetrics } from '@/hooks/use-client-metrics';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 
 type Metric = {
   id: string;
   name: string;
   unit: string;
   description?: string;
+  metricId?: string;
+  assignmentId?: string;
 };
 
 type MetricLog = {
@@ -40,40 +43,13 @@ type MetricLog = {
   loggedAt: Date;
 };
 
-// Mock metrics data
-const mockMetrics: Metric[] = [
-  {
-    id: 'metric-1',
-    name: 'Body Fat',
-    unit: '%',
-    description: 'Percentage of body weight that is fat tissue',
-  },
-  {
-    id: 'metric-2',
-    name: 'Bicep',
-    unit: 'cm',
-    description: 'Circumference measurement of the bicep muscle',
-  },
-  {
-    id: 'metric-3',
-    name: 'Body Mass',
-    unit: 'kg',
-    description: 'Total body mass',
-  },
-  {
-    id: 'metric-4',
-    name: 'Muscle Mass',
-    unit: 'kg',
-    description: 'Total muscle mass',
-  },
-];
-
 const ClientMetricsPage = () => {
   const t = useTranslations();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
-  const athlete = mockAthletes.find((item) => item.id === clientId);
-  const clientName = athlete?.name || 'this client';
+
+  const { metrics: rawMetrics, isLoading } = useClientMetrics(clientId);
+
   const [isAddMetricOpen, setIsAddMetricOpen] = useState<boolean>(false);
   const [isLogMetricOpen, setIsLogMetricOpen] = useState<boolean>(false);
   const [isEditMetricOpen, setIsEditMetricOpen] = useState<boolean>(false);
@@ -82,6 +58,19 @@ const ClientMetricsPage = () => {
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editingLogValue, setEditingLogValue] = useState<string>('');
   const [timeFilter, setTimeFilter] = useState<string>('all-time');
+
+  const metrics = useMemo(() => {
+    return rawMetrics.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      unit: item.unit,
+      description: item.description,
+      metricId: item.id,
+      assignmentId: item.assignment_id
+    }));
+  }, [rawMetrics]);
+
+  const clientName = '';
 
   // Mock log data
   const [metricLogs, setMetricLogs] = useState<MetricLog[]>([
@@ -96,19 +85,19 @@ const ClientMetricsPage = () => {
 
   const filteredMetrics = useMemo(() => {
     if (!searchQuery.trim()) {
-      return mockMetrics;
+      return metrics;
     }
     const query = searchQuery.toLowerCase();
-    return mockMetrics.filter(
+    return metrics.filter(
       (metric) =>
         metric.name.toLowerCase().includes(query) ||
         metric.unit.toLowerCase().includes(query) ||
-        metric.description?.toLowerCase().includes(query)
+        (metric.description && metric.description.toLowerCase().includes(query))
     );
-  }, [searchQuery]);
+  }, [searchQuery, metrics]);
 
   const selectedMetric = selectedMetricId
-    ? mockMetrics.find((metric) => metric.id === selectedMetricId)
+    ? metrics.find((metric) => metric.id === selectedMetricId)
     : null;
 
   // Map filter values to translation keys
@@ -128,7 +117,7 @@ const ClientMetricsPage = () => {
   // Filter logs by time period
   const getFilteredLogsByTime = useMemo(() => {
     if (!selectedMetricId) return [];
-    
+
     const allLogs = metricLogs
       .filter((log) => log.metricId === selectedMetricId)
       .sort((a, b) => a.loggedAt.getTime() - b.loggedAt.getTime());
@@ -212,21 +201,21 @@ const ClientMetricsPage = () => {
   const calculateNiceInterval = (min: number, max: number) => {
     const range = max - min;
     if (range === 0) return { min: min - 1, max: max + 1, step: 1 };
-    
+
     // Calculate a nice step size
     const magnitude = Math.pow(10, Math.floor(Math.log10(range)));
     const normalizedRange = range / magnitude;
     let step = magnitude;
-    
+
     if (normalizedRange <= 1) step = magnitude * 0.1;
     else if (normalizedRange <= 2) step = magnitude * 0.2;
     else if (normalizedRange <= 5) step = magnitude * 0.5;
     else step = magnitude;
-    
+
     // Round min down and max up to nice values
     const niceMin = Math.floor(min / step) * step;
     const niceMax = Math.ceil(max / step) * step;
-    
+
     return { min: niceMin, max: niceMax, step };
   };
 
@@ -239,13 +228,13 @@ const ClientMetricsPage = () => {
     const min = Math.min(...values);
     const max = Math.max(...values);
     const { min: niceMin, max: niceMax, step } = calculateNiceInterval(min, max);
-    
+
     // Generate tick values
     const ticks: number[] = [];
     for (let value = niceMin; value <= niceMax; value += step) {
       ticks.push(value);
     }
-    
+
     return { yAxisDomain: [niceMin, niceMax], yAxisTicks: ticks };
   }, [selectedMetricLogs]);
 
@@ -333,6 +322,38 @@ const ClientMetricsPage = () => {
       setSelectedMetricId(null);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (metrics.length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center p-8">
+        <EmptyGridState
+          title="No metrics assigned"
+          subtitle="This client hasn't been assigned any metrics yet."
+          action={
+            <Button onClick={handleOpenAddMetric} className="gap-2">
+              <Plus className="size-4" />
+              <span>Assign Metric</span>
+            </Button>
+          }
+        />
+        <AddMetricSidePanel
+          open={isAddMetricOpen}
+          onOpenChange={setIsAddMetricOpen}
+          onSave={handleSaveMetric}
+          clientName={clientName}
+          clientId={clientId}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full flex flex-col flex-1 min-h-0">
@@ -451,8 +472,8 @@ const ClientMetricsPage = () => {
                         movement?.percentage === 0 || movement === null
                           ? 'text-foreground'
                           : movement.isUp
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                            ? 'text-green-600'
+                            : 'text-red-600'
                       )}
                     >
                       {movement?.isUp === true && movement.percentage !== 0 && <ArrowUp className="size-4" />}
@@ -545,111 +566,111 @@ const ClientMetricsPage = () => {
                   <DataGrid
                     data={selectedMetricLogs}
                     columns={[
-                        {
-                          id: 'date',
-                          label: 'Date',
-                          sortable: true,
-                          width: { class: 'w-[200px]', pixel: '200px' },
-                          getSortValue: (row) => row.loggedAt.getTime(),
-                          renderCell: (row) => (
-                            <div className="flex items-center w-full">
-                              <span className="text-sm text-foreground">
-                                {format(row.loggedAt, 'd MMM, yy')}
-                              </span>
-                            </div>
-                          ),
-                        },
-                        {
-                          id: 'value',
-                          label: 'Log',
-                          sortable: true,
-                          width: { class: 'w-full', pixel: '100%' },
-                          getSortValue: (row) => row.value,
-                          renderCell: (row) => {
-                            if (editingLogId === row.id) {
-                              return (
-                                <div className="flex items-center gap-2 w-full" data-no-row-link="true">
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-8 w-8 flex-shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteLog(row.id);
-                                    }}
-                                    aria-label="Delete log"
-                                  >
-                                    <Trash2 className="size-4" />
-                                  </Button>
-                                  <Input
-                                    type="number"
-                                    value={editingLogValue}
-                                    onChange={(e) => setEditingLogValue(e.target.value)}
-                                    className="flex-1 h-8"
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleSaveLog(row.id);
-                                      } else if (e.key === 'Escape') {
-                                        e.preventDefault();
-                                        handleCancelEditLog();
-                                      }
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                  <Button
-                                    size="icon"
-                                    variant="default"
-                                    className="h-8 w-8 flex-shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSaveLog(row.id);
-                                    }}
-                                    aria-label="Save log"
-                                  >
-                                    <Check className="size-4" />
-                                  </Button>
-                                </div>
-                              );
-                            }
+                      {
+                        id: 'date',
+                        label: 'Date',
+                        sortable: true,
+                        width: { class: 'w-[200px]', pixel: '200px' },
+                        getSortValue: (row) => row.loggedAt.getTime(),
+                        renderCell: (row) => (
+                          <div className="flex items-center w-full">
+                            <span className="text-sm text-foreground">
+                              {format(row.loggedAt, 'd MMM, yy')}
+                            </span>
+                          </div>
+                        ),
+                      },
+                      {
+                        id: 'value',
+                        label: 'Log',
+                        sortable: true,
+                        width: { class: 'w-full', pixel: '100%' },
+                        getSortValue: (row) => row.value,
+                        renderCell: (row) => {
+                          if (editingLogId === row.id) {
                             return (
-                              <div className="flex items-center justify-between w-full" data-no-row-link="true">
-                                <span className="text-sm text-foreground">
-                                  {row.value} <span className="text-muted-foreground">{selectedMetric.unit}</span>
-                                </span>
+                              <div className="flex items-center gap-2 w-full" data-no-row-link="true">
                                 <Button
                                   size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
+                                  variant="outline"
+                                  className="h-8 w-8 flex-shrink-0"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleEditLog(row.id);
+                                    handleDeleteLog(row.id);
                                   }}
-                                  aria-label="Edit log"
+                                  aria-label="Delete log"
                                 >
-                                  <Edit className="size-4" />
+                                  <Trash2 className="size-4" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  value={editingLogValue}
+                                  onChange={(e) => setEditingLogValue(e.target.value)}
+                                  className="flex-1 h-8"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleSaveLog(row.id);
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      handleCancelEditLog();
+                                    }
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <Button
+                                  size="icon"
+                                  variant="default"
+                                  className="h-8 w-8 flex-shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSaveLog(row.id);
+                                  }}
+                                  aria-label="Save log"
+                                >
+                                  <Check className="size-4" />
                                 </Button>
                               </div>
                             );
-                          },
+                          }
+                          return (
+                            <div className="flex items-center justify-between w-full" data-no-row-link="true">
+                              <span className="text-sm text-foreground">
+                                {row.value} <span className="text-muted-foreground">{selectedMetric.unit}</span>
+                              </span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditLog(row.id);
+                                }}
+                                aria-label="Edit log"
+                              >
+                                <Edit className="size-4" />
+                              </Button>
+                            </div>
+                          );
                         },
-                      ]}
-                      getRowId={(row) => row.id}
-                      gridKey={`metric-logs-${selectedMetricId}`}
-                      enableSearch={false}
-                      showPagination={false}
-                      gridPadding={false}
-                      emptyMessage={t('metrics.noLogsMessage')}
-                      onRowClick={(row, e) => {
-                        // Prevent row click when clicking edit button
-                        if ((e.target as HTMLElement).closest('[data-no-row-link="true"]')) {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }
-                      }}
-                    />
-                  </div>
+                      },
+                    ]}
+                    getRowId={(row) => row.id}
+                    gridKey={`metric-logs-${selectedMetricId}`}
+                    enableSearch={false}
+                    showPagination={false}
+                    gridPadding={false}
+                    emptyMessage={t('metrics.noLogsMessage')}
+                    onRowClick={(row, e) => {
+                      // Prevent row click when clicking edit button
+                      if ((e.target as HTMLElement).closest('[data-no-row-link="true"]')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                  />
+                </div>
               </>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -663,7 +684,7 @@ const ClientMetricsPage = () => {
       <LogMetricSidePanel
         open={isLogMetricOpen}
         onOpenChange={setIsLogMetricOpen}
-        metrics={mockMetrics}
+        metrics={metrics}
         onSave={handleSaveLogMetric}
       />
 

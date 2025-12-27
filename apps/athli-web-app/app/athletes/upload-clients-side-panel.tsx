@@ -21,9 +21,13 @@ import { Trash2, Check, Upload } from 'lucide-react';
 interface UploadClientsSidePanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onClientsAdded?: () => void;
 }
 
-export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSidePanelProps) => {
+import { addClients } from '@/api/coach/coach-client-service';
+import { toast } from 'sonner';
+
+export const UploadClientsSidePanel = ({ open, onOpenChange, onClientsAdded }: UploadClientsSidePanelProps) => {
   const t = useTranslations();
   const [uploadStep, setUploadStep] = useState<number>(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,6 +35,7 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
   const [isValidatingCSV, setIsValidatingCSV] = useState<boolean>(false);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [parsedClients, setParsedClients] = useState<ClientData[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const dragCounterRef = useRef(0);
 
@@ -150,9 +155,23 @@ export const UploadClientsSidePanel = ({ open, onOpenChange }: UploadClientsSide
             {uploadStep === 2 && (
               <Button
                 type="button"
-                onClick={() => setUploadStep(3)}
+                disabled={isSubmitting}
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    await addClients({ clients: parsedClients });
+                    setUploadStep(3);
+                    if (onClientsAdded) onClientsAdded();
+                  } catch (error) {
+                    toast.error(t('athletes.uploadClients.errorProcessing'));
+                    console.error(error);
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
                 aria-label={t('athletes.uploadClients.continueToFinal')}
               >
+                {isSubmitting ? <Spinner className="mr-2" /> : null}
                 {t('athletes.uploadClients.continue')}
               </Button>
             )}

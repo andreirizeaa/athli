@@ -11,6 +11,10 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import {
+  restrictToVerticalAxis,
+  restrictToFirstScrollableAncestor,
+} from '@dnd-kit/modifiers';
+import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
@@ -144,12 +148,16 @@ export const EditColumnsSidebar = ({
     if (columns.length === 0) return [];
     return mergeColumnOrder(columnOrder);
   });
-  
+
   // Track if we're initializing to avoid calling onColumnsChange during initialization
   const isInitializingRef = useRef(true);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -190,7 +198,7 @@ export const EditColumnsSidebar = ({
     // Always show ALL columns from the columns prop (hardcoded definitions)
     // Ensure we have a valid order that includes all columns
     const completeOrder = mergeColumnOrder(localColumnOrder);
-    
+
     // Sort all columns by their order in completeOrder
     const sorted = [...filteredColumns].sort((a, b) => {
       const aIndex = completeOrder.indexOf(a.id);
@@ -249,24 +257,24 @@ export const EditColumnsSidebar = ({
       prevColumnOrderRef.current = [...localColumnOrder];
       return;
     }
-    
+
     // Check if values actually changed
-    const visibleChanged = 
+    const visibleChanged =
       prevVisibleColumnsRef.current.size !== localVisibleColumns.size ||
       Array.from(prevVisibleColumnsRef.current).some(id => !localVisibleColumns.has(id)) ||
       Array.from(localVisibleColumns).some(id => !prevVisibleColumnsRef.current.has(id));
-    
-    const orderChanged = 
+
+    const orderChanged =
       prevColumnOrderRef.current.length !== localColumnOrder.length ||
       prevColumnOrderRef.current.some((id, index) => id !== localColumnOrder[index]);
-    
+
     if (visibleChanged || orderChanged) {
       const newVisibleColumns = Array.from(localVisibleColumns);
       const newOrder = localColumnOrder;
-      
+
       onColumnsChange(newVisibleColumns, newOrder);
       saveToLocalStorage(newVisibleColumns, newOrder);
-      
+
       // Update refs
       prevVisibleColumnsRef.current = new Set(localVisibleColumns);
       prevColumnOrderRef.current = [...localColumnOrder];
@@ -374,7 +382,12 @@ export const EditColumnsSidebar = ({
 
   const gridData = useMemo(() => {
     return (
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
+      >
         <SortableContext
           items={dataRows.map((row) => row.id)}
           strategy={verticalListSortingStrategy}

@@ -65,6 +65,21 @@ export interface DeleteQuestionData {
   questionId: string;
 }
 
+export interface CheckInReview {
+  checkin_log_id: string;
+  client_id: string;
+  coach_checkin_id: string;
+  client_name: string;
+  client_avatar?: string;
+  client_email: string;
+  checkin_name: string;
+  checkin_description?: string;
+  submission_date: string;
+  status: string;
+  updated_at: string;
+  coach_id: string;
+}
+
 /**
  * Service method to get all check-ins from coach's library
  */
@@ -194,4 +209,12 @@ export const duplicateCheckIn = async (checkInId: string, originalCheckIn: Check
   });
 
   return response.data.checkIn;
+};
+
+/**
+ * Service method to get all check-ins awaiting review
+ */
+export const getCheckInReviews = async (): Promise<CheckInReview[]> => {
+  const response = await apiFetch<{ data: { reviews: CheckInReview[] } }>('/coach/forms/check-ins/reviews');
+  return response.data.reviews;
 };

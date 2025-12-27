@@ -1,73 +1,61 @@
 import { Router } from 'express';
+import multer from 'multer';
+import { clientPhotosController } from '../client-photos.controller';
+import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
+
+// Configure multer for memory storage
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+});
 
 export const clientPhotoRouter = Router();
 
-/**
- * @swagger
- * /api/v1/client/photos:
- *   get:
- *     summary: Get client photos
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Client photos retrieved successfully
- */
-clientPhotoRouter.get('/', (req, res) => {
-    res.json({ message: 'Client photos route' });
-});
+// ... (existing GET)
 
-/**
- * @swagger
- * /api/v1/client/photos/{id}:
- *   patch:
- *     summary: Update client photo
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Client photo updated successfully
- */
-clientPhotoRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Client photo updated', id: req.params.id });
-});
+clientPhotoRouter.get('/', supabaseAuthenticate, clientPhotosController.getPhotos);
 
 /**
  * @swagger
  * /api/v1/client/photos:
  *   post:
- *     summary: Create client photo
- *     tags: [Client]
+ *     summary: Upload client progress photo
+ *     tags: [Client Photos]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [file, category]
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *               category: { type: 'string' }
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [photo_url]
+ *             properties:
+ *               photo_url: { type: 'string' }
+ *               category: { type: 'string' }
  *     responses:
  *       201:
- *         description: Client photo created successfully
- *
+ *         description: Progress photo uploaded successfully
+ */
+clientPhotoRouter.post('/', supabaseAuthenticate, upload.single('file'), clientPhotosController.uploadPhoto);
+
+/**
+ * @swagger
  * /api/v1/client/photos/{id}:
  *   delete:
- *     summary: Delete client photo
- *     tags: [Client]
+ *     summary: Delete client progress photo
+ *     tags: [Client Photos]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -77,13 +65,7 @@ clientPhotoRouter.patch('/:id', (req, res) => {
  *         schema:
  *           type: string
  *     responses:
- *       200:
- *         description: Client photo deleted successfully
+ *       204:
+ *         description: Progress photo deleted successfully
  */
-clientPhotoRouter.post('/', (req, res) => {
-    res.json({ message: 'Client photo created' });
-});
-
-clientPhotoRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Client photo deleted', id: req.params.id });
-});
+clientPhotoRouter.delete('/:id', supabaseAuthenticate, clientPhotosController.deletePhoto);

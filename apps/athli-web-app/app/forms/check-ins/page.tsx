@@ -434,7 +434,7 @@ const CheckInsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('forms.checkIns.emptyState.title')}
-            subtitle={t('forms.checkIns.emptyState.subtitle')}
+            subtitle="Create check-in forms to regularly collect feedback and monitor your clients' progress"
             action={
               <Button onClick={handleOpenAddCheckIn} className="gap-2">
                 <Plus className="size-4" />

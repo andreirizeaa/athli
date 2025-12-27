@@ -898,7 +898,7 @@ const HabitsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('habits.emptyState.title')}
-            subtitle={t('habits.emptyState.subtitle')}
+            subtitle="Create daily habits to help your clients build consistency and track their progress over time"
             action={
               <Button onClick={handleOpenAddHabit} className="gap-2">
                 <Plus className="size-4" />

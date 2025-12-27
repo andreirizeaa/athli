@@ -18,6 +18,7 @@ import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
 import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
 import { useCoachPrograms } from '@/hooks/use-coach-programs';
 import { useCoachExercises } from '@/hooks/use-coach-exercises';
+import { useCoachTodo } from '@/hooks/use-coach-todo';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -64,6 +65,7 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoading: isWorkoutsLoading } = useCoachWorkouts();
     const { isLoading: isProgramsLoading } = useCoachPrograms();
     const { isLoading: isExercisesLoading } = useCoachExercises();
+    const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo();
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||
@@ -72,7 +74,9 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
         isQuestionnairesLoading ||
         isWorkoutsLoading ||
         isProgramsLoading ||
-        isExercisesLoading;
+        isExercisesLoading ||
+        isOwnTodoLoading ||
+        isAutoTodoLoading;
 
     if (isLoading) {
         return <FullScreenLoader />;

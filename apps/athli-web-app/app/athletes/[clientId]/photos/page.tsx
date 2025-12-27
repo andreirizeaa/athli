@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Badge } from '@/components/ui/badge';
@@ -18,77 +19,37 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/general/utils';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { format } from 'date-fns';
 import { Plus, GitCompare, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AddPhotoSidePanel } from '@/components/photos/add-photo-side-panel';
-import { addClientPhoto } from '@/api/client/client-photo-service';
+import { useClientPhotos } from '@/hooks/use-client-photos';
+import { addClientPhoto, deleteClientPhoto } from '@/api/client/client-photo-service';
 
 type PhotoView = 'all' | 'front' | 'back' | 'side';
-
-type PhotoItem = {
-  id: string;
-  thumbnailUrl: string;
-  imageUrl: string;
-  view: 'front' | 'back' | 'side';
-  takenAt: Date;
-};
-
-// Mock photo data
-const mockPhotos: PhotoItem[] = [
-  {
-    id: '1',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=1200&fit=crop',
-    view: 'front',
-    takenAt: new Date(2024, 0, 15),
-  },
-  {
-    id: '2',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=1200&fit=crop',
-    view: 'back',
-    takenAt: new Date(2024, 0, 20),
-  },
-  {
-    id: '3',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=1200&fit=crop',
-    view: 'side',
-    takenAt: new Date(2024, 0, 25),
-  },
-  {
-    id: '4',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=1200&fit=crop',
-    view: 'front',
-    takenAt: new Date(2024, 1, 5),
-  },
-  {
-    id: '5',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=1200&fit=crop',
-    view: 'back',
-    takenAt: new Date(2024, 1, 10),
-  },
-  {
-    id: '6',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop',
-    imageUrl: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=1200&fit=crop',
-    view: 'side',
-    takenAt: new Date(2024, 1, 15),
-  },
-];
 
 const ClientPhotosPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const queryClient = useQueryClient();
+
+  // Use React Query hook instead of local state to prevent flickering
+  const { photos, isLoading, refetch } = useClientPhotos(clientId);
+
   const [activeView, setActiveView] = useState<PhotoView>('all');
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [isAddPhotoOpen, setIsAddPhotoOpen] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+
+  // Set initial selected photo when photos load
+  React.useEffect(() => {
+    if (photos.length > 0 && !selectedPhotoId) {
+      setSelectedPhotoId(photos[0].id);
+    }
+  }, [photos, selectedPhotoId]);
 
   const handleViewChange = (view: PhotoView) => {
     setActiveView(view);
@@ -96,10 +57,10 @@ const ClientPhotosPage = () => {
 
   const filteredPhotos = useMemo(() => {
     if (activeView === 'all') {
-      return mockPhotos;
+      return photos;
     }
-    return mockPhotos.filter((photo) => photo.view === activeView);
-  }, [activeView]);
+    return photos.filter((photo) => photo.type === activeView);
+  }, [photos, activeView]);
 
   const formatDate = (date: Date): string => {
     return format(date, 'MMM d, yyyy');
@@ -110,7 +71,7 @@ const ClientPhotosPage = () => {
   };
 
   const selectedPhoto = selectedPhotoId
-    ? mockPhotos.find((photo) => photo.id === selectedPhotoId)
+    ? photos.find((photo) => photo.id === selectedPhotoId)
     : null;
 
   const handleAddPhoto = async (type: 'front' | 'back' | 'side', file: File, takenAt: Date) => {
@@ -122,19 +83,50 @@ const ClientPhotosPage = () => {
         file,
         takenAt,
       });
-      // TODO: Refresh photos list
+      // Invalidate cache to refresh photos
+      await queryClient.invalidateQueries({ queryKey: ['client-photos', clientId] });
+      setIsAddPhotoOpen(false);
     } catch (error) {
       console.error('Failed to add photo:', error);
       // TODO: Show error toast
     }
   };
 
-  const handleDeletePhoto = () => {
-    // TODO: Implement delete photo
-    console.log('Deleting photo:', selectedPhotoId);
-    setIsDeleteDialogOpen(false);
-    setSelectedPhotoId(null);
+  const handleDeletePhoto = async () => {
+    if (!clientId || !selectedPhotoId) return;
+    try {
+      await deleteClientPhoto(clientId, selectedPhotoId);
+      await queryClient.invalidateQueries({ queryKey: ['client-photos', clientId] });
+      setSelectedPhotoId(null);
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to delete photo:', error);
+      // TODO: Error toast
+    }
   };
+
+  if (!isLoading && photos.length === 0) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center min-h-0">
+        <EmptyGridState
+          title={t('photos.emptyState.title', { defaultMessage: 'No photos yet' })}
+          subtitle={t('photos.emptyState.subtitle', { defaultMessage: 'Add progress photos to track changes over time' })}
+          action={
+            <Button onClick={() => setIsAddPhotoOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              <span>{t('photos.addPhoto', { defaultMessage: 'Add photo' })}</span>
+            </Button>
+          }
+        />
+        <AddPhotoSidePanel
+          open={isAddPhotoOpen}
+          onOpenChange={setIsAddPhotoOpen}
+          onSave={handleAddPhoto}
+          clientId={clientId || ''}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full flex flex-col flex-1 min-h-0">
@@ -207,8 +199,8 @@ const ClientPhotosPage = () => {
                     >
                       <div className="flex-shrink-0">
                         <img
-                          src={photo.thumbnailUrl}
-                          alt={`${photo.view} view photo`}
+                          src={photo.url}
+                          alt={`${photo.type} view photo`}
                           className="w-10 h-10 object-cover rounded-md"
                         />
                       </div>
@@ -217,12 +209,12 @@ const ClientPhotosPage = () => {
                           variant="outline"
                           className={cn(
                             'text-xs w-fit',
-                            photo.view === 'front' && 'border-primary text-primary',
-                            photo.view === 'back' && 'border-primary text-primary',
-                            photo.view === 'side' && 'border-primary text-primary'
+                            photo.type === 'front' && 'border-primary text-primary',
+                            photo.type === 'back' && 'border-primary text-primary',
+                            photo.type === 'side' && 'border-primary text-primary'
                           )}
                         >
-                          {getViewLabel(photo.view)}
+                          {getViewLabel(photo.type)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {formatDate(photo.takenAt)}
@@ -249,6 +241,7 @@ const ClientPhotosPage = () => {
                     router.push(`/athletes/${clientId}/photos/compare`);
                   }}
                   className="gap-2 rounded-r-none border-r-0"
+                  disabled={photos.length === 0}
                 >
                   <GitCompare className="size-4" />
                   <span>{t('photos.compare')}</span>
@@ -270,8 +263,8 @@ const ClientPhotosPage = () => {
               <>
                 <div className="flex items-center justify-center h-full w-full">
                   <img
-                    src={selectedPhoto.imageUrl}
-                    alt={`${selectedPhoto.view} view photo`}
+                    src={selectedPhoto.url}
+                    alt={`${selectedPhoto.type} view photo`}
                     className="max-w-full max-h-full w-auto h-auto object-contain rounded-md border"
                   />
                 </div>

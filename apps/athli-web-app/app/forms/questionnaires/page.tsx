@@ -369,7 +369,7 @@ const QuestionnairesPage = () => {
         emptyState={
           <EmptyGridState
             title={t('forms.questionnaires.emptyState.title')}
-            subtitle={t('forms.questionnaires.emptyState.subtitle')}
+            subtitle="Build questionnaires to gather detailed information from your clients about their goals and preferences"
             action={
               <Button onClick={handleOpenAddQuestionnaire} className="gap-2">
                 <Plus className="size-4" />

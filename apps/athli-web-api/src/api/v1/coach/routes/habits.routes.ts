@@ -19,19 +19,17 @@ export const coachHabitRouter = Router();
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   type: object
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
  *                   properties:
- *                     habits:
- *                       type: array
- *                       items:
- *                         $ref: '#/components/schemas/CoachHabit'
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         habits:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/CoachHabit'
  */
 coachHabitRouter.get('/', supabaseAuthenticate, coachHabitsController.getHabits);
 
@@ -53,6 +51,18 @@ coachHabitRouter.get('/', supabaseAuthenticate, coachHabitsController.getHabits)
  *     responses:
  *       201:
  *         description: Coach habit created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         habit:
+ *                           $ref: '#/components/schemas/CoachHabit'
  */
 coachHabitRouter.post('/', supabaseAuthenticate, coachHabitsController.createHabit);
 
@@ -80,6 +90,18 @@ coachHabitRouter.post('/', supabaseAuthenticate, coachHabitsController.createHab
  *     responses:
  *       200:
  *         description: Coach habit updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         habit:
+ *                           $ref: '#/components/schemas/CoachHabit'
  */
 coachHabitRouter.patch('/:id', supabaseAuthenticate, coachHabitsController.updateHabit);
 
@@ -122,5 +144,17 @@ coachHabitRouter.delete('/:id', supabaseAuthenticate, coachHabitsController.dele
  *     responses:
  *       201:
  *         description: Coach habit duplicated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         habit:
+ *                           $ref: '#/components/schemas/CoachHabit'
  */
 coachHabitRouter.post('/:id/duplicate', supabaseAuthenticate, coachHabitsController.duplicateHabit);

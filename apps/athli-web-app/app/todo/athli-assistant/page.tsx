@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { EmptyGridState } from '@/components/app/empty-grid-state';
 import {
   Select,
   SelectContent,
@@ -13,53 +14,19 @@ import {
 } from '@/components/ui/select';
 import { CheckSquare, Tag, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
+import { useCoachTodo } from '@/hooks/use-coach-todo';
+import { AthliAssistantTask } from '@/api/coach/coach-todo-service';
 
-type AthliAssistantTask = {
-  id: string;
-  title: string;
-  type: 'client' | 'general';
-  completed: boolean;
-};
 
-const DUMMY_ATHLI_ASSISTANT_TASKS: AthliAssistantTask[] = [
-  {
-    id: '1',
-    title: 'Update client profile information',
-    type: 'client',
-    completed: false,
-  },
-  {
-    id: '2',
-    title: 'Review training program effectiveness',
-    type: 'general',
-    completed: false,
-  },
-  {
-    id: '3',
-    title: 'Check in with inactive clients',
-    type: 'client',
-    completed: true,
-  },
-  {
-    id: '4',
-    title: 'Update nutrition guidelines',
-    type: 'general',
-    completed: false,
-  },
-];
 
 const AthliAssistantPage = () => {
   const t = useTranslations();
-  const [athliAssistantTasks, setAthliAssistantTasks] = useState<AthliAssistantTask[]>(DUMMY_ATHLI_ASSISTANT_TASKS);
+  const { autoTodos: athliAssistantTasks, completeAutoTodo } = useCoachTodo();
   const [athliFilteredCount, setAthliFilteredCount] = useState(0);
   const [athliTaskTypeFilter, setAthliTaskTypeFilter] = useState<'all' | 'client' | 'general'>('all');
 
-  const handleToggleAthliAssistantComplete = (taskId: string) => {
-    setAthliAssistantTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const handleToggleAthliAssistantComplete = async (taskId: string) => {
+    await completeAutoTodo(taskId);
   };
 
   // Filter Athli Assistant tasks
@@ -173,6 +140,12 @@ const AthliAssistantPage = () => {
         gridPadding={true}
         compactPagination={true}
         emptyMessage={t('home.noTasksFound')}
+        emptyState={
+          <EmptyGridState
+            title={t('home.athliAssistantEmptyStateTitle')}
+            subtitle="Automated tasks and reminders will appear here when there's something that needs your attention"
+          />
+        }
       />
     </div>
   );

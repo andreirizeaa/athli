@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { clientMetricsController } from '../client-metrics.controller';
+import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
 
 export const clientMetricRouter = Router();
 
@@ -7,67 +9,35 @@ export const clientMetricRouter = Router();
  * /api/v1/client/metrics:
  *   get:
  *     summary: Get client metrics
- *     tags: [Client]
+ *     tags: [Client Metrics]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Client metrics retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         assignments:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/ClientMetric'
  */
-clientMetricRouter.get('/', (req, res) => {
-    res.json({ message: 'Client metrics route' });
-});
+clientMetricRouter.get('/', supabaseAuthenticate, clientMetricsController.getMetrics);
 
 /**
  * @swagger
  * /api/v1/client/metrics/{id}:
- *   patch:
- *     summary: Update client metric
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Client metric updated successfully
- */
-clientMetricRouter.patch('/:id', (req, res) => {
-    res.json({ message: 'Client metric updated', id: req.params.id });
-});
-
-/**
- * @swagger
- * /api/v1/client/metrics:
  *   post:
- *     summary: Create client metric
- *     tags: [Client]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       201:
- *         description: Client metric created successfully
- *
- * /api/v1/client/metrics/{id}:
- *   delete:
- *     summary: Delete client metric
- *     tags: [Client]
+ *     summary: Record client metric value
+ *     tags: [Client Metrics]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -76,14 +46,30 @@ clientMetricRouter.patch('/:id', (req, res) => {
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [value]
+ *             properties:
+ *               value:
+ *                 type: string
  *     responses:
  *       200:
- *         description: Client metric deleted successfully
+ *         description: Client metric recorded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         assignment:
+ *                           $ref: '#/components/schemas/ClientMetric'
  */
-clientMetricRouter.post('/', (req, res) => {
-    res.json({ message: 'Client metric created' });
-});
-
-clientMetricRouter.delete('/:id', (req, res) => {
-    res.json({ message: 'Client metric deleted', id: req.params.id });
-});
+clientMetricRouter.post('/:id', supabaseAuthenticate, clientMetricsController.recordMetric);

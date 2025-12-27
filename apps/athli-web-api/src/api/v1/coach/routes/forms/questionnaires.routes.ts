@@ -9,21 +9,67 @@ export const coachQuestionnaireRouter = Router();
  * /api/v1/coach/forms/questionnaires:
  *   get:
  *     summary: Get coach questionnaires
- *     tags: [Coach]
+ *     tags: [Coach Forms]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Coach questionnaires retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         questionnaires:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/CoachQuestionnaire'
  */
 coachQuestionnaireRouter.get('/', supabaseAuthenticate, coachQuestionnairesController.getQuestionnaires);
 
 /**
  * @swagger
  * /api/v1/coach/forms/questionnaires/{id}:
+ *   get:
+ *     summary: Get coach questionnaire by ID
+ *     tags: [Coach Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Coach questionnaire retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         questionnaire:
+ *                           $ref: '#/components/schemas/CoachQuestionnaire'
+ */
+coachQuestionnaireRouter.get('/:id', supabaseAuthenticate, coachQuestionnairesController.getQuestionnaireById);
+
+/**
+ * @swagger
+ * /api/v1/coach/forms/questionnaires/{id}:
  *   patch:
  *     summary: Update coach questionnaire
- *     tags: [Coach]
+ *     tags: [Coach Forms]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -37,10 +83,22 @@ coachQuestionnaireRouter.get('/', supabaseAuthenticate, coachQuestionnairesContr
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             $ref: '#/components/schemas/UpdateCoachQuestionnaireInput'
  *     responses:
  *       200:
  *         description: Coach questionnaire updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         questionnaire:
+ *                           $ref: '#/components/schemas/CoachQuestionnaire'
  */
 coachQuestionnaireRouter.patch('/:id', supabaseAuthenticate, coachQuestionnairesController.updateQuestionnaire);
 
@@ -49,7 +107,7 @@ coachQuestionnaireRouter.patch('/:id', supabaseAuthenticate, coachQuestionnaires
  * /api/v1/coach/forms/questionnaires:
  *   post:
  *     summary: Create coach questionnaire
- *     tags: [Coach]
+ *     tags: [Coach Forms]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -57,15 +115,27 @@ coachQuestionnaireRouter.patch('/:id', supabaseAuthenticate, coachQuestionnaires
  *       content:
  *         application/json:
  *           schema:
- *             type: object
+ *             $ref: '#/components/schemas/CreateCoachQuestionnaireInput'
  *     responses:
  *       201:
  *         description: Coach questionnaire created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         questionnaire:
+ *                           $ref: '#/components/schemas/CoachQuestionnaire'
  *
  * /api/v1/coach/forms/questionnaires/{id}:
  *   delete:
  *     summary: Delete coach questionnaire
- *     tags: [Coach]
+ *     tags: [Coach Forms]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -78,8 +148,38 @@ coachQuestionnaireRouter.patch('/:id', supabaseAuthenticate, coachQuestionnaires
  *       200:
  *         description: Coach questionnaire deleted successfully
  */
-coachQuestionnaireRouter.get('/:id', supabaseAuthenticate, coachQuestionnairesController.getQuestionnaireById);
-
 coachQuestionnaireRouter.post('/', supabaseAuthenticate, coachQuestionnairesController.createQuestionnaire);
 
 coachQuestionnaireRouter.delete('/:id', supabaseAuthenticate, coachQuestionnairesController.deleteQuestionnaire);
+
+/**
+ * @swagger
+ * /api/v1/coach/forms/questionnaires/{id}/duplicate:
+ *   post:
+ *     summary: Duplicate coach questionnaire
+ *     tags: [Coach Forms]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Coach questionnaire duplicated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         questionnaire:
+ *                           $ref: '#/components/schemas/CoachQuestionnaire'
+ */
+coachQuestionnaireRouter.post('/:id/duplicate', supabaseAuthenticate, coachQuestionnairesController.duplicateQuestionnaire);

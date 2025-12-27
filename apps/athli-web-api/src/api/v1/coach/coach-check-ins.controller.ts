@@ -175,4 +175,80 @@ export const coachCheckInsController = {
             message: 'Coach check-in deleted successfully',
         });
     },
+
+    /**
+     * Get all check-ins awaiting review for a coach
+     */
+    getCheckInReviews: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+        const { data: reviews, error } = await supabase
+            .from('coach_checkins_review_view')
+            .select('*')
+            .eq('coach_id', userId)
+            .order('submission_date', { ascending: false });
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        success(res, {
+            message: 'Coach check-in reviews retrieved successfully',
+            data: { reviews },
+        });
+    },
+
+    /**
+     * Duplicate an existing coach check-in
+     */
+    duplicateCheckIn: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Fetch original check-in
+        const { data: original, error: fetchError } = await supabase
+            .from('coach_checkins')
+            .select('*')
+            .eq('id', id)
+            .eq('coach_id', userId)
+            .single();
+
+        if (fetchError || !original) {
+            return res.status(404).json({ success: false, message: 'Check-in not found' });
+        }
+
+        // 2. Insert as new check-in
+        const { id: _, created_at: __, updated_at: ___, ...rest } = original;
+        const { data: duplicated, error: insertError } = await supabase
+            .from('coach_checkins')
+            .insert({
+                ...rest,
+                name: `${original.name} (Copy)`,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+        if (insertError) {
+            return res.status(500).json({ success: false, message: insertError.message });
+        }
+
+        created(res, {
+            message: 'Coach check-in duplicated successfully',
+            data: { checkIn: duplicated },
+        });
+    },
 };

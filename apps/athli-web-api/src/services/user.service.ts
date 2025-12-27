@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './supabase.service';
+import { avatarService } from './avatar.service';
 
 interface UpdateProfileInput {
   name?: string;
@@ -158,7 +159,7 @@ class UserService {
    * Ensure client profile exists for a user
    * Creates a client profile if it doesn't exist, otherwise returns existing profile
    */
-  async ensureClientProfile(userId: string, coachId: string): Promise<UserProfile> {
+  async ensureClientProfile(userId: string, coachId: string, invitationToken?: string): Promise<UserProfile> {
     const supabase = getSupabaseClient();
 
     // Get user from auth
@@ -202,6 +203,16 @@ class UserService {
     const profilePictureUrl = authUser.user.user_metadata?.avatar_url ||
       authUser.user.user_metadata?.picture || null;
 
+    // Generate default avatar if not present and using email
+    let finalProfilePictureUrl = profilePictureUrl;
+    if (!finalProfilePictureUrl && signinMethod === 'email') {
+      try {
+        finalProfilePictureUrl = await avatarService.generateDefaultAvatar(userId, userName);
+      } catch (avatarErr) {
+        console.error('Failed to generate default avatar during profile creation:', avatarErr);
+      }
+    }
+
     const { data: newProfile, error: insertError } = await supabase
       .from('user_profiles')
       .insert({
@@ -209,7 +220,7 @@ class UserService {
         user_type: 'client',
         email: userEmail,
         name: userName,
-        profile_picture_url: profilePictureUrl,
+        profile_picture_url: finalProfilePictureUrl,
         signin_method: signinMethod,
         is_active: true,
       })
@@ -251,6 +262,66 @@ class UserService {
       },
     });
 
+    // Handle invitation token if provided
+    let invitationProcessed = false;
+    if (invitationToken) {
+      const { data: assignment } = await supabase
+        .from('coach_client_assignments')
+        .select('*')
+        .eq('invitation_token', invitationToken)
+        .maybeSingle();
+
+      if (assignment) {
+        invitationProcessed = true;
+        if (assignment.client_id !== userId) {
+          const stubClientId = assignment.client_id;
+
+          // 1. Update assignment to new user
+          await supabase
+            .from('coach_client_assignments')
+            .update({
+              client_id: userId,
+              status: 'connected',
+              connected_at: new Date().toISOString(),
+              invitation_token: null // Clear token after use
+            })
+            .eq('invitation_token', invitationToken);
+
+          // 2. Transfer other assignments
+          const assignmentTables = [
+            'client_metric_assignments',
+            'client_habit_assignments',
+            'client_file_assignments',
+            'client_checkin_assignments',
+            'client_questionnaire_assignments'
+          ];
+
+          for (const table of assignmentTables) {
+            await supabase
+              .from(table)
+              .update({ client_id: userId })
+              .eq('client_id', stubClientId);
+          }
+
+          // 3. Cleanup stub user
+          await supabase.auth.admin.deleteUser(stubClientId);
+        }
+      }
+    }
+
+    if (!invitationProcessed) {
+      // If no token or token not found (could be a general coach code), 
+      // just ensure the assignment exists
+      await supabase
+        .from('coach_client_assignments')
+        .upsert({
+          coach_id: coachId,
+          client_id: userId,
+          status: 'connected',
+          connected_at: new Date().toISOString()
+        }, { onConflict: 'coach_id, client_id' });
+    }
+
     return {
       id: authUser.user.id,
       email: newProfile.email,
@@ -284,8 +355,8 @@ class UserService {
   /**
    * Alias for ensureClientProfile to keep controller logic clean
    */
-  async handleNewClient(userId: string, coachId: string) {
-    const profile = await this.ensureClientProfile(userId, coachId);
+  async handleNewClient(userId: string, coachId: string, invitationToken?: string) {
+    const profile = await this.ensureClientProfile(userId, coachId, invitationToken);
     return {
       profile,
       isNew: true, // simplified for now

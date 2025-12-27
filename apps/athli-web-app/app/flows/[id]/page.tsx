@@ -16,26 +16,11 @@ import {
 import { ChevronRight, Pencil } from 'lucide-react';
 import { FlowEditor } from '@/components/flows/flow-editor';
 import { EditFlowSidePanel } from '@/components/flows/edit-flow-side-panel';
-import { updateFlowDetails } from '@/api/coach/coach-flow-service';
+import { getFlowById, updateFlowDetails, type Flow } from '@/api/coach/coach-flow-service';
 import type { Node, Edge } from 'reactflow';
+import { useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
-// Mock flow data - in production this would come from an API
-const mockFlows = [
-  {
-    id: 'flow-1',
-    name: 'New Client Onboarding',
-    description: 'Comprehensive onboarding flow for new clients',
-    stepCount: 5,
-    createdAt: Date.now() - 86400000 * 7,
-  },
-  {
-    id: 'flow-2',
-    name: 'Athlete Welcome',
-    description: 'Welcome and introduction flow for new athletes',
-    stepCount: 3,
-    createdAt: Date.now() - 86400000 * 3,
-  },
-];
 
 // Empty initial nodes and edges
 const initialNodes: Node[] = [];
@@ -47,9 +32,26 @@ const FlowDetailPage = () => {
   const router = useRouter();
   const flowId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  const [flow, setFlow] = useState(mockFlows.find((f) => f.id === flowId));
+  const [flow, setFlow] = useState<Flow | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isEditFlowOpen, setIsEditFlowOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchFlow = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getFlowById(flowId);
+        setFlow(data);
+      } catch (error) {
+        console.error('Failed to fetch flow:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFlow();
+  }, [flowId]);
 
   const handleBreadcrumbClick = (path: string) => {
     router.push(path);
@@ -73,6 +75,19 @@ const FlowDetailPage = () => {
     // Update local state
     setFlow(prev => prev ? { ...prev, name: data.name, description: data.description || '' } : prev);
   };
+
+  const handleSaveFlow = (nodes: Node[], edges: Edge[]) => {
+    // This is called when the manual save button in FlowEditor is clicked
+    // Or we can just use the internal save of FlowEditor
+  };
+
+  if (isLoading) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!flow) {
     return (
@@ -113,17 +128,22 @@ const FlowDetailPage = () => {
             </Breadcrumb>
             <h1 className="text-[22px] font-semibold">{flow.name}</h1>
           </div>
-          <Button variant="outline" className="gap-2" onClick={() => setIsEditFlowOpen(true)}>
-            <Pencil className="size-4" />
-            <span>Edit</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setIsEditFlowOpen(true)}>
+              <Pencil className="size-4" />
+              <span>Edit flow details</span>
+            </Button>
+          </div>
         </div>
         <Separator />
       </div>
 
       {/* Flow Editor */}
       <FlowEditor
-        flowId={flowId}
+        flow={flow}
+        onFlowChange={(nodes, edges) => {
+          // Manual save will be handled inside FlowEditor or via a header button
+        }}
       />
 
       {/* Edit Flow Side Panel */}
@@ -131,8 +151,8 @@ const FlowDetailPage = () => {
         open={isEditFlowOpen}
         onOpenChange={setIsEditFlowOpen}
         flowId={flowId}
-        initialName={flow.name}
-        initialDescription={flow.description}
+        initialName={flow.name || ''}
+        initialDescription={flow.description || ''}
         onSave={handleEditFlow}
       />
     </div>

@@ -19,15 +19,17 @@ import { toast } from 'sonner';
 import { ChevronRight, MessageCircle, Users, Send, Copy, Check } from 'lucide-react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { mockAthletes } from '@/components/app/app-shell';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { useGlobalData } from '@/providers/global-data-provider';
+import { ClientProfileProvider, useClientProfileContext } from './client-profile-context';
+import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
+import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 
 type ClientProfileLayoutProps = {
   children: React.ReactNode;
 };
 
-const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
+const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
@@ -38,7 +40,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
   const [isInviteCopied, setIsInviteCopied] = useState<boolean>(false);
   const inviteCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const athlete = mockAthletes.find((item) => item.id === clientId);
+  const { athlete, isLoading, error } = useClientProfileContext();
 
   useEffect(() => {
     return () => {
@@ -143,16 +145,22 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
     router.push(`/messaging/${athleteId}`);
   };
 
-  const handleResendInvite = () => {
-    // TODO: Implement resend invite functionality
-    console.log('Resending invite to:', clientId);
-    toast.success(t('athletes.profile.resendInvite'), {
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
+  const handleResendInvite = async () => {
+    if (!clientId) return;
+
+    try {
+      const { email } = await resendClientInvite(clientId);
+      toast.success(t('athletes.profile.resendInviteSuccess', { email }), {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
+    } catch (error) {
+      console.error('Failed to resend invite:', error);
+      toast.error('Failed to resend invitation. Please try again.');
+    }
   };
 
   const handleCopyInvite = async () => {
@@ -209,7 +217,10 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
     }
   };
 
-  if (!athlete) {
+  if (error || !athlete) {
+    if (isLoading) {
+      return <FullScreenLoader />;
+    }
     return (
       <div className="h-full w-full flex flex-col">
         <div className="w-full relative">
@@ -227,7 +238,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
         <div className="w-full flex-1 overflow-auto px-4 py-4 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">{t('athletes.profile.clientNotFoundDescription')}</p>
+          <p className="text-sm text-muted-foreground">{error || t('athletes.profile.clientNotFoundDescription')}</p>
         </div>
       </div>
     );
@@ -268,7 +279,7 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
           <div className="flex items-center">
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={athlete.avatar} alt={athlete.name} />
+                <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
               <h1 className="text-[22px] font-semibold">{athlete.name}</h1>
@@ -337,8 +348,17 @@ const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 min-h-0 bg-background">{children}</div>
+      <div className="w-full flex-1 min-h-0 bg-background bg-card/50">{children}</div>
+      {isLoading && <FullScreenLoader />}
     </div>
+  );
+};
+
+const ClientProfileLayout = ({ children }: ClientProfileLayoutProps) => {
+  return (
+    <ClientProfileProvider>
+      <ClientProfileLayoutContent>{children}</ClientProfileLayoutContent>
+    </ClientProfileProvider>
   );
 };
 

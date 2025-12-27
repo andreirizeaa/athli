@@ -370,7 +370,7 @@ const FilesPage = () => {
         emptyState={
           <EmptyGridState
             title={t('files.emptyState.title')}
-            subtitle={t('files.emptyState.subtitle')}
+            subtitle="Upload and organize files to share with your clients - training plans, nutrition guides, and resources"
             action={
               <Button onClick={handleOpenAddFile} className="gap-2">
                 <Plus className="size-4" />

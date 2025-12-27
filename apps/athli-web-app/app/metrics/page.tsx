@@ -329,7 +329,7 @@ const MetricsPage = () => {
         emptyState={
           <EmptyGridState
             title={t('metrics.emptyState.title')}
-            subtitle={t('metrics.emptyState.subtitle')}
+            subtitle="Define custom metrics to track and measure your clients' performance and progress"
             action={
               <Button onClick={handleOpenAddMetric} className="gap-2">
                 <Plus className="size-4" />
