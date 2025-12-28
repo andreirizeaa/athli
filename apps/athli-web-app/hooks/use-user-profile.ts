@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
-import { getUserProfile, updateUserProfile, uploadProfilePicture, getUserProfileSafe } from '@/api/user/user-service';
+import { getUserProfile, updateUserProfile, getUserProfileSafe } from '@/api/user/user-service';
 
 export interface UpdateProfileInput {
   name?: string;
   profilePictureUrl?: string | null;
+  avatarFile?: File | null;
 }
 
 export function useUserProfile() {
@@ -45,16 +46,17 @@ export function useUserProfile() {
     },
   });
 
-  // Mutation for uploading profile picture
+  // Mutation for uploading profile picture (now handled via updateUserProfile)
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!authUser) throw new Error('No user');
-      const publicUrl = await uploadProfilePicture(file, authUser.id);
-      return publicUrl;
+      const result = await updateUserProfile({ avatarFile: file });
+      await refreshUser();
+      return result.profilePictureUrl || '';
     },
     onSuccess: (publicUrl) => {
-      // Chain the update profile mutation
-      updateProfileMutation.mutate({ profilePictureUrl: publicUrl });
+      // Update query cache with new data
+      queryClient.invalidateQueries({ queryKey: ['user-profile', authUser?.id] });
     },
   });
 

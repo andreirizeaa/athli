@@ -75,8 +75,14 @@ class UserService {
   /**
    * Update user profile
    */
-  async updateUserProfile(userId: string, updates: UpdateProfileInput): Promise<UserProfile> {
+  async updateUserProfile(userId: string, updates: UpdateProfileInput, file?: Express.Multer.File): Promise<UserProfile> {
     const supabase = getSupabaseClient();
+
+    // Handle file upload if present
+    if (file) {
+      const avatarUrl = await avatarService.uploadAvatar(userId, file as any);
+      updates.profilePictureUrl = avatarUrl;
+    }
 
     // Update auth.users metadata if name is being updated
     if (updates.name !== undefined || updates.profilePictureUrl !== undefined) {

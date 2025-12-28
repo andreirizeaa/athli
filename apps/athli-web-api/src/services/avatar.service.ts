@@ -49,6 +49,34 @@ class AvatarService {
 
         return data.publicUrl;
     }
+
+    /**
+     * Upload a profile picture to Supabase storage
+     */
+    async uploadAvatar(userId: string, file: { buffer: Buffer, mimetype: string, originalname: string }): Promise<string> {
+        const supabase = getSupabaseClient();
+        const fileExt = file.originalname.split('.').pop();
+        const fileName = `avatar-${Date.now()}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('profile-pictures')
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: true
+            });
+
+        if (uploadError) {
+            console.error('Failed to upload avatar:', uploadError);
+            throw uploadError;
+        }
+
+        const { data } = supabase.storage
+            .from('profile-pictures')
+            .getPublicUrl(filePath);
+
+        return data.publicUrl;
+    }
 }
 
 export const avatarService = new AvatarService();

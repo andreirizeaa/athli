@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { supabaseAuthenticate } from '../../../../middlewares/supabase-auth';
 import { coachClientController } from '../coach-clients.controller';
+import { clientDetailsController } from '../client-details.controller';
 import multer from 'multer';
 
 const upload = multer({
@@ -73,7 +74,7 @@ coachClientRouter.post('/resend-invite', supabaseAuthenticate, coachClientContro
  *     summary: Remove client from coach
  *     tags: [Coach Clients]
  */
-coachClientRouter.get('/:id', supabaseAuthenticate, coachClientController.getClient);
+coachClientRouter.get('/detail', supabaseAuthenticate, coachClientController.getClient);
 coachClientRouter.delete('/', supabaseAuthenticate, coachClientController.deleteClient);
 
 /**
@@ -83,4 +84,14 @@ coachClientRouter.delete('/', supabaseAuthenticate, coachClientController.delete
  *     summary: Update client status/details
  *     tags: [Coach Clients]
  */
-coachClientRouter.patch('/', supabaseAuthenticate, coachClientController.updateClient);
+coachClientRouter.patch('/', supabaseAuthenticate, upload.single('avatar'), coachClientController.updateClient);
+
+/**
+ * Bio, Goals, Injuries routes
+ */
+coachClientRouter.get('/bio', supabaseAuthenticate, clientDetailsController.getBio);
+coachClientRouter.patch('/bio', supabaseAuthenticate, clientDetailsController.updateBio);
+coachClientRouter.get('/goals', supabaseAuthenticate, clientDetailsController.getGoals);
+coachClientRouter.patch('/goals', supabaseAuthenticate, clientDetailsController.updateGoals);
+coachClientRouter.get('/injuries', supabaseAuthenticate, clientDetailsController.getInjuries);
+coachClientRouter.patch('/injuries', supabaseAuthenticate, clientDetailsController.updateInjuries);

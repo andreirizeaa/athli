@@ -1,8 +1,16 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { userController } from './user.controller';
 import { validate } from '../../../middlewares/validate';
 import { supabaseAuthenticate } from '../../../middlewares/supabase-auth';
 import { updateProfileSchema, ensureClientProfileSchema, newClientSchema } from './user.schemas';
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit
+    },
+});
 
 export const userRouter = Router();
 
@@ -43,7 +51,7 @@ userRouter.get('/me', supabaseAuthenticate, userController.getProfile);
  *       200:
  *         description: Profile updated successfully
  */
-userRouter.patch('/me', supabaseAuthenticate, validate(updateProfileSchema), userController.updateProfile);
+userRouter.patch('/me', supabaseAuthenticate, upload.single('avatar'), validate(updateProfileSchema), userController.updateProfile);
 
 /**
  * @swagger

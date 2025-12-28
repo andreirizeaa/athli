@@ -1,187 +1,98 @@
 import { apiFetch } from '../api-client';
 
 export interface AthleteDetails {
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  age: number | null;
-  weight: number | null; // in kg
-  height: number | null; // in cm
+  birthDate: string | null;
   category: 'online' | 'in-person' | 'hybrid';
   gender: 'male' | 'female' | 'prefer-not-to-say' | null;
   phone: string;
   country: string;
-  avatar?: string;
+  avatarUrl?: string | null;
+  avatarFile?: File | null;
+}
+
+export interface AthleteGoal {
+  id: string;
+  goal: string;
+  target_date: string | null;
+  achieved: boolean;
+}
+
+export interface AthleteInjury {
+  id: string;
+  injury: string;
+  date: string | null;
 }
 
 /**
-/**
- * Dummy athlete service method to get athlete bio
- * This will be connected to the backend in the future
+ * Service method to get athlete bio
  */
 export const getAthleteBio = async (athleteId: string): Promise<string> => {
-  // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
-  console.log('Getting athlete bio:', {
-    athleteId,
+  const response = await apiFetch('/clients/bio', {
+    headers: { 'x-client-id': athleteId },
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // Mock data for John Smith (id: '1')
-  if (athleteId === '1') {
-    return 'John is a dedicated athlete with 5 years of training experience. He focuses on strength training and has shown excellent progress in his squat and deadlift. He trains 4-5 times per week and is committed to achieving his fitness goals.';
-  }
-
-  // Return empty string for other clients
-  return '';
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/bio`, {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get athlete bio')
-  // const data = await response.json()
-  // return data.bio || ''
+  return response.data.bio || '';
 };
 
 /**
- * Dummy athlete service method to save athlete bio
- * This will be connected to the backend in the future
+ * Service method to save athlete bio
  */
 export const saveAthleteBio = async (athleteId: string, bio: string): Promise<void> => {
-  // TODO: Connect to backend API
-  // This is a placeholder that logs the data for now
-
-  console.log('Saving athlete bio:', {
-    athleteId,
-    bio,
+  await apiFetch('/clients/bio', {
+    method: 'PATCH',
+    headers: { 'x-client-id': athleteId },
+    body: JSON.stringify({ bio }),
   });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/bio`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ bio }),
-  // })
-  // if (!response.ok) throw new Error('Failed to save athlete bio')
-  // return await response.json()
 };
 
 /**
- * Dummy athlete service method to get athlete goals
- * This will be connected to the backend in the future
+ * Service method to get athlete goals
  */
-export const getAthleteGoals = async (athleteId: string): Promise<string[]> => {
-  console.log('Getting athlete goals:', {
-    athleteId,
+export const getAthleteGoals = async (athleteId: string): Promise<AthleteGoal[]> => {
+  const response = await apiFetch('/clients/goals', {
+    headers: { 'x-client-id': athleteId },
   });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  if (athleteId === '1') {
-    return [
-      'Increase squat max by 20kg within 3 months',
-      'Improve cardiovascular endurance for upcoming competition',
-      'Maintain consistent training schedule of 4-5 sessions per week',
-    ];
-  }
-
-  return [];
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/goals`, {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get athlete goals')
-  // const data = await response.json()
-  // return data.goals || []
+  return response.data.goals || [];
 };
 
 /**
- * Dummy athlete service method to save athlete goals
- * This will be connected to the backend in the future
+ * Service method to save athlete goals
  */
-export const saveAthleteGoals = async (athleteId: string, goals: string[]): Promise<void> => {
-  console.log('Saving athlete goals:', {
-    athleteId,
-    goals,
+export const saveAthleteGoals = async (athleteId: string, goals: Partial<AthleteGoal>[]): Promise<void> => {
+  await apiFetch('/clients/goals', {
+    method: 'PATCH',
+    headers: { 'x-client-id': athleteId },
+    body: JSON.stringify({ goals }),
   });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/goals`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ goals }),
-  // })
-  // if (!response.ok) throw new Error('Failed to save athlete goals')
-  // return await response.json()
 };
 
 /**
- * Dummy athlete service method to get athlete injuries
- * This will be connected to the backend in the future
+ * Service method to get athlete injuries
  */
-export const getAthleteInjuries = async (athleteId: string): Promise<string[]> => {
-  console.log('Getting athlete injuries:', {
-    athleteId,
+export const getAthleteInjuries = async (athleteId: string): Promise<AthleteInjury[]> => {
+  const response = await apiFetch('/clients/injuries', {
+    headers: { 'x-client-id': athleteId },
   });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  if (athleteId === '1') {
-    return [
-      'Previous left shoulder discomfort during overhead movements',
-      'Currently monitoring and adjusting training load accordingly',
-    ];
-  }
-
-  return [];
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/injuries`, {
-  //   method: 'GET',
-  //   headers: { 'Content-Type': 'application/json' },
-  // })
-  // if (!response.ok) throw new Error('Failed to get athlete injuries')
-  // const data = await response.json()
-  // return data.injuries || []
+  return response.data.injuries || [];
 };
 
 /**
- * Dummy athlete service method to save athlete injuries
- * This will be connected to the backend in the future
+ * Service method to save athlete injuries
  */
-export const saveAthleteInjuries = async (athleteId: string, injuries: string[]): Promise<void> => {
-  console.log('Saving athlete injuries:', {
-    athleteId,
-    injuries,
+export const saveAthleteInjuries = async (athleteId: string, injuries: Partial<AthleteInjury>[]): Promise<void> => {
+  await apiFetch('/clients/injuries', {
+    method: 'PATCH',
+    headers: { 'x-client-id': athleteId },
+    body: JSON.stringify({ injuries }),
   });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/athletes/${athleteId}/injuries`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({ injuries }),
-  // })
-  // if (!response.ok) throw new Error('Failed to save athlete injuries')
-  // return await response.json()
 };
 
 export const getAthleteDetails = async (athleteId?: string): Promise<AthleteDetails> => {
-  // We ignore athleteId for now and fetch the authenticated client's profile
-  const response = await apiFetch('/client');
+  // Use x-client-id header if athleteId is provided (coach viewing client)
+  // Otherwise fetch authenticated user's profile (client viewing own profile)
+  const headers: Record<string, string> = athleteId ? { 'x-client-id': athleteId } : {};
+  const response = await apiFetch('/client', { headers });
   const profile = response.data.profile;
 
   if (!profile) {
@@ -190,49 +101,69 @@ export const getAthleteDetails = async (athleteId?: string): Promise<AthleteDeta
 
   // The backend client-profile controller returns a merged profile structure
   return {
-    firstName: profile.name?.split(' ')[0] || '',
-    lastName: profile.name?.split(' ').slice(1).join(' ') || '',
+    name: profile.name || '',
     email: profile.email || '',
-    age: profile.date_of_birth ? new Date().getFullYear() - new Date(profile.date_of_birth).getFullYear() : null,
-    weight: profile.weight_kg || null,
-    height: profile.height_cm || null,
+    birthDate: profile.date_of_birth || null,
     category: profile.category || 'online',
     gender: profile.gender || null,
     phone: profile.phone || '',
     country: profile.country || '',
-    avatar: profile.profile_picture_url || null,
+    avatarUrl: profile.profile_picture_url || null,
   };
 };
 
 /**
- * Dummy athlete service method to save athlete details
- * This will be connected to the backend in the future
- */
-/**
  * Service method to save athlete details
  */
 export const saveAthleteDetails = async (athleteId: string, details: AthleteDetails): Promise<void> => {
-  // Map AthleteDetails back to DB structure
-  // We'll update client_profiles mainly.
+  // Use x-client-id header if athleteId is provided (coach updating client)
+  // Otherwise update authenticated user's profile (client updating own profile)
+  const headers: Record<string, string> = athleteId ? { 'x-client-id': athleteId } : {};
 
-  const updatePayload = {
-    first_name: details.firstName,
-    last_name: details.lastName,
+  // Map AthleteDetails back to DB structure
+  const updatePayload: any = {
+    name: details.name,
     phone: details.phone,
     gender: details.gender,
     country: details.country,
-    weight: details.weight,
-    height: details.height,
-    // age to birth_date is tricky if we don't have birth_date. 
-    // Ideally we should input birth_date. For now, we might skip age update if it's just a number, 
-    // or calculate a birth year.
-    // Let's assume we pass `metadata: { category: ... }` for category.
+    birth_date: details.birthDate,
   };
+
+  if (details.avatarUrl) {
+    updatePayload.profile_picture_url = details.avatarUrl;
+  }
+
+  let body: any = JSON.stringify(updatePayload);
+
+  if (details.avatarFile) {
+    const formData = new FormData();
+    // Add file as 'avatar'
+    formData.append('avatar', details.avatarFile);
+    // Add other fields
+    Object.keys(updatePayload).forEach(key => {
+      if (updatePayload[key] !== undefined && updatePayload[key] !== null) {
+        formData.append(key, updatePayload[key]);
+      }
+    });
+    // Add ID to body for coach-client controller if needed (it uses req.body.id)
+    if (athleteId) {
+      formData.append('id', athleteId);
+    }
+    body = formData;
+  } else {
+    // If no file, but we have athleteId, we need to include it in the JSON body
+    // because the backend coach-clients.controller.ts expects 'id' in req.body
+    if (athleteId) {
+      updatePayload.id = athleteId;
+      body = JSON.stringify(updatePayload);
+    }
+  }
 
   // call /client instead of /clients/:id
   await apiFetch(`/client`, {
     method: 'PATCH',
-    body: JSON.stringify(updatePayload),
+    headers,
+    body,
   });
 };
 export interface TrainingCalendarSchema {

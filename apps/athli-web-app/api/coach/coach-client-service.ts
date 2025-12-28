@@ -25,7 +25,8 @@ export interface Athlete {
   createdAt: number; // timestamp in milliseconds
   phone: string;
   country: string;
-  age: number;
+  birthDate: string | null;
+  age: number | null;
   lastActivity: string;
   last7DaysTraining: string;
   last30DaysTraining: string;
@@ -33,6 +34,18 @@ export interface Athlete {
   connected: boolean | 'invitation-sent';
   invitationToken?: string;
 }
+
+const calculateAge = (dateOfBirth: string | null): number | null => {
+  if (!dateOfBirth) return null;
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 /**
  * Service method to get all clients for a coach
@@ -61,7 +74,8 @@ export const getClients = async (): Promise<Athlete[]> => {
       lastActivity: '',
       last7DaysTraining: '0/0',
       last30DaysTraining: '0/0',
-      age: 0,
+      birthDate: client.date_of_birth || null,
+      age: calculateAge(client.date_of_birth),
       clientFor: clientForDays.toString(),
       connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
@@ -74,7 +88,9 @@ export const getClients = async (): Promise<Athlete[]> => {
  */
 // getClient now uses the client profile endpoint with clientId param
 export const getClient = async (id: string): Promise<Athlete> => {
-  const response = await apiFetch<{ data: { client: any } }>(`/clients/${id}`);
+  const response = await apiFetch<{ data: { client: any } }>(`/clients/detail`, {
+    headers: { 'x-client-id': id }
+  });
   const client = response.data.client;
 
   const names = client.full_name?.split(' ') || ['', ''];
@@ -97,7 +113,8 @@ export const getClient = async (id: string): Promise<Athlete> => {
     lastActivity: '',
     last7DaysTraining: '0/0',
     last30DaysTraining: '0/0',
-    age: 0,
+    birthDate: client.date_of_birth || null,
+    age: calculateAge(client.date_of_birth),
     clientFor: clientForDays.toString(),
     connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
   };
@@ -225,7 +242,8 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     lastActivity: '',
     last7DaysTraining: '0/0',
     last30DaysTraining: '0/0',
-    age: 0,
+    birthDate: client.date_of_birth || null,
+    age: calculateAge(client.date_of_birth),
     clientFor: clientForDays.toString(),
     connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
     invitationToken: client.invitation_token,
@@ -270,7 +288,8 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
       lastActivity: '',
       last7DaysTraining: '0/0',
       last30DaysTraining: '0/0',
-      age: 0,
+      birthDate: client.date_of_birth || null,
+      age: calculateAge(client.date_of_birth),
       clientFor: clientForDays.toString(),
       connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
@@ -317,7 +336,8 @@ export const getArchivedClients = async (): Promise<Athlete[]> => {
       lastActivity: '',
       last7DaysTraining: '0/0',
       last30DaysTraining: '0/0',
-      age: 0,
+      birthDate: client.date_of_birth || null,
+      age: calculateAge(client.date_of_birth),
       clientFor: clientForDays.toString(),
       connected: false,
     };

@@ -18,6 +18,7 @@ export interface UserProfile {
 export interface UpdateProfileInput {
     name?: string;
     profilePictureUrl?: string | null;
+    avatarFile?: File | null;
 }
 
 /**
@@ -59,49 +60,23 @@ export async function getUserProfileSafe(authUser: User): Promise<UserProfile> {
  * Update user profile via backend API
  */
 export async function updateUserProfile(updates: UpdateProfileInput): Promise<UserProfile> {
+    let body: any = JSON.stringify(updates);
+
+    if (updates.avatarFile) {
+        const formData = new FormData();
+        formData.append('avatar', updates.avatarFile);
+        if (updates.name) formData.append('name', updates.name);
+        if (updates.profilePictureUrl) formData.append('profilePictureUrl', updates.profilePictureUrl);
+        body = formData;
+    }
+
     const data = await apiFetch('/user/me', {
         method: 'PATCH',
-        body: JSON.stringify(updates),
+        body,
     });
     return data.data.user;
 }
 
-/**
- * Upload profile picture to Supabase Storage
- */
-export async function uploadProfilePicture(file: File, userId: string): Promise<string> {
-    const supabase = createClient();
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-        throw new Error('File must be an image');
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        throw new Error('Image size must be less than 5MB');
-    }
-
-    // Upload to Supabase Storage
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const filePath = `${userId}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-        .from('profile-pictures')
-        .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-        throw new Error(uploadError.message);
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-        .from('profile-pictures')
-        .getPublicUrl(filePath);
-
-    return publicUrl;
-}
 
 /**
  * Ensure client profile exists for current user

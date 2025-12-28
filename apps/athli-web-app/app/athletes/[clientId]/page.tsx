@@ -1,13 +1,5 @@
 import { redirect } from 'next/navigation';
 
-type ClientPageProps = {
-  params: {
-    clientId: string;
-  };
-};
-
-const ClientPage = ({ params }: ClientPageProps) => {
+export default function ClientPage({ params }: { params: { clientId: string } }) {
   redirect(`/athletes/${params.clientId}/overview`);
-};
-
-export default ClientPage;
+}
