@@ -304,7 +304,7 @@ const ClientQuestionnairesPage = () => {
                 className="gap-2"
               >
                 <X className="size-4" />
-                <span>Clear {selectedQuestionnaires.size} selected</span>
+                <span>{t('general.clearSelected', { count: selectedQuestionnaires.size })}</span>
               </Button>
               <Button
                 variant="ghost"

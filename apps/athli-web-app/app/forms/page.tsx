@@ -1,16 +1,5 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
-const FormsPage = () => {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/forms/check-ins');
-  }, [router]);
-
-  return null;
-};
-
-export default FormsPage;
+export default function FormsPage() {
+  redirect('/forms/check-ins');
+}

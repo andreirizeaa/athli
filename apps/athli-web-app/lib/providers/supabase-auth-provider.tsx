@@ -4,19 +4,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/supabase/client';
 import type { User } from '@supabase/supabase-js';
-
-interface UserProfile {
-  id: string;
-  id: string;
-  userType: 'coach' | 'client';
-  email: string;
-  name: string;
-  profilePictureUrl?: string | null;
-  signinMethod: 'email' | 'google';
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { UserProfile, getUserProfileSafe } from '@/api/user/user-service';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -36,21 +25,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSupabaseUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id, session.user);
-      } else {
-        setIsLoading(false);
-      }
+      setIsAuthLoading(false);
     });
 
     // Listen for auth changes
@@ -58,45 +43,30 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSupabaseUser(session?.user ?? null);
+      setIsAuthLoading(false);
+
+      // Invalidate profile query on auth state change
       if (session?.user) {
-        fetchUserProfile(session.user.id, session.user);
+        queryClient.invalidateQueries({ queryKey: ['user-profile', session.user.id] });
       } else {
-        setUser(null);
-        setIsLoading(false);
+        queryClient.removeQueries({ queryKey: ['user-profile'] });
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [queryClient]);
 
-  const fetchUserProfile = async (userId: string, authUser?: User) => {
-    // Try to get profile from API to ensure we have publicId
-    try {
-      const { getUserProfile } = await import('@/api/user/user-service');
-      const profile = await getUserProfile();
-      setUser(profile);
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-      // Fallback to metadata
-      const currentUser = authUser || supabaseUser;
-      if (currentUser) {
-        setUser({
-          id: userId,
-          id: userId,
-          userType: (currentUser.user_metadata?.user_type as 'coach' | 'client') || 'coach',
-          email: currentUser.email || '',
-          name: (currentUser.user_metadata?.name as string) || '',
-          profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
-            (currentUser.user_metadata?.picture as string) || null,
-          signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
-          isActive: true, // Default to true since they are logged in
-          createdAt: new Date().toISOString(), // Mock for fallback
-          updatedAt: new Date().toISOString(), // Mock for fallback
-        });
-      }
-    }
-    setIsLoading(false);
-  };
+  // Use React Query for profile fetching with the shared safe fetcher
+  const { data: userProfile, isLoading: isProfileLoading } = useQuery({
+    queryKey: ['user-profile', supabaseUser?.id],
+    queryFn: () => getUserProfileSafe(supabaseUser!),
+    enabled: !!supabaseUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
+  });
+
+  const isLoading = isAuthLoading || (!!supabaseUser && isProfileLoading);
+  const user = userProfile || null;
 
   const signUp = async (email: string, password: string, name: string) => {
     const { data, error } = await supabase.auth.signUp({
@@ -138,7 +108,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    setUser(null);
+    queryClient.removeQueries({ queryKey: ['user-profile'] });
     setSupabaseUser(null);
     router.push('/auth/login');
   };
@@ -211,7 +181,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     if (session?.user) {
       setSupabaseUser(session.user);
-      await fetchUserProfile(session.user.id, session.user);
+      // Invalidate query to trigger refetch
+      await queryClient.invalidateQueries({ queryKey: ['user-profile', session.user.id] });
     }
   };
 

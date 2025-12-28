@@ -1,5 +1,6 @@
 import { createClient } from '@/supabase/client';
 import { apiFetch } from '@/api/api-client';
+import type { User } from '@supabase/supabase-js';
 
 export interface UserProfile {
     id: string;
@@ -25,6 +26,33 @@ export interface UpdateProfileInput {
 export async function getUserProfile(): Promise<UserProfile> {
     const data = await apiFetch('/user/me');
     return data.data.user;
+}
+
+/**
+ * Get user profile safely - falls back to auth metadata if API fails
+ * This is useful for initial load where race conditions might occur
+ */
+export async function getUserProfileSafe(authUser: User): Promise<UserProfile> {
+    try {
+        return await getUserProfile();
+    } catch (error) {
+        console.warn('Failed to fetch user profile, falling back to metadata:', error);
+
+        // Fallback to metadata
+        return {
+            id: authUser.id,
+            publicId: '', // Not available in metadata
+            userType: (authUser.user_metadata?.user_type as 'coach' | 'client') || 'coach',
+            email: authUser.email || '',
+            name: (authUser.user_metadata?.name as string) || '',
+            profilePictureUrl: (authUser.user_metadata?.avatar_url as string) ||
+                (authUser.user_metadata?.picture as string) || null,
+            signinMethod: authUser.app_metadata?.provider === 'google' ? 'google' : 'email',
+            isActive: true, // Default to true since they are logged in
+            createdAt: authUser.created_at || new Date().toISOString(),
+            updatedAt: authUser.updated_at || new Date().toISOString(),
+        };
+    }
 }
 
 /**

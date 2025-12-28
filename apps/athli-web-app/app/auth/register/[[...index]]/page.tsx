@@ -3,17 +3,19 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
+import { AuthErrorAlert } from '@/components/auth/auth-error-alert';
 import { toast } from 'sonner';
 
 export default function SignUpPage() {
   const { signUp, signInWithGoogle } = useSupabaseAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -64,7 +66,8 @@ export default function SignUpPage() {
         />
       </div>
 
-      <div className="flex w-full items-center justify-center lg:w-1/2">
+      <div className="flex w-full items-center justify-center lg:w-1/2 relative">
+        <AuthErrorAlert pathname={pathname} />
         <div className="w-full max-w-md space-y-8 px-4">
           <div className="text-center">
             <h2 className="mt-6 text-3xl font-bold">Create New Account</h2>

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/general/utils';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
+import type { GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
 import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
 import type {
@@ -161,6 +162,7 @@ export const StandardBuilder = ({
   const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [focusedExerciseId, setFocusedExerciseId] = useState<string | null>(null);
+  const [isLoadingAiWorkout, setIsLoadingAiWorkout] = useState(false);
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -216,6 +218,272 @@ export const StandardBuilder = ({
       // If no valid saved schema is found, the default initial schema (empty regular section) will be used.
     }
   }, []);
+
+  // Load AI generated workout on mount with gradual loading
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const aiGeneratedRaw = window.localStorage.getItem('oneninety_ai_generated_workout');
+    if (!aiGeneratedRaw) return;
+
+    try {
+      const aiGenerated: GeneratedWorkout = JSON.parse(aiGeneratedRaw);
+
+      // First, create all sections without exercises
+      const sectionsWithStructure = aiGenerated.sections.map((section: any) => {
+        if (section.type === 'regular') {
+          return {
+            id: section.id as string,
+            type: 'regular' as const,
+            exercises: [] as ExerciseWithSuperset[],
+          };
+        } else if (section.type === 'auxiliary') {
+          return {
+            id: section.id,
+            type: 'auxiliary' as const,
+            exercises: [] as ExerciseWithSuperset[],
+            category: section.category,
+          };
+        } else if (section.type === 'circuits') {
+          return {
+            id: section.id,
+            type: 'circuits' as const,
+            exercises: [] as ExerciseWithSuperset[],
+            targetRounds: section.targetRounds,
+          };
+        } else {
+          return {
+            id: section.id,
+            type: section.type as 'amrap' | 'timed',
+            exercises: [] as ExerciseWithSuperset[],
+            roundDurationSec: section.roundDurationSec,
+            targetRounds: section.targetRounds,
+          };
+        }
+      });
+
+      // Set sections structure first
+      setWorkoutSchema({ sections: sectionsWithStructure });
+
+      // Collect all exercises to add gradually
+      const exercisesToAdd: Array<{
+        sectionId: string;
+        exercise: ExerciseWithSuperset;
+      }> = [];
+
+      aiGenerated.sections.forEach((section: any) => {
+        if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'circuits') {
+          section.exercises?.forEach((group: any) => {
+            if (group.isSuperset && group.exercises) {
+              // Create superset group
+              const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+              group.exercises.forEach((ex: any) => {
+                const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+                const exercise = foundExercise || {
+                  exerciseId: ex.id,
+                  name: ex.name,
+                  imageUrl: '',
+                  videoUrl: '',
+                  equipments: ex.equipment || [],
+                  bodyParts: [],
+                  exerciseType: ex.exerciseType,
+                  targetMuscles: [],
+                  secondaryMuscles: [],
+                  keywords: [],
+                  overview: '',
+                  instructions: [],
+                  exerciseTips: [],
+                  variations: [],
+                  relatedExerciseIds: [],
+                };
+
+                const sets: SetData[] = (ex.sets || []).map((set: any) => {
+                  const setData: SetData = {
+                    setNumber: set.setNumber,
+                    type: set.isDropset ? 'dropset' : 'normal',
+                    reps:
+                      set.isDropset && set.repStages
+                        ? set.repStages.join('-')
+                        : set.reps?.toString() || '',
+                    weight:
+                      set.isDropset && set.weightStages
+                        ? set.weightStages.join('-')
+                        : set.weight?.toString() || '',
+                    rest: set.restSec?.toString() || '',
+                    distance: set.distance?.toString() || '',
+                    duration: set.durationSec?.toString() || '',
+                  };
+                  return setData;
+                });
+
+                exercisesToAdd.push({
+                  sectionId: section.id,
+                  exercise: {
+                    ...exercise,
+                    instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                    supersetGroupId,
+                    sets,
+                  },
+                });
+              });
+            } else if (group.exercises && group.exercises.length > 0) {
+              // Single exercise
+              const ex = group.exercises[0];
+              const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+              const exercise = foundExercise || {
+                exerciseId: ex.id,
+                name: ex.name,
+                imageUrl: '',
+                videoUrl: '',
+                equipments: ex.equipment || [],
+                bodyParts: [],
+                exerciseType: ex.exerciseType,
+                targetMuscles: [],
+                secondaryMuscles: [],
+                keywords: [],
+                overview: '',
+                instructions: [],
+                exerciseTips: [],
+                variations: [],
+                relatedExerciseIds: [],
+              };
+
+              const sets: SetData[] = (ex.sets || []).map((set: any) => {
+                const setData: SetData = {
+                  setNumber: set.setNumber,
+                  type: set.isDropset ? 'dropset' : 'normal',
+                  reps:
+                    set.isDropset && set.repStages
+                      ? set.repStages.join('-')
+                      : set.reps?.toString() || '',
+                  weight:
+                    set.isDropset && set.weightStages
+                      ? set.weightStages.join('-')
+                      : set.weight?.toString() || '',
+                  rest: set.restSec?.toString() || '',
+                  distance: set.distance?.toString() || '',
+                  duration: set.durationSec?.toString() || '',
+                };
+                return setData;
+              });
+
+              exercisesToAdd.push({
+                sectionId: section.id,
+                exercise: {
+                  ...exercise,
+                  instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                  supersetGroupId: null,
+                  sets,
+                },
+              });
+            }
+          });
+        } else {
+          // AMRAP or Timed section
+          section.exercises?.forEach((ex: any) => {
+            const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+            const exercise = foundExercise || {
+              exerciseId: ex.id,
+              name: ex.name,
+              imageUrl: '',
+              videoUrl: '',
+              equipments: ex.equipment || [],
+              bodyParts: [],
+              exerciseType: ex.exerciseType,
+              targetMuscles: [],
+              secondaryMuscles: [],
+              keywords: [],
+              overview: '',
+              instructions: [],
+              exerciseTips: [],
+              variations: [],
+              relatedExerciseIds: [],
+            };
+
+            const sets: SetData[] = (ex.sets || []).map((set: any) => {
+              const setData: SetData = {
+                setNumber: set.setNumber,
+                type: 'normal',
+                reps: set.reps?.toString() || '',
+                weight: set.weight?.toString() || '',
+                rest: set.restSec?.toString() || '',
+                distance: set.distance?.toString() || '',
+                duration: set.durationSec?.toString() || '',
+              };
+              return setData;
+            });
+
+            exercisesToAdd.push({
+              sectionId: section.id,
+              exercise: {
+                ...exercise,
+                instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                supersetGroupId: null,
+                sets,
+              },
+            });
+          });
+        }
+      });
+
+      // Mark as dirty if there are multiple sections, non-regular sections, or any exercises
+      // (anything beyond a single blank regular section is a change)
+      const hasMultipleSections = sectionsWithStructure.length > 1;
+      const hasNonRegularSections = sectionsWithStructure.some((s) => s.type !== 'regular');
+      const hasExercises = exercisesToAdd.length > 0;
+
+      if (hasMultipleSections || hasNonRegularSections || hasExercises) {
+        onDirtyChange?.();
+      }
+
+      // Calculate delay per exercise (5 seconds total / number of exercises)
+      const totalDuration = 5000; // 5 seconds
+      const delayPerExercise =
+        exercisesToAdd.length > 0 ? totalDuration / exercisesToAdd.length : 0;
+
+      // Show loading overlay
+      setIsLoadingAiWorkout(true);
+
+      // Add exercises gradually
+      exercisesToAdd.forEach((item, index) => {
+        setTimeout(() => {
+          setWorkoutSchema((prev) => {
+            const updated = {
+              ...prev,
+              sections: prev.sections.map((sec) => {
+                if (sec.id === item.sectionId) {
+                  return {
+                    ...sec,
+                    exercises: [...(sec.exercises || []), item.exercise],
+                  };
+                }
+                return sec;
+              }),
+            };
+            // Mark as dirty when first exercise is added
+            if (index === 0) {
+              onDirtyChange?.();
+            }
+            return updated;
+          });
+
+          // Hide loading overlay after last exercise is added
+          if (index === exercisesToAdd.length - 1) {
+            setTimeout(() => {
+              setIsLoadingAiWorkout(false);
+            }, 100);
+          }
+        }, index * delayPerExercise);
+      });
+
+      // Clear the localStorage after loading starts
+      window.localStorage.removeItem('oneninety_ai_generated_workout');
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load AI generated workout', error);
+    }
+  }, [onDirtyChange]);
 
   const handleExerciseClick = (exercise: Exercise) => {
     scrollToExercise(
@@ -462,6 +730,14 @@ export const StandardBuilder = ({
       </div>
       <div className="flex-[3] p-2 h-full flex flex-col min-h-0">
         <Card className="relative h-full" style={{ height: '100%' }}>
+          {isLoadingAiWorkout && (
+            <div className="absolute inset-0 mt-[1px] bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-sm text-muted-foreground">Generating workout...</p>
+              </div>
+            </div>
+          )}
           <CardContent
             ref={contentScrollRef}
             className="absolute inset-0 p-4 overflow-y-auto"

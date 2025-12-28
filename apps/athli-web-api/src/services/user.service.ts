@@ -32,16 +32,32 @@ class UserService {
       throw new Error('User not found');
     }
 
-    // Get user profile from database
-    const { data: profile, error: profileError } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
-      .eq('id', userId)
-      .single();
+      .eq('id', userId);
 
     if (profileError) {
       throw new Error(`Failed to fetch profile: ${profileError.message}`);
     }
+
+    if (!profiles || profiles.length === 0) {
+      // Fallback to auth metadata if profile not found in DB (e.g. slight delay in trigger or trigger failure)
+      return {
+        id: authUser.user.id,
+        email: authUser.user.email || '',
+        name: authUser.user.user_metadata?.name || '',
+        userType: (authUser.user.user_metadata?.user_type as 'coach' | 'client') || 'coach',
+        profilePictureUrl: authUser.user.user_metadata?.avatar_url || authUser.user.user_metadata?.picture || null,
+        signinMethod: (authUser.user.app_metadata?.provider as 'email' | 'google') || 'email',
+        isActive: true,
+        createdAt: authUser.user.created_at,
+        updatedAt: authUser.user.updated_at || authUser.user.created_at,
+      };
+    }
+
+    // Prioritize coach profile if multiple exist
+    const profile = profiles.find(p => p.user_type === 'coach') || profiles[0];
 
     return {
       id: authUser.user.id,

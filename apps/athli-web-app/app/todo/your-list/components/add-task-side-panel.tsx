@@ -21,17 +21,12 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { mockAthletes } from '@/components/app/app-shell';
 import { format } from 'date-fns';
+import { Combobox } from '@/components/ui/combobox';
+import { useCoachClients } from '@/hooks/use-coach-clients';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type TaskFormValues = {
   title: string;
@@ -50,6 +45,7 @@ interface AddTaskSidePanelProps {
 export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePanelProps) => {
   const t = useTranslations();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const { clients, isLoading: isLoadingClients } = useCoachClients();
 
   const taskSchema = useMemo(
     () =>
@@ -98,11 +94,12 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
   });
 
   const clientOptions = useMemo(() => {
-    return mockAthletes.map((athlete) => ({
-      value: athlete.id,
-      label: athlete.name,
+    return clients.map((client) => ({
+      value: client.id,
+      label: client.name,
+      avatarUrl: client.avatarUrl,
     }));
-  }, []);
+  }, [clients]);
 
   const taskType = form.watch('taskType');
 
@@ -237,18 +234,37 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
                     </span>
                   </FormLabel>
                   <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full" aria-label={t('home.selectClient')}>
-                        <SelectValue placeholder={t('home.selectClientPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Combobox
+                      options={clientOptions}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t('home.selectClientPlaceholder')}
+                      searchPlaceholder={t('general.search')}
+                      emptyText={isLoadingClients ? 'Loading clients...' : 'No clients found.'}
+                      disabled={isLoadingClients}
+                      renderOption={(option) => (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={option.avatarUrl} alt={option.label} />
+                            <AvatarFallback className="text-xs">
+                              {option.label?.charAt(0) || 'C'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{option.label}</span>
+                        </div>
+                      )}
+                      renderSelected={(option) => (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={option.avatarUrl} alt={option.label} />
+                            <AvatarFallback className="text-xs">
+                              {option.label?.charAt(0) || 'C'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm truncate">{option.label}</span>
+                        </div>
+                      )}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -274,19 +290,24 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
                         type="button"
                         variant="outline"
                         className={cn(
-                          'w-full justify-start text-left font-normal bg-transparent',
+                          'w-full justify-between font-normal bg-sidebar border-muted-foreground/20 hover:border-primary/50 transition-colors',
                           !field.value && 'text-muted-foreground'
                         )}
                         aria-label={t('home.completeBy')}
                       >
-                        <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {field.value ? format(field.value, 'PPP') : t('home.selectDate')}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">
+                            {field.value ? field.value.toLocaleDateString() : t('home.selectDate')}
+                          </span>
+                        </div>
+                        <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                       <CalendarComponent
                         mode="single"
                         selected={field.value}
+                        captionLayout="dropdown"
                         onSelect={(date) => {
                           field.onChange(date);
                           setIsCalendarOpen(false);
@@ -297,7 +318,6 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
                           return date < today;
                         }}
                         initialFocus
-                        captionLayout="dropdown"
                         fromYear={2020}
                         toYear={2030}
                       />

@@ -66,7 +66,7 @@ export function AppSidebar() {
       icon: MessageCircle,
     },
     {
-      href: '/todo',
+      href: '/todo/your-list',
       labelKey: 'sidebar.links.todo',
       icon: CheckSquare,
     },
@@ -79,12 +79,12 @@ export function AppSidebar() {
 
   const libraryNavItems = [
     {
-      href: '/training',
+      href: '/training/workouts',
       labelKey: 'sidebar.links.training',
       icon: Dumbbell,
     },
     {
-      href: '/forms',
+      href: '/forms/check-ins',
       labelKey: 'sidebar.links.forms',
       icon: ClipboardList,
     },
@@ -106,11 +106,6 @@ export function AppSidebar() {
   ] as const;
 
   const automationsNavItems = [
-    {
-      href: '/onboarding',
-      labelKey: 'sidebar.links.onboarding',
-      icon: WandSparkles,
-    },
     {
       href: '/flows',
       labelKey: 'sidebar.links.flows',
@@ -177,10 +172,17 @@ export function AppSidebar() {
               {mainNavItems.map((item) => {
                 const Icon = item.icon;
                 const href = item.href;
-                const isActive =
-                  href === '/athletes' || href === '/messaging' || href === '/todo' || href === '/check-ins'
-                    ? activePath === href || activePath.startsWith(`${href}/`)
-                    : activePath === href;
+                let isActive = activePath === href;
+
+                if (href === '/todo/your-list') {
+                  isActive = activePath.startsWith('/todo');
+                } else if (
+                  href === '/athletes' ||
+                  href === '/messaging' ||
+                  href === '/check-ins'
+                ) {
+                  isActive = activePath === href || activePath.startsWith(`${href}/`);
+                }
                 const label = t(item.labelKey);
 
                 return (
@@ -217,8 +219,15 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 let isActive = false;
-                if (href === '/training' || href === '/metrics' || href === '/files' || href === '/habits' || href === '/forms') {
-                  // Check exact match or if path starts with the href followed by /
+                if (href === '/training/workouts') {
+                  isActive = activePath.startsWith('/training');
+                } else if (href === '/forms/check-ins') {
+                  isActive = activePath.startsWith('/forms');
+                } else if (
+                  href === '/metrics' ||
+                  href === '/files' ||
+                  href === '/habits'
+                ) {
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
                 } else {
                   isActive = activePath === href;
@@ -260,7 +269,7 @@ export function AppSidebar() {
                 const Icon = item.icon;
                 const href = item.href;
                 const isActive =
-                  href === '/flows' || href === '/onboarding'
+                  href === '/flows'
                     ? activePath === href || activePath.startsWith(`${href}/`)
                     : activePath === href;
                 const label = t(item.labelKey);

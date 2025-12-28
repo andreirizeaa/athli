@@ -3,11 +3,11 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { getCheckIns } from '@/api/coach/coach-check-in-service';
-import { updateFlow, type Flow } from '@/api/coach/coach-flow-service';
+import { updateFlow, updateFlowStatus, type Flow } from '@/api/coach/coach-flow-service';
 import { getQuestionnaires } from '@/api/coach/coach-questionnaire-service';
 import { type Habit } from '@/api/coach/coach-habit-service';
 import { X, Plus, Play, Pencil, Trash2, UserPlus } from 'lucide-react';
-import { FlowEditorSidePanel, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
+import { FlowEditorSidePanel, TRIGGER_OPTIONS, type PanelType, type TriggerOption, type ActionOption } from './flow-editor-side-panel';
 import ReactFlow, {
   Background,
   Controls,
@@ -271,6 +271,14 @@ interface FlowEditorProps {
   onSaveFlow?: (data: { nodes: Node[]; edges: Edge[] }) => Promise<void>;
 }
 
+const FLOW_NAME_TO_TRIGGER_ID: Record<string, string> = {
+  'New Client Sign Up': 'new-client-signup',
+  'Workout Finished': 'workout-finished',
+  'Check-in Completed': 'check-in-completed',
+  'Missed Workout': 'missed-workout',
+  'Missed Check-in': 'missed-check-in',
+};
+
 const DEFAULT_NODES: Node[] = [
   {
     id: 'trigger',
@@ -340,6 +348,23 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
   const [selectedTrigger, setSelectedTrigger] = useState<TriggerOption | null>(null);
   const [actionNodes, setActionNodes] = useState<ActionNodeData[]>([]);
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
+  const [isActive, setIsActive] = useState<boolean>(flow?.is_active ?? false);
+
+  useEffect(() => {
+    if (flow) setIsActive(flow.is_active ?? false);
+  }, [flow?.is_active]);
+
+  const togglePublish = async () => {
+    if (!flow) return;
+    const newState = !isActive;
+    setIsActive(newState);
+    try {
+      await updateFlowStatus(flow.id, newState);
+    } catch (e) {
+      setIsActive(!newState);
+      console.error(e);
+    }
+  };
 
   const [checkNodes, setCheckNodes] = useState<Array<{ id: string; linkedActionId: string; repeatActionId: string }>>([]);
   const reactFlowInstanceRef = useRef<any>(null);
@@ -548,17 +573,18 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
     }
   }, [flow, isInitialized, setNodes, setEdges]);
 
-  // For onboarding mode, set the trigger to "New client sign up" automatically
+  // Enforce hardcoded trigger based on flow name
   useEffect(() => {
-    if (isOnboardingMode && !selectedTrigger) {
-      const newClientTrigger = {
-        id: 'new-client-signup',
-        name: 'New client sign up',
-        icon: UserPlus,
-      };
-      setSelectedTrigger(newClientTrigger as TriggerOption);
+    if (!selectedTrigger && flow?.name) {
+      const triggerId = FLOW_NAME_TO_TRIGGER_ID[flow.name];
+      if (triggerId) {
+        const trigger = TRIGGER_OPTIONS.find(t => t.id === triggerId);
+        if (trigger) {
+          setSelectedTrigger(trigger);
+        }
+      }
     }
-  }, [isOnboardingMode, selectedTrigger, setSelectedTrigger]);
+  }, [isOnboardingMode, selectedTrigger, setSelectedTrigger, flow?.name]);
 
   // Auto-save flow changes with debouncing - ONLY in onboarding mode
   useEffect(() => {
@@ -609,9 +635,9 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
         subtitle: selectedTrigger?.name,
         icon: selectedTrigger?.icon,
         isOnboarding: isOnboardingMode,
-        onClick: isOnboardingMode ? undefined : handleOpenTriggerPanel,
-        onEdit: isOnboardingMode ? undefined : (selectedTrigger ? handleOpenTriggerPanel : undefined),
-        onDelete: isOnboardingMode ? undefined : (selectedTrigger ? handleDeleteTrigger : undefined),
+        onClick: undefined,
+        onEdit: undefined,
+        onDelete: undefined,
       },
     });
 
@@ -1034,6 +1060,25 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
 
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
+
+      // Force Center-Top Alignment after layout
+      if (reactFlowInstanceRef.current) {
+        const triggerNode = layoutedNodes.find((n) => n.id === 'trigger');
+        if (triggerNode) {
+          const flowBounds = document.querySelector('.react-flow__renderer');
+          if (flowBounds) {
+            const containerWidth = flowBounds.clientWidth;
+            const nodeWidth = 300;
+            // Center horizontally
+            const centerX = (containerWidth / 2) - (nodeWidth / 2) - triggerNode.position.x;
+            // Position at top with padding
+            const topPadding = 40;
+            const topY = -triggerNode.position.y + topPadding;
+
+            reactFlowInstanceRef.current.setViewport({ x: centerX, y: topY, zoom: 1 });
+          }
+        }
+      }
 
       if (pendingSave && !isOnboardingMode && flow) {
         try {
@@ -1545,7 +1590,7 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
   return (
     <div className="flex flex-1 min-h-0 relative">
       {/* React Flow - Full width always */}
-      <div className="w-full h-full bg-background">
+      <div className="w-full h-full bg-background relative">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -1559,31 +1604,6 @@ export const FlowEditor = ({ flow, onFlowChange, onTriggerClick, onActionClick, 
           defaultViewport={{ x: 0, y: 0, zoom: 1 }}
           onInit={(reactFlowInstance) => {
             reactFlowInstanceRef.current = reactFlowInstance;
-            // Center horizontally and position at top vertically
-            setTimeout(() => {
-              const container = reactFlowInstance.getViewport();
-              const triggerNode = nodes.find((n) => n.id === 'trigger');
-
-              if (triggerNode) {
-                // Get the container dimensions
-                const bounds = reactFlowInstance.getNodes();
-                const flowBounds = document.querySelector('.react-flow__renderer');
-
-                if (flowBounds) {
-                  const containerWidth = flowBounds.clientWidth;
-                  const nodeWidth = 300; // Our node width
-
-                  // Center horizontally: (containerWidth / 2) - (nodeWidth / 2) - nodeX
-                  const centerX = (containerWidth / 2) - (nodeWidth / 2) - triggerNode.position.x;
-
-                  // Position at top with padding
-                  const topPadding = 40;
-                  const topY = -triggerNode.position.y + topPadding;
-
-                  reactFlowInstance.setViewport({ x: centerX, y: topY, zoom: 1 });
-                }
-              }
-            }, 100);
           }}
           fitViewOptions={{
             padding: 0.2,

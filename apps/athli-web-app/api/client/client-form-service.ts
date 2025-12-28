@@ -174,8 +174,6 @@ export const assignClientQuestionnaire = async (data: AssignClientQuestionnaireD
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({
       questionnaireIds: data.questionnaireIds,
-      schedule_config: data.schedule_config,
-      cron_expression: data.cron_expression
     }),
   });
 };
@@ -349,6 +347,40 @@ export const assignForm = async (data: AssignFormData): Promise<void> => {
       coachId: data.coachId,
       schedule_config: data.scheduleData,
       cron_expression: data.cronExpression
+    });
+  }
+};
+
+export interface AssignFormsToClientsData {
+  formIds: string[];
+  clientIds: string[];
+  coachId: string;
+  formType: 'check-in' | 'questionnaire';
+  cronExpression: string;
+  scheduleData: AssignFormScheduleData;
+}
+
+export const assignFormsToClients = async (data: AssignFormsToClientsData): Promise<void> => {
+  if (data.formType === 'check-in') {
+    await apiFetch(`/client/forms/check-ins`, {
+      method: 'POST',
+      headers: { 'x-coach-id': data.coachId },
+      body: JSON.stringify({
+        checkInIds: data.formIds,
+        clientIds: data.clientIds,
+        schedule_config: data.scheduleData,
+        cron_expression: data.cronExpression
+      }),
+    });
+  } else {
+    // Questionnaires bulk assignment
+    await apiFetch(`/client/forms/questionnaires`, {
+      method: 'POST',
+      headers: { 'x-coach-id': data.coachId },
+      body: JSON.stringify({
+        questionnaireIds: data.formIds,
+        clientIds: data.clientIds, // Send array of client IDs
+      }),
     });
   }
 }
