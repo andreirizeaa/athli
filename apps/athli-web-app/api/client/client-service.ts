@@ -179,27 +179,28 @@ export const saveAthleteInjuries = async (athleteId: string, injuries: string[])
   // return await response.json()
 };
 
-export const getAthleteDetails = async (athleteId: string): Promise<AthleteDetails> => {
-  const response = await apiFetch(`/clients/${athleteId}`);
-  const client = response.data.client;
+export const getAthleteDetails = async (athleteId?: string): Promise<AthleteDetails> => {
+  // We ignore athleteId for now and fetch the authenticated client's profile
+  const response = await apiFetch('/client');
+  const profile = response.data.profile;
 
-  if (!client) {
+  if (!profile) {
     throw new Error('Client not found');
   }
 
-  // The backend coach_clients_view returns a flat structure
+  // The backend client-profile controller returns a merged profile structure
   return {
-    firstName: client.full_name?.split(' ')[0] || '',
-    lastName: client.full_name?.split(' ').slice(1).join(' ') || '',
-    email: client.email || '',
-    age: client.date_of_birth ? new Date().getFullYear() - new Date(client.date_of_birth).getFullYear() : null,
-    weight: client.weight_kg || null,
-    height: client.height_cm || null,
-    category: client.category || 'online',
-    gender: client.gender || null,
-    phone: client.phone || '',
-    country: client.country || '',
-    avatar: client.avatar_url || null,
+    firstName: profile.name?.split(' ')[0] || '',
+    lastName: profile.name?.split(' ').slice(1).join(' ') || '',
+    email: profile.email || '',
+    age: profile.date_of_birth ? new Date().getFullYear() - new Date(profile.date_of_birth).getFullYear() : null,
+    weight: profile.weight_kg || null,
+    height: profile.height_cm || null,
+    category: profile.category || 'online',
+    gender: profile.gender || null,
+    phone: profile.phone || '',
+    country: profile.country || '',
+    avatar: profile.profile_picture_url || null,
   };
 };
 
@@ -228,7 +229,8 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
     // Let's assume we pass `metadata: { category: ... }` for category.
   };
 
-  await apiFetch(`/clients/${athleteId}`, {
+  // call /client instead of /clients/:id
+  await apiFetch(`/client`, {
     method: 'PATCH',
     body: JSON.stringify(updatePayload),
   });

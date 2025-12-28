@@ -69,13 +69,18 @@ coachClientRouter.post('/resend-invite', supabaseAuthenticate, coachClientContro
  *   get:
  *     summary: Get a single client
  *     tags: [Coach Clients]
- *   patch:
- *     summary: Update client status/details
- *     tags: [Coach Clients]
  *   delete:
  *     summary: Remove client from coach
  *     tags: [Coach Clients]
  */
 coachClientRouter.get('/:id', supabaseAuthenticate, coachClientController.getClient);
-coachClientRouter.patch('/:id', supabaseAuthenticate, coachClientController.updateClient);
-coachClientRouter.delete('/:id', supabaseAuthenticate, coachClientController.deleteClient);
+coachClientRouter.delete('/', supabaseAuthenticate, coachClientController.deleteClient);
+
+/**
+ * @swagger
+ * /api/v1/clients:
+ *   patch:
+ *     summary: Update client status/details
+ *     tags: [Coach Clients]
+ */
+coachClientRouter.patch('/', supabaseAuthenticate, coachClientController.updateClient);

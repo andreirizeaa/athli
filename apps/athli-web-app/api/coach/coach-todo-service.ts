@@ -41,6 +41,7 @@ export const getOwnTodos = async (): Promise<YourListTask[]> => {
     return response.data.todos.map(todo => ({
         ...todo,
         dueDate: todo.due_date,
+        clientId: todo.client_id,
     }));
 };
 
@@ -52,6 +53,7 @@ export const createOwnTodo = async (data: CreateTaskData): Promise<YourListTask>
     return {
         ...response.data.todo,
         dueDate: response.data.todo.due_date,
+        clientId: response.data.todo.client_id,
     };
 };
 
@@ -63,6 +65,7 @@ export const updateOwnTodo = async (id: string, data: UpdateTaskData): Promise<Y
     return {
         ...response.data.todo,
         dueDate: response.data.todo.due_date,
+        clientId: response.data.todo.client_id,
     };
 };
 

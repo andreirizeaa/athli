@@ -54,7 +54,7 @@ export const useCoachTodo = (options?: { enabled?: boolean }) => {
             queryClient.setQueryData(['coach-own-todos'], (old: YourListTask[] | undefined) => {
                 return old?.filter(t => t.id !== id);
             });
-            toast.success('Task deleted');
+            toast.success('Task completed');
         },
         onError: () => {
             toast.error('Failed to delete task');

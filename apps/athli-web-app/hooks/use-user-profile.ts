@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
-import { getUserProfile, updateUserProfile, uploadProfilePicture } from '@/api/user/user-service';
+import { getUserProfile, updateUserProfile, uploadProfilePicture, getUserProfileSafe } from '@/api/user/user-service';
 
 export interface UpdateProfileInput {
   name?: string;
@@ -8,7 +8,7 @@ export interface UpdateProfileInput {
 }
 
 export function useUserProfile() {
-  const { user: authUser, refreshUser, isLoading: isAuthLoading } = useSupabaseAuth();
+  const { user: authUser, refreshUser, isLoading: isAuthLoading, supabaseUser } = useSupabaseAuth();
   const queryClient = useQueryClient();
 
   // Query for fetching user profile
@@ -19,7 +19,14 @@ export function useUserProfile() {
     error
   } = useQuery({
     queryKey: ['user-profile', authUser?.id],
-    queryFn: () => getUserProfile(),
+    queryFn: () => {
+      // If we have the supabase user from context, use the safe fetcher
+      // Otherwise fall back to the standard one
+      if (supabaseUser) {
+        return getUserProfileSafe(supabaseUser);
+      }
+      return getUserProfile();
+    },
     enabled: !!authUser, // Only run if authenticated
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

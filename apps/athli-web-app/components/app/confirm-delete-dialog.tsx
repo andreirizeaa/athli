@@ -34,7 +34,7 @@ export const ConfirmDeleteDialog = ({
     title: customTitle,
     description: customDescription,
     confirmText,
-    variant = 'destructive',
+    variant = 'default',
 }: ConfirmDeleteDialogProps) => {
     const t = useTranslations();
 

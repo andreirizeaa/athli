@@ -471,11 +471,12 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
                   <CommandItem
                     key="all"
                     onSelect={toggleAll}
-                    className="cursor-pointer"
+                    className="cursor-pointer justify-between"
                   >
+                    <span>Select all</span>
                     <div
                       className={cn(
-                        "mr-1 size-4 flex items-center justify-center rounded-[4px] border border-primary shadow-xs transition-shadow outline-none",
+                        "ml-1 size-4 flex items-center justify-center rounded-[4px] border border-primary shadow-xs transition-shadow outline-none",
                         selectedValues.length === options.length
                           ? "bg-primary text-primary-foreground border-primary"
                           : "opacity-50 [&_svg]:invisible"
@@ -483,7 +484,6 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
                     >
                       <CheckIcon className="size-3.5 text-white dark:text-black" />
                     </div>
-                    <span>Select all</span>
                   </CommandItem>
                 )}
                 {options.map((option, index) => {
@@ -492,18 +492,8 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
                     <CommandItem
                       key={option.value}
                       onSelect={() => toggleOption(option.value)}
-                      className="cursor-pointer text-xs"
+                      className="cursor-pointer text-xs justify-between"
                     >
-                      <div
-                        className={cn(
-                          "mr-1 size-4 flex items-center justify-center rounded-[4px] border border-primary shadow-xs transition-shadow outline-none",
-                          isSelected
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "opacity-50 [&_svg]:invisible"
-                        )}
-                      >
-                        <CheckIcon className="size-3.5 text-white dark:text-black" />
-                      </div>
                       <>
                         {labelFunc ? (
                           labelFunc(option, isSelected, index)
@@ -511,6 +501,16 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
                           <span>{option.label}</span>
                         )}
                       </>
+                      <div
+                        className={cn(
+                          "ml-1 size-4 flex items-center justify-center rounded-[4px] border border-primary shadow-xs transition-shadow outline-none shrink-0",
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "opacity-50 [&_svg]:invisible"
+                        )}
+                      >
+                        <CheckIcon className="size-3.5 text-white dark:text-black" />
+                      </div>
                     </CommandItem>
                   );
                 })}

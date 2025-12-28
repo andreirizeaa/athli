@@ -26,6 +26,20 @@ export const assignHabit = async (data: AssignHabitData & { clientId: string; co
   });
 };
 
+export interface AssignHabitsToClientsData {
+  habitIds: string[];
+  clientIds: string[];
+  coachId: string;
+}
+
+export const assignHabitsToClients = async (data: AssignHabitsToClientsData): Promise<void> => {
+  await apiFetch(`/client/habits`, {
+    method: 'POST',
+    headers: { 'x-coach-id': data.coachId },
+    body: JSON.stringify({ habitIds: data.habitIds, clientIds: data.clientIds }),
+  });
+};
+
 /**
  * Service method to create a private habit for a client
  */

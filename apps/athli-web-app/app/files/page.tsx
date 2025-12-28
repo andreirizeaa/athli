@@ -2,8 +2,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
@@ -17,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Edit, Trash2, UserPlus } from 'lucide-react';
 import { useCoachFiles } from '@/hooks/use-coach-files';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 import { AddFileSidePanel } from '@/components/files/add-file-side-panel';
 import { FilePreviewDialog } from '@/components/files/file-preview-dialog';
 import { getFileUrl, downloadFile, isPreviewable, getFileTypeFromMime, type CoachFile } from '@/api/coach/coach-file-service';
@@ -26,14 +29,18 @@ import { FileThumbnail } from '@/components/files/file-thumbnail';
 import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
+import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
+import { addFilesToClients } from '@/api/client/client-file-service';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import React from 'react';
 
 const FilesPage = () => {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const { files, isLoading, uploadFile, updateFile, deleteFile: deleteFileMutation, isUploading } = useCoachFiles();
-
+  const { clients } = useCoachClients();
+  const { user } = useUserProfile();
   const [isAddFileOpen, setIsAddFileOpen] = useState<boolean>(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
@@ -141,7 +148,14 @@ const FilesPage = () => {
 
   const handleConfirmDelete = () => {
     if (fileToDelete) {
-      deleteFileMutation({ fileId: fileToDelete.id });
+      deleteFileMutation({ fileId: fileToDelete.id }, {
+        onSuccess: () => {
+          toast.success(t('general.deleteSuccessName', { name: fileToDelete.filename }));
+        },
+        onError: () => {
+          toast.error(t('general.deleteError'));
+        }
+      });
       setFileToDelete(null);
     }
   };
@@ -165,10 +179,15 @@ const FilesPage = () => {
   const handleBulkDelete = async () => {
     try {
       const idsToDelete = Array.from(selectedFiles);
+      const deleteCount = idsToDelete.length;
       await Promise.all(idsToDelete.map((id) => deleteFileMutation({ fileId: id })));
+
+      toast.success(t('general.deleteSuccessCount', { count: deleteCount, item: deleteCount === 1 ? 'file' : 'files' }));
+
       setSelectedFiles(new Set());
     } catch (error) {
       console.error('Failed to bulk delete files:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
@@ -191,26 +210,51 @@ const FilesPage = () => {
     });
   };
 
-  const handleAssignFilesToClients = async () => {
-    // Mocked implementation as requested
-    console.log('Assigning files:', filesToAssign.map(f => f.id), 'to clients:', Array.from(selectedClientIds));
-    setIsAssignToClientsOpen(false);
-    setFilesToAssign([]);
-    setSelectedFiles(new Set());
-    setSelectedClientIds(new Set());
+  const handleAssignFilesToClients = async (clientIds: string[]) => {
+    if (clientIds.length === 0 || filesToAssign.length === 0 || !user?.id) {
+      return;
+    }
+
+    try {
+      await addFilesToClients({
+        fileIds: filesToAssign.map(f => f.id),
+        clientIds: clientIds,
+        coachId: user.id
+      });
+      setIsAssignToClientsOpen(false);
+      const fileCount = filesToAssign.length;
+      const clientCount = clientIds.length;
+
+      // Remove queries to force hard refresh and loading state
+      clientIds.forEach(clientId => {
+        queryClient.removeQueries({ queryKey: ['client-files', clientId] });
+      });
+
+      // Determine toast message
+      if (fileCount === 1 && clientCount === 1) {
+        const fileName = filesToAssign[0].filename;
+        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+        toast.success(t('files.assignSuccessSingle', { fileName, clientName }));
+      } else if (fileCount === 1) {
+        const fileName = filesToAssign[0].filename;
+        toast.success(t('files.assignSuccessFileMultiClient', { fileName, count: clientCount }));
+      } else if (clientCount === 1) {
+        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+        toast.success(t('files.assignSuccessMultiFileSingleClient', { count: fileCount, clientName }));
+      } else {
+        toast.success(`Successfully assigned ${fileCount} files to ${clientCount} clients`);
+      }
+
+      // Clear selection
+      setFilesToAssign([]);
+      setSelectedFiles(new Set());
+    } catch (error) {
+      console.error('Failed to assign files to clients:', error);
+      // Optional: add toast notification here
+    }
   };
 
-  const handleToggleClient = (clientId: string) => {
-    setSelectedClientIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(clientId)) {
-        newSet.delete(clientId);
-      } else {
-        newSet.add(clientId);
-      }
-      return newSet;
-    });
-  };
+
 
   // Track changes in edit mode
   React.useEffect(() => {
@@ -390,8 +434,10 @@ const FilesPage = () => {
                 variant="ghost"
                 onClick={handleClearSelected}
                 className="gap-2"
+                aria-label={t('general.clearSelected', { count: selectedFiles.size })}
               >
-                <span>Clear {selectedFiles.size} selected</span>
+                <X className="size-4" />
+                <span>{t('general.clearSelected', { count: selectedFiles.size })}</span>
               </Button>
               <Button
                 variant="ghost"
@@ -491,148 +537,46 @@ const FilesPage = () => {
       />
 
       {/* Assign to Clients Side Panel */}
-      <SidePanel
+      <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
         title={t('forms.assignToClientsTitle')}
-        footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button
-              type="button"
-              onClick={handleAssignFilesToClients}
-              disabled={selectedClientIds.size === 0 || filesToAssign.length === 0}
-            >
-              {selectedClientIds.size === 1
-                ? t('forms.assignToOneClient')
-                : t('forms.assignToClientsCount', { count: selectedClientIds.size })}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setIsAssignToClientsOpen(false)}>
-              {t('general.cancel')}
-            </Button>
-          </div>
+        assignButtonLabel={(count) =>
+          count === 1
+            ? t('forms.assignToOneClient')
+            : t('forms.assignToClientsCount', { count })
         }
-      >
-        <div className="flex flex-col gap-6 h-full">
-          <div className="flex flex-col gap-2 flex-shrink-0">
-            <label className="text-sm font-medium">{t('files.title')}</label>
-            {filesToAssign.length > 0 ? (
-              <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                {filesToAssign.map((file) => (
-                  <div
-                    key={file.id}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <FileThumbnail file={file} />
-                      <span className="text-sm truncate">{file.filename}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFileFromAssignList(file.id)}
-                      className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label={`Remove ${file.filename}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+        onAssign={handleAssignFilesToClients}
+        previewComponent={
+          filesToAssign.length > 0 ? (
+            <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+              {filesToAssign.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileThumbnail file={file} />
+                    <span className="text-sm truncate">{file.filename}</span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground py-4 text-center">
-                {t('forms.noFormsSelected')}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 flex-1 min-h-0">
-            <label className="text-sm font-medium">{t('athletes.title')}</label>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <DataGrid
-                data={mockAthletes}
-                columns={[
-                  {
-                    id: 'name',
-                    label: t('athletes.title'),
-                    icon: <UserPlus className="size-3" />,
-                    width: { class: 'w-full', pixel: '100%' },
-                    getSortValue: (row) => row.name.toLowerCase(),
-                    getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
-                    renderHeader: ({ isAllSelected, onToggleAll }) => (
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                        <div className="flex items-center gap-2">
-                          <UserPlus className="size-3 text-muted-foreground" />
-                          <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
-                        </div>
-                      </div>
-                    ),
-                    renderCell: (row, isSelected) => {
-                      const initials = row.name
-                        .split(' ')
-                        .map((part) => part.charAt(0).toUpperCase())
-                        .slice(0, 2)
-                        .join('');
-                      return (
-                        <div className="flex items-center gap-3 h-full w-full">
-                          <div
-                            className="flex items-center justify-center h-full flex-shrink-0"
-                            data-no-row-link="true"
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => handleToggleClient(row.id)}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Avatar className="h-8 w-8 flex-shrink-0">
-                              <AvatarImage src={row.avatar} alt={row.name} />
-                              <AvatarFallback>{initials}</AvatarFallback>
-                            </Avatar>
-                            <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
-                          </div>
-                        </div>
-                      );
-                    },
-                  },
-                ]}
-                getRowId={(row) => row.id}
-                gridKey="assign-files-to-clients"
-                searchPlaceholder={t('forms.searchAthletes')}
-                enableSearch={true}
-                enableEditColumns={false}
-                enableExport={false}
-                enableRowSelection={true}
-                selectedRowIds={selectedClientIds}
-                onSelectionChange={setSelectedClientIds}
-                onRowClick={(row, event) => {
-                  const targetElement = event.target as HTMLElement;
-                  if (targetElement.closest('[data-no-row-link="true"]')) {
-                    return;
-                  }
-                  handleToggleClient(row.id);
-                }}
-                onRowKeyDown={(row, event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    const targetElement = event.target as HTMLElement;
-                    if (targetElement.closest('[data-no-row-link="true"]')) {
-                      return;
-                    }
-                    event.preventDefault();
-                    handleToggleClient(row.id);
-                  }
-                }}
-
-                emptyMessage={t('forms.noAthletesFound')}
-                rowHeight="54px"
-                compactMode={true}
-                showPagination={true}
-                itemsPerPage={10}
-                gridPadding={true}
-              />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFileFromAssignList(file.id)}
+                    className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label={`Remove ${file.filename}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-      </SidePanel>
+          ) : (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              {t('forms.noFormsSelected')}
+            </div>
+          )
+        }
+      />
     </div>
   );
 };

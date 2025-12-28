@@ -281,9 +281,13 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
  * Service method to archive a user
  */
 export const archiveUser = async (athleteId: string): Promise<void> => {
-  await apiFetch(`/clients/${athleteId}`, {
+  await apiFetch(`/clients`, {
     method: 'PATCH',
-    body: JSON.stringify({ is_active: false }) as any,
+    body: JSON.stringify({
+      id: athleteId,
+      is_active: false,
+      is_archived: true,
+    }) as any,
   });
 };
 
@@ -316,18 +320,27 @@ export const getArchivedClients = async (): Promise<Athlete[]> => {
       age: 0,
       clientFor: clientForDays.toString(),
       connected: false,
-      publicId: client.public_id,
     };
   });
 };
 
 /**
- * Service method to restore an archived client
+ * Service method to restore archived clients (bulk operation)
  */
-export const restoreClient = async (clientId: string): Promise<void> => {
+export const restoreClient = async (clientIds: string[]): Promise<void> => {
   await apiFetch(`/clients/restore`, {
     method: 'POST',
-    headers: { 'x-client-id': clientId },
+    body: JSON.stringify({ clientIds }) as any,
+  });
+};
+
+/**
+ * Service method to delete a client
+ */
+export const deleteClient = async (athleteId: string): Promise<void> => {
+  await apiFetch(`/clients`, {
+    method: 'DELETE',
+    body: JSON.stringify({ id: athleteId }) as any,
   });
 };
 

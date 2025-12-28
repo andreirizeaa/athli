@@ -43,7 +43,7 @@ CREATE POLICY co_all
   ON public.coach_onboarding
   FOR ALL
   TO authenticated
-  USING (coach_id = (select auth.uid()))
+USING (coach_id = (select auth.ud()))
   WITH CHECK (coach_id = (select auth.uid()));
 
 -- STEP 6: Triggers

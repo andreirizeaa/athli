@@ -1,16 +1,5 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
-const TrainingPage = () => {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/training/workouts');
-  }, [router]);
-
-  return null;
-};
-
-export default TrainingPage;
+export default function TrainingPage() {
+  redirect('/training/workouts');
+}

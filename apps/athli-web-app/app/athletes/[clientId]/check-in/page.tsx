@@ -274,7 +274,7 @@ const ClientCheckInPage = () => {
                 className="gap-2"
               >
                 <X className="size-4" />
-                <span>Clear {selectedCheckIns.size} selected</span>
+                <span>{t('general.clearSelected', { count: selectedCheckIns.size })}</span>
               </Button>
               <Button
                 variant="ghost"

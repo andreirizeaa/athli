@@ -528,7 +528,7 @@ const ClientFilesPage = () => {
                 className="gap-2"
               >
                 <X className="size-4" />
-                <span>Clear {selectedFiles.size} selected</span>
+                <span>{t('general.clearSelected', { count: selectedFiles.size })}</span>
               </Button>
               <Button
                 variant="ghost"
@@ -585,6 +585,7 @@ const ClientFilesPage = () => {
         itemName={fileToDelete?.fileName}
         count={selectedFiles.size}
         itemType="file"
+        variant="default"
       />
     </div>
   );

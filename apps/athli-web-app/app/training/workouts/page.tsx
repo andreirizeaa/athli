@@ -20,7 +20,8 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
-import { AssignAthletesList } from '@/components/app/assign-athletes-list';
+import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
+import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
@@ -142,6 +143,13 @@ const WorkoutsPage = () => {
   const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to check if value is empty (null, undefined, empty string, or empty array)
+  const isEmpty = (value: any): boolean => {
+    if (value === null || value === undefined || value === '') return true;
+    if (Array.isArray(value) && value.length === 0) return true;
+    return false;
+  };
+
   useEffect(() => {
     // Initialize filteredCount and starred workouts from context data
     setFilteredCount(workouts.length);
@@ -232,12 +240,11 @@ const WorkoutsPage = () => {
         description: newDescription.trim(),
         type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
-        equipment: [],
+        equipment: [] as string[],
         sections: [
           {
             id: `sec_regular_${Date.now()}`,
-            type: 'regular',
-            name: 'Main Section',
+            type: 'regular' as const,
             exercises: [],
           }
         ],
@@ -345,8 +352,8 @@ const WorkoutsPage = () => {
       }
 
       try {
-        // Set access flag for AI builder - ensure it's set before navigation
-        window.localStorage.setItem('oneninety_workout_builder_access', 'ai');
+        // Set access flag for standard builder - ensure it's set before navigation
+        window.localStorage.setItem('oneninety_workout_builder_access', 'standard');
         // Force a small delay to ensure localStorage is written
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch {
@@ -355,7 +362,7 @@ const WorkoutsPage = () => {
 
       // Wait a bit longer before navigation to ensure everything is ready
       setTimeout(() => {
-        const targetPath = '/training/workouts/new/ai';
+        const targetPath = '/training/workouts/new/standard';
         router.push(targetPath);
 
         // Keep sidebar open during navigation, close after a brief delay
@@ -514,22 +521,27 @@ Focus on proper form and progressive overload.`;
             getSortValue: (row) => row.description.toLowerCase(),
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
-            renderCell: (row) => (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center h-full min-w-0 w-full">
-                    <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="max-w-[250px] break-words"
-                  side="top"
-                  align="start"
-                >
-                  <p className="whitespace-pre-wrap">{row.description}</p>
-                </TooltipContent>
-              </Tooltip>
-            ),
+            renderCell: (row) =>
+              isEmpty(row.description) ? (
+                <div className="flex items-center h-full min-w-0 w-full">
+                  <span className="text-sm truncate block min-w-0 w-full">--</span>
+                </div>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center h-full min-w-0 w-full">
+                      <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="max-w-[250px] break-words"
+                    side="top"
+                    align="start"
+                  >
+                    <p className="whitespace-pre-wrap">{row.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ),
           };
         case 'type':
           return {
@@ -544,7 +556,7 @@ Focus on proper form and progressive overload.`;
             getSortValue: (row) => row.type.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
-                <span className="text-sm">{formatWorkoutType(row.type)}</span>
+                <span className="text-sm">{isEmpty(row.type) ? '--' : formatWorkoutType(row.type)}</span>
               </div>
             ),
           };
@@ -561,7 +573,7 @@ Focus on proper form and progressive overload.`;
             getSortValue: (row) => row.difficulty.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
-                <span className="text-sm">{formatDifficulty(row.difficulty)}</span>
+                <span className="text-sm">{isEmpty(row.difficulty) ? '--' : formatDifficulty(row.difficulty)}</span>
               </div>
             ),
           };
@@ -578,7 +590,7 @@ Focus on proper form and progressive overload.`;
             getSortValue: (row) => row.totalExercises,
             renderCell: (row) => (
               <div className="flex items-center w-full">
-                <span className="text-sm">{row.totalExercises}</span>
+                <span className="text-sm">{isEmpty(row.totalExercises) ? '--' : row.totalExercises}</span>
               </div>
             ),
           };
@@ -593,22 +605,29 @@ Focus on proper form and progressive overload.`;
             },
             tooltip: t('library.equipmentRequiredWorkout'),
             getSortValue: (row) => (Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment).toLowerCase(),
-            renderCell: (row) => (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center h-full min-w-0 w-full">
-                    <span className="text-sm truncate block min-w-0 w-full">{Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="max-w-[200px] break-words"
-                  side="top"
-                  align="start"
-                >
-                  <p>{Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment}</p>
-                </TooltipContent>
-              </Tooltip>
-            ),
+            renderCell: (row) =>
+              isEmpty(row.equipment) ? (
+                <div className="flex items-center h-full min-w-0 w-full">
+                  <span className="text-sm truncate block min-w-0 w-full">--</span>
+                </div>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center h-full min-w-0 w-full">
+                      <span className="text-sm truncate block min-w-0 w-full">
+                        {Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="max-w-[200px] break-words"
+                    side="top"
+                    align="start"
+                  >
+                    <p>{Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ),
           };
         default:
           return {
@@ -733,24 +752,50 @@ Focus on proper form and progressive overload.`;
   const handleBulkDelete = async () => {
     if (selectedWorkouts.size === 0) return;
     try {
-      await deleteWorkouts(Array.from(selectedWorkouts));
+      const idsToDelete = Array.from(selectedWorkouts);
+      const deleteCount = idsToDelete.length;
+
+      let singleItemName = '';
+      if (deleteCount === 1) {
+        const item = workouts.find(w => w.id === idsToDelete[0]);
+        if (item) singleItemName = item.program;
+      }
+
+      await deleteWorkouts(idsToDelete);
       // Reload workouts after deleting
       await refreshWorkouts();
+
+      if (deleteCount === 1 && singleItemName) {
+        toast.success(`Successfully deleted ${singleItemName}`);
+      } else {
+        toast.success(`Successfully deleted ${deleteCount} workout${deleteCount === 1 ? '' : 's'}`);
+      }
+
       // Clear selection after deleting
       setSelectedWorkouts(new Set());
     } catch (error) {
       console.error('Failed to delete workouts:', error);
+      toast.error('Failed to delete workouts');
     }
   };
 
   const handleConfirmSingleDelete = async () => {
     if (!workoutToDelete) return;
     try {
+      const workout = workouts.find(w => w.id === workoutToDelete);
       await deleteWorkouts([workoutToDelete]);
       await refreshWorkouts();
+
+      if (workout) {
+        toast.success(`Successfully deleted ${workout.program}`);
+      } else {
+        toast.success('Successfully deleted workout');
+      }
+
       setWorkoutToDelete(null);
     } catch (error) {
       console.error('Failed to delete workout:', error);
+      toast.error('Failed to delete workout');
     }
   };
 
@@ -970,7 +1015,7 @@ Focus on proper form and progressive overload.`;
                   >
                     <X className="size-4" />
                     <span>
-                      Clear {selectedWorkouts.size} selected
+                      {t('general.clearSelected', { count: selectedWorkouts.size })}
                     </span>
                   </Button>
                 </TooltipTrigger>
@@ -1301,35 +1346,12 @@ Focus on proper form and progressive overload.`;
           </div>
         )}
       </SidePanel>
-      <SidePanel
+      <SelectClientSidePanel
         open={isAssignWorkoutOpen}
         onOpenChange={setIsAssignWorkoutOpen}
         title={t('library.assignWorkout')}
-      >
-        <AssignAthletesList
-          onAthleteSelected={(athleteId) => {
-            setIsAssignWorkoutOpen(false);
-            if (athleteId) {
-              if (selectedWorkouts.size > 0) {
-                // For bulk assign, navigate with preselected workout
-                const firstWorkoutId = Array.from(selectedWorkouts)[0];
-                const workout = workouts.find((w) => w.id === firstWorkoutId);
-                if (workout) {
-                  router.push(
-                    `/athletes/${athleteId}/training-calendar?workoutId=${workout.id}&workoutName=${encodeURIComponent(workout.program)}&openModal=true`
-                  );
-                }
-              } else {
-                // Generic assign - just open the workout modal without preselection
-                router.push(
-                  `/athletes/${athleteId}/training-calendar?openModal=true&modalType=workout`
-                );
-              }
-            }
-          }}
-        />
-      </SidePanel>
-      <SidePanel
+      />
+      <AssignTrainingToClientSidePanel
         open={isAssignIndividualWorkoutOpen}
         onOpenChange={(open) => {
           setIsAssignIndividualWorkoutOpen(open);
@@ -1337,22 +1359,12 @@ Focus on proper form and progressive overload.`;
             setSelectedWorkoutForAssignment(null);
           }
         }}
-        title={selectedWorkoutForAssignment ? t('library.assigningWorkout', { name: selectedWorkoutForAssignment.program }) : t('library.assignWorkout')}
-      >
-        {selectedWorkoutForAssignment && (
-          <AssignAthletesList
-            navigateOnSelect={false}
-            onAthleteSelected={(athleteId) => {
-              if (athleteId) {
-                setIsAssignIndividualWorkoutOpen(false);
-                router.push(
-                  `/athletes/${athleteId}/training-calendar?workoutId=${selectedWorkoutForAssignment.id}&workoutName=${encodeURIComponent(selectedWorkoutForAssignment.program)}&openModal=true`
-                );
-              }
-            }}
-          />
-        )}
-      </SidePanel>
+        selectedItem={selectedWorkoutForAssignment ? {
+          type: 'workout',
+          id: selectedWorkoutForAssignment.id,
+          name: selectedWorkoutForAssignment.program
+        } : null}
+      />
     </div>
   );
 };

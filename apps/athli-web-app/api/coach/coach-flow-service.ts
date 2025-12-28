@@ -102,6 +102,23 @@ export const updateFlowDetails = async (
 };
 
 /**
+ * Update flow status (is_active)
+ * @param flowId - ID of the flow
+ * @param isActive - New active status
+ */
+export const updateFlowStatus = async (
+  flowId: string,
+  isActive: boolean
+): Promise<void> => {
+  await apiFetch(`/coach/flows/${flowId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      is_active: isActive,
+    }),
+  });
+};
+
+/**
  * Duplicate a flow in coach's library
  * @param flowId - ID of the flow to duplicate
  */

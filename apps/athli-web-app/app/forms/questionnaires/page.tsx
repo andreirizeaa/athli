@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,13 +19,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddQuestionnaireFormSidePanel } from '@/components/forms/add-questionnaire-form-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
 import { duplicateQuestionnaire, deleteQuestionnaire, type Questionnaire as Form } from '@/api/coach/coach-questionnaire-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
+import { assignForm, assignFormsToClients, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
 import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
 import { useCoachQuestionnaires } from '@/hooks/use-coach-questionnaires';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useQueryClient } from '@tanstack/react-query';
 
 // Removed mock forms as we fetch from the API
@@ -33,6 +36,7 @@ const QuestionnairesPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const { questionnaires: forms, isLoading } = useCoachQuestionnaires();
+  const { clients } = useCoachClients();
   const { user } = useUserProfile();
   const queryClient = useQueryClient();
 
@@ -73,8 +77,15 @@ const QuestionnairesPage = () => {
   const handleConfirmSingleDelete = async () => {
     if (!formToDelete) return;
     try {
+      const form = forms?.find(f => f.id === formToDelete);
       await deleteQuestionnaire(formToDelete);
       refresh();
+
+      if (form) {
+        toast.success(t('general.deleteSuccessName', { name: form.name }));
+      } else {
+        toast.success(t('general.deleteSuccess'));
+      }
 
       // Clear selection if deleted
       if (selectedQuestionnaires.has(formToDelete)) {
@@ -85,17 +96,34 @@ const QuestionnairesPage = () => {
       setFormToDelete(null);
     } catch (error) {
       console.error('Failed to delete questionnaire:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
   const handleBulkDelete = async () => {
     try {
       const idsToDelete = Array.from(selectedQuestionnaires);
+      const deleteCount = idsToDelete.length;
+
+      let singleItemName = '';
+      if (deleteCount === 1) {
+        const item = questionnaireForms.find(f => f.id === idsToDelete[0]);
+        if (item) singleItemName = item.name;
+      }
+
       await Promise.all(idsToDelete.map((id) => deleteQuestionnaire(id)));
       refresh();
+
+      if (deleteCount === 1 && singleItemName) {
+        toast.success(t('general.deleteSuccessName', { name: singleItemName }));
+      } else {
+        toast.success(t('general.deleteSuccessCount', { count: deleteCount, item: deleteCount === 1 ? 'questionnaire' : 'questionnaires' }));
+      }
+
       setSelectedQuestionnaires(new Set());
     } catch (error) {
       console.error('Failed to bulk delete questionnaires:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
@@ -127,34 +155,47 @@ const QuestionnairesPage = () => {
     try {
       const clientIdsArray = Array.from(selectedClientIds);
 
-      await Promise.all(
-        formsToAssign.flatMap((form) =>
-          clientIdsArray.map(async (clientId) => {
-            const scheduleData: AssignFormScheduleData = {
-              type: 'one-time',
-              sendNow: true,
-            };
+      // We only support one schedule type for bulk assignment for now (can differ per form if we wanted,
+      // but UI implies one schedule for all). Assuming the first form's schedule or a default one.
+      // For simplicity in this bulk UI, we might use a default "one-time now" or let the user configure (not in current UI).
+      // The current UI doesn't show schedule configuration in the side panel.
+      // We'll proceed with "Assign Now" (one-time, immediate) as a safe default for bulk actions 
+      // unless we add a schedule picker to the generic side panel.
 
-            const cronExpression = convertScheduleToCron(scheduleData);
+      const defaultScheduleData: AssignFormScheduleData = {
+        type: 'one-time',
+        sendNow: true,
+      };
 
-            await assignForm({
-              formId: form.id,
-              clientId: clientId,
-              coachId: user.id,
-              formType: 'questionnaire',
-              cronExpression: cronExpression,
-              scheduleData: scheduleData,
-            });
-          })
-        )
-      );
+      const defaultCron = convertScheduleToCron(defaultScheduleData);
+
+      await assignFormsToClients({
+        formIds: formsToAssign.map(f => f.id),
+        clientIds: clientIdsArray,
+        coachId: user.id,
+        formType: 'questionnaire',
+        cronExpression: defaultCron,
+        scheduleData: defaultScheduleData
+      });
 
       setIsAssignToClientsOpen(false);
+
+      const formCount = formsToAssign.length;
+      const clientCount = clientIdsArray.length;
+
+      // Remove queries to force hard refresh and loading state
+      clientIdsArray.forEach(clientId => {
+        queryClient.removeQueries({ queryKey: ['client-questionnaires', clientId] });
+      });
+
+      toast.success(`Successfully assigned ${formCount} ${formCount === 1 ? 'questionnaire' : 'questionnaires'} to ${clientCount} ${clientCount === 1 ? 'client' : 'clients'}`);
+
       setFormsToAssign([]);
       setSelectedQuestionnaires(new Set());
       setSelectedClientIds(new Set());
     } catch (error) {
       console.error('Failed to assign forms to clients:', error);
+      toast.error('Failed to assign questionnaires');
     }
   };
 
@@ -192,17 +233,11 @@ const QuestionnairesPage = () => {
   }>) => {
     refresh();
 
-    const template = formTemplates.find((t) => t.name === newForm.name);
-    const formType = template?.schedule?.type || 'check-in';
-
     if (questions && questions.length > 0) {
       sessionStorage.setItem(`form-questions-${newForm.id}`, JSON.stringify(questions));
-      if (formType === 'check-in') {
-        router.push(`/forms/check-ins/${newForm.id}`);
-      } else {
-        router.push(`/forms/questionnaires/${newForm.id}`);
-      }
     }
+
+    setIsAddQuestionnaireOpen(false);
   };
 
   const questionnaireColumns: ColumnDefinition<Form>[] = [
@@ -436,28 +471,68 @@ const QuestionnairesPage = () => {
         itemType="questionnaire"
       />
 
-      <SidePanel
+      <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
         title={t('forms.assignToClientsTitle')}
-        footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button
-              type="button"
-              onClick={handleAssignFormsToClients}
-              disabled={selectedClientIds.size === 0 || formsToAssign.length === 0}
-            >
-              {selectedClientIds.size === 1
-                ? t('forms.assignToOneClient')
-                : t('forms.assignToClientsCount', { count: selectedClientIds.size })}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleCloseAssignToClients}>
-              {t('general.cancel')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-6 h-full">
+        onAssign={async (clientIds) => {
+          setSelectedClientIds(new Set(clientIds));
+          // We call the handler immediately, but we need to ensure selectedClientIds state is updated 
+          // or we can pass clientIds directly to a new version of the handler.
+          // Refactoring handleAssignFormsToClients to accept IDs would be cleaner, 
+          // but for now setting state and calling works if we wait or just use the passed IDs.
+
+          // Better approach: Call logic directly with passed IDs
+          if (clientIds.length === 0 || formsToAssign.length === 0 || !user?.id) return;
+
+          try {
+            const defaultScheduleData: AssignFormScheduleData = {
+              type: 'one-time',
+              sendNow: true,
+            };
+            const defaultCron = convertScheduleToCron(defaultScheduleData);
+
+            await assignFormsToClients({
+              formIds: formsToAssign.map(f => f.id),
+              clientIds: clientIds,
+              coachId: user.id,
+              formType: 'questionnaire',
+              cronExpression: defaultCron,
+              scheduleData: defaultScheduleData
+            });
+
+            const formCount = formsToAssign.length;
+            const clientCount = clientIds.length;
+
+            clientIds.forEach(clientId => {
+              queryClient.removeQueries({ queryKey: ['client-questionnaires', clientId] });
+            });
+
+            // Determine toast message
+            if (formCount === 1 && clientCount === 1) {
+              const formName = formsToAssign[0].name;
+              const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+              toast.success(t('forms.assignSuccessSingle', { formName, clientName }));
+            } else if (formCount === 1) {
+              const formName = formsToAssign[0].name;
+              toast.success(t('forms.assignSuccessFormMultiClient', { formName, count: clientCount }));
+            } else if (clientCount === 1) {
+              const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+              toast.success(t('forms.assignSuccessMultiFormSingleClient', { count: formCount, clientName }));
+            } else {
+              toast.success(`Successfully assigned ${formCount} questionnaires to ${clientCount} clients`);
+            }
+
+            setFormsToAssign([]);
+            setSelectedQuestionnaires(new Set());
+            setSelectedClientIds(new Set());
+          } catch (error) {
+            console.error('Failed to assign forms to clients:', error);
+            toast.error('Failed to assign questionnaires');
+            throw error; // Propagate to panel to show error if needed
+          }
+        }}
+        previewComponent={
           <div className="flex flex-col gap-2 flex-shrink-0">
             <label className="text-sm font-medium">{t('forms.formsToAssign')}</label>
             {formsToAssign.length > 0 ? (
@@ -487,96 +562,9 @@ const QuestionnairesPage = () => {
               </div>
             )}
           </div>
-
-          <div className="flex flex-col gap-2 flex-1 min-h-0">
-            <label className="text-sm font-medium">{t('athletes.title')}</label>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <DataGrid
-                data={mockAthletes}
-                columns={[
-                  {
-                    id: 'name',
-                    label: t('athletes.title'),
-                    icon: <UserPlus className="size-3" />,
-                    width: { class: 'w-full', pixel: '100%' },
-                    getSortValue: (row) => row.name.toLowerCase(),
-                    getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
-                    renderHeader: ({ isAllSelected, onToggleAll }) => (
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                        <div className="flex items-center gap-2">
-                          <UserPlus className="size-3 text-muted-foreground" />
-                          <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
-                        </div>
-                      </div>
-                    ),
-                    renderCell: (row, isSelected) => {
-                      const initials = row.name
-                        .split(' ')
-                        .map((part) => part.charAt(0).toUpperCase())
-                        .slice(0, 2)
-                        .join('');
-                      return (
-                        <div className="flex items-center gap-3 h-full w-full">
-                          <div
-                            className="flex items-center justify-center h-full flex-shrink-0"
-                            data-no-row-link="true"
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => handleToggleClient(row.id)}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Avatar className="h-8 w-8 flex-shrink-0">
-                              <AvatarImage src={row.avatar} alt={row.name} />
-                              <AvatarFallback>{initials}</AvatarFallback>
-                            </Avatar>
-                            <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
-                          </div>
-                        </div>
-                      );
-                    },
-                  },
-                ]}
-                getRowId={(row) => row.id}
-                gridKey="assign-forms-to-clients"
-                searchPlaceholder={t('forms.searchAthletes')}
-                enableSearch={true}
-                enableEditColumns={false}
-                enableExport={false}
-                enableRowSelection={true}
-                selectedRowIds={selectedClientIds}
-                onSelectionChange={setSelectedClientIds}
-                onRowClick={(row, event) => {
-                  const targetElement = event.target as HTMLElement;
-                  if (targetElement.closest('[data-no-row-link="true"]')) {
-                    return;
-                  }
-                  handleToggleClient(row.id);
-                }}
-                onRowKeyDown={(row, event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    const targetElement = event.target as HTMLElement;
-                    if (targetElement.closest('[data-no-row-link="true"]')) {
-                      return;
-                    }
-                    event.preventDefault();
-                    handleToggleClient(row.id);
-                  }
-                }}
-
-                emptyMessage={t('forms.noAthletesFound')}
-                rowHeight="54px"
-                compactMode={true}
-                showPagination={true}
-                itemsPerPage={10}
-                gridPadding={true}
-              />
-            </div>
-          </div>
-        </div>
-      </SidePanel>
+        }
+        assignButtonLabel={(count) => count <= 1 ? t('forms.assignToOneClient') : t('forms.assignToClientsCount', { count })}
+      />
     </div>
   );
 };

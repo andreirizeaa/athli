@@ -274,8 +274,23 @@ const AthletesPage = () => {
   const handleConfirmArchive = async () => {
     try {
       const athleteIds = Array.from(selectedAthletes);
+      // Get names of athletes being archived
+      const archivedNames = athletes
+        .filter(a => selectedAthletes.has(a.id))
+        .map(a => a.name)
+        .join(', ');
+
       await Promise.all(athleteIds.map(id => archiveClient(id)));
-      toast.success(t('athletes.notifications.archiveSuccess'));
+
+      const message = selectedAthletes.size === 1
+        ? `${archivedNames} has been successfully archived and will lose app access immediately`
+        : `${selectedAthletes.size} clients have been successfully archived and will lose app access immediately`;
+
+      toast.success(message, {
+        description: 'You can restore archived clients later.',
+        duration: 5000,
+      });
+
       setSelectedAthletes(new Set());
       setIsArchiveConfirmOpen(false);
     } catch (error) {
@@ -1156,12 +1171,13 @@ const AthletesPage = () => {
                   <span>{t('athletes.actions.singleClient')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
-                  <Users className="size-4 mr-2" />
-                  <span>{t('athletes.actions.uploadClients')}</span>
+                  <Download className="mr-2 h-4 w-4" />
+                  <span>{t('athletes.actions.uploadCSV')}</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setIsRestoreClientsOpen(true)}>
-                  <ArchiveRestore className="size-4 mr-2" />
-                  <span>{t('athletes.actions.restoreClient')}</span>
+                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                  <span>{t('athletes.actions.archivedClients')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1215,7 +1231,7 @@ const AthletesPage = () => {
           if (targetElement.closest('[data-no-row-link="true"]')) {
             return;
           }
-          handleNavigateToClientProfile(row.publicId || row.id);
+          handleNavigateToClientProfile(row.id);
         }}
         onRowKeyDown={(row, event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -1224,7 +1240,7 @@ const AthletesPage = () => {
               return;
             }
             event.preventDefault();
-            handleNavigateToClientProfile(row.publicId || row.id);
+            handleNavigateToClientProfile(row.id);
           }
         }}
         defaultColumnOrder={['name', ...COLUMN_ORDER]}
@@ -1276,7 +1292,7 @@ const AthletesPage = () => {
                   <Button
                     variant="ghost"
                     onClick={handleArchiveSelected}
-                    className="gap-2"
+                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                     aria-label={t('athletes.actions.archiveSelectedAria')}
                   >
                     <Archive className="size-4" />
@@ -1344,15 +1360,19 @@ const AthletesPage = () => {
         open={isUploadClientsOpen}
         onOpenChange={setIsUploadClientsOpen}
       />
-      <RestoreClientsSidePanel
-        open={isRestoreClientsOpen}
-        onOpenChange={setIsRestoreClientsOpen}
-      />
       <ConfirmArchiveDialog
         open={isArchiveConfirmOpen}
         onOpenChange={setIsArchiveConfirmOpen}
         onConfirm={handleConfirmArchive}
         count={selectedAthletes.size}
+      />
+      <RestoreClientsSidePanel
+        open={isRestoreClientsOpen}
+        onOpenChange={setIsRestoreClientsOpen}
+        onClientRestored={() => {
+          // Invalidate the coach-clients query to refresh the list
+          // This is handled by the useCoachClients hook's query invalidation
+        }}
       />
     </div>
   );

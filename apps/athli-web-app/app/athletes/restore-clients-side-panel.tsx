@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { SidePanel } from '@/components/app/side-panel';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
-import { Search } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { getArchivedClients, restoreClient, type Athlete } from '@/api/coach/coach-client-service';
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 
 interface RestoreClientsSidePanelProps {
     open: boolean;
@@ -23,21 +24,16 @@ export const RestoreClientsSidePanel = ({
     onClientRestored,
 }: RestoreClientsSidePanelProps) => {
     const t = useTranslations();
+    const queryClient = useQueryClient();
     const [archivedClients, setArchivedClients] = useState<Athlete[]>([]);
-    const [filteredClients, setFilteredClients] = useState<Athlete[]>([]);
-    const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(false);
     const [isRestoring, setIsRestoring] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 25;
 
     const handleOpenChange = (isOpen: boolean) => {
         onOpenChange(isOpen);
         if (!isOpen) {
-            setSelectedClientId(null);
-            setSearchQuery('');
-            setCurrentPage(1);
+            setSelectedClientIds(new Set());
         }
     };
 
@@ -48,28 +44,11 @@ export const RestoreClientsSidePanel = ({
         }
     }, [open]);
 
-    // Filter clients based on search query
-    useEffect(() => {
-        if (searchQuery.trim() === '') {
-            setFilteredClients(archivedClients);
-        } else {
-            const query = searchQuery.toLowerCase();
-            const filtered = archivedClients.filter(
-                (client) =>
-                    client.name.toLowerCase().includes(query) ||
-                    client.email.toLowerCase().includes(query)
-            );
-            setFilteredClients(filtered);
-        }
-        setCurrentPage(1); // Reset to first page when search changes
-    }, [searchQuery, archivedClients]);
-
     const fetchArchivedClients = async () => {
         setIsLoading(true);
         try {
             const data = await getArchivedClients();
             setArchivedClients(data);
-            setFilteredClients(data);
         } catch (error) {
             toast.error(t('general.error'));
             console.error(error);
@@ -79,12 +58,26 @@ export const RestoreClientsSidePanel = ({
     };
 
     const handleRestore = async () => {
-        if (!selectedClientId) return;
+        if (selectedClientIds.size === 0) return;
 
         setIsRestoring(true);
         try {
-            await restoreClient(selectedClientId);
-            toast.success(t('athletes.notifications.restoreSuccess'));
+            await restoreClient(Array.from(selectedClientIds));
+
+            const restoredNames = archivedClients
+                .filter(c => selectedClientIds.has(c.id))
+                .map(c => c.name)
+                .join(', ');
+
+            const message = selectedClientIds.size === 1
+                ? `${restoredNames} has been successfully restored and will regain app access immediately`
+                : `${selectedClientIds.size} clients have been successfully restored and will regain app access immediately`;
+
+            toast.success(message);
+
+            // Invalidate the coach-clients query to refresh the main list without page reload
+            queryClient.invalidateQueries({ queryKey: ['coach-clients'] });
+
             onOpenChange(false);
             if (onClientRestored) onClientRestored();
         } catch (error) {
@@ -95,15 +88,51 @@ export const RestoreClientsSidePanel = ({
         }
     };
 
-    const handleClientSelect = (clientId: string) => {
-        setSelectedClientId(selectedClientId === clientId ? null : clientId);
-    };
-
-    // Pagination
-    const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedClients = filteredClients.slice(startIndex, endIndex);
+    const columns: ColumnDefinition<Athlete>[] = useMemo(() => [
+        {
+            id: 'name',
+            label: t('athletes.restorePanel.columns.name'),
+            width: { class: 'min-w-[300px]', pixel: '300px' },
+            renderHeader: ({ isAllSelected, onToggleAll }) => (
+                <div className="flex items-center gap-3 h-full w-full">
+                    <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+                    <span className="text-xs uppercase text-muted-foreground">{t('athletes.restorePanel.columns.name')}</span>
+                </div>
+            ),
+            renderCell: (row, isSelected) => (
+                <div className="flex items-center gap-3 h-full w-full">
+                    <div
+                        className="flex items-center justify-center h-full flex-shrink-0"
+                        data-no-row-link="true"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedClientIds((prev) => {
+                                const newSet = new Set(prev);
+                                if (newSet.has(row.id)) {
+                                    newSet.delete(row.id);
+                                } else {
+                                    newSet.add(row.id);
+                                }
+                                return newSet;
+                            });
+                        }}
+                    >
+                        <Checkbox checked={isSelected} />
+                    </div>
+                    <Avatar className="size-8 flex-shrink-0">
+                        <AvatarImage src={row.avatarUrl} alt={row.name} />
+                        <AvatarFallback className="text-xs">
+                            {row.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col min-w-0">
+                        <span className="truncate text-sm font-medium">{row.name}</span>
+                        <span className="truncate text-xs text-muted-foreground">{row.email}</span>
+                    </div>
+                </div>
+            ),
+        },
+    ], [t, setSelectedClientIds]);
 
     return (
         <SidePanel
@@ -114,10 +143,14 @@ export const RestoreClientsSidePanel = ({
                 <div className="flex w-full justify-start gap-2">
                     <Button
                         onClick={handleRestore}
-                        disabled={!selectedClientId || isRestoring}
+                        disabled={selectedClientIds.size === 0 || isRestoring}
                     >
                         {isRestoring ? <Spinner className="mr-2" /> : null}
-                        {t('athletes.restorePanel.restoreButton')}
+                        {selectedClientIds.size === 0
+                            ? t('athletes.restorePanel.restoreButton')
+                            : selectedClientIds.size === 1
+                                ? 'Restore 1 client'
+                                : `Restore ${selectedClientIds.size} clients`}
                     </Button>
                     <Button
                         variant="outline"
@@ -129,89 +162,33 @@ export const RestoreClientsSidePanel = ({
                 </div>
             }
         >
-            <div className="flex flex-col h-full gap-6">
-                {/* Search */}
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                        type="text"
-                        placeholder={t('athletes.restorePanel.searchPlaceholder')}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9"
-                    />
-                </div>
-
-                {/* Grid */}
-                <div className="flex-1 overflow-auto border rounded-md">
-                    {isLoading ? (
-                        <div className="flex items-center justify-center h-full">
-                            <Spinner className="size-6" />
-                        </div>
-                    ) : filteredClients.length === 0 ? (
-                        <div className="flex items-center justify-center h-full p-8 text-center">
-                            <p className="text-sm text-muted-foreground">{t('athletes.restorePanel.emptyState')}</p>
-                        </div>
-                    ) : (
-                        <table className="w-full">
-                            <thead className="bg-muted/50 sticky top-0 z-10">
-                                <tr>
-                                    <th className="w-12 p-3"></th>
-                                    <th className="text-left p-3 font-medium text-sm">
-                                        {t('athletes.restorePanel.columns.name')}
-                                    </th>
-                                    <th className="text-left p-3 font-medium text-sm">
-                                        {t('athletes.restorePanel.columns.email')}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {paginatedClients.map((client) => (
-                                    <tr
-                                        key={client.id}
-                                        className="border-t hover:bg-muted/30 cursor-pointer"
-                                        onClick={() => handleClientSelect(client.id)}
-                                    >
-                                        <td className="p-3">
-                                            <Checkbox
-                                                checked={selectedClientId === client.id}
-                                                onCheckedChange={() => handleClientSelect(client.id)}
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        </td>
-                                        <td className="p-3 text-sm">{client.name}</td>
-                                        <td className="p-3 text-sm text-muted-foreground">{client.email}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between text-sm">
-                        <div className="text-muted-foreground">
-                            Page {currentPage} of {totalPages}
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                Next
-                            </Button>
-                        </div>
+            <div className="flex flex-col h-full gap-6 min-h-0">
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <Spinner className="size-6" />
+                    </div>
+                ) : (
+                    <div className="flex-1 min-h-0 [&_.border-t]:border-t-0">
+                        <DataGrid
+                            data={archivedClients}
+                            columns={columns}
+                            getRowId={(row) => row.id}
+                            gridKey="archived-clients"
+                            searchPlaceholder={t('athletes.restorePanel.searchPlaceholder')}
+                            searchFields={[(row) => `${row.name} ${row.email}`]}
+                            enableSearch={true}
+                            enableEditColumns={false}
+                            enableExport={false}
+                            enableRowSelection={true}
+                            selectOnRowClick={true}
+                            selectedRowIds={selectedClientIds}
+                            onSelectionChange={setSelectedClientIds}
+                            emptyMessage={t('athletes.restorePanel.emptyState')}
+                            rowHeight="54px"
+                            compactMode={true}
+                            showPagination={false}
+                            gridPadding={false}
+                        />
                     </div>
                 )}
             </div>
