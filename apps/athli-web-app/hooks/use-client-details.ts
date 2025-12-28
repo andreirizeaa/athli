@@ -30,6 +30,7 @@ export function useUpdateClientDetails() {
             saveAthleteDetails(clientId, details),
         onSuccess: (_, { clientId }) => {
             queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
+            queryClient.invalidateQueries({ queryKey: ['client-profile', clientId] });
         },
     });
 }

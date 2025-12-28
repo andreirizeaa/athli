@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAthleteInjuries, saveAthleteInjuries } from '@/api/client/client-service';
+import { getAthleteInjuries, saveAthleteInjuries, type AthleteInjury } from '@/api/client/client-service';
 
 export function useClientInjuries(clientId: string | undefined) {
     const {
@@ -26,7 +26,7 @@ export function useUpdateClientInjuries() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ clientId, injuries }: { clientId: string; injuries: string[] }) =>
+        mutationFn: ({ clientId, injuries }: { clientId: string; injuries: Partial<AthleteInjury>[] }) =>
             saveAthleteInjuries(clientId, injuries),
         onSuccess: (_, { clientId }) => {
             queryClient.invalidateQueries({ queryKey: ['client-injuries', clientId] });

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { userService } from '../../../services/user.service';
 import { asyncHandler } from '../../../utils/async-handler';
-import { success, unauthorized } from '../../../utils/http-response';
+import { success, unauthorized, internalError } from '../../../utils/http-response';
+import { avatarService } from '../../../services/avatar.service';
 
 export class UserController {
   /**
@@ -23,13 +24,19 @@ export class UserController {
   updateProfile = asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).userId;
     const updates = req.body;
+    const file = req.file;
 
-    const user = await userService.updateUserProfile(userId, updates);
+    try {
+      const user = await userService.updateUserProfile(userId, updates, file as any);
 
-    success(res, {
-      message: 'Profile updated successfully',
-      data: { user },
-    });
+      success(res, {
+        message: 'Profile updated successfully',
+        data: { user },
+      });
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      return internalError(res, { message: error.message || 'Failed to update profile' });
+    }
   });
 
   /**

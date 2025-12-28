@@ -43,25 +43,29 @@ export const coachClientController = {
      */
     getClient: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
-        const { id } = req.params;
+        const clientId = req.header('x-client-id');
 
         if (!coachId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
         }
 
-        const supabase = getSupabaseClient();
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
-        if (!isUuid) {
-            return res.status(400).json({ success: false, message: 'Invalid ID format' });
+        if (!clientId) {
+            return res.status(400).json({ success: false, message: 'x-client-id header is required' });
         }
 
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId);
+
+        if (!isUuid) {
+            return res.status(400).json({ success: false, message: 'Invalid ID format in x-client-id header' });
+        }
+
+        const supabase = getSupabaseClient();
         const query = supabase
             .from('coach_clients_view')
             .select('*')
             .eq('coach_id', coachId)
-            .eq('client_id', id);
+            .eq('client_id', clientId);
 
         const { data: client, error } = await query.single();
 
@@ -236,99 +240,109 @@ export const coachClientController = {
      */
     updateClient: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
+        // req.body might be empty if only file is sent or it might contain fields
         const { id } = req.body;
         const updates = req.body;
+        const file = req.file;
 
-        if (!coachId) {
-            unauthorized(res, { message: 'User not authenticated' });
-            return;
-        }
+        try {
+            if (!coachId) {
+                unauthorized(res, { message: 'User not authenticated' });
+                return;
+            }
 
-        if (!id) {
-            return res.status(400).json({ success: false, message: 'Client ID is required' });
-        }
+            if (!id && !updates.id) {
+                return res.status(400).json({ success: false, message: 'Client ID is required' });
+            }
 
-        const supabase = getSupabaseClient();
+            const targetClientId = id || updates.id;
+            const supabase = getSupabaseClient();
 
-        // 1. Separate assignment updates from profile updates
-        const assignmentFields = ['category', 'status', 'is_archived'];
-        const profileFields = ['first_name', 'last_name', 'phone', 'gender', 'country', 'city', 'birth_date', 'height_cm', 'weight_kg', 'unit_system'];
+            // 1. Separate assignment updates from profile updates
+            const assignmentFields = ['category', 'status', 'is_archived'];
+            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system'];
 
-        const assignmentUpdates: any = {};
-        const profileUpdates: any = {};
+            const assignmentUpdates: any = {};
+            const profileUpdates: any = {};
 
-        // Populate update objects based on allowed fields
-        Object.keys(updates).forEach(key => {
-            if (assignmentFields.includes(key)) {
-                assignmentUpdates[key] = updates[key];
-            } else if (profileFields.includes(key)) {
-                // Map birth_date to date_of_birth if needed
-                if (key === 'birth_date') {
-                    profileUpdates['date_of_birth'] = updates[key];
-                } else {
-                    profileUpdates[key] = updates[key];
+            // Populate update objects based on allowed fields
+            Object.keys(updates).forEach(key => {
+                if (assignmentFields.includes(key)) {
+                    assignmentUpdates[key] = updates[key];
+                } else if (profileFields.includes(key)) {
+                    // Map birth_date to date_of_birth if needed
+                    if (key === 'birth_date') {
+                        profileUpdates['date_of_birth'] = updates[key];
+                    } else {
+                        profileUpdates[key] = updates[key];
+                    }
+                }
+            });
+
+            // 1.5 Handle file upload if present
+            if (file) {
+                const avatarUrl = await avatarService.uploadAvatar(targetClientId, file as any);
+                profileUpdates.profile_picture_url = avatarUrl;
+            }
+
+            // 2. Update assignment if needed
+            if (Object.keys(assignmentUpdates).length > 0) {
+                const { error: assignmentError } = await supabase
+                    .from('coach_client_assignments')
+                    .update(assignmentUpdates)
+                    .eq('client_id', targetClientId)
+                    .eq('coach_id', coachId);
+
+                if (assignmentError) throw assignmentError;
+            }
+
+            // 3. Update profile if needed
+            if (Object.keys(profileUpdates).length > 0) {
+                // First update user_profiles if name or avatar changed
+                const userProfileUpdates: any = {};
+                if (profileUpdates.name) userProfileUpdates.name = profileUpdates.name;
+                if (profileUpdates.profile_picture_url) userProfileUpdates.profile_picture_url = profileUpdates.profile_picture_url;
+
+                if (Object.keys(userProfileUpdates).length > 0) {
+                    await supabase
+                        .from('user_profiles')
+                        .update(userProfileUpdates)
+                        .eq('id', targetClientId);
+
+                    delete profileUpdates.name; // Don't try to update name in client_profiles
+                }
+
+                // Update client_profiles
+                if (Object.keys(profileUpdates).length > 0) {
+                    const { error: profileError } = await supabase
+                        .from('client_profiles')
+                        .update(profileUpdates)
+                        .eq('client_id', targetClientId);
+
+                    if (profileError) throw profileError;
                 }
             }
-        });
 
+            // 4. Fetch the updated view for return data
+            const { data: client, error: fetchError } = await supabase
+                .from('coach_clients_view')
+                .select('*')
+                .eq('coach_id', coachId)
+                .eq('client_id', targetClientId)
+                .single();
 
-        // 2. Update assignment if needed
-        if (Object.keys(assignmentUpdates).length > 0) {
-            const { error: assignmentError } = await supabase
-                .from('coach_client_assignments')
-                .update(assignmentUpdates)
-                .eq('client_id', id)
-                .eq('coach_id', coachId);
-
-            if (assignmentError) throw assignmentError;
-        }
-
-        // 3. Update profile if needed
-        if (Object.keys(profileUpdates).length > 0) {
-            // First update user_profiles if name changed
-            if (profileUpdates.first_name || profileUpdates.last_name) {
-                const { data: currentProfile } = await supabase
-                    .from('user_profiles')
-                    .select('name')
-                    .eq('id', id)
-                    .single();
-
-                const names = (currentProfile?.name || '').split(' ');
-                const firstName = profileUpdates.first_name || names[0] || '';
-                const lastName = profileUpdates.last_name || names.slice(1).join(' ') || '';
-                const newFullName = `${firstName} ${lastName}`.trim();
-
-                await supabase
-                    .from('user_profiles')
-                    .update({ name: newFullName })
-                    .eq('id', id);
+            if (fetchError || !client) {
+                return notFound(res, { message: 'Client not found after update' });
             }
 
-            // Update client_profiles
-            const { error: profileError } = await supabase
-                .from('client_profiles')
-                .update(profileUpdates)
-                .eq('client_id', id);
-
-            if (profileError) throw profileError;
+            success(res, {
+                message: 'Client updated successfully',
+                data: { client },
+            });
+        } catch (error: any) {
+            console.error('Error updating client:', error);
+            return res.status(500).json({ success: false, message: error.message || 'Failed to update client' });
         }
-
-        // 4. Fetch the updated view for return data
-        const { data: client, error: fetchError } = await supabase
-            .from('coach_clients_view')
-            .select('*')
-            .eq('coach_id', coachId)
-            .eq('client_id', id)
-            .single();
-
-        if (fetchError || !client) {
-            return notFound(res, { message: 'Client not found after update' });
-        }
-
-        success(res, {
-            message: 'Client updated successfully',
-            data: { client },
-        });
     },
 
     /**

@@ -21,7 +21,7 @@ import type { Athlete, ClientMetric, ClientHabit, ClientNote } from '@/api/coach
 import type { ClientPhoto } from '@/api/client/client-photo-service';
 import type { ClientCheckIn, ClientQuestionnaire } from '@/api/client/client-form-service';
 import type { ClientFileAssignment } from '@/api/coach/coach-file-service';
-import type { AthleteDetails, WorkoutStatistics } from '@/api/client/client-service';
+import type { AthleteDetails, WorkoutStatistics, AthleteGoal, AthleteInjury } from '@/api/client/client-service';
 
 interface ClientProfileContextType {
     athlete: Athlete | null;
@@ -33,8 +33,8 @@ interface ClientProfileContextType {
     files: ClientFileAssignment[];
     notes: ClientNote[];
     bio: string;
-    goals: string[];
-    injuries: string[];
+    goals: AthleteGoal[];
+    injuries: AthleteInjury[];
     details: AthleteDetails | null;
     workoutStats: {
         last7Days: WorkoutStatistics | null;

@@ -80,24 +80,14 @@ export const ClientBioCard = ({ clientId }: ClientBioCardProps) => {
         </CardHeader>
         <Separator className="w-full mt-[-8px] flex-shrink-0" />
         <CardContent
-          className="px-4 py-0 flex-1 mt-[-12px] -mb-[12px] flex items-center justify-center overflow-y-auto cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={handleEditBio}
-          role="button"
-          tabIndex={0}
-          aria-label={t('athletes.profile.editBio')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              handleEditBio();
-            }
-          }}
+          className="px-4 py-0 flex-1 mt-[-12px] -mb-[12px] flex items-center justify-center overflow-y-auto"
         >
           {isLoading ? (
             <p className="text-sm text-muted-foreground">{t('general.loading')}</p>
           ) : bio ? (
             <p className="text-sm text-foreground">{bio}</p>
           ) : (
-            <p className="text-sm text-muted-foreground">{t('athletes.profile.noBio')}</p>
+            <p className="text-xs text-muted-foreground">{t('athletes.profile.noBio')}</p>
           )}
         </CardContent>
         <Separator className="w-full" />
@@ -119,7 +109,7 @@ export const ClientBioCard = ({ clientId }: ClientBioCardProps) => {
           </div>
         }
       >
-        <div className="flex-1 flex flex-col min-h-0 gap-4 px-1 pb-1">
+        <div className="flex-1 flex flex-col min-h-0 gap-4 px-1 pb-1 pt-1">
           <div className="flex-1 flex flex-col min-h-0 space-y-2">
             <Textarea
               ref={bioTextareaRef}
