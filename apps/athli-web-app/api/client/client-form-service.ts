@@ -101,136 +101,83 @@ const mockClientQuestionnaires: ClientQuestionnaire[] = [
 
 /**
  * Service method to get check-ins for a client
- * This will be connected to the backend in the future
  */
-export const getClientCheckIns = async (clientId: string): Promise<ClientCheckIn[]> => {
-  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/check-ins`, { headers: { 'x-client-id': clientId } });
+export const getClientCheckIns = async (clientId: string, coachId: string): Promise<ClientCheckIn[]> => {
+  const response = await apiFetch<{ data: { checkIns: any[] } }>(`/client/forms/check-ins`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
+  });
 
-  return response.data.assignments.map((c: any) => ({
-    id: c.id, // Use assignment ID
-    name: c.check_in?.name || 'Unknown Check-in',
-    questionCount: c.check_in?.num_of_questions || 0,
+  return response.data.checkIns.map((c: any) => ({
+    id: c.assignment_id, // Use assignment ID
+    name: c.name || 'Unknown Check-in',
+    questionCount: c.questions?.length || 0,
     schedule: c.schedule_config?.frequency || 'Manual',
     nextScheduledAt: new Date(c.created_at), // Placeholder
-    description: c.check_in?.description,
+    description: c.description,
   }));
 };
 
 /**
  * Service method to get questionnaires for a client
- * This will be connected to the backend in the future
  */
-export const getClientQuestionnaires = async (clientId: string): Promise<ClientQuestionnaire[]> => {
-  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/questionnaires`, { headers: { 'x-client-id': clientId } });
+export const getClientQuestionnaires = async (clientId: string, coachId: string): Promise<ClientQuestionnaire[]> => {
+  const response = await apiFetch<{ data: { questionnaires: any[] } }>(`/client/forms/questionnaires`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
+  });
 
-  return response.data.assignments.map((q: any) => ({
-    id: q.id,
-    name: q.questionnaire?.name || 'Unknown Questionnaire',
-    questionCount: q.questionnaire?.num_of_questions || 0,
+  return response.data.questionnaires.map((q: any) => ({
+    id: q.assignment_id, // Use assignment ID
+    name: q.name || 'Unknown Questionnaire',
+    questionCount: q.questions?.length || 0,
     status: q.status || 'pending',
-    sentAt: new Date(q.assigned_at || q.created_at),
+    sentAt: new Date(q.assigned_at || q.created_at || Date.now()),
     completedAt: q.completed_at ? new Date(q.completed_at) : undefined,
-    description: q.questionnaire?.description,
+    description: q.description,
   }));
 };
 
-/**
- * Service method to get a specific questionnaire for a client with questions and answers
- * This will be connected to the backend in the future
- */
-export const getClientQuestionnaire = async (
-  clientId: string,
-  questionnaireId: string
-): Promise<ClientQuestionnaireDetail> => {
-  console.log('Getting questionnaire detail for client:', { clientId, questionnaireId });
+// ... (get single form methods are still mocked/placeholders, keeping as is for now)
 
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
+// ... (get single form methods are still mocked/placeholders, keeping as is for now)
 
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${clientId}/questionnaires/${questionnaireId}`, {
-  //   method: 'GET',
-  // })
-  // if (!response.ok) throw new Error('Failed to get client questionnaire')
-  // return await response.json()
+export interface AssignClientCheckInData {
+  checkInIds: string[];
+  clientId: string;
+  coachId: string;
+  schedule_config?: any;
+  cron_expression?: string;
+}
 
-  // Mock data
-  const mockQuestions: Question[] = [
-    {
-      id: 'q1',
-      question: 'What is your primary fitness goal?',
-      required: true,
-      format: 'multipleChoice',
-      options: ['Weight loss', 'Muscle gain', 'General fitness', 'Athletic performance'],
-    },
-    {
-      id: 'q2',
-      question: 'How many days per week can you commit to training?',
-      required: true,
-      format: 'number',
-    },
-    {
-      id: 'q3',
-      question: 'Rate your current fitness level',
-      required: true,
-      format: 'scale',
-      scaleFrom: '1',
-      scaleTo: '10',
-    },
-    {
-      id: 'q4',
-      question: 'Do you have any injuries or limitations?',
-      required: true,
-      format: 'yesNo',
-    },
-    {
-      id: 'q5',
-      question: 'Please describe your training experience',
-      required: false,
-      format: 'text',
-    },
-    {
-      id: 'q6',
-      question: 'Upload progress photos',
-      required: false,
-      format: 'images',
-      mediaCount: 3,
-    },
-    {
-      id: 'q7',
-      question: 'When did you start training?',
-      required: false,
-      format: 'date',
-    },
-    {
-      id: 'q8',
-      question: 'Rate your overall satisfaction',
-      required: false,
-      format: 'rating',
-    },
-  ];
+export const assignClientCheckIn = async (data: AssignClientCheckInData): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      checkInIds: data.checkInIds,
+      schedule_config: data.schedule_config,
+      cron_expression: data.cron_expression
+    }),
+  });
+};
 
-  const mockAnswers: QuestionAnswer[] = [
-    { questionId: 'q1', answer: 'Muscle gain' },
-    { questionId: 'q2', answer: 5 },
-    { questionId: 'q3', answer: 7 },
-    { questionId: 'q4', answer: 'No' },
-    { questionId: 'q5', answer: 'I have been training for 3 years with focus on strength training and bodybuilding. I follow a structured program and track my progress regularly.' },
-    { questionId: 'q6', answer: ['https://picsum.photos/400/600', 'https://picsum.photos/400/601', 'https://picsum.photos/400/602'] },
-    { questionId: 'q7', answer: new Date(2022, 0, 15) },
-    { questionId: 'q8', answer: 5 },
-  ];
+export interface AssignClientQuestionnaireData {
+  questionnaireIds: string[];
+  clientId: string;
+  coachId: string;
+  schedule_config?: any;
+  cron_expression?: string;
+}
 
-  return {
-    id: questionnaireId,
-    name: 'Initial Assessment',
-    description: 'One-time initial assessment form',
-    status: 'completed',
-    sentAt: new Date(2025, 10, 15),
-    completedAt: new Date(2025, 1, 27, 9, 45), // Feb 27, 2025 at 9:45 AM
-    questions: mockQuestions,
-    answers: mockAnswers,
-  };
+export const assignClientQuestionnaire = async (data: AssignClientQuestionnaireData): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires`, {
+    method: 'POST',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      questionnaireIds: data.questionnaireIds,
+      schedule_config: data.schedule_config,
+      cron_expression: data.cron_expression
+    }),
+  });
 };
 
 export interface DeleteClientCheckInsData {
@@ -240,12 +187,11 @@ export interface DeleteClientCheckInsData {
 
 /**
  * Service method to delete check-ins from a client
- * This will be connected to the backend in the future
  */
-export const deleteClientCheckIns = async (data: DeleteClientCheckInsData): Promise<void> => {
-  await apiFetch(`/client/check-ins`, {
+export const deleteClientCheckIns = async (data: DeleteClientCheckInsData & { coachId: string }): Promise<void> => {
+  await apiFetch(`/client/forms/check-ins`, {
     method: 'DELETE',
-    headers: { 'x-client-id': data.clientId },
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ checkInIds: data.checkInIds }),
   });
 };
@@ -255,10 +201,10 @@ export interface DeleteClientQuestionnairesData {
   clientId: string;
 }
 
-export const deleteClientQuestionnaires = async (data: DeleteClientQuestionnairesData): Promise<void> => {
-  await apiFetch(`/client/questionnaires`, {
+export const deleteClientQuestionnaires = async (data: DeleteClientQuestionnairesData & { coachId: string }): Promise<void> => {
+  await apiFetch(`/client/forms/questionnaires`, {
     method: 'DELETE',
-    headers: { 'x-client-id': data.clientId },
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({ questionnaireIds: data.questionnaireIds }),
   });
 };
@@ -276,6 +222,8 @@ export interface AssignFormScheduleData {
 export interface AssignFormData {
   formId: string;
   clientId: string;
+  coachId: string;
+  formType: 'check-in' | 'questionnaire';
   cronExpression: string;
   scheduleData: AssignFormScheduleData;
 }
@@ -382,28 +330,27 @@ export const convertScheduleToCron = (scheduleData: AssignFormScheduleData): str
  * Service method to assign a form to a client with a schedule
  * This will be connected to the backend in the future
  */
+/**
+ * Service method to assign a form to a client with a schedule
+ */
 export const assignForm = async (data: AssignFormData): Promise<void> => {
-  console.log('Assigning form to client:', {
-    formId: data.formId,
-    clientId: data.clientId,
-    scheduleData: data.scheduleData,
-    cronExpression: data.cronExpression,
-  });
-
-  // Simulate API call delay
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // In the future, this will make an actual API call:
-  // const response = await fetch(`/api/clients/${data.clientId}/check-ins`, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify({
-  //     formId: data.formId,
-  //     cronExpression: data.cronExpression,
-  //     scheduleData: data.scheduleData,
-  //   }),
-  // })
-  // if (!response.ok) throw new Error('Failed to assign form')
+  if (data.formType === 'check-in') {
+    await assignClientCheckIn({
+      checkInIds: [data.formId],
+      clientId: data.clientId,
+      coachId: data.coachId,
+      schedule_config: data.scheduleData,
+      cron_expression: data.cronExpression
+    });
+  } else {
+    await assignClientQuestionnaire({
+      questionnaireIds: [data.formId],
+      clientId: data.clientId,
+      coachId: data.coachId,
+      schedule_config: data.scheduleData,
+      cron_expression: data.cronExpression
+    });
+  }
 }
 
 /**

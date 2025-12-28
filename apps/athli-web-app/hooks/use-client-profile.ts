@@ -5,6 +5,7 @@ export function useClientProfile(clientId: string | undefined) {
     const {
         data: client,
         isLoading,
+        isFetching,
         error
     } = useQuery({
         queryKey: ['client-profile', clientId],
@@ -16,6 +17,7 @@ export function useClientProfile(clientId: string | undefined) {
     return {
         client: client || null,
         isLoading,
+        isFetching,
         error,
     };
 }

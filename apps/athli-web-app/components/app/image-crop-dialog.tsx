@@ -133,7 +133,7 @@ export function ImageCropDialog({
                                 />
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-12 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                                    className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-12 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
                                 >
                                     <Upload className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
                                     <p className="text-sm text-muted-foreground mb-2">

@@ -56,7 +56,7 @@ export const coachMetricsController = {
                 description,
                 value_kind: value_kind || 'number',
                 min_value,
-                max_value,
+                max_value
             })
             .select()
             .single();

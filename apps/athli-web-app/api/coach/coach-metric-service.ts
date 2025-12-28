@@ -11,6 +11,7 @@ export interface Metric {
   max_value?: number;
   created_at: string;
   updated_at: string;
+  client_id?: string;
 }
 
 export interface CreateMetricInput {
@@ -20,6 +21,7 @@ export interface CreateMetricInput {
   value_kind?: 'number' | 'percent' | 'duration' | 'score';
   min_value?: number;
   max_value?: number;
+  client_id?: string;
 }
 
 /**
@@ -34,6 +36,16 @@ export const getAllMetrics = async (): Promise<Metric[]> => {
  * Service method to create a new coach metric
  */
 export const createMetric = async (metric: CreateMetricInput): Promise<Metric> => {
+  const { client_id, ...data } = metric;
+
+  if (client_id) {
+    const response = await apiFetch(`/clients/${client_id}/metrics`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.data.metric;
+  }
+
   const response = await apiFetch('/coach/metrics', {
     method: 'POST',
     body: JSON.stringify(metric),

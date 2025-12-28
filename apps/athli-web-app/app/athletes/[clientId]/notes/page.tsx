@@ -12,11 +12,14 @@ import { SidePanel } from '@/components/app/side-panel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 
 import { Trash2, Plus, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { useClientNotes } from '@/hooks/use-client-notes';
 import { type Note } from '@/api/coach/coach-client-service';
+
+import { useClientProfileContext } from '../client-profile-context';
 
 const ClientNotesPage = () => {
   const t = useTranslations();
@@ -24,9 +27,10 @@ const ClientNotesPage = () => {
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
   const itemsPerPage = 25;
 
+  const { notes: notesFromContext, isLoading: isLoadingContext } = useClientProfileContext();
   const {
-    notes,
-    isLoading,
+    notes: notesFromHook,
+    isLoading: isLoadingHook,
     refetch,
     createNote: createNoteMutation,
     updateNote: updateNoteMutation,
@@ -37,6 +41,9 @@ const ClientNotesPage = () => {
     isDeleting
   } = useClientNotes(clientId);
 
+  const notes = notesFromContext.length > 0 ? notesFromContext : notesFromHook;
+  const isLoading = isLoadingContext || isLoadingHook;
+
   const [isViewNoteOpen, setIsViewNoteOpen] = useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -46,7 +53,9 @@ const ClientNotesPage = () => {
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
-  const [filteredCount, setFilteredCount] = useState<number>(0);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
   const noteTitleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -112,34 +121,46 @@ const ClientNotesPage = () => {
     setIsViewNoteOpen(true);
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = (noteId: string) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    setNoteToDelete(note);
+    setIsBulkDelete(false);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
     if (!clientId) return;
 
     try {
-      await deleteNoteMutation({
-        noteId,
-        contactId: clientId,
-      });
-    } catch (error) {
-      console.error('Failed to delete note:', error);
-    }
-  };
+      if (isBulkDelete) {
+        await deleteNotesMutation({
+          noteIds: Array.from(selectedNotes),
+          contactId: clientId,
+        });
+        setSelectedNotes(new Set());
+      } else if (noteToDelete) {
+        await deleteNoteMutation({
+          noteId: noteToDelete.id,
+          contactId: clientId,
+        });
+      }
 
-  const handleDeleteNoteFromPanel = async () => {
-    if (!selectedNote || !clientId) return;
-
-    try {
-      await deleteNoteMutation({
-        noteId: selectedNote.id,
-        contactId: clientId,
-      });
-
+      setIsDeleteDialogOpen(false);
+      setNoteToDelete(null);
       setIsViewNoteOpen(false);
       setSelectedNote(null);
       setHasNoteChanges(false);
     } catch (error) {
-      console.error('Failed to delete note:', error);
+      console.error('Failed to delete notes:', error);
     }
+  };
+
+  const handleDeleteNoteFromPanel = () => {
+    if (!selectedNote) return;
+    setNoteToDelete(selectedNote);
+    setIsBulkDelete(false);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleCreateNote = async () => {
@@ -176,19 +197,11 @@ const ClientNotesPage = () => {
     setSelectedNotes(new Set());
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedNotes.size === 0 || !clientId) return;
-
-    try {
-      await deleteNotesMutation({
-        noteIds: Array.from(selectedNotes),
-        contactId: clientId,
-      });
-
-      setSelectedNotes(new Set());
-    } catch (error) {
-      console.error('Failed to delete notes:', error);
-    }
+  const handleDeleteSelected = () => {
+    if (selectedNotes.size === 0) return;
+    setIsBulkDelete(true);
+    setNoteToDelete(null);
+    setIsDeleteDialogOpen(true);
   };
 
   const truncateText = (text: string, maxLength: number = 100): string => {
@@ -200,42 +213,6 @@ const ClientNotesPage = () => {
     return format(new Date(timestamp), 'MMM d, yyyy');
   };
 
-  // Render first column header with checkbox
-  const renderFirstColumnHeader = ({
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        <div className="flex items-center gap-2">
-          <FileText className="size-3 text-muted-foreground" />
-          <span className="text-xs uppercase text-muted-foreground">{t('messages.noteTitle')}</span>
-        </div>
-      </div>
-    );
-  };
-
-  // Render first column with checkbox and title
-  const renderFirstColumn = (row: Note, isSelected: boolean) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleNote(row.id)} />
-        </div>
-        <div className="flex items-center w-full min-w-0">
-          <span className="text-sm font-medium truncate">{row.title}</span>
-        </div>
-      </div>
-    );
-  };
-
   // Create column definitions
   const columns: ColumnDefinition<Note>[] = [
     {
@@ -243,9 +220,26 @@ const ClientNotesPage = () => {
       label: t('messages.noteTitle'),
       icon: <FileText className="size-3" />,
       width: { class: 'min-w-[300px]', pixel: '300px' },
-      renderCell: (row) => (
-        <div className="flex items-center w-full">
-          <span className="text-sm font-medium truncate">{row.title}</span>
+      renderHeader: ({ isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          <div className="flex items-center gap-2">
+            <FileText className="size-3 text-muted-foreground" />
+            <span className="text-xs uppercase text-muted-foreground">{t('messages.noteTitle')}</span>
+          </div>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div
+            className="flex items-center justify-center h-full flex-shrink-0"
+            data-no-row-link="true"
+          >
+            <Checkbox checked={isSelected} onCheckedChange={() => handleToggleNote(row.id)} />
+          </div>
+          <div className="flex items-center w-full min-w-0">
+            <span className="text-sm font-medium truncate">{row.title}</span>
+          </div>
         </div>
       ),
       getSortValue: (row) => row.title.toLowerCase(),
@@ -320,7 +314,6 @@ const ClientNotesPage = () => {
         getRowId={(row) => row.id}
         gridKey={`client-notes-${clientId}`}
         itemsPerPage={itemsPerPage}
-        onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('messages.searchNotesPlaceholder')}
         searchFields={[(row) => `${row.title} ${row.body || ''}`]}
@@ -329,11 +322,6 @@ const ClientNotesPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedNotes}
         onSelectionChange={setSelectedNotes}
-        firstColumnId="title"
-        stickyFirstColumn={true}
-        firstColumnWidth="175px"
-        renderFirstColumn={renderFirstColumn}
-        renderFirstColumnHeader={renderFirstColumnHeader}
         onRowClick={(row, event) => {
           const targetElement = event.target as HTMLElement;
           if (targetElement.closest('[data-no-row-link="true"]') || targetElement.closest('[data-action-menu="true"]')) {
@@ -370,28 +358,26 @@ const ClientNotesPage = () => {
           />
         }
         selectionActions={
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              onClick={handleClearSelected}
-              className="gap-2"
-              aria-label={t('general.clear')}
-            >
-              <X className="size-4" />
-              <span>
-                {t('general.clear')} {selectedNotes.size} selected
-              </span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleDeleteSelected}
-              className="gap-2"
-              aria-label={t('general.delete')}
-            >
-              <Trash2 className="size-4" />
-              <span>{t('general.delete')}</span>
-            </Button>
-          </div>
+          selectedNotes.size > 0 ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                onClick={handleClearSelected}
+                className="gap-2"
+              >
+                <X className="size-4" />
+                <span>Clear {selectedNotes.size} selected</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleDeleteSelected}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
+            </div>
+          ) : undefined
         }
         filterBarActions={
           <Button onClick={() => setIsCreateNoteOpen(true)} className="gap-2">
@@ -417,6 +403,7 @@ const ClientNotesPage = () => {
               onClick={handleDeleteNoteFromPanel}
               aria-label={t('general.delete')}
             >
+              <Trash2 className="size-4" />
               {t('general.delete')}
             </Button>
             <Button variant="outline" onClick={handleCancelNoteEdit}>
@@ -527,6 +514,16 @@ const ClientNotesPage = () => {
           </div>
         </div>
       </SidePanel>
+
+      <ConfirmDeleteDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        itemName={noteToDelete?.title}
+        count={selectedNotes.size}
+        itemType="note"
+        variant="default"
+      />
     </div>
   );
 };

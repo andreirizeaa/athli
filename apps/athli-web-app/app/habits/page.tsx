@@ -8,8 +8,10 @@ import * as z from 'zod';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X, Copy, Loader2 } from 'lucide-react';
+import { Button as UIButton } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { PageHeader } from '@/components/app/page-header';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import {
   Form,
   FormControl,
@@ -37,7 +39,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { cn } from '@/lib/general/utils';
 import { Habit } from '@/api/coach/coach-habit-service';
 import { useCoachHabits } from '@/hooks/use-coach-habits';
@@ -94,6 +96,7 @@ const HabitsPage = () => {
   } = useCoachHabits();
 
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
+  const { user } = useUserProfile();
   const [filteredCount, setFilteredCount] = useState<number>(0);
 
   // Add habit side panel state
@@ -110,6 +113,7 @@ const HabitsPage = () => {
   const [habitsToAssign, setHabitsToAssign] = useState<Habit[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
 
   const habitSchema = z
     .object({
@@ -378,6 +382,16 @@ const HabitsPage = () => {
     }
   };
 
+  const handleDeleteSingle = async () => {
+    if (!habitToDelete) return;
+    try {
+      await deleteHabit(habitToDelete);
+      setHabitToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete habit:', error);
+    }
+  };
+
   const handleAssignToClients = () => {
     const selectedHabitItems = habits.filter((habit) => selectedHabits.has(habit.id));
     if (selectedHabitItems.length === 0) {
@@ -408,10 +422,17 @@ const HabitsPage = () => {
       const habitIds = habitsToAssign.map((habit) => habit.id);
       const clientIdsArray = Array.from(selectedClientIds);
 
-      await assignHabit({
-        habitIds,
-        clientIds: clientIdsArray,
-      });
+      if (!user?.id) return;
+
+      await Promise.all(
+        clientIdsArray.map((clientId) =>
+          assignHabit({
+            habitIds,
+            clientId,
+            coachId: user.id,
+          })
+        )
+      );
 
       setIsAssignToClientsOpen(false);
       setHabitsToAssign([]);
@@ -457,6 +478,27 @@ const HabitsPage = () => {
   };
 
   const columns: ColumnDefinition<Habit>[] = [
+    {
+      id: 'name',
+      label: t('habits.columns.name'),
+      width: { class: 'w-[350px]', pixel: '350px' },
+      renderHeader: ({ isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase text-muted-foreground">{t('habits.columns.name')}</span>
+          </div>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+            <Checkbox checked={isSelected} onCheckedChange={() => handleToggleHabit(row.id)} />
+          </div>
+          <span className="text-sm font-medium truncate">{row.name}</span>
+        </div>
+      ),
+    },
     {
       id: 'aim',
       label: 'Aim',
@@ -518,55 +560,31 @@ const HabitsPage = () => {
       width: { class: 'w-[80px]', pixel: '80px' },
       renderCell: (row) => (
         <div className="flex items-center justify-end w-full" data-no-row-link="true">
-          <Button
+          <UIButton
             variant="ghost"
             size="icon"
-            onClick={(e) => handleDeleteFromGrid(row.id, e)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setHabitToDelete(row.id);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
-                handleDeleteFromGrid(row.id, e);
+                e.stopPropagation();
+                e.preventDefault();
+                setHabitToDelete(row.id);
               }
             }}
             className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
             aria-label={`Delete ${row.name}`}
           >
             <Trash2 className="h-4 w-4" />
-          </Button>
+          </UIButton>
         </div>
       ),
     },
   ];
 
-  const renderFirstColumnHeader = ({
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase text-muted-foreground">{t('habits.columns.name')}</span>
-        </div>
-      </div>
-    );
-  };
 
-  const renderFirstColumn = (row: Habit, isSelected: boolean) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleHabit(row.id)} />
-        </div>
-        <span className="text-sm font-medium truncate">{row.name}</span>
-      </div>
-    );
-  };
 
   const renderManualForm = () => (
     <Form {...form}>
@@ -868,29 +886,7 @@ const HabitsPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedHabits}
         onSelectionChange={setSelectedHabits}
-        onRowClick={(row, event) => {
-          const targetElement = event.target as HTMLElement;
-          if (targetElement.closest('[data-no-row-link="true"]')) {
-            return;
-          }
-          handleOpenEditHabit(row);
-        }}
-        onRowKeyDown={(row, event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            const targetElement = event.target as HTMLElement;
-            if (targetElement.closest('[data-no-row-link="true"]')) {
-              return;
-            }
-            event.preventDefault();
-            handleOpenEditHabit(row);
-          }
-        }}
-        firstColumnId="name"
-        stickyFirstColumn={true}
-        firstColumnWidth="350px"
-        hideFirstColumnBorder={false}
-        renderFirstColumn={renderFirstColumn}
-        renderFirstColumnHeader={renderFirstColumnHeader}
+
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -908,59 +904,84 @@ const HabitsPage = () => {
           />
         }
         selectionActions={
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              onClick={handleClearSelected}
-              className="gap-2"
-              aria-label={t('habits.actions.clearSelected')}
-            >
-              <X className="size-4" />
-              <span>
-                {t('habits.actions.clearSelected')} {selectedHabits.size}
-              </span>
-            </Button>
-            {selectedHabits.size === 1 && (
+          selectedHabits.size > 0 ? (
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
-                onClick={handleDuplicateSelected}
+                onClick={handleClearSelected}
                 className="gap-2"
-                aria-label={t('habits.actions.duplicateAria')}
-                disabled={isDuplicating}
+                aria-label={t('habits.actions.clearSelected')}
               >
-                {isDuplicating ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}
-                <span>{t('habits.actions.duplicate')}</span>
+                <X className="size-4" />
+                <span>{t('general.clearSelected', { count: selectedHabits.size })}</span>
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              onClick={handleAssignToClients}
-              className="gap-2"
-              aria-label={t('habits.actions.addToClients')}
-            >
-              <UserPlus className="size-4" />
-              <span>{t('habits.actions.addToClients')}</span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setIsBulkDeleteOpen(true)}
-              className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              aria-label={t('general.delete')}
-            >
-              <Trash2 className="size-4" />
-              <span>{t('general.delete')}</span>
-            </Button>
-          </div>
+              {selectedHabits.size === 1 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleDuplicateSelected}
+                  className="gap-2"
+                  aria-label={t('habits.actions.duplicateAria')}
+                  disabled={isDuplicating}
+                >
+                  {isDuplicating ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" />}
+                  <span>{t('habits.actions.duplicate')}</span>
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                onClick={handleAssignToClients}
+                className="gap-2"
+                aria-label={t('habits.actions.addToClients')}
+              >
+                <UserPlus className="size-4" />
+                <span>{t('habits.actions.addToClients')}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setIsBulkDeleteOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label={t('general.delete')}
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
+            </div>
+          ) : undefined
         }
+        onRowClick={(row, event) => {
+          const targetElement = event.target as HTMLElement;
+          if (targetElement.closest('[data-no-row-link="true"]')) {
+            return;
+          }
+          handleOpenEditHabit(row);
+        }}
+        onRowKeyDown={(row, event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            const targetElement = event.target as HTMLElement;
+            if (targetElement.closest('[data-no-row-link="true"]')) {
+              return;
+            }
+            event.preventDefault();
+            handleOpenEditHabit(row);
+          }
+        }}
         rowHeight="54px"
       />
 
-      <BulkDeleteConfirmationDialog
+      <ConfirmDeleteDialog
         open={isBulkDeleteOpen}
         onOpenChange={setIsBulkDeleteOpen}
         onConfirm={handleBulkDelete}
         count={selectedHabits.size}
-        itemName={t('habits.title').toLowerCase()}
+        itemType={t('habits.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={habitToDelete !== null}
+        onOpenChange={(open) => !open && setHabitToDelete(null)}
+        onConfirm={handleDeleteSingle}
+        itemName={habits.find(h => h.id === habitToDelete)?.name}
+        itemType="habit"
       />
 
       {/* Add Habit Side Panel */}
@@ -1160,11 +1181,27 @@ const HabitsPage = () => {
                 columns={[
                   {
                     id: 'name',
-                    label: 'Athlete',
+                    label: t('habits.columns.name'),
                     icon: <UserPlus className="size-3" />,
                     width: { class: 'w-full', pixel: '100%' },
                     getSortValue: (row) => row.name.toLowerCase(),
                     getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
+                    renderHeader: ({ isAllSelected, onToggleAll }) => (
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs uppercase text-muted-foreground">{t('habits.columns.name')}</span>
+                        </div>
+                      </div>
+                    ),
+                    renderCell: (row, isSelected) => (
+                      <div className="flex items-center gap-3 h-full w-full">
+                        <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
+                          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleClient(row.id)} />
+                        </div>
+                        <span className="text-sm font-medium truncate">{row.name}</span>
+                      </div>
+                    ),
                   },
                 ]}
                 getRowId={(row) => row.id}
@@ -1193,54 +1230,13 @@ const HabitsPage = () => {
                     handleToggleClient(row.id);
                   }
                 }}
-                firstColumnId="name"
-                stickyFirstColumn={true}
-                firstColumnWidth="100%"
-                hideFirstColumnBorder={true}
-                renderFirstColumn={(row, isSelected) => {
-                  const initials = row.name
-                    .split(' ')
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .slice(0, 2)
-                    .join('');
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <div
-                        className="flex items-center justify-center h-full flex-shrink-0"
-                        data-no-row-link="true"
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleToggleClient(row.id)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={row.avatar} alt={row.name} />
-                          <AvatarFallback>{initials}</AvatarFallback>
-                        </Avatar>
-                        <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
-                      </div>
-                    </div>
-                  );
-                }}
-                renderFirstColumnHeader={({ isAllSelected, onToggleAll }) => {
-                  return (
-                    <div className="flex items-center gap-3 h-full w-full">
-                      <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                      <div className="flex items-center gap-2">
-                        <UserPlus className="size-3 text-muted-foreground" />
-                        <span className="text-xs uppercase text-muted-foreground">Athlete</span>
-                      </div>
-                    </div>
-                  );
-                }}
+
                 emptyMessage="No athletes found."
                 rowHeight="54px"
                 compactMode={true}
                 showPagination={true}
-                itemsPerPage={10}
                 gridPadding={true}
+                itemsPerPage={10}
               />
             </div>
           </div>

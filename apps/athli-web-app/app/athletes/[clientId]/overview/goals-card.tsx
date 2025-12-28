@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Edit, Plus, X } from 'lucide-react';
-import { getAthleteGoals, saveAthleteGoals } from '@/api/client/client-service';
+import { useClientProfileContext } from '../client-profile-context';
+import { useUpdateClientGoals } from '@/hooks/use-client-goals';
 
 type GoalsCardProps = {
   clientId: string;
@@ -18,33 +19,12 @@ type GoalsCardProps = {
 
 export const GoalsCard = ({ clientId }: GoalsCardProps) => {
   const t = useTranslations();
-  const [goals, setGoals] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { goals, isLoading } = useClientProfileContext();
+  const updateGoalsMutation = useUpdateClientGoals();
   const [isEditGoalsOpen, setIsEditGoalsOpen] = useState(false);
   const [editingGoals, setEditingGoals] = useState<string[]>(['']);
   const [hasGoalsChanges, setHasGoalsChanges] = useState(false);
   const firstGoalInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const fetchGoals = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const fetchedGoals = await getAthleteGoals(clientId);
-        setGoals(fetchedGoals);
-        setEditingGoals(fetchedGoals.length > 0 ? fetchedGoals : ['']);
-      } catch (error) {
-        console.error('Failed to fetch goals:', error);
-        setGoals([]);
-        setEditingGoals(['']);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchGoals();
-  }, [clientId]);
 
   useEffect(() => {
     if (isEditGoalsOpen && firstGoalInputRef.current) {
@@ -65,8 +45,7 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
 
     try {
       const filteredGoals = editingGoals.filter((goal) => goal.trim() !== '');
-      await saveAthleteGoals(clientId, filteredGoals);
-      setGoals(filteredGoals);
+      await updateGoalsMutation.mutateAsync({ clientId, goals: filteredGoals });
       setHasGoalsChanges(false);
       setIsEditGoalsOpen(false);
     } catch (error) {

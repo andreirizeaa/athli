@@ -8,7 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Edit } from 'lucide-react';
 import { PieChart, Pie, Label } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { getWorkoutStatistics, type WorkoutStatistics } from '@/api/client/client-service';
+import { useClientProfileContext } from '../client-profile-context';
+import type { WorkoutStatistics } from '@/api/client/client-service';
 
 type AthleteWorkoutsCardProps = {
   clientId: string;
@@ -34,34 +35,11 @@ const chartConfig = {
 
 export const AthleteWorkoutsCard = ({ clientId }: AthleteWorkoutsCardProps) => {
   const t = useTranslations();
-  const [last7DaysStats, setLast7DaysStats] = useState<WorkoutStatistics | null>(null);
-  const [last30DaysStats, setLast30DaysStats] = useState<WorkoutStatistics | null>(null);
-  const [nextWeekStats, setNextWeekStats] = useState<WorkoutStatistics | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { workoutStats, isLoading } = useClientProfileContext();
 
-  useEffect(() => {
-    const fetchStatistics = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const [last7, last30, next] = await Promise.all([
-          getWorkoutStatistics(clientId, 'last7Days'),
-          getWorkoutStatistics(clientId, 'last30Days'),
-          getWorkoutStatistics(clientId, 'nextWeek'),
-        ]);
-        setLast7DaysStats(last7);
-        setLast30DaysStats(last30);
-        setNextWeekStats(next);
-      } catch (error) {
-        console.error('Failed to fetch workout statistics:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchStatistics();
-  }, [clientId]);
+  const last7DaysStats = workoutStats?.last7Days || null;
+  const last30DaysStats = workoutStats?.last30Days || null;
+  const nextWeekStats = workoutStats?.nextWeek || null;
 
   const formatDataForChart = (stats: WorkoutStatistics) => {
     return [
