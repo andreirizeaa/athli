@@ -1215,7 +1215,7 @@ const AthletesPage = () => {
           if (targetElement.closest('[data-no-row-link="true"]')) {
             return;
           }
-          handleNavigateToClientProfile(row.id);
+          handleNavigateToClientProfile(row.publicId || row.id);
         }}
         onRowKeyDown={(row, event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -1224,7 +1224,7 @@ const AthletesPage = () => {
               return;
             }
             event.preventDefault();
-            handleNavigateToClientProfile(row.id);
+            handleNavigateToClientProfile(row.publicId || row.id);
           }
         }}
         defaultColumnOrder={['name', ...COLUMN_ORDER]}

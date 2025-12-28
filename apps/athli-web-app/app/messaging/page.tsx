@@ -426,9 +426,9 @@ const MessagingPage = () => {
   // Read contact ID from URL path params on mount and when path changes
   React.useEffect(() => {
     if (contactIdFromPath) {
-      const contactExists = mockContacts.some((contact) => contact.id === contactIdFromPath);
-      if (contactExists) {
-        setSelectedContactId(contactIdFromPath);
+      const contact = mockContacts.find(c => c.id === contactIdFromPath);
+      if (contact) {
+        setSelectedContactId(contact.id);
       } else {
         // Invalid contact ID, redirect to base messaging page
         router.replace('/messaging');

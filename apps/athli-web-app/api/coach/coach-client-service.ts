@@ -46,6 +46,7 @@ export const getClients = async (): Promise<Athlete[]> => {
 
     return {
       id: client.client_id,
+      publicId: client.public_id,
       name: client.full_name || '',
       firstName: names[0] || '',
       lastName: names.slice(1).join(' ') || '',
@@ -254,6 +255,7 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
 
     return {
       id: client.client_id,
+      publicId: client.public_id,
       name: client.full_name || '',
       firstName: names[0] || '',
       lastName: names.slice(1).join(' ') || '',
@@ -314,6 +316,7 @@ export const getArchivedClients = async (): Promise<Athlete[]> => {
       age: 0,
       clientFor: clientForDays.toString(),
       connected: false,
+      publicId: client.public_id,
     };
   });
 };

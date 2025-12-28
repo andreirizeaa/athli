@@ -48,14 +48,19 @@ export const coachClientController = {
         }
 
         const supabase = getSupabaseClient();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-        // Use the view which joins profiles + assignments
-        const { data: client, error } = await supabase
+        if (!isUuid) {
+            return res.status(400).json({ success: false, message: 'Invalid ID format' });
+        }
+
+        const query = supabase
             .from('coach_clients_view')
             .select('*')
             .eq('coach_id', coachId)
-            .eq('client_id', id)
-            .single();
+            .eq('client_id', id);
+
+        const { data: client, error } = await query.single();
 
         if (error || !client) {
             if (error?.code !== 'PGRST116') { // PGRST116 is "The result contains 0 rows"
