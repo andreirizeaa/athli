@@ -27,10 +27,19 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { useClientProfileContext } from '../client-profile-context';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { getAllMetrics } from '@/api/coach/coach-metric-service';
-import { assignMetric, addMetric as addClientMetric, removeMetric } from '@/api/client/client-metric-service';
+import {
+  assignMetric,
+  addMetric as addClientMetric,
+  removeMetric,
+  logMetric,
+  updateMetric,
+  deleteMetricLog,
+  updateMetricLog
+} from '@/api/client/client-metric-service';
 import { useClientMetrics } from '@/hooks/use-client-metrics';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { toast } from 'sonner';
 
 type Metric = {
   id: string;
@@ -64,6 +73,7 @@ const ClientMetricsPage = () => {
   const [isLogMetricOpen, setIsLogMetricOpen] = useState<boolean>(false);
   const [isEditMetricOpen, setIsEditMetricOpen] = useState<boolean>(false);
   const [selectedMetricId, setSelectedMetricId] = useState<string | null>(null);
+  const [selectedMetricIdForLog, setSelectedMetricIdForLog] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [editingLogId, setEditingLogId] = useState<string | null>(null);
   const [editingLogValue, setEditingLogValue] = useState<string>('');
@@ -77,22 +87,17 @@ const ClientMetricsPage = () => {
       unit: item.unit,
       description: item.description,
       metricId: item.id,
-      assignmentId: item.assignment_id || item.id
+      assignmentId: item.assignment_id || item.id,
+      logs: (item.logs || []).map((log: any) => ({
+        id: log.id,
+        metricId: item.id,
+        value: log.value,
+        loggedAt: new Date(log.date)
+      }))
     }));
   }, [rawData]);
 
   const clientName = '';
-
-  // Mock log data
-  const [metricLogs, setMetricLogs] = useState<MetricLog[]>([
-    { id: 'log-1', metricId: 'metric-1', value: 15.5, loggedAt: new Date(2024, 11, 20) },
-    { id: 'log-2', metricId: 'metric-1', value: 16.2, loggedAt: new Date(2024, 11, 25) },
-    { id: 'log-3', metricId: 'metric-1', value: 15.8, loggedAt: new Date(2024, 11, 30) },
-    { id: 'log-4', metricId: 'metric-1', value: 16.5, loggedAt: new Date(2025, 0, 5) },
-    { id: 'log-5', metricId: 'metric-1', value: 16.0, loggedAt: new Date(2025, 0, 10) },
-    { id: 'log-6', metricId: 'metric-1', value: 15.3, loggedAt: new Date(2025, 0, 15) },
-    { id: 'log-7', metricId: 'metric-1', value: 15.9, loggedAt: new Date(2025, 0, 20) },
-  ]);
 
   const filteredMetrics = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -127,11 +132,10 @@ const ClientMetricsPage = () => {
 
   // Filter logs by time period
   const getFilteredLogsByTime = useMemo(() => {
-    if (!selectedMetricId) return [];
+    if (!selectedMetric) return [];
 
-    const allLogs = metricLogs
-      .filter((log) => log.metricId === selectedMetricId)
-      .sort((a, b) => a.loggedAt.getTime() - b.loggedAt.getTime());
+    const allLogs = (selectedMetric.logs || [])
+      .sort((a: any, b: any) => a.loggedAt.getTime() - b.loggedAt.getTime());
 
     if (timeFilter === 'all-time') {
       return allLogs;
@@ -163,8 +167,8 @@ const ClientMetricsPage = () => {
         return allLogs;
     }
 
-    return allLogs.filter((log) => log.loggedAt >= cutoffDate);
-  }, [selectedMetricId, metricLogs, timeFilter]);
+    return allLogs.filter((log: any) => log.loggedAt >= cutoffDate);
+  }, [selectedMetric, timeFilter]);
 
   // Get logs for selected metric (filtered by time)
   const selectedMetricLogs = getFilteredLogsByTime;
@@ -172,7 +176,7 @@ const ClientMetricsPage = () => {
   // Calculate average
   const averageValue = useMemo(() => {
     if (selectedMetricLogs.length === 0) return null;
-    const sum = selectedMetricLogs.reduce((acc, log) => acc + log.value, 0);
+    const sum = selectedMetricLogs.reduce((acc: any, log: any) => acc + log.value, 0);
     return sum / selectedMetricLogs.length;
   }, [selectedMetricLogs]);
 
@@ -192,7 +196,7 @@ const ClientMetricsPage = () => {
 
   // Format chart data
   const chartData = useMemo(() => {
-    return selectedMetricLogs.map((log) => ({
+    return selectedMetricLogs.map((log: any) => ({
       date: format(log.loggedAt, 'MMM d'),
       value: log.value,
     }));
@@ -235,7 +239,7 @@ const ClientMetricsPage = () => {
     if (selectedMetricLogs.length === 0) {
       return { yAxisDomain: ['auto', 'auto'], yAxisTicks: [] };
     }
-    const values = selectedMetricLogs.map((log) => log.value);
+    const values = selectedMetricLogs.map((log: any) => log.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const { min: niceMin, max: niceMax, step } = calculateNiceInterval(min, max);
@@ -250,7 +254,7 @@ const ClientMetricsPage = () => {
   }, [selectedMetricLogs]);
 
   const handleEditLog = (logId: string) => {
-    const log = selectedMetricLogs.find((l) => l.id === logId);
+    const log = selectedMetricLogs.find((l: any) => l.id === logId);
     if (log) {
       setEditingLogId(logId);
       setEditingLogValue(log.value.toString());
@@ -258,13 +262,25 @@ const ClientMetricsPage = () => {
   };
 
   const handleSaveLog = async (logId: string) => {
+    if (!clientId || !user?.id) return;
     const value = parseFloat(editingLogValue);
-    if (!isNaN(value) && value > 0) {
-      setMetricLogs((prev) =>
-        prev.map((log) => (log.id === logId ? { ...log, value } : log))
-      );
-      setEditingLogId(null);
-      setEditingLogValue('');
+    if (!isNaN(value)) { // removed value > 0 restriction in case 0 is valid
+      try {
+        await updateMetricLog({
+          logId,
+          value,
+          clientId,
+          coachId: user.id
+        });
+        toast.success('Log updated successfully');
+        refetch();
+        refreshData?.();
+        setEditingLogId(null);
+        setEditingLogValue('');
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to update log');
+      }
     }
   };
 
@@ -274,12 +290,19 @@ const ClientMetricsPage = () => {
   };
 
   const handleDeleteLog = async (logId: string) => {
-    // TODO: Implement delete log for client
-    console.log('Deleting log for client:', { clientId, logId });
-    setMetricLogs((prev) => prev.filter((log) => log.id !== logId));
-    if (editingLogId === logId) {
-      setEditingLogId(null);
-      setEditingLogValue('');
+    if (!clientId || !user?.id) return;
+    try {
+      await deleteMetricLog(logId, clientId, user.id);
+      toast.success('Log deleted successfully');
+      refetch();
+      refreshData?.();
+      if (editingLogId === logId) {
+        setEditingLogId(null);
+        setEditingLogValue('');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete log');
     }
   };
 
@@ -292,10 +315,12 @@ const ClientMetricsPage = () => {
   };
 
   const handleOpenLogMetric = () => {
+    setSelectedMetricIdForLog(null);
     setIsLogMetricOpen(true);
   };
 
   const handleCloseLogMetric = () => {
+    setSelectedMetricIdForLog(null);
     setIsLogMetricOpen(false);
   };
 
@@ -333,45 +358,76 @@ const ClientMetricsPage = () => {
         });
       }
 
+      toast.success('Metric saved successfully');
       // Refetch
       refetch();
       refreshData?.();
       handleCloseAddMetric();
     } catch (error) {
       console.error('Failed to save metric:', error);
+      toast.error('Failed to save metric');
     }
   };
 
-  const handleSaveLogMetric = async (metricId: string, value: number) => {
-    // TODO: Implement save log metric for client
-    console.log('Saving log metric for client:', { clientId, metricId, value });
+  const handleSaveLogMetric = async (metricId: string, value: number, date: Date) => {
+    if (!clientId || !user?.id) return;
+    try {
+      await logMetric({
+        assignmentId: metricId,
+        value,
+        date,
+        clientId,
+        coachId: user.id
+      });
+      toast.success('Metric logged successfully');
+      refetch();
+      refreshData?.();
+      handleCloseLogMetric();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to log metric');
+    }
   };
 
   const handleSaveEditMetric = async (name: string, unit: string, description?: string) => {
-    // TODO: Implement update metric for client
-    console.log('Updating metric for client:', { clientId, metricId: selectedMetricId, name, unit, description });
-    handleCloseEditMetric();
+    if (!clientId || !user?.id || !selectedMetricId) return;
+    try {
+      await updateMetric({
+        assignmentId: selectedMetricId,
+        name,
+        unit,
+        description,
+        clientId,
+        coachId: user.id
+      });
+      toast.success('Metric updated successfully');
+      refetch();
+      refreshData?.();
+      handleCloseEditMetric();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update metric');
+    }
   };
 
   const handleDeleteMetric = async () => {
     if (!clientId || !user?.id || !selectedMetricId) return;
 
     try {
-      // Find the metric to get the assignment ID if needed,
-      // but removeMetric usually takes metric IDs for simplicity or as specified.
-      // Based on controller, it uses metric_id in removal.
       await removeMetric({
         metricIds: [selectedMetricId],
         clientId,
         coachId: user.id
       });
 
+      toast.success('Metric deleted successfully');
       refetch();
       refreshData?.();
       setSelectedMetricId(null);
       setIsDeleteDialogOpen(false);
     } catch (error) {
       console.error('Failed to delete metric:', error);
+      toast.error('Failed to delete metric');
     }
   };
 
@@ -444,33 +500,39 @@ const ClientMetricsPage = () => {
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Metrics list */}
             <div className="space-y-0 flex-1 overflow-y-auto">
-              {filteredMetrics.map((metric: any, index: number) => {
-                const isSelected = selectedMetricId === metric.id;
-                const isLast = index === filteredMetrics.length - 1;
-                const isOnlyItem = filteredMetrics.length === 1;
+              {filteredMetrics.length === 0 ? (
+                <div className="flex items-center justify-center py-8 px-4">
+                  <span className="text-sm text-muted-foreground">No metrics found</span>
+                </div>
+              ) : (
+                filteredMetrics.map((metric: any, index: number) => {
+                  const isSelected = selectedMetricId === metric.id;
+                  const isLast = index === filteredMetrics.length - 1;
+                  const isOnlyItem = filteredMetrics.length === 1;
 
-                return (
-                  <React.Fragment key={metric.id}>
-                    <button
-                      onClick={() => setSelectedMetricId(metric.id)}
-                      className={cn(
-                        'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
-                        isSelected
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                      )}
-                    >
-                      <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <span className="text-sm font-medium">{metric.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {metric.unit} {metric.description && `• ${metric.description}`}
-                        </span>
-                      </div>
-                    </button>
-                    {(!isLast || isOnlyItem) && <Separator className="w-full" />}
-                  </React.Fragment>
-                );
-              })}
+                  return (
+                    <React.Fragment key={metric.id}>
+                      <button
+                        onClick={() => setSelectedMetricId(metric.id)}
+                        className={cn(
+                          'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
+                          isSelected
+                            ? 'bg-accent text-accent-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                        )}
+                      >
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <span className="text-sm font-medium">{metric.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {metric.unit} {metric.description && `• ${metric.description}`}
+                          </span>
+                        </div>
+                      </button>
+                      {(!isLast || isOnlyItem) && <Separator className="w-full" />}
+                    </React.Fragment>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -538,8 +600,9 @@ const ClientMetricsPage = () => {
                       {movement !== null ? `${movement.percentage.toFixed(1)}%` : '0%'}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <ButtonGroup>
                     <Button onClick={() => {
+                      setSelectedMetricIdForLog(selectedMetricId);
                       setIsLogMetricOpen(true);
                     }} className="gap-2" variant="outline">
                       <FileText className="size-4" />
@@ -552,7 +615,7 @@ const ClientMetricsPage = () => {
                     <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
                       <Trash className="size-4" />
                     </Button>
-                  </div>
+                  </ButtonGroup>
                 </div>
 
                 {/* Line Chart */}
@@ -611,30 +674,7 @@ const ClientMetricsPage = () => {
                 </div>
 
                 {/* Logs DataGrid */}
-                <div className="w-full min-h-[200px] metric-logs-no-scroll">
-                  <style
-                    dangerouslySetInnerHTML={{
-                      __html: `
-                    .metric-logs-no-scroll div[class*="overflow-auto"],
-                    .metric-logs-no-scroll div[class*="overflow-hidden"] {
-                      overflow: visible !important;
-                      height: auto !important;
-                      max-height: none !important;
-                    }
-                    .metric-logs-no-scroll div[class*="min-h-0"] {
-                      min-height: auto !important;
-                    }
-                    .metric-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-auto"]),
-                    .metric-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-hidden"]) {
-                      flex: none !important;
-                    }
-                    .metric-logs-no-scroll > div > div:first-child {
-                      border-top-left-radius: 0.5rem !important;
-                      border-top-right-radius: 0.5rem !important;
-                    }
-                  `,
-                    }}
-                  />
+                <div className="w-full">
                   <DataGrid
                     data={selectedMetricLogs}
                     columns={[
@@ -709,7 +749,7 @@ const ClientMetricsPage = () => {
                           return (
                             <div className="flex items-center justify-between w-full" data-no-row-link="true">
                               <span className="text-sm text-foreground">
-                                {row.value} <span className="text-muted-foreground">{selectedMetric.unit}</span>
+                                {row.value}
                               </span>
                               <Button
                                 size="icon"
@@ -760,9 +800,15 @@ const ClientMetricsPage = () => {
 
       <LogMetricSidePanel
         open={isLogMetricOpen}
-        onOpenChange={setIsLogMetricOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseLogMetric();
+          setIsLogMetricOpen(open);
+        }}
         metrics={metrics}
         onSave={handleSaveLogMetric}
+        preselectedMetricId={selectedMetricIdForLog || undefined}
+        clientId={clientId}
+        coachId={user?.id || ''}
       />
 
       <AddMetricSidePanel
@@ -792,6 +838,7 @@ const ClientMetricsPage = () => {
         onConfirm={handleDeleteMetric}
         itemName={selectedMetric?.name}
         itemType="metric"
+        variant="default"
       />
     </div>
   );

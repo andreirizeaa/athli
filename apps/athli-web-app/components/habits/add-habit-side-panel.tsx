@@ -426,7 +426,7 @@ export const AddHabitSidePanel = ({
               </AlertDescription>
             </Alert>
           ) : (
-            <div className="flex-1 min-h-0 h-full">
+            <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
               <DataGrid
                 data={coachHabits}
                 columns={columns}

@@ -162,7 +162,14 @@ export function createExpressApp() {
   // API v1 routes
   app.use('/api/v1', v1Router);
 
-  // 404 + error handling
+  // Debug: Log all 404s before handling
+  app.use((req, res, next) => {
+    if (!res.headersSent) {
+      console.log(`[DEBUG] 404 Candidate: ${req.method} ${req.originalUrl}`);
+    }
+    next();
+  });
+
   app.use(notFoundHandler);
   app.use(errorHandler);
 

@@ -20,7 +20,6 @@ export const coachClientRouter = Router();
  *     tags: [Coach Clients]
  */
 coachClientRouter.get('/', supabaseAuthenticate, coachClientController.getClients);
-coachClientRouter.get('/:id', supabaseAuthenticate, coachClientController.getClient);
 
 /**
  * @swagger
@@ -30,19 +29,6 @@ coachClientRouter.get('/:id', supabaseAuthenticate, coachClientController.getCli
  *     tags: [Coach Clients]
  */
 coachClientRouter.post('/new', supabaseAuthenticate, coachClientController.createClients);
-
-/**
- * @swagger
- * /api/v1/clients/{id}:
- *   patch:
- *     summary: Update client status/details
- *     tags: [Coach Clients]
- *   delete:
- *     summary: Remove client from coach
- *     tags: [Coach Clients]
- */
-coachClientRouter.patch('/:id', supabaseAuthenticate, coachClientController.updateClient);
-coachClientRouter.delete('/:id', supabaseAuthenticate, coachClientController.deleteClient);
 
 /**
  * @swagger
@@ -76,3 +62,20 @@ coachClientRouter.post('/restore', supabaseAuthenticate, coachClientController.r
  *     tags: [Coach Clients]
  */
 coachClientRouter.post('/resend-invite', supabaseAuthenticate, coachClientController.resendInvite);
+
+/**
+ * @swagger
+ * /api/v1/clients/{id}:
+ *   get:
+ *     summary: Get a single client
+ *     tags: [Coach Clients]
+ *   patch:
+ *     summary: Update client status/details
+ *     tags: [Coach Clients]
+ *   delete:
+ *     summary: Remove client from coach
+ *     tags: [Coach Clients]
+ */
+coachClientRouter.get('/:id', supabaseAuthenticate, coachClientController.getClient);
+coachClientRouter.patch('/:id', supabaseAuthenticate, coachClientController.updateClient);
+coachClientRouter.delete('/:id', supabaseAuthenticate, coachClientController.deleteClient);

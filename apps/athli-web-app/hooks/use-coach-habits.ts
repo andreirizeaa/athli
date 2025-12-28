@@ -11,7 +11,7 @@ import {
 } from '@/api/coach/coach-habit-service';
 import { toast } from 'sonner';
 
-export function useCoachHabits() {
+export function useCoachHabits(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
     const {
@@ -22,6 +22,7 @@ export function useCoachHabits() {
         queryKey: ['coach-habits'],
         queryFn: () => getAllHabits(),
         staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: options?.enabled !== false,
     });
 
     const createMutation = useMutation({

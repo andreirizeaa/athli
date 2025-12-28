@@ -18,6 +18,7 @@ import { getAllFiles, type CoachFile } from '@/api/coach/coach-file-service';
 import { addFilesToClient } from '@/api/client/client-file-service';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { FileThumbnail } from '@/components/files/file-thumbnail';
 
 const TAG_OPTIONS: Option[] = [
   { label: 'Training', value: 'Training' },
@@ -168,7 +169,7 @@ export const AddFileSidePanel = ({
           <Checkbox checked={isSelected} onCheckedChange={onToggle} />
         </div>
         <div className="flex items-center gap-3 w-full min-w-0">
-          <FileText className="size-4 text-muted-foreground" />
+          <FileThumbnail file={row} />
           <span className="truncate text-sm">{row.filename}</span>
         </div>
       </div>
@@ -309,7 +310,7 @@ export const AddFileSidePanel = ({
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="flex-1 min-h-0 h-full">
+              <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
                 <DataGrid
                   data={coachFiles}
                   columns={columns}

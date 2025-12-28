@@ -109,6 +109,11 @@ export interface ClientMetric {
   description?: string;
   assignment_id: string;
   sort_order: number;
+  logs?: Array<{
+    id: string;
+    value: number;
+    date: string;
+  }>;
 }
 
 export const getClientMetrics = async (clientId: string, coachId: string): Promise<ClientMetric[]> => {
@@ -127,8 +132,8 @@ export const getClientMetrics = async (clientId: string, coachId: string): Promi
     assignment_id: m.assignment_id,
     value_kind: m.value_kind,
     is_private: m.is_private,
-    // Add missing fields if necessary, ensuring alignment with backend response
     sort_order: 0,
+    logs: m.logs || [],
   }));
 };
 
@@ -142,6 +147,12 @@ export interface ClientHabit {
   assignment_id: string;
   sort_order: number;
   custom_schedule?: any;
+  logs?: Array<{
+    id: string;
+    value: number;
+    status: string;
+    date: string;
+  }>;
 }
 
 export const getClientHabits = async (clientId: string, coachId: string): Promise<ClientHabit[]> => {
@@ -163,7 +174,8 @@ export const getClientHabits = async (clientId: string, coachId: string): Promis
     assignment_id: h.assignment_id,
     sort_order: h.sort_order || 0,
     custom_schedule: h.custom_schedule,
-    is_private: h.is_private
+    is_private: h.is_private,
+    logs: h.logs || [],
   }));
 };
 

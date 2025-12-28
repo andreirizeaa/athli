@@ -62,8 +62,9 @@ export const clientMetricsController = {
         const supabase = getSupabaseClient();
         let query = supabase
             .from('client_metrics')
-            .select('*')
-            .eq('client_id', targetClientId);
+            .select('*, logs:client_metric_logs(*)')
+            .eq('client_id', targetClientId)
+            .order('created_at', { ascending: false });
 
         if (targetCoachId) {
             query = query.eq('coach_id', targetCoachId);
@@ -85,6 +86,11 @@ export const clientMetricsController = {
             description: m.description,
             value_kind: m.value_kind,
             is_private: false, // All client_metrics are copies now
+            logs: (m.logs || []).map((l: any) => ({
+                id: l.id,
+                value: l.value,
+                date: l.date
+            })).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
         }));
 
         success(res, {
@@ -226,55 +232,206 @@ export const clientMetricsController = {
     },
 
     /**
-     * Record a metric log
+     * Log metric (create log entry)
      */
-    recordMetric: async (req: Request, res: Response) => {
+    logMetric: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.params; // client_metrics.id
-        const { value, date, note } = req.body;
+        const { assignmentId, value, date } = req.body;
 
-        // Use headers for lookup validation, though auth.uid() check in RLS might suffice.
         const clientIdHeader = req.header('x-client-id');
-
-        // If coach recording for client?
         const coachIdHeader = req.header('x-coach-id');
         const isCoach = coachIdHeader && coachIdHeader === userId;
-
         const targetClientId = isCoach ? (clientIdHeader as string) : userId;
 
         if (!targetClientId) return forbidden(res, { message: 'Target client unknown' });
+        if (!assignmentId) return res.status(400).json({ success: false, message: 'assignmentId required in body' });
 
         const supabase = getSupabaseClient();
 
-        // Get the metric to find its coach_id (needed for log composite if we enforced it, or just for correctness)
+        // Get the metric to find its coach_id
         const { data: metric, error: fetchError } = await supabase
             .from('client_metrics')
             .select('coach_id')
-            .eq('id', id)
-            .eq('client_id', targetClientId) // Ensure it belongs to target
+            .eq('id', assignmentId)
+            .eq('client_id', targetClientId)
             .single();
 
         if (fetchError || !metric) return notFound(res, { message: 'Metric not found' });
 
-        // Insert Log
+        // Use upsert to handle duplicate dates
         const { data: log, error: logError } = await supabase
             .from('client_metric_logs')
-            .insert({
+            .upsert({
                 client_id: targetClientId,
                 coach_id: metric.coach_id,
-                assignment_id: id,
+                assignment_id: assignmentId,
                 value,
-                date: date || new Date().toISOString().split('T')[0],
-                note
+                date: date || new Date().toISOString().split('T')[0]
+            }, {
+                onConflict: 'assignment_id,date'
             })
             .select()
             .single();
 
         if (logError) return res.status(500).json({ success: false, message: logError.message });
 
+        success(res, { message: 'Metric logged', data: { log } });
+    },
+
+    /**
+     * Update assignment details
+     */
+    updateAssignment: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { assignmentId, name, unit, description } = req.body;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+
+        // Only coaches can edit assignments
+        if (!coachIdHeader || coachIdHeader !== userId) {
+            return unauthorized(res, { message: 'Only coaches can edit assignments' });
+        }
+        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
+        if (!assignmentId) return res.status(400).json({ success: false, message: 'assignmentId required in body' });
+
+        const supabase = getSupabaseClient();
+        const { data: metric, error } = await supabase
+            .from('client_metrics')
+            .update({ name, unit, description })
+            .eq('id', assignmentId)
+            .eq('client_id', clientIdHeader)
+            .eq('coach_id', coachIdHeader)
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        if (!metric) return notFound(res, { message: 'Metric not found' });
+
+        success(res, { message: 'Metric updated', data: { metric } });
+    },
+
+    /**
+     * Delete a log entry
+     */
+    deleteLog: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { logId } = req.body;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoach = coachIdHeader && coachIdHeader === userId;
+        const targetClientId = isCoach ? (clientIdHeader as string) : userId;
+
+        if (!targetClientId) return forbidden(res, { message: 'Target client unknown' });
+        if (!logId) return res.status(400).json({ success: false, message: 'logId required in body' });
+
+        const supabase = getSupabaseClient();
+
+        // First get the log to find its coach_id
+        const { data: log } = await supabase
+            .from('client_metric_logs')
+            .select('coach_id')
+            .eq('id', logId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (!log) return notFound(res, { message: 'Log not found' });
+
+        const { error } = await supabase
+            .from('client_metric_logs')
+            .delete()
+            .eq('id', logId)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', log.coach_id);
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        success(res, { message: 'Log deleted' });
+    },
+
+    /**
+     * Update a log entry
+     */
+    updateLog: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { logId, value, date } = req.body;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoach = coachIdHeader && coachIdHeader === userId;
+        const targetClientId = isCoach ? (clientIdHeader as string) : userId;
+
+        if (!targetClientId) return forbidden(res, { message: 'Target client unknown' });
+        if (!logId) return res.status(400).json({ success: false, message: 'logId required in body' });
+
+        const supabase = getSupabaseClient();
+
+        // First get the log to find its coach_id
+        const { data: existingLog } = await supabase
+            .from('client_metric_logs')
+            .select('coach_id')
+            .eq('id', logId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (!existingLog) return notFound(res, { message: 'Log not found' });
+
+        const { data: log, error } = await supabase
+            .from('client_metric_logs')
+            .update({ value, date })
+            .eq('id', logId)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', existingLog.coach_id)
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+        if (!log) return notFound(res, { message: 'Log not found' });
+
+        success(res, { message: 'Log updated', data: { log } });
+    },
+
+    /**
+     * Check if a log exists for a specific date
+     */
+    checkExistingLog: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { assignmentId, date } = req.body;
+        const clientIdHeader = req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoach = coachIdHeader && coachIdHeader === userId;
+        const targetClientId = isCoach ? (clientIdHeader as string) : userId;
+
+        if (!targetClientId) return forbidden(res, { message: 'Target client unknown' });
+        if (!assignmentId) return res.status(400).json({ success: false, message: 'assignmentId required in body' });
+        if (!date) return res.status(400).json({ success: false, message: 'date required in body' });
+
+        const supabase = getSupabaseClient();
+
+        // Get metric to find its coach_id
+        const { data: metric } = await supabase
+            .from('client_metrics')
+            .select('coach_id')
+            .eq('id', assignmentId)
+            .eq('client_id', targetClientId)
+            .single();
+
+        if (!metric) return notFound(res, { message: 'Metric not found' });
+
+        const { data: log, error } = await supabase
+            .from('client_metric_logs')
+            .select('id, value, date')
+            .eq('assignment_id', assignmentId)
+            .eq('client_id', targetClientId)
+            .eq('coach_id', metric.coach_id)
+            .eq('date', date)
+            .maybeSingle();
+
+        if (error) return res.status(500).json({ success: false, message: error.message });
+
         success(res, {
-            message: 'Metric recorded successfully',
-            data: { log },
+            message: 'Check completed',
+            data: {
+                exists: !!log,
+                log: log || undefined
+            }
         });
     },
 };

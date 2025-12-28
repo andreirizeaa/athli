@@ -46,7 +46,6 @@ export interface LogMetricData {
   assignmentId: string;
   value: number;
   date: Date;
-  note?: string;
   // Context needed for headers
   clientId: string;
   coachId: string;
@@ -56,13 +55,13 @@ export interface LogMetricData {
  * Service method to log a metric value for a client
  */
 export const logMetric = async (data: LogMetricData): Promise<void> => {
-  await apiFetch(`/client/metrics/${data.assignmentId}`, {  // Changed path to match POST /:id
-    method: 'POST',
+  await apiFetch(`/client/metrics`, {
+    method: 'PATCH',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({
+      assignmentId: data.assignmentId,
       value: data.value,
       date: data.date.toISOString().split('T')[0],
-      note: data.note
     }),
   });
 };
@@ -75,4 +74,54 @@ export const getClientMetrics = async (clientId: string, coachId: string): Promi
     headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
   });
   return response.data.metrics;
+};
+
+export interface UpdateMetricData {
+  assignmentId: string;
+  name?: string;
+  unit?: string;
+  description?: string;
+  clientId: string;
+  coachId: string;
+}
+
+export const updateMetric = async (data: UpdateMetricData): Promise<void> => {
+  await apiFetch(`/client/metrics`, {
+    method: 'PUT',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      assignmentId: data.assignmentId,
+      name: data.name,
+      unit: data.unit,
+      description: data.description,
+    }),
+  });
+};
+
+export const deleteMetricLog = async (logId: string, clientId: string, coachId: string): Promise<void> => {
+  await apiFetch(`/client/metrics/logs`, {
+    method: 'DELETE',
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    body: JSON.stringify({ logId }),
+  });
+};
+
+export interface UpdateMetricLogData {
+  logId: string;
+  value: number;
+  date?: Date;
+  clientId: string;
+  coachId: string;
+}
+
+export const updateMetricLog = async (data: UpdateMetricLogData): Promise<void> => {
+  await apiFetch(`/client/metrics/logs`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      logId: data.logId,
+      value: data.value,
+      date: data.date ? data.date.toISOString().split('T')[0] : undefined
+    }),
+  });
 };

@@ -17,7 +17,11 @@ interface ConfirmDeleteDialogProps {
     onConfirm: () => void;
     itemName?: string; // Name of single item being deleted
     count?: number; // Number of items for bulk delete
-    itemType: string; // e.g. "flow", "metric", "habit", "file"
+    itemType?: string; // e.g. "flow", "metric", "habit", "file"
+    title?: string;
+    description?: string;
+    confirmText?: string;
+    variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 }
 
 export const ConfirmDeleteDialog = ({
@@ -26,21 +30,32 @@ export const ConfirmDeleteDialog = ({
     onConfirm,
     itemName,
     count,
-    itemType,
+    itemType = "item",
+    title: customTitle,
+    description: customDescription,
+    confirmText,
+    variant = 'destructive',
 }: ConfirmDeleteDialogProps) => {
     const t = useTranslations();
 
     const isSingleDelete = itemName !== undefined;
-    const title = isSingleDelete
-        ? `Delete ${itemName}?`
-        : t('general.confirmDeletion');
 
-    const description = isSingleDelete
-        ? `Are you sure you want to delete "${itemName}"? This action cannot be undone.`
-        : t('general.bulkDeleteConfirmation', {
-            count: count || 0,
-            item: itemType,
-        });
+    let title = customTitle;
+    if (!title) {
+        title = isSingleDelete
+            ? `Delete ${itemName}?`
+            : t('general.confirmDeletion');
+    }
+
+    let description = customDescription;
+    if (!description) {
+        description = isSingleDelete
+            ? `Are you sure you want to delete "${itemName}"? This action cannot be undone.`
+            : t('general.bulkDeleteConfirmation', {
+                count: count || 0,
+                item: itemType,
+            });
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,13 +76,14 @@ export const ConfirmDeleteDialog = ({
                         {t('general.cancel')}
                     </Button>
                     <Button
+                        variant={variant}
                         onClick={(e) => {
                             e.preventDefault();
                             onConfirm();
                             onOpenChange(false);
                         }}
                     >
-                        {t('general.delete')}
+                        {confirmText || t('general.delete')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

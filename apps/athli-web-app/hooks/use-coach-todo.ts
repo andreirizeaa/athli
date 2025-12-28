@@ -12,13 +12,14 @@ import {
     YourListTask
 } from '../api/coach/coach-todo-service';
 
-export const useCoachTodo = () => {
+export const useCoachTodo = (options?: { enabled?: boolean }) => {
     const queryClient = useQueryClient();
 
     // Own Todos (Your List)
     const { data: ownTodos = [], isLoading: isLoadingOwn } = useQuery({
         queryKey: ['coach-own-todos'],
         queryFn: getOwnTodos,
+        enabled: options?.enabled !== false,
     });
 
     const createOwnMutation = useMutation({
@@ -64,6 +65,7 @@ export const useCoachTodo = () => {
     const { data: autoTodos = [], isLoading: isLoadingAuto } = useQuery({
         queryKey: ['coach-auto-todos'],
         queryFn: getAutoTodos,
+        enabled: options?.enabled !== false,
     });
 
     const completeAutoMutation = useMutation({

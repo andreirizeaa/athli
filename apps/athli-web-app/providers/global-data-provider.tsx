@@ -61,16 +61,19 @@ import { usePathname } from 'next/navigation';
 // Component to handle prefetching of coach data
 const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
-    const { isLoading: isFilesLoading } = useCoachFiles();
-    const { isLoading: isHabitsLoading } = useCoachHabits();
-    const { isLoading: isMetricsLoading } = useCoachMetrics();
-    const { isLoading: isCheckInsLoading } = useCoachCheckIns();
-    const { isLoading: isQuestionnairesLoading } = useCoachQuestionnaires();
-    const { isLoading: isWorkoutsLoading } = useCoachWorkouts();
-    const { isLoading: isProgramsLoading } = useCoachPrograms();
-    const { isLoading: isExercisesLoading } = useCoachExercises();
-    const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo();
-    const { isLoading: isClientsLoading } = useCoachClients();
+    const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
+    const shouldPrefetch = !isAthleteProfile;
+
+    const { isLoading: isFilesLoading } = useCoachFiles({ enabled: shouldPrefetch });
+    const { isLoading: isHabitsLoading } = useCoachHabits({ enabled: shouldPrefetch });
+    const { isLoading: isMetricsLoading } = useCoachMetrics({ enabled: shouldPrefetch });
+    const { isLoading: isCheckInsLoading } = useCoachCheckIns({ enabled: shouldPrefetch });
+    const { isLoading: isQuestionnairesLoading } = useCoachQuestionnaires({ enabled: shouldPrefetch });
+    const { isLoading: isWorkoutsLoading } = useCoachWorkouts({ enabled: shouldPrefetch });
+    const { isLoading: isProgramsLoading } = useCoachPrograms({ enabled: shouldPrefetch });
+    const { isLoading: isExercisesLoading } = useCoachExercises({ enabled: shouldPrefetch });
+    const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo({ enabled: shouldPrefetch });
+    const { isLoading: isClientsLoading } = useCoachClients({ enabled: shouldPrefetch });
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||
@@ -86,11 +89,10 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
 
     // We only show the full screen loader for prefetching if we are NOT on a specific athlete's page
     // This allows the athlete profile to load its own data without being blocked by global coach data loading
-    const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
-    const shouldShowLoader = isLoading && !isAthleteProfile;
+    const shouldShowLoader = isLoading && shouldPrefetch;
 
     if (shouldShowLoader) {
-        return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
+        return <FullScreenLoader subtitle="Just setting up your workspace, Coach..." />;
     }
 
     return <>{children}</>;
@@ -136,7 +138,7 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
     const shouldShowLoader = isLoading && !isAthleteProfile;
 
     if (shouldShowLoader) {
-        return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
+        return <FullScreenLoader subtitle="Just setting up your workspace, Coach..." />;
     }
 
     // If user is logged in, wrap with prefetcher to ensure data is loaded

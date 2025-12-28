@@ -60,20 +60,16 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.notes'),
     },
     {
-      value: 'metrics',
-      label: t('athletes.profile.metrics'),
-    },
-    {
       value: 'training-calendar',
       label: t('athletes.profile.trainingCalendar'),
     },
     {
-      value: 'check-in',
-      label: t('athletes.profile.checkIns.title'),
+      value: 'metrics',
+      label: t('athletes.profile.metrics'),
     },
     {
-      value: 'questionnaires',
-      label: t('athletes.profile.questionnaires.title'),
+      value: 'habits',
+      label: t('athletes.profile.habits'),
     },
     {
       value: 'photos',
@@ -84,8 +80,12 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.files'),
     },
     {
-      value: 'habits',
-      label: t('athletes.profile.habits'),
+      value: 'check-in',
+      label: t('athletes.profile.checkIns.title'),
+    },
+    {
+      value: 'questionnaires',
+      label: t('athletes.profile.questionnaires.title'),
     },
     {
       value: 'settings',

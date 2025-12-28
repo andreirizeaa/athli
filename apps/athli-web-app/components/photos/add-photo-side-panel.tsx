@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, ChevronDownIcon, X, Plus } from 'lucide-react';
+import { Upload, ChevronDownIcon, X, Plus, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import {
@@ -15,7 +15,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
-import { AddClientPhotosData } from '@/api/client/client-photo-service';
+import { AddClientPhotosData, checkExistingPhotos } from '@/api/client/client-photo-service';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { format } from 'date-fns';
 
 type PhotoType = 'front' | 'side' | 'back';
 
@@ -47,6 +49,8 @@ export const AddPhotoSidePanel = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverType, setDragOverType] = useState<PhotoType | null>(null);
+  const [existingAngles, setExistingAngles] = useState<PhotoType[]>([]);
+  const [isChecking, setIsChecking] = useState(false);
   const dragCounterRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,6 +76,7 @@ export const AddPhotoSidePanel = ({
     });
     setRecordedAt(new Date());
     setIsSaving(false);
+    setExistingAngles([]);
   };
 
   useEffect(() => {
@@ -80,6 +85,48 @@ export const AddPhotoSidePanel = ({
     }
     return cleanupPreviews;
   }, [open]);
+
+  // Check for existing photos when date or uploaded photos change
+  useEffect(() => {
+    const checkPhotos = async () => {
+      if (!recordedAt || !clientId) {
+        setExistingAngles([]);
+        return;
+      }
+
+      // Only check if user has selected at least one photo
+      const hasSelectedPhotos = photos.front.file || photos.side.file || photos.back.file;
+      if (!hasSelectedPhotos) {
+        setExistingAngles([]);
+        return;
+      }
+
+      setIsChecking(true);
+      try {
+        const result = await checkExistingPhotos({
+          clientId,
+          date: recordedAt,
+        });
+
+        if (result.exists && result.angles.length > 0) {
+          // Filter to only show warnings for angles that conflict with what user is uploading
+          const conflictingAngles = result.angles.filter((angle) => {
+            return photos[angle].file !== null;
+          });
+          setExistingAngles(conflictingAngles as PhotoType[]);
+        } else {
+          setExistingAngles([]);
+        }
+      } catch (error) {
+        console.error('Error checking existing photos:', error);
+        setExistingAngles([]);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    checkPhotos();
+  }, [recordedAt, photos.front.file, photos.side.file, photos.back.file, clientId]);
 
   const handleFileSelect = (type: PhotoType, file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -349,6 +396,20 @@ export const AddPhotoSidePanel = ({
               </PopoverContent>
             </Popover>
           </div>
+
+          {/* Warning for existing photos */}
+          {existingAngles.length > 0 && recordedAt && (
+            <Alert className="bg-primary/5 border-primary/20 text-primary">
+              <Info className="size-4" />
+              <AlertDescription className="min-w-0 line-clamp-4">
+                {existingAngles.length === 1 ? (
+                  <>A <strong>{existingAngles[0]}</strong> photo already exists for <strong>{format(recordedAt, 'd MMM, yyyy')}</strong>. If you proceed, it will be overwritten.</>
+                ) : (
+                  <>Photos for <strong>{existingAngles.join(', ')}</strong> already exist for <strong>{format(recordedAt, 'd MMM, yyyy')}</strong>. If you proceed, they will be overwritten.</>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       </div>
     </SidePanel>

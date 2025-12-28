@@ -20,7 +20,8 @@ export const clientPhotosController = {
             .from('client_photo_logs')
             .select('*')
             .eq('client_id', targetClientId)
-            .order('recorded_date', { ascending: false });
+            .eq('coach_id', userId)
+            .order('date', { ascending: false });
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
@@ -69,7 +70,7 @@ export const clientPhotosController = {
     uploadPhoto: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const { recorded_date, notes } = req.body;
+        const { date } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -82,7 +83,7 @@ export const clientPhotosController = {
         // Helper to upload a single file
         const uploadFile = async (file: Express.Multer.File, category: string) => {
             const fileExtension = file.originalname.split('.').pop() || 'jpg';
-            const dateStr = recorded_date || new Date().toISOString().split('T')[0];
+            const dateStr = date || new Date().toISOString().split('T')[0];
             const uniqueFileName = `${targetClientId}/${dateStr}/${category}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExtension}`;
 
             const { error: uploadError } = await supabase.storage
@@ -113,14 +114,16 @@ export const clientPhotosController = {
             }
 
             // Insert a single log entry for all photos uploaded in this session
+            // Use upsert to handle duplicate dates
             const { data, error } = await supabase
                 .from('client_photo_logs')
-                .insert({
+                .upsert({
                     client_id: targetClientId,
                     coach_id: userId,
-                    recorded_date: recorded_date || new Date().toISOString().split('T')[0],
+                    date: date || new Date().toISOString().split('T')[0],
                     ...photoPaths,
-                    notes: notes || null,
+                }, {
+                    onConflict: 'client_id,date'
                 })
                 .select()
                 .single();
@@ -157,7 +160,8 @@ export const clientPhotosController = {
             .from('client_photo_logs')
             .delete()
             .eq('id', id)
-            .eq('client_id', targetClientId);
+            .eq('client_id', targetClientId)
+            .eq('coach_id', userId);
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
@@ -194,6 +198,7 @@ export const clientPhotosController = {
             .select('front_photo_path, side_photo_path, back_photo_path')
             .eq('id', id)
             .eq('client_id', targetClientId)
+            .eq('coach_id', userId)
             .single();
 
         if (fetchError) {
@@ -223,7 +228,8 @@ export const clientPhotosController = {
             .from('client_photo_logs')
             .update({ [fieldName]: null })
             .eq('id', id)
-            .eq('client_id', targetClientId);
+            .eq('client_id', targetClientId)
+            .eq('coach_id', userId);
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
@@ -235,6 +241,7 @@ export const clientPhotosController = {
             .select('front_photo_path, side_photo_path, back_photo_path')
             .eq('id', id)
             .eq('client_id', targetClientId)
+            .eq('coach_id', userId)
             .single();
 
         if (!checkError && updatedRow) {
@@ -248,10 +255,58 @@ export const clientPhotosController = {
                     .from('client_photo_logs')
                     .delete()
                     .eq('id', id)
-                    .eq('client_id', targetClientId);
+                    .eq('client_id', targetClientId)
+                    .eq('coach_id', userId);
             }
         }
 
         noContent(res);
+    },
+
+    /**
+     * Check if photos exist for a specific date
+     */
+    checkExistingPhotos: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const { date } = req.body;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        if (!date) {
+            return res.status(400).json({ success: false, message: 'date required in body' });
+        }
+
+        const supabase = getSupabaseClient();
+        const { data: log, error } = await supabase
+            .from('client_photo_logs')
+            .select('id, front_photo_path, side_photo_path, back_photo_path, date')
+            .eq('client_id', targetClientId)
+            .eq('coach_id', userId)
+            .eq('date', date)
+            .maybeSingle();
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        const existingAngles: string[] = [];
+        if (log) {
+            if (log.front_photo_path) existingAngles.push('front');
+            if (log.side_photo_path) existingAngles.push('side');
+            if (log.back_photo_path) existingAngles.push('back');
+        }
+
+        success(res, {
+            message: 'Check completed',
+            data: {
+                exists: !!log,
+                angles: existingAngles,
+                date: log?.date
+            }
+        });
     },
 };
