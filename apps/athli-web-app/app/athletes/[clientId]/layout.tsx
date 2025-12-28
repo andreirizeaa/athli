@@ -146,10 +146,10 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   };
 
   const handleResendInvite = async () => {
-    if (!clientId) return;
+    if (!athlete?.id) return;
 
     try {
-      const { email } = await resendClientInvite(clientId);
+      const { email } = await resendClientInvite(athlete.id);
       toast.success(t('athletes.profile.resendInviteSuccess', { email }), {
         style: {
           background: 'rgb(220 252 231)',

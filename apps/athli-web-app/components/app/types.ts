@@ -1,5 +1,6 @@
 export type Contact = {
   id: string;
+  publicId?: string;
   name: string;
   avatar?: string;
   lastMessage: string;
@@ -58,6 +59,7 @@ export type Message = {
 
 export type Athlete = {
   id: string;
+  publicId?: string;
   name: string;
   avatar?: string;
   lastActivity: string;

@@ -7,12 +7,15 @@ import type { User } from '@supabase/supabase-js';
 
 interface UserProfile {
   id: string;
+  id: string;
   userType: 'coach' | 'client';
   email: string;
   name: string;
   profilePictureUrl?: string | null;
   signinMethod: 'email' | 'google';
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AuthContextType {
@@ -67,19 +70,30 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const fetchUserProfile = async (userId: string, authUser?: User) => {
-    // Rely solely on auth metadata to avoid direct DB access
-    const currentUser = authUser || supabaseUser;
-    if (currentUser) {
-      setUser({
-        id: userId,
-        userType: (currentUser.user_metadata?.user_type as 'coach' | 'client') || 'coach',
-        email: currentUser.email || '',
-        name: (currentUser.user_metadata?.name as string) || '',
-        profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
-          (currentUser.user_metadata?.picture as string) || null,
-        signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
-        isActive: true, // Default to true since they are logged in
-      });
+    // Try to get profile from API to ensure we have publicId
+    try {
+      const { getUserProfile } = await import('@/api/user/user-service');
+      const profile = await getUserProfile();
+      setUser(profile);
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+      // Fallback to metadata
+      const currentUser = authUser || supabaseUser;
+      if (currentUser) {
+        setUser({
+          id: userId,
+          id: userId,
+          userType: (currentUser.user_metadata?.user_type as 'coach' | 'client') || 'coach',
+          email: currentUser.email || '',
+          name: (currentUser.user_metadata?.name as string) || '',
+          profilePictureUrl: (currentUser.user_metadata?.avatar_url as string) ||
+            (currentUser.user_metadata?.picture as string) || null,
+          signinMethod: currentUser.app_metadata?.provider === 'google' ? 'google' : 'email',
+          isActive: true, // Default to true since they are logged in
+          createdAt: new Date().toISOString(), // Mock for fallback
+          updatedAt: new Date().toISOString(), // Mock for fallback
+        });
+      }
     }
     setIsLoading(false);
   };

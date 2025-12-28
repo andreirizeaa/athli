@@ -3,6 +3,7 @@ import { apiFetch } from '@/api/api-client';
 
 export interface UserProfile {
     id: string;
+    publicId: string;
     email: string;
     name: string;
     userType: 'coach' | 'client';

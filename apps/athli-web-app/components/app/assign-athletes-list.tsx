@@ -35,11 +35,13 @@ export const AssignAthletesList = ({
 }: AssignAthletesListProps) => {
   const router = useRouter();
 
-  const handleNavigateToTrainingCalendar = (athleteId: string) => {
+  const handleNavigateToTrainingCalendar = (athlete: (typeof mockAthletes)[0]) => {
+    const targetId = athlete.id;
+
     if (navigateOnSelect) {
       const params = new URLSearchParams();
       params.set('openModal', 'true');
-      
+
       if (workoutId && workoutName) {
         params.set('workoutId', workoutId);
         params.set('workoutName', workoutName);
@@ -47,12 +49,10 @@ export const AssignAthletesList = ({
         params.set('programId', programId);
         params.set('programName', programName);
       }
-      
-      router.push(`/athletes/${athleteId}/training-calendar?${params.toString()}`);
-    }
 
-    if (onAthleteSelected) {
-      onAthleteSelected(athleteId);
+      router.push(`/athletes/${targetId}/calendar?${params.toString()}`);
+    } else if (onAthleteSelected) {
+      onAthleteSelected(athlete.id);
     }
   };
 
@@ -62,7 +62,7 @@ export const AssignAthletesList = ({
   ) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      handleNavigateToTrainingCalendar(row.id);
+      handleNavigateToTrainingCalendar(row);
     }
   };
 
@@ -108,10 +108,7 @@ export const AssignAthletesList = ({
       enableEditColumns={false}
       enableExport={false}
       enableRowSelection={false}
-      onRowClick={(row, event) => {
-        event.stopPropagation();
-        handleNavigateToTrainingCalendar(row.id);
-      }}
+      onRowClick={handleNavigateToTrainingCalendar}
       onRowKeyDown={handleRowKeyDown}
       emptyMessage="No athletes found."
       rowHeight="54px"

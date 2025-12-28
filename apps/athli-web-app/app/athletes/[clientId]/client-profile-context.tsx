@@ -63,27 +63,30 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
 
     // Use all the React Query hooks - they will only fetch when clientId is provided
     const { client: athlete, isLoading: isLoadingProfile, error: profileError, isFetching: isFetchingProfile } = useClientProfile(clientId);
-    const { metrics, isLoading: isLoadingMetrics, isFetching: isFetchingMetrics } = useClientMetrics(clientId);
-    const { habits, isLoading: isLoadingHabits, isFetching: isFetchingHabits } = useClientHabits(clientId);
-    const { photos, isLoading: isLoadingPhotos, isFetching: isFetchingPhotos } = useClientPhotos(clientId);
-    const { checkIns, isLoading: isLoadingCheckIns, isFetching: isFetchingCheckIns } = useClientCheckIns(clientId);
-    const { questionnaires, isLoading: isLoadingQuestionnaires, isFetching: isFetchingQuestionnaires } = useClientQuestionnaires(clientId);
-    const { files, isLoading: isLoadingFiles, isFetching: isFetchingFiles } = useClientFiles(clientId);
-    const { notes, isLoading: isLoadingNotes, isFetching: isFetchingNotes } = useClientNotes(clientId);
-    const { bio, isLoading: isLoadingBio, isFetching: isFetchingBio } = useClientBio(clientId);
-    const { goals, isLoading: isLoadingGoals, isFetching: isFetchingGoals } = useClientGoals(clientId);
-    const { injuries, isLoading: isLoadingInjuries, isFetching: isFetchingInjuries } = useClientInjuries(clientId);
-    const { details, isLoading: isLoadingDetails, isFetching: isFetchingDetails } = useClientDetails(clientId);
-    const { stats: workoutStats, isLoading: isLoadingWorkoutStats, isFetching: isFetchingWorkoutStats } = useClientWorkoutStats(clientId);
+    // Use the resolved athlete ID (UUID) for other queries
+    const resolvedClientId = athlete?.id;
+
+    const { metrics, isLoading: isLoadingMetrics, isFetching: isFetchingMetrics } = useClientMetrics(resolvedClientId);
+    const { habits, isLoading: isLoadingHabits, isFetching: isFetchingHabits } = useClientHabits(resolvedClientId);
+    const { photos, isLoading: isLoadingPhotos, isFetching: isFetchingPhotos } = useClientPhotos(resolvedClientId);
+    const { checkIns, isLoading: isLoadingCheckIns, isFetching: isFetchingCheckIns } = useClientCheckIns(resolvedClientId);
+    const { questionnaires, isLoading: isLoadingQuestionnaires, isFetching: isFetchingQuestionnaires } = useClientQuestionnaires(resolvedClientId);
+    const { files, isLoading: isLoadingFiles, isFetching: isFetchingFiles } = useClientFiles(resolvedClientId);
+    const { notes, isLoading: isLoadingNotes, isFetching: isFetchingNotes } = useClientNotes(resolvedClientId);
+    const { bio, isLoading: isLoadingBio, isFetching: isFetchingBio } = useClientBio(resolvedClientId);
+    const { goals, isLoading: isLoadingGoals, isFetching: isFetchingGoals } = useClientGoals(resolvedClientId);
+    const { injuries, isLoading: isLoadingInjuries, isFetching: isFetchingInjuries } = useClientInjuries(resolvedClientId);
+    const { details, isLoading: isLoadingDetails, isFetching: isFetchingDetails } = useClientDetails(resolvedClientId);
+    const { stats: workoutStats, isLoading: isLoadingWorkoutStats, isFetching: isFetchingWorkoutStats } = useClientWorkoutStats(resolvedClientId);
 
     // Check if ANY data is currently loading or fetching (fetching includes cached data being revalidated)
     const isAnyLoading = isLoadingProfile || isLoadingMetrics || isLoadingHabits || isLoadingPhotos ||
-                         isLoadingCheckIns || isLoadingQuestionnaires || isLoadingFiles || isLoadingNotes ||
-                         isLoadingBio || isLoadingGoals || isLoadingInjuries || isLoadingDetails || isLoadingWorkoutStats;
+        isLoadingCheckIns || isLoadingQuestionnaires || isLoadingFiles || isLoadingNotes ||
+        isLoadingBio || isLoadingGoals || isLoadingInjuries || isLoadingDetails || isLoadingWorkoutStats;
 
     const isAnyFetching = isFetchingProfile || isFetchingMetrics || isFetchingHabits || isFetchingPhotos ||
-                          isFetchingCheckIns || isFetchingQuestionnaires || isFetchingFiles || isFetchingNotes ||
-                          isFetchingBio || isFetchingGoals || isFetchingInjuries || isFetchingDetails || isFetchingWorkoutStats;
+        isFetchingCheckIns || isFetchingQuestionnaires || isFetchingFiles || isFetchingNotes ||
+        isFetchingBio || isFetchingGoals || isFetchingInjuries || isFetchingDetails || isFetchingWorkoutStats;
 
     // Debug logging
     useEffect(() => {
@@ -157,42 +160,45 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
 
     // Refresh all data by invalidating all queries
     const refreshData = async () => {
-        if (!clientId) return;
+        if (!athlete?.id) return;
+        const targetId = athlete.id;
 
         await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['client-profile', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-metrics', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-habits', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-photos', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-check-ins', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-questionnaires', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-files', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-notes', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-bio', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-goals', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-injuries', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-details', clientId] }),
-            queryClient.invalidateQueries({ queryKey: ['client-workout-stats', clientId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-profile', clientId] }), // Profile uses publicId/param
+            queryClient.invalidateQueries({ queryKey: ['client-metrics', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-habits', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-photos', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-check-ins', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-questionnaires', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-files', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-notes', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-bio', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-goals', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-injuries', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-details', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-workout-stats', targetId] }),
         ]);
     };
 
     // Refresh specific section by invalidating its query
+    // Refresh specific section by invalidating its query
     const refreshSection = async (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats') => {
-        if (!clientId) return;
+        if (!athlete?.id) return;
+        const targetId = athlete.id;
 
         const queryKeyMap = {
-            'metrics': ['client-metrics', clientId],
-            'habits': ['client-habits', clientId],
-            'photos': ['client-photos', clientId],
-            'check-ins': ['client-check-ins', clientId],
-            'questionnaires': ['client-questionnaires', clientId],
-            'files': ['client-files', clientId],
-            'notes': ['client-notes', clientId],
-            'bio': ['client-bio', clientId],
-            'goals': ['client-goals', clientId],
-            'injuries': ['client-injuries', clientId],
-            'details': ['client-details', clientId],
-            'workout-stats': ['client-workout-stats', clientId],
+            'metrics': ['client-metrics', targetId],
+            'habits': ['client-habits', targetId],
+            'photos': ['client-photos', targetId],
+            'check-ins': ['client-check-ins', targetId],
+            'questionnaires': ['client-questionnaires', targetId],
+            'files': ['client-files', targetId],
+            'notes': ['client-notes', targetId],
+            'bio': ['client-bio', targetId],
+            'goals': ['client-goals', targetId],
+            'injuries': ['client-injuries', targetId],
+            'details': ['client-details', targetId],
+            'workout-stats': ['client-workout-stats', targetId],
         };
 
         await queryClient.invalidateQueries({ queryKey: queryKeyMap[section] });
