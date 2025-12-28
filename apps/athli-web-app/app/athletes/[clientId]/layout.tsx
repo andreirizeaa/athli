@@ -60,20 +60,16 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.notes'),
     },
     {
-      value: 'metrics',
-      label: t('athletes.profile.metrics'),
-    },
-    {
       value: 'training-calendar',
       label: t('athletes.profile.trainingCalendar'),
     },
     {
-      value: 'check-in',
-      label: t('athletes.profile.checkIns.title'),
+      value: 'metrics',
+      label: t('athletes.profile.metrics'),
     },
     {
-      value: 'questionnaires',
-      label: t('athletes.profile.questionnaires.title'),
+      value: 'habits',
+      label: t('athletes.profile.habits'),
     },
     {
       value: 'photos',
@@ -84,8 +80,12 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.files'),
     },
     {
-      value: 'habits',
-      label: t('athletes.profile.habits'),
+      value: 'check-in',
+      label: t('athletes.profile.checkIns.title'),
+    },
+    {
+      value: 'questionnaires',
+      label: t('athletes.profile.questionnaires.title'),
     },
     {
       value: 'settings',
@@ -217,10 +217,11 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
     }
   };
 
+  if (isLoading) {
+    return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
+  }
+
   if (error || !athlete) {
-    if (isLoading) {
-      return <FullScreenLoader />;
-    }
     return (
       <div className="h-full w-full flex flex-col">
         <div className="w-full relative">
@@ -244,13 +245,14 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
     );
   }
 
-  const initials = athlete.name
-    .split(' ')
-    .map((part) => part.charAt(0).toUpperCase())
-    .slice(0, 2)
-    .join('');
-
-  const firstName = athlete.name.split(' ')[0];
+  const names = athlete.name.split(' ');
+  const firstName = names[0] || '';
+  const lastName = names.slice(1).join(' ') || '';
+  const initials = firstName && lastName
+    ? `${firstName.charAt(0).toUpperCase()}${lastName.charAt(0).toUpperCase()}`
+    : firstName
+      ? firstName.charAt(0).toUpperCase()
+      : 'U';
 
   return (
     <div className="h-full w-full flex flex-col overflow-auto">
@@ -349,7 +351,6 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 min-h-0 bg-background bg-card/50">{children}</div>
-      {isLoading && <FullScreenLoader />}
     </div>
   );
 };

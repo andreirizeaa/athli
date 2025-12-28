@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { coachClientRouter } from './routes/clients.routes';
+// coachClientRouter removed
 import { coachFileRouter } from './routes/files.routes';
 import { coachCodeRouter } from './routes/code.routes';
 import { coachFlowRouter } from './routes/flows.routes';
@@ -26,7 +26,7 @@ const formsRouter = Router();
 formsRouter.use('/check-ins', coachCheckInRouter);
 formsRouter.use('/questionnaires', coachQuestionnaireRouter);
 
-coachRouter.use('/clients', coachClientRouter);
+// clients route removed
 coachRouter.use('/training', trainingRouter);
 coachRouter.use('/files', coachFileRouter);
 coachRouter.use('/flows', coachFlowRouter);

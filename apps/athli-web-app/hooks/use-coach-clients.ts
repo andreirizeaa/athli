@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getClients, archiveUser, type Athlete } from '@/api/coach/coach-client-service';
 import { toast } from 'sonner';
 
-export function useCoachClients() {
+export function useCoachClients(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
     const {
@@ -14,6 +14,7 @@ export function useCoachClients() {
         queryFn: () => getClients(),
         staleTime: 5 * 60 * 1000, // 5 minutes
         gcTime: 10 * 60 * 1000, // 10 minutes
+        enabled: options?.enabled !== false,
     });
 
     const archiveMutation = useMutation({

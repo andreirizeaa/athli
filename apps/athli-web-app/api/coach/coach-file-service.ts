@@ -4,6 +4,8 @@ export interface AddFileData {
   fileName: string;
   file: File;
   tags?: string[];
+  clientId?: string;
+  coachId?: string; // Required if assigning to client
 }
 
 export interface UpdateFileData {
@@ -32,9 +34,11 @@ export interface FileWithUrl extends CoachFile {
 }
 
 /**
- * Service method to upload a file to coach's library
+ * Service method to upload a file to coach's library.
+ * If clientId is provided, also assigns the file to the client using a secondary API call.
  */
 export const uploadFile = async (data: AddFileData): Promise<CoachFile> => {
+  // 1. Upload to Coach Library
   const formData = new FormData();
   formData.append('file', data.file);
   formData.append('filename', data.fileName);
@@ -45,10 +49,20 @@ export const uploadFile = async (data: AddFileData): Promise<CoachFile> => {
   const response = await apiFetch<{ data: { file: CoachFile } }>('/coach/files', {
     method: 'POST',
     body: formData as any,
-    // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
   });
 
-  return response.data.file;
+  const file = response.data.file;
+
+  // 2. Assign to Client if requested
+  if (data.clientId && data.coachId) {
+    await apiFetch(`/client/files`, {
+      method: 'POST',
+      headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+      body: JSON.stringify({ fileIds: [file.id] }),
+    });
+  }
+
+  return file;
 };
 
 /**
@@ -134,13 +148,12 @@ export interface ClientFileAssignment extends CoachFile {
   sort_order: number;
 }
 
-export const getClientFiles = async (clientId: string): Promise<ClientFileAssignment[]> => {
-  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/files?clientId=${clientId}`);
-  return response.data.assignments.map((a: any) => ({
-    ...a.file,
-    id: a.file.id,
-    assignment_id: a.id,
-    display_name: a.display_name,
-    sort_order: a.sort_order || 0
+export const getClientFiles = async (clientId: string, coachId: string): Promise<ClientFileAssignment[]> => {
+  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/files`, {
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
+  });
+  return response.data.assignments.map((f: any) => ({
+    ...f,
+    display_name: f.fileName || f.filename,
   }));
 };

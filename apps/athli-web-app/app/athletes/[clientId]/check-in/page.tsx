@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { Plus, FileText, X, Trash2, ClipboardList } from 'lucide-react';
-import { deleteClientCheckIns, getClientCheckIns, type ClientCheckIn } from '@/api/client/client-form-service';
+import { Plus, FileText, X, Trash2 } from 'lucide-react';
+import { deleteClientCheckIns, type ClientCheckIn } from '@/api/client/client-form-service';
 import { AddCheckInSidePanel } from '@/components/forms/add-check-in-side-panel';
-
 import { useClientCheckIns } from '@/hooks/use-client-check-ins';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 
 const ClientCheckInPage = () => {
   const t = useTranslations();
@@ -19,17 +20,18 @@ const ClientCheckInPage = () => {
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const { checkIns, isLoading, refetch } = useClientCheckIns(clientId);
+  const { user } = useUserProfile();
+  const { checkIns, refetch } = useClientCheckIns(clientId);
   const itemsPerPage = 25;
-  const [filteredCount, setFilteredCount] = useState<number>(0);
   const [selectedCheckIns, setSelectedCheckIns] = useState<Set<string>>(new Set());
   const [isAddCheckInOpen, setIsAddCheckInOpen] = useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
   const handleAddCheckIn = () => {
     setIsAddCheckInOpen(true);
   };
 
-  const handleSaveAddCheckIn = async (formId: string, scheduleData: any) => {
+  const handleSaveAddCheckIn = async () => {
     // This callback is called after the form is successfully assigned via the assignForm service
     // The service call and logging happens in AddCheckInSidePanel's handleSave function
     // Refresh the check-ins list
@@ -40,16 +42,23 @@ const ClientCheckInPage = () => {
     setSelectedCheckIns(new Set());
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedCheckIns.size === 0 || !clientId) return;
+  const handleDeleteSelected = () => {
+    if (selectedCheckIns.size === 0) return;
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!clientId || !user?.id) return;
 
     try {
       await deleteClientCheckIns({
         checkInIds: Array.from(selectedCheckIns),
         clientId: clientId,
+        coachId: user.id
       });
 
       refetch();
+      setIsDeleteDialogOpen(false);
       setSelectedCheckIns(new Set());
     } catch (error) {
       console.error('Failed to delete check-ins:', error);
@@ -68,49 +77,6 @@ const ClientCheckInPage = () => {
     });
   };
 
-  // Render first column header with checkbox
-  const renderFirstColumnHeader = ({
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        <div className="flex items-center gap-2">
-          <FileText className="size-3 text-muted-foreground" />
-          <span className="text-xs uppercase text-muted-foreground">
-            {t('athletes.profile.checkIns.columns.name')}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  // Render first column with checkbox
-  const renderFirstColumn = (row: ClientCheckIn, isSelected: boolean) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleCheckIn(row.id)} />
-        </div>
-        <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-sm font-medium truncate">{row.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {row.questionCount === 1
-              ? t('athletes.profile.checkIns.questions', { count: row.questionCount })
-              : t('athletes.profile.checkIns.questionsPlural', { count: row.questionCount })}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
   const columns: ColumnDefinition<ClientCheckIn>[] = [
     {
       id: 'name',
@@ -120,14 +86,33 @@ const ClientCheckInPage = () => {
       width: { class: 'w-[350px]', pixel: '350px' },
       getSortValue: (row) => row.name.toLowerCase(),
       getSearchValue: (row) => row.name,
-      renderCell: (row) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium">{row.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {row.questionCount === 1
-              ? t('athletes.profile.checkIns.questions', { count: row.questionCount })
-              : t('athletes.profile.checkIns.questionsPlural', { count: row.questionCount })}
-          </span>
+      renderHeader: ({ isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          <div className="flex items-center gap-2">
+            <FileText className="size-3 text-muted-foreground" />
+            <span className="text-xs uppercase text-muted-foreground">
+              {t('athletes.profile.checkIns.columns.name')}
+            </span>
+          </div>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div
+            className="flex items-center justify-center h-full flex-shrink-0"
+            data-no-row-link="true"
+          >
+            <Checkbox checked={isSelected} onCheckedChange={() => handleToggleCheckIn(row.id)} />
+          </div>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="text-sm font-medium truncate">{row.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {row.questionCount === 1
+                ? t('athletes.profile.checkIns.questions', { count: row.questionCount })
+                : t('athletes.profile.checkIns.questionsPlural', { count: row.questionCount })}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -213,7 +198,6 @@ const ClientCheckInPage = () => {
         getRowId={(row) => row.id}
         gridKey={`client-check-ins-${clientId}`}
         itemsPerPage={itemsPerPage}
-        onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('athletes.profile.checkIns.searchPlaceholder')}
         searchFields={['name', 'description', 'schedule']}
@@ -221,7 +205,7 @@ const ClientCheckInPage = () => {
           <div className="flex items-center gap-2">
             <Button onClick={handleAddCheckIn} className="gap-2">
               <Plus className="size-4" />
-              <span>{t('athletes.profile.checkIns.addCheckIn')}</span>
+              <span>{t('general.assign')} Check-in</span>
             </Button>
           </div>
         }
@@ -230,11 +214,6 @@ const ClientCheckInPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedCheckIns}
         onSelectionChange={setSelectedCheckIns}
-        firstColumnId="name"
-        stickyFirstColumn={true}
-        firstColumnWidth="350px"
-        renderFirstColumn={renderFirstColumn}
-        renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -244,9 +223,9 @@ const ClientCheckInPage = () => {
             title="No check-ins assigned"
             subtitle="This client has no check-ins assigned yet"
             action={
-              <Button onClick={() => router.push('/forms')} className="gap-2">
-                <ClipboardList className="size-4" />
-                <span>{t('athletes.profile.checkIns.goToForms')}</span>
+              <Button onClick={() => setIsAddCheckInOpen(true)} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('general.assign')} Check-in</span>
               </Button>
             }
           />
@@ -261,28 +240,26 @@ const ClientCheckInPage = () => {
           }
         }}
         selectionActions={
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              onClick={handleClearSelected}
-              className="gap-2"
-              aria-label={t('athletes.profile.checkIns.clearSelected')}
-            >
-              <X className="size-4" />
-              <span>
-                {t('athletes.profile.checkIns.clearSelected')} {selectedCheckIns.size}
-              </span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleDeleteSelected}
-              className="gap-2"
-              aria-label={t('general.delete')}
-            >
-              <Trash2 className="size-4" />
-              <span>{t('general.delete')}</span>
-            </Button>
-          </div>
+          selectedCheckIns.size > 0 ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                onClick={handleClearSelected}
+                className="gap-2"
+              >
+                <X className="size-4" />
+                <span>Clear {selectedCheckIns.size} selected</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleDeleteSelected}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
+            </div>
+          ) : undefined
         }
       />
       <AddCheckInSidePanel
@@ -290,6 +267,16 @@ const ClientCheckInPage = () => {
         onOpenChange={setIsAddCheckInOpen}
         onSave={handleSaveAddCheckIn}
         clientId={clientId}
+        coachId={user?.id}
+      />
+
+      <ConfirmDeleteDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        count={selectedCheckIns.size}
+        itemType="check-in"
+        variant="default"
       />
     </div>
   );

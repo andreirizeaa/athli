@@ -38,7 +38,7 @@ export interface Athlete {
  * Service method to get all clients for a coach
  */
 export const getClients = async (): Promise<Athlete[]> => {
-  const response = await apiFetch<{ data: { clients: any[] } }>('/coach/clients');
+  const response = await apiFetch<{ data: { clients: any[] } }>('/clients');
   return response.data.clients.map((client) => {
     const names = client.full_name?.split(' ') || ['', ''];
     const createdAt = new Date(client.created_at || Date.now());
@@ -73,42 +73,32 @@ export const getClients = async (): Promise<Athlete[]> => {
  */
 // getClient now uses the client profile endpoint with clientId param
 export const getClient = async (id: string): Promise<Athlete> => {
-  const response = await apiFetch<{ data: { profile: any } }>(`/client`, { headers: { 'x-client-id': id } });
-  const client = response.data.profile;
+  const response = await apiFetch<{ data: { client: any } }>(`/clients/${id}`);
+  const client = response.data.client;
 
-  // Since we fetch from user_profiles, some fields might be different or missing compared to coach_clients_view
-  // We need to map available fields. user_profiles has: id, email, name, avatar_url, etc.
-  // It does NOT have: coachingType, category, lastActivity, metrics...
-  // Usually the Coach View (`coach_clients_view`) joins multiple tables.
-  // Using `client-profile.controller` (user_profiles), we get minimal data.
-  // However, the User Explicitly asked to use `api/v1/client`.
-  // If we need the "full" coach view data (like status, category), we might need another endpoint or rely on what's available.
-  // For now, I map what I can.
-
-  // Note: logic for 'connected' status etc might be missing if we only query user_profiles.
-  // But the requirement is to use client routes.
-  const names = client.name?.split(' ') || ['', ''];
-  const createdAt = client.created_at ? new Date(client.created_at) : new Date();
+  const names = client.full_name?.split(' ') || ['', ''];
+  const createdAt = new Date(client.created_at || Date.now());
+  const clientForDays = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
 
   return {
-    id: client.id,
-    name: client.name || '',
+    id: client.client_id,
+    name: client.full_name || '',
     firstName: names[0] || '',
     lastName: names.slice(1).join(' ') || '',
     email: client.email || '',
-    coachingType: 'online', // Default or fetch from elsewhere?
-    category: 'online',
-    status: 'connected', // Assumed if profile exists?
+    coachingType: (client.category as any) || 'online',
+    category: client.category || 'online',
+    status: client.status || 'invited',
     avatarUrl: client.avatar_url || '',
     createdAt: createdAt.getTime(),
-    phone: '', // Not in user_profiles usually
-    country: '', // Not in user_profiles
+    phone: client.phone || '',
+    country: client.country || '',
     lastActivity: '',
     last7DaysTraining: '0/0',
     last30DaysTraining: '0/0',
     age: 0,
-    clientFor: '0',
-    connected: true,
+    clientFor: clientForDays.toString(),
+    connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
   };
 };
 
@@ -119,17 +109,31 @@ export interface ClientMetric {
   description?: string;
   assignment_id: string;
   sort_order: number;
+  logs?: Array<{
+    id: string;
+    value: number;
+    date: string;
+  }>;
 }
 
-export const getClientMetrics = async (clientId: string): Promise<ClientMetric[]> => {
-  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/metrics`, { headers: { 'x-client-id': clientId } });
-  // Mapping assignments to ClientMetric structure
-  // Controller returns { assignments: [ { ..., metric: {...} } ] }
-  return response.data.assignments.map((a: any) => ({
-    ...a.metric, // Spread metric details (name, unit, etc.)
-    id: a.metric.id, // Metric ID
-    assignment_id: a.id, // Assignment ID
-    sort_order: a.sort_order || 0
+export const getClientMetrics = async (clientId: string, coachId: string): Promise<ClientMetric[]> => {
+  const response = await apiFetch<{ data: { metrics: any[] } }>(`/client/metrics`, {
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId
+    }
+  });
+
+  return response.data.metrics.map((m: any) => ({
+    id: m.id,
+    name: m.name,
+    unit: m.unit,
+    description: m.description,
+    assignment_id: m.assignment_id,
+    value_kind: m.value_kind,
+    is_private: m.is_private,
+    sort_order: 0,
+    logs: m.logs || [],
   }));
 };
 
@@ -143,36 +147,53 @@ export interface ClientHabit {
   assignment_id: string;
   sort_order: number;
   custom_schedule?: any;
+  logs?: Array<{
+    id: string;
+    value: number;
+    status: string;
+    date: string;
+  }>;
 }
 
-export const getClientHabits = async (clientId: string): Promise<ClientHabit[]> => {
-  const response = await apiFetch<{ data: { assignments: any[] } }>(`/client/habits`, { headers: { 'x-client-id': clientId } });
-  return response.data.assignments.map((a: any) => ({
-    ...a.habit,
-    id: a.habit.id,
-    assignment_id: a.id,
-    sort_order: a.sort_order || 0,
-    custom_schedule: a.custom_schedule
+export const getClientHabits = async (clientId: string, coachId: string): Promise<ClientHabit[]> => {
+  const response = await apiFetch<{ data: { habits: any[] } }>(`/client/habits`, {
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId
+    }
+  });
+
+  return response.data.habits.map((h: any) => ({
+    id: h.id,
+    name: h.name,
+    description: h.description,
+    amount: h.amount,
+    unit: h.unit,
+    period: h.period,
+    frequency: h.period === 'weekly' ? 'weekly' : 'daily',
+    assignment_id: h.assignment_id,
+    sort_order: h.sort_order || 0,
+    custom_schedule: h.custom_schedule,
+    is_private: h.is_private,
+    logs: h.logs || [],
   }));
 };
 
-export const getClientFiles = async (clientId: string) => {
-  // This seems to be a duplicate if we put it in coach-file-service, but the controller has it.
-  // I will remove it from here if I put it in coach-file-service as intended by the previous plan step.
-  // Actually, I'll validly implement it here or rely on coach-file-service.
-  // Let's remove it from here to avoid confusion and use coach-file-service.
-  // But wait, my context imported it from coach-file-service?
-  // Context: import { getClientFiles ... } from '@/api/coach/coach-file-service';
-  // So I should REMOVE it from here if it exists or definitely NOT add it here.
-  // Previous view showed it WAS here at line 140. I should remove it.
-  return [];
+export const getClientFiles = async (clientId: string, coachId: string): Promise<any[]> => {
+  const response = await apiFetch<{ data: { files: any[] } }>(`/client/files`, {
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId
+    }
+  });
+  return response.data.files;
 };
 
 /**
  * Service method to add a single client
  */
 export const addClient = async (data: AddClientData): Promise<Athlete> => {
-  const response = await apiFetch<{ data: { clients: any[] } }>('/coach/clients/new', {
+  const response = await apiFetch<{ data: { clients: any[] } }>('/clients/new', {
     method: 'POST',
     body: JSON.stringify({
       email: data.email,
@@ -221,7 +242,7 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
     category: c.category,
   }));
 
-  const response = await apiFetch<{ data: { clients: any[] } }>('/coach/clients/new', {
+  const response = await apiFetch<{ data: { clients: any[] } }>('/clients/new', {
     method: 'POST',
     body: JSON.stringify(payload) as any,
   });
@@ -258,7 +279,7 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
  * Service method to archive a user
  */
 export const archiveUser = async (athleteId: string): Promise<void> => {
-  await apiFetch(`/coach/clients/${athleteId}`, {
+  await apiFetch(`/clients/${athleteId}`, {
     method: 'PATCH',
     body: JSON.stringify({ is_active: false }) as any,
   });
@@ -268,7 +289,7 @@ export const archiveUser = async (athleteId: string): Promise<void> => {
  * Service method to get all archived clients for a coach
  */
 export const getArchivedClients = async (): Promise<Athlete[]> => {
-  const response = await apiFetch<{ data: { clients: any[] } }>('/coach/clients/archived');
+  const response = await apiFetch<{ data: { clients: any[] } }>('/clients/archived');
   return response.data.clients.map((client) => {
     const names = client.full_name?.split(' ') || ['', ''];
     const createdAt = new Date(client.created_at || Date.now());
@@ -301,8 +322,9 @@ export const getArchivedClients = async (): Promise<Athlete[]> => {
  * Service method to restore an archived client
  */
 export const restoreClient = async (clientId: string): Promise<void> => {
-  await apiFetch(`/coach/clients/${clientId}/restore`, {
+  await apiFetch(`/clients/restore`, {
     method: 'POST',
+    headers: { 'x-client-id': clientId },
   });
 };
 

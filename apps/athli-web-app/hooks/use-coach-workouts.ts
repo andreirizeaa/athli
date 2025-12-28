@@ -14,7 +14,7 @@ import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-
 import type { Workout } from '@/components/app/app-shell';
 import { toast } from 'sonner';
 
-export function useCoachWorkouts() {
+export function useCoachWorkouts(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
     const {
@@ -25,6 +25,7 @@ export function useCoachWorkouts() {
         queryKey: ['coach-workouts'],
         queryFn: () => getWorkouts(),
         staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: options?.enabled !== false,
     });
 
     const createMutation = useMutation({

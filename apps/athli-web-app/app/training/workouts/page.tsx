@@ -23,7 +23,7 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { BulkDeleteConfirmationDialog } from '@/components/app/bulk-delete-confirmation-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
@@ -139,6 +139,7 @@ const WorkoutsPage = () => {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isGeneratingStandard, setIsGeneratingStandard] = useState<boolean>(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
+  const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -631,14 +632,9 @@ Focus on proper form and progressive overload.`;
         <Button
           variant="ghost"
           size="icon"
-          onClick={async (e) => {
+          onClick={(e) => {
             e.stopPropagation();
-            try {
-              await deleteWorkouts([row.id]);
-              await refreshWorkouts();
-            } catch (error) {
-              console.error('Failed to delete workout:', error);
-            }
+            setWorkoutToDelete(row.id);
           }}
           className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
           aria-label={`Delete ${row.program}`}
@@ -744,6 +740,17 @@ Focus on proper form and progressive overload.`;
       setSelectedWorkouts(new Set());
     } catch (error) {
       console.error('Failed to delete workouts:', error);
+    }
+  };
+
+  const handleConfirmSingleDelete = async () => {
+    if (!workoutToDelete) return;
+    try {
+      await deleteWorkouts([workoutToDelete]);
+      await refreshWorkouts();
+      setWorkoutToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete workout:', error);
     }
   };
 
@@ -1074,12 +1081,20 @@ Focus on proper form and progressive overload.`;
         compactPagination={true}
       />
 
-      <BulkDeleteConfirmationDialog
+      <ConfirmDeleteDialog
         open={isBulkDeleteOpen}
         onOpenChange={setIsBulkDeleteOpen}
         onConfirm={handleBulkDelete}
         count={selectedWorkouts.size}
-        itemName={t('workouts.title').toLowerCase()}
+        itemType={t('workouts.title').toLowerCase()}
+      />
+
+      <ConfirmDeleteDialog
+        open={workoutToDelete !== null}
+        onOpenChange={(open) => !open && setWorkoutToDelete(null)}
+        onConfirm={handleConfirmSingleDelete}
+        itemName={workouts.find(w => w.id === workoutToDelete)?.program}
+        itemType="workout"
       />
 
       <SidePanel

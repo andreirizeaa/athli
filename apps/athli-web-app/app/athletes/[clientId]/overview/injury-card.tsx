@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
 import { Edit, Plus, X } from 'lucide-react';
-import { getAthleteInjuries, saveAthleteInjuries } from '@/api/client/client-service';
+import { useClientProfileContext } from '../client-profile-context';
+import { useUpdateClientInjuries } from '@/hooks/use-client-injuries';
 
 type InjuryCardProps = {
   clientId: string;
@@ -18,33 +19,12 @@ type InjuryCardProps = {
 
 export const InjuryCard = ({ clientId }: InjuryCardProps) => {
   const t = useTranslations();
-  const [injuries, setInjuries] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { injuries, isLoading } = useClientProfileContext();
+  const updateInjuriesMutation = useUpdateClientInjuries();
   const [isEditInjuriesOpen, setIsEditInjuriesOpen] = useState(false);
   const [editingInjuries, setEditingInjuries] = useState<string[]>(['']);
   const [hasInjuriesChanges, setHasInjuriesChanges] = useState(false);
   const firstInjuryInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const fetchInjuries = async () => {
-      if (!clientId) return;
-
-      setIsLoading(true);
-      try {
-        const fetchedInjuries = await getAthleteInjuries(clientId);
-        setInjuries(fetchedInjuries);
-        setEditingInjuries(fetchedInjuries.length > 0 ? fetchedInjuries : ['']);
-      } catch (error) {
-        console.error('Failed to fetch injuries:', error);
-        setInjuries([]);
-        setEditingInjuries(['']);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchInjuries();
-  }, [clientId]);
 
   useEffect(() => {
     if (isEditInjuriesOpen && firstInjuryInputRef.current) {
@@ -65,8 +45,7 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
 
     try {
       const filteredInjuries = editingInjuries.filter((injury) => injury.trim() !== '');
-      await saveAthleteInjuries(clientId, filteredInjuries);
-      setInjuries(filteredInjuries);
+      await updateInjuriesMutation.mutateAsync({ clientId, injuries: filteredInjuries });
       setHasInjuriesChanges(false);
       setIsEditInjuriesOpen(false);
     } catch (error) {

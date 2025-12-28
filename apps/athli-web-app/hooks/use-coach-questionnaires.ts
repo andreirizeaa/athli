@@ -10,7 +10,7 @@ import {
 } from '@/api/coach/coach-questionnaire-service';
 import { toast } from 'sonner';
 
-export function useCoachQuestionnaires() {
+export function useCoachQuestionnaires(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
     const {
@@ -21,6 +21,7 @@ export function useCoachQuestionnaires() {
         queryKey: ['coach-questionnaires'],
         queryFn: () => getQuestionnaires(),
         staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: options?.enabled !== false,
     });
 
     const createMutation = useMutation({

@@ -10,7 +10,7 @@ import {
 } from '@/api/coach/coach-metric-service';
 import { toast } from 'sonner';
 
-export function useCoachMetrics() {
+export function useCoachMetrics(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
     const {
@@ -21,6 +21,7 @@ export function useCoachMetrics() {
         queryKey: ['coach-metrics'],
         queryFn: () => getAllMetrics(),
         staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: options?.enabled !== false,
     });
 
     const createMutation = useMutation({

@@ -5,6 +5,7 @@ export function useClientPhotos(clientId: string | undefined) {
     const {
         data: photos,
         isLoading,
+        isFetching,
         error,
         refetch
     } = useQuery({
@@ -17,6 +18,7 @@ export function useClientPhotos(clientId: string | undefined) {
     return {
         photos: photos || [],
         isLoading,
+        isFetching,
         error,
         refetch
     };

@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
-import { Plus, FileText, X, Trash2, ClipboardList } from 'lucide-react';
-import { deleteClientQuestionnaires, getClientQuestionnaires, type ClientQuestionnaire } from '@/api/client/client-form-service';
+import { Plus, FileText, X, Trash2 } from 'lucide-react';
+import { deleteClientQuestionnaires, type ClientQuestionnaire } from '@/api/client/client-form-service';
 import { AddQuestionnaireSidePanel } from '@/components/forms/add-questionnaire-side-panel';
 import { Badge } from '@/components/ui/badge';
-
 import { useClientQuestionnaires } from '@/hooks/use-client-questionnaires';
+import { useUserProfile } from '@/hooks/use-user-profile';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 
 const ClientQuestionnairesPage = () => {
   const t = useTranslations();
@@ -20,17 +21,18 @@ const ClientQuestionnairesPage = () => {
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const { questionnaires, isLoading, refetch } = useClientQuestionnaires(clientId);
+  const { user } = useUserProfile();
+  const { questionnaires, refetch } = useClientQuestionnaires(clientId);
   const itemsPerPage = 25;
-  const [filteredCount, setFilteredCount] = useState<number>(0);
   const [selectedQuestionnaires, setSelectedQuestionnaires] = useState<Set<string>>(new Set());
   const [isAddQuestionnaireOpen, setIsAddQuestionnaireOpen] = useState<boolean>(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
   const handleAddQuestionnaire = () => {
     setIsAddQuestionnaireOpen(true);
   };
 
-  const handleSaveAddQuestionnaire = async (formId: string, scheduleData: any) => {
+  const handleSaveAddQuestionnaire = async () => {
     // This callback is called after the form is successfully assigned via the assignForm service
     // The service call and logging happens in AddQuestionnaireSidePanel's handleSave function
     // Refresh the questionnaires list
@@ -41,16 +43,23 @@ const ClientQuestionnairesPage = () => {
     setSelectedQuestionnaires(new Set());
   };
 
-  const handleDeleteSelected = async () => {
-    if (selectedQuestionnaires.size === 0 || !clientId) return;
+  const handleDeleteSelected = () => {
+    if (selectedQuestionnaires.size === 0) return;
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!clientId || !user?.id) return;
 
     try {
       await deleteClientQuestionnaires({
         questionnaireIds: Array.from(selectedQuestionnaires),
         clientId: clientId,
+        coachId: user.id
       });
 
       refetch();
+      setIsDeleteDialogOpen(false);
       setSelectedQuestionnaires(new Set());
     } catch (error) {
       console.error('Failed to delete questionnaires:', error);
@@ -69,49 +78,6 @@ const ClientQuestionnairesPage = () => {
     });
   };
 
-  // Render first column header with checkbox
-  const renderFirstColumnHeader = ({
-    isAllSelected,
-    onToggleAll,
-  }: {
-    isAllSelected: boolean;
-    onToggleAll: () => void;
-  }) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-        <div className="flex items-center gap-2">
-          <FileText className="size-3 text-muted-foreground" />
-          <span className="text-xs uppercase text-muted-foreground">
-            {t('athletes.profile.questionnaires.columns.name')}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  // Render first column with checkbox
-  const renderFirstColumn = (row: ClientQuestionnaire, isSelected: boolean) => {
-    return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div
-          className="flex items-center justify-center h-full flex-shrink-0"
-          data-no-row-link="true"
-        >
-          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleQuestionnaire(row.id)} />
-        </div>
-        <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-sm font-medium truncate">{row.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {row.questionCount === 1
-              ? t('athletes.profile.questionnaires.questions', { count: row.questionCount })
-              : t('athletes.profile.questionnaires.questionsPlural', { count: row.questionCount })}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
   const columns: ColumnDefinition<ClientQuestionnaire>[] = [
     {
       id: 'name',
@@ -121,14 +87,33 @@ const ClientQuestionnairesPage = () => {
       width: { class: 'w-[350px]', pixel: '350px' },
       getSortValue: (row) => row.name.toLowerCase(),
       getSearchValue: (row) => row.name,
-      renderCell: (row) => (
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium">{row.name}</span>
-          <span className="text-xs text-muted-foreground">
-            {row.questionCount === 1
-              ? t('athletes.profile.questionnaires.questions', { count: row.questionCount })
-              : t('athletes.profile.questionnaires.questionsPlural', { count: row.questionCount })}
-          </span>
+      renderHeader: ({ isAllSelected, onToggleAll }) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+          <div className="flex items-center gap-2">
+            <FileText className="size-3 text-muted-foreground" />
+            <span className="text-xs uppercase text-muted-foreground">
+              {t('athletes.profile.questionnaires.columns.name')}
+            </span>
+          </div>
+        </div>
+      ),
+      renderCell: (row, isSelected) => (
+        <div className="flex items-center gap-3 h-full w-full">
+          <div
+            className="flex items-center justify-center h-full flex-shrink-0"
+            data-no-row-link="true"
+          >
+            <Checkbox checked={isSelected} onCheckedChange={() => handleToggleQuestionnaire(row.id)} />
+          </div>
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="text-sm font-medium truncate">{row.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {row.questionCount === 1
+                ? t('athletes.profile.questionnaires.questions', { count: row.questionCount })
+                : t('athletes.profile.questionnaires.questionsPlural', { count: row.questionCount })}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -243,7 +228,6 @@ const ClientQuestionnairesPage = () => {
         getRowId={(row) => row.id}
         gridKey={`client-questionnaires-${clientId}`}
         itemsPerPage={itemsPerPage}
-        onFilteredDataChange={setFilteredCount}
         enableSearch={true}
         searchPlaceholder={t('athletes.profile.questionnaires.searchPlaceholder')}
         searchFields={['name', 'description']}
@@ -251,7 +235,7 @@ const ClientQuestionnairesPage = () => {
           <div className="flex items-center gap-2">
             <Button onClick={handleAddQuestionnaire} className="gap-2">
               <Plus className="size-4" />
-              <span>{t('athletes.profile.questionnaires.addQuestionnaire')}</span>
+              <span>{t('general.assign')} Questionnaire</span>
             </Button>
           </div>
         }
@@ -260,11 +244,6 @@ const ClientQuestionnairesPage = () => {
         enableRowSelection={true}
         selectedRowIds={selectedQuestionnaires}
         onSelectionChange={setSelectedQuestionnaires}
-        firstColumnId="name"
-        stickyFirstColumn={true}
-        firstColumnWidth="350px"
-        renderFirstColumn={renderFirstColumn}
-        renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
         gridPadding={true}
         compactPagination={true}
@@ -274,9 +253,9 @@ const ClientQuestionnairesPage = () => {
             title="No questionnaires assigned"
             subtitle="This client has no questionnaires assigned yet"
             action={
-              <Button onClick={() => router.push('/forms')} className="gap-2">
-                <ClipboardList className="size-4" />
-                <span>{t('athletes.profile.questionnaires.goToForms')}</span>
+              <Button onClick={() => setIsAddQuestionnaireOpen(true)} className="gap-2">
+                <Plus className="size-4" />
+                <span>{t('general.assign')} Questionnaire</span>
               </Button>
             }
           />
@@ -291,28 +270,26 @@ const ClientQuestionnairesPage = () => {
           }
         }}
         selectionActions={
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              onClick={handleClearSelected}
-              className="gap-2"
-              aria-label={t('athletes.profile.questionnaires.clearSelected')}
-            >
-              <X className="size-4" />
-              <span>
-                {t('athletes.profile.questionnaires.clearSelected')} {selectedQuestionnaires.size}
-              </span>
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={handleDeleteSelected}
-              className="gap-2"
-              aria-label={t('general.delete')}
-            >
-              <Trash2 className="size-4" />
-              <span>{t('general.delete')}</span>
-            </Button>
-          </div>
+          selectedQuestionnaires.size > 0 ? (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                onClick={handleClearSelected}
+                className="gap-2"
+              >
+                <X className="size-4" />
+                <span>Clear {selectedQuestionnaires.size} selected</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleDeleteSelected}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="size-4" />
+                <span>{t('general.delete')}</span>
+              </Button>
+            </div>
+          ) : undefined
         }
       />
       <AddQuestionnaireSidePanel
@@ -320,6 +297,16 @@ const ClientQuestionnairesPage = () => {
         onOpenChange={setIsAddQuestionnaireOpen}
         onSave={handleSaveAddQuestionnaire}
         clientId={clientId}
+        coachId={user?.id}
+      />
+
+      <ConfirmDeleteDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        count={selectedQuestionnaires.size}
+        itemType="questionnaire"
+        variant="default"
       />
     </div>
   );

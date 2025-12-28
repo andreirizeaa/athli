@@ -29,7 +29,7 @@ export function createExpressApp() {
     origin: env.CORS_ORIGIN || 'http://localhost:3001',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'x-coach-id'],
   };
   app.use(cors(corsOptions));
 
@@ -162,7 +162,14 @@ export function createExpressApp() {
   // API v1 routes
   app.use('/api/v1', v1Router);
 
-  // 404 + error handling
+  // Debug: Log all 404s before handling
+  app.use((req, res, next) => {
+    if (!res.headersSent) {
+      console.log(`[DEBUG] 404 Candidate: ${req.method} ${req.originalUrl}`);
+    }
+    next();
+  });
+
   app.use(notFoundHandler);
   app.use(errorHandler);
 

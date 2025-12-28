@@ -19,6 +19,7 @@ export interface CheckIn {
     specificDay?: number;
   };
   questions: Question[];
+  questionCount?: number;
   created_at: string;
   updated_at: string;
 }
