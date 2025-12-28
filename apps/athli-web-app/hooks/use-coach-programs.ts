@@ -13,7 +13,7 @@ import {
 import type { Program } from '@/components/app/app-shell';
 import { toast } from 'sonner';
 
-export function useCoachPrograms() {
+export function useCoachPrograms(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
     const {
@@ -24,6 +24,7 @@ export function useCoachPrograms() {
         queryKey: ['coach-programs'],
         queryFn: () => getPrograms(),
         staleTime: 5 * 60 * 1000,
+        enabled: options?.enabled !== false,
     });
 
     const createMutation = useMutation({

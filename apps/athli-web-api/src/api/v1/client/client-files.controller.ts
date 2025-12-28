@@ -94,16 +94,21 @@ export const clientFilesController = {
 
         const supabase = getSupabaseClient();
 
-        // 1. Fetch file path
+        // 1. Fetch file path and coach_id
         const { data: assignment, error: assignmentError } = await supabase
             .from('client_files')
-            .select('client_id, file_path, bucket_id') // Assuming bucket_id exists or default
+            .select('client_id, file_path, bucket_id, coach_id') // Assuming bucket_id exists or default
             .eq('id', id)
             .eq('client_id', targetClientId)
             .single();
 
         if (assignmentError || !assignment) {
             return notFound(res, { message: 'File not found or access denied' });
+        }
+
+        // If this is a coach request, verify coach_id matches
+        if (isCoach && coachIdHeader !== assignment.coach_id) {
+            return forbidden(res, { message: 'Coach ID mismatch' });
         }
 
         // 2. Generate signed URL

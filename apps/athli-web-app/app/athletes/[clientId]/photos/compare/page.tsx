@@ -185,28 +185,6 @@ const PhotoComparisonPage = () => {
             <BreadcrumbList className="text-xs gap-1">
               <BreadcrumbItem>
                 <BreadcrumbLink
-                  onClick={handleNavigateToAthletes}
-                  className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
-                >
-                  {t('athletes.profile.athletes')}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-muted-foreground/60">
-                <ChevronLeft className="h-2 w-2 rotate-180" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  onClick={handleNavigateToClient}
-                  className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
-                >
-                  {athlete?.name || 'Client'}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-muted-foreground/60">
-                <ChevronLeft className="h-2 w-2 rotate-180" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbLink
                   onClick={handleNavigateToPhotos}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                 >

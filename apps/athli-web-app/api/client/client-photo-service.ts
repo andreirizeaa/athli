@@ -6,7 +6,6 @@ export interface ClientPhoto {
   type: 'front' | 'back' | 'side';
   recordedAt: Date;
   createdAt: Date;
-  notes?: string;
 }
 
 export interface AddClientPhotosData {
@@ -28,9 +27,8 @@ export const getClientPhotos = async (clientId: string): Promise<ClientPhoto[]> 
 
   response.data.photos.forEach((log) => {
     const common = {
-      recordedAt: new Date(log.recorded_date),
+      recordedAt: new Date(log.date),
       createdAt: new Date(log.created_at),
-      notes: log.notes,
     };
 
     if (log.front_photo_url) {
@@ -68,7 +66,7 @@ export const addClientPhotos = async (data: AddClientPhotosData): Promise<void> 
   if (data.sideFile) formData.append('side', data.sideFile);
   if (data.backFile) formData.append('back', data.backFile);
 
-  formData.append('recorded_date', data.recordedAt.toISOString().split('T')[0]);
+  formData.append('date', data.recordedAt.toISOString().split('T')[0]);
 
   await apiFetch(`/client/photos`, {
     method: 'POST',
@@ -103,4 +101,27 @@ export const deleteClientPhotoAngle = async (
     method: 'DELETE',
     headers: { 'x-client-id': clientId },
   });
+};
+
+export interface CheckExistingPhotosParams {
+  clientId: string;
+  date: Date;
+}
+
+export interface CheckExistingPhotosResult {
+  exists: boolean;
+  angles: ('front' | 'side' | 'back')[];
+  date?: string;
+}
+
+export const checkExistingPhotos = async (params: CheckExistingPhotosParams): Promise<CheckExistingPhotosResult> => {
+  const response = await apiFetch<{ data: CheckExistingPhotosResult }>(`/client/photos/check`, {
+    method: 'POST',
+    headers: { 'x-client-id': params.clientId },
+    body: JSON.stringify({
+      date: params.date.toISOString().split('T')[0],
+    }),
+  });
+
+  return response.data;
 };

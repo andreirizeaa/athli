@@ -276,6 +276,7 @@ const ClientCheckInPage = () => {
         onConfirm={handleConfirmDelete}
         count={selectedCheckIns.size}
         itemType="check-in"
+        variant="default"
       />
     </div>
   );

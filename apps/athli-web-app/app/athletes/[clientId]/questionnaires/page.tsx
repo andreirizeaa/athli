@@ -306,6 +306,7 @@ const ClientQuestionnairesPage = () => {
         onConfirm={handleConfirmDelete}
         count={selectedQuestionnaires.size}
         itemType="questionnaire"
+        variant="default"
       />
     </div>
   );

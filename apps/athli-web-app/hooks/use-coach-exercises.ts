@@ -12,7 +12,7 @@ import {
 } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 
-export function useCoachExercises() {
+export function useCoachExercises(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
     const {
@@ -23,6 +23,7 @@ export function useCoachExercises() {
         queryKey: ['coach-exercises'],
         queryFn: () => getExercises(),
         staleTime: 5 * 60 * 1000,
+        enabled: options?.enabled !== false,
     });
 
     const createMutation = useMutation({

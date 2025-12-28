@@ -56,7 +56,9 @@ export const clientQuestionnairesController = {
             description: a.description,
             questions: a.questions,
             status: a.status,
-            completed_at: a.completed_at
+            completed_at: a.completed_at,
+            assigned_at: a.created_at,
+            created_at: a.created_at
         }));
 
         success(res, {
@@ -166,6 +168,11 @@ export const clientQuestionnairesController = {
 
         if (detailsError || !assignmentDetails) return notFound(res, { message: 'Assignment not found' });
 
+        // If this is a coach request, verify coach_id matches
+        if (isCoach && coachIdHeader !== assignmentDetails.coach_id) {
+            return forbidden(res, { message: 'Coach ID mismatch' });
+        }
+
         // 2. Insert into logs
         await supabase.from('client_questionnaire_logs').insert({
             client_id: targetClientId,
@@ -184,6 +191,7 @@ export const clientQuestionnairesController = {
             })
             .eq('id', id)
             .eq('client_id', targetClientId)
+            .eq('coach_id', assignmentDetails.coach_id)
             .select()
             .single();
 

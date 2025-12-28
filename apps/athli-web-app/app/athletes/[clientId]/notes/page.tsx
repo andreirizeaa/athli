@@ -403,6 +403,7 @@ const ClientNotesPage = () => {
               onClick={handleDeleteNoteFromPanel}
               aria-label={t('general.delete')}
             >
+              <Trash2 className="size-4" />
               {t('general.delete')}
             </Button>
             <Button variant="outline" onClick={handleCancelNoteEdit}>
@@ -521,6 +522,7 @@ const ClientNotesPage = () => {
         itemName={noteToDelete?.title}
         count={selectedNotes.size}
         itemType="note"
+        variant="default"
       />
     </div>
   );

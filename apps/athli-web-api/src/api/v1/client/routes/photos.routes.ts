@@ -17,6 +17,8 @@ export const clientPhotoRouter = Router();
 
 clientPhotoRouter.get('/', supabaseAuthenticate, clientPhotosController.getPhotos);
 
+clientPhotoRouter.post('/check', supabaseAuthenticate, clientPhotosController.checkExistingPhotos);
+
 /**
  * @swagger
  * /api/v1/client/photos:

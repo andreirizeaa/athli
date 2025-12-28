@@ -11,13 +11,14 @@ import {
     type DeleteFileData,
 } from '@/api/coach/coach-file-service';
 
-export const useCoachFiles = () => {
+export const useCoachFiles = (options?: { enabled?: boolean }) => {
     const queryClient = useQueryClient();
 
     const { data: files = [], isLoading } = useQuery({
         queryKey: ['coach-files'],
         queryFn: getAllFiles,
         staleTime: 5 * 60 * 1000, // 5 minutes
+        enabled: options?.enabled !== false,
     });
 
     const uploadMutation = useMutation({

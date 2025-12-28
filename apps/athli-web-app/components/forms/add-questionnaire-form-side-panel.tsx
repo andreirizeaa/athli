@@ -300,7 +300,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
                   <RequiredAsterisk />
                 </span>
               </label>
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 [&_.border-t]:border-t-0">
                 <DataGrid
                   data={questionnaireTemplates}
                   columns={columns}

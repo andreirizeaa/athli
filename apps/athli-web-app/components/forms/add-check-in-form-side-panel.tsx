@@ -529,7 +529,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
                   <RequiredAsterisk />
                 </span>
               </label>
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 [&_.border-t]:border-t-0">
                 <DataGrid
                   data={checkInTemplates}
                   columns={templateColumns}

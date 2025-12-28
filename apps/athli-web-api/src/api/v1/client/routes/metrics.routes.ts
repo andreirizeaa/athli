@@ -49,15 +49,21 @@ clientMetricRouter.delete('/', supabaseAuthenticate, clientMetricsController.del
 
 /**
  * @swagger
- * /api/v1/client/metrics/{id}:
- *   post:
- *     summary: Record client metric value
+ * /api/v1/client/metrics:
+ *   patch:
+ *     summary: Log client metric (create log entry)
  *     tags: [Client Metrics]
  *     parameters:
- *       - in: path
- *         name: id
- *         required: true
+ *       - in: header
+ *         name: x-client-id
  *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ *   put:
+ *     summary: Update metric assignment details
+ *     tags: [Client Metrics]
+ *     parameters:
  *       - in: header
  *         name: x-client-id
  *         schema: { type: string }
@@ -65,4 +71,48 @@ clientMetricRouter.delete('/', supabaseAuthenticate, clientMetricsController.del
  *         name: x-coach-id
  *         schema: { type: string }
  */
-clientMetricRouter.post('/:id', supabaseAuthenticate, clientMetricsController.recordMetric);
+clientMetricRouter.patch('/', supabaseAuthenticate, clientMetricsController.logMetric);
+clientMetricRouter.put('/', supabaseAuthenticate, clientMetricsController.updateAssignment);
+
+/**
+ * @swagger
+ * /api/v1/client/metrics/logs:
+ *   delete:
+ *     summary: Delete metric log entry
+ *     tags: [Client Metrics]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ *   patch:
+ *     summary: Update metric log entry
+ *     tags: [Client Metrics]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ */
+clientMetricRouter.delete('/logs', supabaseAuthenticate, clientMetricsController.deleteLog);
+clientMetricRouter.patch('/logs', supabaseAuthenticate, clientMetricsController.updateLog);
+
+/**
+ * @swagger
+ * /api/v1/client/metrics/logs/check:
+ *   post:
+ *     summary: Check if a log exists for a specific date
+ *     tags: [Client Metrics]
+ *     parameters:
+ *       - in: header
+ *         name: x-client-id
+ *         schema: { type: string }
+ *       - in: header
+ *         name: x-coach-id
+ *         schema: { type: string }
+ */
+clientMetricRouter.post('/logs/check', supabaseAuthenticate, clientMetricsController.checkExistingLog);

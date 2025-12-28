@@ -49,7 +49,6 @@ export interface LogHabitData {
   status: 'completed' | 'skipped' | 'partial';
   value?: number;
   date: Date;
-  note?: string;
   // Context needed for headers
   clientId: string;
   coachId: string;
@@ -59,16 +58,14 @@ export interface LogHabitData {
  * Service method to log a habit for a client
  */
 export const logHabit = async (data: LogHabitData): Promise<void> => {
-  await apiFetch(`/client/habits/${data.assignmentId}`, { // Changed to PATCH /:id
+  await apiFetch(`/client/habits`, {
     method: 'PATCH',
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({
+      assignmentId: data.assignmentId,
       status: data.status,
-      // value: data.value, // Controller only takes status and date? Let's check controller. 
-      // Controller updateHabitStatus extracts { status, date }. It ignores value? 
-      // If value is needed, controller should be updated. But keeping it safe.
-      date: data.date.toISOString().split('T')[0],
-      // note: data.note // Controller doesn't seem to take note?
+      value: data.value,
+      date: data.date.toISOString().split('T')[0]
     }),
   });
 };
@@ -81,4 +78,79 @@ export const getClientHabits = async (clientId: string, coachId: string): Promis
     headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
   });
   return response.data.habits;
+};
+
+export interface UpdateHabitData {
+  assignmentId: string;
+  name?: string;
+  description?: string;
+  period?: 'daily' | 'weekly';
+  custom_schedule?: any;
+  clientId: string;
+  coachId: string;
+}
+
+export const updateHabit = async (data: UpdateHabitData): Promise<void> => {
+  await apiFetch(`/client/habits`, {
+    method: 'PUT',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      assignmentId: data.assignmentId,
+      name: data.name,
+      description: data.description,
+      period: data.period,
+      custom_schedule: data.custom_schedule,
+    }),
+  });
+};
+
+export const deleteHabitLog = async (logId: string, clientId: string, coachId: string): Promise<void> => {
+  await apiFetch(`/client/habits/logs`, {
+    method: 'DELETE',
+    headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+    body: JSON.stringify({ logId }),
+  });
+};
+
+export interface UpdateHabitLogData {
+  logId: string;
+  status: 'completed' | 'skipped' | 'partial';
+  value?: number;
+  date?: Date;
+  clientId: string;
+  coachId: string;
+}
+
+export const updateHabitLog = async (data: UpdateHabitLogData): Promise<void> => {
+  await apiFetch(`/client/habits/logs`, {
+    method: 'PATCH',
+    headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
+    body: JSON.stringify({
+      logId: data.logId,
+      status: data.status,
+      value: data.value,
+      date: data.date ? data.date.toISOString().split('T')[0] : undefined
+    }),
+  });
+};
+
+export interface HabitStreaks {
+  longest_streak: number;
+  current_streak: number;
+}
+
+export const getHabitStreaks = async (
+  assignmentId: string,
+  clientId: string,
+  coachId: string
+): Promise<HabitStreaks> => {
+  const response = await apiFetch<{ data: HabitStreaks }>(
+    `/client/habits/streaks`,
+    {
+      method: 'POST',
+      headers: { 'x-client-id': clientId, 'x-coach-id': coachId },
+      body: JSON.stringify({ assignmentId })
+    }
+  );
+  return response.data;
 };

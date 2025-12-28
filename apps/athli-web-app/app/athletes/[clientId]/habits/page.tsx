@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Trash } from 'lucide-react';
+import { Plus, FileText, Search, X, Edit, ArrowUp, ArrowDown, Check, Trash2, Flame, Trash, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -25,13 +25,24 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { mockAthletes } from '@/components/app/app-shell';
 import { getAllHabits, type Habit } from '@/api/coach/coach-habit-service';
-import { assignHabit, addHabit as addClientHabit, deleteClientHabits, logHabit } from '@/api/client/client-habit-service';
+import {
+  assignHabit,
+  addHabit as addClientHabit,
+  deleteClientHabits,
+  logHabit,
+  updateHabit,
+  deleteHabitLog,
+  updateHabitLog,
+  getHabitStreaks,
+  type HabitStreaks
+} from '@/api/client/client-habit-service';
 import { getClientHabits } from '@/api/coach/coach-client-service';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { useClientHabits } from '@/hooks/use-client-habits';
 import { useClientProfileContext } from '../client-profile-context';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { toast } from 'sonner';
 
 // Mock habits removed
 
@@ -58,6 +69,15 @@ const ClientHabitsPage = () => {
   const [isAddHabitOpen, setIsAddHabitOpen] = useState<boolean>(false);
   const [isLogHabitOpen, setIsLogHabitOpen] = useState<boolean>(false);
   const [isEditHabitOpen, setIsEditHabitOpen] = useState<boolean>(false);
+  const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+  const [selectedHabitIdForLog, setSelectedHabitIdForLog] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editingLogValue, setEditingLogValue] = useState<string>('');
+  const [timeFilter, setTimeFilter] = useState<string>('all-time');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [streaks, setStreaks] = useState<HabitStreaks | null>(null);
+  const [isLoadingStreaks, setIsLoadingStreaks] = useState<boolean>(false);
 
   const habits = useMemo(() => {
     return rawData.map((item: any) => ({
@@ -69,16 +89,16 @@ const ClientHabitsPage = () => {
       period: item.period,
       createdAt: new Date(item.created_at || Date.now()).getTime(),
       assignmentId: item.assignment_id || item.id,
-      customSchedule: item.custom_schedule
+      customSchedule: item.custom_schedule,
+      logs: (item.logs || []).map((l: any) => ({
+        id: l.id,
+        habitId: item.id,
+        value: typeof l.value === 'number' ? l.value : (l.status === 'completed' ? (item.amount || 1) : 0),
+        status: l.status,
+        completedAt: new Date(l.date)
+      }))
     }));
   }, [rawData]);
-  const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [editingLogId, setEditingLogId] = useState<string | null>(null);
-  const [editingLogValue, setEditingLogValue] = useState<string>('');
-  const [timeFilter, setTimeFilter] = useState<string>('all-time');
-  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]); // Initialize empty logs
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
 
   const filteredHabits = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -88,8 +108,8 @@ const ClientHabitsPage = () => {
     return habits.filter(
       (habit: any) =>
         habit.name.toLowerCase().includes(query) ||
-        habit.description?.toLowerCase().includes(query) ||
-        habit.unit.toLowerCase().includes(query)
+        (habit.description && habit.description.toLowerCase().includes(query)) ||
+        (habit.unit && habit.unit.toLowerCase().includes(query))
     );
   }, [searchQuery, habits]);
 
@@ -113,11 +133,10 @@ const ClientHabitsPage = () => {
 
   // Filter logs by time period
   const getFilteredLogsByTime = useMemo(() => {
-    if (!selectedHabitId) return [];
+    if (!selectedHabit) return [];
 
-    const allLogs = habitLogs
-      .filter((log) => log.habitId === selectedHabitId)
-      .sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime());
+    const allLogs = (selectedHabit.logs || [])
+      .sort((a: any, b: any) => a.completedAt.getTime() - b.completedAt.getTime());
 
     if (timeFilter === 'all-time') {
       return allLogs;
@@ -149,8 +168,8 @@ const ClientHabitsPage = () => {
         return allLogs;
     }
 
-    return allLogs.filter((log) => log.completedAt >= cutoffDate);
-  }, [selectedHabitId, habitLogs, timeFilter]);
+    return allLogs.filter((log: any) => log.completedAt >= cutoffDate);
+  }, [selectedHabit, timeFilter]);
 
   // Get logs for selected habit (filtered by time)
   const selectedHabitLogs = getFilteredLogsByTime;
@@ -158,7 +177,7 @@ const ClientHabitsPage = () => {
   // Calculate average
   const averageValue = useMemo(() => {
     if (selectedHabitLogs.length === 0) return null;
-    const sum = selectedHabitLogs.reduce((acc, log) => acc + log.value, 0);
+    const sum = selectedHabitLogs.reduce((acc: any, log: any) => acc + log.value, 0);
     return sum / selectedHabitLogs.length;
   }, [selectedHabitLogs]);
 
@@ -208,138 +227,43 @@ const ClientHabitsPage = () => {
     };
   }, [selectedHabitLogs]);
 
-  // Calculate streak
+  // Fetch streaks from API when habit is selected
+  useEffect(() => {
+    const fetchStreaks = async () => {
+      if (!selectedHabitId || !user?.id || !clientId) {
+        setStreaks(null);
+        return;
+      }
+
+      setIsLoadingStreaks(true);
+      try {
+        const result = await getHabitStreaks(selectedHabitId, clientId, user.id);
+        setStreaks(result);
+      } catch (error) {
+        console.error('Error fetching streaks:', error);
+        setStreaks({ longest_streak: 0, current_streak: 0 });
+      } finally {
+        setIsLoadingStreaks(false);
+      }
+    };
+
+    fetchStreaks();
+  }, [selectedHabitId, user?.id, clientId]);
+
+  // Map API streaks to UI format
   const streak = useMemo(() => {
-    if (!selectedHabit || selectedHabitLogs.length === 0) {
+    if (!streaks) {
       return { current: 0, best: 0 };
     }
-
-    // Helper to normalize date to start of day
-    const normalizeDate = (date: Date): Date => {
-      const normalized = new Date(date);
-      normalized.setHours(0, 0, 0, 0);
-      normalized.setMinutes(0);
-      normalized.setSeconds(0);
-      normalized.setMilliseconds(0);
-      return normalized;
+    return {
+      current: streaks.current_streak,
+      best: streaks.longest_streak
     };
-
-    // Helper to get date key for grouping (YYYY-MM-DD for daily, YYYY-WW for weekly)
-    const getDateKey = (date: Date): string => {
-      const normalized = normalizeDate(date);
-      if (selectedHabit.period === 'daily') {
-        return format(normalized, 'yyyy-MM-dd');
-      } else {
-        // For weekly, use ISO week
-        const year = normalized.getFullYear();
-        const week = getISOWeek(normalized);
-        return `${year}-W${week.toString().padStart(2, '0')}`;
-      }
-    };
-
-    const getISOWeek = (date: Date): number => {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-      const yearStart = new Date(d.getFullYear(), 0, 1);
-      return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    };
-
-    // Get unique date keys and sort them
-    const dateKeysSet = new Set(selectedHabitLogs.map((log) => getDateKey(log.completedAt)));
-    const dateKeys = Array.from(dateKeysSet).sort();
-
-    if (dateKeys.length === 0) {
-      return { current: 0, best: 0 };
-    }
-
-    // Calculate current streak (from today backwards)
-    const now = normalizeDate(new Date());
-    const todayKey = getDateKey(now);
-    const yesterdayKey = getDateKey(new Date(now.getTime() - 24 * 60 * 60 * 1000));
-
-    // Find starting point (today, yesterday, or most recent)
-    let startKey = dateKeys.includes(todayKey) ? todayKey :
-      dateKeys.includes(yesterdayKey) ? yesterdayKey :
-        dateKeys[dateKeys.length - 1];
-
-    let currentStreak = 0;
-    let checkDate = new Date(now);
-
-    // If we found today or yesterday, start from there; otherwise start from most recent log date
-    if (startKey === todayKey || startKey === yesterdayKey) {
-      checkDate = startKey === todayKey ? now : new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    } else {
-      // Find the date of the most recent log
-      const mostRecentLog = selectedHabitLogs
-        .filter((log) => getDateKey(log.completedAt) === startKey)
-        .sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime())[0];
-      checkDate = normalizeDate(mostRecentLog.completedAt);
-    }
-
-    // Count backwards
-    while (true) {
-      const checkKey = getDateKey(checkDate);
-      if (dateKeys.includes(checkKey)) {
-        currentStreak++;
-        // Move to previous period
-        if (selectedHabit.period === 'daily') {
-          checkDate = new Date(checkDate.getTime() - 24 * 60 * 60 * 1000);
-        } else {
-          checkDate = new Date(checkDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-        }
-      } else {
-        break;
-      }
-    }
-
-    // Calculate best streak (longest consecutive sequence)
-    let bestStreak = 1;
-    let tempStreak = 1;
-
-    for (let i = 1; i < dateKeys.length; i++) {
-      const prevKey = dateKeys[i - 1];
-      const currentKey = dateKeys[i];
-
-      // Parse keys to check if consecutive
-      const isConsecutive = (() => {
-        if (selectedHabit.period === 'daily') {
-          const prevDate = new Date(prevKey);
-          const currDate = new Date(currentKey);
-          const diffDays = Math.floor((currDate.getTime() - prevDate.getTime()) / (24 * 60 * 60 * 1000));
-          return diffDays === 1;
-        } else {
-          // For weekly, parse YYYY-WW format
-          const [prevYear, prevWeek] = prevKey.split('-W').map(Number);
-          const [currYear, currWeek] = currentKey.split('-W').map(Number);
-
-          if (currYear === prevYear) {
-            return currWeek === prevWeek + 1;
-          } else if (currYear === prevYear + 1 && currWeek === 1) {
-            // Check if previous was last week of previous year
-            const prevDate = new Date(prevYear, 11, 31);
-            const lastWeekOfPrevYear = getISOWeek(prevDate);
-            return prevWeek === lastWeekOfPrevYear;
-          }
-          return false;
-        }
-      })();
-
-      if (isConsecutive) {
-        tempStreak++;
-      } else {
-        bestStreak = Math.max(bestStreak, tempStreak);
-        tempStreak = 1;
-      }
-    }
-    bestStreak = Math.max(bestStreak, tempStreak);
-
-    return { current: currentStreak, best: bestStreak };
-  }, [selectedHabit, selectedHabitLogs]);
+  }, [streaks]);
 
   // Format chart data
   const chartData = useMemo(() => {
-    return selectedHabitLogs.map((log) => ({
+    return selectedHabitLogs.map((log: any) => ({
       date: format(log.completedAt, 'MMM d'),
       value: log.value,
     }));
@@ -382,7 +306,7 @@ const ClientHabitsPage = () => {
     if (selectedHabitLogs.length === 0) {
       return { yAxisDomain: ['auto', 'auto'], yAxisTicks: [] };
     }
-    const values = selectedHabitLogs.map((log) => log.value);
+    const values = selectedHabitLogs.map((log: any) => log.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const { min: niceMin, max: niceMax, step } = calculateNiceInterval(min, max);
@@ -397,7 +321,7 @@ const ClientHabitsPage = () => {
   }, [selectedHabitLogs]);
 
   const handleEditLog = (logId: string) => {
-    const log = selectedHabitLogs.find((l) => l.id === logId);
+    const log = selectedHabitLogs.find((l: any) => l.id === logId);
     if (log) {
       setEditingLogId(logId);
       setEditingLogValue(log.value.toString());
@@ -405,13 +329,31 @@ const ClientHabitsPage = () => {
   };
 
   const handleSaveLog = async (logId: string) => {
+    if (!clientId || !user?.id) return;
     const value = parseFloat(editingLogValue);
-    if (!isNaN(value) && value > 0) {
-      setHabitLogs((prev) =>
-        prev.map((log) => (log.id === logId ? { ...log, value } : log))
-      );
-      setEditingLogId(null);
-      setEditingLogValue('');
+    if (!isNaN(value)) {
+      try {
+        await updateHabitLog({
+          logId,
+          status: 'completed', // Maintain completed if editing value
+          value,
+          clientId,
+          coachId: user.id
+        });
+        toast.success('Log updated successfully');
+        refetch();
+        refreshData?.();
+        setEditingLogId(null);
+        setEditingLogValue('');
+        // Refetch streaks after updating log
+        if (selectedHabitId) {
+          const result = await getHabitStreaks(selectedHabitId, clientId, user.id);
+          setStreaks(result);
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to update log');
+      }
     }
   };
 
@@ -421,12 +363,24 @@ const ClientHabitsPage = () => {
   };
 
   const handleDeleteLog = async (logId: string) => {
-    // TODO: Implement delete log for client
-    console.log('Deleting log for client:', { clientId, logId });
-    setHabitLogs((prev) => prev.filter((log) => log.id !== logId));
-    if (editingLogId === logId) {
-      setEditingLogId(null);
-      setEditingLogValue('');
+    if (!clientId || !user?.id) return;
+    try {
+      await deleteHabitLog(logId, clientId, user.id);
+      toast.success('Log deleted successfully');
+      refetch();
+      refreshData?.();
+      if (editingLogId === logId) {
+        setEditingLogId(null);
+        setEditingLogValue('');
+      }
+      // Refetch streaks after deleting log
+      if (selectedHabitId) {
+        const result = await getHabitStreaks(selectedHabitId, clientId, user.id);
+        setStreaks(result);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete log');
     }
   };
 
@@ -439,10 +393,12 @@ const ClientHabitsPage = () => {
   };
 
   const handleOpenLogHabit = () => {
+    setSelectedHabitIdForLog(null);
     setIsLogHabitOpen(true);
   };
 
   const handleCloseLogHabit = () => {
+    setSelectedHabitIdForLog(null);
     setIsLogHabitOpen(false);
   };
 
@@ -478,43 +434,62 @@ const ClientHabitsPage = () => {
         });
       }
 
-      // Invalidate and refetch
+      toast.success('Habit saved successfully');
       refetch();
       refreshData?.();
       handleCloseAddHabit();
-      // TODO: Show success toast
     } catch (error) {
       console.error('Failed to add habit:', error);
-      // TODO: Show error toast
+      toast.error('Failed to save habit');
     }
   };
 
-  const handleSaveLogHabit = async (assignmentId: string, value: number) => {
+  const handleSaveLogHabit = async (assignmentId: string, value: number, date: Date) => {
     if (!user?.id) return;
     try {
       await logHabit({
         assignmentId,
         status: 'completed',
         value,
-        date: new Date(),
+        date,
         clientId,
         coachId: user.id
       });
-      refreshData(); // Refresh context to get new logs if needed
-      // TODO: Show success toast
+      toast.success('Habit logged successfully');
+      refetch();
+      refreshData?.();
+      handleCloseLogHabit(); // Close modal
+      // Refetch streaks after logging habit
+      if (selectedHabitId) {
+        const result = await getHabitStreaks(selectedHabitId, clientId, user.id);
+        setStreaks(result);
+      }
     } catch (error) {
       console.error('Failed to log habit:', error);
-      // TODO: Show error toast
+      toast.error('Failed to log habit');
     }
   };
 
   const handleSaveEditHabit = async (values: HabitFormValues) => {
-    // TODO: Implement update habit for client
-    console.log('Updating habit for client:', { clientId, habitId: selectedHabitId, values });
-    if (selectedHabitId) {
+    if (!clientId || !user?.id || !selectedHabitId) return;
+    try {
+      await updateHabit({
+        assignmentId: selectedHabitId,
+        name: values.name,
+        description: values.description,
+        period: values.period,
+        custom_schedule: (values as any).customSchedule,
+        clientId,
+        coachId: user.id
+      });
+      toast.success('Habit updated successfully');
       refetch();
+      refreshData?.();
+      handleCloseEditHabit();
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update habit');
     }
-    handleCloseEditHabit();
   };
 
   const handleDeleteHabit = async () => {
@@ -527,12 +502,14 @@ const ClientHabitsPage = () => {
         coachId: user.id
       });
 
+      toast.success('Habit deleted successfully');
       refetch();
       refreshData?.();
       setSelectedHabitId(null);
       setIsDeleteDialogOpen(false);
     } catch (error) {
       console.error('Failed to delete habit:', error);
+      toast.error('Failed to delete habit');
     }
   };
 
@@ -612,33 +589,39 @@ const ClientHabitsPage = () => {
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Habits list */}
             <div className="space-y-0 flex-1 overflow-y-auto">
-              {filteredHabits.map((habit: any, index: number) => {
-                const isSelected = selectedHabitId === habit.id;
-                const isLast = index === filteredHabits.length - 1;
-                const isOnlyItem = filteredHabits.length === 1;
+              {filteredHabits.length === 0 ? (
+                <div className="flex items-center justify-center py-8 px-4">
+                  <span className="text-sm text-muted-foreground">No habits found</span>
+                </div>
+              ) : (
+                filteredHabits.map((habit: any, index: number) => {
+                  const isSelected = selectedHabitId === habit.id;
+                  const isLast = index === filteredHabits.length - 1;
+                  const isOnlyItem = filteredHabits.length === 1;
 
-                return (
-                  <React.Fragment key={habit.id}>
-                    <button
-                      onClick={() => setSelectedHabitId(habit.id)}
-                      className={cn(
-                        'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
-                        isSelected
-                          ? 'bg-accent text-accent-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                      )}
-                    >
-                      <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <span className="text-sm font-medium">{habit.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {getAimText(habit)} {habit.description && `• ${habit.description}`}
-                        </span>
-                      </div>
-                    </button>
-                    {(!isLast || isOnlyItem) && <Separator className="w-full" />}
-                  </React.Fragment>
-                );
-              })}
+                  return (
+                    <React.Fragment key={habit.id}>
+                      <button
+                        onClick={() => setSelectedHabitId(habit.id)}
+                        className={cn(
+                          'w-full flex items-start gap-3 px-4 py-3 text-sm transition-colors text-left',
+                          isSelected
+                            ? 'bg-accent text-accent-foreground'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                        )}
+                      >
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                          <span className="text-sm font-medium">{habit.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {getAimText(habit)} {habit.description && `• ${habit.description}`}
+                          </span>
+                        </div>
+                      </button>
+                      {(!isLast || isOnlyItem) && <Separator className="w-full" />}
+                    </React.Fragment>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -669,7 +652,7 @@ const ClientHabitsPage = () => {
           <div className="flex-1 overflow-auto p-4 relative flex flex-col gap-6">
             {selectedHabit ? (
               <>
-                {/* Top row with filter, average, movement, and edit button */}
+                {/* Top row with filter and action buttons */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Select value={timeFilter} onValueChange={setTimeFilter}>
@@ -688,28 +671,10 @@ const ClientHabitsPage = () => {
                         <SelectItem value="all-time">{t('habits.timeFilter.allTime')}</SelectItem>
                       </SelectContent>
                     </Select>
-                    {averageValue !== null && (
-                      <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
-                        Average: {averageValue.toFixed(1)} {t(`habits.form.units.${selectedHabit.unit || 'times'}` as any)}
-                      </div>
-                    )}
-                    <div
-                      className={cn(
-                        'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default',
-                        movement?.percentage === 0 || movement === null
-                          ? 'text-foreground'
-                          : movement.isUp
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                      )}
-                    >
-                      {movement?.isUp === true && movement.percentage !== 0 && <ArrowUp className="size-4" />}
-                      {movement?.isUp === false && movement.percentage !== 0 && <ArrowDown className="size-4" />}
-                      {movement !== null ? `${movement.percentage.toFixed(1)}%` : '0%'}
-                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <ButtonGroup>
                     <Button onClick={() => {
+                      setSelectedHabitIdForLog(selectedHabitId);
                       setIsLogHabitOpen(true);
                     }} className="gap-2" variant="outline">
                       <FileText className="size-4" />
@@ -722,11 +687,30 @@ const ClientHabitsPage = () => {
                     <Button onClick={handleOpenDeleteDialog} className="gap-2" variant="outline">
                       <Trash className="size-4" />
                     </Button>
-                  </div>
+                  </ButtonGroup>
                 </div>
 
-                {/* Second row with completion rate and streaks */}
+                {/* Second row with stats: average, movement, completion rate, and streaks */}
                 <div className="flex items-center gap-4">
+                  {averageValue !== null && (
+                    <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
+                      Average: {averageValue.toFixed(1)} {t(`habits.form.units.${selectedHabit.unit || 'times'}` as any)}
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default',
+                      movement?.percentage === 0 || movement === null
+                        ? 'text-foreground'
+                        : movement.isUp
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                    )}
+                  >
+                    {movement?.isUp === true && movement.percentage !== 0 && <ArrowUp className="size-4" />}
+                    {movement?.isUp === false && movement.percentage !== 0 && <ArrowDown className="size-4" />}
+                    {movement !== null ? `${movement.percentage.toFixed(1)}%` : '0%'}
+                  </div>
                   {completionRate !== null && (
                     <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
                       Completion: {completionRate.toFixed(1)}%
@@ -735,13 +719,13 @@ const ClientHabitsPage = () => {
                   <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
                     <Flame className="size-4 text-primary" />
                     <span>
-                      {t('habits.streak.current')}: {streak.current} {selectedHabit.period === 'daily' ? t('habits.streak.days') : t('habits.streak.weeks')}
+                      {t('habits.streak.current')}: {isLoadingStreaks ? <Loader2 className="size-3 animate-spin inline-block ml-1" /> : `${streak.current} ${streak.current === 1 ? 'day' : 'days'}`}
                     </span>
                   </div>
                   <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
                     <Flame className="size-4 text-primary" />
                     <span>
-                      {t('habits.streak.longest')}: {streak.best} {selectedHabit.period === 'daily' ? t('habits.streak.days') : t('habits.streak.weeks')}
+                      {t('habits.streak.longest')}: {isLoadingStreaks ? <Loader2 className="size-3 animate-spin inline-block ml-1" /> : `${streak.best} ${streak.best === 1 ? 'day' : 'days'}`}
                     </span>
                   </div>
                 </div>
@@ -802,30 +786,7 @@ const ClientHabitsPage = () => {
                 </div>
 
                 {/* Logs DataGrid */}
-                <div className="w-full min-h-[200px] habit-logs-no-scroll">
-                  <style
-                    dangerouslySetInnerHTML={{
-                      __html: `
-                    .habit-logs-no-scroll div[class*="overflow-auto"],
-                    .habit-logs-no-scroll div[class*="overflow-hidden"] {
-                      overflow: visible !important;
-                      height: auto !important;
-                      max-height: none !important;
-                    }
-                    .habit-logs-no-scroll div[class*="min-h-0"] {
-                      min-height: auto !important;
-                    }
-                    .habit-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-auto"]),
-                    .habit-logs-no-scroll div[class*="flex-1"]:has(div[class*="overflow-hidden"]) {
-                      flex: none !important;
-                    }
-                    .habit-logs-no-scroll > div > div:first-child {
-                      border-top-left-radius: 0.5rem !important;
-                      border-top-right-radius: 0.5rem !important;
-                    }
-                  `,
-                    }}
-                  />
+                <div className="w-full">
                   <DataGrid
                     data={selectedHabitLogs}
                     columns={[
@@ -900,7 +861,7 @@ const ClientHabitsPage = () => {
                           return (
                             <div className="flex items-center justify-between w-full" data-no-row-link="true">
                               <span className="text-sm text-foreground">
-                                {row.value} <span className="text-muted-foreground">{t(`habits.form.units.${selectedHabit.unit || 'times'}` as any)}</span>
+                                {row.value}
                               </span>
                               <Button
                                 size="icon"
@@ -951,9 +912,15 @@ const ClientHabitsPage = () => {
 
       <LogHabitSidePanel
         open={isLogHabitOpen}
-        onOpenChange={setIsLogHabitOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseLogHabit();
+          setIsLogHabitOpen(open);
+        }}
         habits={habits}
         onSave={handleSaveLogHabit}
+        preselectedHabitId={selectedHabitIdForLog || undefined}
+        clientId={clientId}
+        coachId={user?.id || ''}
       />
 
       <AddHabitSidePanel
@@ -983,6 +950,7 @@ const ClientHabitsPage = () => {
         onConfirm={handleDeleteHabit}
         itemName={selectedHabit?.name}
         itemType="habit"
+        variant="default"
       />
     </div>
   );
