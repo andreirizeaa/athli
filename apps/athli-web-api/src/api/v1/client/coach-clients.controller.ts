@@ -23,7 +23,10 @@ export const coachClientController = {
         const { data: clients, error } = await supabase
             .from('coach_clients_view')
             .select('*')
-            .eq('coach_id', coachId);
+            .eq('coach_id', coachId)
+            // Show only active and unarchived clients in the main list
+            .eq('is_active', true)
+            .eq('is_archived', false);
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });
@@ -40,22 +43,31 @@ export const coachClientController = {
      */
     getClient: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
-        const { id } = req.params;
+        const clientId = req.header('x-client-id');
 
         if (!coachId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
         }
 
-        const supabase = getSupabaseClient();
+        if (!clientId) {
+            return res.status(400).json({ success: false, message: 'x-client-id header is required' });
+        }
 
-        // Use the view which joins profiles + assignments
-        const { data: client, error } = await supabase
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId);
+
+        if (!isUuid) {
+            return res.status(400).json({ success: false, message: 'Invalid ID format in x-client-id header' });
+        }
+
+        const supabase = getSupabaseClient();
+        const query = supabase
             .from('coach_clients_view')
             .select('*')
             .eq('coach_id', coachId)
-            .eq('client_id', id)
-            .single();
+            .eq('client_id', clientId);
+
+        const { data: client, error } = await query.single();
 
         if (error || !client) {
             if (error?.code !== 'PGRST116') { // PGRST116 is "The result contains 0 rows"
@@ -228,121 +240,200 @@ export const coachClientController = {
      */
     updateClient: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
-        const { id } = req.params;
+        // req.body might be empty if only file is sent or it might contain fields
+        const { id } = req.body;
         const updates = req.body;
+        const file = req.file;
 
-        if (!coachId) {
-            unauthorized(res, { message: 'User not authenticated' });
-            return;
-        }
+        try {
+            if (!coachId) {
+                unauthorized(res, { message: 'User not authenticated' });
+                return;
+            }
 
-        const supabase = getSupabaseClient();
+            if (!id && !updates.id) {
+                return res.status(400).json({ success: false, message: 'Client ID is required' });
+            }
 
-        // 1. Separate assignment updates from profile updates
-        const assignmentFields = ['category', 'status', 'is_archived'];
-        const profileFields = ['first_name', 'last_name', 'phone', 'gender', 'country', 'city', 'birth_date', 'height_cm', 'weight_kg', 'unit_system'];
+            const targetClientId = id || updates.id;
+            const supabase = getSupabaseClient();
 
-        const assignmentUpdates: any = {};
-        const profileUpdates: any = {};
+            // 1. Separate assignment updates from profile updates
+            const assignmentFields = ['category', 'status', 'is_archived'];
+            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system'];
 
-        // Populate update objects based on allowed fields
-        Object.keys(updates).forEach(key => {
-            if (assignmentFields.includes(key)) {
-                assignmentUpdates[key] = updates[key];
-            } else if (profileFields.includes(key)) {
-                // Map birth_date to date_of_birth if needed
-                if (key === 'birth_date') {
-                    profileUpdates['date_of_birth'] = updates[key];
-                } else {
-                    profileUpdates[key] = updates[key];
+            const assignmentUpdates: any = {};
+            const profileUpdates: any = {};
+
+            // Populate update objects based on allowed fields
+            Object.keys(updates).forEach(key => {
+                if (assignmentFields.includes(key)) {
+                    assignmentUpdates[key] = updates[key];
+                } else if (profileFields.includes(key)) {
+                    // Map birth_date to date_of_birth if needed
+                    if (key === 'birth_date') {
+                        profileUpdates['date_of_birth'] = updates[key];
+                    } else {
+                        profileUpdates[key] = updates[key];
+                    }
+                }
+            });
+
+            // 1.5 Handle file upload if present
+            if (file) {
+                const avatarUrl = await avatarService.uploadAvatar(targetClientId, file as any);
+                profileUpdates.profile_picture_url = avatarUrl;
+            }
+
+            // 2. Update assignment if needed
+            if (Object.keys(assignmentUpdates).length > 0) {
+                const { error: assignmentError } = await supabase
+                    .from('coach_client_assignments')
+                    .update(assignmentUpdates)
+                    .eq('client_id', targetClientId)
+                    .eq('coach_id', coachId);
+
+                if (assignmentError) throw assignmentError;
+            }
+
+            // 3. Update profile if needed
+            if (Object.keys(profileUpdates).length > 0) {
+                // First update user_profiles if name or avatar changed
+                const userProfileUpdates: any = {};
+                if (profileUpdates.name) userProfileUpdates.name = profileUpdates.name;
+                if (profileUpdates.profile_picture_url) userProfileUpdates.profile_picture_url = profileUpdates.profile_picture_url;
+
+                if (Object.keys(userProfileUpdates).length > 0) {
+                    await supabase
+                        .from('user_profiles')
+                        .update(userProfileUpdates)
+                        .eq('id', targetClientId);
+
+                    delete profileUpdates.name; // Don't try to update name in client_profiles
+                }
+
+                // Update client_profiles
+                if (Object.keys(profileUpdates).length > 0) {
+                    const { error: profileError } = await supabase
+                        .from('client_profiles')
+                        .update(profileUpdates)
+                        .eq('client_id', targetClientId);
+
+                    if (profileError) throw profileError;
                 }
             }
-        });
 
+            // 4. Fetch the updated view for return data
+            const { data: client, error: fetchError } = await supabase
+                .from('coach_clients_view')
+                .select('*')
+                .eq('coach_id', coachId)
+                .eq('client_id', targetClientId)
+                .single();
 
-        // 2. Update assignment if needed
-        if (Object.keys(assignmentUpdates).length > 0) {
-            const { error: assignmentError } = await supabase
-                .from('coach_client_assignments')
-                .update(assignmentUpdates)
-                .eq('client_id', id)
-                .eq('coach_id', coachId);
-
-            if (assignmentError) throw assignmentError;
-        }
-
-        // 3. Update profile if needed
-        if (Object.keys(profileUpdates).length > 0) {
-            // First update user_profiles if name changed
-            if (profileUpdates.first_name || profileUpdates.last_name) {
-                const { data: currentProfile } = await supabase
-                    .from('user_profiles')
-                    .select('name')
-                    .eq('id', id)
-                    .single();
-
-                const names = (currentProfile?.name || '').split(' ');
-                const firstName = profileUpdates.first_name || names[0] || '';
-                const lastName = profileUpdates.last_name || names.slice(1).join(' ') || '';
-                const newFullName = `${firstName} ${lastName}`.trim();
-
-                await supabase
-                    .from('user_profiles')
-                    .update({ name: newFullName })
-                    .eq('id', id);
+            if (fetchError || !client) {
+                return notFound(res, { message: 'Client not found after update' });
             }
 
-            // Update client_profiles
-            const { error: profileError } = await supabase
-                .from('client_profiles')
-                .update(profileUpdates)
-                .eq('client_id', id);
-
-            if (profileError) throw profileError;
+            success(res, {
+                message: 'Client updated successfully',
+                data: { client },
+            });
+        } catch (error: any) {
+            console.error('Error updating client:', error);
+            return res.status(500).json({ success: false, message: error.message || 'Failed to update client' });
         }
-
-        // 4. Fetch the updated view for return data
-        const { data: client, error: fetchError } = await supabase
-            .from('coach_clients_view')
-            .select('*')
-            .eq('coach_id', coachId)
-            .eq('client_id', id)
-            .single();
-
-        if (fetchError || !client) {
-            return notFound(res, { message: 'Client not found after update' });
-        }
-
-        success(res, {
-            message: 'Client updated successfully',
-            data: { client },
-        });
     },
 
     /**
      * Delete client assignment (remove client from coach)
+     * Performs a comprehensive cleanup of all associated data.
      */
     deleteClient: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
-        const { id } = req.params;
+        const { id } = req.body;
 
         if (!coachId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
         }
 
-        const supabase = getSupabaseClient();
-        const { error } = await supabase
-            .from('coach_client_assignments')
-            .delete()
-            .eq('client_id', id)
-            .eq('coach_id', coachId);
-
-        if (error) {
-            return res.status(500).json({ success: false, message: error.message });
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Client ID is required' });
         }
 
-        noContent(res);
+        const supabase = getSupabaseClient();
+
+        // Helper to run deletions in parallel where possible, but we'll do sequential for safety and clarity first
+        // 1. Assignments
+        const assignmentsTables = [
+            'client_metric_assignments',
+            'client_habit_assignments',
+            'client_file_assignments',
+            'client_checkin_assignments',
+            'client_questionnaire_assignments'
+        ];
+
+        // 2. Logs
+        const logsTables = [
+            'client_metric_entries',
+            'client_habit_logs',
+            'client_checkin_logs',
+            'client_questionnaire_logs',
+            'client_photo_logs'
+        ];
+
+        // 3. Private Data
+        const privateDataTables = [
+            'client_bio',
+            'client_goals',
+            'client_injuries',
+            'client_notes'
+        ];
+
+        // 4. Todo Lists
+        const todoTables = [
+            'coach_own_todolist',
+            'coach_auto_todolist'
+        ];
+
+        try {
+            // Delete Assignments
+            for (const table of assignmentsTables) {
+                await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
+            }
+
+            // Delete Logs
+            for (const table of logsTables) {
+                await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
+            }
+
+            // Delete Private Data
+            for (const table of privateDataTables) {
+                await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
+            }
+
+            // Delete Todo Lists
+            for (const table of todoTables) {
+                await supabase.from(table).delete().eq('client_id', id).eq('coach_id', coachId);
+            }
+
+            // 5. Finally delete the main assignment
+            const { error } = await supabase
+                .from('coach_client_assignments')
+                .delete()
+                .eq('client_id', id)
+                .eq('coach_id', coachId);
+
+            if (error) {
+                throw error;
+            }
+
+            noContent(res);
+        } catch (error: any) {
+            console.error('Error deleting client data:', error);
+            return res.status(500).json({ success: false, message: error.message || 'Failed to delete client data' });
+        }
     },
 
     /**
@@ -377,13 +468,11 @@ export const coachClientController = {
      */
     restoreClient: async (req: Request, res: Response) => {
         const coachId = getActingCoachId(req);
-        const clientIdHeader = req.header('x-client-id');
+        const { clientIds } = req.body; // Expect array of client IDs
 
-        if (!clientIdHeader) {
-            return res.status(400).json({ success: false, message: 'x-client-id header is required' });
+        if (!clientIds || !Array.isArray(clientIds) || clientIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'clientIds array is required' });
         }
-
-        const id = clientIdHeader; // client_id
 
         if (!coachId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -392,34 +481,43 @@ export const coachClientController = {
 
         const supabase = getSupabaseClient();
 
-        // Verify the client belongs to this coach
-        const { data: assignment, error: assignmentError } = await supabase
+        // Verify all clients belong to this coach
+        const { data: assignments, error: assignmentError } = await supabase
             .from('coach_client_assignments')
-            .select('*')
+            .select('client_id')
             .eq('coach_id', coachId)
-            .eq('client_id', id)
-            .single();
+            .in('client_id', clientIds);
 
-        if (assignmentError || !assignment) {
-            return notFound(res, { message: 'Client not found or not assigned to this coach' });
+        if (assignmentError) {
+            return res.status(500).json({ success: false, message: assignmentError.message });
         }
 
-        // Update user_profiles to restore the client
+        if (!assignments || assignments.length !== clientIds.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'One or more clients not found or not assigned to this coach'
+            });
+        }
+
+        // Restore clients by updating coach_client_assignments
         const { error: updateError } = await supabase
-            .from('user_profiles')
+            .from('coach_client_assignments')
             .update({
-                status: 'active',
+                is_active: true,
                 is_archived: false,
             })
-            .eq('id', id);
+            .eq('coach_id', coachId)
+            .in('client_id', clientIds);
 
         if (updateError) {
             return res.status(500).json({ success: false, message: updateError.message });
         }
 
-        success(res, { message: 'Client restored successfully' });
+        success(res, {
+            message: `Successfully restored ${clientIds.length} client(s)`,
+            data: { clientIds },
+        });
     },
-
     /**
      * Resend invitation email to client
      */

@@ -1,16 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAthleteDetails, saveAthleteDetails, type AthleteDetails } from '@/api/client/client-service';
 
-export function useClientDetails(clientId: string | undefined) {
+export function useClientDetails(clientId?: string) {
     const {
         data: details,
         isLoading,
         isFetching,
         error
     } = useQuery({
-        queryKey: ['client-details', clientId],
-        queryFn: () => getAthleteDetails(clientId!),
-        enabled: !!clientId,
+        queryKey: ['client-details', clientId || 'me'],
+        queryFn: () => getAthleteDetails(clientId),
+        enabled: true, // Always enable as we can fetch "me"
         staleTime: 5 * 60 * 1000,
     });
 
@@ -30,6 +30,7 @@ export function useUpdateClientDetails() {
             saveAthleteDetails(clientId, details),
         onSuccess: (_, { clientId }) => {
             queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
+            queryClient.invalidateQueries({ queryKey: ['client-profile', clientId] });
         },
     });
 }

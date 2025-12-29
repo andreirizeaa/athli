@@ -1,8 +1,10 @@
 import { createClient } from '@/supabase/client';
 import { apiFetch } from '@/api/api-client';
+import type { User } from '@supabase/supabase-js';
 
 export interface UserProfile {
     id: string;
+    publicId: string;
     email: string;
     name: string;
     userType: 'coach' | 'client';
@@ -16,6 +18,7 @@ export interface UserProfile {
 export interface UpdateProfileInput {
     name?: string;
     profilePictureUrl?: string | null;
+    avatarFile?: File | null;
 }
 
 /**
@@ -27,52 +30,53 @@ export async function getUserProfile(): Promise<UserProfile> {
 }
 
 /**
+ * Get user profile safely - falls back to auth metadata if API fails
+ * This is useful for initial load where race conditions might occur
+ */
+export async function getUserProfileSafe(authUser: User): Promise<UserProfile> {
+    try {
+        return await getUserProfile();
+    } catch (error) {
+        console.warn('Failed to fetch user profile, falling back to metadata:', error);
+
+        // Fallback to metadata
+        return {
+            id: authUser.id,
+            publicId: '', // Not available in metadata
+            userType: (authUser.user_metadata?.user_type as 'coach' | 'client') || 'coach',
+            email: authUser.email || '',
+            name: (authUser.user_metadata?.name as string) || '',
+            profilePictureUrl: (authUser.user_metadata?.avatar_url as string) ||
+                (authUser.user_metadata?.picture as string) || null,
+            signinMethod: authUser.app_metadata?.provider === 'google' ? 'google' : 'email',
+            isActive: true, // Default to true since they are logged in
+            createdAt: authUser.created_at || new Date().toISOString(),
+            updatedAt: authUser.updated_at || new Date().toISOString(),
+        };
+    }
+}
+
+/**
  * Update user profile via backend API
  */
 export async function updateUserProfile(updates: UpdateProfileInput): Promise<UserProfile> {
+    let body: any = JSON.stringify(updates);
+
+    if (updates.avatarFile) {
+        const formData = new FormData();
+        formData.append('avatar', updates.avatarFile);
+        if (updates.name) formData.append('name', updates.name);
+        if (updates.profilePictureUrl) formData.append('profilePictureUrl', updates.profilePictureUrl);
+        body = formData;
+    }
+
     const data = await apiFetch('/user/me', {
         method: 'PATCH',
-        body: JSON.stringify(updates),
+        body,
     });
     return data.data.user;
 }
 
-/**
- * Upload profile picture to Supabase Storage
- */
-export async function uploadProfilePicture(file: File, userId: string): Promise<string> {
-    const supabase = createClient();
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-        throw new Error('File must be an image');
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        throw new Error('Image size must be less than 5MB');
-    }
-
-    // Upload to Supabase Storage
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}-${Date.now()}.${fileExt}`;
-    const filePath = `${userId}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-        .from('profile-pictures')
-        .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-        throw new Error(uploadError.message);
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-        .from('profile-pictures')
-        .getPublicUrl(filePath);
-
-    return publicUrl;
-}
 
 /**
  * Ensure client profile exists for current user

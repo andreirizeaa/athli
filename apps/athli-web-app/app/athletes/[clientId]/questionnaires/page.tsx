@@ -210,6 +210,32 @@ const ClientQuestionnairesPage = () => {
         </span>
       ),
     },
+    {
+      id: 'actions',
+      label: '',
+      icon: <></>,
+      sortable: false,
+      width: { class: 'w-[60px]', pixel: '60px' },
+      getSortValue: () => '',
+      getSearchValue: () => '',
+      renderHeader: () => <></>,
+      renderCell: (row) => (
+        <div className="flex items-center justify-center" data-no-row-link="true">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedQuestionnaires(new Set([row.id]));
+              setIsDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   // Filter and sort questionnaires
@@ -278,7 +304,7 @@ const ClientQuestionnairesPage = () => {
                 className="gap-2"
               >
                 <X className="size-4" />
-                <span>Clear {selectedQuestionnaires.size} selected</span>
+                <span>{t('general.clearSelected', { count: selectedQuestionnaires.size })}</span>
               </Button>
               <Button
                 variant="ghost"

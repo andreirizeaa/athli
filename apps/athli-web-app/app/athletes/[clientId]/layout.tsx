@@ -88,6 +88,10 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.questionnaires.title'),
     },
     {
+      value: 'updates',
+      label: t('athletes.profile.updates'),
+    },
+    {
       value: 'settings',
       label: t('athletes.profile.settings.title'),
     },
@@ -96,11 +100,12 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   const validTabValues = tabs.map((tab) => tab.value);
   const lastSegment = segments[segments.length - 1];
 
-  // Check if we're in a check-in, questionnaires, photos, settings, or training-calendar route (either list or detail page)
+  // Check if we're in a check-in, questionnaires, photos, settings, updates, or training-calendar route (either list or detail page)
   const isCheckInRoute = segments.includes('check-in');
   const isQuestionnairesRoute = segments.includes('questionnaires');
   const isPhotosRoute = segments.includes('photos');
   const isSettingsRoute = segments.includes('settings');
+  const isUpdatesRoute = segments.includes('updates');
   const isTrainingCalendarRoute = segments.includes('training-calendar');
 
   // Determine active tab
@@ -112,9 +117,11 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
         ? 'photos'
         : isSettingsRoute
           ? 'settings'
-          : isTrainingCalendarRoute
-            ? 'training-calendar'
-            : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
+          : isUpdatesRoute
+            ? 'updates'
+            : isTrainingCalendarRoute
+              ? 'training-calendar'
+              : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const handleTabChange = (value: string) => {
     if (!clientId) {
@@ -146,10 +153,10 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   };
 
   const handleResendInvite = async () => {
-    if (!clientId) return;
+    if (!athlete?.id) return;
 
     try {
-      const { email } = await resendClientInvite(clientId);
+      const { email } = await resendClientInvite(athlete.id);
       toast.success(t('athletes.profile.resendInviteSuccess', { email }), {
         style: {
           background: 'rgb(220 252 231)',

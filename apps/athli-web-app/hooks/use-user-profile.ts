@@ -1,14 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
-import { getUserProfile, updateUserProfile, uploadProfilePicture } from '@/api/user/user-service';
+import { getUserProfile, updateUserProfile, getUserProfileSafe } from '@/api/user/user-service';
 
 export interface UpdateProfileInput {
   name?: string;
   profilePictureUrl?: string | null;
+  avatarFile?: File | null;
 }
 
 export function useUserProfile() {
-  const { user: authUser, refreshUser, isLoading: isAuthLoading } = useSupabaseAuth();
+  const { user: authUser, refreshUser, isLoading: isAuthLoading, supabaseUser } = useSupabaseAuth();
   const queryClient = useQueryClient();
 
   // Query for fetching user profile
@@ -19,7 +20,14 @@ export function useUserProfile() {
     error
   } = useQuery({
     queryKey: ['user-profile', authUser?.id],
-    queryFn: () => getUserProfile(),
+    queryFn: () => {
+      // If we have the supabase user from context, use the safe fetcher
+      // Otherwise fall back to the standard one
+      if (supabaseUser) {
+        return getUserProfileSafe(supabaseUser);
+      }
+      return getUserProfile();
+    },
     enabled: !!authUser, // Only run if authenticated
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -38,16 +46,17 @@ export function useUserProfile() {
     },
   });
 
-  // Mutation for uploading profile picture
+  // Mutation for uploading profile picture (now handled via updateUserProfile)
   const uploadImageMutation = useMutation({
     mutationFn: async (file: File) => {
       if (!authUser) throw new Error('No user');
-      const publicUrl = await uploadProfilePicture(file, authUser.id);
-      return publicUrl;
+      const result = await updateUserProfile({ avatarFile: file });
+      await refreshUser();
+      return result.profilePictureUrl || '';
     },
     onSuccess: (publicUrl) => {
-      // Chain the update profile mutation
-      updateProfileMutation.mutate({ profilePictureUrl: publicUrl });
+      // Update query cache with new data
+      queryClient.invalidateQueries({ queryKey: ['user-profile', authUser?.id] });
     },
   });
 

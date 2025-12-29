@@ -103,16 +103,16 @@ const mockClientQuestionnaires: ClientQuestionnaire[] = [
  * Service method to get check-ins for a client
  */
 export const getClientCheckIns = async (clientId: string, coachId: string): Promise<ClientCheckIn[]> => {
-  const response = await apiFetch<{ data: { checkIns: any[] } }>(`/client/forms/check-ins`, {
+  const response = await apiFetch<{ data: { checkins: any[] } }>(`/client/forms/check-ins`, {
     headers: { 'x-client-id': clientId, 'x-coach-id': coachId }
   });
 
-  return response.data.checkIns.map((c: any) => ({
-    id: c.assignment_id, // Use assignment ID
+  return response.data.checkins.map((c: any) => ({
+    id: c.id || c.assignment_id,
     name: c.name || 'Unknown Check-in',
     questionCount: c.questions?.length || 0,
     schedule: c.schedule_config?.frequency || 'Manual',
-    nextScheduledAt: new Date(c.created_at), // Placeholder
+    nextScheduledAt: new Date(c.assigned_at || c.created_at),
     description: c.description,
   }));
 };
@@ -126,7 +126,7 @@ export const getClientQuestionnaires = async (clientId: string, coachId: string)
   });
 
   return response.data.questionnaires.map((q: any) => ({
-    id: q.assignment_id, // Use assignment ID
+    id: q.id || q.assignment_id,
     name: q.name || 'Unknown Questionnaire',
     questionCount: q.questions?.length || 0,
     status: q.status || 'pending',
@@ -174,8 +174,6 @@ export const assignClientQuestionnaire = async (data: AssignClientQuestionnaireD
     headers: { 'x-client-id': data.clientId, 'x-coach-id': data.coachId },
     body: JSON.stringify({
       questionnaireIds: data.questionnaireIds,
-      schedule_config: data.schedule_config,
-      cron_expression: data.cron_expression
     }),
   });
 };
@@ -349,6 +347,40 @@ export const assignForm = async (data: AssignFormData): Promise<void> => {
       coachId: data.coachId,
       schedule_config: data.scheduleData,
       cron_expression: data.cronExpression
+    });
+  }
+};
+
+export interface AssignFormsToClientsData {
+  formIds: string[];
+  clientIds: string[];
+  coachId: string;
+  formType: 'check-in' | 'questionnaire';
+  cronExpression: string;
+  scheduleData: AssignFormScheduleData;
+}
+
+export const assignFormsToClients = async (data: AssignFormsToClientsData): Promise<void> => {
+  if (data.formType === 'check-in') {
+    await apiFetch(`/client/forms/check-ins`, {
+      method: 'POST',
+      headers: { 'x-coach-id': data.coachId },
+      body: JSON.stringify({
+        checkInIds: data.formIds,
+        clientIds: data.clientIds,
+        schedule_config: data.scheduleData,
+        cron_expression: data.cronExpression
+      }),
+    });
+  } else {
+    // Questionnaires bulk assignment
+    await apiFetch(`/client/forms/questionnaires`, {
+      method: 'POST',
+      headers: { 'x-coach-id': data.coachId },
+      body: JSON.stringify({
+        questionnaireIds: data.formIds,
+        clientIds: data.clientIds, // Send array of client IDs
+      }),
     });
   }
 }

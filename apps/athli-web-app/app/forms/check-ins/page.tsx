@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Plus, FileText, ArrowUpNarrowWide, ArrowDownWideNarrow, Check, X, Trash2, UserPlus, Copy, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -19,13 +21,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AddCheckInFormSidePanel } from '@/components/forms/add-check-in-form-side-panel';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { deleteCheckIn, duplicateCheckIn, type CheckIn as Form } from '@/api/coach/coach-check-in-service';
-import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
+import { assignForm, assignFormsToClients, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
-import { mockAthletes } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
+import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
 import { useCoachCheckIns } from '@/hooks/use-coach-check-ins';
+import { useCoachClients } from '@/hooks/use-coach-clients';
 import { useUserProfile } from '@/hooks/use-user-profile';
-import { useQueryClient } from '@tanstack/react-query';
+
 
 // Removed mock forms as we fetch from the API
 
@@ -33,6 +36,7 @@ const CheckInsPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const { checkIns: forms, isLoading } = useCoachCheckIns();
+  const { clients } = useCoachClients();
   const { user } = useUserProfile();
   const queryClient = useQueryClient();
 
@@ -73,8 +77,15 @@ const CheckInsPage = () => {
   const handleConfirmSingleDelete = async () => {
     if (!formToDelete) return;
     try {
+      const form = forms?.find(f => f.id === formToDelete);
       await deleteCheckIn(formToDelete);
       refresh();
+
+      if (form) {
+        toast.success(t('general.deleteSuccessName', { name: form.name }));
+      } else {
+        toast.success(t('general.deleteSuccess'));
+      }
 
       // Clear selection if deleted
       if (selectedCheckIns.has(formToDelete)) {
@@ -85,17 +96,23 @@ const CheckInsPage = () => {
       setFormToDelete(null);
     } catch (error) {
       console.error('Failed to delete check-in:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
   const handleBulkDelete = async () => {
     try {
       const idsToDelete = Array.from(selectedCheckIns);
+      const deleteCount = idsToDelete.length;
       await Promise.all(idsToDelete.map((id) => deleteCheckIn(id)));
       refresh();
+
+      toast.success(t('general.deleteSuccessCount', { count: deleteCount, item: deleteCount === 1 ? 'check-in' : 'check-ins' }));
+
       setSelectedCheckIns(new Set());
     } catch (error) {
       console.error('Failed to bulk delete check-ins:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
@@ -118,42 +135,57 @@ const CheckInsPage = () => {
     });
   };
 
-  const handleAssignFormsToClients = async () => {
-    if (selectedClientIds.size === 0 || formsToAssign.length === 0) return;
+  const handleAssignFormsToClients = async (clientIds: string[]) => {
+    if (clientIds.length === 0 || formsToAssign.length === 0) return;
 
     // Check if user (coach) exists
     if (!user?.id) return;
 
     try {
-      const clientIdsArray = Array.from(selectedClientIds);
+      const scheduleData: AssignFormScheduleData = {
+        type: 'check-in',
+        frequency: 'weekly',
+        selectedDays: ['sunday'],
+      };
 
-      await Promise.all(
-        formsToAssign.flatMap((form) =>
-          clientIdsArray.map(async (clientId) => {
-            const scheduleData: AssignFormScheduleData = {
-              type: 'check-in',
-              frequency: 'weekly',
-              selectedDays: ['sunday'],
-            };
+      const cronExpression = convertScheduleToCron(scheduleData);
 
-            const cronExpression = convertScheduleToCron(scheduleData);
-
-            await assignForm({
-              formId: form.id,
-              clientId: clientId,
-              coachId: user.id,
-              formType: 'check-in',
-              cronExpression: cronExpression,
-              scheduleData: scheduleData,
-            });
-          })
-        )
-      );
+      await assignFormsToClients({
+        formIds: formsToAssign.map(f => f.id),
+        clientIds: clientIds,
+        coachId: user.id,
+        formType: 'check-in',
+        cronExpression: cronExpression,
+        scheduleData: scheduleData,
+      });
 
       setIsAssignToClientsOpen(false);
+      const formCount = formsToAssign.length;
+      const clientCount = clientIds.length;
+
+      // Remove queries to force hard refresh and loading state
+      clientIds.forEach(clientId => {
+        queryClient.removeQueries({ queryKey: ['client-check-ins', clientId] });
+      });
+
+      // Determine toast message
+      if (formCount === 1 && clientCount === 1) {
+        const formName = formsToAssign[0].name;
+        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+        toast.success(t('forms.assignSuccessSingle', { formName, clientName }));
+      } else if (formCount === 1) {
+        const formName = formsToAssign[0].name;
+        toast.success(t('forms.assignSuccessFormMultiClient', { formName, count: clientCount }));
+      } else if (clientCount === 1) {
+        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+        toast.success(t('forms.assignSuccessMultiFormSingleClient', { count: formCount, clientName }));
+      } else {
+        toast.success(`Successfully assigned ${formCount} check-ins to ${clientCount} clients`);
+      }
+
+      // Clear selection
       setFormsToAssign([]);
       setSelectedCheckIns(new Set());
-      setSelectedClientIds(new Set());
     } catch (error) {
       console.error('Failed to assign forms to clients:', error);
     }
@@ -165,17 +197,7 @@ const CheckInsPage = () => {
     setSelectedClientIds(new Set());
   };
 
-  const handleToggleClient = (clientId: string) => {
-    setSelectedClientIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(clientId)) {
-        newSet.delete(clientId);
-      } else {
-        newSet.add(clientId);
-      }
-      return newSet;
-    });
-  };
+
 
   const checkInForms = useMemo(() => {
     // Return all forms - backend filters by type
@@ -193,17 +215,11 @@ const CheckInsPage = () => {
   }>) => {
     refresh();
 
-    const template = formTemplates.find((t) => t.name === newForm.name);
-    const formType = template?.schedule?.type || 'check-in';
-
     if (questions && questions.length > 0) {
       sessionStorage.setItem(`form-questions-${newForm.id}`, JSON.stringify(questions));
-      if (formType === 'check-in') {
-        router.push(`/forms/check-ins/${newForm.id}`);
-      } else {
-        router.push(`/forms/questionnaires/${newForm.id}`);
-      }
     }
+
+    setIsAddCheckInOpen(false);
   };
 
   const formatScheduleText = (form: Form): string => {
@@ -525,147 +541,45 @@ const CheckInsPage = () => {
         itemType="check-in"
       />
 
-      <SidePanel
+      <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
         title={t('forms.assignToClientsTitle')}
-        footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button
-              type="button"
-              onClick={handleAssignFormsToClients}
-              disabled={selectedClientIds.size === 0 || formsToAssign.length === 0}
-            >
-              {selectedClientIds.size === 1
-                ? t('forms.assignToOneClient')
-                : t('forms.assignToClientsCount', { count: selectedClientIds.size })}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleCloseAssignToClients}>
-              {t('general.cancel')}
-            </Button>
-          </div>
+        assignButtonLabel={(count) =>
+          count === 1
+            ? t('forms.assignToOneClient')
+            : t('forms.assignToClientsCount', { count })
         }
-      >
-        <div className="flex flex-col gap-6 h-full">
-          <div className="flex flex-col gap-2 flex-shrink-0">
-            <label className="text-sm font-medium">{t('forms.formsToAssign')}</label>
-            {formsToAssign.length > 0 ? (
-              <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                {formsToAssign.map((form) => (
-                  <div
-                    key={form.id}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-sm truncate">{form.name}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFormFromAssignList(form.id)}
-                      className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label={`Remove ${form.name}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+        onAssign={handleAssignFormsToClients}
+        previewComponent={
+          formsToAssign.length > 0 ? (
+            <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+              {formsToAssign.map((form) => (
+                <div
+                  key={form.id}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-sm truncate">{form.name}</span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground py-4 text-center">
-                {t('forms.noFormsSelected')}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 flex-1 min-h-0">
-            <label className="text-sm font-medium">{t('athletes.title')}</label>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <DataGrid
-                data={mockAthletes}
-                columns={[
-                  {
-                    id: 'name',
-                    label: t('athletes.title'),
-                    icon: <UserPlus className="size-3" />,
-                    width: { class: 'w-full', pixel: '100%' },
-                    getSortValue: (row) => row.name.toLowerCase(),
-                    getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
-                    renderHeader: ({ isAllSelected, onToggleAll }) => (
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                        <div className="flex items-center gap-2">
-                          <UserPlus className="size-3 text-muted-foreground" />
-                          <span className="text-xs uppercase text-muted-foreground">{t('athletes.title')}</span>
-                        </div>
-                      </div>
-                    ),
-                    renderCell: (row, isSelected) => {
-                      const initials = row.name
-                        .split(' ')
-                        .map((part) => part.charAt(0).toUpperCase())
-                        .slice(0, 2)
-                        .join('');
-                      return (
-                        <div className="flex items-center gap-3 h-full w-full">
-                          <div
-                            className="flex items-center justify-center h-full flex-shrink-0"
-                            data-no-row-link="true"
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => handleToggleClient(row.id)}
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <Avatar className="h-8 w-8 flex-shrink-0">
-                              <AvatarImage src={row.avatar} alt={row.name} />
-                              <AvatarFallback>{initials}</AvatarFallback>
-                            </Avatar>
-                            <span className={cn('truncate text-sm font-medium')}>{row.name}</span>
-                          </div>
-                        </div>
-                      );
-                    },
-                  },
-                ]}
-                getRowId={(row) => row.id}
-                gridKey="assign-forms-to-clients"
-                searchPlaceholder={t('forms.searchAthletes')}
-                enableSearch={true}
-                enableEditColumns={false}
-                enableExport={false}
-                enableRowSelection={true}
-                selectedRowIds={selectedClientIds}
-                onSelectionChange={setSelectedClientIds}
-                onRowClick={(row, event) => {
-                  const targetElement = event.target as HTMLElement;
-                  if (targetElement.closest('[data-no-row-link="true"]')) {
-                    return;
-                  }
-                  handleToggleClient(row.id);
-                }}
-                onRowKeyDown={(row, event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    const targetElement = event.target as HTMLElement;
-                    if (targetElement.closest('[data-no-row-link="true"]')) {
-                      return;
-                    }
-                    event.preventDefault();
-                    handleToggleClient(row.id);
-                  }
-                }}
-
-                emptyMessage={t('forms.noAthletesFound')}
-                rowHeight="54px"
-                compactMode={true}
-                showPagination={true}
-                itemsPerPage={10}
-                gridPadding={true}
-              />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFormFromAssignList(form.id)}
+                    className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label={`Remove ${form.name}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-      </SidePanel>
+          ) : (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              {t('forms.noFormsSelected')}
+            </div>
+          )
+        }
+      />
     </div>
   );
 };

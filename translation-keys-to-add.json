@@ -1,0 +1,28 @@
+{
+  "athletes": {
+    "trainingCalendar": {
+      "saveAs": "Save as",
+      "saveAsWorkout": {
+        "title": "Save as Workout",
+        "menuItem": "Save as Workout",
+        "selectDate": "Select workout date you wish to use",
+        "selectDatePlaceholder": "Select date",
+        "selectDateAria": "Select workout date",
+        "success": "Workout saved successfully",
+        "error": "Failed to save workout",
+        "errors": {
+          "dateRequired": "Please select a workout date",
+          "nameRequired": "Workout name is required",
+          "typeRequired": "Workout type is required",
+          "difficultyRequired": "Difficulty is required",
+          "noWorkoutFound": "No workout found for the selected date",
+          "workoutDataUnavailable": "Workout data is not available for the selected date"
+        }
+      },
+      "saveAsProgram": {
+        "title": "Save as Program",
+        "menuItem": "Save as Program"
+      }
+    }
+  }
+}

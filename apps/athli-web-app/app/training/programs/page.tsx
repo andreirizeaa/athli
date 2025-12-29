@@ -26,7 +26,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
 import { SidePanel } from '@/components/app/side-panel';
-import { AssignAthletesList } from '@/components/app/assign-athletes-list';
+import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
+import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
@@ -237,24 +238,50 @@ const ProgramsPage = () => {
   const handleBulkDelete = async () => {
     if (selectedPrograms.size === 0) return;
     try {
-      await deletePrograms(Array.from(selectedPrograms));
+      const idsToDelete = Array.from(selectedPrograms);
+      const deleteCount = idsToDelete.length;
+
+      let singleItemName = '';
+      if (deleteCount === 1) {
+        const item = programs.find(p => p.id === idsToDelete[0]);
+        if (item) singleItemName = item.program;
+      }
+
+      await deletePrograms(idsToDelete);
       // Reload programs after deleting
       await refreshPrograms();
+
+      if (deleteCount === 1 && singleItemName) {
+        toast.success(`Successfully deleted ${singleItemName}`);
+      } else {
+        toast.success(`Successfully deleted ${deleteCount} program${deleteCount === 1 ? '' : 's'}`);
+      }
+
       // Clear selection after deleting
       setSelectedPrograms(new Set());
     } catch (error) {
       console.error('Failed to delete programs:', error);
+      toast.error('Failed to delete programs');
     }
   };
 
   const handleConfirmSingleDelete = async () => {
     if (!programToDelete) return;
     try {
+      const program = programs.find(p => p.id === programToDelete);
       await deletePrograms([programToDelete]);
       await refreshPrograms();
+
+      if (program) {
+        toast.success(`Successfully deleted ${program.program}`);
+      } else {
+        toast.success('Successfully deleted program');
+      }
+
       setProgramToDelete(null);
     } catch (error) {
       console.error('Failed to delete program:', error);
+      toast.error('Failed to delete program');
     }
   };
 
@@ -323,7 +350,7 @@ const ProgramsPage = () => {
 
     try {
       await createProgram(programData);
-      toast.success(t('programs.new.toast.savedSuccessfully', { name: newProgramName }));
+      toast.success(`Successfully created ${newProgramName}`);
 
       // Reload programs to show the new one
       await refreshPrograms();
@@ -805,7 +832,7 @@ const ProgramsPage = () => {
                   >
                     <X className="size-4" />
                     <span>
-                      Clear {selectedPrograms.size} selected
+                      {t('general.clearSelected', { count: selectedPrograms.size })}
                     </span>
                   </Button>
                 </TooltipTrigger>
@@ -931,36 +958,12 @@ const ProgramsPage = () => {
         itemName={programs.find(p => p.id === programToDelete)?.program}
         itemType="program"
       />
-
-      <SidePanel
+      <SelectClientSidePanel
         open={isAssignProgramOpen}
         onOpenChange={setIsAssignProgramOpen}
         title={t('programs.actions.assignProgram')}
-      >
-        <AssignAthletesList
-          onAthleteSelected={(athleteId) => {
-            setIsAssignProgramOpen(false);
-            if (athleteId) {
-              if (selectedPrograms.size > 0) {
-                // For bulk assign, navigate with preselected program
-                const firstProgramId = Array.from(selectedPrograms)[0];
-                const program = programs.find((p) => p.id === firstProgramId);
-                if (program) {
-                  router.push(
-                    `/athletes/${athleteId}/training-calendar?programId=${program.id}&programName=${encodeURIComponent(program.program)}&openModal=true`
-                  );
-                }
-              } else {
-                // Generic assign - just open the program modal without preselection
-                router.push(
-                  `/athletes/${athleteId}/training-calendar?openModal=true&modalType=program`
-                );
-              }
-            }
-          }}
-        />
-      </SidePanel>
-      <SidePanel
+      />
+      <AssignTrainingToClientSidePanel
         open={isAssignIndividualProgramOpen}
         onOpenChange={(open) => {
           setIsAssignIndividualProgramOpen(open);
@@ -968,22 +971,12 @@ const ProgramsPage = () => {
             setSelectedProgramForAssignment(null);
           }
         }}
-        title={selectedProgramForAssignment ? t('programs.assigning.title', { name: selectedProgramForAssignment.program }) : t('programs.assigning.titleGeneric')}
-      >
-        {selectedProgramForAssignment && (
-          <AssignAthletesList
-            navigateOnSelect={false}
-            onAthleteSelected={(athleteId) => {
-              if (athleteId) {
-                setIsAssignIndividualProgramOpen(false);
-                router.push(
-                  `/athletes/${athleteId}/training-calendar?programId=${selectedProgramForAssignment.id}&programName=${encodeURIComponent(selectedProgramForAssignment.program)}&openModal=true`
-                );
-              }
-            }}
-          />
-        )}
-      </SidePanel>
+        selectedItem={selectedProgramForAssignment ? {
+          type: 'program',
+          id: selectedProgramForAssignment.id,
+          name: selectedProgramForAssignment.program
+        } : null}
+      />
       <SidePanel
         open={isCreateProgramOpen}
         onOpenChange={(open) => {

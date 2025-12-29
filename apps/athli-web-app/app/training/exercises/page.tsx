@@ -15,8 +15,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { SidePanel } from '@/components/app/side-panel';
-import { AssignAthletesList } from '@/components/app/assign-athletes-list';
+import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
+import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
@@ -39,6 +41,7 @@ import {
   Download,
   Settings,
   User,
+  UserPlus,
   Star,
   Archive,
   Trash2,
@@ -47,6 +50,7 @@ import {
 import type { Program } from '@/components/app/app-shell';
 import { starPrograms, archivePrograms, deletePrograms } from '@/api/coach/coach-program-service';
 import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
+import { toast } from 'sonner';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
 import { useTrainingData } from '../training-data-context';
@@ -164,6 +168,13 @@ const ExercisesPage = () => {
   const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
   const [isAssignIndividualExerciseOpen, setIsAssignIndividualExerciseOpen] = useState<boolean>(false);
   const [selectedExerciseForAssignment, setSelectedExerciseForAssignment] = useState<Program | null>(null);
+
+  // Helper to check if value is empty (null, undefined, empty string, or empty array)
+  const isEmpty = (value: any): boolean => {
+    if (value === null || value === undefined || value === '') return true;
+    if (Array.isArray(value) && value.length === 0) return true;
+    return false;
+  };
 
   const handleToggleExercise = (exerciseId: string) => {
     setSelectedExercises((prev) => {
@@ -307,24 +318,50 @@ const ExercisesPage = () => {
   const handleBulkDelete = async () => {
     if (selectedExercises.size === 0) return;
     try {
-      await deleteExercisesService(Array.from(selectedExercises));
+      const idsToDelete = Array.from(selectedExercises);
+      const deleteCount = idsToDelete.length;
+
+      let singleItemName = '';
+      if (deleteCount === 1) {
+        const item = exercises.find(e => e.id === idsToDelete[0]);
+        if (item) singleItemName = item.program;
+      }
+
+      await deleteExercisesService(idsToDelete);
       // Refresh exercises after deleting
       await refreshExercises();
+
+      if (deleteCount === 1 && singleItemName) {
+        toast.success(`Successfully deleted ${singleItemName}`);
+      } else {
+        toast.success(`Successfully deleted ${deleteCount} exercise${deleteCount === 1 ? '' : 's'}`);
+      }
+
       // Clear selection after deleting
       setSelectedExercises(new Set());
     } catch (error) {
       console.error('Failed to delete exercises:', error);
+      toast.error('Failed to delete exercises');
     }
   };
 
   const handleConfirmSingleDelete = async () => {
     if (!exerciseToDelete) return;
     try {
+      const exercise = exercises.find(e => e.id === exerciseToDelete);
       await deleteExercisesService([exerciseToDelete]);
       await refreshExercises();
+
+      if (exercise) {
+        toast.success(`Successfully deleted ${exercise.program}`);
+      } else {
+        toast.success('Successfully deleted exercise');
+      }
+
       setExerciseToDelete(null);
     } catch (error) {
       console.error('Failed to delete exercise:', error);
+      toast.error('Failed to delete exercise');
     }
   };
 
@@ -637,6 +674,35 @@ const ExercisesPage = () => {
               <TooltipTrigger asChild>
                 <button
                   type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedExerciseForAssignment(exercise);
+                    setIsAssignIndividualExerciseOpen(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedExerciseForAssignment(exercise);
+                      setIsAssignIndividualExerciseOpen(true);
+                    }
+                  }}
+                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
+                  aria-label="Assign exercise to client"
+                >
+                  <User className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Assign to Client</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
                   onClick={(e) => handleToggleStar(exercise.id, e)}
                   onKeyDown={(e) => handleStarKeyDown(exercise.id, e)}
                   className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
@@ -733,10 +799,21 @@ const ExercisesPage = () => {
             </p>
           </div>
           <div>
-            <Button onClick={handleOpenCreateExercise} className="gap-2" aria-label={t('exercises.actions.createExercise')}>
-              <Plus className="size-4" />
-              <span>{t('exercises.actions.createExercise')}</span>
-            </Button>
+            <ButtonGroup>
+              <Button
+                variant="ghost"
+                onClick={() => setIsAssignExerciseOpen(true)}
+                className="gap-2 border border-primary"
+                aria-label="Assign Exercise"
+              >
+                <UserPlus className="size-4" />
+                <span>{t('general.assign')}</span>
+              </Button>
+              <Button onClick={handleOpenCreateExercise} className="gap-2" aria-label={t('exercises.actions.createExercise')}>
+                <Plus className="size-4" />
+                <span>{t('exercises.actions.createExercise')}</span>
+              </Button>
+            </ButtonGroup>
           </div>
         </div>
       </div>
@@ -795,7 +872,7 @@ const ExercisesPage = () => {
                   >
                     <X className="size-4" />
                     <span>
-                      Clear {selectedExercises.size} selected
+                      {t('general.clearSelected', { count: selectedExercises.size })}
                     </span>
                   </Button>
                 </TooltipTrigger>
@@ -919,36 +996,12 @@ const ExercisesPage = () => {
         itemName={exercises.find(e => e.id === exerciseToDelete)?.program}
         itemType="exercise"
       />
-
-      <SidePanel
+      <SelectClientSidePanel
         open={isAssignExerciseOpen}
         onOpenChange={setIsAssignExerciseOpen}
         title={t('exercises.actions.assignExercise')}
-      >
-        <AssignAthletesList
-          onAthleteSelected={(athleteId) => {
-            setIsAssignExerciseOpen(false);
-            if (athleteId) {
-              if (selectedExercises.size > 0) {
-                // For bulk assign, navigate with preselected exercise
-                const firstExerciseId = Array.from(selectedExercises)[0];
-                const exercise = exercises.find((p) => p.id === firstExerciseId);
-                if (exercise) {
-                  router.push(
-                    `/athletes/${athleteId}/training-calendar?exerciseId=${exercise.id}&exerciseName=${encodeURIComponent(exercise.program)}&openModal=true`
-                  );
-                }
-              } else {
-                // Generic assign - just open the exercise modal without preselection
-                router.push(
-                  `/athletes/${athleteId}/training-calendar?openModal=true&modalType=exercise`
-                );
-              }
-            }
-          }}
-        />
-      </SidePanel>
-      <SidePanel
+      />
+      <AssignTrainingToClientSidePanel
         open={isAssignIndividualExerciseOpen}
         onOpenChange={(open) => {
           setIsAssignIndividualExerciseOpen(open);
@@ -956,22 +1009,12 @@ const ExercisesPage = () => {
             setSelectedExerciseForAssignment(null);
           }
         }}
-        title={selectedExerciseForAssignment ? t('exercises.assigning.title', { name: selectedExerciseForAssignment.program }) : t('exercises.assigning.titleGeneric')}
-      >
-        {selectedExerciseForAssignment && (
-          <AssignAthletesList
-            navigateOnSelect={false}
-            onAthleteSelected={(athleteId) => {
-              if (athleteId) {
-                setIsAssignIndividualExerciseOpen(false);
-                router.push(
-                  `/athletes/${athleteId}/training-calendar?exerciseId=${selectedExerciseForAssignment.id}&exerciseName=${encodeURIComponent(selectedExerciseForAssignment.program)}&openModal=true`
-                );
-              }
-            }}
-          />
-        )}
-      </SidePanel>
+        selectedItem={selectedExerciseForAssignment ? {
+          type: 'exercise',
+          id: selectedExerciseForAssignment.id,
+          name: selectedExerciseForAssignment.program
+        } : null}
+      />
       <AddExerciseSidePanel
         open={isCreateExerciseOpen}
         onOpenChange={(open) => {
@@ -989,6 +1032,20 @@ const ExercisesPage = () => {
         }}
         exercise={editingExercise}
         onSave={handleSaveExercise}
+      />
+      <AssignTrainingToClientSidePanel
+        open={isAssignIndividualExerciseOpen}
+        onOpenChange={(open) => {
+          setIsAssignIndividualExerciseOpen(open);
+          if (!open) {
+            setSelectedExerciseForAssignment(null);
+          }
+        }}
+        selectedItem={selectedExerciseForAssignment ? {
+          type: 'exercise',
+          id: selectedExerciseForAssignment.id,
+          name: selectedExerciseForAssignment.program
+        } : null}
       />
     </div>
   );

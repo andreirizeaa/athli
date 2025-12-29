@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { SidePanel } from '@/components/app/side-panel';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Form,
   FormControl,
@@ -21,18 +21,13 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Calendar } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
-import { mockAthletes } from '@/components/app/app-shell';
 import { format } from 'date-fns';
 import { YourListTask } from '@/api/coach/coach-todo-service';
+import { Combobox } from '@/components/ui/combobox';
+import { useCoachClients } from '@/hooks/use-coach-clients';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type TaskFormValues = {
   title: string;
@@ -53,6 +48,7 @@ interface EditTaskSidePanelProps {
 export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }: EditTaskSidePanelProps) => {
   const t = useTranslations();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const { clients, isLoading: isLoadingClients } = useCoachClients();
 
   const taskSchema = useMemo(
     () =>
@@ -101,11 +97,12 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
   });
 
   const clientOptions = useMemo(() => {
-    return mockAthletes.map((athlete) => ({
-      value: athlete.id,
-      label: athlete.name,
+    return clients.map((client) => ({
+      value: client.id,
+      label: client.name,
+      avatarUrl: client.avatarUrl,
     }));
-  }, []);
+  }, [clients]);
 
   const taskType = form.watch('taskType');
 
@@ -241,29 +238,22 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
                   <span>{t('home.taskType')}</span>
                 </FormLabel>
                 <FormControl>
-                  <ToggleGroup
-                    type="single"
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    variant="outline"
-                    spacing={0}
-                    className="w-full"
-                  >
-                    <ToggleGroupItem
-                      value="client"
-                      aria-label={t('home.taskTypeClient')}
-                      className="flex-1 data-[state=on]:border-primary data-[state=on]:bg-primary/5 data-[state=on]:text-primary dark:data-[state=on]:border-primary dark:data-[state=on]:bg-primary/5 dark:data-[state=on]:text-primary"
-                    >
-                      {t('home.taskTypeClient')}
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="general"
-                      aria-label={t('home.taskTypeGeneral')}
-                      className="flex-1 data-[state=on]:border-primary data-[state=on]:bg-primary/5 data-[state=on]:text-primary dark:data-[state=on]:border-primary dark:data-[state=on]:bg-primary/5 dark:data-[state=on]:text-primary"
-                    >
-                      {t('home.taskTypeGeneral')}
-                    </ToggleGroupItem>
-                  </ToggleGroup>
+                  <Tabs value={field.value} onValueChange={field.onChange} className="w-full">
+                    <TabsList className="w-full">
+                      <TabsTrigger
+                        value="client"
+                        className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                      >
+                        {t('home.taskTypeClient')}
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="general"
+                        className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                      >
+                        {t('home.taskTypeGeneral')}
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -283,18 +273,38 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
                     </span>
                   </FormLabel>
                   <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full" aria-label={t('home.selectClient')}>
-                        <SelectValue placeholder={t('home.selectClientPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Combobox
+                      key={task?.id || 'new'}
+                      options={clientOptions}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder={t('home.selectClientPlaceholder')}
+                      searchPlaceholder={t('general.search')}
+                      emptyText={isLoadingClients ? 'Loading clients...' : 'No clients found.'}
+                      disabled={isLoadingClients}
+                      renderOption={(option) => (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={option.avatarUrl} alt={option.label} />
+                            <AvatarFallback className="text-xs">
+                              {option.label?.charAt(0) || 'C'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{option.label}</span>
+                        </div>
+                      )}
+                      renderSelected={(option) => (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={option.avatarUrl} alt={option.label} />
+                            <AvatarFallback className="text-xs">
+                              {option.label?.charAt(0) || 'C'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm truncate">{option.label}</span>
+                        </div>
+                      )}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -320,19 +330,24 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
                         type="button"
                         variant="outline"
                         className={cn(
-                          'w-full justify-start text-left font-normal bg-transparent',
+                          'w-full justify-between font-normal bg-sidebar border-muted-foreground/20 hover:border-primary/50 transition-colors',
                           !field.value && 'text-muted-foreground'
                         )}
                         aria-label={t('home.completeBy')}
                       >
-                        <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {field.value ? format(field.value, 'PPP') : t('home.selectDate')}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">
+                            {field.value ? field.value.toLocaleDateString() : t('home.selectDate')}
+                          </span>
+                        </div>
+                        <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                       <CalendarComponent
                         mode="single"
                         selected={field.value}
+                        captionLayout="dropdown"
                         onSelect={(date) => {
                           field.onChange(date);
                           setIsCalendarOpen(false);
@@ -343,7 +358,6 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
                           return date < today;
                         }}
                         initialFocus
-                        captionLayout="dropdown"
                         fromYear={2020}
                         toYear={2030}
                       />

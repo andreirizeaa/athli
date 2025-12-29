@@ -8,7 +8,8 @@ export function useCoachFlows() {
     const {
         data: flows,
         isLoading,
-        error
+        error,
+        refetch
     } = useQuery({
         queryKey: ['coach-flows'],
         queryFn: () => getFlows(),
@@ -45,7 +46,8 @@ export function useCoachFlows() {
     return {
         flows: flows || [],
         isLoading,
-        error,
+        error: error as Error | null,
+        refetch,
         duplicateFlow: duplicateMutation.mutateAsync,
         isDuplicating: duplicateMutation.isPending,
         deleteFlow: deleteMutation.mutateAsync,

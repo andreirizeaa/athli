@@ -107,50 +107,60 @@ export const clientMetricsController = {
         const userId = (req as any).userId;
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
-        const { metricIds, name, unit, description, value_kind } = req.body;
+        const { metricIds, clientIds, name, unit, description, value_kind } = req.body;
 
         if (!coachIdHeader || coachIdHeader !== userId) {
             return unauthorized(res, { message: 'Only coaches can assign metrics' });
         }
-        if (!clientIdHeader) {
-            return forbidden(res, { message: 'x-client-id header required' });
-        }
 
         const targetCoachId = coachIdHeader as string;
-        const targetClientId = clientIdHeader as string;
+        let targetClientIds: string[] = [];
+
+        // Determine target clients
+        if (Array.isArray(clientIds) && clientIds.length > 0) {
+            targetClientIds = clientIds;
+        } else if (clientIdHeader) {
+            targetClientIds = [clientIdHeader as string];
+        } else {
+            return forbidden(res, { message: 'x-client-id header or clientIds body param required' });
+        }
 
         const supabase = getSupabaseClient();
 
-        // Verify Relationship
-        const { data: relation } = await supabase
+        // Verify Relationships (Bulk)
+        const { data: relations, error: relationError } = await supabase
             .from('coach_client_assignments')
             .select('client_id')
             .eq('coach_id', targetCoachId)
-            .eq('client_id', targetClientId)
-            .single();
+            .in('client_id', targetClientIds);
 
-        if (!relation) return forbidden(res, { message: 'Client not assigned to this coach' });
+        if (relationError || !relations || relations.length !== targetClientIds.length) {
+            // Some clients might not be assigned. For simplicity, we can error or filter.
+            // Let's error if any are invalid to be safe/strict.
+            return forbidden(res, { message: 'One or more clients not assigned to this coach' });
+        }
 
-        // 1. Private Metric Creation
+        // 1. Private Metric Creation (for each client)
         if (name) {
-            const { data: metric, error } = await supabase
+            const inserts = targetClientIds.map(cid => ({
+                client_id: cid,
+                coach_id: targetCoachId,
+                name,
+                unit,
+                description,
+                value_kind: value_kind || 'number',
+            }));
+
+            const { data: metrics, error } = await supabase
                 .from('client_metrics')
-                .insert({
-                    client_id: targetClientId,
-                    coach_id: targetCoachId,
-                    name,
-                    unit,
-                    description,
-                    value_kind: value_kind || 'number',
-                })
-                .select()
-                .single();
+                .insert(inserts)
+                .select();
 
             if (error) return res.status(500).json({ success: false, message: error.message });
 
             return created(res, {
-                message: 'Private metric created successfully',
-                data: { metric },
+                message: 'Private metrics created successfully',
+                data: { metrics },
             });
         }
 
@@ -169,21 +179,48 @@ export const clientMetricsController = {
         if (!libraryMetrics || libraryMetrics.length === 0) return notFound(res, { message: 'No metrics found' });
 
         // Transform for client_metrics
-        // Logic: Copy data, set coach_id + client_id
-        const assignments = libraryMetrics.map(m => ({
-            client_id: targetClientId,
-            coach_id: targetCoachId,
-            name: m.name,
-            unit: m.unit,
-            description: m.description,
-            value_kind: m.value_kind,
-        }));
+        // Logic: Cross Join Clients x Metrics
+        const assignments: any[] = [];
+        for (const cid of targetClientIds) {
+            for (const m of libraryMetrics) {
+                assignments.push({
+                    client_id: cid,
+                    coach_id: targetCoachId,
+                    name: m.name,
+                    unit: m.unit,
+                    description: m.description,
+                    value_kind: m.value_kind,
+                });
+            }
+        }
 
-        // Upsert? Or Insert? 
-        // With composite key (id, client_id, coach_id), conflict is ID. But these are new rows with new IDs (default).
-        // If we want to prevent duplicates based on name? Or something else?
-        // Previous logic used `(client_id, metric_id)` unique constraint. That constraint is gone.
-        // So we just insert new copies.
+        // Deduplication & Renaming: Fetch existing metrics for these clients
+        const { data: existingMetrics } = await supabase
+            .from('client_metrics')
+            .select('client_id, name')
+            .in('client_id', targetClientIds);
+
+        const existingSet = new Set(
+            (existingMetrics || []).map((m: any) => `${m.client_id}:${m.name}`)
+        );
+
+        // Process assignments to ensure unique names
+        for (const assignment of assignments) {
+            let originalName = assignment.name;
+            let checkName = originalName;
+            let counter = 1;
+
+            while (existingSet.has(`${assignment.client_id}:${checkName}`)) {
+                checkName = `${originalName} ${counter}`;
+                counter++;
+            }
+
+            // Assign unique name
+            assignment.name = checkName;
+            // Add to set to prevent internal collisions in this batch
+            existingSet.add(`${assignment.client_id}:${checkName}`);
+        }
+
         const { error: insertError } = await supabase
             .from('client_metrics')
             .insert(assignments);

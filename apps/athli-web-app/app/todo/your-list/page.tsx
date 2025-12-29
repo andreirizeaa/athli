@@ -96,6 +96,12 @@ const YourListPage = () => {
       ),
       renderCell: (row) => (
         <div className="flex items-center gap-3 min-w-0">
+          {row.type === 'client' && row.clientAvatar && (
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              <AvatarImage src={row.clientAvatar} alt={row.clientName} />
+              <AvatarFallback>{row.clientName?.charAt(0) || 'C'}</AvatarFallback>
+            </Avatar>
+          )}
           <div className="flex flex-col min-w-0">
             <span className={cn('text-sm font-medium', row.completed && 'line-through text-muted-foreground')}>
               {row.title}
@@ -106,12 +112,6 @@ const YourListPage = () => {
               </span>
             )}
           </div>
-          {row.type === 'client' && row.clientAvatar && (
-            <Avatar className="h-8 w-8 flex-shrink-0">
-              <AvatarImage src={row.clientAvatar} alt={row.clientName} />
-              <AvatarFallback>{row.clientName?.charAt(0) || 'C'}</AvatarFallback>
-            </Avatar>
-          )}
         </div>
       ),
     },

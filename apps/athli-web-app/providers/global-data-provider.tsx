@@ -132,10 +132,13 @@ export default function GlobalDataProvider({ children }: { children: ReactNode }
         isUpdatingCompany
     }), [userProfile, preferences, company, notifications, uniqueCode, isLoading, updatePreferences, updateCompany, uploadAndSetCompanyLogo, toggleNotification, isUploadingLogo, isUpdatingCompany]);
 
-    // We only show the full screen loader for global auth/settings if we are NOT on a specific athlete's page
-    // This allows the athlete profile to load its own data without being blocked by global user loading
+    // Don't show loader on auth routes, error pages, client routes, or athlete profiles
+    const isAuthRoute = pathname?.startsWith('/auth/');
+    const isErrorRoute = pathname?.startsWith('/pages/error');
+    const isClientRoute = pathname?.startsWith('/client/');
+    const isCoachReferralRoute = pathname?.startsWith('/coach/referral/');
     const isAthleteProfile = pathname?.includes('/athletes/') && pathname?.split('/').filter(Boolean).length >= 2;
-    const shouldShowLoader = isLoading && !isAthleteProfile;
+    const shouldShowLoader = isLoading && !isAuthRoute && !isErrorRoute && !isClientRoute && !isCoachReferralRoute && !isAthleteProfile;
 
     if (shouldShowLoader) {
         return <FullScreenLoader subtitle="Just setting up your workspace, Coach..." />;

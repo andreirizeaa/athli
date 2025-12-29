@@ -5,8 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Loader2 } from 'lucide-react';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { toast } from 'sonner';
 import { createClient } from '@/supabase/client';
@@ -65,7 +64,7 @@ const DangerPage = () => {
                 </p>
               </div>
               <Button
-                variant="destructive"
+                variant="default"
                 size="sm"
                 onClick={() => setIsDeleteModalOpen(true)}
                 className="ml-4"
@@ -79,50 +78,17 @@ const DangerPage = () => {
       </Card>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent
-          className="w-full max-w-[500px] sm:max-w-[500px] flex flex-col"
-          showCloseButton={false}
-        >
-          <DialogHeader className="flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-left text-destructive">
-                {t('settings.danger.deleteAccountConfirmTitle')}
-              </DialogTitle>
-              <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t('general.close')}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
-            </div>
-          </DialogHeader>
-          <div className="flex-1 mt-4">
-            <p className="text-sm text-muted-foreground">
-              {t('settings.danger.deleteAccountConfirmDescription')}
-            </p>
-          </div>
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              {t('settings.danger.cancel')}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={isDeletingAccount}
-            >
-              {isDeletingAccount ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('settings.danger.deleting')}
-                </>
-              ) : (
-                t('settings.danger.deleteAccount')
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDeleteDialog
+        open={isDeleteModalOpen}
+        onOpenChange={(open) => {
+          if (!isDeletingAccount) setIsDeleteModalOpen(open);
+        }}
+        onConfirm={handleDeleteAccount}
+        title={t('settings.danger.deleteAccountConfirmTitle')}
+        description={t('settings.danger.deleteAccountConfirmDescription')}
+        confirmText={isDeletingAccount ? t('settings.danger.deleting') : t('settings.danger.deleteAccount')}
+        variant="default"
+      />
     </div>
   );
 };

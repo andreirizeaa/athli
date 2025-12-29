@@ -8,6 +8,7 @@ import { clientTrainingRouter } from './routes/training/index.routes';
 import { clientCheckInRouter } from './routes/forms/check-ins.routes';
 import { clientQuestionnaireRouter } from './routes/forms/questionnaires.routes';
 import { clientNoteRouter } from './routes/notes.routes';
+import { clientUpdateRouter } from './routes/updates.routes';
 import { clientProfileController } from './client-profile.controller';
 import { supabaseAuthenticate } from '../../../middlewares/supabase-auth';
 
@@ -24,3 +25,4 @@ clientRouter.use('/metrics', clientMetricRouter);
 clientRouter.use('/photos', clientPhotoRouter);
 clientRouter.use('/trainings', clientTrainingRouter);
 clientRouter.use('/notes', clientNoteRouter);
+clientRouter.use('/updates', clientUpdateRouter);

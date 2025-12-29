@@ -6,6 +6,54 @@ export const clientTrainingRouter = Router();
 
 /**
  * @swagger
+ * /api/v1/client/trainings/calendar:
+ *   post:
+ *     summary: Get client training calendar for a date range
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - startDate
+ *               - endDate
+ *             properties:
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *                 description: Start date (YYYY-MM-DD)
+ *                 example: "2025-12-15"
+ *               endDate:
+ *                 type: string
+ *                 format: date
+ *                 description: End date (YYYY-MM-DD)
+ *                 example: "2026-01-11"
+ *     responses:
+ *       200:
+ *         description: Training calendar retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         calendar:
+ *                           type: object
+ *                           additionalProperties:
+ *                             type: array
+ */
+clientTrainingRouter.post('/calendar', supabaseAuthenticate, clientTrainingsController.getTrainingCalendar);
+
+/**
+ * @swagger
  * /api/v1/client/trainings:
  *   get:
  *     summary: Get client training assignments
