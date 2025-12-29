@@ -1,214 +1,375 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { SidePanel } from '@/components/app/side-panel';
+import { Dumbbell } from 'lucide-react';
+import Link from 'next/link';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RequiredAsterisk } from '@/components/ui/required-asterisk';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
+import { getWorkouts } from '@/api/coach/coach-workout-service';
+import type { Workout } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
-
-const WORKOUT_TYPES = [
-    'Weightlifting',
-    'Bodyweight',
-    'Cardio',
-    'HIIT',
-    'CrossFit',
-    'Running',
-    'Cycling',
-    'Swimming',
-    'Yoga',
-    'Pilates',
-    'Combination',
-] as const;
-
-const DIFFICULTY_LEVELS = ['All levels', 'Beginner', 'Intermediate', 'Advanced'] as const;
 
 type AddWorkoutSidePanelProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSave: (data: { title: string; type: string; difficulty: string; description: string }) => Promise<void>;
+    onSave: (workout: Workout, scheduleOption: string, config: string) => Promise<void>;
+    selectedDate?: Date;
+    workoutTitle?: string;
 };
 
 export const AddWorkoutSidePanel = ({
     open,
     onOpenChange,
     onSave,
+    selectedDate,
+    workoutTitle
 }: AddWorkoutSidePanelProps) => {
     const t = useTranslations();
-    const [title, setTitle] = useState('');
-    const [type, setType] = useState('');
-    const [difficulty, setDifficulty] = useState('');
-    const [description, setDescription] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const [titleError, setTitleError] = useState<string | null>(null);
-    const [typeError, setTypeError] = useState<string | null>(null);
-    const [difficultyError, setDifficultyError] = useState<string | null>(null);
+    const [step, setStep] = useState<number>(1);
+    const [workouts, setWorkouts] = useState<Workout[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
+    const [selectedScheduleOption, setSelectedScheduleOption] = useState<string>('once');
+    const [everyDaysInput, setEveryDaysInput] = useState<string>('1');
+    const [weeklyDayInput, setWeeklyDayInput] = useState<string>('Monday');
 
     useEffect(() => {
         if (open) {
-            setTitle('');
-            setType('');
-            setDifficulty('');
-            setDescription('');
-            setTitleError(null);
-            setTypeError(null);
-            setDifficultyError(null);
+            setStep(1);
+            fetchWorkouts();
+            // Reset config
+            setSelectedScheduleOption('once');
+            setEveryDaysInput('1');
+            if (selectedDate) {
+                setWeeklyDayInput(selectedDate.toLocaleDateString('en-US', { weekday: 'long' }));
+            }
         }
-    }, [open]);
+    }, [open, selectedDate]);
 
-    const handleSave = async () => {
-        if (!title.trim()) {
-            setTitleError(t('library.workoutNameRequired'));
-            return;
-        }
-        if (!type.trim()) {
-            setTypeError(t('library.workoutTypeRequired'));
-            return;
-        }
-        if (!difficulty.trim()) {
-            setDifficultyError(t('library.difficultyRequired'));
-            return;
-        }
-
+    const fetchWorkouts = async () => {
+        setIsLoading(true);
         try {
-            setIsSaving(true);
-            await onSave({ title, type, difficulty, description });
-            onOpenChange(false);
+            const data = await getWorkouts();
+            setWorkouts(data);
         } catch (error) {
-            console.error('Failed to save workout details:', error);
+            console.error('Failed to fetch workouts:', error);
         } finally {
-            setIsSaving(false);
+            setIsLoading(false);
         }
     };
+
+    const selectedWorkout = useMemo(() =>
+        workouts.find(w => w.id === selectedWorkoutId),
+        [workouts, selectedWorkoutId]
+    );
+
+    const handleClose = () => {
+        onOpenChange(false);
+        setStep(1);
+        setSelectedWorkoutId(null);
+    };
+
+    const handleNext = () => {
+        if (step === 1 && selectedWorkoutId) {
+            setStep(2);
+        }
+    };
+
+    const handleBack = () => {
+        if (step === 2) {
+            setStep(1);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!selectedWorkout) return;
+
+        let config = '';
+        if (selectedScheduleOption === 'every') {
+            config = everyDaysInput;
+        } else if (selectedScheduleOption === 'weekly') {
+            config = weeklyDayInput;
+        }
+
+        await onSave(selectedWorkout, selectedScheduleOption, config);
+        handleClose();
+    };
+
+    const columns: ColumnDefinition<Workout>[] = useMemo(() => [
+        {
+            id: 'program',
+            label: t('athletes.trainingCalendar.table.name'),
+            width: { class: 'w-1/2', pixel: '50%' },
+            renderHeader: ({ isAllSelected, onToggleAll }) => {
+                const handleToggleAll = () => {
+                    // Only toggle non-empty workouts
+                    const selectableWorkouts = workouts.filter(w => w.totalExercises && w.totalExercises > 0);
+                    if (isAllSelected) {
+                        setSelectedWorkoutId(null);
+                    } else if (selectableWorkouts.length > 0) {
+                        setSelectedWorkoutId(selectableWorkouts[0].id);
+                    }
+                };
+                return (
+                    <div className="flex items-center gap-3 h-full w-full">
+                        <Checkbox checked={isAllSelected} onCheckedChange={handleToggleAll} aria-label="Select all" />
+                        <div className="flex items-center gap-2">
+                            <Dumbbell className="size-3 text-muted-foreground" />
+                            <span className="text-xs uppercase text-muted-foreground">{t('athletes.trainingCalendar.table.name')}</span>
+                        </div>
+                    </div>
+                );
+            },
+            renderCell: (row, isSelected) => {
+                const isEmpty = !row.totalExercises || row.totalExercises === 0;
+                return (
+                    <div className="flex items-center gap-3 h-full w-full">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div
+                                        className="flex items-center justify-center h-full flex-shrink-0"
+                                        data-no-row-link="true"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (!isEmpty) {
+                                                setSelectedWorkoutId(row.id);
+                                            }
+                                        }}
+                                    >
+                                        <Checkbox checked={isSelected} disabled={isEmpty} />
+                                    </div>
+                                </TooltipTrigger>
+                                {isEmpty && (
+                                    <TooltipContent>
+                                        <p>No exercises in this workout</p>
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                        <div className="flex flex-col gap-1 py-1 min-w-0">
+                            <span className="font-medium text-sm truncate">{row.program}</span>
+                            {row.description && (
+                                <span className="text-xs text-muted-foreground line-clamp-1">{row.description}</span>
+                            )}
+                        </div>
+                    </div>
+                );
+            },
+        },
+        {
+            id: 'totalExercises',
+            label: t('library.totalExercises'),
+            width: { class: 'w-1/2', pixel: '50%' },
+            getSortValue: (row) => row.totalExercises || 0,
+            renderCell: (row) => {
+                const isEmpty = !row.totalExercises || row.totalExercises === 0;
+                if (isEmpty) {
+                    return (
+                        <Link
+                            href={`/training/workouts/${row.id}/edit`}
+                            className="text-sm text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            Add exercise
+                        </Link>
+                    );
+                }
+                return <span className="text-sm">{row.totalExercises}</span>;
+            },
+        },
+    ], [t, selectedWorkoutId]);
+
+    const title = workoutTitle
+        ? workoutTitle
+        : (step === 1 ? t('athletes.trainingCalendar.addWorkoutTitle') : t('athletes.trainingCalendar.configureWorkoutTitle'));
 
     return (
         <SidePanel
             open={open}
-            onOpenChange={onOpenChange}
-            title={t('workouts.addWorkout.title')}
+            onOpenChange={handleClose}
+            title={title}
             footer={
                 <div className="flex w-full justify-start gap-2">
-                    <Button onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? t('general.saving') : t('library.continue')}
-                    </Button>
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                        {t('general.cancel')}
-                    </Button>
+                    {step === 1 ? (
+                        <>
+                            <Button
+                                type="button"
+                                onClick={handleNext}
+                                disabled={!selectedWorkoutId}
+                            >
+                                {t('general.continue')}
+                            </Button>
+                            <Button type="button" variant="outline" onClick={handleClose}>
+                                {t('general.cancel')}
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button
+                                type="button"
+                                onClick={handleSave}
+                            >
+                                {t('general.save')}
+                            </Button>
+                            <Button type="button" variant="outline" onClick={handleBack}>
+                                {t('general.back')}
+                            </Button>
+                        </>
+                    )}
                 </div>
             }
         >
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="workout-title" className="text-sm font-medium">
-                            {t('workouts.addWorkout.workoutName')}<RequiredAsterisk />
-                        </label>
-                        <Input
-                            id="workout-title"
-                            type="text"
-                            placeholder={t('workouts.addWorkout.workoutNamePlaceholder')}
-                            value={title}
-                            onChange={(e) => {
-                                setTitle(e.target.value);
-                                if (titleError) {
-                                    setTitleError(null);
-                                }
-                            }}
-                            className={cn(
-                                'w-full',
-                                titleError && 'border-destructive aria-invalid:border-destructive'
-                            )}
-                            aria-invalid={!!titleError}
-                        />
-                        {titleError && <p className="text-sm text-destructive">{titleError}</p>}
+            {step === 1 ? (
+                <div className="flex flex-col h-full min-h-0">
+                    {isLoading ? (
+                        <div className="flex-1 flex items-center justify-center">
+                            <span className="text-muted-foreground">{t('general.loading')}</span>
+                        </div>
+                    ) : (
+                        <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
+                            <DataGrid
+                                data={workouts}
+                                columns={columns}
+                                getRowId={(row) => row.id}
+                                gridKey="add-workout-grid"
+                                searchPlaceholder={t('athletes.trainingCalendar.searchWorkoutsPlaceholder')}
+                                searchFields={[(row) => row.program]}
+                                enableSearch={true}
+                                enableEditColumns={false}
+                                enableExport={false}
+                                enableRowSelection={true}
+                                selectOnRowClick={true}
+                                selectedRowIds={new Set(selectedWorkoutId ? [selectedWorkoutId] : [])}
+                                onSelectionChange={(ids) => setSelectedWorkoutId(ids.size > 0 ? Array.from(ids)[0] : null)}
+                                emptyMessage={t('athletes.trainingCalendar.noWorkoutsFound')}
+                                rowHeight="54px"
+                                compactMode={true}
+                                showPagination={false}
+                                gridPadding={false}
+                            />
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="flex flex-col gap-6">
+                    <div className="text-sm text-muted-foreground">
+                        {t('athletes.trainingCalendar.configureWorkoutDescription')}
                     </div>
+                    {selectedWorkout && (
+                        <div className="flex flex-col gap-2 p-4 border rounded-lg bg-muted/40">
+                            <div className="flex items-center gap-2">
+                                <Dumbbell className="size-4 text-primary" />
+                                <span className="font-semibold">{selectedWorkout.program}</span>
+                            </div>
+                            <div className="flex gap-2 text-xs text-muted-foreground">
+                                <Badge variant="secondary" className="text-xs">{selectedWorkout.type}</Badge>
+                                <Badge variant="secondary" className="text-xs">{selectedWorkout.difficulty}</Badge>
+                                <span>{selectedWorkout.totalExercises} {t('athletes.trainingCalendar.exercises')}</span>
+                            </div>
+                        </div>
+                    )}
 
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="workout-type" className="text-sm font-medium">
-                            {t('workouts.addWorkout.type')}<RequiredAsterisk />
-                        </label>
-                        <Select
-                            value={type}
-                            onValueChange={(value) => {
-                                setType(value);
-                                if (typeError) {
-                                    setTypeError(null);
-                                }
-                            }}
-                        >
-                            <SelectTrigger
-                                id="workout-type"
+                    <div className="flex flex-col gap-4">
+                        <h3 className="text-sm font-medium">{t('athletes.trainingCalendar.addConfigurations')}</h3>
+                        <div className="flex flex-col gap-3">
+                            <Card
                                 className={cn(
-                                    'w-full',
-                                    typeError && 'border-destructive aria-invalid:border-destructive'
+                                    'p-4 border rounded-lg cursor-pointer transition-colors',
+                                    selectedScheduleOption === 'once'
+                                        ? 'border-primary bg-primary/5'
+                                        : 'bg-background hover:bg-accent/30',
                                 )}
-                                aria-invalid={!!typeError}
+                                onClick={() => setSelectedScheduleOption('once')}
                             >
-                                <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {WORKOUT_TYPES.map((workoutType) => (
-                                    <SelectItem key={workoutType} value={workoutType}>
-                                        {workoutType}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-                    </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">
+                                        {t('athletes.trainingCalendar.addOnlyForThisDay')}
+                                    </span>
+                                    <div className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center', selectedScheduleOption === 'once' ? 'border-primary' : 'border-muted')}>
+                                        {selectedScheduleOption === 'once' && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                                    </div>
+                                </div>
+                            </Card>
 
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="workout-difficulty" className="text-sm font-medium">
-                            {t('workouts.addWorkout.difficulty')}<RequiredAsterisk />
-                        </label>
-                        <Select
-                            value={difficulty}
-                            onValueChange={(value) => {
-                                setDifficulty(value);
-                                if (difficultyError) {
-                                    setDifficultyError(null);
-                                }
-                            }}
-                        >
-                            <SelectTrigger
-                                id="workout-difficulty"
+                            <Card
                                 className={cn(
-                                    'w-full',
-                                    difficultyError && 'border-destructive aria-invalid:border-destructive'
+                                    'p-4 border rounded-lg transition-colors',
+                                    selectedScheduleOption === 'every'
+                                        ? 'border-primary bg-primary/5'
+                                        : 'bg-background',
                                 )}
-                                aria-invalid={!!difficultyError}
                             >
-                                <SelectValue placeholder={t('workouts.addWorkout.difficultyPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {DIFFICULTY_LEVELS.map((level) => (
-                                    <SelectItem key={level} value={level.toLowerCase()}>
-                                        {level}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">{t('athletes.trainingCalendar.addThisWorkoutEvery')}</span>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            className="w-20 h-8"
+                                            value={everyDaysInput}
+                                            onChange={(e) => {
+                                                setEveryDaysInput(e.target.value);
+                                                setSelectedScheduleOption('every');
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                        <span className="text-sm font-medium">{t('athletes.trainingCalendar.days')}</span>
+                                    </div>
+                                    <div
+                                        className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer', selectedScheduleOption === 'every' ? 'border-primary' : 'border-muted')}
+                                        onClick={() => setSelectedScheduleOption('every')}
+                                    >
+                                        {selectedScheduleOption === 'every' && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card
+                                className={cn(
+                                    'p-4 border rounded-lg transition-colors',
+                                    selectedScheduleOption === 'weekly'
+                                        ? 'border-primary bg-primary/5'
+                                        : 'bg-background',
+                                )}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">{t('athletes.trainingCalendar.addThisWorkoutWeeklyOn')}</span>
+                                        <Input
+                                            className="w-32 h-8"
+                                            value={weeklyDayInput}
+                                            onChange={(e) => {
+                                                setWeeklyDayInput(e.target.value);
+                                                setSelectedScheduleOption('weekly');
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </div>
+                                    <div
+                                        className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer', selectedScheduleOption === 'weekly' ? 'border-primary' : 'border-muted')}
+                                        onClick={() => setSelectedScheduleOption('weekly')}
+                                    >
+                                        {selectedScheduleOption === 'weekly' && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                                    </div>
+                                </div>
+                            </Card>
+                        </div>
                     </div>
                 </div>
-
-                <div className="flex flex-col gap-2">
-                    <label htmlFor="workout-description" className="text-sm font-medium">
-                        {t('workouts.addWorkout.description')} <span className="text-muted-foreground font-normal">{t('workouts.addWorkout.descriptionOptional')}</span>
-                    </label>
-                    <Textarea
-                        id="workout-description"
-                        placeholder={t('workouts.addWorkout.descriptionPlaceholder')}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={4}
-                        className="resize-none"
-                    />
-                </div>
-            </div>
+            )}
         </SidePanel>
     );
 };
