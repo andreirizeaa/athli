@@ -5,16 +5,17 @@ import {
   DndContext,
   DragEndEvent,
   DragStartEvent,
+  DragOverEvent,
   PointerSensor,
   KeyboardSensor,
   closestCorners,
   useSensor,
   useSensors,
   DragOverlay,
+  useDndContext,
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -24,7 +25,6 @@ import {
   restrictToVerticalAxis,
   restrictToFirstScrollableAncestor,
 } from '@dnd-kit/modifiers';
-import { CSS } from '@dnd-kit/utilities';
 import { Target, GripVertical, Link2, Link2Off, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/general/utils';
@@ -36,19 +36,25 @@ import type {
 
 type ActiveOverviewItem =
   | {
-      type: 'section';
-      sectionId: string;
-    }
+    type: 'section';
+    sectionId: string;
+  }
   | {
-      type: 'exerciseGroup';
-      sectionId: string;
-      startIndex: number;
-      length: number;
-    }
+    type: 'exerciseGroup';
+    sectionId: string;
+    startIndex: number;
+    length: number;
+  }
   | {
-      type: 'topLevelExercise';
-      instanceId: string;
-    };
+    type: 'topLevelExercise';
+    instanceId: string;
+  }
+  | {
+    type: 'topLevelSuperset';
+    instanceId: string;
+    length: number;
+  };
+
 
 type OverviewPanelProps = {
   items: WorkoutSchemaItem[];
@@ -64,6 +70,46 @@ type OverviewPanelProps = {
   onExerciseClick?: (exerciseId: string) => void;
 };
 
+// DropGap: A gap between cards that can optionally show a centered drop line
+const DropGap = ({
+  id,
+  data,
+  isActive,
+  isDisabled,
+}: {
+  id: string;
+  data: any;
+  isActive: boolean;
+  isDisabled?: boolean;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data,
+    disabled: isDisabled,
+  });
+
+  const showLine = isActive || isOver;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "relative w-full flex-shrink-0 transition-all",
+        // Making the hit area larger (12px) but the visual height smaller if needed
+        "h-3"
+      )}
+    >
+      {showLine && (
+        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-primary z-20 pointer-events-none">
+          <div className="absolute top-1/2 left-0 -translate-y-1/2 h-2 w-2 rounded-full bg-primary shadow-sm" />
+          <div className="absolute top-1/2 right-0 -translate-y-1/2 h-2 w-2 rounded-full bg-primary shadow-sm" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ... OverviewSectionCard updated: opacity logic removed
 const OverviewSectionCard = ({
   section,
   children,
@@ -73,25 +119,29 @@ const OverviewSectionCard = ({
   children: React.ReactNode;
   onDelete: (sectionId: string) => void;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: `section-${section.id}`,
+    data: { type: 'section', section },
   });
 
   const { setNodeRef: setDroppableRef } = useDroppable({
-    id: `section-${section.id}`,
+    id: `section-droppable-${section.id}`,
+    data: { type: 'section-container', sectionId: section.id },
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
+    // opacity removed
+    position: 'relative' as const,
+    transform: 'none',
+    transition: 'none',
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="relative">
       <div
         className={cn(
-          'border border-primary rounded-lg bg-sidebar shadow-sm mb-2 select-none'
+          'border border-primary rounded-lg bg-sidebar shadow-sm select-none relative transition-colors',
+          // Removed opacity-50
         )}
       >
         <div
@@ -110,16 +160,7 @@ const OverviewSectionCard = ({
                 e.stopPropagation();
                 onDelete(section.id);
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDelete(section.id);
-                }
-              }}
               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-              aria-label={`Delete ${section.type} section`}
-              data-no-row-link="true"
             >
               <Trash2 className="size-3" />
             </button>
@@ -129,13 +170,12 @@ const OverviewSectionCard = ({
               {...listeners}
               onClick={(e) => e.stopPropagation()}
               className="cursor-grab active:cursor-grabbing p-0.5 rounded select-none text-muted-foreground hover:text-foreground"
-              aria-label="Reorder section"
             >
               <GripVertical className="size-3" />
             </button>
           </div>
         </div>
-        <div ref={setDroppableRef}>
+        <div ref={setDroppableRef} className="min-h-[10px]">
           {children}
         </div>
       </div>
@@ -152,18 +192,20 @@ const OverviewTopLevelExerciseRow = ({
   onDelete: (instanceId: string) => void;
   onExerciseClick?: (exerciseId: string) => void;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: `top-level-exercise-${exercise.instanceId}`,
+    data: { type: 'top-level-exercise', instanceId: exercise.instanceId },
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
+    // opacity removed
+    position: 'relative' as const,
+    transform: 'none',
+    transition: 'none',
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="relative">
       <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs shadow-sm">
         <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
         <span className="text-xs flex-1 min-w-0 truncate">{exercise.name || 'Untitled exercise'}</span>
@@ -177,7 +219,6 @@ const OverviewTopLevelExerciseRow = ({
                   onExerciseClick(exercise.exerciseId);
                 }}
                 className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
-                aria-label="Focus exercise in view"
               >
                 <Target className="size-3" />
               </button>
@@ -194,7 +235,6 @@ const OverviewTopLevelExerciseRow = ({
             onDelete(exercise.instanceId);
           }}
           className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-          aria-label={`Delete ${exercise.name || 'exercise'}`}
         >
           <Trash2 className="size-3" />
         </button>
@@ -204,7 +244,6 @@ const OverviewTopLevelExerciseRow = ({
           {...listeners}
           onClick={(e) => e.stopPropagation()}
           className="cursor-grab active:cursor-grabbing p-0.5 -mr-1 rounded select-none text-muted-foreground hover:text-foreground flex-shrink-0"
-          aria-label="Reorder exercise"
         >
           <GripVertical className="size-3" />
         </button>
@@ -224,18 +263,20 @@ const OverviewExerciseRow = ({
   onDelete: (sectionId: string, exerciseId: string) => void;
   onExerciseClick?: (exerciseId: string) => void;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: `exercise-|${sectionId}|${exercise.instanceId}`,
+    data: { type: 'section-exercise', sectionId, instanceId: exercise.instanceId },
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
+    // opacity removed
+    position: 'relative' as const,
+    transform: 'none',
+    transition: 'none',
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} className="relative">
       <div
         {...listeners}
         className={cn(
@@ -254,24 +295,13 @@ const OverviewExerciseRow = ({
                     e.stopPropagation();
                     onExerciseClick(exercise.exerciseId);
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onExerciseClick(exercise.exerciseId);
-                    }
-                  }}
                   onMouseDown={(e) => e.stopPropagation()}
                   className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label="Focus exercise in view"
-                  data-no-row-link="true"
                 >
                   <Target className="size-3" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Focus exercise in view</p>
-              </TooltipContent>
+              <TooltipContent><p>Focus exercise in view</p></TooltipContent>
             </Tooltip>
           )}
           <button
@@ -280,17 +310,8 @@ const OverviewExerciseRow = ({
               e.stopPropagation();
               onDelete(sectionId, exercise.exerciseId);
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.stopPropagation();
-                onDelete(sectionId, exercise.exerciseId);
-              }
-            }}
             onMouseDown={(e) => e.stopPropagation()}
             className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            aria-label={`Delete ${exercise.name || 'exercise'}`}
-            data-no-row-link="true"
           >
             <Trash2 className="size-3" />
           </button>
@@ -319,14 +340,21 @@ const OverviewSupersetRow = ({
   onExerciseClick?: (exerciseId: string) => void;
 }) => {
   const firstExerciseId = exercises[0]?.instanceId;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: `exercise-|${sectionId}|${firstExerciseId}`,
+    data: {
+      type: 'section-superset',
+      sectionId,
+      instanceId: firstExerciseId,
+      length: exercises.length
+    },
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
+    // opacity removed
+    position: 'relative' as const,
+    transform: 'none',
+    transition: 'none',
   };
 
   const exerciseNames = exercises.map((ex) => ex.name || 'Untitled exercise').join(', ');
@@ -336,32 +364,13 @@ const OverviewSupersetRow = ({
     const exerciseIds = exercises.map((ex) => ex.exerciseId);
     onDelete(sectionId, exerciseIds);
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      e.stopPropagation();
-      handleDelete(e);
-    }
-  };
-
   const handleUnlink = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    if (onUnlink) {
-      onUnlink(sectionId, exerciseStartIndex);
-    }
-  };
-
-  const handleUnlinkKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      e.stopPropagation();
-      handleUnlink(e);
-    }
+    if (onUnlink) onUnlink(sectionId, exerciseStartIndex);
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} className="relative">
       <div
         {...listeners}
         className={cn(
@@ -384,18 +393,13 @@ const OverviewSupersetRow = ({
                           <button
                             type="button"
                             onClick={handleUnlink}
-                            onKeyDown={handleUnlinkKeyDown}
                             onMouseDown={(e) => e.stopPropagation()}
                             className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                            aria-label="Unlink superset"
-                            data-no-row-link="true"
                           >
                             <Link2Off className="size-3" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Unlink superset</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Unlink superset</p></TooltipContent>
                       </Tooltip>
                     </div>
                   )}
@@ -411,37 +415,22 @@ const OverviewSupersetRow = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Focus on the first exercise in the superset
                       onExerciseClick(exercises[0].exerciseId);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onExerciseClick(exercises[0].exerciseId);
-                      }
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                     className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
-                    aria-label="Focus exercise in view"
-                    data-no-row-link="true"
                   >
                     <Target className="size-3" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Focus exercise in view</p>
-                </TooltipContent>
+                <TooltipContent><p>Focus exercise in view</p></TooltipContent>
               </Tooltip>
             )}
             <button
               type="button"
               onClick={handleDelete}
-              onKeyDown={handleKeyDown}
               onMouseDown={(e) => e.stopPropagation()}
               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-              aria-label={`Delete superset group: ${exerciseNames}`}
-              data-no-row-link="true"
             >
               <Trash2 className="size-3" />
             </button>
@@ -467,14 +456,20 @@ const OverviewTopLevelSupersetRow = ({
   onExerciseClick?: (exerciseId: string) => void;
 }) => {
   const firstExerciseId = exercises[0]?.instanceId;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: `top-level-exercise-${firstExerciseId}`,
+    data: {
+      type: 'top-level-superset',
+      instanceId: firstExerciseId,
+      length: exercises.length
+    },
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
+    // opacity removed
+    position: 'relative' as const,
+    transform: 'none',
+    transition: 'none',
   };
 
   const exerciseNames = exercises.map((ex) => ex.name || 'Untitled exercise').join(', ');
@@ -486,32 +481,13 @@ const OverviewTopLevelSupersetRow = ({
       onDelete(exerciseIds);
     }
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      e.stopPropagation();
-      handleDelete(e);
-    }
-  };
-
   const handleUnlink = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    if (onUnlink) {
-      onUnlink(itemStartIndex);
-    }
-  };
-
-  const handleUnlinkKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      e.stopPropagation();
-      handleUnlink(e);
-    }
+    if (onUnlink) onUnlink(itemStartIndex);
   };
 
   return (
-    <div ref={setNodeRef} style={style}>
+    <div ref={setNodeRef} style={style} className="relative">
       <div
         {...attributes}
         {...listeners}
@@ -535,18 +511,13 @@ const OverviewTopLevelSupersetRow = ({
                           <button
                             type="button"
                             onClick={handleUnlink}
-                            onKeyDown={handleUnlinkKeyDown}
                             onMouseDown={(e) => e.stopPropagation()}
                             className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                            aria-label="Unlink superset"
-                            data-no-row-link="true"
                           >
                             <Link2Off className="size-3" />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Unlink superset</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Unlink superset</p></TooltipContent>
                       </Tooltip>
                     </div>
                   )}
@@ -562,29 +533,22 @@ const OverviewTopLevelSupersetRow = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Focus on the first exercise in the superset
                       onExerciseClick(exercises[0].exerciseId);
                     }}
+                    onMouseDown={(e) => e.stopPropagation()}
                     className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
-                    aria-label="Focus exercise in view"
-                    data-no-row-link="true"
                   >
                     <Target className="size-3" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Focus exercise in view</p>
-                </TooltipContent>
+                <TooltipContent><p>Focus exercise in view</p></TooltipContent>
               </Tooltip>
             )}
             <button
               type="button"
               onClick={handleDelete}
-              onKeyDown={handleKeyDown}
               onMouseDown={(e) => e.stopPropagation()}
               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-              aria-label={`Delete superset group: ${exerciseNames}`}
-              data-no-row-link="true"
             >
               <Trash2 className="size-3" />
             </button>
@@ -592,7 +556,6 @@ const OverviewTopLevelSupersetRow = ({
               type="button"
               onClick={(e) => e.stopPropagation()}
               className="cursor-grab active:cursor-grabbing p-0.5 -mr-1 rounded select-none text-muted-foreground hover:text-foreground flex-shrink-0"
-              aria-label="Reorder exercise"
             >
               <GripVertical className="size-3" />
             </button>
@@ -603,54 +566,30 @@ const OverviewTopLevelSupersetRow = ({
   );
 };
 
-export const OverviewPanel = ({
-  items,
-  onItemsChange,
-  onDeleteSection,
-  onDeleteExercise,
-  onDeleteTopLevelExercise,
-  onDeleteSuperset,
-  onDeleteTopLevelSuperset,
-  onUnlinkSuperset,
-  onUnlinkTopLevelSuperset,
-  groupExercisesBySuperset,
-  onExerciseClick,
-}: OverviewPanelProps) => {
-  // Extract sections from items for backward compatibility with existing logic
-  const sections = items
-    .filter((item): item is { itemType: 'section'; section: WorkoutSection } => item.itemType === 'section')
-    .map((item) => item.section);
 
-  // Extract top-level exercises
-  const topLevelExercises = items
-    .filter((item): item is { itemType: 'exercise'; exercise: ExerciseWithSuperset } => item.itemType === 'exercise')
-    .map((item) => item.exercise);
+export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, onDeleteSection, onDeleteExercise, onDeleteTopLevelExercise, onDeleteSuperset, onDeleteTopLevelSuperset, onUnlinkSuperset, onUnlinkTopLevelSuperset, onExerciseClick }: OverviewPanelProps) => {
 
-  const onSectionsChange = (updatedSections: WorkoutSection[]) => {
-    // Rebuild items array preserving top-level exercises
-    const newItems: WorkoutSchemaItem[] = items.map((item) => {
-      if (item.itemType === 'section') {
-        const updatedSection = updatedSections.find((s) => s.id === item.section.id);
-        if (updatedSection) {
-          return { ...item, section: updatedSection };
-        }
-      }
-      return item;
-    });
-    onItemsChange(newItems);
-  };
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
-  const [activeOverviewItem, setActiveOverviewItem] = React.useState<ActiveOverviewItem | null>(
-    null
+
+  const [activeOverviewItem, setActiveOverviewItem] = React.useState<ActiveOverviewItem | null>(null);
+  const [activeGapId, setActiveGapId] = React.useState<string | null>(null);
+
+  // ... (useMemos)
+  const sections = React.useMemo(() =>
+    items
+      .filter((item): item is { itemType: 'section'; section: WorkoutSection } => item.itemType === 'section')
+      .map((item) => item.section),
+    [items]
+  );
+
+  const topLevelExercises = React.useMemo(() =>
+    items
+      .filter((item): item is { itemType: 'exercise'; exercise: ExerciseWithSuperset } => item.itemType === 'exercise')
+      .map((item) => item.exercise),
+    [items]
   );
 
   const handleOverviewDragStart = (event: DragStartEvent) => {
@@ -658,503 +597,553 @@ export const OverviewPanel = ({
     const activeId = active.id as string;
 
     if (activeId.startsWith('section-')) {
-      const sectionId = activeId.replace('section-', '');
-      setActiveOverviewItem({ type: 'section', sectionId });
-      return;
-    }
-
-    if (activeId.startsWith('top-level-exercise-')) {
+      setActiveOverviewItem({ type: 'section', sectionId: activeId.replace('section-', '') });
+    } else if (activeId.startsWith('top-level-exercise-')) {
       const instanceId = activeId.replace('top-level-exercise-', '');
-      setActiveOverviewItem({ type: 'topLevelExercise', instanceId });
+      const data = active.data.current;
+      if (data && data.type === 'top-level-superset') {
+        setActiveOverviewItem({ type: 'topLevelSuperset', instanceId, length: data.length });
+      } else {
+        setActiveOverviewItem({ type: 'topLevelExercise', instanceId });
+      }
+    } else if (activeId.startsWith('exercise-|')) {
+      const [, sectionId, exerciseId] = activeId.split('|');
+      const section = items
+        .filter((i): i is { itemType: 'section'; section: WorkoutSection } => i.itemType === 'section')
+        .find(i => i.section.id === sectionId)?.section;
+
+      if (section?.exercises) {
+        const exercises = section.exercises;
+        const centerIndex = exercises.findIndex((ex) => ex.instanceId === exerciseId);
+        if (centerIndex !== -1) {
+          const groupId = exercises[centerIndex].supersetGroupId;
+          let startIndex = centerIndex, endIndex = centerIndex;
+          if (groupId) {
+            while (startIndex > 0 && exercises[startIndex - 1].supersetGroupId === groupId) startIndex--;
+            while (endIndex < exercises.length - 1 && exercises[endIndex + 1].supersetGroupId === groupId) endIndex++;
+          }
+          setActiveOverviewItem({
+            type: 'exerciseGroup',
+            sectionId,
+            startIndex,
+            length: endIndex - startIndex + 1,
+          });
+        }
+      }
+    }
+  };
+
+  const handleOverviewDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) {
+      setActiveGapId(null);
       return;
     }
 
-    if (activeId.startsWith('exercise-')) {
-      const [, sectionId, exerciseId] = activeId.split('|');
-      const section = sections.find((s) => s.id === sectionId);
-      if (!section || !section.exercises) {
-        return;
-      }
-
-      const exercises = section.exercises;
-      const centerIndex = exercises.findIndex((ex) => ex.instanceId === exerciseId);
-      if (centerIndex === -1) {
-        return;
-      }
-
-      const groupId = exercises[centerIndex].supersetGroupId;
-      let startIndex = centerIndex;
-      let endIndex = centerIndex;
-
-      if (groupId) {
-        while (startIndex > 0 && exercises[startIndex - 1].supersetGroupId === groupId) {
-          startIndex -= 1;
-        }
-
-        while (
-          endIndex < exercises.length - 1 &&
-          exercises[endIndex + 1].supersetGroupId === groupId
-        ) {
-          endIndex += 1;
-        }
-      }
-
-      setActiveOverviewItem({
-        type: 'exerciseGroup',
-        sectionId,
-        startIndex,
-        length: endIndex - startIndex + 1,
-      });
+    if (active.id === over.id) {
+      setActiveGapId(null);
+      return;
     }
+
+    const overId = String(over.id);
+
+    // 1. If strictly over a gap, activate it
+    if (overId.startsWith('gap-')) {
+      setActiveGapId(overId);
+      return;
+    }
+
+    // 2. If over an Item, snap to nearest gap
+    // Items are: section-{id}, top-level-exercise-{id}, exercise-|{secId}|{exId}
+    // We need to parse items to find their index and determine 'before' or 'after' gap.
+
+    const overRect = over.rect;
+    if (!overRect) return;
+
+    // Calculate mouse Y relative to center
+    let currentPointerY: number;
+    if (active.rect.current.translated) {
+      currentPointerY = active.rect.current.translated.top + active.rect.current.translated.height / 2;
+    } else {
+      currentPointerY = overRect.top + overRect.height / 2;
+    }
+
+    const overCenterY = overRect.top + overRect.height / 2;
+    const isTopHalf = currentPointerY < overCenterY;
+
+    // Helper to find gap ID based on item context
+    // This logic relies on consistent naming conventions for gaps used in render
+
+    let targetGapId = null;
+
+    if (overId.startsWith('section-')) {
+      // It's a section card.
+      // If we are dragging another section, we drop before/after this section (Root Level Gaps)
+      // If we are dragging an exercise, we might be dropping INSIDE the section or around it.
+      // However, usually 'inside' is handled by the droppable area inside the card.
+      // But let's simplify: if hovering the generic Section Card Item (Sortable), we treat it as "Root Level Position".
+      // To drop *inside*, the user should drag over the internal droppable or the gaps *inside* the section.
+
+      const sectionId = overId.replace('section-', '');
+      const idx = items.findIndex(i => i.itemType === 'section' && i.section.id === sectionId);
+      if (idx !== -1) {
+        // Gap logic: Gap K is before Item K. Gap K+1 is after Item K.
+        const gapIndex = isTopHalf ? idx : idx + 1;
+        targetGapId = `gap-root-${gapIndex}`;
+      }
+
+    } else if (overId.startsWith('top-level-exercise-')) {
+      // Root level exercise
+      const instanceId = overId.replace('top-level-exercise-', '');
+      const idx = items.findIndex(i => i.itemType === 'exercise' && i.exercise.instanceId === instanceId);
+      if (idx !== -1) {
+        let actualGapIndex = isTopHalf ? idx : idx + 1;
+
+        // Check for superset grouping if we are calculating "after" (or generally to be safe)
+        // If the item is part of a superset, "after" should mean "after the whole group" because visually it's one row
+        const exItem = items[idx];
+        if (exItem.itemType === 'exercise' && exItem.exercise.supersetGroupId) {
+          const groupId = exItem.exercise.supersetGroupId;
+
+          if (isTopHalf) {
+            // If top half, we want the start of the group
+            let start = idx;
+            while (start > 0) {
+              const prev = items[start - 1];
+              if (prev.itemType === 'exercise' && prev.exercise.supersetGroupId === groupId) {
+                start--;
+              } else {
+                break;
+              }
+            }
+            actualGapIndex = start;
+          } else {
+            // If bottom half, we want the end of the group
+            let end = idx;
+            while (end < items.length - 1) {
+              const next = items[end + 1];
+              if (next.itemType === 'exercise' && next.exercise.supersetGroupId === groupId) {
+                end++;
+              } else {
+                break;
+              }
+            }
+            actualGapIndex = end + 1;
+          }
+        }
+
+        targetGapId = `gap-root-${actualGapIndex}`;
+      }
+    } else if (overId.startsWith('exercise-|')) {
+      // Exercise inside a section
+      const [, secId, exId] = overId.split('|');
+      const secItem = items.find(i => i.itemType === 'section' && i.section.id === secId);
+      if (secItem && secItem.itemType === 'section') {
+        // We need to find the *flat index* of this exercise group within the section's rendered list
+        // This is tricky because of superset grouping.
+        // Let's rely on the data passed to the Sortable Item which might help, or recalculate.
+
+        // Simplified: Find the group index in the section
+        const section = secItem.section;
+        if (section.exercises) {
+          const groups = groupExercisesBySuperset(section.exercises);
+          // Find which group contains exId
+          const groupIndex = groups.findIndex(g => g.some(e => e.instanceId === exId));
+          if (groupIndex !== -1) {
+            const gapIndex = isTopHalf ? groupIndex : groupIndex + 1;
+            targetGapId = `gap-section-${secId}-${gapIndex}`;
+          }
+        }
+      }
+    } else if (overId.startsWith('section-droppable-')) {
+      // Dropping into empty section or explicitly on the container
+      const secId = overId.replace('section-droppable-', '');
+      // If empty, target gap 0
+      // If empty, target gap 0
+      targetGapId = `gap-section-${secId}-0`;
+    }
+
+    // Force strict check: if we are dragging a section, we CANNOT target a section-level gap
+    if (active.id.toString().startsWith('section-') && targetGapId && targetGapId.includes('gap-section-')) {
+      targetGapId = null;
+    }
+
+    setActiveGapId(targetGapId);
   };
 
   const handleOverviewDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || !activeOverviewItem) {
-      setActiveOverviewItem(null);
-      return;
+    setActiveOverviewItem(null);
+    setActiveGapId(null);
+
+    if (!over) return;
+
+    // Check if dropped on a gap
+    const overId = String(over.id);
+    let targetData = over.data.current;
+
+    // If dropped on an item but NOT a gap, try to infer the gap from the activeGapId state if it matches the proximity
+    // (This acts as a fallback if the user releases mouse *near* a gap but technically over an item)
+    if (!overId.startsWith('gap-') && activeGapId) {
+      // We trust the activeGapId calculation from DragOver
+      // But we need to reconstruct the data for that gap since we don't have the gap's data object here directly
+      // ACTUALLY: We can just parse the activeGapId string since we encode info in it.
+      // gap-root-{index}
+      // gap-section-{secId}-{index}
+
+      if (activeGapId.startsWith('gap-root-')) {
+        const index = parseInt(activeGapId.replace('gap-root-', ''), 10);
+        targetData = { type: 'gap', level: 'root', index };
+      } else if (activeGapId.startsWith('gap-section-')) {
+        const parts = activeGapId.split('-'); // gap, section, {id}, {index}
+        // id might contain dashes? standard UUIDs do.
+        // gap-section-UUID-INDEX
+        // Last part is index.
+        const indexStr = parts.pop();
+        const index = parseInt(indexStr || '0', 10);
+        const secId = parts.slice(2).join('-');
+        targetData = { type: 'gap', level: 'section', sectionId: secId, index };
+      }
     }
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
+    // If still no valid target gap data, abort
+    if (!targetData || targetData.type !== 'gap') return;
 
-    if (activeOverviewItem.type === 'topLevelExercise') {
-      const activeInstanceId = activeOverviewItem.instanceId;
-      const activeItemIndex = items.findIndex(
-        (item) => item.itemType === 'exercise' && item.exercise.instanceId === activeInstanceId
-      );
+    const sourceId = String(active.id);
+    if (sourceId === overId) return;
 
-      if (activeItemIndex === -1) {
-        setActiveOverviewItem(null);
-        return;
-      }
+    // 1. Extract Source Items
+    let sourceList: WorkoutSchemaItem[] = JSON.parse(JSON.stringify(items));
+    let movedItems: ExerciseWithSuperset[] = [];
+    let payloadType: 'exercise' | 'superset' | 'section' = 'exercise';
 
-      const activeItem = items[activeItemIndex];
-      if (activeItem.itemType !== 'exercise') {
-        setActiveOverviewItem(null);
-        return;
-      }
+    // REMOVAL LOGIC
+    if (sourceId.startsWith('section-')) {
+      payloadType = 'section';
+      const sectionId = sourceId.replace('section-', '');
+      const idx = sourceList.findIndex(i => i.itemType === 'section' && i.section.id === sectionId);
+      if (idx !== -1) {
+        movedItems = []; // It's a section, handled differently
+        const [removed] = sourceList.splice(idx, 1);
+        // We'll handle section reordering separately if needed, or unify.
+        // For now, let's say 'movedItems' is empty and we carry the section object differently?
+        // Actually, let's separate Section Move vs Exercise Move.
 
-      // Check if dropping into a section or on section exercise
-      if (overId.startsWith('exercise-|')) {
-        // Dropping on a section exercise - move top-level exercise into that section
-        const [, sectionId, targetExerciseId] = overId.split('|');
-        const sectionIndex = items.findIndex(
-          (item) => item.itemType === 'section' && item.section.id === sectionId
-        );
+        // Re-insert section
+        if (targetData.level === 'root') {
+          let insertIndex = targetData.index;
+          // Adjust index if we removed from before the target
+          if (idx < insertIndex) insertIndex--;
 
-        if (sectionIndex === -1) {
-          setActiveOverviewItem(null);
+          sourceList.splice(insertIndex, 0, removed);
+          onItemsChange(sourceList);
+          return;
+        } else {
+          // Trying to drop section inside a section? Not allowed.
           return;
         }
-
-        const sectionItem = items[sectionIndex];
-        if (sectionItem.itemType !== 'section') {
-          setActiveOverviewItem(null);
-          return;
-        }
-
-        // Find target exercise position
-        const targetIndex = sectionItem.section.exercises?.findIndex(
-          (ex) => ex.instanceId === targetExerciseId
-        ) ?? -1;
-
-        if (targetIndex === -1) {
-          setActiveOverviewItem(null);
-          return;
-        }
-
-        // Remove from top-level and add to section
-        const newItems = items.filter((_, idx) => idx !== activeItemIndex);
-        const updatedSection = { ...sectionItem.section };
-        const exercises = [...(updatedSection.exercises || [])];
-        exercises.splice(targetIndex, 0, activeItem.exercise);
-        updatedSection.exercises = exercises;
-
-        newItems[sectionIndex > activeItemIndex ? sectionIndex - 1 : sectionIndex] = {
-          itemType: 'section',
-          section: updatedSection,
-        };
-
-        onItemsChange(newItems);
-        setActiveOverviewItem(null);
-        return;
       }
+    } else if (sourceId.startsWith('top-level-exercise-')) {
+      const id = sourceId.replace('top-level-exercise-', '');
+      const idx = sourceList.findIndex(i => i.itemType === 'exercise' && i.exercise.instanceId === id);
 
-      if (overId.startsWith('section-')) {
-        // Dropping on a section - move top-level exercise into that section at the end
-        const overSectionId = overId.replace('section-', '');
-        const sectionIndex = items.findIndex(
-          (item) => item.itemType === 'section' && item.section.id === overSectionId
-        );
-
-        if (sectionIndex === -1) {
-          setActiveOverviewItem(null);
-          return;
-        }
-
-        const sectionItem = items[sectionIndex];
-        if (sectionItem.itemType !== 'section') {
-          setActiveOverviewItem(null);
-          return;
-        }
-
-        // Remove from top-level and add to section at the end
-        const newItems = items.filter((_, idx) => idx !== activeItemIndex);
-        const updatedSection = { ...sectionItem.section };
-        updatedSection.exercises = [...(updatedSection.exercises || []), activeItem.exercise];
-
-        newItems[sectionIndex > activeItemIndex ? sectionIndex - 1 : sectionIndex] = {
-          itemType: 'section',
-          section: updatedSection,
-        };
-
-        onItemsChange(newItems);
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      if (overId.startsWith('top-level-exercise-')) {
-        // Reordering within top-level exercises
-        const overInstanceId = overId.replace('top-level-exercise-', '');
-        const overItemIndex = items.findIndex(
-          (item) => item.itemType === 'exercise' && item.exercise.instanceId === overInstanceId
-        );
-
-        if (overItemIndex === -1 || activeItemIndex === overItemIndex) {
-          setActiveOverviewItem(null);
-          return;
-        }
-
-        const newItems = arrayMove(items, activeItemIndex, overItemIndex);
-        onItemsChange(newItems);
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      setActiveOverviewItem(null);
-      return;
-    }
-
-    if (activeOverviewItem.type === 'section') {
-      const activeSectionId = activeOverviewItem.sectionId;
-      const activeItemIndex = items.findIndex(
-        (item) => item.itemType === 'section' && item.section.id === activeSectionId
-      );
-
-      if (activeItemIndex === -1) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      let overItemIndex = -1;
-
-      if (overId.startsWith('section-')) {
-        const overSectionId = overId.replace('section-', '');
-        overItemIndex = items.findIndex(
-          (item) => item.itemType === 'section' && item.section.id === overSectionId
-        );
-      } else if (overId.startsWith('top-level-exercise-')) {
-        const overInstanceId = overId.replace('top-level-exercise-', '');
-        overItemIndex = items.findIndex(
-          (item) => item.itemType === 'exercise' && item.exercise.instanceId === overInstanceId
-        );
-      }
-
-      if (overItemIndex === -1 || activeItemIndex === overItemIndex) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      const newItems = arrayMove(items, activeItemIndex, overItemIndex);
-      onItemsChange(newItems);
-      setActiveOverviewItem(null);
-      return;
-    }
-
-    if (activeOverviewItem.type === 'exerciseGroup') {
-      const sourceSectionId = activeOverviewItem.sectionId;
-      const { startIndex, length } = activeOverviewItem;
-
-      // Find source section in items
-      const sourceSectionItemIndex = items.findIndex(
-        (item) => item.itemType === 'section' && item.section.id === sourceSectionId
-      );
-
-      if (sourceSectionItemIndex === -1) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      const sourceSectionItem = items[sourceSectionItemIndex];
-      if (sourceSectionItem.itemType !== 'section' || !sourceSectionItem.section.exercises) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      const sourceExercises = [...sourceSectionItem.section.exercises];
-
-      if (
-        startIndex < 0 ||
-        startIndex >= sourceExercises.length ||
-        startIndex + length > sourceExercises.length
-      ) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      const groupExercises = sourceExercises.slice(startIndex, startIndex + length);
-      const groupExerciseIds = new Set(groupExercises.map((ex) => ex.exerciseId));
-
-      // Check if dropping on top-level exercise - move to top-level
-      if (overId.startsWith('top-level-exercise-')) {
-        const overInstanceId = overId.replace('top-level-exercise-', '');
-        const topLevelExerciseIndex = items.findIndex(
-          (item) => item.itemType === 'exercise' && item.exercise.instanceId === overInstanceId
-        );
-
-        if (topLevelExerciseIndex === -1) {
-          setActiveOverviewItem(null);
-          return;
-        }
-
-        // Remove from section
-        sourceExercises.splice(startIndex, length);
-        const updatedSourceSection = {
-          ...sourceSectionItem.section,
-          exercises: sourceExercises,
-        };
-
-        // Add to top-level at the target position
-        const newItems = [...items];
-        newItems[sourceSectionItemIndex] = {
-          itemType: 'section',
-          section: updatedSourceSection,
-        };
-
-        // Insert exercises as top-level items at the target position
-        groupExercises.forEach((exercise, idx) => {
-          newItems.splice(topLevelExerciseIndex + idx, 0, {
-            itemType: 'exercise',
-            exercise,
-          });
-        });
-
-        onItemsChange(newItems);
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      // Check if dropping on section or section exercise
-      let targetSectionId = sourceSectionId;
-      let targetExerciseId: string | null = null;
-
-      if (overId.startsWith('section-')) {
-        targetSectionId = overId.replace('section-', '');
-      } else if (overId.startsWith('exercise-|')) {
-        const [, sectionId, exerciseId] = overId.split('|');
-        targetSectionId = sectionId;
-        targetExerciseId = exerciseId;
-      } else {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      const targetSectionItemIndex = items.findIndex(
-        (item) => item.itemType === 'section' && item.section.id === targetSectionId
-      );
-
-      if (targetSectionItemIndex === -1) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      const targetSectionItem = items[targetSectionItemIndex];
-      if (targetSectionItem.itemType !== 'section') {
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      sourceExercises.splice(startIndex, length);
-
-      if (targetExerciseId && groupExerciseIds.has(targetExerciseId)) {
-        // Trying to drop on itself
-        const updatedSourceSection = {
-          ...sourceSectionItem.section,
-          exercises: sourceExercises,
-        };
-        const newItems = [...items];
-        newItems[sourceSectionItemIndex] = {
-          itemType: 'section',
-          section: updatedSourceSection,
-        };
-        onItemsChange(newItems);
-        setActiveOverviewItem(null);
-        return;
-      }
-
-      let targetExercises = [...(targetSectionItem.section.exercises || [])];
-      let toIndex = targetExercises.length;
-
-      if (targetExerciseId) {
-        const existingIndex = targetExercises.findIndex((ex) => ex.instanceId === targetExerciseId);
-        if (existingIndex !== -1) {
-          toIndex = existingIndex;
+      if (idx !== -1) {
+        const ex = sourceList[idx].exercise;
+        if (ex.supersetGroupId) {
+          payloadType = 'superset';
+          let start = idx;
+          while (start > 0 && sourceList[start - 1].itemType === 'exercise' && sourceList[start - 1].exercise.supersetGroupId === ex.supersetGroupId) start--;
+          const group: ExerciseWithSuperset[] = [];
+          let curr = start;
+          while (curr < sourceList.length && sourceList[curr].itemType === 'exercise' && sourceList[curr].exercise.supersetGroupId === ex.supersetGroupId) {
+            group.push(sourceList[curr].exercise);
+            curr++;
+          }
+          movedItems = group;
+          sourceList.splice(start, group.length);
+        } else {
+          movedItems.push(ex);
+          sourceList.splice(idx, 1);
         }
       }
-
-      if (sourceSectionId === targetSectionId) {
-        // Moving within same section
-        targetExercises = [...sourceExercises];
-
-        if (targetExerciseId) {
-          const existingIndex = targetExercises.findIndex(
-            (ex) => ex.instanceId === targetExerciseId
-          );
-          if (existingIndex !== -1) {
-            toIndex = existingIndex;
+    } else if (sourceId.startsWith('exercise-|')) {
+      const [, secId, exId] = sourceId.split('|');
+      const secIdx = sourceList.findIndex(i => i.itemType === 'section' && i.section.id === secId);
+      if (secIdx !== -1) {
+        const sec = sourceList[secIdx].section;
+        const exIdx = sec.exercises?.findIndex(e => e.instanceId === exId) ?? -1;
+        if (exIdx !== -1 && sec.exercises) {
+          const ex = sec.exercises[exIdx];
+          if (ex.supersetGroupId) {
+            payloadType = 'superset';
+            const group = sec.exercises.filter(e => e.supersetGroupId === ex.supersetGroupId);
+            movedItems = group;
+            sec.exercises = sec.exercises.filter(e => e.supersetGroupId !== ex.supersetGroupId);
           } else {
-            toIndex = targetExercises.length;
+            movedItems = [ex];
+            sec.exercises.splice(exIdx, 1);
+          }
+        }
+        sourceList[secIdx] = { ...sourceList[secIdx], section: { ...sec } };
+      }
+    }
+
+    if (movedItems.length === 0 && payloadType !== 'section') return;
+
+    // INSERTION LOGIC using targetData (Gap)
+    if (targetData.level === 'root') {
+      let insertIndex = targetData.index;
+
+      // Adjust index if we removed from root and the removed index was < insertIndex
+      // For exercises, we need to know where they came from.
+      // Simplified: The gap index is based on the list state *before* drop. 
+      // If we removed items from *before* the gap, the insertion point shifts.
+      // However, we just mutated 'sourceList' by removing items.
+      // If we compute removal first, the index might be wrong if we don't account for it.
+
+      // Let's re-calculate:
+      // 'targetData.index' is the index in the OLD list.
+      // We need the index in the NEW list (sourceList).
+
+      // If source was distinct (e.g. from section to root), we just insert at index.
+      // If source was root and moved within root:
+      //    Old Index < Target Index: We removed from before, so we insert at Target - 1 (or -length).
+      //    Old Index > Target Index: We removed from after, so insert at Target.
+
+      // To do this robustly:
+      // We need the original index of the moved item.
+      // Let's go back and capture it during removal.
+
+      // ...Actually, simpler heuristic for drag/drop within same list:
+      // references usually handle this, but with explicit indexes it's manual.
+
+      // Let's assume 'targetData.index' is intended destination.
+      // We need to know how many items were removed from "before" this destination in the 'sourceList'.
+
+      // Optimization:
+      // 1. Calculate insertion index in the *original* list.
+      // 2. Remove items.
+      // 3. Adjust insertion index.
+
+      // BUT 'sourceList' is already mutated above.
+      // Let's simply reconstruct.
+
+      // It is safer to:
+      // 1. Identify what to move.
+      // 2. Identify where to put it.
+      // 3. Execute.
+
+      // Re-do removal logic to capture original indices?
+      // Wait, DndKit 'over.id' is based on current render.
+      // So targetData.index is 100% correct relative to the *visible* list at start of drag.
+
+      /* 
+         Example: [A, B, C, D]
+         Move A to after C (Gap 3).
+         Remove A -> [B, C, D].
+         Original Target Gap Index = 3.
+         Since A was at 0 (< 3), we decrement target: 3 - 1 = 2.
+         Insert at 2 -> [B, C, A, D]. Correct.
+         
+         Example: [A, B, C, D]
+         Move C to before A (Gap 0).
+         Remove C -> [A, B, D].
+         Original Target Gap 0.
+         C was at 2 (> 0). No decrement.
+         Insert at 0 -> [C, A, B, D]. Correct.
+      */
+
+      const count = movedItems.length;
+
+      // If moving within root (top-level to top-level), adjust index if we removed from before the insertion point
+      if (sourceId.startsWith('top-level-') && targetData.level === 'root') {
+        const rawId = sourceId.replace('top-level-exercise-', '');
+        const originalIdx = items.findIndex(i => i.itemType === 'exercise' && i.exercise.instanceId === rawId);
+
+        if (originalIdx !== -1 && originalIdx < targetData.index) {
+          insertIndex -= count;
+        }
+      }
+
+      const newItemsWrapped = movedItems.map(ex => ({ itemType: 'exercise' as const, exercise: ex }));
+      sourceList.splice(insertIndex, 0, ...newItemsWrapped);
+
+    } else if (targetData.level === 'section') {
+      const secId = targetData.sectionId;
+      const secIdx = sourceList.findIndex(i => i.itemType === 'section' && i.section.id === secId);
+      if (secIdx !== -1) {
+        const sec = sourceList[secIdx].section;
+        const newExercises = [...(sec.exercises || [])];
+        let insertIndex = targetData.index;
+
+        // Same adjustment logic applies if we moved FROM this same section
+        if (sourceId.startsWith('exercise-|' + secId)) {
+          // Moved from within SAME section
+          const [, sId, exId] = sourceId.split('|');
+          // Recover original index from 'items' (immutable param)
+          const oldSecItem = items.find(i => i.itemType === 'section' && i.section.id === secId);
+          if (oldSecItem && oldSecItem.itemType === 'section' && oldSecItem.section.exercises) {
+            // We need the index of the Group if using groups, or flat index?
+            // Review Render Loop:
+            // DropGap indices in section are based on GROUPS.
+            // "groups.forEach..." -> gapIndex refers to GROUP index.
+
+            // So 'insertIndex' is a GROUP index.
+            // We need to convert that to a flat exercise index for splicing 'newExercises'.
+
+            // 1. Reconstruct groups from 'newExercises' (content AFTER removal)
+            // This is hard because we need to insert into the flattened array at the correct spot.
+
+            // Alternative:
+            // Since we know the target is "Before Group X" or "After Group Y".
+            // We can just find the flat index of the start of Group X.
+
+            // Let's use the 'items' (original) to map 'targetData.index' (Group Index) to a Flat Index.
+            // originalGroups = groupExercises(oldSection.exercises)
+            // If targetData.index == 0 -> Flat Index 0.
+            // If targetData.index == K -> Sum of lengths of groups 0..K-1.
+
+            const originalGroups = groupExercisesBySuperset(oldSecItem.section.exercises);
+            // originalFlatInsertionIndex
+            let originalFlatIdx = 0;
+            for (let i = 0; i < targetData.index; i++) {
+              originalFlatIdx += originalGroups[i]?.length || 0;
+            }
+
+            // Now we check if we removed from *before* this point in the flat list.
+            const exToRemoveId = sourceId.split('|')[2];
+            const originalExIdx = oldSecItem.section.exercises.findIndex(e => e.instanceId === exToRemoveId);
+
+            // If we removed from before, we shift active insertion point
+            if (originalExIdx !== -1 && originalExIdx < originalFlatIdx) {
+              originalFlatIdx -= movedItems.length;
+            }
+
+            insertIndex = originalFlatIdx;
           }
         } else {
-          toIndex = targetExercises.length;
+          // Moved from elsewhere. No adjustment needed, but we need to map Group Index to Flat Index of handling 'sourceList' section content.
+          // Wait, 'sourceList' has the section *without* the moved items (if they were in it? No, handled above).
+
+          // If we moved from OUTSIDE this section, 'newExercises' is just raw list.
+          // We calculate insertion point based on CURRENT content of 'sourceList' section? 
+          // No, based on Rendered mapping.
+          // Rendered Gaps correspond to structure in 'items'.
+
+          // Map Group Index -> Flat Index using 'items' (snapshot).
+          const oldSecItem = items.find(i => i.itemType === 'section' && i.section.id === secId);
+          if (oldSecItem && oldSecItem.itemType === 'section' && oldSecItem.section.exercises) {
+            const originalGroups = groupExercisesBySuperset(oldSecItem.section.exercises);
+            let flatIdx = 0;
+            for (let i = 0; i < targetData.index; i++) {
+              flatIdx += originalGroups[i]?.length || 0;
+            }
+            insertIndex = flatIdx;
+          }
         }
 
-        targetExercises.splice(toIndex, 0, ...groupExercises);
-
-        const updatedSection = {
-          ...sourceSectionItem.section,
-          exercises: targetExercises,
-        };
-
-        const newItems = [...items];
-        newItems[sourceSectionItemIndex] = {
-          itemType: 'section',
-          section: updatedSection,
-        };
-
-        onItemsChange(newItems);
-      } else {
-        // Moving between different sections
-        targetExercises.splice(toIndex, 0, ...groupExercises);
-
-        const updatedSourceSection = {
-          ...sourceSectionItem.section,
-          exercises: sourceExercises,
-        };
-
-        const updatedTargetSection = {
-          ...targetSectionItem.section,
-          exercises: targetExercises,
-        };
-
-        const newItems = [...items];
-        newItems[sourceSectionItemIndex] = {
-          itemType: 'section',
-          section: updatedSourceSection,
-        };
-        newItems[targetSectionItemIndex] = {
-          itemType: 'section',
-          section: updatedTargetSection,
-        };
-
-        onItemsChange(newItems);
+        newExercises.splice(insertIndex, 0, ...movedItems);
+        sourceList[secIdx] = { ...sourceList[secIdx], section: { ...sec, exercises: newExercises } };
       }
     }
 
-    setActiveOverviewItem(null);
+    onItemsChange(sourceList);
   };
 
-  // Create a flat list of all sortable IDs (sections, top-level exercises, and section exercises)
-  const allSortableIds = React.useMemo(() => {
-    const ids: string[] = [];
 
-    items.forEach((item) => {
+
+
+
+  const rootSortableIds = React.useMemo(() => {
+    return items.map((item) => {
       if (item.itemType === 'exercise') {
-        ids.push(`top-level-exercise-${item.exercise.instanceId}`);
-      } else if (item.itemType === 'section') {
-        ids.push(`section-${item.section.id}`);
-        // Add all exercises within the section
-        item.section.exercises?.forEach((exercise) => {
-          ids.push(`exercise-|${item.section.id}|${exercise.instanceId}`);
-        });
+        return `top-level-exercise-${item.exercise.instanceId}`;
+      } else {
+        return `section-${item.section.id}`;
       }
     });
-
-    return ids;
   }, [items]);
 
   return (
     <>
-      <h2 className="text-left mb-3">Overview</h2>
+      <h2 className="text-left mb-0">Overview</h2>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleOverviewDragStart}
+        onDragOver={handleOverviewDragOver}
         onDragEnd={handleOverviewDragEnd}
         modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
       >
         <SortableContext
-          items={allSortableIds}
+          items={rootSortableIds}
           strategy={verticalListSortingStrategy}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col px-1 pt-0 pb-20 min-h-[500px]" id="root-droppable">
             {items.length > 0 ? (
               (() => {
                 const renderedItems: React.ReactElement[] = [];
                 let itemIndex = 0;
 
+                // Add initial gap (before first item)
+                renderedItems.push(
+                  <DropGap
+                    key="gap-root-0"
+                    id={`gap-root-0`}
+                    data={{ type: 'gap', level: 'root', index: 0 }}
+                    isActive={activeGapId === 'gap-root-0'}
+                  />
+                );
+
                 while (itemIndex < items.length) {
                   const item = items[itemIndex];
 
                   if (item.itemType === 'exercise') {
-                    // Check if this is part of a superset
                     const exercise = item.exercise;
-
                     if (exercise.supersetGroupId) {
-                      // Group consecutive exercises with the same supersetGroupId
                       const supersetExercises: ExerciseWithSuperset[] = [exercise];
                       let nextIndex = itemIndex + 1;
-
                       while (
                         nextIndex < items.length &&
                         items[nextIndex].itemType === 'exercise' &&
-                        items[nextIndex].exercise.supersetGroupId === exercise.supersetGroupId
+                        (items[nextIndex] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise.supersetGroupId === exercise.supersetGroupId
                       ) {
-                        supersetExercises.push(items[nextIndex].exercise);
+                        supersetExercises.push((items[nextIndex] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise);
                         nextIndex++;
                       }
-
-                      if (supersetExercises.length > 1) {
-                        // Render as superset
-                        renderedItems.push(
-                          <OverviewTopLevelSupersetRow
-                            key={`top-level-superset-${exercise.instanceId}`}
-                            exercises={supersetExercises}
-                            itemStartIndex={itemIndex}
-                            onDelete={onDeleteTopLevelSuperset}
-                            onUnlink={onUnlinkTopLevelSuperset}
-                            onExerciseClick={onExerciseClick}
-                          />
-                        );
-                        itemIndex = nextIndex;
-                        continue;
-                      }
+                      renderedItems.push(
+                        <OverviewTopLevelSupersetRow
+                          key={`top-level-superset-${exercise.instanceId}`}
+                          exercises={supersetExercises}
+                          itemStartIndex={itemIndex}
+                          onDelete={onDeleteTopLevelSuperset}
+                          onUnlink={onUnlinkTopLevelSuperset}
+                          onExerciseClick={onExerciseClick}
+                        />
+                      );
+                      itemIndex = nextIndex;
+                    } else {
+                      renderedItems.push(
+                        <OverviewTopLevelExerciseRow
+                          key={exercise.instanceId}
+                          exercise={exercise}
+                          onDelete={onDeleteTopLevelExercise}
+                          onExerciseClick={onExerciseClick}
+                        />
+                      );
+                      itemIndex++;
                     }
-
-                    // Render as single exercise
-                    renderedItems.push(
-                      <OverviewTopLevelExerciseRow
-                        key={item.exercise.instanceId}
-                        exercise={item.exercise}
-                        onDelete={onDeleteTopLevelExercise}
-                        onExerciseClick={onExerciseClick}
-                      />
-                    );
-                    itemIndex++;
                   } else {
-                    // Section item
                     const section = item.section;
+                    const sectionSortableIds: string[] = [];
+                    if (section.exercises) {
+                      const groups = groupExercisesBySuperset(section.exercises);
+                      groups.forEach(group => {
+                        if (group.length > 0) {
+                          sectionSortableIds.push(`exercise-|${section.id}|${group[0].instanceId}`);
+                        }
+                      });
+                    }
 
                     renderedItems.push(
                       <OverviewSectionCard
@@ -1162,202 +1151,126 @@ export const OverviewPanel = ({
                         section={section}
                         onDelete={onDeleteSection}
                       >
-                        <div className="p-2 flex flex-col gap-1">
-                          {section.exercises && section.exercises.length > 0 ? (
-                            (() => {
-                              const groups = groupExercisesBySuperset(section.exercises);
-                              let exerciseIndex = 0;
-                              const exerciseElements: React.ReactElement[] = [];
+                        <SortableContext items={sectionSortableIds} strategy={verticalListSortingStrategy}>
+                          <div className="px-2 py-0 flex flex-col min-h-[50px]">
+                            {section.exercises && section.exercises.length > 0 ? (
+                              (() => {
+                                const sectionContent: React.ReactElement[] = [];
+                                const groups = groupExercisesBySuperset(section.exercises);
+                                let exerciseIndex = 0;
+                                let sectionGapIndex = 0;
 
-                              groups.forEach((exerciseGroup, groupIndex) => {
-                                const groupStartIndex = exerciseIndex;
-                                exerciseIndex += exerciseGroup.length;
+                                // Initial gap inside section
+                                sectionContent.push(
+                                  <DropGap
+                                    key={`gap-section-${section.id}-0`}
+                                    id={`gap-section-${section.id}-0`}
+                                    data={{ type: 'gap', level: 'section', sectionId: section.id, index: 0 }}
+                                    isActive={activeGapId === `gap-section-${section.id}-0`}
+                                    isDisabled={activeOverviewItem?.type === 'section'}
+                                  />
+                                );
+                                sectionGapIndex++;
 
-                                if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
-                                  exerciseElements.push(
-                                    <OverviewSupersetRow
-                                      key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
-                                      sectionId={section.id}
-                                      exercises={exerciseGroup}
-                                      exerciseStartIndex={groupStartIndex}
-                                      onDelete={onDeleteSuperset}
-                                      onUnlink={onUnlinkSuperset}
-                                      onExerciseClick={onExerciseClick}
-                                    />
-                                  );
-                                } else {
-                                  exerciseGroup.forEach((exercise, indexInGroup) => {
-                                    exerciseElements.push(
-                                      <OverviewExerciseRow
-                                        key={`${exercise.instanceId}-${indexInGroup}`}
+                                groups.forEach((exerciseGroup, groupIndex) => {
+                                  const groupStartIndex = exerciseIndex;
+                                  exerciseIndex += exerciseGroup.length;
+
+                                  if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
+                                    sectionContent.push(
+                                      <OverviewSupersetRow
+                                        key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
                                         sectionId={section.id}
-                                        exercise={exercise}
-                                        onDelete={onDeleteExercise}
+                                        exercises={exerciseGroup}
+                                        exerciseStartIndex={groupStartIndex}
+                                        onDelete={onDeleteSuperset}
+                                        onUnlink={onUnlinkSuperset}
                                         onExerciseClick={onExerciseClick}
                                       />
                                     );
-                                  });
-                                }
-                              });
+                                  } else {
+                                    exerciseGroup.forEach((exercise, indexInGroup) => {
+                                      sectionContent.push(
+                                        <OverviewExerciseRow
+                                          key={`${exercise.instanceId}-${indexInGroup}`}
+                                          sectionId={section.id}
+                                          exercise={exercise}
+                                          onDelete={onDeleteExercise}
+                                          onExerciseClick={onExerciseClick}
+                                        />
+                                      );
+                                    });
+                                  }
 
-                              return exerciseElements;
-                            })()
-                          ) : (
-                            <div className="text-xs text-muted-foreground px-1 py-2">
-                              No exercises yet.
-                            </div>
-                          )}
-                        </div>
+                                  sectionContent.push(
+                                    <DropGap
+                                      key={`gap-section-${section.id}-${sectionGapIndex}`}
+                                      id={`gap-section-${section.id}-${sectionGapIndex}`}
+                                      data={{ type: 'gap', level: 'section', sectionId: section.id, index: sectionGapIndex }}
+                                      isActive={activeGapId === `gap-section-${section.id}-${sectionGapIndex}`}
+                                      isDisabled={activeOverviewItem?.type === 'section'}
+                                    />
+                                  );
+                                  sectionGapIndex++;
+                                });
+
+                                return sectionContent;
+                              })()
+                            ) : (
+                              // For empty sections, show instruction + a gap
+                              <>
+                                <DropGap
+                                  key={`gap-section-${section.id}-0`}
+                                  id={`gap-section-${section.id}-0`}
+                                  data={{ type: 'gap', level: 'section', sectionId: section.id, index: 0 }}
+                                  isActive={activeGapId === `gap-section-${section.id}-0`}
+                                  isDisabled={activeOverviewItem?.type === 'section'}
+                                />
+                                <div className="text-xs text-muted-foreground px-1 py-2 italic text-center opacity-50 pointer-events-none">
+                                  Drag exercises here
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </SortableContext>
                       </OverviewSectionCard>
                     );
                     itemIndex++;
                   }
+
+                  // Add gap after this item (using the CURRENT itemIndex which points to the next item)
+                  renderedItems.push(
+                    <DropGap
+                      key={`gap-root-${itemIndex}`}
+                      id={`gap-root-${itemIndex}`}
+                      data={{ type: 'gap', level: 'root', index: itemIndex }}
+                      isActive={activeGapId === `gap-root-${itemIndex}`}
+                    />
+                  );
                 }
 
                 return renderedItems;
               })()
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Exercises and sections will appear here once created.
-              </p>
+              // If completely empty, show one gap
+              <>
+                <DropGap
+                  key="gap-root-0"
+                  id="gap-root-0"
+                  data={{ type: 'gap', level: 'root', index: 0 }}
+                  isActive={activeGapId === 'gap-root-0'}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Exercises and sections will appear here once created.
+                </p>
+              </>
             )}
           </div>
         </SortableContext>
+
+        {/* Invisible DragOverlay */}
         <DragOverlay dropAnimation={null}>
-          {activeOverviewItem ? (
-            (() => {
-              if (activeOverviewItem.type === 'section') {
-                const section = sections.find((s) => s.id === activeOverviewItem.sectionId);
-                if (!section) return null;
-
-                const groups = section.exercises ? groupExercisesBySuperset(section.exercises) : [];
-
-                return (
-                  <div className="border border-primary rounded-lg bg-sidebar shadow-lg mb-2 select-none opacity-90">
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-primary bg-primary/10 rounded-t-lg">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {section.type}{' '}
-                        <span className="font-normal">
-                          ({section.exercises ? section.exercises.length : 0})
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className="p-1 rounded text-muted-foreground"
-                          aria-label={`Delete ${section.type} section`}
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
-                        <div className="p-0.5 rounded select-none text-muted-foreground">
-                          <GripVertical className="size-3" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-2 flex flex-col gap-1">
-                      {section.exercises && section.exercises.length > 0 ? (
-                        groups.map((exerciseGroup, groupIndex) => {
-                          if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
-                            return (
-                              <div key={`drag-superset-${groupIndex}`} className="rounded-md border bg-background text-xs">
-                                <div className="flex items-start justify-between px-3 py-2.5">
-                                  <div className="flex items-start gap-2 flex-1 min-w-0">
-                                    <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                      {exerciseGroup.map((exercise) => (
-                                        <div key={exercise.instanceId} className="flex items-center gap-2">
-                                          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                                          <span className="text-xs flex-1">{exercise.name || 'Untitled exercise'}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
-                                </div>
-                              </div>
-                            );
-                          } else {
-                            return exerciseGroup.map((exercise) => (
-                              <div key={exercise.instanceId} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                                  <span className="text-xs flex-1 min-w-0">{exercise.name || 'Untitled exercise'}</span>
-                                </div>
-                                <div className="flex-shrink-0">
-                                  <GripVertical className="size-3 text-muted-foreground" />
-                                </div>
-                              </div>
-                            ));
-                          }
-                        })
-                      ) : (
-                        <div className="text-xs text-muted-foreground px-1 py-2">
-                          No exercises yet.
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-
-              if (activeOverviewItem.type === 'topLevelExercise') {
-                const exercise = topLevelExercises.find((ex) => ex.instanceId === activeOverviewItem.instanceId);
-                if (!exercise) return null;
-
-                return (
-                  <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs shadow-lg opacity-90">
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                    <span className="text-xs flex-1 min-w-0 truncate">{exercise.name || 'Untitled exercise'}</span>
-                    <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
-                  </div>
-                );
-              }
-
-              if (activeOverviewItem.type === 'exerciseGroup') {
-                const section = sections.find((s) => s.id === activeOverviewItem.sectionId);
-                if (!section || !section.exercises) return null;
-
-                const { startIndex, length } = activeOverviewItem;
-                const exercises = section.exercises.slice(startIndex, startIndex + length);
-
-                if (exercises.length === 0) return null;
-
-                if (exercises.length > 1 && exercises[0]?.supersetGroupId) {
-                  return (
-                    <div className="rounded-md border bg-background text-xs shadow-lg opacity-90">
-                      <div className="flex items-start justify-between px-3 py-2.5">
-                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <div className="flex flex-col gap-1 flex-1 min-w-0">
-                            {exercises.map((exercise) => (
-                              <div key={exercise.instanceId} className="flex items-center gap-2">
-                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                                <span className="text-xs flex-1">{exercise.name || 'Untitled exercise'}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
-                      </div>
-                    </div>
-                  );
-                } else {
-                  const exercise = exercises[0];
-                  return (
-                    <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs shadow-lg opacity-90">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
-                        <span className="text-xs flex-1 min-w-0">{exercise.name || 'Untitled exercise'}</span>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <GripVertical className="size-3 text-muted-foreground" />
-                      </div>
-                    </div>
-                  );
-                }
-              }
-
-              return null;
-            })()
-          ) : null}
+          {null}
         </DragOverlay>
       </DndContext>
     </>

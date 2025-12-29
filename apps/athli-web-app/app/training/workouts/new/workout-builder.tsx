@@ -26,7 +26,7 @@ import type { SetData } from './components/exercise-card';
 import { ExerciseCard } from './components/exercise-card';
 import { ExerciseSelectionPanel } from './components/exercise-selection-panel';
 import { SectionSelectionPanel } from './components/section-selection-panel';
-import { EquipmentPanel } from './components/equipment-panel';
+
 import { OverviewPanel } from './components/overview-panel';
 import { VideoModal } from './components/video-modal';
 import {
@@ -1488,7 +1488,7 @@ export const StandardBuilder = ({
       <div className="flex-[1.25] p-2 h-full flex flex-col min-h-0">
         <Card className="relative h-full" style={{ height: '100%' }}>
           <CardContent className="absolute inset-0 p-4 overflow-y-auto">
-            <EquipmentPanel sections={sectionsForPanels} />
+
             <OverviewPanel
               items={workoutSchema.items}
               onItemsChange={(items: WorkoutSchemaItem[]) => {
