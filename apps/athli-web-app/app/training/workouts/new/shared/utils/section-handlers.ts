@@ -1,4 +1,4 @@
-import type { WorkoutSchema, ExerciseWithSuperset } from '../types/workout-builder.types';
+import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '../types/workout-builder.types';
 
 /**
  * Handles adding a new section to the workout
@@ -11,7 +11,7 @@ export const handleSectionSelect = (
   type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary',
   currentSchema: WorkoutSchema
 ): WorkoutSchema => {
-  const newSection = {
+  const newSection: WorkoutSection = {
     id: `sec_${type}_${Date.now()}`,
     type,
     // All section types use `exercises` for the builder UI. For AMRAP/Timed/Circuits/Auxiliary,
@@ -23,9 +23,14 @@ export const handleSectionSelect = (
     ...(type === 'auxiliary' && { category: undefined }),
   };
 
+  const newItem: WorkoutSchemaItem = {
+    itemType: 'section',
+    section: newSection,
+  };
+
   return {
     ...currentSchema,
-    sections: [...currentSchema.sections, newSection],
+    items: [...currentSchema.items, newItem],
   };
 };
 
@@ -40,13 +45,20 @@ export const handleDeleteSection = (
   sectionId: string,
   currentSchema: WorkoutSchema
 ): { schema: WorkoutSchema; shouldSwitchToSectionMode: boolean } => {
-  const updatedSections = currentSchema.sections.filter((section) => section.id !== sectionId);
-  const shouldSwitchToSectionMode = updatedSections.length === 0;
+  const updatedItems = currentSchema.items.filter((item) => {
+    if (item.itemType === 'section') {
+      return item.section.id !== sectionId;
+    }
+    return true;
+  });
+
+  // Only switch to section mode if there are no items at all
+  const shouldSwitchToSectionMode = updatedItems.length === 0;
 
   return {
     schema: {
       ...currentSchema,
-      sections: updatedSections,
+      items: updatedItems,
     },
     shouldSwitchToSectionMode,
   };

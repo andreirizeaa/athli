@@ -12,17 +12,32 @@ export type ExerciseWithSuperset = Exercise & {
 };
 
 /**
+ * Section type for the builder UI
+ */
+export type WorkoutSection = {
+  id: string;
+  name?: string;
+  type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  exercises?: ExerciseWithSuperset[];
+  roundDurationSec?: number;
+  targetRounds?: number;
+  category?: 'warmup' | 'cooldown' | 'mobility';
+};
+
+/**
+ * A workout schema item can be either:
+ * - A top-level exercise (possibly part of a superset with adjacent exercises)
+ * - A section containing exercises
+ */
+export type WorkoutSchemaItem =
+  | { itemType: 'exercise'; exercise: ExerciseWithSuperset }
+  | { itemType: 'section'; section: WorkoutSection };
+
+/**
  * Workout schema used in the builder UI
  */
 export type WorkoutSchema = {
-  sections: Array<{
-    id: string;
-    type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
-    exercises?: ExerciseWithSuperset[];
-    roundDurationSec?: number;
-    targetRounds?: number;
-    category?: 'warmup' | 'cooldown' | 'mobility';
-  }>;
+  items: WorkoutSchemaItem[];
 };
 
 /**

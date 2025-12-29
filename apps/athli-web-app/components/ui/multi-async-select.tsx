@@ -36,6 +36,7 @@ import { PopoverContentProps } from "@radix-ui/react-popover";
 export interface Option {
   label: string;
   value: string; // should be unique, and not empty
+  imageUrl?: string;
 }
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -162,6 +163,12 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
    * Receives the search input value.
    */
   onSearch?: (value: string) => void;
+
+  /**
+   * Custom pill rendering function.
+   * Optional, defaults to null.
+   */
+  renderPill?: (option: Option, onRemove: () => void) => React.ReactNode;
 }
 
 interface MultiAsyncSelectRef {
@@ -192,6 +199,7 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
       onSearch,
       clearSearchOnClose = false,
       searchValue,
+      renderPill,
     },
     ref
   ) => {
@@ -334,6 +342,14 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
                       option = options.find((option) => option.value === value);
                     }
 
+                    if (renderPill && option) {
+                      return (
+                        <React.Fragment key={value}>
+                          {renderPill(option, () => toggleOption(value))}
+                        </React.Fragment>
+                      );
+                    }
+
                     return (
                       <div
                         className="h-[26px] flex items-center gap-1 rounded-md px-2 py-0.5 border border-zinc-200 text-zinc-600 hover:text-primary dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-primary hover:border-zinc-400 dark:hover:border-zinc-600"
@@ -406,7 +422,7 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
               const { scrollTop, scrollHeight, clientHeight } = commandList;
               const isAtTop = scrollTop === 0;
               const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
-              
+
               // Only stop propagation if we can actually scroll
               if ((e.deltaY > 0 && !isAtBottom) || (e.deltaY < 0 && !isAtTop)) {
                 e.stopPropagation();
@@ -432,7 +448,7 @@ export const MultiAsyncSelect = React.forwardRef<MultiAsyncSelectRef, Props>(
               }}
               onKeyDown={handleInputKeyDown}
             />
-            <CommandList 
+            <CommandList
               ref={commandListRef}
               className="max-h-[250px]"
             >
