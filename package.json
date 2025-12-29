@@ -23,6 +23,7 @@
     "rn-emoji-keyboard": "^1.7.0"
   },
   "devDependencies": {
+    "@types/uuid": "^9.0.8",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
     "metro-minify-terser": "^0.83.3",
