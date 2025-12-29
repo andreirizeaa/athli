@@ -5,7 +5,6 @@ import {
   DndContext,
   DragEndEvent,
   DragStartEvent,
-  DragOverEvent,
   PointerSensor,
   KeyboardSensor,
   closestCorners,
@@ -69,33 +68,30 @@ const OverviewSectionCard = ({
   section,
   children,
   onDelete,
-  isEmpty,
 }: {
   section: WorkoutSection;
   children: React.ReactNode;
   onDelete: (sectionId: string) => void;
-  isEmpty?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `section-${section.id}`,
   });
 
-  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+  const { setNodeRef: setDroppableRef } = useDroppable({
     id: `section-${section.id}`,
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
   };
 
   return (
     <div ref={setNodeRef} style={style}>
       <div
         className={cn(
-          'border border-primary rounded-lg bg-sidebar shadow-sm mb-2 select-none',
-          isOver && isEmpty && 'ring-2 ring-primary ring-offset-2'
+          'border border-primary rounded-lg bg-sidebar shadow-sm mb-2 select-none'
         )}
       >
         <div
@@ -163,7 +159,7 @@ const OverviewTopLevelExerciseRow = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
   };
 
   return (
@@ -235,7 +231,7 @@ const OverviewExerciseRow = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
   };
 
   return (
@@ -330,7 +326,7 @@ const OverviewSupersetRow = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
   };
 
   const exerciseNames = exercises.map((ex) => ex.name || 'Untitled exercise').join(', ');
@@ -457,13 +453,6 @@ const OverviewSupersetRow = ({
   );
 };
 
-const DropPlaceholder = ({ height = 40 }: { height?: number }) => (
-  <div
-    style={{ height: `${height}px` }}
-    className="border-2 border-dashed border-primary bg-primary/5 rounded-md"
-  />
-);
-
 const OverviewTopLevelSupersetRow = ({
   exercises,
   itemStartIndex,
@@ -485,7 +474,7 @@ const OverviewTopLevelSupersetRow = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    visibility: isDragging ? ('hidden' as const) : ('visible' as const),
   };
 
   const exerciseNames = exercises.map((ex) => ex.name || 'Untitled exercise').join(', ');
@@ -663,7 +652,6 @@ export const OverviewPanel = ({
   const [activeOverviewItem, setActiveOverviewItem] = React.useState<ActiveOverviewItem | null>(
     null
   );
-  const [overId, setOverId] = React.useState<string | null>(null);
 
   const handleOverviewDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -720,14 +708,8 @@ export const OverviewPanel = ({
     }
   };
 
-  const handleOverviewDragOver = (event: DragOverEvent) => {
-    const { over } = event;
-    setOverId(over?.id as string | null);
-  };
-
   const handleOverviewDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setOverId(null);
     if (!over || !activeOverviewItem) {
       setActiveOverviewItem(null);
       return;
@@ -1109,7 +1091,6 @@ export const OverviewPanel = ({
         sensors={sensors}
         collisionDetection={closestCorners}
         onDragStart={handleOverviewDragStart}
-        onDragOver={handleOverviewDragOver}
         onDragEnd={handleOverviewDragEnd}
         modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
       >
@@ -1129,14 +1110,6 @@ export const OverviewPanel = ({
                   if (item.itemType === 'exercise') {
                     // Check if this is part of a superset
                     const exercise = item.exercise;
-
-                    // Check if we should show a placeholder before this item
-                    const topLevelId = `top-level-exercise-${exercise.instanceId}`;
-                    if (overId === topLevelId && activeOverviewItem) {
-                      renderedItems.push(
-                        <DropPlaceholder key={`placeholder-before-${topLevelId}`} />
-                      );
-                    }
 
                     if (exercise.supersetGroupId) {
                       // Group consecutive exercises with the same supersetGroupId
@@ -1182,24 +1155,12 @@ export const OverviewPanel = ({
                   } else {
                     // Section item
                     const section = item.section;
-                    const isEmpty = !section.exercises || section.exercises.length === 0;
-                    const isSectionBeingDraggedOver = overId === `section-${section.id}` && activeOverviewItem;
-                    const shouldShowPlaceholder = isSectionBeingDraggedOver && isEmpty;
-
-                    // Check if we should show a placeholder before this section
-                    const sectionId = `section-${section.id}`;
-                    if (overId === sectionId && activeOverviewItem && activeOverviewItem.type === 'section') {
-                      renderedItems.push(
-                        <DropPlaceholder key={`placeholder-before-${sectionId}`} height={60} />
-                      );
-                    }
 
                     renderedItems.push(
                       <OverviewSectionCard
                         key={section.id}
                         section={section}
                         onDelete={onDeleteSection}
-                        isEmpty={isEmpty}
                       >
                         <div className="p-2 flex flex-col gap-1">
                           {section.exercises && section.exercises.length > 0 ? (
@@ -1211,15 +1172,6 @@ export const OverviewPanel = ({
                               groups.forEach((exerciseGroup, groupIndex) => {
                                 const groupStartIndex = exerciseIndex;
                                 exerciseIndex += exerciseGroup.length;
-
-                                // Check if we should show placeholder before this exercise group
-                                const firstExerciseInGroup = exerciseGroup[0];
-                                const exerciseItemId = `exercise-|${section.id}|${firstExerciseInGroup.instanceId}`;
-                                if (overId === exerciseItemId && activeOverviewItem) {
-                                  exerciseElements.push(
-                                    <DropPlaceholder key={`placeholder-before-${exerciseItemId}`} />
-                                  );
-                                }
 
                                 if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
                                   exerciseElements.push(
@@ -1250,8 +1202,6 @@ export const OverviewPanel = ({
 
                               return exerciseElements;
                             })()
-                          ) : shouldShowPlaceholder ? (
-                            <DropPlaceholder />
                           ) : (
                             <div className="text-xs text-muted-foreground px-1 py-2">
                               No exercises yet.
@@ -1273,6 +1223,142 @@ export const OverviewPanel = ({
             )}
           </div>
         </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeOverviewItem ? (
+            (() => {
+              if (activeOverviewItem.type === 'section') {
+                const section = sections.find((s) => s.id === activeOverviewItem.sectionId);
+                if (!section) return null;
+
+                const groups = section.exercises ? groupExercisesBySuperset(section.exercises) : [];
+
+                return (
+                  <div className="border border-primary rounded-lg bg-sidebar shadow-lg mb-2 select-none opacity-90">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-primary bg-primary/10 rounded-t-lg">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {section.type}{' '}
+                        <span className="font-normal">
+                          ({section.exercises ? section.exercises.length : 0})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="p-1 rounded text-muted-foreground"
+                          aria-label={`Delete ${section.type} section`}
+                        >
+                          <Trash2 className="size-3" />
+                        </button>
+                        <div className="p-0.5 rounded select-none text-muted-foreground">
+                          <GripVertical className="size-3" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2 flex flex-col gap-1">
+                      {section.exercises && section.exercises.length > 0 ? (
+                        groups.map((exerciseGroup, groupIndex) => {
+                          if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
+                            return (
+                              <div key={`drag-superset-${groupIndex}`} className="rounded-md border bg-background text-xs">
+                                <div className="flex items-start justify-between px-3 py-2.5">
+                                  <div className="flex items-start gap-2 flex-1 min-w-0">
+                                    <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                      {exerciseGroup.map((exercise) => (
+                                        <div key={exercise.instanceId} className="flex items-center gap-2">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                                          <span className="text-xs flex-1">{exercise.name || 'Untitled exercise'}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return exerciseGroup.map((exercise) => (
+                              <div key={exercise.instanceId} className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs flex-1 min-w-0">{exercise.name || 'Untitled exercise'}</span>
+                                </div>
+                                <div className="flex-shrink-0">
+                                  <GripVertical className="size-3 text-muted-foreground" />
+                                </div>
+                              </div>
+                            ));
+                          }
+                        })
+                      ) : (
+                        <div className="text-xs text-muted-foreground px-1 py-2">
+                          No exercises yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+
+              if (activeOverviewItem.type === 'topLevelExercise') {
+                const exercise = topLevelExercises.find((ex) => ex.instanceId === activeOverviewItem.instanceId);
+                if (!exercise) return null;
+
+                return (
+                  <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs shadow-lg opacity-90">
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                    <span className="text-xs flex-1 min-w-0 truncate">{exercise.name || 'Untitled exercise'}</span>
+                    <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
+                  </div>
+                );
+              }
+
+              if (activeOverviewItem.type === 'exerciseGroup') {
+                const section = sections.find((s) => s.id === activeOverviewItem.sectionId);
+                if (!section || !section.exercises) return null;
+
+                const { startIndex, length } = activeOverviewItem;
+                const exercises = section.exercises.slice(startIndex, startIndex + length);
+
+                if (exercises.length === 0) return null;
+
+                if (exercises.length > 1 && exercises[0]?.supersetGroupId) {
+                  return (
+                    <div className="rounded-md border bg-background text-xs shadow-lg opacity-90">
+                      <div className="flex items-start justify-between px-3 py-2.5">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                            {exercises.map((exercise) => (
+                              <div key={exercise.instanceId} className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                                <span className="text-xs flex-1">{exercise.name || 'Untitled exercise'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <GripVertical className="size-3 text-muted-foreground flex-shrink-0" />
+                      </div>
+                    </div>
+                  );
+                } else {
+                  const exercise = exercises[0];
+                  return (
+                    <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs shadow-lg opacity-90">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                        <span className="text-xs flex-1 min-w-0">{exercise.name || 'Untitled exercise'}</span>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <GripVertical className="size-3 text-muted-foreground" />
+                      </div>
+                    </div>
+                  );
+                }
+              }
+
+              return null;
+            })()
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </>
   );
