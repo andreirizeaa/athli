@@ -1,14 +1,10 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import { useClientUpdates } from '@/hooks/use-client-updates';
+import { useClientProfileContext } from '../client-profile-context';
 
 export default function UpdatesPage() {
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
-
-  // Query updates data (but don't display it)
-  const { updates, isLoading } = useClientUpdates(clientId);
+  // Get updates from context (already loaded with other client data)
+  const { updates, isLoading } = useClientProfileContext();
 
   return (
     <div className="flex flex-col h-full">
@@ -18,5 +14,4 @@ export default function UpdatesPage() {
     </div>
   );
 }
-
 

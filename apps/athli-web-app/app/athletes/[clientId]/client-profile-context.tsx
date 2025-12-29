@@ -16,12 +16,14 @@ import { useClientGoals } from '@/hooks/use-client-goals';
 import { useClientInjuries } from '@/hooks/use-client-injuries';
 import { useClientDetails } from '@/hooks/use-client-details';
 import { useClientWorkoutStats } from '@/hooks/use-client-workout-stats';
+import { useClientUpdates } from '@/hooks/use-client-updates';
 import { useUserProfile } from '@/hooks/use-user-profile';
 import type { Athlete, ClientMetric, ClientHabit, ClientNote } from '@/api/coach/coach-client-service';
 import type { ClientPhoto } from '@/api/client/client-photo-service';
 import type { ClientCheckIn, ClientQuestionnaire } from '@/api/client/client-form-service';
 import type { ClientFileAssignment } from '@/api/coach/coach-file-service';
 import type { AthleteDetails, WorkoutStatistics, AthleteGoal, AthleteInjury } from '@/api/client/client-service';
+import type { ClientUpdate } from '@/api/client/client-updates-service';
 
 interface ClientProfileContextType {
     athlete: Athlete | null;
@@ -41,10 +43,11 @@ interface ClientProfileContextType {
         last30Days: WorkoutStatistics | null;
         nextWeek: WorkoutStatistics | null;
     } | null;
+    updates: ClientUpdate[];
     isLoading: boolean;
     error: string | null;
     refreshData: () => Promise<void>;
-    refreshSection: (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats') => Promise<void>;
+    refreshSection: (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats' | 'updates') => Promise<void>;
 }
 
 const ClientProfileContext = createContext<ClientProfileContextType | undefined>(undefined);
@@ -78,15 +81,18 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
     const { injuries, isLoading: isLoadingInjuries, isFetching: isFetchingInjuries } = useClientInjuries(resolvedClientId);
     const { details, isLoading: isLoadingDetails, isFetching: isFetchingDetails } = useClientDetails(resolvedClientId);
     const { stats: workoutStats, isLoading: isLoadingWorkoutStats, isFetching: isFetchingWorkoutStats } = useClientWorkoutStats(resolvedClientId);
+    const { updates, isLoading: isLoadingUpdates, isFetching: isFetchingUpdates } = useClientUpdates(resolvedClientId);
 
     // Check if ANY data is currently loading or fetching (fetching includes cached data being revalidated)
     const isAnyLoading = isLoadingProfile || isLoadingMetrics || isLoadingHabits || isLoadingPhotos ||
         isLoadingCheckIns || isLoadingQuestionnaires || isLoadingFiles || isLoadingNotes ||
-        isLoadingBio || isLoadingGoals || isLoadingInjuries || isLoadingDetails || isLoadingWorkoutStats;
+        isLoadingBio || isLoadingGoals || isLoadingInjuries || isLoadingDetails || isLoadingWorkoutStats ||
+        isLoadingUpdates;
 
     const isAnyFetching = isFetchingProfile || isFetchingMetrics || isFetchingHabits || isFetchingPhotos ||
         isFetchingCheckIns || isFetchingQuestionnaires || isFetchingFiles || isFetchingNotes ||
-        isFetchingBio || isFetchingGoals || isFetchingInjuries || isFetchingDetails || isFetchingWorkoutStats;
+        isFetchingBio || isFetchingGoals || isFetchingInjuries || isFetchingDetails || isFetchingWorkoutStats ||
+        isFetchingUpdates;
 
     // Debug logging
     useEffect(() => {
@@ -110,6 +116,7 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
                     injuries: { loading: isLoadingInjuries, fetching: isFetchingInjuries },
                     details: { loading: isLoadingDetails, fetching: isFetchingDetails },
                     workoutStats: { loading: isLoadingWorkoutStats, fetching: isFetchingWorkoutStats },
+                    updates: { loading: isLoadingUpdates, fetching: isFetchingUpdates },
                 }
             });
         }
@@ -120,7 +127,7 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
         isLoadingFiles, isFetchingFiles, isLoadingNotes, isFetchingNotes,
         isLoadingBio, isFetchingBio, isLoadingGoals, isFetchingGoals,
         isLoadingInjuries, isFetchingInjuries, isLoadingDetails, isFetchingDetails,
-        isLoadingWorkoutStats, isFetchingWorkoutStats]);
+        isLoadingWorkoutStats, isFetchingWorkoutStats, isLoadingUpdates, isFetchingUpdates]);
 
     // Reset initial load state when clientId changes
     useEffect(() => {
@@ -177,12 +184,13 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
             queryClient.invalidateQueries({ queryKey: ['client-injuries', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-details', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-workout-stats', targetId] }),
+            queryClient.invalidateQueries({ queryKey: ['client-updates', targetId] }),
         ]);
     };
 
     // Refresh specific section by invalidating its query
     // Refresh specific section by invalidating its query
-    const refreshSection = async (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats') => {
+    const refreshSection = async (section: 'metrics' | 'habits' | 'photos' | 'check-ins' | 'questionnaires' | 'files' | 'notes' | 'bio' | 'goals' | 'injuries' | 'details' | 'workout-stats' | 'updates') => {
         if (!athlete?.id) return;
         const targetId = athlete.id;
 
@@ -199,6 +207,7 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
             'injuries': ['client-injuries', targetId],
             'details': ['client-details', targetId],
             'workout-stats': ['client-workout-stats', targetId],
+            'updates': ['client-updates', targetId],
         };
 
         await queryClient.invalidateQueries({ queryKey: queryKeyMap[section] });
@@ -220,6 +229,7 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
                 injuries,
                 details,
                 workoutStats,
+                updates,
                 isLoading,
                 error,
                 refreshData,
