@@ -142,16 +142,11 @@ The API follows a layered architecture:
 1. **Routes**: Define API endpoints and apply middleware
 2. **Controllers**: Handle HTTP requests/responses
 3. **Services**: Business logic layer
-4. **Repositories**: Data access layer (currently in-memory, ready for DB integration)
+4. **Repositories**: Data access layer (integrating with Supabase)
 
 ## Database Integration
-
-The repository pattern is implemented with an in-memory store. To integrate a real database:
-
-1. Choose your ORM (Prisma, TypeORM, Mongoose, etc.)
-2. Implement the repository interfaces in `src/infrastructure/db/`
-3. Replace in-memory repositories with database-backed implementations
-4. Initialize DB connection in `src/loaders/index.ts`
+ 
+The project uses **Supabase** as the primary database and authentication provider. The repository pattern is used to abstract data access.
 
 ## Production Considerations
 

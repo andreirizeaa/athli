@@ -12,13 +12,7 @@ This is a monorepo managed with [Turborepo](https://turbo.build/) and npm worksp
 - **`apps/athli-web-app`** - Main web application (Next.js)
 - **`apps/athli-mobile`** - Mobile application (React Native/Expo)
 - **`apps/athli-web-api`** - Web API backend (Express.js/TypeScript)
-- **`apps/athli-mobile-api`** - Mobile API backend (FastAPI/Python)
 
-### Packages
-
-- **`packages/auth`** - Shared authentication utilities
-- **`packages/ui`** - Shared UI components
-- **`packages/utils`** - Shared utility functions
 
 ## Tech Stack
 
@@ -40,9 +34,6 @@ This is a monorepo managed with [Turborepo](https://turbo.build/) and npm worksp
 
 ### Backend
 - **Express.js** - Web API framework (TypeScript)
-- **FastAPI** - Mobile API framework (Python)
-- **Celery** - Background task processing
-- **Redis** - Caching and task queue
 - **Supabase** - Database and authentication
 
 ### Development Tools
@@ -58,8 +49,6 @@ This is a monorepo managed with [Turborepo](https://turbo.build/) and npm worksp
 
 - **Node.js** 22.x or higher
 - **npm** 10.0.0 or higher
-- **Python** 3.12+ (for mobile API)
-- **Redis** (for mobile API background tasks)
 
 ### Installation
 
@@ -74,7 +63,7 @@ cd athli
 npm install
 ```
 
-That's it! The installation will handle all dependencies for all applications and packages in the monorepo.
+That's it! The installation will handle all dependencies for all applications in the monorepo.
 
 ### Development
 
@@ -90,7 +79,6 @@ This will start all apps in parallel using Turborepo. For specific application s
 - [`apps/athli-web-app/README.md`](./apps/athli-web-app/README.md)
 - [`apps/athli-mobile/README.md`](./apps/athli-mobile/README.md)
 - [`apps/athli-web-api/README.md`](./apps/athli-web-api/README.md)
-- [`apps/athli-mobile-api/README.md`](./apps/athli-mobile-api/README.md)
 
 ## Available Scripts
 
@@ -105,7 +93,6 @@ The monorepo uses:
 
 - **Turborepo** for task orchestration and caching
 - **npm workspaces** for dependency management
-- **Shared packages** for code reuse across applications
 - **TypeScript** for type safety across the entire codebase
 
-Each application is independently deployable and can be developed in isolation while sharing common utilities and components from the `packages/` directory.
+Each application is independently deployable and can be developed in isolation.
