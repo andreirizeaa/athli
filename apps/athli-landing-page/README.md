@@ -8,7 +8,6 @@ The marketing landing page for Athli, built with Next.js.
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
 - **shadcn/ui** - UI component library
-- **Clerk** - Authentication
 - **next-intl** - Internationalization
 - **Biome** - Code formatting and linting
 
@@ -71,8 +70,6 @@ Create a `.env.local` file in this directory with the following variables:
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3001
 NEXT_PUBLIC_WWW_URL=http://localhost:3000
-CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
 ```
 
 ## Project Structure

@@ -15,10 +15,7 @@
       "env": [
         "NEXT_PUBLIC_APP_URL",
         "NEXT_PUBLIC_WWW_URL",
-        "CLERK_SECRET_KEY",
-        "CLERK_FRONTEND_API_URL",
-        "SUPABASE_SERVICE_ROLE_KEY",
-        "CONVEX_DEPLOYMENT"
+        "SUPABASE_SERVICE_ROLE_KEY"
       ]
     },
     "lint": {
