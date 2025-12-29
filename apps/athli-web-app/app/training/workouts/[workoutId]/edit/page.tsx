@@ -205,7 +205,7 @@ const EditStandardWorkoutPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="px-0.5 capitalize">
+                  <BreadcrumbPage className="px-0.5 capitalize font-semibold text-foreground">
                     {t('general.edit')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
