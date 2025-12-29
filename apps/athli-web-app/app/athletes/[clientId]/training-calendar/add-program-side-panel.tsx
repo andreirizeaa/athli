@@ -140,7 +140,7 @@ export const AddProgramSidePanel = ({
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (!isEmpty) {
-                                                setSelectedProgramId(row.id);
+                                                setSelectedProgramId(isSelected ? null : row.id);
                                             }
                                         }}
                                     >
@@ -243,7 +243,13 @@ export const AddProgramSidePanel = ({
                                 enableEditColumns={false}
                                 enableExport={false}
                                 enableRowSelection={true}
-                                selectOnRowClick={true}
+                                selectOnRowClick={false}
+                                onRowClick={(row) => {
+                                    const isEmpty = !row.length || row.length === '0 weeks' || !row.totalExercises || row.totalExercises === 0;
+                                    if (!isEmpty) {
+                                        setSelectedProgramId(row.id);
+                                    }
+                                }}
                                 selectedRowIds={new Set(selectedProgramId ? [selectedProgramId] : [])}
                                 onSelectionChange={(ids) => setSelectedProgramId(ids.size > 0 ? Array.from(ids)[0] : null)}
                                 emptyMessage={t('athletes.trainingCalendar.noProgramsFound')}

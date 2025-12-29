@@ -61,6 +61,7 @@ export type SetFieldValidation = {
 type ExerciseWithSets = Exercise & {
   sets?: SetData[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
+  notes?: string; // Exercise-specific notes
 };
 
 type ExerciseCardProps = {
@@ -945,11 +946,22 @@ export const ExerciseCard = ({
       {(exercise.exerciseType === 'weight_reps' ||
         exercise.exerciseType === 'reps' ||
         exercise.exerciseType === 'distance_duration') && (
-          <div className="w-full border rounded-lg overflow-hidden">
+          <div className="w-full border rounded-md overflow-hidden">
             <Table className="text-[11px] leading-tight">
               <TableHeader className="bg-transparent">
                 <TableRow className="h-8">
-                  <TableHead className="text-center h-8 py-1 px-2">Set</TableHead>
+                  <TableHead className="text-center h-8 py-1 px-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddSet}
+                      className="h-5 px-3 text-[11px] font-medium border"
+                      aria-label="Add set"
+                    >
+                      Add set
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
                   {exercise.exerciseType === 'distance_duration' ? (
                     <>
@@ -1305,32 +1317,40 @@ export const ExerciseCard = ({
                     </TableCell>
                   </TableRow>
                 ))}
-                {!isSingleSetOnly && (
-                  <TableRow
-                    className="h-8 bg-background cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={handleAddSet}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleAddSet();
-                      }
-                    }}
-                    aria-label="Add set"
-                  >
-                    <TableCell
-                      colSpan={exercise.exerciseType === 'reps' ? 5 : 6}
-                      className="text-center py-1 text-[11px]"
-                    >
-                      Add set
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </div>
         )}
+
+        {/* Exercise Notes */}
+        <div className="w-full relative">
+          <Input
+            placeholder="Notes"
+            value={exercise.notes || ''}
+            onChange={(e) => {
+              onExerciseChange({
+                ...exercise,
+                notes: e.target.value,
+              });
+            }}
+            className="w-full pr-8"
+          />
+          {exercise.notes && (
+            <button
+              type="button"
+              onClick={() => {
+                onExerciseChange({
+                  ...exercise,
+                  notes: '',
+                });
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear notes"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
         <DialogContent
           className="w-full max-w-[60vw] sm:max-w-[60vw] max-h-[85vh] flex flex-col overflow-y-auto"

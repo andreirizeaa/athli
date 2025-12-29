@@ -225,6 +225,7 @@ const ExercisesPage = () => {
       muscleGroups: ex.muscle_group || [], // Keep array for filtering
       modality: ex.modality || '',
       videoLink: ex.video_link || '',
+      isFavourite: ex.isFavourite || false,
     }));
     setExercises(mappedExercises);
   }, [contextExercises]);
@@ -253,7 +254,12 @@ const ExercisesPage = () => {
   const handleToggleStar = async (exerciseId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starExercises(exerciseId, !starredExercises.has(exerciseId));
+      const isStarred = starredExercises.has(exerciseId);
+      await starExercises(exerciseId, !isStarred);
+
+      const exercise = exercises.find((e) => e.id === exerciseId);
+      const exerciseName = exercise?.program || t('exercises.exercise');
+
       setStarredExercises((prev) => {
         const next = new Set(prev);
         if (next.has(exerciseId)) {
@@ -263,9 +269,15 @@ const ExercisesPage = () => {
         }
         return next;
       });
+
+      if (isStarred) {
+        toast.success(t('exercises.detail.toast.unstarredSuccessfully', { name: exerciseName }));
+      } else {
+        toast.success(t('exercises.detail.toast.starredSuccessfully', { name: exerciseName }));
+      }
     } catch (error) {
-      // Error handling - could show toast here
       console.error('Failed to star exercise:', error);
+      toast.error(t('general.error'));
     }
   };
 

@@ -12,26 +12,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { toast } from 'sonner';
 import { cn } from '@/lib/general/utils';
 
-const WORKOUT_TYPES = [
-    { value: 'weightlifting', label: 'Weightlifting' },
-    { value: 'bodyweight', label: 'Bodyweight' },
-    { value: 'cardio', label: 'Cardio' },
-    { value: 'hiit', label: 'HIIT' },
-    { value: 'crossfit', label: 'CrossFit' },
-    { value: 'running', label: 'Running' },
-    { value: 'cycling', label: 'Cycling' },
-    { value: 'swimming', label: 'Swimming' },
-    { value: 'yoga', label: 'Yoga' },
-    { value: 'pilates', label: 'Pilates' },
-    { value: 'combination', label: 'Combination' },
-] as const;
-
-const DIFFICULTY_LEVELS = [
-    { value: 'all_levels', label: 'All levels' },
-    { value: 'beginner', label: 'Beginner' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'advanced', label: 'Advanced' },
-] as const;
+import { DIFFICULTY_LEVELS, WORKOUT_TYPES } from '@/lib/constants/training';
 
 type EditWorkoutDetailsSidePanelProps = {
     open: boolean;
@@ -259,7 +240,7 @@ export const EditWorkoutDetailsSidePanel = ({
 
                     <div className="flex flex-col gap-2">
                         <label htmlFor="workout-description" className="text-sm font-medium">
-                            {t('workouts.addWorkout.description')} <span className="text-muted-foreground font-normal">{t('workouts.addWorkout.descriptionOptional')}</span>
+                            {t('workouts.addWorkout.description')}
                         </label>
                         <Textarea
                             id="workout-description"

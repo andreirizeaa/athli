@@ -1177,7 +1177,7 @@ export const StandardBuilder = ({
                                         ? 'border-primary bg-primary/5'
                                         : sectionValidationErrors[section.id]?.emptyExercises
                                           ? 'border-destructive bg-destructive/5'
-                                          : 'border-muted'
+                                          : 'border-muted-foreground/30 hover:border-primary/50'
                                     )}
                                   >
                                     <p className="text-muted-foreground text-sm text-center">

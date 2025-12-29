@@ -145,7 +145,7 @@ export const AddWorkoutSidePanel = ({
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             if (!isEmpty) {
-                                                setSelectedWorkoutId(row.id);
+                                                setSelectedWorkoutId(isSelected ? null : row.id);
                                             }
                                         }}
                                     >
@@ -251,7 +251,13 @@ export const AddWorkoutSidePanel = ({
                                 enableEditColumns={false}
                                 enableExport={false}
                                 enableRowSelection={true}
-                                selectOnRowClick={true}
+                                selectOnRowClick={false}
+                                onRowClick={(row) => {
+                                    const isEmpty = !row.totalExercises || row.totalExercises === 0;
+                                    if (!isEmpty) {
+                                        setSelectedWorkoutId(row.id);
+                                    }
+                                }}
                                 selectedRowIds={new Set(selectedWorkoutId ? [selectedWorkoutId] : [])}
                                 onSelectionChange={(ids) => setSelectedWorkoutId(ids.size > 0 ? Array.from(ids)[0] : null)}
                                 emptyMessage={t('athletes.trainingCalendar.noWorkoutsFound')}

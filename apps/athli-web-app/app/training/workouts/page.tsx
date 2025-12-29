@@ -153,7 +153,8 @@ const WorkoutsPage = () => {
   useEffect(() => {
     // Initialize filteredCount and starred workouts from context data
     setFilteredCount(workouts.length);
-    const starred = new Set(workouts.filter(w => (w as any).starred).map(w => w.id));
+    setFilteredCount(workouts.length);
+    const starred = new Set(workouts.filter(w => w.isFavourite).map(w => w.id));
     setStarredWorkouts(starred);
   }, [workouts]);
 
@@ -232,26 +233,45 @@ const WorkoutsPage = () => {
         return;
       }
 
-      // If standard builder, navigate to builder page
+      // If standard builder, create workout directly and close panel
       const meta = {
         title: newWorkoutName.trim(),
         description: newDescription.trim(),
         type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
-        builder: newSelectedBuilder,
+        equipment: [],
+        totalExercises: 0,
+        sections: [
+          {
+            id: `sec_regular_${Date.now()}`,
+            type: 'regular' as const,
+            exercises: [],
+          },
+        ]
       };
 
+      setIsGeneratingStandard(true);
       try {
-        window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify(meta));
-        window.localStorage.setItem('oneninety_workout_builder_access', 'standard');
-      } catch {
-        // Ignore storage errors
+        await createWorkout(meta as any);
+        toast.success(t('workouts.new.toast.savedSuccessfully', {
+          name: meta.title,
+          type: meta.type.charAt(0).toUpperCase() + meta.type.slice(1)
+        }), {
+          style: {
+            background: 'rgb(220 252 231)',
+            color: 'rgb(20 83 45)',
+            border: '1px solid rgb(187 247 208)',
+          },
+        });
+        await refreshWorkouts();
+        setIsCreateWorkoutOpen(false);
+        resetCreateWorkoutState();
+      } catch (error) {
+        console.error('Failed to create workout:', error);
+        toast.error(t('general.error'));
+      } finally {
+        setIsGeneratingStandard(false);
       }
-
-      setIsCreateWorkoutOpen(false);
-      resetCreateWorkoutState();
-      router.push('/training/workouts/new');
-      setIsGeneratingStandard(false);
     } else {
       // Step 2: Generate AI workout and navigate to builder
       setIsGenerating(true);
@@ -675,7 +695,12 @@ Focus on proper form and progressive overload.`;
   const handleToggleStar = async (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starWorkouts(workoutId, !starredWorkouts.has(workoutId));
+      const isStarred = starredWorkouts.has(workoutId);
+      await starWorkouts(workoutId, !isStarred);
+
+      const workout = workouts.find((w) => w.id === workoutId);
+      const workoutName = workout?.program || t('library.workout');
+
       setStarredWorkouts((prev) => {
         const next = new Set(prev);
         if (next.has(workoutId)) {
@@ -685,8 +710,15 @@ Focus on proper form and progressive overload.`;
         }
         return next;
       });
+
+      if (isStarred) {
+        toast.success(t('workouts.detail.toast.unstarredSuccessfully', { name: workoutName }));
+      } else {
+        toast.success(t('workouts.detail.toast.starredSuccessfully', { name: workoutName }));
+      }
     } catch (error) {
       console.error('Failed to star workout:', error);
+      toast.error(t('general.error'));
     }
   };
 
@@ -716,8 +748,8 @@ Focus on proper form and progressive overload.`;
         });
         return next;
       });
-      // Clear selection after starring
       setSelectedWorkouts(new Set());
+      toast.success(t('workouts.detail.toast.starredSuccessfully'));
     } catch (error) {
       console.error('Failed to star workouts:', error);
     }
@@ -727,8 +759,8 @@ Focus on proper form and progressive overload.`;
     if (selectedWorkouts.size === 0) return;
     try {
       await archiveWorkouts(Array.from(selectedWorkouts), true);
-      // Clear selection after archiving
       setSelectedWorkouts(new Set());
+      toast.success(t('workouts.detail.toast.archivedSuccessfully'));
     } catch (error) {
       console.error('Failed to archive workouts:', error);
     }
@@ -751,9 +783,9 @@ Focus on proper form and progressive overload.`;
       await refreshWorkouts();
 
       if (deleteCount === 1 && singleItemName) {
-        toast.success(`Successfully deleted ${singleItemName}`);
+        toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       } else {
-        toast.success(`Successfully deleted ${deleteCount} workout${deleteCount === 1 ? '' : 's'}`);
+        toast.success(t('workouts.detail.toast.deletedBulkSuccessfully', { count: deleteCount }));
       }
 
       // Clear selection after deleting
@@ -772,9 +804,9 @@ Focus on proper form and progressive overload.`;
       await refreshWorkouts();
 
       if (workout) {
-        toast.success(`Successfully deleted ${workout.program}`);
+        toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       } else {
-        toast.success('Successfully deleted workout');
+        toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       }
 
       setWorkoutToDelete(null);
@@ -793,8 +825,8 @@ Focus on proper form and progressive overload.`;
       const duplicatedWorkout = await duplicateWorkout(workoutId);
       // Reload workouts to show the duplicated one
       await refreshWorkouts();
-      // Clear selection after duplicating
       setSelectedWorkouts(new Set());
+      toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name: workout.program }));
     } catch (error) {
       console.error('Failed to duplicate workout:', error);
     }

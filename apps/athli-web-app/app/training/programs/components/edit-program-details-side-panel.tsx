@@ -12,41 +12,9 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { toast } from 'sonner';
 import { cn } from '@/lib/general/utils';
 
-const PROGRAM_TYPES = [
-    { value: 'strength', label: 'Strength' },
-    { value: 'hypertrophy', label: 'Hypertrophy' },
-    { value: 'endurance', label: 'Endurance' },
-    { value: 'power', label: 'Power' },
-    { value: 'athletic_performance', label: 'Athletic Performance' },
-    { value: 'weight_loss', label: 'Weight Loss' },
-    { value: 'general_fitness', label: 'General Fitness' },
-    { value: 'sport_specific', label: 'Sport Specific' },
-    { value: 'rehabilitation', label: 'Rehabilitation' },
-    { value: 'combination', label: 'Combination' },
-] as const;
+import { DIFFICULTY_LEVELS, PROGRAM_TYPES } from '@/lib/constants/training';
 
-const DIFFICULTY_LEVELS = [
-    { value: 'all_levels', label: 'All levels' },
-    { value: 'beginner', label: 'Beginner' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'advanced', label: 'Advanced' },
-] as const;
 
-// Helper to normalize legacy values to snake_case format
-const normalizeValue = (value: string, options: readonly { value: string; label: string }[]): string => {
-    if (!value) return '';
-
-    // Check if value already exists in our options
-    const existingOption = options.find(opt => opt.value === value.toLowerCase());
-    if (existingOption) return existingOption.value;
-
-    // Try to match by label (case-insensitive)
-    const matchByLabel = options.find(opt => opt.label.toLowerCase() === value.toLowerCase());
-    if (matchByLabel) return matchByLabel.value;
-
-    // Convert to snake_case as fallback
-    return value.toLowerCase().replace(/\s+/g, '_');
-};
 
 type EditProgramDetailsSidePanelProps = {
     open: boolean;
@@ -89,18 +57,14 @@ export const EditProgramDetailsSidePanel = ({
 
     useEffect(() => {
         if (open) {
-            // Normalize values to ensure they match our value/label structure
-            const normalizedType = normalizeValue(programMeta.type, PROGRAM_TYPES);
-            const normalizedDifficulty = normalizeValue(programMeta.difficulty, DIFFICULTY_LEVELS);
-
             setName(programMeta.name);
-            setType(normalizedType);
-            setDifficulty(normalizedDifficulty);
+            setType(programMeta.type);
+            setDifficulty(programMeta.difficulty);
             setDescription(programMeta.description);
             setOriginalValues({
                 name: programMeta.name,
-                type: normalizedType,
-                difficulty: normalizedDifficulty,
+                type: programMeta.type,
+                difficulty: programMeta.difficulty,
                 description: programMeta.description,
             });
             setNameError(null);
@@ -278,7 +242,7 @@ export const EditProgramDetailsSidePanel = ({
 
                     <div className="flex flex-col gap-2">
                         <label htmlFor="program-description" className="text-sm font-medium">
-                            {t('programs.addProgram.description')} <span className="text-muted-foreground font-normal">{t('programs.addProgram.descriptionOptional')}</span>
+                            {t('programs.addProgram.description')}
                         </label>
                         <Textarea
                             id="program-description"

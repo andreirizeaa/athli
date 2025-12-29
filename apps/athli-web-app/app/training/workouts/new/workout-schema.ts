@@ -167,9 +167,34 @@ export type WorkoutSectionPayload =
   | AuxiliarySectionPayload;
 
 /**
- * Complete workout schema
- * When coaches create: status is 'not_started', optional fields are empty
- * During/after execution: user fills in completion data
+ * Workout data structure stored in the workout_data JSONB field.
+ * Contains only the actual workout structure and execution tracking.
+ * Metadata (title, description, type, difficulty, equipment) is stored in table columns.
+ */
+export type WorkoutData = {
+  sections: WorkoutSectionPayload[];
+
+  // Execution tracking (empty when coach creates)
+  status?: WorkoutStatus;
+  startedAt?: string; // ISO 8601 timestamp
+  completedAt?: string; // ISO 8601 timestamp
+  totalDurationMin?: number; // Total workout duration in minutes
+
+  // Session-level metrics (empty when coach creates)
+  sessionComments?: string; // User comments for the entire session
+  totalWeightLifted?: number; // Total weight lifted in the session (in kg or lbs)
+  intensity?: number; // Perceived intensity (0-10 scale)
+  readiness?: number; // Pre-workout readiness (0-10 scale)
+
+  // Additional fields
+  overallNotes?: string; // User notes for the entire workout
+  rating?: number; // User rating (1-5)
+};
+
+/**
+ * Complete workout payload including metadata.
+ * Used for creating/editing workouts in the UI.
+ * When sending to backend, metadata fields are sent separately from workout_data.
  */
 export type WorkoutPayload = {
   id?: string; // Workout ID (assigned after creation)
@@ -200,3 +225,4 @@ export type WorkoutPayload = {
 
 // Legacy aliases for backwards compatibility
 export type WorkoutProgramPayload = WorkoutPayload;
+

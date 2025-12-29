@@ -16,7 +16,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { StandardBuilder } from './standard-builder';
+import { StandardBuilder } from './workout-builder';
 import type { WorkoutProgramPayload } from './workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { createWorkout } from '@/api/coach/coach-workout-service';
@@ -49,7 +49,7 @@ const StandardWorkoutPage = () => {
     // Check for access flag only once - if not present, redirect to workouts
     if (!hasCheckedAccess.current) {
       hasCheckedAccess.current = true;
-      const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+      const accessFlag = window.localStorage.getItem('athli_workout_builder_access');
       if (accessFlag !== 'standard') {
         router.push('/training/workouts');
         return;
@@ -60,13 +60,13 @@ const StandardWorkoutPage = () => {
     hasInitialized.current = true;
 
     // Try to load meta from localStorage (if coming from create panel)
-    const raw = window.localStorage.getItem('oneninety_new_workout_meta');
+    const raw = window.localStorage.getItem('athli_new_workout_meta');
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as WorkoutMeta;
         setWorkoutMeta(parsed);
         // Clear the access flag after setting meta to prevent re-redirects
-        window.localStorage.removeItem('oneninety_workout_builder_access');
+        window.localStorage.removeItem('athli_workout_builder_access');
         return;
       } catch {
         // If parsing fails, fall through to default values
@@ -82,7 +82,7 @@ const StandardWorkoutPage = () => {
       builder: 'standard',
     });
     // Clear the access flag after setting default meta
-    window.localStorage.removeItem('oneninety_workout_builder_access');
+    window.localStorage.removeItem('athli_workout_builder_access');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -114,7 +114,10 @@ const StandardWorkoutPage = () => {
     try {
       await createWorkout(payload);
 
-      toast.success(t('workouts.new.toast.savedSuccessfully', { name: payload.title, type: payload.type }), {
+      toast.success(t('workouts.new.toast.savedSuccessfully', {
+        name: payload.title,
+        type: payload.type.charAt(0).toUpperCase() + payload.type.slice(1)
+      }), {
         style: {
           background: 'rgb(220 252 231)',
           color: 'rgb(20 83 45)',

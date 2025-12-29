@@ -6,6 +6,7 @@ import {
   DragEndEvent,
   DragStartEvent,
   PointerSensor,
+  KeyboardSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -13,9 +14,14 @@ import {
 import {
   SortableContext,
   arrayMove,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import {
+  restrictToVerticalAxis,
+  restrictToFirstScrollableAncestor,
+} from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
 import { Target, GripVertical, Link2, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -83,17 +89,19 @@ const OverviewSectionCard = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style}>
       <div
         className={cn(
-          'border rounded-lg bg-sidebar shadow-sm mb-2 select-none',
-          isDragging && 'opacity-80'
+          'border rounded-lg bg-sidebar shadow-sm mb-2 select-none'
         )}
       >
-        <div className="flex items-center justify-between px-3 py-2 border-b">
+        <div
+          className="flex items-center justify-between px-3 py-2 border-b rounded-t-lg"
+        >
           <div className="flex items-center gap-2">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {section.type}{' '}
@@ -118,12 +126,14 @@ const OverviewSectionCard = ({
               aria-label={`Delete ${section.type} section`}
               data-no-row-link="true"
             >
-              <Trash2 className="size-4" />
+              <Trash2 className="size-3" />
             </button>
           </div>
           <button
             type="button"
+            {...attributes}
             {...listeners}
+            onClick={(e) => e.stopPropagation()}
             className="cursor-grab active:cursor-grabbing p-1 -mr-1 rounded select-none text-muted-foreground hover:text-foreground"
             aria-label="Reorder section"
           >
@@ -154,6 +164,7 @@ const OverviewExerciseRow = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   return (
@@ -161,8 +172,7 @@ const OverviewExerciseRow = ({
       <div
         {...listeners}
         className={cn(
-          'flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing',
-          isDragging && 'opacity-80 shadow-sm'
+          'flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs select-none cursor-grab active:cursor-grabbing'
         )}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -245,6 +255,7 @@ const OverviewSupersetRow = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
   const exerciseNames = exercises.map((ex) => ex.name || 'Untitled exercise').join(', ');
@@ -268,8 +279,7 @@ const OverviewSupersetRow = ({
       <div
         {...listeners}
         className={cn(
-          'rounded-md border bg-background text-xs select-none cursor-grab active:cursor-grabbing',
-          isDragging && 'opacity-80 shadow-sm'
+          'rounded-md border bg-background text-xs select-none cursor-grab active:cursor-grabbing'
         )}
       >
         <div className="flex items-start justify-between px-3 py-2.5">
@@ -349,7 +359,16 @@ export const OverviewPanel = ({
   groupExercisesBySuperset,
   onExerciseClick,
 }: OverviewPanelProps) => {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 10 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
   const [activeOverviewItem, setActiveOverviewItem] = React.useState<ActiveOverviewItem | null>(
     null
   );
@@ -554,6 +573,7 @@ export const OverviewPanel = ({
         collisionDetection={closestCenter}
         onDragStart={handleOverviewDragStart}
         onDragEnd={handleOverviewDragEnd}
+        modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
       >
         <SortableContext
           items={sections.map((section) => `section-${section.id}`)}
@@ -562,7 +582,11 @@ export const OverviewPanel = ({
           <div className="flex flex-col gap-3">
             {sections.length > 0 ? (
               sections.map((section) => (
-                <OverviewSectionCard key={section.id} section={section} onDelete={onDeleteSection}>
+                <OverviewSectionCard
+                  key={section.id}
+                  section={section}
+                  onDelete={onDeleteSection}
+                >
                   <div className="p-2 flex flex-col gap-1">
                     {section.exercises && section.exercises.length > 0 ? (
                       <SortableContext

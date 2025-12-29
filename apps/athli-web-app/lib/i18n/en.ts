@@ -707,7 +707,7 @@ export const enMessages = {
     },
   },
   library: {
-    title: 'Library',
+    title: 'Training',
     workouts: 'Workouts',
     programs: 'Programs',
     exercises: 'Exercises',
@@ -877,10 +877,22 @@ export const enMessages = {
       },
       toast: {
         deletedSuccessfully: 'Program deleted successfully',
+        starredSuccessfully: '{name} starred successfully',
+        unstarredSuccessfully: '{name} unstarred successfully',
       },
     },
     descriptionModal: {
       title: '{name} - Description',
+    },
+    delete: {
+      toast: {
+        success: 'Program deleted successfully',
+      },
+    },
+    edit: {
+      toast: {
+        updatedSuccessfully: 'Program "{name}" updated successfully',
+      },
     },
     builder: {
       newProgram: 'New program',
@@ -1003,6 +1015,12 @@ export const enMessages = {
       selectAllExercises: 'Select all exercises',
       sortAscending: 'Sort ascending',
       sortDescending: 'Sort descending',
+    },
+    detail: {
+      toast: {
+        starredSuccessfully: '{name} starred successfully',
+        unstarredSuccessfully: '{name} unstarred successfully',
+      },
     },
     filters: {
       type: 'Type',
@@ -1198,11 +1216,17 @@ export const enMessages = {
       },
       toast: {
         deletedSuccessfully: 'Workout deleted successfully',
+        deletedBulkSuccessfully: '{count} workouts deleted successfully',
+        duplicatedSuccessfully: 'Workout "{name}" duplicated successfully',
+        archivedSuccessfully: 'Workout archived successfully',
+        unarchivedSuccessfully: 'Workout restored successfully',
+        starredSuccessfully: '{name} starred successfully',
+        unstarredSuccessfully: '{name} unstarred successfully',
       },
     },
     new: {
       toast: {
-        savedSuccessfully: '{type} workout "{name}" has been saved',
+        savedSuccessfully: '{type} workout "{name}" saved successfully',
         failedToSave: 'Failed to save workout',
       },
     },
@@ -1218,7 +1242,7 @@ export const enMessages = {
       cancel: 'Cancel',
       cancelAria: 'Cancel editing workout',
       toast: {
-        updatedSuccessfully: 'Workout "{name}" has been updated',
+        updatedSuccessfully: 'Workout "{name}" updated successfully',
         failedToUpdate: 'Failed to update workout',
       },
     },
