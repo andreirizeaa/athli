@@ -9,7 +9,7 @@ The main web application for Athli, built with Next.js.
 - **Tailwind CSS** - Styling
 - **shadcn/ui** - UI component library
 - **Supabase Auth** - Authentication
-- **Convex** - Backend-as-a-Service
+
 - **Supabase** - Database and backend services
 - **next-intl** - Internationalization
 - **Biome** - Code formatting and linting
@@ -76,7 +76,7 @@ NEXT_PUBLIC_WWW_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-CONVEX_DEPLOYMENT=your_convex_deployment
+
 ```
 
 ## Project Structure

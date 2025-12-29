@@ -22,8 +22,7 @@ This is a monorepo managed with [Turborepo](https://turbo.build/) and npm worksp
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
 - **shadcn/ui** - UI component library
-- **Clerk** - Authentication
-- **Convex** - Backend-as-a-Service
+
 - **Supabase** - Database and backend services
 - **next-intl** - Internationalization
 
