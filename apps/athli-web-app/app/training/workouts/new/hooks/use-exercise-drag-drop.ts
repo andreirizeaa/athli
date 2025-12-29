@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Exercise } from '@/api/exercise/exercise-search';
 
 export type DragOverSlot = {
@@ -10,6 +10,9 @@ type UseExerciseDragDropOptions = {
   onExpandSection?: (sectionId: string) => void;
 };
 
+const SCROLL_THRESHOLD = 80; // Distance from edge to trigger scroll
+const SCROLL_SPEED = 10; // Pixels to scroll per frame
+
 export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
@@ -18,6 +21,8 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
   const topLevelContainerRef = useRef<HTMLElement | null>(null);
   const expandedSectionsRef = useRef<Set<string>>(new Set());
+  const scrollIntervalRef = useRef<number | null>(null);
+  const lastMouseYRef = useRef<number>(0);
 
   /**
    * Calculate the nearest drop slot based on mouse position
@@ -77,6 +82,52 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
 
     return { sectionId, slotIndex: nearestSlotIndex };
   }, [draggedExercise]);
+
+  /**
+   * Handle auto-scrolling when dragging near edges
+   */
+  const handleAutoScroll = useCallback((mouseY: number) => {
+    const container = topLevelContainerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const distanceFromTop = mouseY - containerRect.top;
+    const distanceFromBottom = containerRect.bottom - mouseY;
+
+    // Clear existing scroll interval
+    if (scrollIntervalRef.current !== null) {
+      window.clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+
+    // Scroll up if near top edge
+    if (distanceFromTop < SCROLL_THRESHOLD && distanceFromTop > 0) {
+      scrollIntervalRef.current = window.setInterval(() => {
+        if (container.scrollTop > 0) {
+          container.scrollTop -= SCROLL_SPEED;
+        }
+      }, 16); // ~60fps
+    }
+    // Scroll down if near bottom edge
+    else if (distanceFromBottom < SCROLL_THRESHOLD && distanceFromBottom > 0) {
+      scrollIntervalRef.current = window.setInterval(() => {
+        const maxScroll = container.scrollHeight - container.clientHeight;
+        if (container.scrollTop < maxScroll) {
+          container.scrollTop += SCROLL_SPEED;
+        }
+      }, 16); // ~60fps
+    }
+  }, []);
+
+  /**
+   * Clear auto-scroll interval
+   */
+  const clearAutoScroll = useCallback(() => {
+    if (scrollIntervalRef.current !== null) {
+      window.clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+  }, []);
 
   /**
    * Handle drag start
@@ -153,7 +204,9 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     setDragOverTopLevelSlot(null);
     // Clear expanded sections tracking
     expandedSectionsRef.current.clear();
-  }, []);
+    // Clear auto-scroll
+    clearAutoScroll();
+  }, [clearAutoScroll]);
 
   /**
    * Handle drag over section - calculates nearest slot automatically
@@ -168,6 +221,10 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
 
     if (!draggedExercise) return;
 
+    // Track mouse position and trigger auto-scroll
+    lastMouseYRef.current = e.clientY;
+    handleAutoScroll(e.clientY);
+
     setDragOverSectionId(sectionId);
     // Clear top-level slot when dragging over a section
     setDragOverTopLevelSlot(null);
@@ -181,7 +238,7 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     // Automatically calculate and show nearest slot
     const nearestSlot = calculateNearestSlot(e, sectionId, exerciseCount);
     setDragOverSlot(nearestSlot);
-  }, [draggedExercise, calculateNearestSlot, options]);
+  }, [draggedExercise, calculateNearestSlot, options, handleAutoScroll]);
 
   /**
    * Handle drag leave section
@@ -207,6 +264,10 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
 
     if (!draggedExercise) return;
 
+    // Track mouse position and trigger auto-scroll
+    lastMouseYRef.current = e.clientY;
+    handleAutoScroll(e.clientY);
+
     // Check if we're inside a section - if so, don't handle at top level
     const target = e.target as HTMLElement;
     const isInsideSection = target.closest('[data-workout-section]');
@@ -223,7 +284,7 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     // Automatically calculate and show nearest slot
     const nearestSlot = calculateNearestTopLevelSlot(e, totalItems);
     setDragOverTopLevelSlot(nearestSlot);
-  }, [draggedExercise, calculateNearestTopLevelSlot]);
+  }, [draggedExercise, calculateNearestTopLevelSlot, handleAutoScroll]);
 
   /**
    * Handle drag leave top-level container
@@ -253,6 +314,15 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   const registerTopLevelContainerRef = useCallback((element: HTMLElement | null) => {
     topLevelContainerRef.current = element;
   }, []);
+
+  /**
+   * Cleanup scroll interval on unmount
+   */
+  useEffect(() => {
+    return () => {
+      clearAutoScroll();
+    };
+  }, [clearAutoScroll]);
 
   return {
     draggedExercise,

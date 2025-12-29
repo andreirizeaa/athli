@@ -88,13 +88,13 @@ const OverviewSectionCard = ({
         <div
           className="flex items-center justify-between px-3 py-2 border-b border-primary bg-primary/10 rounded-t-lg"
         >
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {section.type}{' '}
+            <span className="font-normal">
+              ({section.exercises ? section.exercises.length : 0})
+            </span>
+          </div>
           <div className="flex items-center gap-2">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {section.type}{' '}
-              <span className="font-normal">
-                ({section.exercises ? section.exercises.length : 0})
-              </span>
-            </div>
             <button
               type="button"
               onClick={(e) => {
@@ -114,17 +114,17 @@ const OverviewSectionCard = ({
             >
               <Trash2 className="size-3" />
             </button>
+            <button
+              type="button"
+              {...attributes}
+              {...listeners}
+              onClick={(e) => e.stopPropagation()}
+              className="cursor-grab active:cursor-grabbing p-0.5 rounded select-none text-muted-foreground hover:text-foreground"
+              aria-label="Reorder section"
+            >
+              <GripVertical className="size-3" />
+            </button>
           </div>
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            onClick={(e) => e.stopPropagation()}
-            className="cursor-grab active:cursor-grabbing p-0.5 -mr-1 rounded select-none text-muted-foreground hover:text-foreground"
-            aria-label="Reorder section"
-          >
-            <GripVertical className="size-3" />
-          </button>
         </div>
         {children}
       </div>
@@ -519,68 +519,155 @@ export const OverviewPanel = ({
     const overId = over.id as string;
 
     if (activeOverviewItem.type === 'topLevelExercise') {
-      if (!overId.startsWith('top-level-exercise-')) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
       const activeInstanceId = activeOverviewItem.instanceId;
-      const overInstanceId = overId.replace('top-level-exercise-', '');
+      const activeItemIndex = items.findIndex(
+        (item) => item.itemType === 'exercise' && item.exercise.instanceId === activeInstanceId
+      );
 
-      if (activeInstanceId === overInstanceId) {
+      if (activeItemIndex === -1) {
         setActiveOverviewItem(null);
         return;
       }
 
-      const oldIndex = topLevelExercises.findIndex((ex) => ex.instanceId === activeInstanceId);
-      const newIndex = topLevelExercises.findIndex((ex) => ex.instanceId === overInstanceId);
-
-      if (oldIndex === -1 || newIndex === -1) {
+      const activeItem = items[activeItemIndex];
+      if (activeItem.itemType !== 'exercise') {
         setActiveOverviewItem(null);
         return;
       }
 
-      // Reorder top-level exercises
-      const reorderedExercises = arrayMove(topLevelExercises, oldIndex, newIndex);
+      // Check if dropping into a section or on section exercise
+      if (overId.startsWith('exercise-|')) {
+        // Dropping on a section exercise - move top-level exercise into that section
+        const [, sectionId, targetExerciseId] = overId.split('|');
+        const sectionIndex = items.findIndex(
+          (item) => item.itemType === 'section' && item.section.id === sectionId
+        );
 
-      // Rebuild items array with reordered top-level exercises
-      const newItems: WorkoutSchemaItem[] = items.map((item) => {
-        if (item.itemType === 'exercise') {
-          const index = topLevelExercises.findIndex((ex) => ex.instanceId === item.exercise.instanceId);
-          if (index !== -1) {
-            return { ...item, exercise: reorderedExercises[index] };
-          }
+        if (sectionIndex === -1) {
+          setActiveOverviewItem(null);
+          return;
         }
-        return item;
-      });
 
-      onItemsChange(newItems);
+        const sectionItem = items[sectionIndex];
+        if (sectionItem.itemType !== 'section') {
+          setActiveOverviewItem(null);
+          return;
+        }
+
+        // Find target exercise position
+        const targetIndex = sectionItem.section.exercises?.findIndex(
+          (ex) => ex.instanceId === targetExerciseId
+        ) ?? -1;
+
+        if (targetIndex === -1) {
+          setActiveOverviewItem(null);
+          return;
+        }
+
+        // Remove from top-level and add to section
+        const newItems = items.filter((_, idx) => idx !== activeItemIndex);
+        const updatedSection = { ...sectionItem.section };
+        const exercises = [...(updatedSection.exercises || [])];
+        exercises.splice(targetIndex, 0, activeItem.exercise);
+        updatedSection.exercises = exercises;
+
+        newItems[sectionIndex > activeItemIndex ? sectionIndex - 1 : sectionIndex] = {
+          itemType: 'section',
+          section: updatedSection,
+        };
+
+        onItemsChange(newItems);
+        setActiveOverviewItem(null);
+        return;
+      }
+
+      if (overId.startsWith('section-')) {
+        // Dropping on a section - move top-level exercise into that section at the end
+        const overSectionId = overId.replace('section-', '');
+        const sectionIndex = items.findIndex(
+          (item) => item.itemType === 'section' && item.section.id === overSectionId
+        );
+
+        if (sectionIndex === -1) {
+          setActiveOverviewItem(null);
+          return;
+        }
+
+        const sectionItem = items[sectionIndex];
+        if (sectionItem.itemType !== 'section') {
+          setActiveOverviewItem(null);
+          return;
+        }
+
+        // Remove from top-level and add to section at the end
+        const newItems = items.filter((_, idx) => idx !== activeItemIndex);
+        const updatedSection = { ...sectionItem.section };
+        updatedSection.exercises = [...(updatedSection.exercises || []), activeItem.exercise];
+
+        newItems[sectionIndex > activeItemIndex ? sectionIndex - 1 : sectionIndex] = {
+          itemType: 'section',
+          section: updatedSection,
+        };
+
+        onItemsChange(newItems);
+        setActiveOverviewItem(null);
+        return;
+      }
+
+      if (overId.startsWith('top-level-exercise-')) {
+        // Reordering within top-level exercises
+        const overInstanceId = overId.replace('top-level-exercise-', '');
+        const overItemIndex = items.findIndex(
+          (item) => item.itemType === 'exercise' && item.exercise.instanceId === overInstanceId
+        );
+
+        if (overItemIndex === -1 || activeItemIndex === overItemIndex) {
+          setActiveOverviewItem(null);
+          return;
+        }
+
+        const newItems = arrayMove(items, activeItemIndex, overItemIndex);
+        onItemsChange(newItems);
+        setActiveOverviewItem(null);
+        return;
+      }
+
       setActiveOverviewItem(null);
       return;
     }
 
     if (activeOverviewItem.type === 'section') {
-      if (!overId.startsWith('section-')) {
-        setActiveOverviewItem(null);
-        return;
-      }
-
       const activeSectionId = activeOverviewItem.sectionId;
-      const overSectionId = overId.replace('section-', '');
+      const activeItemIndex = items.findIndex(
+        (item) => item.itemType === 'section' && item.section.id === activeSectionId
+      );
 
-      if (activeSectionId === overSectionId) {
+      if (activeItemIndex === -1) {
         setActiveOverviewItem(null);
         return;
       }
 
-      const oldIndex = sections.findIndex((s) => s.id === activeSectionId);
-      const newIndex = sections.findIndex((s) => s.id === overSectionId);
-      if (oldIndex === -1 || newIndex === -1) {
+      let overItemIndex = -1;
+
+      if (overId.startsWith('section-')) {
+        const overSectionId = overId.replace('section-', '');
+        overItemIndex = items.findIndex(
+          (item) => item.itemType === 'section' && item.section.id === overSectionId
+        );
+      } else if (overId.startsWith('top-level-exercise-')) {
+        const overInstanceId = overId.replace('top-level-exercise-', '');
+        overItemIndex = items.findIndex(
+          (item) => item.itemType === 'exercise' && item.exercise.instanceId === overInstanceId
+        );
+      }
+
+      if (overItemIndex === -1 || activeItemIndex === overItemIndex) {
         setActiveOverviewItem(null);
         return;
       }
 
-      onSectionsChange(arrayMove(sections, oldIndex, newIndex));
+      const newItems = arrayMove(items, activeItemIndex, overItemIndex);
+      onItemsChange(newItems);
       setActiveOverviewItem(null);
       return;
     }
