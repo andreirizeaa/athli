@@ -1040,6 +1040,13 @@ export const StandardBuilder = ({
                                 )}
                               </>
                             )}
+
+                            {/* Drop zone after the last exercise */}
+                            {section.exercises && exerciseIndex === section.exercises.length - 1 && draggedExercise && dragOverSlot && dragOverSlot.sectionId === section.id && dragOverSlot.slotIndex === exerciseIndex + 1 && (
+                              <div className="my-2 min-h-14 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                <span>Drop your exercise here</span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -1325,9 +1332,10 @@ export const StandardBuilder = ({
                   const hasSupersetButtonAfter = item.itemType === 'exercise' && nextItem?.itemType === 'exercise';
 
                   // Determine where drop zones CAN appear:
-                  // - Before: not if linked to previous, AND not if current item is a section, AND not if previous item is an exercise (superset area handles it)
+                  // - Before: not if linked to previous, AND not if previous item is an exercise (superset area handles it)
+                  //   Special case: allow before sections if there's no previous item (top of list)
                   // - After: not if linked to next, AND not if superset button area exists (it handles the drop zone internally)
-                  const canShowDropZoneBefore = !isLinkedToPrev && !isSection && prevItem?.itemType !== 'exercise';
+                  const canShowDropZoneBefore = !isLinkedToPrev && prevItem?.itemType !== 'exercise' && (!isSection || !prevItem);
                   const canShowDropZoneAfter = !isLinkedToNext && !hasSupersetButtonAfter;
 
                   // ONLY ONE drop zone appears at a time - the one matching dragOverTopLevelSlot
