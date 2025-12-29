@@ -1005,7 +1005,7 @@ export const StandardBuilder = ({
                               <>
                                 {isLinkedToNext ? (
                                   // Linked superset - show unlink button (no drop zone even when dragging)
-                                  <div className="relative flex items-center justify-center bg-background border-x my-2 py-1">
+                                  <div className="relative flex items-center justify-center bg-background border-x py-1">
                                     <Separator className="absolute w-full" />
                                     <Button
                                       type="button"
@@ -1196,9 +1196,9 @@ export const StandardBuilder = ({
         {/* Show superset link/unlink button or drop zone for adjacent exercise items */}
         {nextItem?.itemType === 'exercise' && (
           <>
-            {isLinkedToNext && !draggedExercise ? (
-              // Linked superset - show unlink button (when not dragging)
-              <div className="relative flex items-center justify-center bg-background border-x my-2 py-1">
+            {isLinkedToNext ? (
+              // Linked superset - show unlink button (always visible, even when dragging)
+              <div className="relative flex items-center justify-center bg-background border-x py-1 -mb-2">
                 <Separator className="absolute w-full" />
                 <Button
                   type="button"
@@ -1211,8 +1211,13 @@ export const StandardBuilder = ({
                   Unlink
                 </Button>
               </div>
-            ) : !isLinkedToNext && !draggedExercise ? (
-              // Show superset button when not dragging and not linked
+            ) : draggedExercise && dragOverTopLevelSlot === itemIndex + 1 ? (
+              // Dragging and this is the drop slot - show drop zone
+              <div className="h-14 my-2 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                <span>Drop exercise here</span>
+              </div>
+            ) : (
+              // Show superset button (visible even when dragging, unless drop zone is showing here)
               <div className="flex justify-center my-2">
                 <Button
                   type="button"
@@ -1225,12 +1230,7 @@ export const StandardBuilder = ({
                   Superset
                 </Button>
               </div>
-            ) : draggedExercise && dragOverTopLevelSlot === itemIndex + 1 && !isLinkedToNext ? (
-              // Show drop zone when dragging over this slot between exercises
-              <div className="h-14 my-2 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                <span>Drop exercise here</span>
-              </div>
-            ) : null}
+            )}
           </>
         )}
       </div>
@@ -1505,6 +1505,17 @@ export const StandardBuilder = ({
                 onDirtyChange?.();
               }}
               onDeleteSuperset={handleDeleteSupersetFromOverview}
+              onDeleteTopLevelSuperset={(exerciseIds: string[]) => {
+                setWorkoutSchema((prev) => ({
+                  ...prev,
+                  items: prev.items.filter(
+                    (item) => !(item.itemType === 'exercise' && exerciseIds.includes(item.exercise.instanceId))
+                  ),
+                }));
+                onDirtyChange?.();
+              }}
+              onUnlinkSuperset={handleSupersetUnlink}
+              onUnlinkTopLevelSuperset={handleTopLevelSupersetUnlink}
               groupExercisesBySuperset={groupExercisesBySuperset as any}
               onExerciseClick={handleExerciseClickByIdWrapper}
             />
