@@ -604,6 +604,7 @@ export const enMessages = {
     previous: 'Previous',
     select: 'Select',
     continue: 'Continue',
+    new: 'New',
     selectAll: 'Select all',
     choose: 'Choose',
     create: 'Create',
@@ -932,6 +933,7 @@ export const enMessages = {
       },
       addWorkout: {
         title: 'Add workout',
+        titleDay: 'Add Workout - Day {day}',
         searchPlaceholder: 'Search workouts...',
         noWorkoutsFound: 'No workouts found.',
         scheduleOption: {
@@ -1876,7 +1878,7 @@ export const enMessages = {
       configureWorkoutTitle: 'Configure Workout',
       configureWorkoutDescription: 'Configure how this workout should be added to the calendar.',
       addThisWorkoutWeeklyOn: 'Add this workout weekly on',
-      addConfigurations: 'Configurations',
+      configurations: 'Configurations',
 
       /* Add Program Side Panel */
       addProgramTitle: 'Add Program',

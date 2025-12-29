@@ -3,6 +3,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Search, Info, FileText } from 'lucide-react';
+import Link from 'next/link';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -93,53 +100,90 @@ export const AddProgramSidePanel = ({
 
     const columns: ColumnDefinition<Program>[] = useMemo(() => [
         {
-            id: 'select',
-            label: '',
-            width: { class: 'w-[50px] min-w-[50px] max-w-[50px]', pixel: '50px' },
-            renderHeader: () => null,
-            renderCell: (row) => (
-                <div className="flex items-center justify-center h-full">
-                    <Checkbox
-                        checked={selectedProgramId === row.id}
-                        onCheckedChange={() => setSelectedProgramId(row.id)}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            ),
-        },
-        {
             id: 'program',
             label: t('athletes.trainingCalendar.table.name'),
-            width: { class: 'min-w-[200px]', pixel: '200px' },
-            sortable: true,
-            renderCell: (row) => (
-                <div className="flex flex-col gap-1 py-1">
-                    <span className="font-medium text-sm">{row.program}</span>
-                    {row.description && (
-                        <span className="text-xs text-muted-foreground line-clamp-1">{row.description}</span>
-                    )}
-                </div>
-            ),
-        },
-        {
-            id: 'type',
-            label: t('athletes.trainingCalendar.table.type'),
-            width: { class: 'min-w-[100px]', pixel: '100px' },
-            sortable: true,
-            renderCell: (row) => (
-                <Badge variant="outline" className="text-xs font-normal">
-                    {row.type}
-                </Badge>
-            ),
+            width: { class: 'w-1/2', pixel: '50%' },
+            renderHeader: ({ isAllSelected, onToggleAll }) => {
+                const handleToggleAll = () => {
+                    // Only toggle non-empty programs
+                    const selectablePrograms = programs.filter(p => p.length && p.length !== '0 weeks' && p.totalExercises && p.totalExercises > 0);
+                    if (isAllSelected) {
+                        setSelectedProgramId(null);
+                    } else if (selectablePrograms.length > 0) {
+                        setSelectedProgramId(selectablePrograms[0].id);
+                    }
+                };
+                return (
+                    <div className="flex items-center gap-3 h-full w-full">
+                        <Checkbox checked={isAllSelected} onCheckedChange={handleToggleAll} aria-label="Select all" />
+                        <div className="flex items-center gap-2">
+                            <FileText className="size-3 text-muted-foreground" />
+                            <span className="text-xs uppercase text-muted-foreground">{t('athletes.trainingCalendar.table.name')}</span>
+                        </div>
+                    </div>
+                );
+            },
+            renderCell: (row, isSelected) => {
+                // Program is empty if it has no length (no weeks/workouts) or totalExercises is 0
+                const isEmpty = !row.length || row.length === '0 weeks' || !row.totalExercises || row.totalExercises === 0;
+                const tooltipMessage = !row.length || row.length === '0 weeks'
+                    ? 'No workouts in this program'
+                    : 'No exercises in this program';
+                return (
+                    <div className="flex items-center gap-3 h-full w-full">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div
+                                        className="flex items-center justify-center h-full flex-shrink-0"
+                                        data-no-row-link="true"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (!isEmpty) {
+                                                setSelectedProgramId(row.id);
+                                            }
+                                        }}
+                                    >
+                                        <Checkbox checked={isSelected} disabled={isEmpty} />
+                                    </div>
+                                </TooltipTrigger>
+                                {isEmpty && (
+                                    <TooltipContent>
+                                        <p>{tooltipMessage}</p>
+                                    </TooltipContent>
+                                )}
+                            </Tooltip>
+                        </TooltipProvider>
+                        <div className="flex flex-col gap-1 py-1 min-w-0">
+                            <span className="font-medium text-sm truncate">{row.program}</span>
+                            {row.description && (
+                                <span className="text-xs text-muted-foreground line-clamp-1">{row.description}</span>
+                            )}
+                        </div>
+                    </div>
+                );
+            },
         },
         {
             id: 'length',
             label: t('athletes.trainingCalendar.table.length'),
-            width: { class: 'min-w-[80px]', pixel: '80px' },
-            sortable: true,
-            renderCell: (row) => (
-                <span className="text-sm text-muted-foreground">{row.length}</span>
-            ),
+            width: { class: 'w-1/2', pixel: '50%' },
+            getSortValue: (row) => row.length || '',
+            renderCell: (row) => {
+                const isEmpty = !row.length || row.length === '0 weeks' || !row.totalExercises || row.totalExercises === 0;
+                if (isEmpty) {
+                    return (
+                        <Link
+                            href={`/training/programs/${row.id}/edit`}
+                            className="text-sm text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            Add workout
+                        </Link>
+                    );
+                }
+                return <span className="text-sm">{row.length}</span>;
+            },
         },
     ], [t, selectedProgramId]);
 
@@ -187,23 +231,28 @@ export const AddProgramSidePanel = ({
                             <span className="text-muted-foreground">{t('general.loading')}</span>
                         </div>
                     ) : (
-                        <DataGrid
-                            data={programs}
-                            columns={columns}
-                            getRowId={(row) => row.id}
-                            gridKey="add-program-grid"
-                            searchPlaceholder={t('athletes.trainingCalendar.searchProgramsPlaceholder')}
-                            searchFields={[(row) => row.program]}
-                            enableSearch={true}
-                            enableRowSelection={false}
-                            onRowClick={(row) => setSelectedProgramId(row.id)}
-                            selectedRowIds={new Set(selectedProgramId ? [selectedProgramId] : [])}
-                            emptyMessage={t('athletes.trainingCalendar.noProgramsFound')}
-                            rowHeight="60px"
-                            compactMode={true}
-                            showPagination={false}
-                            gridPadding={false}
-                        />
+                        <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
+                            <DataGrid
+                                data={programs}
+                                columns={columns}
+                                getRowId={(row) => row.id}
+                                gridKey="add-program-grid"
+                                searchPlaceholder={t('athletes.trainingCalendar.searchProgramsPlaceholder')}
+                                searchFields={[(row) => row.program]}
+                                enableSearch={true}
+                                enableEditColumns={false}
+                                enableExport={false}
+                                enableRowSelection={true}
+                                selectOnRowClick={true}
+                                selectedRowIds={new Set(selectedProgramId ? [selectedProgramId] : [])}
+                                onSelectionChange={(ids) => setSelectedProgramId(ids.size > 0 ? Array.from(ids)[0] : null)}
+                                emptyMessage={t('athletes.trainingCalendar.noProgramsFound')}
+                                rowHeight="54px"
+                                compactMode={true}
+                                showPagination={false}
+                                gridPadding={false}
+                            />
+                        </div>
                     )}
                 </div>
             ) : (

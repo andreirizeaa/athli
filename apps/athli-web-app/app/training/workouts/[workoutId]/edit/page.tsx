@@ -16,11 +16,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { StandardBuilder } from '../../../new/standard/standard-builder';
-import type { WorkoutProgramPayload } from '../../../new/workout-schema';
+import { StandardBuilder } from '../../new/standard-builder';
+import type { WorkoutProgramPayload } from '../../new/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { getWorkoutById, updateWorkoutDetails, deleteWorkouts } from '@/api/coach/coach-workout-service';
-import { EditWorkoutDetailsSidePanel } from '../../../components/edit-workout-details-side-panel';
+import { EditWorkoutDetailsSidePanel } from '../../components/edit-workout-details-side-panel';
 
 type WorkoutMeta = {
   title: string;
@@ -169,11 +169,7 @@ const EditStandardWorkoutPage = () => {
       return;
     }
 
-    if (path === '/library') {
-      router.push('/library');
-    } else if (path === '/training/workouts') {
-      router.push('/training/workouts');
-    }
+    router.push(path);
   };
 
   return (
@@ -185,10 +181,10 @@ const EditStandardWorkoutPage = () => {
               <BreadcrumbList className="text-xs gap-1">
                 <BreadcrumbItem>
                   <BreadcrumbLink
-                    onClick={() => handleBreadcrumbClick('/library')}
+                    onClick={() => handleBreadcrumbClick('/training')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    {t('workouts.edit.breadcrumb.library')}
+                    {t('sidebar.links.training')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -206,8 +202,8 @@ const EditStandardWorkoutPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {workoutMeta?.title || t('workouts.detail.breadcrumb.workout')}
+                  <BreadcrumbPage className="px-0.5 capitalize">
+                    {t('general.edit')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -215,7 +211,7 @@ const EditStandardWorkoutPage = () => {
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {t('workouts.edit.breadcrumb.editWorkout')}
+                    {workoutMeta?.title || t('workouts.detail.breadcrumb.workout')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>

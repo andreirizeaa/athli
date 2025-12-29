@@ -170,7 +170,7 @@ const WorkoutsPage = () => {
   };
 
   const handleNavigateToWorkout = (workoutId: string) => {
-    router.push(`/training/workouts/${workoutId}/edit/standard`);
+    router.push(`/training/workouts/${workoutId}/edit`);
   };
 
   const handleNavigateToAthletes = () => {
@@ -232,41 +232,26 @@ const WorkoutsPage = () => {
         return;
       }
 
-      // If standard builder, create workout directly without navigation
-      setIsGeneratingStandard(true);
-
-      const workoutData = {
+      // If standard builder, navigate to builder page
+      const meta = {
         title: newWorkoutName.trim(),
         description: newDescription.trim(),
         type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
-        equipment: [] as string[],
-        sections: [
-          {
-            id: `sec_regular_${Date.now()}`,
-            type: 'regular' as const,
-            exercises: [],
-          }
-        ],
-        totalExercises: 0,
+        builder: newSelectedBuilder,
       };
 
       try {
-        const createdWorkout = await createWorkout(workoutData);
-        toast.success(t('library.workoutCreatedSuccessfully', { name: newWorkoutName }));
-
-        // Reload workouts to show the new one
-        await refreshWorkouts();
-
-        // Close side panel and reset state
-        setIsCreateWorkoutOpen(false);
-        resetCreateWorkoutState();
-      } catch (error) {
-        console.error('Failed to create workout:', error);
-        toast.error(t('library.workoutCreationFailed'));
-      } finally {
-        setIsGeneratingStandard(false);
+        window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify(meta));
+        window.localStorage.setItem('oneninety_workout_builder_access', 'standard');
+      } catch {
+        // Ignore storage errors
       }
+
+      setIsCreateWorkoutOpen(false);
+      resetCreateWorkoutState();
+      router.push('/training/workouts/new');
+      setIsGeneratingStandard(false);
     } else {
       // Step 2: Generate AI workout and navigate to builder
       setIsGenerating(true);
@@ -274,7 +259,7 @@ const WorkoutsPage = () => {
 
       const meta = {
         title: newWorkoutName.trim(),
-        description: prompt,
+        description: newDescription.trim(),
         type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
         builder: newSelectedBuilder,
@@ -362,7 +347,7 @@ const WorkoutsPage = () => {
 
       // Wait a bit longer before navigation to ensure everything is ready
       setTimeout(() => {
-        const targetPath = '/training/workouts/new/standard';
+        const targetPath = '/training/workouts/new';
         router.push(targetPath);
 
         // Keep sidebar open during navigation, close after a brief delay

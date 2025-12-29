@@ -18,6 +18,7 @@ import {
 import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
 import {
   Dialog,
   DialogContent,
@@ -72,11 +73,6 @@ export const ProgramBuilder = ({
   const [currentWeek, setCurrentWeek] = useState<number>(1);
   const [totalWeeks, setTotalWeeks] = useState<number>(1);
   const [isAddWorkoutModalOpen, setIsAddWorkoutModalOpen] = useState<boolean>(false);
-  const [workoutSearchQuery, setWorkoutSearchQuery] = useState<string>('');
-  const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
-  const [selectedScheduleOption, setSelectedScheduleOption] = useState<string | null>('once');
-  const [everyDaysInput, setEveryDaysInput] = useState<string>('');
-  const [weeklyDayInput, setWeeklyDayInput] = useState<string>('');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [workoutsByDay, setWorkoutsByDay] = useState<{
     [week: number]: { [day: number]: Array<Workout & { id: string }> };
@@ -99,8 +95,7 @@ export const ProgramBuilder = ({
     day: number;
     workout: Workout & { id: string };
   } | null>(null);
-  const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
-  const [isLoadingAvailableWorkouts, setIsLoadingAvailableWorkouts] = useState<boolean>(false);
+
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
 
 
@@ -342,21 +337,7 @@ export const ProgramBuilder = ({
     }
   };
 
-  useEffect(() => {
-    const fetchAvailableWorkouts = async () => {
-      setIsLoadingAvailableWorkouts(true);
-      try {
-        const workouts = await getWorkouts();
-        setAvailableWorkouts(workouts);
-      } catch (error) {
-        console.error('Failed to fetch available workouts:', error);
-      } finally {
-        setIsLoadingAvailableWorkouts(false);
-      }
-    };
 
-    fetchAvailableWorkouts();
-  }, []);
 
 
   const handleSaveClick = async () => {
@@ -364,15 +345,9 @@ export const ProgramBuilder = ({
   };
 
   const handleBreadcrumbClick = (path: string) => {
-    if (path === '/library') {
-      handleActionWithConfirmation(() => {
-        router.push('/library');
-      });
-    } else if (path === '/training/programs') {
-      handleActionWithConfirmation(() => {
-        navigateBackToPrograms();
-      });
-    }
+    handleActionWithConfirmation(() => {
+      router.push(path);
+    });
   };
 
   const handlePreviousWeek = () => {
@@ -494,25 +469,25 @@ export const ProgramBuilder = ({
     setIsAddWorkoutModalOpen(true);
   };
 
-  const handleAddWorkout = () => {
-    if (!selectedWorkout || selectedDay === null) return;
+  const handleSaveWorkoutFromPanel = async (workout: Workout, scheduleOption: string, config: string) => {
+    if (!workout || selectedDay === null) return;
 
     const workoutToAdd = {
-      ...selectedWorkout,
-      id: `${selectedWorkout.id}-${Date.now()}`,
+      ...workout,
+      id: `${workout.id}-${Date.now()}`,
     };
 
     setWorkoutsByDay((prev) => {
       const updated = { ...prev };
 
-      if (selectedScheduleOption === 'once') {
+      if (scheduleOption === 'once') {
         const { week, day } = getWeekAndDay(selectedDay);
         updated[week] = {
           ...(updated[week] || {}),
           [day]: [...(updated[week]?.[day] || []), workoutToAdd],
         };
-      } else if (selectedScheduleOption === 'every' && everyDaysInput) {
-        const daysInterval = parseInt(everyDaysInput, 10);
+      } else if (scheduleOption === 'every' && config) {
+        const daysInterval = parseInt(config, 10);
         if (daysInterval > 0) {
           const maxDay = totalWeeks * 7;
           for (let dayNum = selectedDay; dayNum <= maxDay; dayNum += daysInterval) {
@@ -523,14 +498,31 @@ export const ProgramBuilder = ({
             };
           }
         }
-      } else if (selectedScheduleOption === 'weekly' && weeklyDayInput) {
-        const dayOfWeek = parseInt(weeklyDayInput, 10);
-        if (dayOfWeek >= 1 && dayOfWeek <= 7) {
+      } else if (scheduleOption === 'weekly' && config) {
+        // config is day name (Monday, Tuesday etc)
+        const daysMap: { [key: string]: number } = {
+          'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        };
+        // Get day index (0-6) from config
+        const targetDayIndex = daysMap[config];
+
+        if (targetDayIndex !== undefined) {
+          // Get the start date day index based on selected day (assuming day 1 is Monday for simplified logic)
+          // Ideally use actual dates, but here we work with relative days 1..7
+          // Let's assume day 1 = Monday, day 7 = Sunday
+          const targetDay = targetDayIndex + 1; // 1-7
+
           for (let week = 1; week <= totalWeeks; week++) {
-            updated[week] = {
-              ...(updated[week] || {}),
-              [dayOfWeek]: [...(updated[week]?.[dayOfWeek] || []), workoutToAdd],
-            };
+            // For each week, add to the target day
+            // Only add if (week-1)*7 + targetDay >= selectedDay
+            const dayNum = (week - 1) * 7 + targetDay;
+
+            if (dayNum >= selectedDay) {
+              updated[week] = {
+                ...(updated[week] || {}),
+                [targetDay]: [...(updated[week]?.[targetDay] || []), workoutToAdd],
+              };
+            }
           }
         }
       }
@@ -541,11 +533,6 @@ export const ProgramBuilder = ({
 
     // Close modal and reset
     setIsAddWorkoutModalOpen(false);
-    setSelectedWorkout(null);
-    setWorkoutSearchQuery('');
-    setSelectedScheduleOption('once');
-    setEveryDaysInput('');
-    setWeeklyDayInput('');
     setSelectedDay(null);
   };
 
@@ -622,19 +609,9 @@ export const ProgramBuilder = ({
     }
   };
 
+  // Filter logic removed as it's handled in the side panel
   // Filter workouts based on search query
-  const filteredWorkouts = availableWorkouts.filter((workout) => {
-    if (!workoutSearchQuery.trim()) {
-      return true;
-    }
-    const query = workoutSearchQuery.toLowerCase().trim();
-    return (
-      workout.program.toLowerCase().includes(query) ||
-      workout.description.toLowerCase().includes(query) ||
-      workout.type.toLowerCase().includes(query) ||
-      (typeof workout.equipment === 'string' ? workout.equipment.toLowerCase() : '').includes(query)
-    );
-  });
+  const filteredWorkouts: Workout[] = [];
 
   // Calculate week range based on selected week view
   const getWeekRange = () => {
@@ -683,10 +660,10 @@ export const ProgramBuilder = ({
               <BreadcrumbList className="text-xs gap-1">
                 <BreadcrumbItem>
                   <BreadcrumbLink
-                    onClick={() => handleBreadcrumbClick('/library')}
+                    onClick={() => handleBreadcrumbClick('/training')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    {t('programs.detail.breadcrumb.library')}
+                    {t('sidebar.links.training')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -704,8 +681,16 @@ export const ProgramBuilder = ({
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
+                  <BreadcrumbPage className="px-0.5 capitalize">
+                    {mode === 'new' ? t('general.new') : t('general.edit')}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {mode === 'new' ? t('programs.builder.newProgram') : t('programs.builder.editProgram')}
+                    {programMeta.name}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -1011,311 +996,17 @@ export const ProgramBuilder = ({
           })}
         </div>
       </div>
-      <Dialog
+      <AddWorkoutSidePanel
         open={isAddWorkoutModalOpen}
         onOpenChange={(open) => {
           setIsAddWorkoutModalOpen(open);
           if (!open) {
-            setSelectedWorkout(null);
-            setWorkoutSearchQuery('');
-            setSelectedScheduleOption('once');
-            setEveryDaysInput('');
-            setWeeklyDayInput('');
             setSelectedDay(null);
           }
         }}
-      >
-        <DialogContent className="max-w-4xl sm:max-w-4xl h-[600px] flex flex-col">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>{t('programs.builder.addWorkout.title')}</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 flex-1 min-h-0">
-            {!selectedWorkout ? (
-              <>
-                <div className="relative w-full flex-shrink-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    type="text"
-                    placeholder={t('programs.builder.addWorkout.searchPlaceholder')}
-                    className="w-full pl-9"
-                    aria-label={t('programs.builder.addWorkout.searchPlaceholder')}
-                    value={workoutSearchQuery}
-                    onChange={(e) => setWorkoutSearchQuery(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 flex-1 overflow-y-auto min-h-0">
-                  {filteredWorkouts.length > 0 ? (
-                    filteredWorkouts.map((workout) => {
-                      const equipmentList = typeof workout.equipment === 'string'
-                        ? workout.equipment.split(',').map((item: string) => item.trim()).filter((item: string) => item !== '')
-                        : Array.isArray(workout.equipment) ? workout.equipment : [];
-                      return (
-                        <div
-                          key={workout.id}
-                          className="p-3 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors"
-                          role="button"
-                          tabIndex={0}
-                          aria-label={t('programs.builder.selectWorkout', { name: workout.program })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSelectedWorkout(workout);
-                            }
-                          }}
-                          onClick={() => {
-                            setSelectedWorkout(workout);
-                          }}
-                        >
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-medium">{workout.program}</span>
-                              <span className="text-xs text-muted-foreground">{formatDate(workout.created)}</span>
-                            </div>
-                            {workout.description && (
-                              <span className="text-xs text-muted-foreground line-clamp-2">
-                                {workout.description}
-                              </span>
-                            )}
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {t('general.type')}: {workout.type}
-                              </Badge>
-                              {equipmentList.length > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {t('general.equipment')}: {equipmentList.join(', ')}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-8 text-sm text-muted-foreground">
-                      {t('programs.builder.addWorkout.noWorkoutsFound')}
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-y-auto">
-                {selectedWorkout && (
-                  <Card className="p-4 border rounded-lg bg-background">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">{selectedWorkout.program}</span>
-                        <span className="text-xs text-muted-foreground">{formatDate(selectedWorkout.created)}</span>
-                      </div>
-                      {selectedWorkout.description && (
-                        <span className="text-xs text-muted-foreground line-clamp-2">
-                          {selectedWorkout.description}
-                        </span>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {t('general.type')}: {selectedWorkout.type}
-                        </Badge>
-                        {selectedWorkout.equipment && (typeof selectedWorkout.equipment === 'string' ? selectedWorkout.equipment.split(',').filter((item: string) => item.trim() !== '').length > 0 : false) && (
-                          <Badge variant="secondary" className="text-xs">
-                            {t('general.equipment')}: {typeof selectedWorkout.equipment === 'string' ? selectedWorkout.equipment.split(',').map((item: string) => item.trim()).filter((item: string) => item !== '').join(', ') : ''}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                )}
-                <div className="flex flex-col gap-4">
-                  <h3 className="text-sm font-medium">{t('athletes.trainingCalendar.addConfigurations')}</h3>
-                  <Card
-                    className={cn(
-                      'p-4 border rounded-lg cursor-pointer transition-colors',
-                      selectedScheduleOption === 'once'
-                        ? 'border-primary bg-primary/5'
-                        : 'bg-background hover:bg-accent/30'
-                    )}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={t('programs.builder.addWorkout.scheduleOption.once')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSelectedScheduleOption('once');
-                      }
-                    }}
-                    onClick={() => {
-                      setSelectedScheduleOption('once');
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {t('programs.builder.addWorkout.scheduleOption.once')} {selectedDay !== null ? selectedDay : ''}
-                      </span>
-                      <div
-                        className={cn(
-                          'h-5 w-5 rounded-full border-2 flex items-center justify-center',
-                          selectedScheduleOption === 'once'
-                            ? 'border-primary bg-primary/10'
-                            : 'border-input bg-background'
-                        )}
-                      >
-                        {selectedScheduleOption === 'once' && (
-                          <div className="h-2.5 w-2.5 rounded-full bg-primary" />
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                  <Card
-                    className={cn(
-                      'p-4 border rounded-lg transition-colors',
-                      selectedScheduleOption === 'every'
-                        ? 'border-primary bg-primary/5'
-                        : 'bg-background'
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{t('programs.builder.addWorkout.scheduleOption.everyDays')}</span>
-                        <Input
-                          type="number"
-                          min="1"
-                          placeholder="1"
-                          className="w-24"
-                          value={everyDaysInput}
-                          onChange={(e) => {
-                            setEveryDaysInput(e.target.value);
-                            if (e.target.value) {
-                              setSelectedScheduleOption('every');
-                            }
-                          }}
-                          aria-label={t('programs.builder.addWorkout.numberOfDays')}
-                        />
-                        <span className="text-sm text-muted-foreground">{t('programs.builder.addWorkout.days')}</span>
-                      </div>
-                      <div
-                        className={cn(
-                          'h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer',
-                          selectedScheduleOption === 'every'
-                            ? 'border-primary bg-primary/10'
-                            : 'border-input bg-background'
-                        )}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={t('programs.builder.selectRepeatEveryDays')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setSelectedScheduleOption('every');
-                          }
-                        }}
-                        onClick={() => {
-                          setSelectedScheduleOption('every');
-                        }}
-                      >
-                        {selectedScheduleOption === 'every' && (
-                          <div className="h-2.5 w-2.5 rounded-full bg-primary" />
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                  <Card
-                    className={cn(
-                      'p-4 border rounded-lg transition-colors',
-                      selectedScheduleOption === 'weekly'
-                        ? 'border-primary bg-primary/5'
-                        : 'bg-background'
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">{t('programs.builder.addWorkout.scheduleOption.weekly')}</span>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="7"
-                          placeholder="1"
-                          className="w-24"
-                          value={weeklyDayInput}
-                          onChange={(e) => {
-                            setWeeklyDayInput(e.target.value);
-                            if (e.target.value) {
-                              setSelectedScheduleOption('weekly');
-                            }
-                          }}
-                          aria-label={t('programs.builder.addWorkout.dayOfWeek')}
-                        />
-                      </div>
-                      <div
-                        className={cn(
-                          'h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer',
-                          selectedScheduleOption === 'weekly'
-                            ? 'border-primary bg-primary/10'
-                            : 'border-input bg-background'
-                        )}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={t('programs.builder.selectRepeatWeekly')}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            setSelectedScheduleOption('weekly');
-                          }
-                        }}
-                        onClick={() => {
-                          setSelectedScheduleOption('weekly');
-                        }}
-                      >
-                        {selectedScheduleOption === 'weekly' && (
-                          <div className="h-2.5 w-2.5 rounded-full bg-primary" />
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </div>
-            )}
-          </div>
-          {selectedWorkout && (
-            <div className="flex items-center justify-end gap-2 flex-shrink-0 pt-4">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setIsAddWorkoutModalOpen(false);
-                  setSelectedWorkout(null);
-                  setWorkoutSearchQuery('');
-                  setSelectedScheduleOption('once');
-                  setEveryDaysInput('');
-                  setWeeklyDayInput('');
-                  setSelectedDay(null);
-                }}
-                aria-label={t('programs.builder.addWorkout.cancel')}
-              >
-                {t('programs.builder.addWorkout.cancel')}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setSelectedWorkout(null);
-                  setSelectedScheduleOption('once');
-                  setEveryDaysInput('');
-                  setWeeklyDayInput('');
-                }}
-                aria-label={t('general.select')}
-              >
-                {t('general.select')}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleAddWorkout}
-                aria-label={t('programs.builder.addWorkout.addAria')}
-              >
-                {t('programs.builder.addWorkout.add')}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        onSave={handleSaveWorkoutFromPanel}
+        workoutTitle={selectedDay ? t('programs.builder.addWorkout.titleDay', { day: selectedDay }) : undefined}
+      />
       <Dialog open={!!selectedWorkoutDetails} onOpenChange={(open) => !open && handleCloseWorkoutDetails()}>
         <DialogContent className="max-w-5xl sm:max-w-5xl h-[600px] flex flex-col">
           <DialogHeader className="flex-shrink-0">

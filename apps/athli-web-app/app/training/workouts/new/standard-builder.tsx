@@ -18,7 +18,7 @@ import { cn } from '@/lib/general/utils';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import type { GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
-import { useExerciseDragDrop } from '../hooks/use-exercise-drag-drop';
+import { useExerciseDragDrop } from './hooks/use-exercise-drag-drop';
 import type {
   CircuitExerciseGroupPayload,
   CircuitExercisePayload,
@@ -29,14 +29,14 @@ import type {
   SetPayload,
   WorkoutProgramPayload,
   WorkoutSectionPayload,
-} from '../workout-schema';
-import type { SetData } from '../components/exercise-card';
-import { ExerciseCard } from '../components/exercise-card';
-import { ExerciseSelectionPanel } from '../components/exercise-selection-panel';
-import { SectionSelectionPanel } from '../components/section-selection-panel';
-import { EquipmentPanel } from '../components/equipment-panel';
-import { OverviewPanel } from '../components/overview-panel';
-import { VideoModal } from '../components/video-modal';
+} from './workout-schema';
+import type { SetData } from './components/exercise-card';
+import { ExerciseCard } from './components/exercise-card';
+import { ExerciseSelectionPanel } from './components/exercise-selection-panel';
+import { SectionSelectionPanel } from './components/section-selection-panel';
+import { EquipmentPanel } from './components/equipment-panel';
+import { OverviewPanel } from './components/overview-panel';
+import { VideoModal } from './components/video-modal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,41 +52,41 @@ import type {
   ValidationErrors,
   SectionValidation,
   SectionValidationErrors,
-} from '../shared/types/workout-builder.types';
+} from './shared/types/workout-builder.types';
 import {
   recomputeExerciseValidation as recomputeValidation,
   clearSetValidationField as clearFieldValidation,
   validateWorkoutSchema,
   clearEmptyExercisesError,
   clearMissingConfigError,
-} from '../shared/utils/validation';
+} from './shared/utils/validation';
 import {
   buildWorkoutPayload,
   groupExercisesBySupersetForPayload,
-} from '../shared/utils/payload-builder';
+} from './shared/utils/payload-builder';
 import {
   handleSectionSelect as selectSection,
   handleDeleteSection as deleteSection,
   getSectionDescription,
-} from '../shared/utils/section-handlers';
+} from './shared/utils/section-handlers';
 import {
   handleDeleteExerciseFromOverview as deleteExerciseFromOverview,
   handleDeleteSupersetFromOverview as deleteSupersetFromOverview,
   handleAddExercise as addExercise,
-} from '../shared/utils/exercise-handlers';
+} from './shared/utils/exercise-handlers';
 import {
   groupExercisesBySuperset,
   handleSupersetLink as linkSuperset,
   handleSupersetUnlink as unlinkSuperset,
-} from '../shared/utils/superset-handlers';
+} from './shared/utils/superset-handlers';
 import {
   handleDrop as dropExercise,
   handleSlotDrop,
-} from '../shared/utils/drop-handlers';
+} from './shared/utils/drop-handlers';
 import {
   handleExerciseClick as scrollToExercise,
   handleExerciseClickById,
-} from '../shared/utils/exercise-scroll';
+} from './shared/utils/exercise-scroll';
 
 type StandardBuilderProps = {
   meta: WorkoutMeta | null;
