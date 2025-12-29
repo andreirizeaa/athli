@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +13,7 @@ import { Button as UIButton } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { PageHeader } from '@/components/app/page-header';
 import { useUserProfile } from '@/hooks/use-user-profile';
+import { toast } from 'sonner';
 import {
   Form,
   FormControl,
@@ -43,9 +45,10 @@ import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { cn } from '@/lib/general/utils';
 import { Habit } from '@/api/coach/coach-habit-service';
 import { useCoachHabits } from '@/hooks/use-coach-habits';
-import { assignHabit } from '@/api/client/client-habit-service';
+import { useCoachClients } from '@/hooks/use-coach-clients';
+import { assignHabitsToClients } from '@/api/client/client-habit-service';
 import { defaultHabits, type DefaultHabit } from '@/constants/habits';
-import { mockAthletes } from '@/components/app/app-shell';
+import { AssignToClientsSidePanel } from '@/components/app/assign-to-clients-side-panel';
 
 type HabitFormValues = {
   name: string;
@@ -82,6 +85,7 @@ const unitOptions = [
 
 const HabitsPage = () => {
   const t = useTranslations();
+  const queryClient = useQueryClient();
   const {
     habits,
     isLoading,
@@ -240,10 +244,19 @@ const HabitsPage = () => {
     if (!editingHabitId) return;
 
     try {
+      const habit = habits.find(h => h.id === editingHabitId);
       await deleteHabit(editingHabitId);
+
+      if (habit) {
+        toast.success(t('general.deleteSuccessName', { name: habit.name }));
+      } else {
+        toast.success(t('general.deleteSuccess'));
+      }
+
       handleCloseEditHabit();
     } catch (error) {
       console.error('Failed to delete habit:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
@@ -375,20 +388,34 @@ const HabitsPage = () => {
   const handleBulkDelete = async () => {
     try {
       const idsToDelete = Array.from(selectedHabits);
+      const deleteCount = idsToDelete.length;
       await Promise.all(idsToDelete.map((id) => deleteHabit(id)));
+
+      toast.success(t('general.deleteSuccessCount', { count: deleteCount, item: deleteCount === 1 ? 'habit' : 'habits' }));
+
       setSelectedHabits(new Set());
     } catch (error) {
       console.error('Failed to bulk delete habits:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
   const handleDeleteSingle = async () => {
     if (!habitToDelete) return;
     try {
+      const habit = habits.find(h => h.id === habitToDelete);
       await deleteHabit(habitToDelete);
+
+      if (habit) {
+        toast.success(t('general.deleteSuccessName', { name: habit.name }));
+      } else {
+        toast.success(t('general.deleteSuccess'));
+      }
+
       setHabitToDelete(null);
     } catch (error) {
       console.error('Failed to delete habit:', error);
+      toast.error(t('general.deleteError'));
     }
   };
 
@@ -413,31 +440,47 @@ const HabitsPage = () => {
     });
   };
 
-  const handleAssignHabitsToClients = async () => {
-    if (selectedClientIds.size === 0 || habitsToAssign.length === 0) {
+  const handleAssignHabitsToClients = async (clientIds: string[]) => {
+    if (clientIds.length === 0 || habitsToAssign.length === 0) {
       return;
     }
 
     try {
-      const habitIds = habitsToAssign.map((habit) => habit.id);
-      const clientIdsArray = Array.from(selectedClientIds);
-
       if (!user?.id) return;
 
-      await Promise.all(
-        clientIdsArray.map((clientId) =>
-          assignHabit({
-            habitIds,
-            clientId,
-            coachId: user.id,
-          })
-        )
-      );
+      await assignHabitsToClients({
+        habitIds: habitsToAssign.map((h) => h.id),
+        clientIds,
+        coachId: user.id,
+      });
 
       setIsAssignToClientsOpen(false);
+      const habitCount = habitsToAssign.length;
+      const clientCount = clientIds.length;
+
+      // Remove queries to force hard refresh and loading state
+      clientIds.forEach(clientId => {
+        queryClient.removeQueries({ queryKey: ['client-habits', clientId] });
+      });
+
+      // Determine toast message
+      if (habitCount === 1 && clientCount === 1) {
+        const habitName = habitsToAssign[0].name;
+        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+        toast.success(t('habits.assignSuccessSingle', { habitName, clientName }));
+      } else if (habitCount === 1) {
+        const habitName = habitsToAssign[0].name;
+        toast.success(t('habits.assignSuccessHabitMultiClient', { habitName, count: clientCount }));
+      } else if (clientCount === 1) {
+        const clientName = clients.find(c => c.id === clientIds[0])?.name || 'Client';
+        toast.success(t('habits.assignSuccessMultiHabitSingleClient', { count: habitCount, clientName }));
+      } else {
+        toast.success(`Successfully assigned ${habitCount} habits to ${clientCount} clients`);
+      }
+
+      // Clear selection
       setHabitsToAssign([]);
       setSelectedHabits(new Set());
-      setSelectedClientIds(new Set());
     } catch (error) {
       console.error('Failed to assign habits to clients:', error);
     }
@@ -449,17 +492,7 @@ const HabitsPage = () => {
     setSelectedClientIds(new Set());
   };
 
-  const handleToggleClient = (clientId: string) => {
-    setSelectedClientIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(clientId)) {
-        newSet.delete(clientId);
-      } else {
-        newSet.add(clientId);
-      }
-      return newSet;
-    });
-  };
+
 
   const getAimText = (habit: Habit): string => {
     const unitLabel = t(`habits.form.units.${habit.unit as string}`);
@@ -1119,131 +1152,48 @@ const HabitsPage = () => {
       </SidePanel>
 
       {/* Assign to Clients Side Panel */}
-      <SidePanel
+      <AssignToClientsSidePanel
         open={isAssignToClientsOpen}
         onOpenChange={setIsAssignToClientsOpen}
-        title="Assign habits to clients"
-        footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button
-              type="button"
-              onClick={handleAssignHabitsToClients}
-              disabled={selectedClientIds.size === 0 || habitsToAssign.length === 0}
-            >
-              {selectedClientIds.size === 1
-                ? 'Assign to 1 client'
-                : `Assign to ${selectedClientIds.size} clients`}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleCloseAssignToClients}>
-              {t('general.cancel')}
-            </Button>
-          </div>
+        title={t('habits.assignToClientsTitle')}
+        assignButtonLabel={(count) =>
+          count === 1
+            ? t('habits.assignToOneClient')
+            : t('habits.assignToClientsCount', { count })
         }
-      >
-        <div className="flex flex-col gap-6 h-full">
-          {/* Habits to be assigned */}
-          <div className="flex flex-col gap-2 flex-shrink-0">
-            <label className="text-sm font-medium">Habits to be assigned</label>
-            {habitsToAssign.length > 0 ? (
-              <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                {habitsToAssign.map((habit) => (
-                  <div
-                    key={habit.id}
-                    className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-sm truncate">{habit.name}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveHabitFromAssignList(habit.id)}
-                      className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                      aria-label={`Remove ${habit.name}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+        onAssign={handleAssignHabitsToClients}
+        previewComponent={
+          habitsToAssign.length > 0 ? (
+            <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+              {habitsToAssign.map((habit) => (
+                <div
+                  key={habit.id}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-sm truncate">{habit.name}</span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground py-4 text-center">
-                No habits selected
-              </div>
-            )}
-          </div>
-
-          {/* Client Selection */}
-          <div className="flex flex-col gap-2 flex-1 min-h-0">
-            <label className="text-sm font-medium">{t('athletes.title')}</label>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <DataGrid
-                data={mockAthletes}
-                columns={[
-                  {
-                    id: 'name',
-                    label: t('habits.columns.name'),
-                    icon: <UserPlus className="size-3" />,
-                    width: { class: 'w-full', pixel: '100%' },
-                    getSortValue: (row) => row.name.toLowerCase(),
-                    getSearchValue: (row) => `${row.name} ${row.email} ${row.country}`,
-                    renderHeader: ({ isAllSelected, onToggleAll }) => (
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs uppercase text-muted-foreground">{t('habits.columns.name')}</span>
-                        </div>
-                      </div>
-                    ),
-                    renderCell: (row, isSelected) => (
-                      <div className="flex items-center gap-3 h-full w-full">
-                        <div className="flex items-center justify-center h-full flex-shrink-0" data-no-row-link="true">
-                          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleClient(row.id)} />
-                        </div>
-                        <span className="text-sm font-medium truncate">{row.name}</span>
-                      </div>
-                    ),
-                  },
-                ]}
-                getRowId={(row) => row.id}
-                gridKey="assign-habits-to-clients"
-                searchPlaceholder="Search athletes..."
-                enableSearch={true}
-                enableEditColumns={false}
-                enableExport={false}
-                enableRowSelection={true}
-                selectedRowIds={selectedClientIds}
-                onSelectionChange={setSelectedClientIds}
-                onRowClick={(row, event) => {
-                  const targetElement = event.target as HTMLElement;
-                  if (targetElement.closest('[data-no-row-link="true"]')) {
-                    return;
-                  }
-                  handleToggleClient(row.id);
-                }}
-                onRowKeyDown={(row, event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    const targetElement = event.target as HTMLElement;
-                    if (targetElement.closest('[data-no-row-link="true"]')) {
-                      return;
-                    }
-                    event.preventDefault();
-                    handleToggleClient(row.id);
-                  }
-                }}
-
-                emptyMessage="No athletes found."
-                rowHeight="54px"
-                compactMode={true}
-                showPagination={true}
-                gridPadding={true}
-                itemsPerPage={10}
-              />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveHabitFromAssignList(habit.id)}
+                    className="ml-2 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label={`Remove ${habit.name}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
-      </SidePanel>
+          ) : (
+            <div className="text-sm text-muted-foreground py-4 text-center">
+              {t('habits.noHabitsSelected')}
+            </div>
+          )
+        }
+      />
     </div>
   );
 };
 
 export default HabitsPage;
+

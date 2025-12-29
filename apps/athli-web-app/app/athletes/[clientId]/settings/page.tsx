@@ -11,6 +11,8 @@ import { archiveUser } from '@/api/coach/coach-client-service';
 import { toast } from 'sonner';
 import { mockAthletes } from '@/components/app/app-shell';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useClientProfileContext } from '../client-profile-context';
 
 const AthleteSettingsPage = () => {
   const t = useTranslations();
@@ -18,11 +20,13 @@ const AthleteSettingsPage = () => {
   const params = useParams<{ clientId: string }>();
   const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
 
-  const athlete = mockAthletes.find((item) => item.id === clientId);
-  const firstName = athlete?.name.split(' ')[0] || '';
+  const { athlete } = useClientProfileContext();
+  const clientName = athlete?.name || '';
 
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const { deleteClient } = useCoachClients();
 
   const handleNavigateToAthletes = () => {
     router.push('/athletes');
@@ -56,17 +60,26 @@ const AthleteSettingsPage = () => {
   const handleDelete = async () => {
     if (!clientId) return;
 
-    // TODO: Implement delete functionality
-    console.log('Deleting client:', clientId);
-    setIsDeleteModalOpen(false);
-    toast.success(t('athletes.profile.settings.danger.deleteSuccess'), {
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
-    handleNavigateToAthletes();
+    try {
+      await deleteClient(clientId);
+      setIsDeleteModalOpen(false);
+      toast.success(t('athletes.profile.settings.danger.deleteSuccess'), {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
+      handleNavigateToAthletes();
+    } catch (error) {
+      toast.error(t('athletes.profile.settings.danger.deleteFailed'), {
+        style: {
+          background: 'rgb(254 242 242)',
+          color: 'rgb(153 27 27)',
+          border: '1px solid rgb(254 202 202)',
+        },
+      });
+    }
   };
 
   return (
@@ -90,7 +103,7 @@ const AthleteSettingsPage = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsArchiveModalOpen(true)}
-                className="ml-4 gap-2 border-primary text-primary hover:bg-primary/10 hover:text-primary"
+                className="ml-4 gap-2"
               >
                 <Archive className="h-4 w-4" />
                 {t('athletes.profile.settings.danger.archiveButton')}
@@ -100,7 +113,7 @@ const AthleteSettingsPage = () => {
             {/* Delete Client */}
             <div className="flex items-center justify-between pt-2 px-4">
               <div className="flex-1">
-                <h3 className="font-medium text-sm text-destructive">
+                <h3 className="font-medium text-sm text-primary">
                   {t('athletes.profile.settings.danger.deleteTitle')}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-0.5">
@@ -108,7 +121,7 @@ const AthleteSettingsPage = () => {
                 </p>
               </div>
               <Button
-                variant="destructive"
+                variant="default"
                 size="sm"
                 onClick={() => setIsDeleteModalOpen(true)}
                 className="ml-4 gap-2"
@@ -126,7 +139,7 @@ const AthleteSettingsPage = () => {
         open={isArchiveModalOpen}
         onOpenChange={setIsArchiveModalOpen}
         onConfirm={handleArchive}
-        title={t('athletes.profile.archiveConfirmTitle', { firstName })}
+        title={`Archive ${clientName}`}
         description={t('athletes.profile.archiveDescription')}
         confirmText={t('athletes.profile.yes')}
         variant="default"
@@ -137,10 +150,10 @@ const AthleteSettingsPage = () => {
         open={isDeleteModalOpen}
         onOpenChange={setIsDeleteModalOpen}
         onConfirm={handleDelete}
-        title={t('athletes.profile.settings.danger.deleteConfirmTitle', { firstName })}
+        title={`Delete ${clientName}`}
         description={t('athletes.profile.settings.danger.deleteConfirmDescription')}
         confirmText={t('athletes.profile.settings.danger.deleteConfirmButton')}
-        variant="destructive"
+        variant="default"
       />
     </div>
   );

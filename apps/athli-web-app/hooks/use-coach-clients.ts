@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getClients, archiveUser, type Athlete } from '@/api/coach/coach-client-service';
+import { getClients, archiveUser, deleteClient, type Athlete } from '@/api/coach/coach-client-service';
 import { toast } from 'sonner';
 
 export function useCoachClients(options?: { enabled?: boolean }) {
@@ -23,10 +23,21 @@ export function useCoachClients(options?: { enabled?: boolean }) {
             queryClient.setQueryData(['coach-clients'], (old: Athlete[] | undefined) => {
                 return old?.filter(c => c.id !== clientId);
             });
-            toast.success('Client archived successfully');
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to archive client');
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (clientId: string) => deleteClient(clientId),
+        onSuccess: (_, clientId) => {
+            queryClient.setQueryData(['coach-clients'], (old: Athlete[] | undefined) => {
+                return old?.filter(c => c.id !== clientId);
+            });
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || 'Failed to delete client');
         }
     });
 
@@ -36,5 +47,7 @@ export function useCoachClients(options?: { enabled?: boolean }) {
         error,
         archiveClient: archiveMutation.mutateAsync,
         isArchiving: archiveMutation.isPending,
+        deleteClient: deleteMutation.mutateAsync,
+        isDeleting: deleteMutation.isPending,
     };
 }

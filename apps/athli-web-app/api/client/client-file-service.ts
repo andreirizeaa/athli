@@ -21,6 +21,20 @@ export const addFilesToClient = async (data: AddFilesToClientData & { coachId: s
   });
 };
 
+export interface AddFilesToClientsData {
+  fileIds: string[];
+  clientIds: string[];
+  coachId: string;
+}
+
+export const addFilesToClients = async (data: AddFilesToClientsData): Promise<void> => {
+  await apiFetch(`/client/files`, {
+    method: 'POST',
+    headers: { 'x-coach-id': data.coachId },
+    body: JSON.stringify({ fileIds: data.fileIds, clientIds: data.clientIds }),
+  });
+};
+
 /**
  * Service method to delete files from a client
  */

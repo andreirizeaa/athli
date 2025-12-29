@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,14 @@ import { Label } from '@/components/ui/label';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { createClient } from '@/supabase/client';
 import { getCoachByCode } from '@/api/coach/coach-public-service';
+import { AuthErrorAlert } from '@/components/auth/auth-error-alert';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 
 export default function ClientInvitePage() {
   const params = useParams<{ code: string }>();
   const router = useRouter();
+  const pathname = usePathname();
   const { signIn, signInWithGoogle } = useSupabaseAuth();
   const supabase = createClient();
 
@@ -182,7 +184,8 @@ export default function ClientInvitePage() {
         />
       </div>
 
-      <div className="flex h-full w-full items-center justify-center lg:w-1/2 overflow-y-auto">
+      <div className="flex h-full w-full items-center justify-center lg:w-1/2 overflow-y-auto relative">
+        <AuthErrorAlert pathname={pathname} />
         {isLoadingCoach ? (
           <div className="flex flex-col items-center justify-center gap-4">
             <Spinner className="size-8 text-primary" />

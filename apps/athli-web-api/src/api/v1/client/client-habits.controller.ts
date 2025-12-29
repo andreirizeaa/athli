@@ -90,44 +90,53 @@ export const clientHabitsController = {
         const userId = (req as any).userId;
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
-        const { habitIds, name, description, amount, unit, period, custom_schedule } = req.body;
+        const { habitIds, clientIds, name, description, amount, unit, period, custom_schedule } = req.body;
 
         if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
-        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
 
         const targetCoachId = coachIdHeader as string;
-        const targetClientId = clientIdHeader as string;
+        let targetClientIds: string[] = [];
+
+        if (Array.isArray(clientIds) && clientIds.length > 0) {
+            targetClientIds = clientIds;
+        } else if (clientIdHeader) {
+            targetClientIds = [clientIdHeader as string];
+        } else {
+            return forbidden(res, { message: 'x-client-id header or clientIds body param required' });
+        }
 
         const supabase = getSupabaseClient();
 
-        // Verify
-        const { data: relation } = await supabase
+        // Verify Relationships
+        const { data: relations, error: relationError } = await supabase
             .from('coach_client_assignments')
             .select('client_id')
             .eq('coach_id', targetCoachId)
-            .eq('client_id', targetClientId)
-            .single();
+            .in('client_id', targetClientIds);
 
-        if (!relation) return forbidden(res, { message: 'Forbidden' });
+        if (relationError || !relations || relations.length !== targetClientIds.length) {
+            return forbidden(res, { message: 'One or more clients not assigned to this coach' });
+        }
 
         // 1. Private
         if (name) {
-            const { data: habit, error } = await supabase
+            const inserts = targetClientIds.map(cid => ({
+                client_id: cid,
+                coach_id: targetCoachId,
+                name,
+                description,
+                schedule_type: period === 'weekly' ? 'weekly' : 'daily',
+                // Assuming basic fields or default schedule config if not provided fully
+                // The previous code didn't map schedule_config for private creates explicitly?
+            }));
+
+            const { data: habits, error } = await supabase
                 .from('client_habits')
-                .insert({
-                    client_id: targetClientId,
-                    coach_id: targetCoachId,
-                    name,
-                    description,
-                    schedule_type: period === 'weekly' ? 'weekly' : 'daily', // Approximation from older detailed params
-                    // Or mapping custom_schedule to new fields...
-                    // Assuming basic fields for now based on prev controller usage
-                })
-                .select()
-                .single();
+                .insert(inserts)
+                .select();
 
             if (error) return res.status(500).json({ success: false, message: error.message });
-            return created(res, { message: 'Private habit created', data: { habit } });
+            return created(res, { message: 'Private habits created', data: { habits } });
         }
 
         // 2. Library
@@ -141,19 +150,49 @@ export const clientHabitsController = {
         if (fetchError) return res.status(500).json({ success: false, message: fetchError.message });
         if (!libraryHabits || libraryHabits.length === 0) return notFound(res, { message: 'No habits found' });
 
-        const assignments = libraryHabits.map(h => ({
-            client_id: targetClientId,
-            coach_id: targetCoachId,
-            name: h.name,
-            description: h.description,
-            schedule_type: h.schedule_type,
-            days_of_week: h.days_of_week,
-            times_of_day: h.times_of_day,
-            timezone: h.timezone,
-            start_date: h.start_date,
-            end_date: h.end_date,
-            schedule_config: h.schedule_config
-        }));
+        const assignments: any[] = [];
+        for (const cid of targetClientIds) {
+            for (const h of libraryHabits) {
+                assignments.push({
+                    client_id: cid,
+                    coach_id: targetCoachId,
+                    name: h.name,
+                    description: h.description,
+                    schedule_type: h.schedule_type,
+                    days_of_week: h.days_of_week,
+                    times_of_day: h.times_of_day,
+                    timezone: h.timezone,
+                    start_date: h.start_date,
+                    end_date: h.end_date,
+                    schedule_config: h.schedule_config
+                });
+            }
+        }
+
+        // Deduplication & Renaming
+        const { data: existingHabits } = await supabase
+            .from('client_habits')
+            .select('client_id, name')
+            .in('client_id', targetClientIds);
+
+        const existingSet = new Set(
+            (existingHabits || []).map((h: any) => `${h.client_id}:${h.name}`)
+        );
+
+        // Process assignments to ensure unique names
+        for (const assignment of assignments) {
+            let originalName = assignment.name;
+            let checkName = originalName;
+            let counter = 1;
+
+            while (existingSet.has(`${assignment.client_id}:${checkName}`)) {
+                checkName = `${originalName} ${counter}`;
+                counter++;
+            }
+
+            assignment.name = checkName;
+            existingSet.add(`${assignment.client_id}:${checkName}`);
+        }
 
         const { error: insertError } = await supabase.from('client_habits').insert(assignments);
         if (insertError) return res.status(500).json({ success: false, message: insertError.message });

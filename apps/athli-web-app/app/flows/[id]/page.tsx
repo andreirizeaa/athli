@@ -16,10 +16,11 @@ import {
 import { ChevronRight, Pencil } from 'lucide-react';
 import { FlowEditor } from '@/components/flows/flow-editor';
 import { EditFlowSidePanel } from '@/components/flows/edit-flow-side-panel';
-import { getFlowById, updateFlowDetails, type Flow } from '@/api/coach/coach-flow-service';
+import { getFlowById, updateFlowDetails, updateFlowStatus, type Flow } from '@/api/coach/coach-flow-service';
 import type { Node, Edge } from 'reactflow';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 
 // Empty initial nodes and edges
@@ -76,9 +77,15 @@ const FlowDetailPage = () => {
     setFlow(prev => prev ? { ...prev, name: data.name, description: data.description || '' } : prev);
   };
 
-  const handleSaveFlow = (nodes: Node[], edges: Edge[]) => {
-    // This is called when the manual save button in FlowEditor is clicked
-    // Or we can just use the internal save of FlowEditor
+  const handleTogglePublish = async (isActive: boolean) => {
+    try {
+      await updateFlowStatus(flowId, isActive);
+      setFlow(prev => prev ? { ...prev, is_active: isActive } : prev);
+      toast.success(isActive ? 'Flow published' : 'Flow unpublished');
+    } catch (error) {
+      console.error('Failed to update flow status:', error);
+      toast.error('Failed to update flow status');
+    }
   };
 
   if (isLoading) {
@@ -126,12 +133,16 @@ const FlowDetailPage = () => {
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
-            <h1 className="text-[22px] font-semibold">{flow.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[22px] font-semibold">{flow.name}</h1>
+            </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => setIsEditFlowOpen(true)}>
-              <Pencil className="size-4" />
-              <span>Edit flow details</span>
+            <Button
+              variant={flow.is_active ? "outline" : "default"}
+              onClick={() => handleTogglePublish(!flow.is_active)}
+            >
+              {flow.is_active ? 'Unpublish' : 'Publish'}
             </Button>
           </div>
         </div>

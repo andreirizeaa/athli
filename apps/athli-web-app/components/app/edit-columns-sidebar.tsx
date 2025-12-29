@@ -407,7 +407,7 @@ export const EditColumnsSidebar = ({
             rowHeight="54px"
             stickyFirstColumn={false}
             disableLoadingOverlay={true}
-            gridPadding={true}
+            gridPadding={false}
           />
         </SortableContext>
       </DndContext>
@@ -429,7 +429,7 @@ export const EditColumnsSidebar = ({
       onOpenChange={onOpenChange}
       title="Edit columns"
       side="right"
-      contentClassName="w-full sm:w-[400px] sm:max-w-[400px]"
+      contentClassName="w-full sm:w-[400px] sm:max-w-[400px] !p-0"
     >
       <div className="flex flex-col h-full edit-columns-grid-wrapper">
         <style
@@ -437,12 +437,11 @@ export const EditColumnsSidebar = ({
             __html: `
           .edit-columns-grid-wrapper table th,
           .edit-columns-grid-wrapper table td {
-            padding-left: 0 !important;
+            padding-left: 1rem !important;
             padding-right: 1rem !important;
           }
-          .edit-columns-grid-wrapper [class*="overflow-auto"] {
-            margin-left: -1rem !important;
-            margin-right: -1rem !important;
+          .edit-columns-grid-wrapper table th {
+            border-top: none !important;
           }
         `,
           }}

@@ -141,13 +141,20 @@ export const clientFilesController = {
         const userId = (req as any).userId;
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
-        const { fileIds } = req.body;
+        const { fileIds, clientIds } = req.body;
 
         if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
-        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
 
         const targetCoachId = coachIdHeader as string;
-        const targetClientId = clientIdHeader as string;
+        let targetClientIds: string[] = [];
+
+        if (Array.isArray(clientIds) && clientIds.length > 0) {
+            targetClientIds = clientIds;
+        } else if (clientIdHeader) {
+            targetClientIds = [clientIdHeader as string];
+        } else {
+            return forbidden(res, { message: 'x-client-id header or clientIds body param required' });
+        }
 
         if (!fileIds || !Array.isArray(fileIds)) {
             return res.status(400).json({ success: false, message: 'Invalid fileIds' });
@@ -155,15 +162,16 @@ export const clientFilesController = {
 
         const supabase = getSupabaseClient();
 
-        // Verify Relation
-        const { data: relation } = await supabase
+        // Verify Relationships
+        const { data: relations, error: relationError } = await supabase
             .from('coach_client_assignments')
             .select('client_id')
             .eq('coach_id', targetCoachId)
-            .eq('client_id', targetClientId)
-            .single();
+            .in('client_id', targetClientIds);
 
-        if (!relation) return forbidden(res, { message: 'Forbidden' });
+        if (relationError || !relations || relations.length !== targetClientIds.length) {
+            return forbidden(res, { message: 'One or more clients not assigned to this coach' });
+        }
 
         // 1. Fetch metadata from coach_files
         const { data: coachFiles, error: fetchError } = await supabase
@@ -176,16 +184,63 @@ export const clientFilesController = {
             return res.status(404).json({ success: false, message: 'Source files not found' });
         }
 
-        // 2. Create client copies
-        const assignments = coachFiles.map((f: any) => ({
-            client_id: targetClientId,
-            coach_id: targetCoachId,
-            filename: f.filename,
-            display_name: f.filename,
-            file_path: f.file_path,
-            mime_type: f.mime_type,
-            size: f.size
-        }));
+        // 2. Create client copies (Cross Join)
+        const assignments: any[] = [];
+        for (const cid of targetClientIds) {
+            for (const f of coachFiles) {
+                assignments.push({
+                    client_id: cid,
+                    coach_id: targetCoachId,
+                    filename: f.filename,
+                    display_name: f.filename,
+                    file_path: f.file_path,
+                    mime_type: f.mime_type,
+                    size: f.size
+                });
+            }
+        }
+
+        // Deduplication & Renaming
+        const { data: existingFiles } = await supabase
+            .from('client_files')
+            .select('client_id, filename')
+            .in('client_id', targetClientIds);
+
+        const existingSet = new Set(
+            (existingFiles || []).map((f: any) => `${f.client_id}:${f.filename}`)
+        );
+
+        // Process assignments to ensure unique names
+        for (const assignment of assignments) {
+            let originalName = assignment.filename;
+            let checkName = originalName;
+            let counter = 1;
+
+            // Simple extension handling if needed, but for now just appending to filename
+            // as per "Add 1 after the name"
+            while (existingSet.has(`${assignment.client_id}:${checkName}`)) {
+                // If it has extension, maybe insert before extension? 
+                // User said "just add a 1 after the name". Let's stick to simplest interpretation 
+                // or try to keep extension if present.
+                // Assuming simple append for now to match other entities.
+                // Actually for files, filename usually has extension.
+                // If "foo.pdf" exists, "foo.pdf 1" is weird.
+                // Let's try to split extension.
+                const lastDot = originalName.lastIndexOf('.');
+                if (lastDot !== -1) {
+                    const namePart = originalName.substring(0, lastDot);
+                    const extPart = originalName.substring(lastDot);
+                    checkName = `${namePart} ${counter}${extPart}`;
+                } else {
+                    checkName = `${originalName} ${counter}`;
+                }
+                counter++;
+            }
+
+            assignment.filename = checkName;
+            assignment.display_name = checkName;
+            existingSet.add(`${assignment.client_id}:${checkName}`);
+        }
 
         const { data, error } = await supabase
             .from('client_files')

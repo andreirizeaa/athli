@@ -24,6 +24,20 @@ export const assignMetric = async (data: AssignMetricData & { clientId: string; 
   });
 };
 
+export interface AssignMetricsToClientsData {
+  metricIds: string[];
+  clientIds: string[];
+  coachId: string;
+}
+
+export const assignMetricsToClients = async (data: AssignMetricsToClientsData): Promise<void> => {
+  await apiFetch(`/client/metrics`, {
+    method: 'POST',
+    headers: { 'x-coach-id': data.coachId },
+    body: JSON.stringify({ metricIds: data.metricIds, clientIds: data.clientIds }),
+  });
+};
+
 /**
  * Service method to create a private metric for a client
  */

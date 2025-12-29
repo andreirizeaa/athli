@@ -1,5 +1,54 @@
 import type { Node, Edge } from 'reactflow';
-import { UserPlus, CalendarX, Activity, CheckCircle, MessageSquare, FileText, ClipboardCheck, FilePlus, Sprout, Clock, RotateCw } from 'lucide-react';
+import {
+  UserPlus,
+  CalendarX,
+  Activity,
+  CheckCircle,
+  MessageSquare,
+  FileText,
+  ClipboardCheck,
+  FilePlus,
+  Sprout,
+  Clock,
+  RotateCw,
+  Dumbbell
+} from 'lucide-react';
+
+export interface TriggerOption {
+  id: string;
+  name: string;
+  icon: any;
+}
+
+export interface ActionOption {
+  id: string;
+  name: string;
+  icon: any;
+}
+
+export interface Habit {
+  id: string;
+  name: string;
+}
+
+export const TRIGGER_OPTIONS: TriggerOption[] = [
+  { id: 'new-client-signup', name: 'New client sign up', icon: UserPlus },
+  { id: 'missed-workout', name: 'Missed workout', icon: Activity },
+  { id: 'missed-check-in', name: 'Missed check in', icon: CalendarX },
+  { id: 'workout-finished', name: 'Workout finished', icon: CheckCircle },
+  { id: 'check-in-completed', name: 'Check in completed', icon: CheckCircle },
+];
+
+export const ACTION_OPTIONS: ActionOption[] = [
+  { id: 'send-message', name: 'Send message', icon: MessageSquare },
+  { id: 'assign-questionnaire', name: 'Assign questionnaire', icon: FileText },
+  { id: 'assign-check-in', name: 'Assign check in', icon: ClipboardCheck },
+  { id: 'add-file', name: 'Add file', icon: FilePlus },
+  { id: 'add-habit', name: 'Add habit', icon: Sprout },
+  { id: 'assign-workout', name: 'Assign workout', icon: Dumbbell },
+  { id: 'wait', name: 'Wait', icon: Clock },
+  { id: 'repeat', name: 'Until completed', icon: RotateCw },
+];
 
 export interface FlowTemplate {
   name: string;
@@ -38,7 +87,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'New client sign up',
                 icon: UserPlus,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -55,7 +104,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Welcome to the team! I\'m excited to start working with you.',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -72,7 +121,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: FileText,
               },
               selectedQuestionnaires: new Set(),
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -89,7 +138,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: FilePlus,
               },
               selectedFiles: new Set(),
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -122,7 +171,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'Missed workout',
                 icon: Activity,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -141,7 +190,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
               isWait: true,
               waitDuration: 1,
               waitUnit: 'days',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -158,7 +207,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Hey! I noticed you missed your workout yesterday. Everything okay? Let me know if you need to adjust your schedule.',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -185,7 +234,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'Missed check in',
                 icon: CalendarX,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -202,7 +251,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Reminder: Don\'t forget to complete your daily check-in!',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -220,7 +269,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
               },
               isRepeat: true,
               repeatLinkedActionId: 'action-1',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -247,7 +296,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'Workout finished',
                 icon: CheckCircle,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -264,7 +313,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Great job on completing your workout! Keep up the amazing work!',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -290,7 +339,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'Check in completed',
                 icon: CheckCircle,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -307,7 +356,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Thanks for completing your check-in! I\'ll review it and get back to you soon.',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -339,7 +388,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'New client sign up',
                 icon: UserPlus,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -356,7 +405,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Welcome! I\'ve assigned some habits to help you get started with your fitness journey.',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -373,7 +422,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: Sprout,
               },
               selectedHabits: new Set(),
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -401,7 +450,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'Missed check in',
                 icon: CalendarX,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -418,7 +467,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: ClipboardCheck,
               },
               selectedCheckIns: new Set(),
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -450,7 +499,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'New client sign up',
                 icon: UserPlus,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -467,7 +516,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Welcome! Let\'s get you started with some onboarding materials.',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -484,7 +533,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: FileText,
               },
               selectedQuestionnaires: new Set(),
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -503,7 +552,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
               isWait: true,
               waitDuration: 1,
               waitUnit: 'days',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -520,7 +569,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: FilePlus,
               },
               selectedFiles: new Set(),
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -537,7 +586,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: Sprout,
               },
               selectedHabits: new Set(),
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],
@@ -567,7 +616,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 name: 'Missed check in',
                 icon: CalendarX,
               },
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -586,7 +635,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
               isWait: true,
               waitDuration: 2,
               waitUnit: 'hours',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -603,7 +652,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
                 icon: MessageSquare,
               },
               messageText: 'Gentle reminder to complete your check-in when you have a moment!',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
           {
@@ -621,7 +670,7 @@ export const defaultFlowTemplates: FlowTemplateSection[] = [
               },
               isRepeat: true,
               repeatLinkedActionId: 'action-1',
-              onClick: () => {},
+              onClick: () => { },
             },
           },
         ],

@@ -43,11 +43,11 @@ export const SidePanel = ({
         <div className="px-4 pt-3">
           <h2 className="text-base font-semibold">{title}</h2>
         </div>
-        <Separator />
+        <Separator className="-mt-[3px] -mb-[2px]"/>
         {children && (
-          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-3 flex flex-col min-h-0">{children}</div>
+          <div className={cn("flex-1 overflow-y-auto px-4 flex flex-col min-h-0", !footer && "mb-2")}>{children}</div>
         )}
-        {footer && <div className="px-4 py-3 mt-auto [&_button]:text-[14px]">{footer}</div>}
+        {footer && <div className="px-4 pb-4 pt-1 mt-auto [&_button]:text-[14px]">{footer}</div>}
       </SheetContent>
     </Sheet>
   );

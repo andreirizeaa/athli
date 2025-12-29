@@ -77,44 +77,53 @@ export const clientCheckInsController = {
         const userId = (req as any).userId;
         const clientIdHeader = req.header('x-client-id');
         const coachIdHeader = req.header('x-coach-id');
-        const { checkInIds, name, description, questions, schedule_config, cron_expression } = req.body;
+        const { checkInIds, clientIds, name, description, questions, schedule_config, cron_expression } = req.body;
 
         if (!coachIdHeader || coachIdHeader !== userId) return unauthorized(res, { message: 'Unauthorized' });
-        if (!clientIdHeader) return forbidden(res, { message: 'x-client-id required' });
 
         const targetCoachId = coachIdHeader as string;
-        const targetClientId = clientIdHeader as string;
+        let targetClientIds: string[] = [];
+
+        if (Array.isArray(clientIds) && clientIds.length > 0) {
+            targetClientIds = clientIds;
+        } else if (clientIdHeader) {
+            targetClientIds = [clientIdHeader as string];
+        } else {
+            return forbidden(res, { message: 'x-client-id header or clientIds body param required' });
+        }
 
         const supabase = getSupabaseClient();
 
-        // Verify Relation
-        const { data: relation } = await supabase
+        // Verify Relationships
+        const { data: relations, error: relationError } = await supabase
             .from('coach_client_assignments')
             .select('client_id')
             .eq('coach_id', targetCoachId)
-            .eq('client_id', targetClientId)
-            .single();
+            .in('client_id', targetClientIds);
 
-        if (!relation) return forbidden(res, { message: 'Forbidden' });
+        if (relationError || !relations || relations.length !== targetClientIds.length) {
+            return forbidden(res, { message: 'One or more clients not assigned to this coach' });
+        }
 
         // 1. Private
         if (name) {
-            const { data: checkin, error } = await supabase
+            const inserts = targetClientIds.map(cid => ({
+                client_id: cid,
+                coach_id: targetCoachId,
+                name,
+                description,
+                questions: questions || [],
+                schedule_config: schedule_config || null,
+                cron_expression: cron_expression || null
+            }));
+
+            const { data: checkins, error } = await supabase
                 .from('client_checkins')
-                .insert({
-                    client_id: targetClientId,
-                    coach_id: targetCoachId,
-                    name,
-                    description,
-                    questions: questions || [],
-                    schedule_config: schedule_config || null,
-                    cron_expression: cron_expression || null
-                })
-                .select()
-                .single();
+                .insert(inserts)
+                .select();
 
             if (error) return res.status(500).json({ success: false, message: error.message });
-            return created(res, { message: 'Private check-in created', data: { checkin } });
+            return created(res, { message: 'Private check-ins created', data: { checkins } });
         }
 
         // 2. Library
@@ -128,15 +137,45 @@ export const clientCheckInsController = {
         if (fetchError) return res.status(500).json({ success: false, message: fetchError.message });
         if (!libraryItems || libraryItems.length === 0) return notFound(res, { message: 'No check-ins found' });
 
-        const assignments = libraryItems.map(h => ({
-            client_id: targetClientId,
-            coach_id: targetCoachId,
-            name: h.name,
-            description: h.description,
-            questions: h.questions,
-            schedule_config: schedule_config || h.schedule_config,
-            cron_expression: cron_expression || h.cron_expression
-        }));
+        const assignments: any[] = [];
+        for (const cid of targetClientIds) {
+            for (const h of libraryItems) {
+                assignments.push({
+                    client_id: cid,
+                    coach_id: targetCoachId,
+                    name: h.name,
+                    description: h.description,
+                    questions: h.questions,
+                    schedule_config: schedule_config || h.schedule_config,
+                    cron_expression: cron_expression || h.cron_expression
+                });
+            }
+        }
+
+        // Deduplication & Renaming
+        const { data: existingCheckIns } = await supabase
+            .from('client_checkins')
+            .select('client_id, name')
+            .in('client_id', targetClientIds);
+
+        const existingSet = new Set(
+            (existingCheckIns || []).map((c: any) => `${c.client_id}:${c.name}`)
+        );
+
+        // Process assignments to ensure unique names
+        for (const assignment of assignments) {
+            let originalName = assignment.name;
+            let checkName = originalName;
+            let counter = 1;
+
+            while (existingSet.has(`${assignment.client_id}:${checkName}`)) {
+                checkName = `${originalName} ${counter}`;
+                counter++;
+            }
+
+            assignment.name = checkName;
+            existingSet.add(`${assignment.client_id}:${checkName}`);
+        }
 
         const { error: insertError } = await supabase.from('client_checkins').insert(assignments);
         if (insertError) return res.status(500).json({ success: false, message: insertError.message });

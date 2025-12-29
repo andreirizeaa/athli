@@ -26,6 +26,7 @@ import { useCoachClients } from '@/hooks/use-coach-clients';
 import { cn } from '@/lib/general/utils';
 import { exportToCSV } from '@/lib/general/csv-export';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { AddClientSidePanel } from './add-client-side-panel';
 import { UploadClientsSidePanel } from './upload-clients-side-panel';
 import { RestoreClientsSidePanel } from './restore-clients-side-panel';
@@ -57,7 +58,10 @@ import {
   Download,
   Archive,
   ArchiveRestore,
+  Cake,
 } from 'lucide-react';
+import flags from 'react-phone-number-input/flags';
+import type { Country } from 'react-phone-number-input';
 
 type ColumnId =
   | 'lastActivity'
@@ -68,7 +72,7 @@ type ColumnId =
   | 'email'
   | 'phone'
   | 'country'
-  | 'age'
+  | 'birthDate'
   | 'clientFor';
 
 const COLUMN_ORDER: ColumnId[] = [
@@ -80,7 +84,7 @@ const COLUMN_ORDER: ColumnId[] = [
   'email',
   'phone',
   'country',
-  'age',
+  'birthDate',
   'clientFor',
 ];
 
@@ -93,8 +97,8 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     connected: { class: 'min-w-[150px]', pixel: '150px' },
     email: { class: 'min-w-[220px]', pixel: '310px' },
     phone: { class: 'min-w-[160px]', pixel: '240px' },
-    country: { class: 'min-w-[140px]', pixel: '150px' },
-    age: { class: 'min-w-[110px]', pixel: '110px' },
+    country: { class: 'min-w-[100px]', pixel: '100px' },
+    birthDate: { class: 'min-w-[140px]', pixel: '140px' },
     clientFor: { class: 'min-w-[150px]', pixel: '150px' },
   };
 
@@ -260,6 +264,7 @@ const AthletesPage = () => {
       [t('athletes.export.lastActivity')]: row.lastActivity,
       [t('athletes.export.last7DaysTraining')]: row.last7DaysTraining,
       [t('athletes.export.last30DaysTraining')]: row.last30DaysTraining,
+      [t('athletes.export.birthDate')]: row.birthDate,
       [t('athletes.export.age')]: row.age,
       [t('athletes.export.clientFor')]: row.clientFor,
     }));
@@ -274,8 +279,23 @@ const AthletesPage = () => {
   const handleConfirmArchive = async () => {
     try {
       const athleteIds = Array.from(selectedAthletes);
+      // Get names of athletes being archived
+      const archivedNames = athletes
+        .filter(a => selectedAthletes.has(a.id))
+        .map(a => a.name)
+        .join(', ');
+
       await Promise.all(athleteIds.map(id => archiveClient(id)));
-      toast.success(t('athletes.notifications.archiveSuccess'));
+
+      const message = selectedAthletes.size === 1
+        ? `${archivedNames} has been successfully archived and will lose app access immediately`
+        : `${selectedAthletes.size} clients have been successfully archived and will lose app access immediately`;
+
+      toast.success(message, {
+        description: 'You can restore archived clients later.',
+        duration: 5000,
+      });
+
       setSelectedAthletes(new Set());
       setIsArchiveConfirmOpen(false);
     } catch (error) {
@@ -856,24 +876,38 @@ const AthletesPage = () => {
             getSortValue: (row) => row.country || '',
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
-            renderCell: (row) => (
-              <div className="flex items-center w-full">
-                <span className="text-sm">{row.country || '--'}</span>
-              </div>
-            ),
+            renderCell: (row) => {
+              const Flag = row.country ? flags[row.country as Country] : null;
+              return (
+                <div className="flex items-center w-full">
+                  {Flag ? (
+                    <div className="flex h-4 w-6 overflow-hidden rounded-sm bg-foreground/20 [&_svg:not([class*='size-'])]:size-full">
+                      <Flag title={row.country} />
+                    </div>
+                  ) : (
+                    <span className="text-sm">{row.country || '--'}</span>
+                  )}
+                </div>
+              );
+            },
           };
-        case 'age':
+        case 'birthDate':
           return {
-            id: 'age',
-            label: t('athletes.columns.age'),
-            icon: <User className="size-3" />,
-            width: { class: getColumnWidth('age', 'class'), pixel: getColumnWidth('age', 'pixel') },
-            getSortValue: (row) => row.age || 0,
+            id: 'birthDate',
+            label: t('athletes.columns.birthDate', { defaultValue: 'Birth Date' }),
+            icon: <Cake className="size-3" />,
+            width: {
+              class: getColumnWidth('birthDate', 'class'),
+              pixel: getColumnWidth('birthDate', 'pixel'),
+            },
+            getSortValue: (row) => row.birthDate || '',
             getSearchValue: (row) =>
               `${row.name} ${row.email} ${row.phone} ${row.country} ${row.category}`,
             renderCell: (row) => (
               <div className="flex items-center w-full">
-                <span className="text-sm">{row.age > 0 ? row.age : '--'}</span>
+                <span className="text-sm">
+                  {row.birthDate ? format(new Date(row.birthDate), 'd MMM, yyyy') : '--'}
+                </span>
               </div>
             ),
           };
@@ -1156,12 +1190,13 @@ const AthletesPage = () => {
                   <span>{t('athletes.actions.singleClient')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsUploadClientsOpen(true)}>
-                  <Users className="size-4 mr-2" />
-                  <span>{t('athletes.actions.uploadClients')}</span>
+                  <Download className="mr-2 h-4 w-4" />
+                  <span>{t('athletes.actions.uploadCSV')}</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setIsRestoreClientsOpen(true)}>
-                  <ArchiveRestore className="size-4 mr-2" />
-                  <span>{t('athletes.actions.restoreClient')}</span>
+                  <ArchiveRestore className="mr-2 h-4 w-4" />
+                  <span>{t('athletes.actions.archivedClients')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1276,7 +1311,7 @@ const AthletesPage = () => {
                   <Button
                     variant="ghost"
                     onClick={handleArchiveSelected}
-                    className="gap-2"
+                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
                     aria-label={t('athletes.actions.archiveSelectedAria')}
                   >
                     <Archive className="size-4" />
@@ -1344,15 +1379,19 @@ const AthletesPage = () => {
         open={isUploadClientsOpen}
         onOpenChange={setIsUploadClientsOpen}
       />
-      <RestoreClientsSidePanel
-        open={isRestoreClientsOpen}
-        onOpenChange={setIsRestoreClientsOpen}
-      />
       <ConfirmArchiveDialog
         open={isArchiveConfirmOpen}
         onOpenChange={setIsArchiveConfirmOpen}
         onConfirm={handleConfirmArchive}
         count={selectedAthletes.size}
+      />
+      <RestoreClientsSidePanel
+        open={isRestoreClientsOpen}
+        onOpenChange={setIsRestoreClientsOpen}
+        onClientRestored={() => {
+          // Invalidate the coach-clients query to refresh the list
+          // This is handled by the useCoachClients hook's query invalidation
+        }}
       />
     </div>
   );

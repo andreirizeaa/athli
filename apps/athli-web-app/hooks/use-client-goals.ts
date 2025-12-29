@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAthleteGoals, saveAthleteGoals } from '@/api/client/client-service';
+import { getAthleteGoals, saveAthleteGoals, type AthleteGoal } from '@/api/client/client-service';
 
 export function useClientGoals(clientId: string | undefined) {
     const {
@@ -26,7 +26,7 @@ export function useUpdateClientGoals() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ clientId, goals }: { clientId: string; goals: string[] }) =>
+        mutationFn: ({ clientId, goals }: { clientId: string; goals: Partial<AthleteGoal>[] }) =>
             saveAthleteGoals(clientId, goals),
         onSuccess: (_, { clientId }) => {
             queryClient.invalidateQueries({ queryKey: ['client-goals', clientId] });
