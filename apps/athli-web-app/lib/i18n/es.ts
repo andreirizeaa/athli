@@ -1,6 +1,6 @@
 export const esMessages = {
   layout: {
-    appTitle: 'OneNinety',
+    appTitle: 'Athli',
     appDescription: 'Generado por create next app',
   },
   home: {
@@ -148,7 +148,7 @@ export const esMessages = {
         description: 'Configura la integración de tu calendario aquí.',
         connectCalendar: 'Conectar Calendario',
         connectYourCalendar: 'Conecta tu Calendario',
-        connectDescription: 'Conecta tu calendario para gestionar citas directamente desde OneNinety.',
+        connectDescription: 'Conecta tu calendario para gestionar citas directamente desde Athli.',
         connected: 'Calendario Conectado',
         connectedDescription: 'Tu calendario está conectado y listo para usar.',
         gmail: 'Gmail',
@@ -479,7 +479,7 @@ export const esMessages = {
       logOut: 'Cerrar sesión',
     },
     search: {
-      placeholder: 'Buscar en OneNinety...',
+      placeholder: 'Buscar en Athli...',
       emptyMessage: 'Buscar clientes, entrenamientos, programas o ejercicios...',
       noResults: 'No se encontraron resultados para',
       athletes: 'Atletas',
@@ -698,8 +698,8 @@ export const esMessages = {
     cancel: 'Cancelar',
     dropPdfHere: 'Arrastra tu PDF aquí',
     pdfFilesOnly: 'Solo archivos PDF',
-    oneNinetyAiBuilder: 'Constructor de IA OneNinety',
-    dragDropPdf: 'Arrastra y suelta o selecciona archivos PDF para importar instantáneamente a OneNinety.',
+    athliAiBuilder: 'Constructor de IA Athli',
+    dragDropPdf: 'Arrastra y suelta o selecciona archivos PDF para importar instantáneamente a Athli.',
     letsBuildWorkout: 'Construyamos un entrenamiento',
     workoutPromptPlaceholder: 'Pide un entrenamiento automático, explica lo que quieres que se incluya en el tuyo y escribe en la forma que desees. Presiona Enter para agregar nuevas líneas.',
     selectPdfFile: 'Seleccionar archivo PDF',
@@ -1069,9 +1069,9 @@ export const esMessages = {
       descriptionPlaceholder: 'Agrega una descripción para tu entrenamiento...',
       selectBuilder: 'Selecciona cómo deseas comenzar',
       selectBuilderRequired: 'Selecciona cómo deseas comenzar *',
-      oneNinetyAi: 'OneNinety IA',
-      oneNinetyAiDescription: 'Constructor de Entrenamiento con IA',
-      oneNinetyAiAria: 'Usar OneNinety IA para construir entrenamiento',
+      athliAi: 'Athli IA',
+      athliAiDescription: 'Constructor de Entrenamiento con IA',
+      athliAiAria: 'Usar Athli IA para construir entrenamiento',
       standardBuilder: 'Constructor Estándar',
       standardBuilderDescription: 'Construye tu entrenamiento manualmente',
       standardBuilderAria: 'Construir entrenamiento manualmente',
@@ -1087,8 +1087,8 @@ export const esMessages = {
       workoutTypeRequiredError: 'El tipo de entrenamiento es obligatorio',
       difficultyRequiredError: 'La dificultad es obligatoria',
       aiBuilder: {
-        title: 'Constructor de IA OneNinety',
-        description: 'Arrastra y suelta o selecciona archivos PDF para importar instantáneamente a OneNinety.',
+        title: 'Constructor de IA Athli',
+        description: 'Arrastra y suelta o selecciona archivos PDF para importar instantáneamente a Athli.',
         dropPdfHere: 'Arrastra tu PDF aquí',
         pdfFilesOnly: 'Solo archivos PDF',
         letsBuildWorkout: 'Construyamos un entrenamiento',
@@ -1123,7 +1123,7 @@ export const esMessages = {
       edit: 'Editar',
       editAria: 'Editar entrenamiento',
       editOptions: {
-        oneNinetyAi: 'OneNinety IA',
+        athliAi: 'Athli IA',
         manual: 'Manual',
         editOptionsAria: 'Opciones de edición',
       },
@@ -1302,7 +1302,7 @@ export const esMessages = {
     emptyMessage: 'No se encontraron atletas.',
     emptyState: {
       title: 'Invita a tus clientes',
-      subtitle: 'Gestiona todos tus clientes a través de OneNinety',
+      subtitle: 'Gestiona todos tus clientes a través de Athli',
     },
     searchPlaceholder: 'Buscar...',
     columns: {

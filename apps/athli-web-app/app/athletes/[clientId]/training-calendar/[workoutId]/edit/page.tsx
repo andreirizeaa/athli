@@ -50,21 +50,21 @@ const EditTrainingCalendarWorkoutPage = () => {
 
   // Set schema and access flag synchronously before component renders
   if (typeof window !== 'undefined') {
-    const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+    const savedSchema = window.localStorage.getItem('athli_workout_schema');
     if (!savedSchema) {
       // Set the shared mock schema if no schema exists
-      window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
+      window.localStorage.setItem('athli_workout_schema', JSON.stringify(MOCK_WORKOUT_SCHEMA));
     }
 
     // Set the access flag
-    window.localStorage.setItem('oneninety_workout_builder_access', 'edit-standard');
+    window.localStorage.setItem('athli_workout_builder_access', 'edit-standard');
   }
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // Load view state from localStorage
-    const viewStateRaw = window.localStorage.getItem('oneninety_training_calendar_view_state');
+    const viewStateRaw = window.localStorage.getItem('athli_training_calendar_view_state');
     if (viewStateRaw) {
       try {
         const parsed = JSON.parse(viewStateRaw) as TrainingCalendarViewState;
@@ -78,13 +78,13 @@ const EditTrainingCalendarWorkoutPage = () => {
     }
 
     // Load workout date from localStorage
-    const dateKey = window.localStorage.getItem('oneninety_workout_date');
+    const dateKey = window.localStorage.getItem('athli_workout_date');
     if (dateKey) {
       setWorkoutDate(dateKey);
     }
 
     // Try to load meta from localStorage first (if coming from training calendar)
-    const raw = window.localStorage.getItem('oneninety_new_workout_meta');
+    const raw = window.localStorage.getItem('athli_new_workout_meta');
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as WorkoutMeta;

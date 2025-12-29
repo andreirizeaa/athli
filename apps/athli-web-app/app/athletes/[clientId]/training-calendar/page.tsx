@@ -1184,13 +1184,13 @@ const ClientTrainingCalendarPage = () => {
 
       // Store workout schema and view state in localStorage
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('oneninety_workout_schema', JSON.stringify({ sections: workoutSchema }));
-        window.localStorage.setItem('oneninety_training_calendar_view_state', JSON.stringify({
+        window.localStorage.setItem('athli_workout_schema', JSON.stringify({ sections: workoutSchema }));
+        window.localStorage.setItem('athli_training_calendar_view_state', JSON.stringify({
           currentWeek,
           selectedWeek,
         }));
-        window.localStorage.setItem('oneninety_workout_builder_access', 'edit-standard');
-        window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify({
+        window.localStorage.setItem('athli_workout_builder_access', 'edit-standard');
+        window.localStorage.setItem('athli_new_workout_meta', JSON.stringify({
           title: workout.program || 'Workout',
           description: workout.description || '',
           type: workout.type || 'Push',
@@ -1198,7 +1198,7 @@ const ClientTrainingCalendarPage = () => {
           builder: 'standard',
         }));
         // Store workout date for breadcrumb
-        window.localStorage.setItem('oneninety_workout_date', dateKey);
+        window.localStorage.setItem('athli_workout_date', dateKey);
       }
 
       // Navigate to edit page

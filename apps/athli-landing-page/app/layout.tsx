@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'OneNinety - Marketing Site',
-  description: 'OneNinety marketing and documentation site',
+  title: 'Athli - Marketing Site',
+  description: 'Athli marketing and documentation site',
 };
 
 export default function RootLayout({
@@ -32,8 +32,8 @@ export default function RootLayout({
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
-          >
-            <IntlProvider>{children}</IntlProvider>
+        >
+          <IntlProvider>{children}</IntlProvider>
         </ThemeProvider>
       </body>
     </html>

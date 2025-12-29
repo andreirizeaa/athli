@@ -160,14 +160,14 @@ export const ProgramBuilder = ({
       // Use a small delay to ensure localStorage is available after navigation
       const timeoutId = setTimeout(() => {
         // Check for access flag - if not present, redirect to programs
-        const accessFlag = window.localStorage.getItem('oneninety_program_builder_access');
+        const accessFlag = window.localStorage.getItem('athli_program_builder_access');
         if (accessFlag !== 'true') {
           router.push('/training/programs');
           return;
         }
 
         // Try to load meta from localStorage (if coming from create panel)
-        const raw = window.localStorage.getItem('oneninety_new_program_meta');
+        const raw = window.localStorage.getItem('athli_new_program_meta');
         if (raw) {
           try {
             const parsed = JSON.parse(raw) as ProgramMeta;
@@ -184,7 +184,7 @@ export const ProgramBuilder = ({
               }
             }
             // Clear the access flag after loading
-            window.localStorage.removeItem('oneninety_program_builder_access');
+            window.localStorage.removeItem('athli_program_builder_access');
             return;
           } catch {
             // If parsing fails, fall through to default values

@@ -115,10 +115,10 @@ export const StandardBuilder = ({
       };
     }
 
-    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+    const accessFlag = window.localStorage.getItem('athli_workout_builder_access');
     if (accessFlag === 'edit-standard') {
       try {
-        const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+        const savedSchema = window.localStorage.getItem('athli_workout_schema');
         if (savedSchema) {
           const parsed = JSON.parse(savedSchema);
           if (parsed.sections && parsed.sections.length > 0 && parsed.sections.some((s: any) => s.exercises && s.exercises.length > 0)) {
@@ -192,11 +192,11 @@ export const StandardBuilder = ({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const accessFlag = window.localStorage.getItem('oneninety_workout_builder_access');
+    const accessFlag = window.localStorage.getItem('athli_workout_builder_access');
     const isEditMode = accessFlag === 'edit-standard';
 
     if (isEditMode) {
-      const savedSchema = window.localStorage.getItem('oneninety_workout_schema');
+      const savedSchema = window.localStorage.getItem('athli_workout_schema');
       if (savedSchema) {
         // Load saved schema
         try {
@@ -223,7 +223,7 @@ export const StandardBuilder = ({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const aiGeneratedRaw = window.localStorage.getItem('oneninety_ai_generated_workout');
+    const aiGeneratedRaw = window.localStorage.getItem('athli_ai_generated_workout');
     if (!aiGeneratedRaw) return;
 
     try {
@@ -478,7 +478,7 @@ export const StandardBuilder = ({
       });
 
       // Clear the localStorage after loading starts
-      window.localStorage.removeItem('oneninety_ai_generated_workout');
+      window.localStorage.removeItem('athli_ai_generated_workout');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load AI generated workout', error);

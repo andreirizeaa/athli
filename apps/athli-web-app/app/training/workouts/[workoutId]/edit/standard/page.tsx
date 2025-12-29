@@ -44,14 +44,14 @@ const EditStandardWorkoutPage = () => {
   // Set access flag synchronously before component renders
   if (typeof window !== 'undefined') {
     // Set the access flag
-    window.localStorage.setItem('oneninety_workout_builder_access', 'edit-standard');
+    window.localStorage.setItem('athli_workout_builder_access', 'edit-standard');
   }
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // Try to load meta from localStorage first (if coming from detail page)
-    const raw = window.localStorage.getItem('oneninety_new_workout_meta');
+    const raw = window.localStorage.getItem('athli_new_workout_meta');
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as WorkoutMeta;
@@ -77,7 +77,7 @@ const EditStandardWorkoutPage = () => {
 
         // Set the schema in localStorage for the builder
         if (workout.workout_data) {
-          window.localStorage.setItem('oneninety_workout_schema', JSON.stringify(workout.workout_data));
+          window.localStorage.setItem('athli_workout_schema', JSON.stringify(workout.workout_data));
         }
       } catch (error) {
         console.error('Failed to fetch workout:', error);

@@ -26,8 +26,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'OneNinety - App',
-  description: 'OneNinety application',
+  title: 'Athli - App',
+  description: 'Athli application',
 };
 
 export default async function RootLayout({
