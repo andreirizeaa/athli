@@ -623,7 +623,7 @@ export const ExerciseCard = ({
         {/* Thumbnail with hover play button */}
         {exercise.name && (
           <div
-            className="relative w-9 h-9 flex-shrink-0 rounded cursor-pointer group/thumbnail"
+            className="relative w-9 h-9 flex-shrink-0 rounded-md cursor-pointer group/thumbnail border border-input overflow-hidden"
             onClick={() => onVideoClick(exercise as Exercise)}
             role="button"
             tabIndex={0}
@@ -639,9 +639,9 @@ export const ExerciseCard = ({
               src={exercise.imageUrl || '/demo-img.png'}
               alt={exercise.name}
               fill
-              className="object-cover rounded"
+              className="object-cover"
             />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumbnail:bg-black/30 transition-colors rounded">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumbnail:bg-black/30 transition-colors">
               <div className="opacity-0 group-hover/thumbnail:opacity-100 transition-opacity bg-black/60 rounded-full p-1">
                 <Play className="size-2.5 text-white fill-white" />
               </div>

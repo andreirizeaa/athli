@@ -23,7 +23,7 @@ import {
   restrictToFirstScrollableAncestor,
 } from '@dnd-kit/modifiers';
 import { CSS } from '@dnd-kit/utilities';
-import { Target, GripVertical, Link2, Trash2 } from 'lucide-react';
+import { Target, GripVertical, Link2, Link2Off, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/general/utils';
 import type {
@@ -55,6 +55,9 @@ type OverviewPanelProps = {
   onDeleteExercise: (sectionId: string, exerciseId: string) => void;
   onDeleteTopLevelExercise: (instanceId: string) => void;
   onDeleteSuperset: (sectionId: string, exerciseIds: string[]) => void;
+  onDeleteTopLevelSuperset?: (exerciseIds: string[]) => void;
+  onUnlinkSuperset?: (sectionId: string, exerciseIndex: number) => void;
+  onUnlinkTopLevelSuperset?: (itemIndex: number) => void;
   groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => ExerciseWithSuperset[][];
   onExerciseClick?: (exerciseId: string) => void;
 };
@@ -295,12 +298,16 @@ const OverviewExerciseRow = ({
 const OverviewSupersetRow = ({
   sectionId,
   exercises,
+  exerciseStartIndex,
   onDelete,
+  onUnlink,
   onExerciseClick,
 }: {
   sectionId: string;
   exercises: ExerciseWithSuperset[];
+  exerciseStartIndex: number;
   onDelete: (sectionId: string, exerciseIds: string[]) => void;
+  onUnlink?: (sectionId: string, exerciseIndex: number) => void;
   onExerciseClick?: (exerciseId: string) => void;
 }) => {
   const firstExerciseId = exercises[0]?.instanceId;
@@ -330,6 +337,21 @@ const OverviewSupersetRow = ({
     }
   };
 
+  const handleUnlink = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (onUnlink) {
+      onUnlink(sectionId, exerciseStartIndex);
+    }
+  };
+
+  const handleUnlinkKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleUnlink(e);
+    }
+  };
+
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       <div
@@ -347,9 +369,26 @@ const OverviewSupersetRow = ({
                     <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
                     <span className="text-xs flex-1">{exercise.name || 'Untitled exercise'}</span>
                   </div>
-                  {index < exercises.length - 1 && (
+                  {index < exercises.length - 1 && onUnlink && (
                     <div className="flex items-center justify-center py-0.5">
-                      <Link2 className="size-3 text-muted-foreground" />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={handleUnlink}
+                            onKeyDown={handleUnlinkKeyDown}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                            aria-label="Unlink superset"
+                            data-no-row-link="true"
+                          >
+                            <Link2Off className="size-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Unlink superset</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
                   )}
                 </div>
@@ -406,6 +445,156 @@ const OverviewSupersetRow = ({
   );
 };
 
+const OverviewTopLevelSupersetRow = ({
+  exercises,
+  itemStartIndex,
+  onDelete,
+  onUnlink,
+  onExerciseClick,
+}: {
+  exercises: ExerciseWithSuperset[];
+  itemStartIndex: number;
+  onDelete?: (exerciseIds: string[]) => void;
+  onUnlink?: (itemIndex: number) => void;
+  onExerciseClick?: (exerciseId: string) => void;
+}) => {
+  const firstExerciseId = exercises[0]?.instanceId;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `top-level-exercise-${firstExerciseId}`,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const exerciseNames = exercises.map((ex) => ex.name || 'Untitled exercise').join(', ');
+
+  const handleDelete = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      const exerciseIds = exercises.map((ex) => ex.instanceId);
+      onDelete(exerciseIds);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleDelete(e);
+    }
+  };
+
+  const handleUnlink = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    if (onUnlink) {
+      onUnlink(itemStartIndex);
+    }
+  };
+
+  const handleUnlinkKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleUnlink(e);
+    }
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div
+        {...attributes}
+        {...listeners}
+        className={cn(
+          'rounded-md border bg-background text-xs select-none cursor-grab active:cursor-grabbing'
+        )}
+      >
+        <div className="flex items-start justify-between px-3 py-2.5">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col gap-1">
+              {exercises.map((exercise, index) => (
+                <div key={exercise.instanceId} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
+                    <span className="text-xs flex-1">{exercise.name || 'Untitled exercise'}</span>
+                  </div>
+                  {index < exercises.length - 1 && onUnlink && (
+                    <div className="flex items-center justify-center py-0.5">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={handleUnlink}
+                            onKeyDown={handleUnlinkKeyDown}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                            aria-label="Unlink superset"
+                            data-no-row-link="true"
+                          >
+                            <Link2Off className="size-3" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Unlink superset</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {onExerciseClick && exercises.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Focus on the first exercise in the superset
+                      onExerciseClick(exercises[0].exerciseId);
+                    }}
+                    className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-accent transition-colors flex-shrink-0"
+                    aria-label="Focus exercise in view"
+                    data-no-row-link="true"
+                  >
+                    <Target className="size-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Focus exercise in view</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            <button
+              type="button"
+              onClick={handleDelete}
+              onKeyDown={handleKeyDown}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+              aria-label={`Delete superset group: ${exerciseNames}`}
+              data-no-row-link="true"
+            >
+              <Trash2 className="size-3" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              className="cursor-grab active:cursor-grabbing p-0.5 -mr-1 rounded select-none text-muted-foreground hover:text-foreground flex-shrink-0"
+              aria-label="Reorder exercise"
+            >
+              <GripVertical className="size-3" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const OverviewPanel = ({
   items,
   onItemsChange,
@@ -413,6 +602,9 @@ export const OverviewPanel = ({
   onDeleteExercise,
   onDeleteTopLevelExercise,
   onDeleteSuperset,
+  onDeleteTopLevelSuperset,
+  onUnlinkSuperset,
+  onUnlinkTopLevelSuperset,
   groupExercisesBySuperset,
   onExerciseClick,
 }: OverviewPanelProps) => {
@@ -885,68 +1077,121 @@ export const OverviewPanel = ({
         >
           <div className="flex flex-col gap-2">
             {items.length > 0 ? (
-              items.map((item) => {
-                if (item.itemType === 'exercise') {
-                  return (
-                    <OverviewTopLevelExerciseRow
-                      key={item.exercise.instanceId}
-                      exercise={item.exercise}
-                      onDelete={onDeleteTopLevelExercise}
-                      onExerciseClick={onExerciseClick}
-                    />
-                  );
+              (() => {
+                const renderedItems: JSX.Element[] = [];
+                let itemIndex = 0;
+
+                while (itemIndex < items.length) {
+                  const item = items[itemIndex];
+
+                  if (item.itemType === 'exercise') {
+                    // Check if this is part of a superset
+                    const exercise = item.exercise;
+                    if (exercise.supersetGroupId) {
+                      // Group consecutive exercises with the same supersetGroupId
+                      const supersetExercises: ExerciseWithSuperset[] = [exercise];
+                      let nextIndex = itemIndex + 1;
+
+                      while (
+                        nextIndex < items.length &&
+                        items[nextIndex].itemType === 'exercise' &&
+                        items[nextIndex].exercise.supersetGroupId === exercise.supersetGroupId
+                      ) {
+                        supersetExercises.push(items[nextIndex].exercise);
+                        nextIndex++;
+                      }
+
+                      if (supersetExercises.length > 1) {
+                        // Render as superset
+                        renderedItems.push(
+                          <OverviewTopLevelSupersetRow
+                            key={`top-level-superset-${exercise.instanceId}`}
+                            exercises={supersetExercises}
+                            itemStartIndex={itemIndex}
+                            onDelete={onDeleteTopLevelSuperset}
+                            onUnlink={onUnlinkTopLevelSuperset}
+                            onExerciseClick={onExerciseClick}
+                          />
+                        );
+                        itemIndex = nextIndex;
+                        continue;
+                      }
+                    }
+
+                    // Render as single exercise
+                    renderedItems.push(
+                      <OverviewTopLevelExerciseRow
+                        key={item.exercise.instanceId}
+                        exercise={item.exercise}
+                        onDelete={onDeleteTopLevelExercise}
+                        onExerciseClick={onExerciseClick}
+                      />
+                    );
+                    itemIndex++;
+                  } else {
+                    // Section item
+                    const section = item.section;
+                    renderedItems.push(
+                      <OverviewSectionCard
+                        key={section.id}
+                        section={section}
+                        onDelete={onDeleteSection}
+                      >
+                        <div className="p-2 flex flex-col gap-1">
+                          {section.exercises && section.exercises.length > 0 ? (
+                            <SortableContext
+                              items={section.exercises.map(
+                                (exercise) => `exercise-|${section.id}|${exercise.instanceId}`
+                              )}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {(() => {
+                                const groups = groupExercisesBySuperset(section.exercises);
+                                let exerciseIndex = 0;
+
+                                return groups.map((exerciseGroup, groupIndex) => {
+                                  const groupStartIndex = exerciseIndex;
+                                  exerciseIndex += exerciseGroup.length;
+
+                                  if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
+                                    return (
+                                      <OverviewSupersetRow
+                                        key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
+                                        sectionId={section.id}
+                                        exercises={exerciseGroup}
+                                        exerciseStartIndex={groupStartIndex}
+                                        onDelete={onDeleteSuperset}
+                                        onUnlink={onUnlinkSuperset}
+                                        onExerciseClick={onExerciseClick}
+                                      />
+                                    );
+                                  }
+                                  return exerciseGroup.map((exercise, indexInGroup) => (
+                                    <OverviewExerciseRow
+                                      key={`${exercise.instanceId}-${indexInGroup}`}
+                                      sectionId={section.id}
+                                      exercise={exercise}
+                                      onDelete={onDeleteExercise}
+                                      onExerciseClick={onExerciseClick}
+                                    />
+                                  ));
+                                });
+                              })()}
+                            </SortableContext>
+                          ) : (
+                            <div className="text-xs text-muted-foreground px-1 py-2">
+                              No exercises yet.
+                            </div>
+                          )}
+                        </div>
+                      </OverviewSectionCard>
+                    );
+                    itemIndex++;
+                  }
                 }
 
-                // Section item
-                const section = item.section;
-                return (
-                  <OverviewSectionCard
-                    key={section.id}
-                    section={section}
-                    onDelete={onDeleteSection}
-                  >
-                    <div className="p-2 flex flex-col gap-1">
-                      {section.exercises && section.exercises.length > 0 ? (
-                        <SortableContext
-                          items={section.exercises.map(
-                            (exercise) => `exercise-|${section.id}|${exercise.instanceId}`
-                          )}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {groupExercisesBySuperset(section.exercises).map(
-                            (exerciseGroup, groupIndex) => {
-                              if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
-                                return (
-                                  <OverviewSupersetRow
-                                    key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
-                                    sectionId={section.id}
-                                    exercises={exerciseGroup}
-                                    onDelete={onDeleteSuperset}
-                                    onExerciseClick={onExerciseClick}
-                                  />
-                                );
-                              }
-                              return exerciseGroup.map((exercise, indexInGroup) => (
-                                <OverviewExerciseRow
-                                  key={`${exercise.instanceId}-${indexInGroup}`}
-                                  sectionId={section.id}
-                                  exercise={exercise}
-                                  onDelete={onDeleteExercise}
-                                  onExerciseClick={onExerciseClick}
-                                />
-                              ));
-                            }
-                          )}
-                        </SortableContext>
-                      ) : (
-                        <div className="text-xs text-muted-foreground px-1 py-2">
-                          No exercises yet.
-                        </div>
-                      )}
-                    </div>
-                  </OverviewSectionCard>
-                );
-              })
+                return renderedItems;
+              })()
             ) : (
               <p className="text-xs text-muted-foreground">
                 Exercises and sections will appear here once created.
