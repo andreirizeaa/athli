@@ -1331,7 +1331,9 @@ export const StandardBuilder = ({
                   const canShowDropZoneAfter = !isLinkedToNext && !hasSupersetButtonAfter;
 
                   // ONLY ONE drop zone appears at a time - the one matching dragOverTopLevelSlot
-                  const showDropZoneBefore = draggedExercise && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore;
+                  // Priority: "after" drop zones take precedence over "before" drop zones to avoid duplicates
+                  const isPrevItemShowingDropZoneAfter = draggedExercise && dragOverTopLevelSlot === itemIndex && prevItem;
+                  const showDropZoneBefore = draggedExercise && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
                   const showDropZoneAfter = draggedExercise && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
 
                   // Add extra spacing around sections
