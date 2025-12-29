@@ -281,7 +281,7 @@ const WorkoutsPage = () => {
       };
 
       try {
-        window.localStorage.setItem('oneninety_new_workout_meta', JSON.stringify(meta));
+        window.localStorage.setItem('athli_new_workout_meta', JSON.stringify(meta));
       } catch {
         // Ignore storage errors
       }
@@ -320,7 +320,7 @@ const WorkoutsPage = () => {
       };
 
       try {
-        window.localStorage.setItem('oneninety_ai_workout_chat', JSON.stringify(chatData));
+        window.localStorage.setItem('athli_ai_workout_chat', JSON.stringify(chatData));
       } catch {
         // Ignore storage errors
       }
@@ -339,13 +339,13 @@ const WorkoutsPage = () => {
 
       if (generated) {
         try {
-          window.localStorage.setItem('oneninety_ai_generated_workout', JSON.stringify(generated));
+          window.localStorage.setItem('athli_ai_generated_workout', JSON.stringify(generated));
         } catch {
           // Ignore storage errors
         }
       } else {
         try {
-          window.localStorage.removeItem('oneninety_ai_generated_workout');
+          window.localStorage.removeItem('athli_ai_generated_workout');
         } catch {
           // Ignore storage errors
         }
@@ -353,7 +353,7 @@ const WorkoutsPage = () => {
 
       try {
         // Set access flag for standard builder - ensure it's set before navigation
-        window.localStorage.setItem('oneninety_workout_builder_access', 'standard');
+        window.localStorage.setItem('athli_workout_builder_access', 'standard');
         // Force a small delay to ensure localStorage is written
         await new Promise((resolve) => setTimeout(resolve, 100));
       } catch {
@@ -1263,7 +1263,7 @@ Focus on proper form and progressive overload.`;
                   <BrainCog className="h-10 w-10" />
                 </div>
               </div>
-              <h2 className="text-xl font-semibold text-center">{t('library.oneNinetyAiBuilder')}</h2>
+              <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
               <p className="text-sm text-foreground text-center max-w-md">
                 {t('library.dragDropPdf')}
               </p>

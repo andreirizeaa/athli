@@ -148,7 +148,7 @@ export function createExpressApp() {
   // API v1 base route info
   app.get('/api/v1', (_req, res) => {
     res.status(200).json({
-      message: 'OneNinety API v1',
+      message: 'Athli API v1',
       version: '1.0.0',
       endpoints: {
         health: '/health',

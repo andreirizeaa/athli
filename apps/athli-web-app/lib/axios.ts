@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { createClient } from '@/supabase/client';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || 'http://localhost:3002';
 const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION?.replace(/^\/+|\/+$/g, '') || 'api/v1';
 
 export const API_URL = `${API_BASE_URL}/${API_VERSION}`;

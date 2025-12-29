@@ -122,7 +122,7 @@ export function AppSidebar() {
           </div>
         ) : (
           <div className="flex items-center px-2 py-1 h-10">
-            <span className="text-base font-semibold">OneNinety</span>
+            <span className="text-base font-semibold">Athli</span>
           </div>
         )}
       </SidebarHeader>

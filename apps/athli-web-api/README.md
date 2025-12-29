@@ -60,7 +60,7 @@ cp .env.example .env
 3. Update `.env` with your configuration:
 ```
 NODE_ENV=development
-PORT=3000
+PORT=3002
 LOG_LEVEL=info
 ```
 
@@ -71,7 +71,7 @@ Run the development server with hot reload:
 npm run dev
 ```
 
-The API will be available at **http://localhost:3000**
+The API will be available at **http://localhost:3002**
 
 ### Build
 
@@ -116,7 +116,7 @@ npm start
 
 The API is fully documented using Swagger/OpenAPI. Once the server is running, you can access the interactive API documentation at:
 
-**http://localhost:3000/api-docs**
+**http://localhost:3002/api-docs**
 
 The Swagger UI provides:
 - Complete API endpoint documentation

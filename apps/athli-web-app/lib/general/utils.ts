@@ -16,7 +16,7 @@ export function generateMeta({
   canonical: string;
 }): Metadata {
   return {
-    title: `${title} - OneNinety`,
+    title: `${title} - Athli`,
     description: description,
     alternates: {
       canonical: canonical

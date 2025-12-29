@@ -197,16 +197,16 @@ export const BasicInformation = ({
                 ? 'border-primary bg-primary/5 shadow-sm'
                 : 'bg-background hover:bg-accent/30'
             )}
-            aria-label={t('workouts.addWorkout.oneNinetyAiAria')}
+            aria-label={t('workouts.addWorkout.athliAiAria')}
           >
-            <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.oneNinetyAi')}</p>
+            <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.athliAi')}</p>
             <p
               className={cn(
                 'text-xs',
                 selectedBuilder === 'ai' ? 'text-foreground/80' : 'text-muted-foreground'
               )}
             >
-              {t('workouts.addWorkout.oneNinetyAiDescription')}
+              {t('workouts.addWorkout.athliAiDescription')}
             </p>
             <div
               aria-hidden="true"

@@ -126,7 +126,7 @@ export default function HeroSection() {
                   as="h1"
                   className="mx-auto mt-8 max-w-4xl text-balance text-5xl max-md:font-semibold md:text-7xl lg:mt-16 xl:text-[5.25rem]"
                 >
-                  Scale Your Coaching Business with OneNinety
+                  Scale Your Coaching Business with Athli
                 </TextEffect>
                 <TextEffect
                   per="line"

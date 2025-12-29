@@ -9,7 +9,7 @@ export default function Features() {
             Simplifiy your coaching business and improve your retention
           </h2>
           <p>
-            OneNinety is more than just a coachin platform. It bridges the gap bewteen your business and your athletes providing an improved client experience.
+            Athli is more than just a coachin platform. It bridges the gap bewteen your business and your athletes providing an improved client experience.
           </p>
         </div>
 
