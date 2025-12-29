@@ -35,6 +35,7 @@ import type { WorkoutPayload, WorkoutSectionPayload } from '@/app/training/worko
 import { createProgram, editProgram, deletePrograms, updateProgramDetails, type ProgramData } from '@/api/coach/coach-program-service';
 import { toast } from 'sonner';
 import { EditProgramDetailsSidePanel } from './edit-program-details-side-panel';
+import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 
 type ProgramMeta = {
   name: string;
@@ -54,17 +55,17 @@ type ProgramBuilderProps = {
   mode: 'new' | 'edit';
   programId?: string;
   initialProgramMeta?: ProgramMeta | null;
-  onLoadProgramData?: () => Promise<{
+  initialData?: {
     workoutsByDay: { [week: number]: { [day: number]: Array<Workout & { id: string }> } };
     totalWeeks: number;
-  } | null>;
+  } | null;
 };
 
 export const ProgramBuilder = ({
   mode,
   programId,
   initialProgramMeta,
-  onLoadProgramData,
+  initialData,
 }: ProgramBuilderProps) => {
   const t = useTranslations();
   const router = useRouter();
@@ -89,7 +90,7 @@ export const ProgramBuilder = ({
     workoutsByDay: { [week: number]: { [day: number]: Array<Workout & { id: string }> } };
     totalWeeks: number;
   }>({ workoutsByDay: {}, totalWeeks: 1 });
-  const [isLoading, setIsLoading] = useState<boolean>(mode === 'edit');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedWorkoutDetails, setSelectedWorkoutDetails] = useState<{
     week: number;
     day: number;
@@ -148,6 +149,17 @@ export const ProgramBuilder = ({
     ];
   };
 
+  const initializeEmptyWorkouts = (weeks: number) => {
+    const workouts: { [week: number]: { [day: number]: Array<Workout & { id: string }> } } = {};
+    for (let i = 1; i <= weeks; i++) {
+      workouts[i] = {};
+      for (let j = 1; j <= 7; j++) {
+        workouts[i][j] = [];
+      }
+    }
+    return workouts;
+  };
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -167,15 +179,21 @@ export const ProgramBuilder = ({
           try {
             const parsed = JSON.parse(raw) as ProgramMeta;
             setProgramMeta(parsed);
+
             // Initialize total weeks from meta if available
             if (parsed.weeks && parsed.weeks.trim() !== '') {
               const weeksNum = parseInt(parsed.weeks, 10);
               if (!Number.isNaN(weeksNum) && weeksNum > 0) {
                 setTotalWeeks(weeksNum);
-                // Initialize history with the correct totalWeeks
-                setHistory([{ workoutsByDay: {}, totalWeeks: weeksNum }]);
+
+                // Initialize empty workouts structure for the specified weeks
+                const initialWorkouts = initializeEmptyWorkouts(weeksNum);
+                setWorkoutsByDay(initialWorkouts); // Ensure current state is also set
+
+                // Initialize history with the correct totalWeeks and empty schema
+                setHistory([{ workoutsByDay: initialWorkouts, totalWeeks: weeksNum }]);
                 // Update initial state
-                setInitialState({ workoutsByDay: {}, totalWeeks: weeksNum });
+                setInitialState({ workoutsByDay: initialWorkouts, totalWeeks: weeksNum });
               }
             }
             // Clear the access flag after loading
@@ -189,33 +207,22 @@ export const ProgramBuilder = ({
         // If no meta in localStorage, use default values
         setProgramMeta({
           name: t('programs.builder.newProgram'),
-          type: '',
-          difficulty: 'all levels',
+          type: PROGRAM_TYPES[0].value,
+          difficulty: DIFFICULTY_LEVELS[0].value,
           weeks: '',
           description: '',
         });
       }, 50);
 
       return () => clearTimeout(timeoutId);
-    } else if (mode === 'edit' && onLoadProgramData) {
+    } else if (mode === 'edit' && initialData) {
       // Load program data for edit mode
-      onLoadProgramData()
-        .then((data) => {
-          if (data) {
-            setWorkoutsByDay(data.workoutsByDay);
-            setTotalWeeks(data.totalWeeks);
-            setHistory([{ workoutsByDay: data.workoutsByDay, totalWeeks: data.totalWeeks }]);
-            setInitialState({ workoutsByDay: data.workoutsByDay, totalWeeks: data.totalWeeks });
-          }
-          setIsLoading(false);
-        })
-        .catch(() => {
-          setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
+      setWorkoutsByDay(initialData.workoutsByDay);
+      setTotalWeeks(initialData.totalWeeks);
+      setHistory([{ workoutsByDay: initialData.workoutsByDay, totalWeeks: initialData.totalWeeks }]);
+      setInitialState({ workoutsByDay: initialData.workoutsByDay, totalWeeks: initialData.totalWeeks });
     }
-  }, [mode, router, onLoadProgramData]);
+  }, [mode, router, initialData]);
 
   // Convert day number to week and day within week
   const getWeekAndDay = (dayNumber: number) => {
@@ -389,6 +396,7 @@ export const ProgramBuilder = ({
     saveToHistory(updatedWorkouts, newTotalWeeks);
     setWorkoutsByDay(updatedWorkouts);
     setTotalWeeks(newTotalWeeks);
+    toast.success(`Week ${weekNumber} duplicated successfully`);
   };
 
   const handleDeleteWeek = (weekNumber: number) => {
@@ -416,6 +424,7 @@ export const ProgramBuilder = ({
       if (currentWeek > newTotalWeeks) {
         setCurrentWeek(Math.max(1, newTotalWeeks));
       }
+      toast.success(`Week ${weekNumber} deleted successfully`);
     }
   };
 
@@ -728,7 +737,7 @@ export const ProgramBuilder = ({
           <div className="flex items-center gap-3">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={handlePreviousWeek}
               disabled={currentWeek === 1}
@@ -743,7 +752,7 @@ export const ProgramBuilder = ({
             </div>
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={handleNextWeek}
               disabled={

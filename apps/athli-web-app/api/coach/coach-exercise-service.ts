@@ -14,6 +14,7 @@ export type Exercise = {
   modality?: string;
   video_link?: string;
   starred: boolean;
+  isFavourite: boolean;
   archived: boolean;
   created_at: string;
   updated_at?: string;
@@ -52,8 +53,11 @@ const mapToBackend = (payload: ExercisePayload) => {
  * Get all exercises
  */
 export const getExercises = async (): Promise<Exercise[]> => {
-  const response = await apiFetch<ApiResponse<{ exercises: Exercise[] }>>('/coach/training/exercises');
-  return response.data?.exercises || [];
+  const response = await apiFetch<ApiResponse<{ exercises: any[] }>>('/coach/training/exercises');
+  return (response.data?.exercises || []).map((e) => ({
+    ...e,
+    isFavourite: e.is_favourite || false,
+  }));
 };
 
 /**
@@ -64,9 +68,9 @@ export const starExercises = async (exerciseIds: string | string[], starred: boo
 
   await Promise.all(
     ids.map((id) =>
-      apiFetch(`/coach/training/exercises/${id}`, {
+      apiFetch(`/coach/training/exercises/${id}/toggle-favorite`, {
         method: 'PATCH',
-        body: JSON.stringify({ starred }),
+        body: JSON.stringify({ isFavourite: starred }),
       })
     )
   );

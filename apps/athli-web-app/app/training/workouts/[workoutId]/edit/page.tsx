@@ -16,7 +16,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { StandardBuilder } from '../../new/standard-builder';
+import { StandardBuilder } from '../../new/workout-builder';
 import type { WorkoutProgramPayload } from '../../new/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { getWorkoutById, updateWorkoutDetails, deleteWorkouts } from '@/api/coach/coach-workout-service';
@@ -151,7 +151,7 @@ const EditStandardWorkoutPage = () => {
   const handleDeleteWorkout = async () => {
     try {
       await deleteWorkouts(workoutId);
-      toast.success('Workout deleted successfully');
+      toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       router.push('/training/workouts');
     } catch (error) {
       console.error('Failed to delete workout:', error);

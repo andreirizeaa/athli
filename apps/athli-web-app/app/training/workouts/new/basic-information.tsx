@@ -172,7 +172,7 @@ export const BasicInformation = ({
 
       <div className="flex flex-col gap-2">
         <label htmlFor="workout-description" className="text-sm font-medium">
-          {t('workouts.addWorkout.description')} <span className="text-muted-foreground font-normal">{t('workouts.addWorkout.descriptionOptional')}</span>
+          {t('workouts.addWorkout.description')}
         </label>
         <Textarea
           id="workout-description"

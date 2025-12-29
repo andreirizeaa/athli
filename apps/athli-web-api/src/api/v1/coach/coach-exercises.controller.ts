@@ -150,4 +150,48 @@ export const coachExercisesController = {
             message: 'Coach exercise deleted successfully',
         });
     },
+
+    /**
+     * Toggle favorite status
+     */
+    toggleFavorite: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const { isFavourite } = req.body;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        if (typeof isFavourite !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'isFavourite boolean is required' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        const { data: exercise, error } = await supabase
+            .from('coach_exercises')
+            .update({
+                is_favourite: isFavourite,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .eq('coach_id', userId)
+            .select()
+            .single();
+
+        if (error) {
+            return internalError(res, { message: error.message });
+        }
+
+        if (!exercise) {
+            return notFound(res, { message: 'Exercise not found' });
+        }
+
+        success(res, {
+            message: `Exercise ${isFavourite ? 'starred' : 'unstarred'} successfully`,
+            data: { exercise },
+        });
+    },
 };

@@ -16,7 +16,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { StandardBuilder } from '@/app/training/workouts/new/standard-builder';
+import { StandardBuilder } from '@/app/training/workouts/new/workout-builder';
 import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { mockWorkouts } from '@/components/app/app-shell';

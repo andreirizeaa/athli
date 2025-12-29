@@ -144,7 +144,8 @@ const ProgramsPage = () => {
   useEffect(() => {
     // Initialize filteredCount and starred programs from context data
     setFilteredCount(programs.length);
-    const starred = new Set(programs.filter(p => (p as any).starred).map(p => p.id));
+    setFilteredCount(programs.length);
+    const starred = new Set(programs.filter(p => p.isFavourite).map(p => p.id));
     setStarredPrograms(starred);
   }, [programs]);
 
@@ -175,7 +176,12 @@ const ProgramsPage = () => {
   const handleToggleStar = async (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starPrograms(programId, !starredPrograms.has(programId));
+      const isStarred = starredPrograms.has(programId);
+      await starPrograms(programId, !isStarred);
+
+      const program = programs.find((p) => p.id === programId);
+      const programName = program?.program || t('programs.program');
+
       setStarredPrograms((prev) => {
         const next = new Set(prev);
         if (next.has(programId)) {
@@ -185,9 +191,15 @@ const ProgramsPage = () => {
         }
         return next;
       });
+
+      if (isStarred) {
+        toast.success(t('programs.detail.toast.unstarredSuccessfully', { name: programName }));
+      } else {
+        toast.success(t('programs.detail.toast.starredSuccessfully', { name: programName }));
+      }
     } catch (error) {
-      // Error handling - could show toast here
       console.error('Failed to star program:', error);
+      toast.error(t('general.error'));
     }
   };
 
@@ -1128,7 +1140,7 @@ const ProgramsPage = () => {
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="program-description" className="text-sm font-medium">
-              {t('programs.addProgram.description')} <span className="text-muted-foreground font-normal">{t('programs.addProgram.descriptionOptional')}</span>
+              {t('programs.addProgram.description')}
             </label>
             <Textarea
               id="program-description"

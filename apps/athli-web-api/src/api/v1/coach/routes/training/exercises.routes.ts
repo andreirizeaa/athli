@@ -128,3 +128,5 @@ coachExerciseRouter.patch('/:id', supabaseAuthenticate, coachExercisesController
 coachExerciseRouter.post('/', supabaseAuthenticate, coachExercisesController.createExercise);
 
 coachExerciseRouter.delete('/:id', supabaseAuthenticate, coachExercisesController.deleteExercise);
+
+coachExerciseRouter.patch('/:id/toggle-favorite', supabaseAuthenticate, coachExercisesController.toggleFavorite);
