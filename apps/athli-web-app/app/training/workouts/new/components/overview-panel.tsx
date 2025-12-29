@@ -673,36 +673,26 @@ export const OverviewPanel = ({
     }
 
     if (activeOverviewItem.type === 'exerciseGroup') {
-      let targetSectionId = activeOverviewItem.sectionId;
-      let targetExerciseId: string | null = null;
-
-      if (overId.startsWith('section-')) {
-        targetSectionId = overId.replace('section-', '');
-      } else if (overId.startsWith('exercise-')) {
-        const [, sectionId, exerciseId] = overId.split('|');
-        targetSectionId = sectionId;
-        targetExerciseId = exerciseId;
-      }
-
       const sourceSectionId = activeOverviewItem.sectionId;
       const { startIndex, length } = activeOverviewItem;
 
-      const updatedSections = [...sections];
-      const sourceSectionIndex = updatedSections.findIndex((s) => s.id === sourceSectionId);
-      const targetSectionIndex = updatedSections.findIndex((s) => s.id === targetSectionId);
-      if (sourceSectionIndex === -1 || targetSectionIndex === -1) {
+      // Find source section in items
+      const sourceSectionItemIndex = items.findIndex(
+        (item) => item.itemType === 'section' && item.section.id === sourceSectionId
+      );
+
+      if (sourceSectionItemIndex === -1) {
         setActiveOverviewItem(null);
         return;
       }
 
-      const sourceSection = updatedSections[sourceSectionIndex];
-      const targetSection = updatedSections[targetSectionIndex];
-      if (!sourceSection.exercises) {
+      const sourceSectionItem = items[sourceSectionItemIndex];
+      if (sourceSectionItem.itemType !== 'section' || !sourceSectionItem.section.exercises) {
         setActiveOverviewItem(null);
         return;
       }
 
-      const sourceExercises = [...sourceSection.exercises];
+      const sourceExercises = [...sourceSectionItem.section.exercises];
 
       if (
         startIndex < 0 ||
@@ -716,34 +706,110 @@ export const OverviewPanel = ({
       const groupExercises = sourceExercises.slice(startIndex, startIndex + length);
       const groupExerciseIds = new Set(groupExercises.map((ex) => ex.exerciseId));
 
-      sourceExercises.splice(startIndex, length);
+      // Check if dropping on top-level exercise - move to top-level
+      if (overId.startsWith('top-level-exercise-')) {
+        const overInstanceId = overId.replace('top-level-exercise-', '');
+        const topLevelExerciseIndex = items.findIndex(
+          (item) => item.itemType === 'exercise' && item.exercise.instanceId === overInstanceId
+        );
 
-      if (targetExerciseId && groupExerciseIds.has(targetExerciseId)) {
-        updatedSections[sourceSectionIndex] = {
-          ...sourceSection,
+        if (topLevelExerciseIndex === -1) {
+          setActiveOverviewItem(null);
+          return;
+        }
+
+        // Remove from section
+        sourceExercises.splice(startIndex, length);
+        const updatedSourceSection = {
+          ...sourceSectionItem.section,
           exercises: sourceExercises,
         };
-        onSectionsChange(updatedSections);
+
+        // Add to top-level at the target position
+        const newItems = [...items];
+        newItems[sourceSectionItemIndex] = {
+          itemType: 'section',
+          section: updatedSourceSection,
+        };
+
+        // Insert exercises as top-level items at the target position
+        groupExercises.forEach((exercise, idx) => {
+          newItems.splice(topLevelExerciseIndex + idx, 0, {
+            itemType: 'exercise',
+            exercise,
+          });
+        });
+
+        onItemsChange(newItems);
         setActiveOverviewItem(null);
         return;
       }
 
-      let targetExercises = [...(targetSection.exercises || [])];
+      // Check if dropping on section or section exercise
+      let targetSectionId = sourceSectionId;
+      let targetExerciseId: string | null = null;
+
+      if (overId.startsWith('section-')) {
+        targetSectionId = overId.replace('section-', '');
+      } else if (overId.startsWith('exercise-|')) {
+        const [, sectionId, exerciseId] = overId.split('|');
+        targetSectionId = sectionId;
+        targetExerciseId = exerciseId;
+      } else {
+        setActiveOverviewItem(null);
+        return;
+      }
+
+      const targetSectionItemIndex = items.findIndex(
+        (item) => item.itemType === 'section' && item.section.id === targetSectionId
+      );
+
+      if (targetSectionItemIndex === -1) {
+        setActiveOverviewItem(null);
+        return;
+      }
+
+      const targetSectionItem = items[targetSectionItemIndex];
+      if (targetSectionItem.itemType !== 'section') {
+        setActiveOverviewItem(null);
+        return;
+      }
+
+      sourceExercises.splice(startIndex, length);
+
+      if (targetExerciseId && groupExerciseIds.has(targetExerciseId)) {
+        // Trying to drop on itself
+        const updatedSourceSection = {
+          ...sourceSectionItem.section,
+          exercises: sourceExercises,
+        };
+        const newItems = [...items];
+        newItems[sourceSectionItemIndex] = {
+          itemType: 'section',
+          section: updatedSourceSection,
+        };
+        onItemsChange(newItems);
+        setActiveOverviewItem(null);
+        return;
+      }
+
+      let targetExercises = [...(targetSectionItem.section.exercises || [])];
       let toIndex = targetExercises.length;
 
       if (targetExerciseId) {
-        const existingIndex = targetExercises.findIndex((ex) => ex.exerciseId === targetExerciseId);
+        const existingIndex = targetExercises.findIndex((ex) => ex.instanceId === targetExerciseId);
         if (existingIndex !== -1) {
           toIndex = existingIndex;
         }
       }
 
       if (sourceSectionId === targetSectionId) {
+        // Moving within same section
         targetExercises = [...sourceExercises];
 
         if (targetExerciseId) {
           const existingIndex = targetExercises.findIndex(
-            (ex) => ex.exerciseId === targetExerciseId
+            (ex) => ex.instanceId === targetExerciseId
           );
           if (existingIndex !== -1) {
             toIndex = existingIndex;
@@ -756,24 +822,44 @@ export const OverviewPanel = ({
 
         targetExercises.splice(toIndex, 0, ...groupExercises);
 
-        updatedSections[sourceSectionIndex] = {
-          ...sourceSection,
+        const updatedSection = {
+          ...sourceSectionItem.section,
           exercises: targetExercises,
         };
+
+        const newItems = [...items];
+        newItems[sourceSectionItemIndex] = {
+          itemType: 'section',
+          section: updatedSection,
+        };
+
+        onItemsChange(newItems);
       } else {
+        // Moving between different sections
         targetExercises.splice(toIndex, 0, ...groupExercises);
 
-        updatedSections[sourceSectionIndex] = {
-          ...sourceSection,
+        const updatedSourceSection = {
+          ...sourceSectionItem.section,
           exercises: sourceExercises,
         };
-        updatedSections[targetSectionIndex] = {
-          ...targetSection,
+
+        const updatedTargetSection = {
+          ...targetSectionItem.section,
           exercises: targetExercises,
         };
-      }
 
-      onSectionsChange(updatedSections);
+        const newItems = [...items];
+        newItems[sourceSectionItemIndex] = {
+          itemType: 'section',
+          section: updatedSourceSection,
+        };
+        newItems[targetSectionItemIndex] = {
+          itemType: 'section',
+          section: updatedTargetSection,
+        };
+
+        onItemsChange(newItems);
+      }
     }
 
     setActiveOverviewItem(null);
@@ -790,77 +876,82 @@ export const OverviewPanel = ({
         modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
       >
         <SortableContext
-          items={[
-            ...topLevelExercises.map((ex) => `top-level-exercise-${ex.instanceId}`),
-            ...sections.map((section) => `section-${section.id}`)
-          ]}
+          items={items.map((item) =>
+            item.itemType === 'exercise'
+              ? `top-level-exercise-${item.exercise.instanceId}`
+              : `section-${item.section.id}`
+          )}
           strategy={verticalListSortingStrategy}
         >
           <div className="flex flex-col gap-2">
-            {/* Top-level exercises (outside sections) - individual cards with drag handles */}
-            {topLevelExercises.map((exercise) => (
-              <OverviewTopLevelExerciseRow
-                key={exercise.instanceId}
-                exercise={exercise}
-                onDelete={onDeleteTopLevelExercise}
-                onExerciseClick={onExerciseClick}
-              />
-            ))}
+            {items.length > 0 ? (
+              items.map((item) => {
+                if (item.itemType === 'exercise') {
+                  return (
+                    <OverviewTopLevelExerciseRow
+                      key={item.exercise.instanceId}
+                      exercise={item.exercise}
+                      onDelete={onDeleteTopLevelExercise}
+                      onExerciseClick={onExerciseClick}
+                    />
+                  );
+                }
 
-            {/* Sections */}
-            {sections.length > 0 ? (
-              sections.map((section) => (
-                <OverviewSectionCard
-                  key={section.id}
-                  section={section}
-                  onDelete={onDeleteSection}
-                >
-                  <div className="p-2 flex flex-col gap-1">
-                    {section.exercises && section.exercises.length > 0 ? (
-                      <SortableContext
-                        items={section.exercises.map(
-                          (exercise) => `exercise-|${section.id}|${exercise.instanceId}`
-                        )}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {groupExercisesBySuperset(section.exercises).map(
-                          (exerciseGroup, groupIndex) => {
-                            if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
-                              return (
-                                <OverviewSupersetRow
-                                  key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
+                // Section item
+                const section = item.section;
+                return (
+                  <OverviewSectionCard
+                    key={section.id}
+                    section={section}
+                    onDelete={onDeleteSection}
+                  >
+                    <div className="p-2 flex flex-col gap-1">
+                      {section.exercises && section.exercises.length > 0 ? (
+                        <SortableContext
+                          items={section.exercises.map(
+                            (exercise) => `exercise-|${section.id}|${exercise.instanceId}`
+                          )}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {groupExercisesBySuperset(section.exercises).map(
+                            (exerciseGroup, groupIndex) => {
+                              if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
+                                return (
+                                  <OverviewSupersetRow
+                                    key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
+                                    sectionId={section.id}
+                                    exercises={exerciseGroup}
+                                    onDelete={onDeleteSuperset}
+                                    onExerciseClick={onExerciseClick}
+                                  />
+                                );
+                              }
+                              return exerciseGroup.map((exercise, indexInGroup) => (
+                                <OverviewExerciseRow
+                                  key={`${exercise.instanceId}-${indexInGroup}`}
                                   sectionId={section.id}
-                                  exercises={exerciseGroup}
-                                  onDelete={onDeleteSuperset}
+                                  exercise={exercise}
+                                  onDelete={onDeleteExercise}
                                   onExerciseClick={onExerciseClick}
                                 />
-                              );
+                              ));
                             }
-                            return exerciseGroup.map((exercise, indexInGroup) => (
-                              <OverviewExerciseRow
-                                key={`${exercise.instanceId}-${indexInGroup}`}
-                                sectionId={section.id}
-                                exercise={exercise}
-                                onDelete={onDeleteExercise}
-                                onExerciseClick={onExerciseClick}
-                              />
-                            ));
-                          }
-                        )}
-                      </SortableContext>
-                    ) : (
-                      <div className="text-xs text-muted-foreground px-1 py-2">
-                        No exercises yet.
-                      </div>
-                    )}
-                  </div>
-                </OverviewSectionCard>
-              ))
-            ) : topLevelExercises.length === 0 ? (
+                          )}
+                        </SortableContext>
+                      ) : (
+                        <div className="text-xs text-muted-foreground px-1 py-2">
+                          No exercises yet.
+                        </div>
+                      )}
+                    </div>
+                  </OverviewSectionCard>
+                );
+              })
+            ) : (
               <p className="text-xs text-muted-foreground">
                 Exercises and sections will appear here once created.
               </p>
-            ) : null}
+            )}
           </div>
         </SortableContext>
       </DndContext>
