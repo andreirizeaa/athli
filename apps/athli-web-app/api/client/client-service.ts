@@ -172,10 +172,12 @@ export interface TrainingCalendarSchema {
     program: string;
     description: string;
     type: string;
+    difficulty: string;
     length: string;
     totalExercises: number;
-    equipment: string;
+    equipment: string | string[];
     created: string;
+    workout_data?: any;
   }>;
 }
 
@@ -209,8 +211,29 @@ export interface TrainingCalendarCompletionLogs {
 }
 
 /**
+ * Service method to get the training calendar for a client within a date range
+ * Uses the backend API with optimized queries for partitioned table
+ */
+export const getTrainingCalendarRange = async (
+  clientId: string,
+  startDate: string, // YYYY-MM-DD format
+  endDate: string    // YYYY-MM-DD format
+): Promise<TrainingCalendarSchema> => {
+  const response = await apiFetch(
+    `/client/trainings/calendar`,
+    {
+      method: 'POST',
+      headers: { 'x-client-id': clientId },
+      body: JSON.stringify({ startDate, endDate }),
+    }
+  );
+  return response.data.calendar || {};
+};
+
+/**
  * Service method to get the training calendar for a client
- * This will be connected to the backend in the future
+ * This is the legacy method that returns mock data
+ * @deprecated Use getTrainingCalendarRange instead
  */
 export const getTrainingCalendar = async (
   clientId: string
@@ -339,6 +362,7 @@ const mockJohnSmithTrainingCalendar: TrainingCalendarSchema = (() => {
         description:
           'A comprehensive strength training program designed to build muscle mass and increase overall strength.',
         type: 'Strength',
+        difficulty: 'Intermediate',
         length: '12 weeks',
         totalExercises: 24,
         equipment: 'Barbell, Dumbbells, Bench',
@@ -357,6 +381,7 @@ const mockJohnSmithTrainingCalendar: TrainingCalendarSchema = (() => {
         description:
           'High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest.',
         type: 'HIIT',
+        difficulty: 'Intermediate',
         length: '4 weeks',
         totalExercises: 12,
         equipment: 'Bodyweight, Kettlebells',
@@ -375,6 +400,7 @@ const mockJohnSmithTrainingCalendar: TrainingCalendarSchema = (() => {
         description:
           'A comprehensive strength training program designed to build muscle mass and increase overall strength.',
         type: 'Strength',
+        difficulty: 'Intermediate',
         length: '12 weeks',
         totalExercises: 24,
         equipment: 'Barbell, Dumbbells, Bench',

@@ -597,6 +597,7 @@ export const enMessages = {
     filter: 'Filter',
     sort: 'Sort',
     clear: 'Clear',
+    clearSelection: 'Clear selection',
     apply: 'Apply',
     done: 'Done',
     next: 'Next',
@@ -1766,8 +1767,7 @@ export const enMessages = {
       addWorkoutModal: 'Add workout',
       addWorkoutModalWithDate: 'Add workout - {date}',
       searchWorkouts: 'Search workouts',
-      searchWorkoutsPlaceholder: 'Search workouts',
-      noWorkoutsFound: 'No workouts found',
+
       selectWorkout: 'Select workout {name}',
       type: 'Type',
       equipment: 'Equipment',
@@ -1804,6 +1804,10 @@ export const enMessages = {
         rounds: 'Rounds',
       },
       table: {
+        name: 'Name',
+        difficulty: 'Difficulty',
+        length: 'Length',
+        muscleGroup: 'Muscle Group',
         set: 'Set',
         type: 'Type',
         reps: 'Reps',
@@ -1827,12 +1831,68 @@ export const enMessages = {
       noProgramsFound: 'No programs found.',
       selectProgram: 'Select program {name}',
       startDate: 'Start date',
-      programStartDate: 'Program start date',
+
       selectStartDate: 'Select start date',
       endDate: 'End date',
       selectProgramAndStartDate: 'Select a program and start date',
       addProgramAria: 'Add program to calendar',
       cancelAddProgram: 'Cancel add program',
+      saveAs: 'Save as',
+      saveAsWorkout: {
+        menuItem: 'Save as workout',
+        title: 'Save as Workout',
+        selectDate: 'Select date of workout you wish to use',
+        selectDateAria: 'Select date for workout',
+      },
+      saveAsProgram: {
+        menuItem: 'Save as program',
+        title: 'Save as Program',
+        fromDate: 'From date',
+        toDate: 'To date',
+        selectFromDateAria: 'Select start date for program',
+        selectToDateAria: 'Select end date for program',
+        selectDatePlaceholder: 'Select date',
+        success: 'Program saved successfully',
+        error: 'Failed to save program',
+        errors: {
+          fromDateRequired: 'From date is required',
+          toDateRequired: 'To date is required',
+          nameRequired: 'Program name is required',
+          typeRequired: 'Program type is required',
+          difficultyRequired: 'Difficulty is required',
+          noWorkoutFound: 'No workouts found in the selected range',
+        },
+      },
+      addExercise: 'Add exercise',
+      addExerciseModal: 'Add Exercise',
+      addExerciseModalWithDate: 'Add Exercise to {date}',
+      searchExercisesPlaceholder: 'Search exercises...',
+      searchExercises: 'Search exercises',
+      noExercisesFound: 'No exercises found',
+
+      /* Add Workout Side Panel */
+      addWorkoutTitle: 'Add Workout',
+      addWorkoutDescription: 'Select a workout from your library to add to this day.',
+      configureWorkoutTitle: 'Configure Workout',
+      configureWorkoutDescription: 'Configure how this workout should be added to the calendar.',
+      addThisWorkoutWeeklyOn: 'Add this workout weekly on',
+      addConfigurations: 'Configurations',
+
+      /* Add Program Side Panel */
+      addProgramTitle: 'Add Program',
+      addProgramDescription: 'Select a program from your library to add to the calendar.',
+      configureProgramTitle: 'Configure Program',
+      configureProgramDescription: 'Set the start date and other details for this program.',
+      programStartDate: 'Start Date',
+      programStartDateDescription: 'This program will be scheduled starting from this date.',
+
+      /* Add Exercise Side Panel */
+      addExerciseTitle: 'Add Exercise',
+      addExerciseDescription: 'Select an exercise from your library to add as a single workout.',
+
+      searchWorkoutsPlaceholder: 'Search workouts...',
+      noWorkoutsFound: 'No workouts found. Try adjusting your filters.',
+
     },
   },
   error: {
