@@ -5,11 +5,13 @@ import {
   DndContext,
   DragEndEvent,
   DragStartEvent,
+  DragOverEvent,
   PointerSensor,
   KeyboardSensor,
-  closestCenter,
+  closestCorners,
   useSensor,
   useSensors,
+  DragOverlay,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -18,6 +20,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import {
   restrictToVerticalAxis,
   restrictToFirstScrollableAncestor,
@@ -66,12 +69,18 @@ const OverviewSectionCard = ({
   section,
   children,
   onDelete,
+  isEmpty,
 }: {
   section: WorkoutSection;
   children: React.ReactNode;
   onDelete: (sectionId: string) => void;
+  isEmpty?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `section-${section.id}`,
+  });
+
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: `section-${section.id}`,
   });
 
@@ -85,7 +94,8 @@ const OverviewSectionCard = ({
     <div ref={setNodeRef} style={style}>
       <div
         className={cn(
-          'border border-primary rounded-lg bg-sidebar shadow-sm mb-2 select-none'
+          'border border-primary rounded-lg bg-sidebar shadow-sm mb-2 select-none',
+          isOver && isEmpty && 'ring-2 ring-primary ring-offset-2'
         )}
       >
         <div
@@ -129,7 +139,9 @@ const OverviewSectionCard = ({
             </button>
           </div>
         </div>
-        {children}
+        <div ref={setDroppableRef}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -445,6 +457,13 @@ const OverviewSupersetRow = ({
   );
 };
 
+const DropPlaceholder = ({ height = 40 }: { height?: number }) => (
+  <div
+    style={{ height: `${height}px` }}
+    className="border-2 border-dashed border-primary bg-primary/5 rounded-md"
+  />
+);
+
 const OverviewTopLevelSupersetRow = ({
   exercises,
   itemStartIndex,
@@ -644,6 +663,7 @@ export const OverviewPanel = ({
   const [activeOverviewItem, setActiveOverviewItem] = React.useState<ActiveOverviewItem | null>(
     null
   );
+  const [overId, setOverId] = React.useState<string | null>(null);
 
   const handleOverviewDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -700,8 +720,14 @@ export const OverviewPanel = ({
     }
   };
 
+  const handleOverviewDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    setOverId(over?.id as string | null);
+  };
+
   const handleOverviewDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setOverId(null);
     if (!over || !activeOverviewItem) {
       setActiveOverviewItem(null);
       return;
@@ -1057,28 +1083,44 @@ export const OverviewPanel = ({
     setActiveOverviewItem(null);
   };
 
+  // Create a flat list of all sortable IDs (sections, top-level exercises, and section exercises)
+  const allSortableIds = React.useMemo(() => {
+    const ids: string[] = [];
+
+    items.forEach((item) => {
+      if (item.itemType === 'exercise') {
+        ids.push(`top-level-exercise-${item.exercise.instanceId}`);
+      } else if (item.itemType === 'section') {
+        ids.push(`section-${item.section.id}`);
+        // Add all exercises within the section
+        item.section.exercises?.forEach((exercise) => {
+          ids.push(`exercise-|${item.section.id}|${exercise.instanceId}`);
+        });
+      }
+    });
+
+    return ids;
+  }, [items]);
+
   return (
     <>
       <h2 className="text-left mb-3">Overview</h2>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={closestCorners}
         onDragStart={handleOverviewDragStart}
+        onDragOver={handleOverviewDragOver}
         onDragEnd={handleOverviewDragEnd}
         modifiers={[restrictToVerticalAxis, restrictToFirstScrollableAncestor]}
       >
         <SortableContext
-          items={items.map((item) =>
-            item.itemType === 'exercise'
-              ? `top-level-exercise-${item.exercise.instanceId}`
-              : `section-${item.section.id}`
-          )}
+          items={allSortableIds}
           strategy={verticalListSortingStrategy}
         >
           <div className="flex flex-col gap-2">
             {items.length > 0 ? (
               (() => {
-                const renderedItems: JSX.Element[] = [];
+                const renderedItems: React.ReactElement[] = [];
                 let itemIndex = 0;
 
                 while (itemIndex < items.length) {
@@ -1087,6 +1129,15 @@ export const OverviewPanel = ({
                   if (item.itemType === 'exercise') {
                     // Check if this is part of a superset
                     const exercise = item.exercise;
+
+                    // Check if we should show a placeholder before this item
+                    const topLevelId = `top-level-exercise-${exercise.instanceId}`;
+                    if (overId === topLevelId && activeOverviewItem) {
+                      renderedItems.push(
+                        <DropPlaceholder key={`placeholder-before-${topLevelId}`} />
+                      );
+                    }
+
                     if (exercise.supersetGroupId) {
                       // Group consecutive exercises with the same supersetGroupId
                       const supersetExercises: ExerciseWithSuperset[] = [exercise];
@@ -1131,53 +1182,76 @@ export const OverviewPanel = ({
                   } else {
                     // Section item
                     const section = item.section;
+                    const isEmpty = !section.exercises || section.exercises.length === 0;
+                    const isSectionBeingDraggedOver = overId === `section-${section.id}` && activeOverviewItem;
+                    const shouldShowPlaceholder = isSectionBeingDraggedOver && isEmpty;
+
+                    // Check if we should show a placeholder before this section
+                    const sectionId = `section-${section.id}`;
+                    if (overId === sectionId && activeOverviewItem && activeOverviewItem.type === 'section') {
+                      renderedItems.push(
+                        <DropPlaceholder key={`placeholder-before-${sectionId}`} height={60} />
+                      );
+                    }
+
                     renderedItems.push(
                       <OverviewSectionCard
                         key={section.id}
                         section={section}
                         onDelete={onDeleteSection}
+                        isEmpty={isEmpty}
                       >
                         <div className="p-2 flex flex-col gap-1">
                           {section.exercises && section.exercises.length > 0 ? (
-                            <SortableContext
-                              items={section.exercises.map(
-                                (exercise) => `exercise-|${section.id}|${exercise.instanceId}`
-                              )}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              {(() => {
-                                const groups = groupExercisesBySuperset(section.exercises);
-                                let exerciseIndex = 0;
+                            (() => {
+                              const groups = groupExercisesBySuperset(section.exercises);
+                              let exerciseIndex = 0;
+                              const exerciseElements: React.ReactElement[] = [];
 
-                                return groups.map((exerciseGroup, groupIndex) => {
-                                  const groupStartIndex = exerciseIndex;
-                                  exerciseIndex += exerciseGroup.length;
+                              groups.forEach((exerciseGroup, groupIndex) => {
+                                const groupStartIndex = exerciseIndex;
+                                exerciseIndex += exerciseGroup.length;
 
-                                  if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
-                                    return (
-                                      <OverviewSupersetRow
-                                        key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
+                                // Check if we should show placeholder before this exercise group
+                                const firstExerciseInGroup = exerciseGroup[0];
+                                const exerciseItemId = `exercise-|${section.id}|${firstExerciseInGroup.instanceId}`;
+                                if (overId === exerciseItemId && activeOverviewItem) {
+                                  exerciseElements.push(
+                                    <DropPlaceholder key={`placeholder-before-${exerciseItemId}`} />
+                                  );
+                                }
+
+                                if (exerciseGroup.length > 1 && exerciseGroup[0]?.supersetGroupId) {
+                                  exerciseElements.push(
+                                    <OverviewSupersetRow
+                                      key={`superset-${section.id}-${exerciseGroup[0].instanceId}-${groupIndex}`}
+                                      sectionId={section.id}
+                                      exercises={exerciseGroup}
+                                      exerciseStartIndex={groupStartIndex}
+                                      onDelete={onDeleteSuperset}
+                                      onUnlink={onUnlinkSuperset}
+                                      onExerciseClick={onExerciseClick}
+                                    />
+                                  );
+                                } else {
+                                  exerciseGroup.forEach((exercise, indexInGroup) => {
+                                    exerciseElements.push(
+                                      <OverviewExerciseRow
+                                        key={`${exercise.instanceId}-${indexInGroup}`}
                                         sectionId={section.id}
-                                        exercises={exerciseGroup}
-                                        exerciseStartIndex={groupStartIndex}
-                                        onDelete={onDeleteSuperset}
-                                        onUnlink={onUnlinkSuperset}
+                                        exercise={exercise}
+                                        onDelete={onDeleteExercise}
                                         onExerciseClick={onExerciseClick}
                                       />
                                     );
-                                  }
-                                  return exerciseGroup.map((exercise, indexInGroup) => (
-                                    <OverviewExerciseRow
-                                      key={`${exercise.instanceId}-${indexInGroup}`}
-                                      sectionId={section.id}
-                                      exercise={exercise}
-                                      onDelete={onDeleteExercise}
-                                      onExerciseClick={onExerciseClick}
-                                    />
-                                  ));
-                                });
-                              })()}
-                            </SortableContext>
+                                  });
+                                }
+                              });
+
+                              return exerciseElements;
+                            })()
+                          ) : shouldShowPlaceholder ? (
+                            <DropPlaceholder />
                           ) : (
                             <div className="text-xs text-muted-foreground px-1 py-2">
                               No exercises yet.
