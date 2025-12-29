@@ -36,6 +36,7 @@ import { createProgram, editProgram, deletePrograms, updateProgramDetails, type 
 import { toast } from 'sonner';
 import { EditProgramDetailsSidePanel } from './edit-program-details-side-panel';
 import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
+import { useTrainingData } from '../../training-data-context';
 
 type ProgramMeta = {
   name: string;
@@ -69,6 +70,7 @@ export const ProgramBuilder = ({
 }: ProgramBuilderProps) => {
   const t = useTranslations();
   const router = useRouter();
+  const { refreshPrograms } = useTrainingData();
   const [programMeta, setProgramMeta] = useState<ProgramMeta | null>(initialProgramMeta || null);
   const [selectedWeek, setSelectedWeek] = useState<string>('1');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
@@ -448,6 +450,7 @@ export const ProgramBuilder = ({
     if (programId) {
       try {
         await deletePrograms(programId);
+        await refreshPrograms();
         toast.success(t('programs.delete.toast.success'));
         router.push('/training/programs');
       } catch (error) {

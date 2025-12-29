@@ -14,7 +14,9 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<DragOverSlot>(null);
+  const [dragOverTopLevelSlot, setDragOverTopLevelSlot] = useState<number | null>(null);
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const topLevelContainerRef = useRef<HTMLElement | null>(null);
   const expandedSectionsRef = useRef<Set<string>>(new Set());
 
   /**
@@ -84,12 +86,71 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   }, []);
 
   /**
+   * Calculate the nearest top-level drop slot based on mouse position
+   * Works for exercises and sections at the top level
+   */
+  const calculateNearestTopLevelSlot = useCallback((
+    e: React.DragEvent,
+    totalItems: number
+  ): number | null => {
+    if (!draggedExercise) return null;
+
+    const containerElement = topLevelContainerRef.current;
+    if (!containerElement) return null;
+
+    // If no items exist, return slot 0
+    if (totalItems === 0) {
+      return 0;
+    }
+
+    // Get all top-level items (sections and exercises)
+    const itemElements = Array.from(
+      containerElement.querySelectorAll('[data-top-level-item]')
+    ) as HTMLElement[];
+
+    if (itemElements.length === 0) {
+      return 0;
+    }
+
+    const mouseY = e.clientY;
+    let nearestSlotIndex = 0;
+    let minDistance = Infinity;
+
+    // Check distance to position before first item
+    const firstItem = itemElements[0];
+    const firstItemRect = firstItem.getBoundingClientRect();
+    const distanceToFirst = Math.abs(mouseY - firstItemRect.top);
+
+    if (distanceToFirst < minDistance) {
+      minDistance = distanceToFirst;
+      nearestSlotIndex = 0;
+    }
+
+    // Check distances after each item
+    itemElements.forEach((item, index) => {
+      const itemRect = item.getBoundingClientRect();
+      const itemBottom = itemRect.bottom;
+
+      // Distance to position after this item
+      const distanceToAfter = Math.abs(mouseY - itemBottom);
+
+      if (distanceToAfter < minDistance) {
+        minDistance = distanceToAfter;
+        nearestSlotIndex = index + 1;
+      }
+    });
+
+    return nearestSlotIndex;
+  }, [draggedExercise]);
+
+  /**
    * Handle drag end
    */
   const handleDragEnd = useCallback(() => {
     setDraggedExercise(null);
     setDragOverSectionId(null);
     setDragOverSlot(null);
+    setDragOverTopLevelSlot(null);
     // Clear expanded sections tracking
     expandedSectionsRef.current.clear();
   }, []);
@@ -108,6 +169,8 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     if (!draggedExercise) return;
 
     setDragOverSectionId(sectionId);
+    // Clear top-level slot when dragging over a section
+    setDragOverTopLevelSlot(null);
 
     // Expand collapsed section when dragging over it (only once per drag session)
     if (options?.onExpandSection && !expandedSectionsRef.current.has(sectionId)) {
@@ -134,6 +197,46 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   }, []);
 
   /**
+   * Handle drag over top-level container - calculates nearest slot automatically
+   */
+  const handleTopLevelDragOver = useCallback((
+    e: React.DragEvent,
+    totalItems: number
+  ) => {
+    e.preventDefault();
+
+    if (!draggedExercise) return;
+
+    // Check if we're inside a section - if so, don't handle at top level
+    const target = e.target as HTMLElement;
+    const isInsideSection = target.closest('[data-workout-section]');
+
+    if (isInsideSection) {
+      // We're inside a section, let the section handler manage the drop slot
+      return;
+    }
+
+    // We're at top level - clear section state and set top-level slot
+    setDragOverSlot(null);
+    setDragOverSectionId(null);
+
+    // Automatically calculate and show nearest slot
+    const nearestSlot = calculateNearestTopLevelSlot(e, totalItems);
+    setDragOverTopLevelSlot(nearestSlot);
+  }, [draggedExercise, calculateNearestTopLevelSlot]);
+
+  /**
+   * Handle drag leave top-level container
+   */
+  const handleTopLevelDragLeave = useCallback((e: React.DragEvent) => {
+    // Only clear if we're leaving the container entirely
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget || !relatedTarget.closest('[data-top-level-container]')) {
+      setDragOverTopLevelSlot(null);
+    }
+  }, []);
+
+  /**
    * Register a section ref for position calculations
    */
   const registerSectionRef = useCallback((sectionId: string, element: HTMLElement | null) => {
@@ -144,14 +247,25 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     }
   }, []);
 
+  /**
+   * Register the top-level container ref for position calculations
+   */
+  const registerTopLevelContainerRef = useCallback((element: HTMLElement | null) => {
+    topLevelContainerRef.current = element;
+  }, []);
+
   return {
     draggedExercise,
     dragOverSectionId,
     dragOverSlot,
+    dragOverTopLevelSlot,
     handleDragStart,
     handleDragEnd,
     handleSectionDragOver,
     handleSectionDragLeave,
+    handleTopLevelDragOver,
+    handleTopLevelDragLeave,
     registerSectionRef,
+    registerTopLevelContainerRef,
   };
 };

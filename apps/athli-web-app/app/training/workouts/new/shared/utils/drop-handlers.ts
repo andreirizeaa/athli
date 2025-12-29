@@ -1,8 +1,70 @@
 import type { Exercise } from '@/api/exercise/exercise-search';
-import type { WorkoutSchema, ExerciseWithSuperset } from '../types/workout-builder.types';
+import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '../types/workout-builder.types';
 
 /**
- * Handles dropping an exercise at the end of a section (fallback for when no specific slot is active)
+ * Handles dropping an exercise at the end of all items (top-level)
+ *
+ * @param draggedExercise - The exercise being dragged
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema
+ */
+export const handleTopLevelDrop = (
+  draggedExercise: Exercise,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  const exerciseWithSuperset: ExerciseWithSuperset = {
+    ...draggedExercise,
+    supersetGroupId: null,
+    instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  };
+
+  const newItem: WorkoutSchemaItem = {
+    itemType: 'exercise',
+    exercise: exerciseWithSuperset,
+  };
+
+  return {
+    ...currentSchema,
+    items: [...currentSchema.items, newItem],
+  };
+};
+
+/**
+ * Handles dropping an exercise at a specific slot in the items array (top-level)
+ *
+ * @param slotIndex - The index where the exercise should be inserted
+ * @param draggedExercise - The exercise being dragged
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema
+ */
+export const handleTopLevelSlotDrop = (
+  slotIndex: number,
+  draggedExercise: Exercise,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  const exerciseWithSuperset: ExerciseWithSuperset = {
+    ...draggedExercise,
+    supersetGroupId: null,
+    instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  };
+
+  const newItem: WorkoutSchemaItem = {
+    itemType: 'exercise',
+    exercise: exerciseWithSuperset,
+  };
+
+  const updatedItems = [...currentSchema.items];
+  const safeIndex = Math.min(Math.max(slotIndex, 0), updatedItems.length);
+  updatedItems.splice(safeIndex, 0, newItem);
+
+  return {
+    ...currentSchema,
+    items: updatedItems,
+  };
+};
+
+/**
+ * Handles dropping an exercise at the end of a section
  *
  * @param sectionId - The ID of the section to drop into
  * @param draggedExercise - The exercise being dragged
@@ -16,26 +78,29 @@ export const handleDrop = (
 ): WorkoutSchema => {
   return {
     ...currentSchema,
-    sections: currentSchema.sections.map((section) => {
-      if (section.id === sectionId) {
-        const exercises = section.exercises || [];
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId) {
+        const exercises = item.section.exercises || [];
         const exerciseWithSuperset: ExerciseWithSuperset = {
           ...draggedExercise,
           supersetGroupId: null,
           instanceId: `${draggedExercise.exerciseId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         };
         return {
-          ...section,
-          exercises: [...exercises, exerciseWithSuperset],
+          ...item,
+          section: {
+            ...item.section,
+            exercises: [...exercises, exerciseWithSuperset],
+          },
         };
       }
-      return section;
+      return item;
     }),
   };
 };
 
 /**
- * Handles dropping an exercise at a specific slot position
+ * Handles dropping an exercise at a specific slot position within a section
  *
  * @param sectionId - The ID of the section to drop into
  * @param slotIndex - The index where the exercise should be inserted
@@ -51,10 +116,10 @@ export const handleSlotDrop = (
 ): WorkoutSchema => {
   return {
     ...currentSchema,
-    sections: currentSchema.sections.map((section) => {
-      if (section.id !== sectionId) return section;
+    items: currentSchema.items.map((item) => {
+      if (item.itemType !== 'section' || item.section.id !== sectionId) return item;
 
-      const exercises = section.exercises || [];
+      const exercises = item.section.exercises || [];
       const exerciseWithSuperset: ExerciseWithSuperset = {
         ...draggedExercise,
         supersetGroupId: null,
@@ -66,8 +131,11 @@ export const handleSlotDrop = (
       updatedExercises.splice(safeIndex, 0, exerciseWithSuperset);
 
       return {
-        ...section,
-        exercises: updatedExercises,
+        ...item,
+        section: {
+          ...item.section,
+          exercises: updatedExercises,
+        },
       };
     }),
   };

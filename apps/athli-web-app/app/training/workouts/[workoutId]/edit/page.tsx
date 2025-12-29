@@ -21,6 +21,7 @@ import type { WorkoutProgramPayload } from '../../new/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { getWorkoutById, updateWorkoutDetails, deleteWorkouts } from '@/api/coach/coach-workout-service';
 import { EditWorkoutDetailsSidePanel } from '../../components/edit-workout-details-side-panel';
+import { useTrainingData } from '../../../training-data-context';
 
 type WorkoutMeta = {
   title: string;
@@ -35,6 +36,7 @@ const EditStandardWorkoutPage = () => {
   const router = useRouter();
   const params = useParams();
   const workoutId = params.workoutId as string;
+  const { refreshWorkouts } = useTrainingData();
   const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
@@ -151,6 +153,7 @@ const EditStandardWorkoutPage = () => {
   const handleDeleteWorkout = async () => {
     try {
       await deleteWorkouts(workoutId);
+      await refreshWorkouts();
       toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       router.push('/training/workouts');
     } catch (error) {

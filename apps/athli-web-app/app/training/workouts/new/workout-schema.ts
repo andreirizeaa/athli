@@ -167,12 +167,21 @@ export type WorkoutSectionPayload =
   | AuxiliarySectionPayload;
 
 /**
+ * A workout item can be either:
+ * - An exercise group (top-level exercises, possibly in supersets)
+ * - A section containing exercises
+ */
+export type WorkoutItem =
+  | { itemType: 'exercise'; data: ExerciseGroupPayload }
+  | { itemType: 'section'; data: WorkoutSectionPayload };
+
+/**
  * Workout data structure stored in the workout_data JSONB field.
  * Contains only the actual workout structure and execution tracking.
  * Metadata (title, description, type, difficulty, equipment) is stored in table columns.
  */
 export type WorkoutData = {
-  sections: WorkoutSectionPayload[];
+  items: WorkoutItem[]; // Mixed array of top-level exercises and sections
 
   // Execution tracking (empty when coach creates)
   status?: WorkoutStatus;
@@ -203,8 +212,8 @@ export type WorkoutPayload = {
   type: string;
   difficulty: string;
   equipment: string[];
-  totalExercises: number; // Total number of exercises across all sections
-  sections: WorkoutSectionPayload[];
+  totalExercises: number; // Total number of exercises across all items
+  items: WorkoutItem[]; // Mixed array of top-level exercises and sections
 
   // Execution tracking (empty when coach creates)
   status?: WorkoutStatus;

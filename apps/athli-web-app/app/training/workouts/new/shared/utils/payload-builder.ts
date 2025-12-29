@@ -8,11 +8,14 @@ import type {
   SetPayload,
   WorkoutProgramPayload,
   WorkoutSectionPayload,
+  WorkoutItem,
 } from '../../workout-schema';
 import type { SetData } from '../../components/exercise-card';
 import type {
   ExerciseWithSuperset,
   WorkoutSchema,
+  WorkoutSchemaItem,
+  WorkoutSection,
   WorkoutMeta,
 } from '../types/workout-builder.types';
 
@@ -56,6 +59,50 @@ export const groupExercisesBySupersetForPayload = (
   }
 
   return groups;
+};
+
+/**
+ * Groups consecutive top-level exercise items into superset groups
+ * Used for building payload from items array
+ */
+const groupTopLevelExerciseItems = (
+  items: WorkoutSchemaItem[]
+): Array<{ type: 'exerciseGroup'; exercises: ExerciseWithSuperset[] } | { type: 'section'; section: WorkoutSection }> => {
+  const result: Array<{ type: 'exerciseGroup'; exercises: ExerciseWithSuperset[] } | { type: 'section'; section: WorkoutSection }> = [];
+  let currentExerciseGroup: ExerciseWithSuperset[] = [];
+  let currentGroupId: string | null = null;
+
+  const flushCurrentGroup = () => {
+    if (currentExerciseGroup.length > 0) {
+      result.push({ type: 'exerciseGroup', exercises: currentExerciseGroup });
+      currentExerciseGroup = [];
+      currentGroupId = null;
+    }
+  };
+
+  items.forEach((item) => {
+    if (item.itemType === 'section') {
+      flushCurrentGroup();
+      result.push({ type: 'section', section: item.section });
+    } else if (item.itemType === 'exercise') {
+      const exercise = item.exercise;
+      if (exercise.supersetGroupId) {
+        if (exercise.supersetGroupId === currentGroupId) {
+          currentExerciseGroup.push(exercise);
+        } else {
+          flushCurrentGroup();
+          currentExerciseGroup = [exercise];
+          currentGroupId = exercise.supersetGroupId;
+        }
+      } else {
+        flushCurrentGroup();
+        result.push({ type: 'exerciseGroup', exercises: [exercise] });
+      }
+    }
+  });
+
+  flushCurrentGroup();
+  return result;
 };
 
 /**
@@ -160,6 +207,168 @@ export const mapSetDataToPayload = (
 };
 
 /**
+ * Builds a section payload from a WorkoutSection
+ */
+const buildSectionPayload = (
+  section: WorkoutSection,
+  parserType: ParserType
+): WorkoutSectionPayload => {
+  if (section.type === 'regular') {
+    const groups = groupExercisesBySupersetForPayload(section.exercises || []);
+
+    const exercises: ExerciseGroupPayload[] = groups.map((group) => {
+      const mapped = group.map<RegularExercisePayload>((exercise) => ({
+        id: exercise.exerciseId,
+        exerciseType: exercise.exerciseType as ExerciseType,
+        sets: (exercise.sets || []).map((set) =>
+          mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
+        ),
+        alternatives: exercise.alternatives || [],
+      }));
+
+      const isSuperset = mapped.length > 1;
+
+      return {
+        isSuperset,
+        exercises: mapped,
+      };
+    });
+
+    return {
+      id: section.id,
+      type: 'regular',
+      exercises,
+    };
+  }
+
+  if (section.type === 'amrap') {
+    const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
+      id: exercise.exerciseId ?? exercise.id,
+      exerciseType: exercise.exerciseType,
+      weight: exercise.weight ?? null,
+      reps: exercise.reps ?? null,
+      distance: exercise.distance ?? null,
+      durationSec: exercise.durationSec ?? null,
+      restSec: exercise.restSec ?? null,
+    }));
+
+    return {
+      id: section.id,
+      type: 'amrap',
+      durationSec: section.roundDurationSec || 0,
+      exercises,
+    };
+  }
+
+  if (section.type === 'circuits') {
+    const groups = groupExercisesBySupersetForPayload(section.exercises || []);
+
+    const exercises: CircuitExerciseGroupPayload[] = groups.map((group) => {
+      const mapped = group.map<CircuitExercisePayload>((exercise) => {
+        const firstSet =
+          (exercise.sets && exercise.sets[0]) || {
+            setNumber: 1,
+            type: 'normal' as const,
+            reps: '0',
+            weight: '0',
+            rest: '0',
+          };
+
+        return {
+          id: exercise.exerciseId,
+          exerciseType: exercise.exerciseType as ExerciseType,
+          set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet, parserType),
+          alternatives: exercise.alternatives || [],
+        };
+      });
+
+      const isSuperset = mapped.length > 1;
+
+      return {
+        isSuperset,
+        exercises: mapped,
+      };
+    });
+
+    return {
+      id: section.id,
+      type: 'circuits',
+      targetRounds: section.targetRounds || 0,
+      exercises,
+    };
+  }
+
+  if (section.type === 'auxiliary') {
+    const groups = groupExercisesBySupersetForPayload(section.exercises || []);
+
+    const exercises: ExerciseGroupPayload[] = groups.map((group) => {
+      const mapped = group.map<RegularExercisePayload>((exercise) => ({
+        id: exercise.exerciseId,
+        exerciseType: exercise.exerciseType as ExerciseType,
+        sets: (exercise.sets || []).map((set) =>
+          mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
+        ),
+        alternatives: exercise.alternatives || [],
+      }));
+
+      const isSuperset = mapped.length > 1;
+
+      return {
+        isSuperset,
+        exercises: mapped,
+      };
+    });
+
+    return {
+      id: section.id,
+      type: 'auxiliary',
+      category: section.category || 'warmup',
+      exercises,
+    };
+  }
+
+  // Timed section
+  const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
+    id: exercise.exerciseId ?? exercise.id,
+    exerciseType: exercise.exerciseType,
+    weight: exercise.weight ?? null,
+    reps: exercise.reps ?? null,
+    distance: exercise.distance ?? null,
+    durationSec: exercise.durationSec ?? null,
+    restSec: exercise.restSec ?? null,
+  }));
+
+  return {
+    id: section.id,
+    type: 'timed',
+    targetRounds: section.targetRounds || 0,
+    exercises,
+  };
+};
+
+/**
+ * Builds an exercise group payload from top-level exercises
+ */
+const buildExerciseGroupPayload = (
+  exercises: ExerciseWithSuperset[],
+  parserType: ParserType
+): ExerciseGroupPayload => {
+  const mapped = exercises.map<RegularExercisePayload>((exercise) => ({
+    id: exercise.exerciseId,
+    exerciseType: exercise.exerciseType as ExerciseType,
+    sets: (exercise.sets || []).map((set) =>
+      mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
+    ),
+    alternatives: exercise.alternatives || [],
+  }));
+
+  return {
+    isSuperset: mapped.length > 1,
+    exercises: mapped,
+  };
+};
+
+/**
  * Builds the complete workout payload from the workout schema
  *
  * @param workoutSchema - The workout schema from the builder
@@ -180,165 +389,63 @@ export const buildWorkoutPayload = (
 
   const parserType = options?.parserType || 'null';
 
-  const sections: WorkoutSectionPayload[] = workoutSchema.sections.map((section) => {
-    if (section.type === 'regular') {
-      const groups = groupExercisesBySupersetForPayload(section.exercises || []);
+  // Group items into exercise groups and sections
+  const groupedItems = groupTopLevelExerciseItems(workoutSchema.items);
 
-      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
-        const mapped = group.map<RegularExercisePayload>((exercise) => ({
-          id: exercise.exerciseId,
-          exerciseType: exercise.exerciseType as ExerciseType,
-          sets: (exercise.sets || []).map((set) =>
-            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
-          ),
-          alternatives: exercise.alternatives || [],
-        }));
-
-        const isSuperset = mapped.length > 1;
-
-        return {
-          isSuperset,
-          exercises: mapped,
-        };
-      });
-
+  // Build items array for payload
+  const items: WorkoutItem[] = groupedItems.map((group) => {
+    if (group.type === 'section') {
       return {
-        id: section.id,
-        type: 'regular',
-        exercises,
+        itemType: 'section' as const,
+        data: buildSectionPayload(group.section, parserType),
+      };
+    } else {
+      return {
+        itemType: 'exercise' as const,
+        data: buildExerciseGroupPayload(group.exercises, parserType),
       };
     }
-
-    if (section.type === 'amrap') {
-      const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
-        id: exercise.exerciseId ?? exercise.id,
-        exerciseType: exercise.exerciseType,
-        weight: exercise.weight ?? null,
-        reps: exercise.reps ?? null,
-        distance: exercise.distance ?? null,
-        durationSec: exercise.durationSec ?? null,
-        restSec: exercise.restSec ?? null,
-      }));
-
-      return {
-        id: section.id,
-        type: 'amrap',
-        durationSec: section.roundDurationSec || 0,
-        exercises,
-      };
-    }
-
-    if (section.type === 'circuits') {
-      const groups = groupExercisesBySupersetForPayload(section.exercises || []);
-
-      const exercises: CircuitExerciseGroupPayload[] = groups.map((group) => {
-        const mapped = group.map<CircuitExercisePayload>((exercise) => {
-          const firstSet =
-            (exercise.sets && exercise.sets[0]) || {
-              setNumber: 1,
-              type: 'normal' as const,
-              reps: '0',
-              weight: '0',
-              rest: '0',
-            };
-
-          return {
-            id: exercise.exerciseId,
-            exerciseType: exercise.exerciseType as ExerciseType,
-            set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet, parserType),
-            alternatives: exercise.alternatives || [],
-          };
-        });
-
-        const isSuperset = mapped.length > 1;
-
-        return {
-          isSuperset,
-          exercises: mapped,
-        };
-      });
-
-      return {
-        id: section.id,
-        type: 'circuits',
-        targetRounds: section.targetRounds || 0,
-        exercises,
-      };
-    }
-
-    if (section.type === 'auxiliary') {
-      const groups = groupExercisesBySupersetForPayload(section.exercises || []);
-
-      const exercises: ExerciseGroupPayload[] = groups.map((group) => {
-        const mapped = group.map<RegularExercisePayload>((exercise) => ({
-          id: exercise.exerciseId,
-          exerciseType: exercise.exerciseType as ExerciseType,
-          sets: (exercise.sets || []).map((set) =>
-            mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
-          ),
-          alternatives: exercise.alternatives || [],
-        }));
-
-        const isSuperset = mapped.length > 1;
-
-        return {
-          isSuperset,
-          exercises: mapped,
-        };
-      });
-
-      return {
-        id: section.id,
-        type: 'auxiliary',
-        category: section.category || 'warmup',
-        exercises,
-      };
-    }
-
-    const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
-      id: exercise.exerciseId ?? exercise.id,
-      exerciseType: exercise.exerciseType,
-      weight: exercise.weight ?? null,
-      reps: exercise.reps ?? null,
-      distance: exercise.distance ?? null,
-      durationSec: exercise.durationSec ?? null,
-      restSec: exercise.restSec ?? null,
-    }));
-
-    return {
-      id: section.id,
-      type: 'timed',
-      targetRounds: section.targetRounds || 0,
-      exercises,
-    };
   });
 
   // Extract unique equipment from all exercises
   const equipmentSet = new Set<string>();
-  workoutSchema.sections.forEach((section) => {
-    section.exercises?.forEach((exercise) => {
-      exercise.equipments?.forEach((equipment) => {
+  workoutSchema.items.forEach((item) => {
+    if (item.itemType === 'exercise') {
+      item.exercise.equipments?.forEach((equipment) => {
         if (equipment && equipment.trim() !== '') {
           equipmentSet.add(equipment);
         }
       });
-    });
+    } else if (item.itemType === 'section') {
+      item.section.exercises?.forEach((exercise) => {
+        exercise.equipments?.forEach((equipment) => {
+          if (equipment && equipment.trim() !== '') {
+            equipmentSet.add(equipment);
+          }
+        });
+      });
+    }
   });
   const equipment = Array.from(equipmentSet).sort();
 
-  // Calculate total exercises across all sections
+  // Calculate total exercises across all items
   let totalExercises = 0;
-  sections.forEach((section) => {
-    if (section.type === 'regular' || section.type === 'auxiliary') {
-      section.exercises.forEach((group) => {
-        totalExercises += group.exercises.length;
-      });
-    } else if (section.type === 'circuits') {
-      section.exercises.forEach((group) => {
-        totalExercises += group.exercises.length;
-      });
-    } else if (section.type === 'amrap' || section.type === 'timed') {
-      totalExercises += section.exercises.length;
+  items.forEach((item) => {
+    if (item.itemType === 'exercise') {
+      totalExercises += item.data.exercises.length;
+    } else if (item.itemType === 'section') {
+      const section = item.data;
+      if (section.type === 'regular' || section.type === 'auxiliary') {
+        section.exercises.forEach((group) => {
+          totalExercises += group.exercises.length;
+        });
+      } else if (section.type === 'circuits') {
+        section.exercises.forEach((group) => {
+          totalExercises += group.exercises.length;
+        });
+      } else if (section.type === 'amrap' || section.type === 'timed') {
+        totalExercises += section.exercises.length;
+      }
     }
   });
 
@@ -349,6 +456,6 @@ export const buildWorkoutPayload = (
     difficulty: meta.difficulty,
     equipment,
     totalExercises,
-    sections,
+    items,
   };
 };
