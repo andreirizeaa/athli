@@ -65,6 +65,7 @@ import type { Program } from '@/components/app/app-shell';
 import { getPrograms, starPrograms, deletePrograms, duplicateProgram, createProgram, getProgramById } from '@/api/coach/coach-program-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
+import { CreateProgramSidePanel } from './components/create-program-side-panel';
 import { ProgramNameCell } from './components/program-name-cell';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'actions';
@@ -155,22 +156,14 @@ const ProgramsPage = () => {
   const [columnOrder] = useState<ColumnId[]>(COLUMN_ORDER);
   const [visibleColumns] = useState<Set<string>>(new Set(COLUMN_ORDER));
   const [filteredCount, setFilteredCount] = useState<number>(0);
-  const itemsPerPage = 25;
+  const [itemsPerPage] = useState<number>(25);
   const [isCreateProgramOpen, setIsCreateProgramOpen] = useState<boolean>(false);
-  const [newProgramName, setNewProgramName] = useState<string>('');
-  const [newProgramType, setNewProgramType] = useState<string>('');
-  const [newProgramDifficulty, setNewProgramDifficulty] = useState<string>('all levels');
-  const [newProgramWeeks, setNewProgramWeeks] = useState<string>('');
-  const [newProgramDescription, setNewProgramDescription] = useState<string>('');
-  const [newProgramError, setNewProgramError] = useState<string | null>(null);
-  const [newProgramTypeError, setNewProgramTypeError] = useState<string | null>(null);
-  const [newProgramDifficultyError, setNewProgramDifficultyError] = useState<string | null>(null);
   const [isAssignProgramOpen, setIsAssignProgramOpen] = useState<boolean>(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [programToDelete, setProgramToDelete] = useState<string | null>(null);
   const [isAssignIndividualProgramOpen, setIsAssignIndividualProgramOpen] = useState<boolean>(false);
   const [selectedProgramForAssignment, setSelectedProgramForAssignment] = useState<Program | null>(null);
-  const [isNavigating, setIsNavigating] = useState<boolean>(false);
+
 
   useEffect(() => {
     // Initialize filteredCount and starred programs from context data
@@ -354,70 +347,10 @@ const ProgramsPage = () => {
     }
   }, [refreshPrograms, t]);
 
-  const resetCreateProgramState = () => {
-    setNewProgramName('');
-    setNewProgramType('');
-    setNewProgramDifficulty('all levels');
-    setNewProgramWeeks('');
-    setNewProgramDescription('');
-    setNewProgramError(null);
-    setNewProgramTypeError(null);
-    setNewProgramDifficultyError(null);
-    setIsNavigating(false);
-  };
-
   const handleOpenCreateProgram = () => {
-    resetCreateProgramState();
     setIsCreateProgramOpen(true);
   };
 
-  const handleCloseCreateProgram = () => {
-    setIsCreateProgramOpen(false);
-  };
-
-  const handleCreateProgramContinue = async () => {
-    if (!newProgramName.trim()) {
-      setNewProgramError(t('programs.addProgram.programNameRequiredError'));
-      return;
-    }
-
-    if (!newProgramType) {
-      setNewProgramTypeError(t('programs.addProgram.programTypeRequiredError'));
-      return;
-    }
-
-    if (!newProgramDifficulty) {
-      setNewProgramDifficultyError(t('programs.addProgram.difficultyRequiredError'));
-      return;
-    }
-
-    setIsNavigating(true);
-
-    const programData = {
-      name: newProgramName.trim(),
-      type: newProgramType,
-      difficulty: newProgramDifficulty,
-      weeks: newProgramWeeks || '1',
-      description: newProgramDescription.trim(),
-    };
-
-    try {
-      await createProgram(programData);
-      toast.success(`Successfully created ${newProgramName}`);
-
-      // Reload programs to show the new one
-      await refreshPrograms();
-
-      // Close side panel and reset state
-      setIsCreateProgramOpen(false);
-      resetCreateProgramState();
-    } catch (error) {
-      console.error('Failed to create program:', error);
-      toast.error(t('programs.builder.saveFailed'));
-    } finally {
-      setIsNavigating(false);
-    }
-  };
 
   const handleProgramRowKeyDown = (
     event: React.KeyboardEvent<HTMLTableRowElement>,
@@ -954,170 +887,10 @@ const ProgramsPage = () => {
           name: selectedProgramForAssignment.program
         } : null}
       />
-      <SidePanel
+      <CreateProgramSidePanel
         open={isCreateProgramOpen}
-        onOpenChange={(open) => {
-          if (!open && !isNavigating) {
-            setIsCreateProgramOpen(open);
-            resetCreateProgramState();
-          }
-        }}
-        title={t('programs.addProgram.title')}
-        footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseCreateProgram}
-              aria-label={t('programs.addProgram.cancelAria')}
-            >
-              {t('programs.addProgram.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleCreateProgramContinue}
-              disabled={
-                isNavigating ||
-                !newProgramName.trim() ||
-                !newProgramType ||
-                !newProgramDifficulty
-              }
-              aria-label={t('programs.addProgram.continueAria')}
-              className={cn('gap-2', isNavigating && 'min-w-[120px] justify-center')}
-            >
-              {isNavigating ? <Spinner className="size-4" /> : t('programs.addProgram.continue')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <label htmlFor="program-name" className="text-sm font-medium">
-                {t('programs.addProgram.programName')}<RequiredAsterisk />
-              </label>
-              <Input
-                id="program-name"
-                type="text"
-                placeholder={t('programs.addProgram.programNamePlaceholder')}
-                value={newProgramName}
-                onChange={(event) => {
-                  setNewProgramName(event.target.value);
-                  if (newProgramError) {
-                    setNewProgramError(null);
-                  }
-                }}
-                className="w-full"
-                aria-invalid={!!newProgramError}
-              />
-              {newProgramError && <p className="text-sm text-destructive">{newProgramError}</p>}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="program-type" className="text-sm font-medium">
-                {t('programs.addProgram.type')}<RequiredAsterisk />
-              </label>
-              <Select
-                value={newProgramType}
-                onValueChange={(value) => {
-                  setNewProgramType(value);
-                  if (newProgramTypeError) {
-                    setNewProgramTypeError(null);
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="program-type"
-                  className={cn(
-                    'w-full',
-                    newProgramTypeError && 'border-destructive aria-invalid:border-destructive'
-                  )}
-                  aria-invalid={!!newProgramTypeError}
-                >
-                  <SelectValue placeholder={t('general.select')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROGRAM_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {newProgramTypeError && (
-                <p className="text-sm text-destructive">{newProgramTypeError}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="program-difficulty" className="text-sm font-medium">
-                {t('programs.addProgram.difficulty')}<RequiredAsterisk />
-              </label>
-              <Select
-                value={newProgramDifficulty}
-                onValueChange={(value) => {
-                  setNewProgramDifficulty(value);
-                  if (newProgramDifficultyError) {
-                    setNewProgramDifficultyError(null);
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="program-difficulty"
-                  className={cn(
-                    'w-full',
-                    newProgramDifficultyError &&
-                    'border-destructive aria-invalid:border-destructive'
-                  )}
-                  aria-invalid={!!newProgramDifficultyError}
-                >
-                  <SelectValue placeholder={t('general.select')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROGRAM_DIFFICULTY_LEVELS.map((level) => (
-                    <SelectItem key={level} value={level.toLowerCase()}>
-                      {level}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {newProgramDifficultyError && (
-                <p className="text-sm text-destructive">{newProgramDifficultyError}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="program-weeks" className="text-sm font-medium">
-                {t('programs.addProgram.weeks')}
-              </label>
-              <Input
-                id="program-weeks"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                step={1}
-                placeholder={t('programs.addProgram.weeksPlaceholder')}
-                value={newProgramWeeks}
-                onChange={(event) => {
-                  const value = event.target.value.replace(/[^0-9]/g, '');
-                  setNewProgramWeeks(value);
-                }}
-                className="w-full"
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label htmlFor="program-description" className="text-sm font-medium">
-              {t('programs.addProgram.description')}
-            </label>
-            <Textarea
-              id="program-description"
-              value={newProgramDescription}
-              onChange={(event) => setNewProgramDescription(event.target.value)}
-              placeholder={t('programs.addProgram.descriptionPlaceholder')}
-              rows={4}
-              className="resize-none"
-            />
-          </div>
-        </div>
-      </SidePanel>
+        onOpenChange={setIsCreateProgramOpen}
+      />
     </div>
   );
 };

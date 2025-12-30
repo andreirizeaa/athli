@@ -61,12 +61,17 @@ export const EditProgramDetailsSidePanel = ({
         if (open) {
             setName(programMeta.name);
             setType(programMeta.type);
-            setDifficulty(programMeta.difficulty);
+            // Normalize difficulty value to snake_case if it comes as "All levels" or "all levels"
+            let normalizedDifficulty = programMeta.difficulty;
+            if (programMeta.difficulty.toLowerCase() === 'all levels') {
+                normalizedDifficulty = 'all_levels';
+            }
+            setDifficulty(normalizedDifficulty);
             setDescription(programMeta.description);
             setOriginalValues({
                 name: programMeta.name,
                 type: programMeta.type,
-                difficulty: programMeta.difficulty,
+                difficulty: normalizedDifficulty,
                 description: programMeta.description,
             });
             setNameError(null);

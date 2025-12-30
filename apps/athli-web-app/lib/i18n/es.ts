@@ -230,7 +230,7 @@ export const esMessages = {
       email: 'Correo electrónico',
       emailPlaceholder: 'Ingrese la dirección de correo',
       saveChanges: 'Guardar Cambios',
-      saving: 'Guardando...',
+      saving: 'Guardando',
       updatedSuccessfully: 'Perfil actualizado exitosamente',
       updateFailed: 'Error al actualizar el perfil',
       imageUploadFailed: 'Error al subir la imagen',
@@ -542,7 +542,7 @@ export const esMessages = {
   },
   general: {
     save: 'Guardar',
-    saving: 'Guardando...',
+    saving: 'Guardando',
     cancel: 'Cancelar',
     delete: 'Eliminar',
     edit: 'Editar',

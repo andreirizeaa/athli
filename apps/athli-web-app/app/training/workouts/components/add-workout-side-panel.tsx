@@ -20,6 +20,13 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { getWorkouts } from '@/api/coach/coach-workout-service';
 import type { Workout } from '@/components/app/app-shell';
 import { cn } from '@/lib/general/utils';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 type AddWorkoutSidePanelProps = {
     open: boolean;
@@ -27,6 +34,8 @@ type AddWorkoutSidePanelProps = {
     onSave: (workout: Workout, scheduleOption: string, config: string) => Promise<void>;
     selectedDate?: Date;
     workoutTitle?: string;
+    mode?: 'program' | 'calendar';
+    availableWorkouts: Workout[];
 };
 
 export const AddWorkoutSidePanel = ({
@@ -34,46 +43,60 @@ export const AddWorkoutSidePanel = ({
     onOpenChange,
     onSave,
     selectedDate,
-    workoutTitle
+    workoutTitle,
+    mode = 'calendar',
+    availableWorkouts
 }: AddWorkoutSidePanelProps) => {
     const t = useTranslations();
     const [step, setStep] = useState<number>(1);
-    const [workouts, setWorkouts] = useState<Workout[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    // workouts state removed, using availableWorkouts prop
+    // isLoading state removed
     const [isSaving, setIsSaving] = useState(false);
     const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
     const [selectedScheduleOption, setSelectedScheduleOption] = useState<string>('once');
     const [everyDaysInput, setEveryDaysInput] = useState<string>('1');
     const [weeklyDayInput, setWeeklyDayInput] = useState<string>('Monday');
 
+    const weeklyOptions = useMemo(() => {
+        if (mode === 'program') {
+            return Array.from({ length: 7 }, (_, i) => ({
+                value: `Day ${i + 1}`,
+                label: `Day ${i + 1}`
+            }));
+        }
+        return [
+            { value: 'Monday', label: t('calendar.days.monday') },
+            { value: 'Tuesday', label: t('calendar.days.tuesday') },
+            { value: 'Wednesday', label: t('calendar.days.wednesday') },
+            { value: 'Thursday', label: t('calendar.days.thursday') },
+            { value: 'Friday', label: t('calendar.days.friday') },
+            { value: 'Saturday', label: t('calendar.days.saturday') },
+            { value: 'Sunday', label: t('calendar.days.sunday') }
+        ];
+    }, [mode, t]);
+
     useEffect(() => {
         if (open) {
             setStep(1);
-            fetchWorkouts();
+            // fetchWorkouts removed
             // Reset config
             setSelectedScheduleOption('once');
             setEveryDaysInput('1');
             if (selectedDate) {
                 setWeeklyDayInput(selectedDate.toLocaleDateString('en-US', { weekday: 'long' }));
+            } else if (mode === 'program') {
+                setWeeklyDayInput('Day 1');
             }
         }
-    }, [open, selectedDate]);
+    }, [open, selectedDate, mode]);
 
-    const fetchWorkouts = async () => {
-        setIsLoading(true);
-        try {
-            const data = await getWorkouts();
-            setWorkouts(data);
-        } catch (error) {
-            console.error('Failed to fetch workouts:', error);
-        } finally {
-            setIsLoading(false);
-        }
+    const handleEditWorkoutSelection = () => {
+        setStep(1);
     };
 
     const selectedWorkout = useMemo(() =>
-        workouts.find(w => w.id === selectedWorkoutId),
-        [workouts, selectedWorkoutId]
+        availableWorkouts.find(w => w.id === selectedWorkoutId),
+        [availableWorkouts, selectedWorkoutId]
     );
 
     const handleClose = () => {
@@ -120,19 +143,10 @@ export const AddWorkoutSidePanel = ({
             id: 'program',
             label: t('athletes.trainingCalendar.table.name'),
             width: { class: 'w-1/2', pixel: '50%' },
-            renderHeader: ({ isAllSelected, onToggleAll }) => {
-                const handleToggleAll = () => {
-                    // Only toggle non-empty workouts
-                    const selectableWorkouts = workouts.filter(w => w.totalExercises && w.totalExercises > 0);
-                    if (isAllSelected) {
-                        setSelectedWorkoutId(null);
-                    } else if (selectableWorkouts.length > 0) {
-                        setSelectedWorkoutId(selectableWorkouts[0].id);
-                    }
-                };
+            renderHeader: () => {
                 return (
                     <div className="flex items-center gap-3 h-full w-full">
-                        <Checkbox checked={isAllSelected} onCheckedChange={handleToggleAll} aria-label="Select all" />
+                        <div className="size-4 shrink-0" />
                         <div className="flex items-center gap-2">
                             <Dumbbell className="size-3 text-muted-foreground" />
                             <span className="text-xs uppercase text-muted-foreground">{t('athletes.trainingCalendar.table.name')}</span>
@@ -250,62 +264,84 @@ export const AddWorkoutSidePanel = ({
         >
             {step === 1 ? (
                 <div className="flex flex-col h-full min-h-0">
-                    {isLoading ? (
-                        <div className="flex-1 flex items-center justify-center">
-                            <span className="text-muted-foreground">{t('general.loading')}</span>
-                        </div>
-                    ) : (
-                        <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
-                            <DataGrid
-                                data={workouts}
-                                columns={columns}
-                                getRowId={(row) => row.id}
-                                gridKey="add-workout-grid"
-                                searchPlaceholder={t('athletes.trainingCalendar.searchWorkoutsPlaceholder')}
-                                searchFields={[(row) => row.program]}
-                                enableSearch={true}
-                                enableEditColumns={false}
-                                enableExport={false}
-                                enableRowSelection={true}
-                                selectOnRowClick={false}
-                                onRowClick={(row) => {
-                                    const isEmpty = !row.totalExercises || row.totalExercises === 0;
-                                    if (!isEmpty) {
-                                        setSelectedWorkoutId(row.id);
-                                    }
-                                }}
-                                selectedRowIds={new Set(selectedWorkoutId ? [selectedWorkoutId] : [])}
-                                onSelectionChange={(ids) => setSelectedWorkoutId(ids.size > 0 ? Array.from(ids)[0] : null)}
-                                emptyMessage={t('athletes.trainingCalendar.noWorkoutsFound')}
-                                rowHeight="54px"
-                                compactMode={true}
-                                showPagination={false}
-                                gridPadding={false}
-                            />
-                        </div>
-                    )}
+                    <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
+                        <DataGrid
+                            data={availableWorkouts}
+                            columns={columns}
+                            getRowId={(row) => row.id}
+                            gridKey="add-workout-grid"
+                            searchPlaceholder={t('athletes.trainingCalendar.searchWorkoutsPlaceholder')}
+                            searchFields={[(row) => row.program]}
+                            enableSearch={true}
+                            enableEditColumns={false}
+                            enableExport={false}
+                            enableRowSelection={true}
+                            selectOnRowClick={false}
+                            onRowClick={(row) => {
+                                const isEmpty = !row.totalExercises || row.totalExercises === 0;
+                                if (!isEmpty) {
+                                    setSelectedWorkoutId(row.id);
+                                }
+                            }}
+                            selectedRowIds={new Set(selectedWorkoutId ? [selectedWorkoutId] : [])}
+                            onSelectionChange={(ids) => setSelectedWorkoutId(ids.size > 0 ? Array.from(ids)[0] : null)}
+                            emptyMessage={t('athletes.trainingCalendar.noWorkoutsFound')}
+                            rowHeight="54px"
+                            compactMode={true}
+                            showPagination={false}
+                            gridPadding={false}
+                        />
+                    </div>
                 </div>
             ) : (
                 <div className="flex flex-col gap-6">
-                    <div className="text-sm text-muted-foreground">
-                        {t('athletes.trainingCalendar.configureWorkoutDescription')}
-                    </div>
                     {selectedWorkout && (
-                        <div className="flex flex-col gap-2 p-4 border rounded-lg bg-muted/40">
-                            <div className="flex items-center gap-2">
-                                <Dumbbell className="size-4 text-primary" />
-                                <span className="font-semibold">{selectedWorkout.program}</span>
+                        <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/40">
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Dumbbell className="size-4 text-primary" />
+                                    <span className="font-semibold">{selectedWorkout.program}</span>
+                                </div>
+                                <div className="flex gap-2 text-xs text-muted-foreground">
+                                    <Badge variant="outline" className="text-xs border-primary text-primary hover:bg-transparent">
+                                        {selectedWorkout.type?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs border-primary text-primary hover:bg-transparent">
+                                        {selectedWorkout.difficulty?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs border-primary text-primary hover:bg-transparent">
+                                        {selectedWorkout.totalExercises} {t('athletes.trainingCalendar.exercises')}
+                                    </Badge>
+                                </div>
                             </div>
-                            <div className="flex gap-2 text-xs text-muted-foreground">
-                                <Badge variant="secondary" className="text-xs">{selectedWorkout.type}</Badge>
-                                <Badge variant="secondary" className="text-xs">{selectedWorkout.difficulty}</Badge>
-                                <span>{selectedWorkout.totalExercises} {t('athletes.trainingCalendar.exercises')}</span>
-                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                onClick={handleEditWorkoutSelection}
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="lucide lucide-pencil"
+                                >
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                    <path d="m15 5 4 4" />
+                                </svg>
+                                <span className="sr-only">{t('general.edit')}</span>
+                            </Button>
                         </div>
                     )}
 
                     <div className="flex flex-col gap-4">
-                        <h3 className="text-sm font-medium">{t('athletes.trainingCalendar.addConfigurations')}</h3>
+                        <h3 className="text-sm font-medium">Configure how this workout should be added to the {mode === 'program' ? 'program' : 'calendar'}</h3>
                         <div className="flex flex-col gap-3">
                             <Card
                                 className={cn(
@@ -320,7 +356,7 @@ export const AddWorkoutSidePanel = ({
                                     <span className="text-sm font-medium">
                                         {t('athletes.trainingCalendar.addOnlyForThisDay')}
                                     </span>
-                                    <div className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center', selectedScheduleOption === 'once' ? 'border-primary' : 'border-muted')}>
+                                    <div className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center', selectedScheduleOption === 'once' ? 'border-primary' : 'border-muted-foreground/50')}>
                                         {selectedScheduleOption === 'once' && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
                                     </div>
                                 </div>
@@ -328,11 +364,12 @@ export const AddWorkoutSidePanel = ({
 
                             <Card
                                 className={cn(
-                                    'p-4 border rounded-lg transition-colors',
+                                    'p-4 border rounded-lg transition-colors cursor-pointer',
                                     selectedScheduleOption === 'every'
                                         ? 'border-primary bg-primary/5'
-                                        : 'bg-background',
+                                        : 'bg-background hover:bg-accent/30',
                                 )}
+                                onClick={() => setSelectedScheduleOption('every')}
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -351,8 +388,7 @@ export const AddWorkoutSidePanel = ({
                                         <span className="text-sm font-medium">{t('athletes.trainingCalendar.days')}</span>
                                     </div>
                                     <div
-                                        className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer', selectedScheduleOption === 'every' ? 'border-primary' : 'border-muted')}
-                                        onClick={() => setSelectedScheduleOption('every')}
+                                        className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center', selectedScheduleOption === 'every' ? 'border-primary' : 'border-muted-foreground/50')}
                                     >
                                         {selectedScheduleOption === 'every' && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
                                     </div>
@@ -361,28 +397,40 @@ export const AddWorkoutSidePanel = ({
 
                             <Card
                                 className={cn(
-                                    'p-4 border rounded-lg transition-colors',
+                                    'p-4 border rounded-lg transition-colors cursor-pointer',
                                     selectedScheduleOption === 'weekly'
                                         ? 'border-primary bg-primary/5'
-                                        : 'bg-background',
+                                        : 'bg-background hover:bg-accent/30',
                                 )}
+                                onClick={() => setSelectedScheduleOption('weekly')}
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm font-medium">{t('athletes.trainingCalendar.addThisWorkoutWeeklyOn')}</span>
-                                        <Input
-                                            className="w-32 h-8"
+                                        <Select
                                             value={weeklyDayInput}
-                                            onChange={(e) => {
-                                                setWeeklyDayInput(e.target.value);
+                                            onValueChange={(value) => {
+                                                setWeeklyDayInput(value);
                                                 setSelectedScheduleOption('weekly');
                                             }}
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
+                                        >
+                                            <SelectTrigger
+                                                className="w-32 h-8"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <SelectValue placeholder="Select day" />
+                                            </SelectTrigger>
+                                            <SelectContent onClick={(e) => e.stopPropagation()}>
+                                                {weeklyOptions.map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div
-                                        className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center cursor-pointer', selectedScheduleOption === 'weekly' ? 'border-primary' : 'border-muted')}
-                                        onClick={() => setSelectedScheduleOption('weekly')}
+                                        className={cn('h-5 w-5 rounded-full border-2 flex items-center justify-center', selectedScheduleOption === 'weekly' ? 'border-primary' : 'border-muted-foreground/50')}
                                     >
                                         {selectedScheduleOption === 'weekly' && <div className="h-2.5 w-2.5 rounded-full bg-primary" />}
                                     </div>

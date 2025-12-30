@@ -13,21 +13,7 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { cn } from '@/lib/general/utils';
 
-const WORKOUT_TYPES = [
-  'Weightlifting',
-  'Bodyweight',
-  'Cardio',
-  'HIIT',
-  'CrossFit',
-  'Running',
-  'Cycling',
-  'Swimming',
-  'Yoga',
-  'Pilates',
-  'Combination',
-] as const;
-
-const DIFFICULTY_LEVELS = ['All levels', 'Beginner', 'Intermediate', 'Advanced'] as const;
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 
 type BasicInformationProps = {
   workoutName: string;
@@ -127,8 +113,8 @@ export const BasicInformation = ({
             </SelectTrigger>
             <SelectContent>
               {WORKOUT_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -160,8 +146,8 @@ export const BasicInformation = ({
             </SelectTrigger>
             <SelectContent>
               {DIFFICULTY_LEVELS.map((level) => (
-                <SelectItem key={level} value={level.toLowerCase()}>
-                  {level}
+                <SelectItem key={level.value} value={level.value}>
+                  {level.label}
                 </SelectItem>
               ))}
             </SelectContent>
