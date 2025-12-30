@@ -44,11 +44,12 @@ import {
   UserPlus,
   Star,
   Trash2,
+  Copy,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
 import { starPrograms, deletePrograms } from '@/api/coach/coach-program-service';
-import { getExercises, starExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
+import { getExercises, starExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, duplicateExercises, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
@@ -377,6 +378,19 @@ const ExercisesPage = () => {
     exportToCSV(exportData, 'selected-exercises.csv');
   };
 
+  const handleDuplicateSelected = async () => {
+    if (selectedExercises.size === 0) return;
+    try {
+      await duplicateExercises(Array.from(selectedExercises));
+      await refreshExercises();
+      toast.success('Exercises duplicated successfully');
+      setSelectedExercises(new Set());
+    } catch (error) {
+      console.error('Failed to duplicate exercises:', error);
+      toast.error('Failed to duplicate exercises');
+    }
+  };
+
   const handleOpenCreateExercise = () => {
     setIsCreateExerciseOpen(true);
   };
@@ -470,7 +484,14 @@ const ExercisesPage = () => {
               return `${row.program} ${category}`;
             },
             renderCell: (row) => {
-              const category = (row as any).category || '';
+              const category = (row as any).category;
+              if (isEmpty(category)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <div className="flex items-center h-full">
                   <span className="text-sm">{category}</span>
@@ -498,6 +519,13 @@ const ExercisesPage = () => {
             },
             renderCell: (row) => {
               const muscleGroup = (row as any).muscleGroup || '';
+              if (isEmpty(muscleGroup)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -535,7 +563,14 @@ const ExercisesPage = () => {
               return `${row.program} ${modality}`;
             },
             renderCell: (row) => {
-              const modality = (row as any).modality || '';
+              const modality = (row as any).modality;
+              if (isEmpty(modality)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <div className="flex items-center h-full">
                   <span className="text-sm">{modality}</span>
@@ -562,7 +597,14 @@ const ExercisesPage = () => {
               return `${row.program} ${equipment}`;
             },
             renderCell: (row) => {
-              const equipment = (row as any).equipment || row.equipment || '';
+              const equipment = (row as any).equipment || row.equipment;
+              if (isEmpty(equipment)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -894,6 +936,24 @@ const ExercisesPage = () => {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('exercises.actions.export')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    onClick={handleDuplicateSelected}
+                    className="gap-2"
+                    aria-label="Duplicate selected"
+                  >
+                    <Copy className="size-4" />
+                    <span>Duplicate</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Duplicate selected</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

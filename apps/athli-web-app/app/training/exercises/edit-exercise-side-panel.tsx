@@ -20,6 +20,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { X, Upload } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
+import { toast } from 'sonner';
 
 const EXERCISE_CATEGORIES = ['Weight & Reps', 'Reps', 'Distance / Duration'] as const;
 
@@ -391,6 +392,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
       };
 
       await editExercise(exercise.id, exerciseData);
+      toast.success(t('exercises.actions.updateSuccess') || 'Exercise updated successfully');
       onSave();
       handleClose();
     } catch (error) {

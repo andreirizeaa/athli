@@ -12,6 +12,8 @@ import {
 } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 
+const EMPTY_ARRAY: any[] = [];
+
 export function useCoachExercises(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
@@ -81,7 +83,7 @@ export function useCoachExercises(options?: { enabled?: boolean }) {
     });
 
     return {
-        exercises: exercises || [],
+        exercises: exercises || EMPTY_ARRAY,
         isLoading,
         error,
         createExercise: createMutation.mutateAsync,

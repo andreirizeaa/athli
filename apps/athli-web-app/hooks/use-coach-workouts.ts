@@ -14,6 +14,8 @@ import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-
 import type { Workout } from '@/components/app/app-shell';
 import { toast } from 'sonner';
 
+const EMPTY_ARRAY: any[] = [];
+
 export function useCoachWorkouts(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
@@ -105,7 +107,7 @@ export function useCoachWorkouts(options?: { enabled?: boolean }) {
     // Archive mutation similar pattern... 
 
     return {
-        workouts: workouts || [],
+        workouts: workouts || EMPTY_ARRAY,
         isLoading,
         error,
         createWorkout: createMutation.mutateAsync,

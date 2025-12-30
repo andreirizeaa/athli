@@ -13,6 +13,8 @@ import {
 import type { Program } from '@/components/app/app-shell';
 import { toast } from 'sonner';
 
+const EMPTY_ARRAY: any[] = [];
+
 export function useCoachPrograms(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
@@ -92,7 +94,7 @@ export function useCoachPrograms(options?: { enabled?: boolean }) {
     });
 
     return {
-        programs: programs || [],
+        programs: programs || EMPTY_ARRAY,
         isLoading,
         error,
         createProgram: createMutation.mutateAsync,

@@ -58,22 +58,22 @@ export const TrainingDataProvider = ({ children }: TrainingDataProviderProps) =>
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
 
-  // Sync cache to local state
+  // Sync cache to local state - only update if data actually changed
   useEffect(() => {
-    if (cachedWorkouts) setWorkouts(cachedWorkouts);
-  }, [cachedWorkouts]);
+    if (cachedWorkouts && cachedWorkouts !== workouts) setWorkouts(cachedWorkouts);
+  }, [cachedWorkouts, workouts]);
 
   useEffect(() => {
-    if (cachedPrograms) setPrograms(cachedPrograms);
-  }, [cachedPrograms]);
+    if (cachedPrograms && cachedPrograms !== programs) setPrograms(cachedPrograms);
+  }, [cachedPrograms, programs]);
 
   useEffect(() => {
-    if (cachedExercises) setExercises(cachedExercises);
-  }, [cachedExercises]);
+    if (cachedExercises && cachedExercises !== exercises) setExercises(cachedExercises);
+  }, [cachedExercises, exercises]);
 
   useEffect(() => {
-    if (cachedSections) setSections(cachedSections);
-  }, [cachedSections]);
+    if (cachedSections && cachedSections !== sections) setSections(cachedSections);
+  }, [cachedSections, sections]);
 
   // Refresh functions invalidate queries to trigger refetch
   const refreshWorkouts = async () => {

@@ -295,7 +295,7 @@ export const coachSectionsController = {
             .from('coach_sections')
             .insert({
                 coach_id: userId,
-                name: `${existing.name} Copy`,
+                name: `${existing.name} (Copy)`,
                 description: existing.description,
                 section_type: existing.section_type,
                 section_data: existing.section_data,

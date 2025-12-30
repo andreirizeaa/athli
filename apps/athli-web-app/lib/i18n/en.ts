@@ -622,6 +622,7 @@ export const enMessages = {
     type: 'Type',
     equipment: 'Equipment',
     created: 'Created',
+    editDetails: 'Edit details',
   },
   messages: {
     title: 'Messages',
@@ -712,10 +713,13 @@ export const enMessages = {
     sections: {
       title: 'Sections',
       section: 'Section',
+      sectionName: 'Section Name',
+      type: 'Type',
+      description: 'Description',
       sectionType: 'Section Type',
       exercises: 'Exercises',
       created: 'Created',
-      searchPlaceholder: 'Search sections...',
+      searchPlaceholder: 'Search...',
       sectionNamePlaceholder: 'e.g., Upper Body Strength',
       selectTypePlaceholder: 'Select section type',
       descriptionPlaceholder: 'Add notes about this section...',
@@ -1066,6 +1070,8 @@ export const enMessages = {
       selectAllExercises: 'Select all exercises',
       sortAscending: 'Sort ascending',
       sortDescending: 'Sort descending',
+      createSuccess: 'Exercise created successfully',
+      updateSuccess: 'Exercise updated successfully',
     },
     detail: {
       toast: {

@@ -53,6 +53,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     description: { class: 'min-w-[250px]', pixel: '250px' },
     sectionType: { class: 'min-w-[140px]', pixel: '140px' },
     totalExercises: { class: 'min-w-[170px]', pixel: '170px' },
+    created: { class: 'min-w-[130px]', pixel: '130px' },
     actions: { class: 'w-[100px]', pixel: '100px' },
   };
 
@@ -243,28 +244,7 @@ const SectionsPage = () => {
 
   const handleDuplicateSelectedPerRow = async (sectionId: string, name: string) => {
     try {
-      const fullSection = await getSectionById(sectionId);
-      // The section data from backend might have snake_case fields or be flat
-      // Based on createSection in service, we need: title, description, sectionType, items
-      // Assuming fullSection matches the structure needed or we map it
-
-      // Map backend response to payload if needed. 
-      // Checking getSectionById implementation, it returns raw backend response 'section'.
-      // We need to map it to the payload expected by createSection.
-
-      const sectionPayload = {
-        title: fullSection.name || fullSection.title,
-        description: fullSection.description,
-        sectionType: fullSection.section_type || fullSection.sectionType,
-        items: fullSection.section_data?.items || [],
-        // Include other required fields for WorkoutProgramPayload if necessary, defaulting to safe values
-        type: fullSection.section_type || fullSection.sectionType,
-        difficulty: '',
-        equipment: [],
-        totalExercises: 0,
-      };
-
-      await createSection(sectionPayload);
+      await duplicateSection(sectionId);
       await refreshSections();
       setSelectedSections(new Set());
       toast.success(t('library.sections.toast.duplicatedSuccessfully', { name }));
