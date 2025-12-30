@@ -151,12 +151,12 @@ coachWorkoutRouter.post('/', supabaseAuthenticate, coachWorkoutsController.creat
 
 coachWorkoutRouter.post('/bulk', supabaseAuthenticate, coachWorkoutsController.getWorkoutsByIds);
 
-coachWorkoutRouter.get('/:id', supabaseAuthenticate, coachWorkoutsController.getWorkoutById);
+coachWorkoutRouter.post('/get', supabaseAuthenticate, coachWorkoutsController.getWorkoutById);
 
-coachWorkoutRouter.patch('/:id', supabaseAuthenticate, coachWorkoutsController.updateWorkout);
+coachWorkoutRouter.post('/update', supabaseAuthenticate, coachWorkoutsController.updateWorkout);
 
-coachWorkoutRouter.delete('/:id', supabaseAuthenticate, coachWorkoutsController.deleteWorkout);
+coachWorkoutRouter.post('/delete', supabaseAuthenticate, coachWorkoutsController.deleteWorkout);
 
-coachWorkoutRouter.post('/:id/duplicate', supabaseAuthenticate, coachWorkoutsController.duplicateWorkout);
+coachWorkoutRouter.post('/duplicate', supabaseAuthenticate, coachWorkoutsController.duplicateWorkout);
 
-coachWorkoutRouter.patch('/:id/toggle-favorite', supabaseAuthenticate, coachWorkoutsController.toggleFavorite);
+coachWorkoutRouter.post('/toggle-favorite', supabaseAuthenticate, coachWorkoutsController.toggleFavorite);

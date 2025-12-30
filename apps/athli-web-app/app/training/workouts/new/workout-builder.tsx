@@ -150,6 +150,13 @@ export const StandardBuilder = ({
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // Reset builder mode to 'exercise' when workout is empty
+  useEffect(() => {
+    if (workoutSchema.items.length === 0) {
+      setBuilderMode('exercise');
+    }
+  }, [workoutSchema.items.length]);
+
   // Use the shared drag-drop hook
   const {
     draggedExercise,
@@ -476,6 +483,8 @@ export const StandardBuilder = ({
     );
   };
 
+
+
   useEffect(() => {
     if (!saveSignal || saveSignal === 0) {
       return;
@@ -488,6 +497,7 @@ export const StandardBuilder = ({
     if (Object.keys(exerciseErrors).length > 0 || Object.keys(sectionErrors).length > 0) {
       setValidationErrors(exerciseErrors);
       setSectionValidationErrors(sectionErrors);
+
       toast.error('Please fill out all fields');
       return;
     }
@@ -504,7 +514,8 @@ export const StandardBuilder = ({
     if (onSaveSuccess) {
       onSaveSuccess(payload);
     }
-  }, [saveSignal, workoutSchema, meta, onSaveSuccess]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveSignal]);
 
   const handleSectionSelect = (type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary') => {
     if (contentScrollRef.current) {
@@ -526,9 +537,7 @@ export const StandardBuilder = ({
   const handleDeleteSection = (sectionId: string) => {
     const result = deleteSection(sectionId, workoutSchema);
     setWorkoutSchema(result.schema);
-    if (result.shouldSwitchToSectionMode) {
-      setBuilderMode('section');
-    }
+
     onDirtyChange?.();
   };
 
@@ -698,13 +707,13 @@ export const StandardBuilder = ({
   const activeExerciseIds = useMemo(() => {
     const activeIds = new Set<string>();
     workoutSchema.items.forEach((item) => {
-      if (item.itemType === 'exercise') {
+      if (item.itemType === 'exercise' && item.exercise) {
         if (item.exercise.exerciseId) {
           activeIds.add(item.exercise.exerciseId);
         }
-      } else if (item.itemType === 'section') {
+      } else if (item.itemType === 'section' && item.section) {
         item.section.exercises?.forEach((exercise) => {
-          if (exercise.exerciseId) {
+          if (exercise?.exerciseId) {
             activeIds.add(exercise.exerciseId);
           }
         });
@@ -942,12 +951,14 @@ export const StandardBuilder = ({
                               className={cn(focusedExerciseId === exercise.exerciseId && "[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse")}
                             >
                               <ExerciseCard
+                                key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
                                 exercise={exercise}
                                 isLinkedToPrev={isLinkedToPrev}
                                 isLinkedToNext={isLinkedToNext}
                                 onVideoClick={handleExerciseClick}
                                 sectionType={section.type}
                                 validationErrors={validationErrors[exercise.instanceId]}
+                                hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
                                 onClearValidationField={(setIndex, field) =>
                                   handleClearSetValidationField(exercise.instanceId, setIndex, field)
                                 }
@@ -963,6 +974,7 @@ export const StandardBuilder = ({
                                     castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
                                     castExercise.sets || []
                                   );
+
                                   setWorkoutSchema((prev) => ({
                                     ...prev,
                                     items: prev.items.map((item) => {
@@ -1005,7 +1017,13 @@ export const StandardBuilder = ({
                               <>
                                 {isLinkedToNext ? (
                                   // Linked superset - show unlink button (no drop zone even when dragging)
-                                  <div className="relative flex items-center justify-center bg-background border-x py-1">
+                                  <div className={cn(
+                                    "relative flex items-center justify-center bg-background py-1",
+                                    // Add red borders on left/right if superset has error
+                                    validationErrors[exercise.instanceId]?.supersetMismatch
+                                      ? "border-x-2 border-x-destructive"
+                                      : "border-x"
+                                  )}>
                                     <Separator className="absolute w-full" />
                                     <Button
                                       type="button"
@@ -1149,12 +1167,14 @@ export const StandardBuilder = ({
           className={cn(focusedExerciseId === exercise.exerciseId && "[&>div]:!border-primary [&>div]:!border [&>div]:animate-pulse")}
         >
           <ExerciseCard
+            key={`${exercise.instanceId}-${exercise.sets?.length || 0}`}
             exercise={exercise}
             isLinkedToPrev={isLinkedToPrev}
             isLinkedToNext={isLinkedToNext}
             onVideoClick={handleExerciseClick}
             sectionType="regular"
             validationErrors={validationErrors[exercise.instanceId]}
+            hasSupersetError={validationErrors[exercise.instanceId]?.supersetMismatch}
             onClearValidationField={(setIndex, field) =>
               handleClearSetValidationField(exercise.instanceId, setIndex, field)
             }
@@ -1170,6 +1190,7 @@ export const StandardBuilder = ({
                 castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
                 castExercise.sets || []
               );
+
               setWorkoutSchema((prev) => ({
                 ...prev,
                 items: prev.items.map((item, idx) => {
@@ -1198,7 +1219,13 @@ export const StandardBuilder = ({
           <>
             {isLinkedToNext ? (
               // Linked superset - show unlink button (always visible, even when dragging)
-              <div className="relative flex items-center justify-center bg-background border-x py-1 -mb-2">
+              <div className={cn(
+                "relative flex items-center justify-center bg-background py-1 -mb-2",
+                // Add red borders on left/right if superset has error
+                validationErrors[exercise.instanceId]?.supersetMismatch
+                  ? "border-x-2 border-x-destructive"
+                  : "border-x"
+              )}>
                 <Separator className="absolute w-full" />
                 <Button
                   type="button"
@@ -1312,15 +1339,15 @@ export const StandardBuilder = ({
                   const isLinkedToPrev = !!(
                     item.itemType === 'exercise' &&
                     prevItem?.itemType === 'exercise' &&
-                    item.exercise.supersetGroupId &&
-                    prevItem.exercise.supersetGroupId === item.exercise.supersetGroupId
+                    item.exercise?.supersetGroupId &&
+                    prevItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
                   );
 
                   const isLinkedToNext = !!(
                     item.itemType === 'exercise' &&
                     nextItem?.itemType === 'exercise' &&
-                    item.exercise.supersetGroupId &&
-                    nextItem.exercise.supersetGroupId === item.exercise.supersetGroupId
+                    item.exercise?.supersetGroupId &&
+                    nextItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
                   );
 
                   // Check if current/prev/next items are sections
@@ -1518,6 +1545,7 @@ export const StandardBuilder = ({
               onUnlinkTopLevelSuperset={handleTopLevelSupersetUnlink}
               groupExercisesBySuperset={groupExercisesBySuperset as any}
               onExerciseClick={handleExerciseClickByIdWrapper}
+              validationErrors={validationErrors}
             />
           </CardContent>
         </Card>

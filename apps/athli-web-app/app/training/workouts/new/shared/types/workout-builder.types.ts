@@ -62,9 +62,14 @@ export type SetFieldValidation = {
 };
 
 /**
- * Validation errors for exercises (keyed by instanceId, then set index)
+ * Validation errors for exercises (keyed by instanceId)
+ * Can contain set-level errors (indexed by set number) and/or a supersetMismatch flag
  */
-export type ValidationErrors = Record<string, Record<number, SetFieldValidation>>;
+export type ExerciseValidationError = Record<number, SetFieldValidation> & {
+  supersetMismatch?: boolean;
+};
+
+export type ValidationErrors = Record<string, ExerciseValidationError>;
 
 /**
  * Validation errors for sections

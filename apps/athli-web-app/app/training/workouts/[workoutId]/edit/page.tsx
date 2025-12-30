@@ -19,9 +19,10 @@ import {
 import { StandardBuilder } from '../../new/workout-builder';
 import type { WorkoutProgramPayload } from '../../new/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
-import { getWorkoutById, updateWorkoutDetails, deleteWorkouts } from '@/api/coach/coach-workout-service';
+import { getWorkoutById, updateWorkoutDetails, deleteWorkouts, editWorkout } from '@/api/coach/coach-workout-service';
 import { EditWorkoutDetailsSidePanel } from '../../components/edit-workout-details-side-panel';
 import { useTrainingData } from '../../../training-data-context';
+import { convertPayloadToBuilderFormat } from '../../new/shared/utils/payload-converter';
 
 type WorkoutMeta = {
   title: string;
@@ -79,7 +80,8 @@ const EditStandardWorkoutPage = () => {
 
         // Set the schema in localStorage for the builder
         if (workout.workout_data) {
-          window.localStorage.setItem('athli_workout_schema', JSON.stringify(workout.workout_data));
+          const builderSchema = convertPayloadToBuilderFormat(workout.workout_data);
+          window.localStorage.setItem('athli_workout_schema', JSON.stringify(builderSchema));
         }
       } catch (error) {
         console.error('Failed to fetch workout:', error);
@@ -114,26 +116,25 @@ const EditStandardWorkoutPage = () => {
     setSaveSignal((prev) => prev + 1);
   };
 
-  const handleSaveSuccess = (payload: WorkoutProgramPayload) => {
-    // Styled console.log with green background
-    // eslint-disable-next-line no-console
-    console.log(
-      '%cWorkout payload',
-      'background: #16a34a; color: white; padding: 4px 8px; border-radius: 4px;'
-    );
-    // eslint-disable-next-line no-console
-    console.log(payload);
+  const handleSaveSuccess = async (payload: WorkoutProgramPayload) => {
+    try {
+      await editWorkout(workoutId, payload);
 
-    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }), {
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
+      toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }), {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
 
-    setHasUnsavedChanges(false);
-    navigateBackToWorkouts();
+      setHasUnsavedChanges(false);
+      await refreshWorkouts();
+      navigateBackToWorkouts();
+    } catch (error) {
+      console.error('Failed to save workout:', error);
+      toast.error(t('general.error'));
+    }
   };
 
   const handleSaveDetails = async (details: { title: string; type: string; difficulty: string; description: string }) => {

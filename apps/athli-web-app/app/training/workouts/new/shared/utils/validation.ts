@@ -260,8 +260,12 @@ export const validateWorkoutSchema = (
       section.exercises?.forEach((exercise) => {
         validateExercise(exercise, nextErrors);
       });
+
+
     }
   });
+
+
 
   return { exerciseErrors: nextErrors, sectionErrors: nextSectionErrors };
 };

@@ -32,6 +32,7 @@ import type {
   ExerciseWithSuperset,
   WorkoutSection,
   WorkoutSchemaItem,
+  ValidationErrors,
 } from '../shared/types/workout-builder.types';
 
 type ActiveOverviewItem =
@@ -68,6 +69,7 @@ type OverviewPanelProps = {
   onUnlinkTopLevelSuperset?: (itemIndex: number) => void;
   groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => ExerciseWithSuperset[][];
   onExerciseClick?: (exerciseId: string) => void;
+  validationErrors?: ValidationErrors;
 };
 
 // DropGap: A gap between cards that can optionally show a centered drop line
@@ -331,6 +333,7 @@ const OverviewSupersetRow = ({
   onDelete,
   onUnlink,
   onExerciseClick,
+  validationErrors,
 }: {
   sectionId: string;
   exercises: ExerciseWithSuperset[];
@@ -338,6 +341,7 @@ const OverviewSupersetRow = ({
   onDelete: (sectionId: string, exerciseIds: string[]) => void;
   onUnlink?: (sectionId: string, exerciseIndex: number) => void;
   onExerciseClick?: (exerciseId: string) => void;
+  validationErrors?: ValidationErrors;
 }) => {
   const firstExerciseId = exercises[0]?.instanceId;
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
@@ -448,12 +452,14 @@ const OverviewTopLevelSupersetRow = ({
   onDelete,
   onUnlink,
   onExerciseClick,
+  validationErrors,
 }: {
   exercises: ExerciseWithSuperset[];
   itemStartIndex: number;
   onDelete?: (exerciseIds: string[]) => void;
   onUnlink?: (itemIndex: number) => void;
   onExerciseClick?: (exerciseId: string) => void;
+  validationErrors?: ValidationErrors;
 }) => {
   const firstExerciseId = exercises[0]?.instanceId;
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
@@ -567,7 +573,7 @@ const OverviewTopLevelSupersetRow = ({
 };
 
 
-export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, onDeleteSection, onDeleteExercise, onDeleteTopLevelExercise, onDeleteSuperset, onDeleteTopLevelSuperset, onUnlinkSuperset, onUnlinkTopLevelSuperset, onExerciseClick }: OverviewPanelProps) => {
+export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, onDeleteSection, onDeleteExercise, onDeleteTopLevelExercise, onDeleteSuperset, onDeleteTopLevelSuperset, onUnlinkSuperset, onUnlinkTopLevelSuperset, onExerciseClick, validationErrors }: OverviewPanelProps) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -1119,6 +1125,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                           onDelete={onDeleteTopLevelSuperset}
                           onUnlink={onUnlinkTopLevelSuperset}
                           onExerciseClick={onExerciseClick}
+                          validationErrors={validationErrors}
                         />
                       );
                       itemIndex = nextIndex;
@@ -1186,6 +1193,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                                         onDelete={onDeleteSuperset}
                                         onUnlink={onUnlinkSuperset}
                                         onExerciseClick={onExerciseClick}
+                                        validationErrors={validationErrors}
                                       />
                                     );
                                   } else {
@@ -1226,8 +1234,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                                   isActive={activeGapId === `gap-section-${section.id}-0`}
                                   isDisabled={activeOverviewItem?.type === 'section'}
                                 />
-                                <div className="text-xs text-muted-foreground px-1 py-2 italic text-center opacity-50 pointer-events-none">
-                                  Drag exercises here
+                                <div className="text-xs text-muted-foreground px-1 py-2 italic text-center opacity-50 pointer-events-none min-h-[20px]">
                                 </div>
                               </>
                             )}

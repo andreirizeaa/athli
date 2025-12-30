@@ -46,10 +46,10 @@ export const coachWorkoutsController = {
             return res.status(400).json({ success: false, message: 'Workout title is required' });
         }
 
-        // Extract only the workout structure (sections and execution tracking) for workout_data
+        // Extract only the workout structure (items and execution tracking) for workout_data
         // Remove metadata fields that should be stored in table columns
         const cleanWorkoutData = workout_data ? {
-            sections: workout_data.sections || [],
+            items: workout_data.items || [],
             ...(workout_data.status && { status: workout_data.status }),
             ...(workout_data.startedAt && { startedAt: workout_data.startedAt }),
             ...(workout_data.completedAt && { completedAt: workout_data.completedAt }),
@@ -60,7 +60,7 @@ export const coachWorkoutsController = {
             ...(workout_data.readiness && { readiness: workout_data.readiness }),
             ...(workout_data.overallNotes && { overallNotes: workout_data.overallNotes }),
             ...(workout_data.rating && { rating: workout_data.rating }),
-        } : { sections: [] };
+        } : { items: [] };
 
         const supabase = getSupabaseClient();
         const { data: workout, error } = await supabase
@@ -93,12 +93,15 @@ export const coachWorkoutsController = {
      */
     updateWorkout: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.params;
-        const updates = req.body;
+        const { id, ...updates } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
+        }
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Workout ID is required' });
         }
 
         const supabase = getSupabaseClient();
@@ -123,7 +126,7 @@ export const coachWorkoutsController = {
 
         // Clean workout_data if provided
         const cleanWorkoutData = workout_data ? {
-            sections: workout_data.sections || [],
+            items: workout_data.items || [],
             ...(workout_data.status && { status: workout_data.status }),
             ...(workout_data.startedAt && { startedAt: workout_data.startedAt }),
             ...(workout_data.completedAt && { completedAt: workout_data.completedAt }),
@@ -165,11 +168,15 @@ export const coachWorkoutsController = {
      */
     deleteWorkout: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.params;
+        const { id } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
+        }
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Workout ID is required' });
         }
 
         const supabase = getSupabaseClient();
@@ -194,11 +201,15 @@ export const coachWorkoutsController = {
      */
     duplicateWorkout: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.params;
+        const { id } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
+        }
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Workout ID is required' });
         }
 
         const supabase = getSupabaseClient();
@@ -247,11 +258,15 @@ export const coachWorkoutsController = {
      */
     getWorkoutById: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.params;
+        const { id } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
+        }
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Workout ID is required' });
         }
 
         const supabase = getSupabaseClient();
@@ -318,12 +333,15 @@ export const coachWorkoutsController = {
      */
     toggleFavorite: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.params;
-        const { isFavourite } = req.body;
+        const { id, isFavourite } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
+        }
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Workout ID is required' });
         }
 
         if (typeof isFavourite !== 'boolean') {
