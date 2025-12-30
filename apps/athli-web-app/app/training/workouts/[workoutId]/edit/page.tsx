@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, ChevronRight, X, Pencil } from 'lucide-react';
+import { Check, ChevronRight, X, Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
@@ -72,8 +72,12 @@ const EditStandardWorkoutPage = () => {
     const fetchWorkout = async () => {
       try {
         const workout = await getWorkoutById(workoutId);
+        // Mapping fix: API returns 'name', but Workout type expects 'program'.
+        // Cast to any to access 'name' if present.
+        const title = (workout as any).name || workout.program || 'Workout';
+
         setWorkoutMeta({
-          title: workout.program || 'Workout',
+          title: title,
           description: workout.description || '',
           type: workout.type || 'Push',
           difficulty: workout.difficulty || 'intermediate',
@@ -150,6 +154,7 @@ const EditStandardWorkoutPage = () => {
     try {
       await updateWorkoutDetails(workoutId, details);
       toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: details.title }));
+      await refreshWorkouts();
     } catch (error) {
       console.error('Failed to update workout details:', error);
       toast.error('Failed to update details');
@@ -169,7 +174,11 @@ const EditStandardWorkoutPage = () => {
   };
 
   if (!workoutMeta) {
-    return null;
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const handleBreadcrumbClick = (path: string) => {
@@ -211,16 +220,16 @@ const EditStandardWorkoutPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="px-0.5 capitalize font-semibold text-foreground">
-                    {t('general.edit')}
+                  <BreadcrumbPage className="px-0.5 font-semibold text-foreground">
+                    {workoutMeta?.title || t('workouts.detail.breadcrumb.workout')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {workoutMeta?.title || t('workouts.detail.breadcrumb.workout')}
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5 capitalize">
+                    {t('general.edit')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -247,11 +256,11 @@ const EditStandardWorkoutPage = () => {
             </Button>
             <Button
               onClick={handleSaveClick}
-              loading={isSaving}
+              disabled={isSaving}
               className="gap-2"
               aria-label={t('workouts.edit.saveAria')}
             >
-              <Check className="size-4" />
+              {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
               <span>{t('workouts.edit.save')}</span>
             </Button>
           </ButtonGroup>

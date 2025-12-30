@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Exercise } from '@/api/exercise/exercise-search';
+import type { Section } from '@/api/coach/coach-section-service';
 
 export type DragOverSlot = {
   sectionId: string;
@@ -15,6 +16,7 @@ const SCROLL_SPEED = 10; // Pixels to scroll per frame
 
 export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   const [draggedExercise, setDraggedExercise] = useState<Exercise | null>(null);
+  const [draggedSection, setDraggedSection] = useState<Section | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<DragOverSlot>(null);
   const [dragOverTopLevelSlot, setDragOverTopLevelSlot] = useState<number | null>(null);
@@ -144,7 +146,9 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     e: React.DragEvent,
     totalItems: number
   ): number | null => {
-    if (!draggedExercise) return null;
+    // Works for both exercises and sections
+    const isDraggingSomething = draggedExercise || draggedSection;
+    if (!isDraggingSomething) return null;
 
     const containerElement = topLevelContainerRef.current;
     if (!containerElement) return null;
@@ -192,13 +196,14 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     });
 
     return nearestSlotIndex;
-  }, [draggedExercise]);
+  }, [draggedExercise, draggedSection]);
 
   /**
    * Handle drag end
    */
   const handleDragEnd = useCallback(() => {
     setDraggedExercise(null);
+    setDraggedSection(null);
     setDragOverSectionId(null);
     setDragOverSlot(null);
     setDragOverTopLevelSlot(null);
@@ -262,7 +267,7 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
   ) => {
     e.preventDefault();
 
-    if (!draggedExercise) return;
+    if (!draggedExercise && !draggedSection) return;
 
     // Track mouse position and trigger auto-scroll
     lastMouseYRef.current = e.clientY;
@@ -284,7 +289,7 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
     // Automatically calculate and show nearest slot
     const nearestSlot = calculateNearestTopLevelSlot(e, totalItems);
     setDragOverTopLevelSlot(nearestSlot);
-  }, [draggedExercise, calculateNearestTopLevelSlot, handleAutoScroll]);
+  }, [draggedExercise, draggedSection, calculateNearestTopLevelSlot, handleAutoScroll]);
 
   /**
    * Handle drag leave top-level container
@@ -326,10 +331,12 @@ export const useExerciseDragDrop = (options?: UseExerciseDragDropOptions) => {
 
   return {
     draggedExercise,
+    draggedSection,
     dragOverSectionId,
     dragOverSlot,
     dragOverTopLevelSlot,
     handleDragStart,
+    setDraggedSection,
     handleDragEnd,
     handleSectionDragOver,
     handleSectionDragLeave,

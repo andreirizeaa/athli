@@ -3,11 +3,15 @@
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Check, X, Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
-import { Spinner } from '@/components/ui/spinner';
+
+
+import { useTrainingData } from '../../../training-data-context';
+import { EditSectionDetailsSidePanel } from '../../components/edit-section-details-side-panel';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -33,12 +37,14 @@ const EditSectionPage = () => {
   const router = useRouter();
   const params = useParams();
   const sectionId = params?.sectionId as string;
+  const { refreshSections } = useTrainingData();
 
   const [sectionMeta, setSectionMeta] = useState<SectionMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
   const [saveSignal, setSaveSignal] = useState(0);
   const hasInitialized = useRef(false);
 
@@ -51,9 +57,24 @@ const EditSectionPage = () => {
         setIsLoading(true);
         const section = await getSectionById(sectionId);
 
-        // Store section data in localStorage for the builder to load
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem('athli_workout_schema', JSON.stringify(section.section_data));
+          // Wrap section data in items format for the builder
+          // Ensure we merge the metadata (type, title/name) back into the section data
+          // because it might be stripped from the JSONB if using the new schema
+          const sectionData = {
+            ...section.section_data,
+            id: section.id,
+            type: section.section_type,
+            name: section.name,
+          };
+
+          const schema = {
+            items: [{
+              itemType: 'section',
+              section: sectionData
+            }]
+          };
+          window.localStorage.setItem('athli_workout_schema', JSON.stringify(schema));
           window.localStorage.setItem('athli_workout_builder_access', 'edit-standard');
         }
 
@@ -124,6 +145,7 @@ const EditSectionPage = () => {
       });
 
       setHasUnsavedChanges(false);
+      await refreshSections();
       navigateBackToSections();
     } catch (error) {
       console.error('Failed to save section:', error);
@@ -133,21 +155,46 @@ const EditSectionPage = () => {
     }
   };
 
+  const handleSaveDetails = async (details: { title: string; sectionType: SectionType; description: string }) => {
+    try {
+      await updateSection(sectionId, {
+        title: details.title,
+        description: details.description,
+      });
+
+      toast.success(t('library.sections.toast.updatedSuccessfully', { name: details.title }), {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
+
+      setSectionMeta((prev) => prev ? { ...prev, ...details } : null);
+      await refreshSections();
+    } catch (error) {
+      console.error('Failed to update section details:', error);
+      toast.error(t('library.sections.toast.failedToSave'));
+    }
+  };
+
   const handleBreadcrumbClick = (path: string) => {
     if (hasUnsavedChanges) {
       setIsDiscardDialogOpen(true);
       return;
     }
 
-    if (path === '/training/sections') {
+    if (path === '/training') {
+      router.push('/training');
+    } else if (path === '/training/sections') {
       navigateBackToSections();
     }
   };
 
   if (isLoading || !sectionMeta) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner />
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }
@@ -182,27 +229,54 @@ const EditSectionPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
+                  <BreadcrumbPage className="px-0.5 font-semibold text-foreground">
                     {sectionMeta.title}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
+                    {t('general.edit')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
+            <h1 className="text-[22px] font-semibold truncate">Editing {sectionMeta.title}</h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
+          <ButtonGroup className="flex-shrink-0">
+            <Button
+              variant="ghost"
+              onClick={() => setIsEditDetailsOpen(true)}
+              className="gap-2 border border-primary"
+            >
+              <Pencil className="size-4" />
+              <span>{t('general.editDetails') || 'Edit details'}</span>
             </Button>
-            <Button onClick={handleSaveClick} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
+            <Button
+              variant="ghost"
+              onClick={handleCancel}
+              className="gap-2 border border-primary"
+            >
+              <X className="size-4" />
+              <span>{t('general.cancel')}</span>
             </Button>
-          </div>
+            <Button
+              onClick={handleSaveClick}
+              disabled={isSaving}
+              className="gap-2"
+            >
+              {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
+              <span>{t('general.save')}</span>
+            </Button>
+          </ButtonGroup>
         </div>
-        <Separator />
+        <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-sidebar">
         <StandardBuilder
           meta={{
             title: sectionMeta.title,
@@ -213,10 +287,18 @@ const EditSectionPage = () => {
           onDirtyChange={() => setHasUnsavedChanges(true)}
           saveSignal={saveSignal}
           onSaveSuccess={handleSaveSuccess}
+          onSaveError={() => setIsSaving(false)}
           mode="section"
           sectionType={sectionMeta.sectionType}
         />
       </div>
+
+      <EditSectionDetailsSidePanel
+        open={isEditDetailsOpen}
+        onOpenChange={setIsEditDetailsOpen}
+        sectionMeta={sectionMeta}
+        onSave={handleSaveDetails}
+      />
 
       <DiscardChangesDialog
         open={isDiscardDialogOpen}

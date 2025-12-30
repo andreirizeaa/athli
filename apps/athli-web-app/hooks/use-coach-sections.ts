@@ -13,6 +13,8 @@ import type { Section } from '@/api/coach/coach-section-service';
 import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
 import { toast } from 'sonner';
 
+const EMPTY_ARRAY: any[] = [];
+
 export function useCoachSections(options?: { enabled?: boolean }) {
     const queryClient = useQueryClient();
 
@@ -103,7 +105,7 @@ export function useCoachSections(options?: { enabled?: boolean }) {
     });
 
     return {
-        sections: sections || [],
+        sections: sections || EMPTY_ARRAY,
         isLoading,
         error,
         createSection: createMutation.mutateAsync,

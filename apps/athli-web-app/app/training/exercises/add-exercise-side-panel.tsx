@@ -19,6 +19,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { X, Upload } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { createExercise } from '@/api/coach/coach-exercise-service';
+import { toast } from 'sonner';
 
 const EXERCISE_CATEGORIES = ['Weight & Reps', 'Reps', 'Distance / Duration'] as const;
 
@@ -279,6 +280,11 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
     onOpenChange(false);
   };
 
+  const isFormValid =
+    exerciseName.trim() !== '' &&
+    category !== '' &&
+    (videoLink.trim() !== '' || videoFile !== null);
+
   const handleSave = async () => {
     let hasError = false;
 
@@ -369,6 +375,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
       };
 
       await createExercise(exerciseData);
+      toast.success(t('exercises.actions.createSuccess') || 'Exercise created successfully');
       onSave();
       handleClose();
     } catch (error) {
@@ -391,7 +398,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
           <Button
             type="button"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !isFormValid}
             aria-label={t('exercises.addExercise.saveAria')}
             className={cn(isSaving && 'min-w-[120px] justify-center')}
           >

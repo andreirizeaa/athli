@@ -111,6 +111,30 @@ export const deleteExercises = async (exerciseIds: string | string[]): Promise<v
 };
 
 /**
+ * Duplicate exercises
+ */
+export const duplicateExercises = async (exerciseIds: string | string[]): Promise<void> => {
+  const ids = Array.isArray(exerciseIds) ? exerciseIds : [exerciseIds];
+
+  // We fetch and create new exercises. The DB trigger will handle name conflicts by appending " Copy"
+  await Promise.all(
+    ids.map(async (id) => {
+      const original = await getExerciseById(id);
+      const payload: ExercisePayload = {
+        name: original.name,
+        description: original.description,
+        category: original.category,
+        muscleGroups: original.muscle_group,
+        equipment: original.equipment,
+        modality: original.modality,
+        videoLink: original.video_link,
+      };
+      return createExercise(payload);
+    })
+  );
+};
+
+/**
  * Create a new exercise
  */
 export const createExercise = async (exerciseData: ExercisePayload): Promise<Exercise> => {

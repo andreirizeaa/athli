@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Dumbbell, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Dumbbell, Ellipsis, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -25,7 +26,10 @@ import type {
 import type { SetData } from './components/exercise-card';
 import { ExerciseCard } from './components/exercise-card';
 import { ExerciseSelectionPanel } from './components/exercise-selection-panel';
-import { SectionSelectionPanel } from './components/section-selection-panel';
+import { CoachSectionsSidebar } from './components/coach-sections-sidebar';
+import { InlineSectionCreator } from './components/inline-section-creator';
+import type { Section } from '@/api/coach/coach-section-service';
+import { SectionType } from '@/app/training/sections/section-type-utils';
 
 import { OverviewPanel } from './components/overview-panel';
 import { VideoModal } from './components/video-modal';
@@ -193,6 +197,15 @@ export const StandardBuilder = ({
   const contentScrollRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
   const exerciseRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [isCreatingSection, setIsCreatingSection] = useState(false);
+  const creatorRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to creator when opened
+  useEffect(() => {
+    if (isCreatingSection && creatorRef.current) {
+      creatorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isCreatingSection]);
 
   // Reset builder mode to 'exercise' when workout is empty
   useEffect(() => {
@@ -201,9 +214,10 @@ export const StandardBuilder = ({
     }
   }, [workoutSchema.items.length]);
 
-  // Use the shared drag-drop hook
   const {
     draggedExercise,
+    draggedSection,
+    setDraggedSection,
     dragOverSectionId,
     dragOverSlot,
     dragOverTopLevelSlot,
@@ -580,6 +594,16 @@ export const StandardBuilder = ({
     }
   }, [workoutSchema.items.length]);
 
+  const handleSectionSourceDragStart = (section: Section) => {
+    setDraggedSection(section);
+  };
+
+  const handleCreateSection = (name: string, type: SectionType) => {
+    setWorkoutSchema((prev) => selectSection(type, prev, { name: name }));
+    setIsCreatingSection(false);
+    onDirtyChange?.();
+  };
+
   const handleDeleteSection = (sectionId: string) => {
     const result = deleteSection(sectionId, workoutSchema);
     setWorkoutSchema(result.schema);
@@ -608,8 +632,48 @@ export const StandardBuilder = ({
     if (draggedExercise && dragOverTopLevelSlot !== null) {
       setWorkoutSchema((prev) => handleTopLevelSlotDrop(dragOverTopLevelSlot, draggedExercise, prev));
       onDirtyChange?.();
+    } else if (draggedSection && dragOverTopLevelSlot !== null) {
+      // Handle dropping a section from the sidebar
+      // We insert a NEW section at the slot index
+      // We'll map the coach section structure to a new workout section
+      // NOTE: Deep copy of exercises is complex. For now, we just create the section container with name/type.
+      // User requirement: "drag sections into the wokrout area"
+
+      // We'll reuse selectSection logic but insert at specific index?
+      // selectSection appends to end. We need "insert at index".
+      // Let's manually implement insertion logic here similar to slot drop.
+
+      setWorkoutSchema((prev) => {
+        // Create new section object
+        const type = draggedSection.sectionType as any;
+        const newSection: WorkoutSection = {
+          id: `sec_${type}_${Date.now()}`,
+          type: type || 'regular',
+          exercises: [], // TODO: If we need to clone exercises, we need to fetch full section details. Sidebar section only has metadata.
+          // Assuming metadata only for now as per "one card for each section" usage in sidebar usually implies template usage.
+          name: draggedSection.program,
+        };
+
+        const newItem: WorkoutSchemaItem = {
+          itemType: 'section',
+          section: newSection,
+        };
+
+        const newItems = [...prev.items];
+        // If dropping at index N, we splice it in.
+        // dragOverTopLevelSlot is strictly for "top level items".
+        if (dragOverTopLevelSlot >= newItems.length) {
+          newItems.push(newItem);
+        } else {
+          newItems.splice(dragOverTopLevelSlot, 0, newItem);
+        }
+
+        return { ...prev, items: newItems };
+      });
+      onDirtyChange?.();
     }
     handleDragEnd();
+    setDraggedSection(null);
   };
 
   // Section drop handlers
@@ -627,6 +691,11 @@ export const StandardBuilder = ({
 
   const handleSectionDrop = (e: React.DragEvent, sectionId: string) => {
     e.preventDefault();
+
+    // Prevent dropping a section INTO another section
+    if (draggedSection) {
+      return;
+    }
 
     if (dragOverSlot && dragOverSlot.sectionId === sectionId) {
       handleSlotDropWrapper(e, sectionId, dragOverSlot.slotIndex);
@@ -833,7 +902,7 @@ export const StandardBuilder = ({
                 </Tooltip>
                 <Input
                   className="h-7 flex-1 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
-                  placeholder={section.type.charAt(0).toUpperCase() + section.type.slice(1)}
+                  placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
                   value={section.name || ''}
                   onChange={(e) => {
                     const newName = e.target.value;
@@ -852,6 +921,11 @@ export const StandardBuilder = ({
                     }));
                   }}
                 />
+                {section.type && (
+                  <Badge variant="outline" className="h-7 px-2 text-xs font-bold capitalize bg-background text-foreground border-input rounded-md shadow-none">
+                    {section.type}
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 {(section.type === 'amrap' || section.type === 'timed' || section.type === 'circuits') && (
@@ -911,27 +985,93 @@ export const StandardBuilder = ({
                     />
                   </div>
                 )}
-                {/* Hide delete button in section mode */}
+                {/* Hide actions in section mode */}
                 {!isSectionMode && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:border-destructive bg-background border-input shadow-none shrink-0"
-                    onClick={() => setSectionToDelete(section)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSectionToDelete(section);
-                      }
-                    }}
-                    aria-label={`Delete ${section.type} section`}
-                  >
-                    <Trash2 className="size-3" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground bg-background border-input shadow-none shrink-0"
+                      >
+                        <Ellipsis className="size-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {itemIndex > 0 && (
+                        <DropdownMenuItem onClick={() => handleMoveTopLevelExerciseUp(itemIndex)}>
+                          <ArrowUp className="size-4 mr-2" />
+                          Move up
+                        </DropdownMenuItem>
+                      )}
+                      {itemIndex < workoutSchema.items.length - 1 && (
+                        <DropdownMenuItem onClick={() => handleMoveTopLevelExerciseDown(itemIndex)}>
+                          <ArrowDown className="size-4 mr-2" />
+                          Move down
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => setSectionToDelete(section)}
+                      >
+                        <Trash2 className="size-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
             </div>
+            {/* Section Notes */}
+            {!isCollapsed && (
+              <div className="px-3 pb-2 w-full relative">
+                <Input
+                  placeholder="Notes"
+                  value={section.notes || ''}
+                  onChange={(e) => {
+                    const newNotes = e.target.value;
+                    onDirtyChange?.();
+                    setWorkoutSchema((prev) => ({
+                      ...prev,
+                      items: prev.items.map((item) => {
+                        if (item.itemType === 'section' && item.section.id === section.id) {
+                          return {
+                            ...item,
+                            section: { ...item.section, notes: newNotes },
+                          };
+                        }
+                        return item;
+                      }),
+                    }));
+                  }}
+                  className="w-full text-xs h-7 border-input bg-background shadow-none pr-8"
+                />
+                {section.notes && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDirtyChange?.();
+                      setWorkoutSchema((prev) => ({
+                        ...prev,
+                        items: prev.items.map((item) => {
+                          if (item.itemType === 'section' && item.section.id === section.id) {
+                            return {
+                              ...item,
+                              section: { ...item.section, notes: '' },
+                            };
+                          }
+                          return item;
+                        }),
+                      }));
+                    }}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Clear notes"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </CardHeader>
           {!isCollapsed && (
             <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
@@ -1354,7 +1494,7 @@ export const StandardBuilder = ({
             )}
             {builderMode === 'section' && !isSectionMode && (
               <div className="flex-1 min-h-0 mt-4">
-                <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
+                <CoachSectionsSidebar onDragStart={handleSectionSourceDragStart} />
               </div>
             )}
           </CardContent>
@@ -1419,9 +1559,11 @@ export const StandardBuilder = ({
 
                   // ONLY ONE drop zone appears at a time - the one matching dragOverTopLevelSlot
                   // Priority: "after" drop zones take precedence over "before" drop zones to avoid duplicates
-                  const isPrevItemShowingDropZoneAfter = draggedExercise && dragOverTopLevelSlot === itemIndex && prevItem;
-                  const showDropZoneBefore = draggedExercise && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
-                  const showDropZoneAfter = draggedExercise && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
+                  const isDraggingSomething = draggedExercise || draggedSection;
+                  const isPrevItemShowingDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex && prevItem;
+                  // Sections can drop anywhere at top level but not between exercises in superset or inside sections
+                  const showDropZoneBefore = isDraggingSomething && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
+                  const showDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
 
                   // Add extra spacing around sections
                   const extraTopMargin = isSection && isPrevSection ? 'mt-2' : isSection && prevItem ? 'mt-4' : '';
@@ -1432,22 +1574,22 @@ export const StandardBuilder = ({
                       {/* Drop zone before this item - ONLY if this is the nearest slot and NOT inside a section */}
                       {showDropZoneBefore && (
                         <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                          <span>Drop exercise here</span>
+                          <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
                         </div>
                       )}
 
                       {/* Render the item (section or exercise) with extra spacing */}
                       <div className={cn(extraTopMargin, extraBottomMargin)}>
                         {item.itemType === 'section'
-                          ? renderSectionItem(item.section, itemIndex)
-                          : renderExerciseItem(item.exercise, itemIndex)
+                          ? (item.section ? renderSectionItem(item.section, itemIndex) : null)
+                          : (item.exercise ? renderExerciseItem(item.exercise, itemIndex) : null)
                         }
                       </div>
 
                       {/* Drop zone after this item - ONLY if this is the nearest slot and NOT in superset area */}
                       {showDropZoneAfter && (
                         <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                          <span>Drop exercise here</span>
+                          <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
                         </div>
                       )}
                     </React.Fragment>
@@ -1455,95 +1597,72 @@ export const StandardBuilder = ({
                 })}
                 {/* Hide "Add exercise" and "Add section" buttons in section mode */}
                 {!isSectionMode && (
-                  <div className="flex items-center justify-center gap-2 py-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs h-7 px-2"
-                      onClick={handleAddTopLevelExercise}
-                    >
-                      <Plus className="size-3" />
-                      <span>Add exercise</span>
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 text-xs h-7 px-2"
-                          aria-label="Add new section"
-                        >
-                          <Plus className="size-3" />
-                          <span>Add section</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
-                          <Dumbbell className="mr-2 size-4 text-foreground" />
-                          Regular
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
-                          <NotebookPen className="mr-2 size-4 text-foreground" />
-                          AMRAP
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
-                          <Timer className="mr-2 size-4 text-foreground" />
-                          Timed
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
-                          <Repeat className="mr-2 size-4 text-foreground" />
-                          Circuits
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <div className="flex flex-col gap-2 py-2 w-full">
+                    {isCreatingSection && (
+                      <div ref={creatorRef} className="w-full mb-2">
+                        <InlineSectionCreator
+                          onCreate={handleCreateSection}
+                          onCancel={() => setIsCreatingSection(false)}
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7 px-2"
+                        onClick={handleAddTopLevelExercise}
+                      >
+                        <Plus className="size-3" />
+                        <span>Add exercise</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7 px-2"
+                        onClick={() => setIsCreatingSection(true)}
+                      >
+                        <Plus className="size-3" />
+                        <span>Create section</span>
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-6 transition-all duration-200 relative">
+              <div className="flex flex-col items-center justify-center h-full gap-6 transition-all duration-200 relative p-4">
                 {/* Empty state content - hidden when dragging */}
                 {!(dragOverTopLevelSlot === 0 && draggedExercise) && (
-                  <div className="flex flex-col items-center gap-6 text-center max-w-md">
-                    <div className="flex flex-col gap-3">
+                  <div className="flex flex-col items-center gap-6 text-center w-full max-w-3xl">
+                    <div className="flex flex-col gap-3 max-w-md mx-auto">
                       <h3 className="text-4xl font-bold">Start building your workout</h3>
                       <p className="text-l font-semibold text-muted-foreground">
                         Add exercises or create sections to organize your training
                       </p>
                     </div>
-                    <div className="flex gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="gap-2"
-                            aria-label="Add new section"
-                          >
-                            <Plus className="size-4" />
-                            <span>Add section</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
-                            <Dumbbell className="mr-2 size-4 text-foreground" />
-                            Regular
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
-                            <NotebookPen className="mr-2 size-4 text-foreground" />
-                            AMRAP
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
-                            <Timer className="mr-2 size-4 text-foreground" />
-                            Timed
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
-                            <Repeat className="mr-2 size-4 text-foreground" />
-                            Circuits
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+
+                    {isCreatingSection && (
+                      <div ref={creatorRef} className="w-full mb-4">
+                        <InlineSectionCreator
+                          onCreate={handleCreateSection}
+                          onCancel={() => setIsCreatingSection(false)}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 items-center justify-center w-full">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setIsCreatingSection(true)}
+                      >
+                        <Plus className="size-4" />
+                        <span>Create section</span>
+                      </Button>
+
                       <Button
                         type="button"
                         className="gap-2"
@@ -1557,9 +1676,11 @@ export const StandardBuilder = ({
                 )}
 
                 {/* Drag overlay - shown when dragging */}
-                {(dragOverTopLevelSlot === 0 && draggedExercise) && (
+                {(draggedExercise || draggedSection) && (
                   <div className="absolute inset-0 border-2 border-dashed rounded-lg border-primary bg-primary/5 flex items-center justify-center">
-                    <p className="text-primary font-medium text-lg">Drop your exercise here</p>
+                    <p className="text-primary font-medium text-lg">
+                      {draggedExercise ? 'Drop your exercise here' : 'Drop your section here'}
+                    </p>
                   </div>
                 )}
               </div>

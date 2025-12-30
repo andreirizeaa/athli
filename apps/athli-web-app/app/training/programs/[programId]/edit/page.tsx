@@ -7,7 +7,7 @@ import { getProgramById } from '@/api/coach/coach-program-service';
 import { getWorkoutById, getWorkoutsByIds } from '@/api/coach/coach-workout-service';
 import type { Workout } from '@/components/app/app-shell';
 import type { Program } from '@/components/app/app-shell';
-import { Spinner } from '@/components/ui/spinner';
+import { Loader2 } from 'lucide-react';
 
 type ProgramMeta = {
   name: string;
@@ -112,7 +112,7 @@ const EditProgramPage = () => {
   if (isLoading) {
     return (
       <div className="h-full w-full flex items-center justify-center">
-        <Spinner />
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
   }

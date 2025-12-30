@@ -9,7 +9,8 @@ import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSec
  */
 export const handleSectionSelect = (
   type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary',
-  currentSchema: WorkoutSchema
+  currentSchema: WorkoutSchema,
+  overrides?: Partial<WorkoutSection>
 ): WorkoutSchema => {
   const newSection: WorkoutSection = {
     id: `sec_${type}_${Date.now()}`,
@@ -21,6 +22,7 @@ export const handleSectionSelect = (
     ...(type === 'timed' && { targetRounds: undefined }),
     ...(type === 'circuits' && { targetRounds: undefined }),
     ...(type === 'auxiliary' && { category: undefined }),
+    ...overrides,
   };
 
   const newItem: WorkoutSchemaItem = {

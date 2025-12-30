@@ -115,6 +115,18 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
   return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
 };
 
+// Helper function to format program type for display
+const formatProgramType = (type: string): string => {
+  if (!type) return '-';
+  // Convert snake_case or kebab-case to Title Case
+  return type
+    .replace(/_/g, ' ')
+    .replace(/-/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 const ProgramsPage = () => {
   const t = useTranslations();
   const router = useRouter();
@@ -609,7 +621,7 @@ const ProgramsPage = () => {
       id: 'type',
       label: t('programs.filters.type'),
       icon: <Tag className="size-4" />,
-      options: uniqueTypes.map((type) => ({ value: type, label: type })),
+      options: uniqueTypes.map((type) => ({ value: type, label: formatProgramType(type) })),
       getFilterValue: (row) => row.type,
     },
     {

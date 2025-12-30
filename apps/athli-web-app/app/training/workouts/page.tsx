@@ -676,7 +676,7 @@ Focus on proper form and progressive overload.`;
       id: 'type',
       label: t('general.type'),
       icon: <Tag className="size-4" />,
-      options: uniqueTypes.map((type) => ({ value: type, label: type })),
+      options: uniqueTypes.map((type) => ({ value: type, label: formatWorkoutType(type) })),
       getFilterValue: (row) => row.type,
     },
     {
@@ -815,26 +815,7 @@ Focus on proper form and progressive overload.`;
 
   const handleDuplicateSelectedPerRow = async (workoutId: string, name: string) => {
     try {
-      const fullWorkout = await getWorkoutById(workoutId);
-      await createWorkout({
-        title: fullWorkout.program,
-        description: fullWorkout.description,
-        type: fullWorkout.type,
-        difficulty: fullWorkout.difficulty,
-        equipment: Array.isArray(fullWorkout.equipment) ? fullWorkout.equipment : [fullWorkout.equipment],
-        items: fullWorkout.workout_data.items,
-        status: fullWorkout.workout_data.status,
-        startedAt: fullWorkout.workout_data.startedAt,
-        completedAt: fullWorkout.workout_data.completedAt,
-        totalDurationMin: fullWorkout.workout_data.totalDurationMin,
-        sessionComments: fullWorkout.workout_data.sessionComments,
-        totalWeightLifted: fullWorkout.workout_data.totalWeightLifted,
-        intensity: fullWorkout.workout_data.intensity,
-        readiness: fullWorkout.workout_data.readiness,
-        overallNotes: fullWorkout.workout_data.overallNotes,
-        rating: fullWorkout.workout_data.rating,
-        totalExercises: fullWorkout.totalExercises || 0,
-      });
+      await duplicateWorkout(workoutId);
       // Reload workouts to show the duplicated one
       await refreshWorkouts();
       setSelectedWorkouts(new Set());
