@@ -36,6 +36,7 @@ const StandardWorkoutPage = () => {
   const router = useRouter();
   const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
   const [saveSignal, setSaveSignal] = useState(0);
@@ -107,6 +108,7 @@ const StandardWorkoutPage = () => {
 
   const handleSaveClick = () => {
     // Signal the builder to attempt a save; builder will handle validation and call onSaveSuccess
+    setIsSaving(true);
     setSaveSignal((prev) => prev + 1);
   };
 
@@ -130,6 +132,8 @@ const StandardWorkoutPage = () => {
     } catch (error) {
       console.error('Failed to save workout:', error);
       toast.error(t('general.error'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -150,8 +154,8 @@ const StandardWorkoutPage = () => {
     }
   };
 
-  const handleUpdateMeta = async (data: { title: string; type: string; difficulty: string; description: string }) => {
-    setWorkoutMeta((prev) => prev ? { ...prev, ...data } : null);
+  const handleSaveDetails = async (details: { title: string; type: string; difficulty: string; description: string }) => {
+    setWorkoutMeta((prev) => prev ? { ...prev, ...details } : null);
     setHasUnsavedChanges(true);
   };
 
@@ -219,7 +223,12 @@ const StandardWorkoutPage = () => {
               <Settings className="size-4" />
               <span>Edit details</span>
             </Button>
-            <Button onClick={handleSaveClick} className="gap-2" aria-label={t('workouts.edit.saveAria')}>
+            <Button
+              onClick={handleSaveClick}
+              loading={isSaving}
+              className="gap-2"
+              aria-label={t('workouts.edit.saveAria')}
+            >
               <Check className="size-4" />
               <span>{t('workouts.edit.save')}</span>
             </Button>
@@ -229,10 +238,12 @@ const StandardWorkoutPage = () => {
       </div>
       <div className="w-full flex-1 min-h-0 overflow-hidden bg-sidebar">
         <StandardBuilder
+          key={workoutMeta.title}
           meta={workoutMeta}
-          onDirtyChange={() => setHasUnsavedChanges(true)}
           saveSignal={saveSignal}
           onSaveSuccess={handleSaveSuccess}
+          onSaveError={() => setIsSaving(false)}
+          onDirtyChange={() => setHasUnsavedChanges(true)}
         />
       </div>
       <DiscardChangesDialog
@@ -244,7 +255,7 @@ const StandardWorkoutPage = () => {
         open={isEditDetailsOpen}
         onOpenChange={setIsEditDetailsOpen}
         workoutMeta={workoutMeta}
-        onSave={handleUpdateMeta}
+        onSave={handleSaveDetails}
       />
     </div>
   );

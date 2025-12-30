@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -55,13 +55,12 @@ import {
   Settings,
   Star,
   User,
-  Archive,
   Trash2,
   Copy,
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
-import { getWorkouts, starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout, createWorkout } from '@/api/coach/coach-workout-service';
+import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, createWorkout, getWorkoutById } from '@/api/coach/coach-workout-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
 
@@ -646,7 +645,7 @@ Focus on proper form and progressive overload.`;
   ];
 
   // Add actions column
-  const actionsColumn: ColumnDefinition<Workout> = {
+  const actionsColumn: ColumnDefinition<Workout> = useMemo(() => ({
     id: 'actions',
     label: '',
     sortable: false,
@@ -667,12 +666,12 @@ Focus on proper form and progressive overload.`;
         </Button>
       </div>
     ),
-  };
+  }), [t]);
 
-  const columns: ColumnDefinition<Workout>[] = [...allColumns, actionsColumn];
+  const columns: ColumnDefinition<Workout>[] = useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
 
   // Create filter definitions
-  const filters: FilterDefinition<Workout>[] = [
+  const filters: FilterDefinition<Workout>[] = useMemo(() => [
     {
       id: 'type',
       label: t('general.type'),
@@ -690,7 +689,7 @@ Focus on proper form and progressive overload.`;
       ],
       getFilterValue: (row) => (starredWorkouts.has(row.id) ? 'starred' : 'unstarred'),
     },
-  ];
+  ], [t, uniqueTypes, starredWorkouts]);
 
   const handleToggleStar = async (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -755,16 +754,6 @@ Focus on proper form and progressive overload.`;
     }
   };
 
-  const handleArchiveSelected = async () => {
-    if (selectedWorkouts.size === 0) return;
-    try {
-      await archiveWorkouts(Array.from(selectedWorkouts), true);
-      setSelectedWorkouts(new Set());
-      toast.success(t('workouts.detail.toast.archivedSuccessfully'));
-    } catch (error) {
-      console.error('Failed to archive workouts:', error);
-    }
-  };
 
   const handleBulkDelete = async () => {
     if (selectedWorkouts.size === 0) return;
@@ -821,19 +810,42 @@ Focus on proper form and progressive overload.`;
     const workoutId = Array.from(selectedWorkouts)[0];
     const workout = workouts.find((w) => w.id === workoutId);
     if (!workout) return;
+    handleDuplicateSelectedPerRow(workoutId, workout.program);
+  };
+
+  const handleDuplicateSelectedPerRow = async (workoutId: string, name: string) => {
     try {
-      const duplicatedWorkout = await duplicateWorkout(workoutId);
+      const fullWorkout = await getWorkoutById(workoutId);
+      await createWorkout({
+        title: fullWorkout.program,
+        description: fullWorkout.description,
+        type: fullWorkout.type,
+        difficulty: fullWorkout.difficulty,
+        equipment: Array.isArray(fullWorkout.equipment) ? fullWorkout.equipment : [fullWorkout.equipment],
+        items: fullWorkout.workout_data.items,
+        status: fullWorkout.workout_data.status,
+        startedAt: fullWorkout.workout_data.startedAt,
+        completedAt: fullWorkout.workout_data.completedAt,
+        totalDurationMin: fullWorkout.workout_data.totalDurationMin,
+        sessionComments: fullWorkout.workout_data.sessionComments,
+        totalWeightLifted: fullWorkout.workout_data.totalWeightLifted,
+        intensity: fullWorkout.workout_data.intensity,
+        readiness: fullWorkout.workout_data.readiness,
+        overallNotes: fullWorkout.workout_data.overallNotes,
+        rating: fullWorkout.workout_data.rating,
+        totalExercises: fullWorkout.totalExercises || 0,
+      });
       // Reload workouts to show the duplicated one
       await refreshWorkouts();
       setSelectedWorkouts(new Set());
-      toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name: workout.program }));
+      toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name: name }));
     } catch (error) {
       console.error('Failed to duplicate workout:', error);
     }
   };
 
   // Create first column renderer
-  const renderFirstColumn = (workout: Workout, isSelected: boolean) => {
+  const renderFirstColumn = useCallback((workout: Workout, isSelected: boolean) => {
     const isStarred = starredWorkouts.has(workout.id);
     return (
       <div className="flex items-center gap-3 h-full w-full">
@@ -896,11 +908,10 @@ Focus on proper form and progressive overload.`;
         </div>
       </div>
     );
-  };
+  }, [starredWorkouts, handleToggleWorkout, handleToggleStar, handleStarKeyDown, t]);
 
   // Create first column header with sorting
-  const renderFirstColumnHeader = ({
-    isSorted,
+  const renderFirstColumnHeader = useCallback(({
     isAscending,
     isDescending,
     onSort,
@@ -956,7 +967,7 @@ Focus on proper form and progressive overload.`;
         </DropdownMenu>
       </div>
     );
-  };
+  }, [t]);
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -1041,6 +1052,7 @@ Focus on proper form and progressive overload.`;
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            {/* RESTORED Duplicate Selected */}
             {selectedWorkouts.size === 1 && (
               <TooltipProvider>
                 <Tooltip>
@@ -1076,24 +1088,6 @@ Focus on proper form and progressive overload.`;
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('workouts.actions.starSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleArchiveSelected}
-                    className="gap-2"
-                    aria-label={t('workouts.actions.archiveSelectedAria')}
-                  >
-                    <Archive className="size-4" />
-                    <span>{t('workouts.actions.archiveSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('workouts.actions.archiveSelected')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

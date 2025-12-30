@@ -21,6 +21,10 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
       label: t('library.workouts'),
     },
     {
+      value: 'sections',
+      label: t('library.sections.title'),
+    },
+    {
       value: 'programs',
       label: t('library.programs'),
     },

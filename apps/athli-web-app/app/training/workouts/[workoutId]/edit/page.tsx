@@ -41,6 +41,8 @@ const EditStandardWorkoutPage = () => {
   const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [saveSignal, setSaveSignal] = useState(0);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
 
@@ -108,11 +110,12 @@ const EditStandardWorkoutPage = () => {
   const handleConfirmDiscard = () => {
     setIsDiscardDialogOpen(false);
     setHasUnsavedChanges(false);
+    setIsSaving(false);
     navigateBackToWorkouts();
   };
 
-  const handleSaveClick = () => {
-    // Signal the builder to attempt a save; builder will handle validation and call onSaveSuccess
+  const handleSaveClick = async () => {
+    setIsSaving(true);
     setSaveSignal((prev) => prev + 1);
   };
 
@@ -134,6 +137,8 @@ const EditStandardWorkoutPage = () => {
     } catch (error) {
       console.error('Failed to save workout:', error);
       toast.error(t('general.error'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -240,7 +245,12 @@ const EditStandardWorkoutPage = () => {
               <X className="size-4" />
               <span>{t('workouts.edit.cancel')}</span>
             </Button>
-            <Button onClick={handleSaveClick} className="gap-2" aria-label={t('workouts.edit.saveAria')}>
+            <Button
+              onClick={handleSaveClick}
+              loading={isSaving}
+              className="gap-2"
+              aria-label={t('workouts.edit.saveAria')}
+            >
               <Check className="size-4" />
               <span>{t('workouts.edit.save')}</span>
             </Button>
@@ -250,10 +260,12 @@ const EditStandardWorkoutPage = () => {
       </div>
       <div className="w-full flex-1 overflow-auto bg-sidebar">
         <StandardBuilder
+          key={workoutMeta.title}
           meta={workoutMeta}
-          onDirtyChange={() => setHasUnsavedChanges(true)}
           saveSignal={saveSignal}
           onSaveSuccess={handleSaveSuccess}
+          onSaveError={() => setIsSaving(false)}
+          onDirtyChange={() => setHasUnsavedChanges(true)}
         />
       </div>
       {workoutMeta && (

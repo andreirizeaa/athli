@@ -14,6 +14,7 @@ import { IntercomProvider } from '@/components/intercom-provider';
 import { ActiveThemeProvider } from '@/components/app/active-theme';
 import { DEFAULT_THEME } from '@/lib/theme';
 import { cn } from '@/lib/general/utils';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -70,7 +71,9 @@ export default async function RootLayout({
                 <SupabaseProvider>
                   <IntlProvider>
                     <GlobalDataProvider>
-                      <ConditionalAppShell>{children}</ConditionalAppShell>
+                      <TooltipProvider>
+                        <ConditionalAppShell>{children}</ConditionalAppShell>
+                      </TooltipProvider>
                     </GlobalDataProvider>
                   </IntlProvider>
                 </SupabaseProvider>

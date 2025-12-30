@@ -70,6 +70,7 @@ type OverviewPanelProps = {
   groupExercisesBySuperset: (exercises: ExerciseWithSuperset[]) => ExerciseWithSuperset[][];
   onExerciseClick?: (exerciseId: string) => void;
   validationErrors?: ValidationErrors;
+  isSectionMode?: boolean; // If true, hide delete/drag icons for the section container
 };
 
 // DropGap: A gap between cards that can optionally show a centered drop line
@@ -116,14 +117,17 @@ const OverviewSectionCard = ({
   section,
   children,
   onDelete,
+  hideDragAndDelete = false,
 }: {
   section: WorkoutSection;
   children: React.ReactNode;
   onDelete: (sectionId: string) => void;
+  hideDragAndDelete?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useSortable({
     id: `section-${section.id}`,
     data: { type: 'section', section },
+    disabled: hideDragAndDelete, // Disable dragging in section mode
   });
 
   const { setNodeRef: setDroppableRef } = useDroppable({
@@ -155,27 +159,30 @@ const OverviewSectionCard = ({
               ({section.exercises ? section.exercises.length : 0})
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(section.id);
-              }}
-              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            >
-              <Trash2 className="size-3" />
-            </button>
-            <button
-              type="button"
-              {...attributes}
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-              className="cursor-grab active:cursor-grabbing p-0.5 rounded select-none text-muted-foreground hover:text-foreground"
-            >
-              <GripVertical className="size-3" />
-            </button>
-          </div>
+          {/* Hide delete and drag buttons when hideDragAndDelete is true */}
+          {!hideDragAndDelete && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(section.id);
+                }}
+                className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <Trash2 className="size-3" />
+              </button>
+              <button
+                type="button"
+                {...attributes}
+                {...listeners}
+                onClick={(e) => e.stopPropagation()}
+                className="cursor-grab active:cursor-grabbing p-0.5 rounded select-none text-muted-foreground hover:text-foreground"
+              >
+                <GripVertical className="size-3" />
+              </button>
+            </div>
+          )}
         </div>
         <div ref={setDroppableRef} className="min-h-[10px]">
           {children}
@@ -211,7 +218,7 @@ const OverviewTopLevelExerciseRow = ({
       <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-xs shadow-sm">
         <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
         <span className="text-xs flex-1 min-w-0 truncate">{exercise.name || 'Untitled exercise'}</span>
-        {onExerciseClick && (
+        {onExerciseClick && exercise?.exerciseId && (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -288,7 +295,7 @@ const OverviewExerciseRow = ({
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground flex-shrink-0" />
           <span className="text-xs flex-1 min-w-0">{exercise.name || 'Untitled exercise'}</span>
-          {onExerciseClick && (
+          {onExerciseClick && exercise?.exerciseId && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -310,7 +317,9 @@ const OverviewExerciseRow = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onDelete(sectionId, exercise.exerciseId);
+              if (exercise?.exerciseId) {
+                onDelete(sectionId, exercise.exerciseId);
+              }
             }}
             onMouseDown={(e) => e.stopPropagation()}
             className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
@@ -365,8 +374,10 @@ const OverviewSupersetRow = ({
 
   const handleDelete = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
-    const exerciseIds = exercises.map((ex) => ex.exerciseId);
-    onDelete(sectionId, exerciseIds);
+    const exerciseIds = exercises.map((ex) => ex.exerciseId).filter((id): id is string => !!id);
+    if (exerciseIds.length > 0) {
+      onDelete(sectionId, exerciseIds);
+    }
   };
   const handleUnlink = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -532,7 +543,7 @@ const OverviewTopLevelSupersetRow = ({
             </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {onExerciseClick && exercises.length > 0 && (
+            {onExerciseClick && exercises?.[0]?.exerciseId && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -573,7 +584,7 @@ const OverviewTopLevelSupersetRow = ({
 };
 
 
-export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, onDeleteSection, onDeleteExercise, onDeleteTopLevelExercise, onDeleteSuperset, onDeleteTopLevelSuperset, onUnlinkSuperset, onUnlinkTopLevelSuperset, onExerciseClick, validationErrors }: OverviewPanelProps) => {
+export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, onDeleteSection, onDeleteExercise, onDeleteTopLevelExercise, onDeleteSuperset, onDeleteTopLevelSuperset, onUnlinkSuperset, onUnlinkTopLevelSuperset, onExerciseClick, validationErrors, isSectionMode = false }: OverviewPanelProps) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -608,7 +619,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
       const instanceId = activeId.replace('top-level-exercise-', '');
       const data = active.data.current;
       if (data && data.type === 'top-level-superset') {
-        setActiveOverviewItem({ type: 'topLevelSuperset', instanceId, length: data.length });
+        setActiveOverviewItem({ type: 'topLevelSuperset', instanceId, length: data.length || 0 });
       } else {
         setActiveOverviewItem({ type: 'topLevelExercise', instanceId });
       }
@@ -858,11 +869,11 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
         if (ex.supersetGroupId) {
           payloadType = 'superset';
           let start = idx;
-          while (start > 0 && sourceList[start - 1].itemType === 'exercise' && sourceList[start - 1].exercise.supersetGroupId === ex.supersetGroupId) start--;
+          while (start > 0 && sourceList[start - 1].itemType === 'exercise' && sourceList[start - 1].exercise?.supersetGroupId === ex.supersetGroupId) start--;
           const group: ExerciseWithSuperset[] = [];
           let curr = start;
-          while (curr < sourceList.length && sourceList[curr].itemType === 'exercise' && sourceList[curr].exercise.supersetGroupId === ex.supersetGroupId) {
-            group.push(sourceList[curr].exercise);
+          while (curr < sourceList.length && sourceList[curr].itemType === 'exercise' && sourceList[curr].exercise?.supersetGroupId === ex.supersetGroupId) {
+            group.push(sourceList[curr].exercise!);
             curr++;
           }
           movedItems = group;
@@ -971,7 +982,9 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
         }
       }
 
-      const newItemsWrapped = movedItems.map(ex => ({ itemType: 'exercise' as const, exercise: ex }));
+      const newItemsWrapped = movedItems
+        .filter(ex => !!ex)
+        .map(ex => ({ itemType: 'exercise' as const, exercise: ex }));
       sourceList.splice(insertIndex, 0, ...newItemsWrapped);
 
     } else if (targetData.level === 'section') {
@@ -1157,6 +1170,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                         key={section.id}
                         section={section}
                         onDelete={onDeleteSection}
+                        hideDragAndDelete={isSectionMode}
                       >
                         <SortableContext items={sectionSortableIds} strategy={verticalListSortingStrategy}>
                           <div className="px-2 py-0 flex flex-col min-h-[50px]">
