@@ -15,7 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil, MoreHorizontal, Save, ChevronUp, ChevronDown } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil, MoreHorizontal, Save, ChevronUp, ChevronDown, Eraser } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -50,6 +50,7 @@ import { getWorkouts } from '@/api/coach/coach-workout-service';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
+import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import type { WorkoutPayload, WorkoutSectionPayload } from '@/app/training/workouts/new/workout-schema';
 import { createProgram, editProgram, deletePrograms, updateProgramDetails, type ProgramData } from '@/api/coach/coach-program-service';
 import { toast } from 'sonner';
@@ -293,7 +294,8 @@ const DroppableDayCard = ({
       className={cn(
         'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
         !isCopyMode && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
-        isCopyMode && !isCopySource && !isPastedDay && 'cursor-pointer hover:border-primary/50'
+        isCopyMode && !isCopySource && !isPastedDay && 'cursor-pointer hover:border-primary/50',
+        isDragOver && 'border-primary/50'
       )}
     >
       <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
@@ -316,10 +318,33 @@ const DroppableDayCard = ({
           </Button>
         )}
       </div>
-      <div className={cn(
-        "flex-1 p-3 min-h-0 relative",
-        (isCopySource || isHoveredForCopy) ? "overflow-hidden" : "overflow-y-auto"
-      )}>
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <div className={cn(
+          "absolute inset-0 p-3",
+          (isCopySource || isHoveredForCopy) ? "overflow-hidden" : "overflow-y-auto"
+        )}>
+          {workouts.length > 0 ? (
+            <div className="flex flex-col gap-2 relative z-20">
+              {workouts.map((workout) => (
+                <DraggableWorkoutCard
+                  key={workout.id}
+                  workout={workout}
+                  week={week}
+                  day={day}
+                  onDelete={onDeleteWorkout}
+                  onClick={onOpenWorkoutDetails}
+                  onCopy={onCopyWorkout}
+                  onCancelCopy={onCancelCopy}
+                  t={t}
+                  isDraggingGlobal={isDraggingGlobal}
+                  isCopyMode={isCopyMode}
+                  isCopySource={isCopyMode && copiedWorkoutId === workout.id}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+
         {/* Source day overlay - shown below header */}
         {isCopySource && (
           <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
@@ -357,26 +382,6 @@ const DroppableDayCard = ({
             </Button>
           </div>
         )}
-        {workouts.length > 0 ? (
-          <div className="flex flex-col gap-2 relative z-20">
-            {workouts.map((workout) => (
-              <DraggableWorkoutCard
-                key={workout.id}
-                workout={workout}
-                week={week}
-                day={day}
-                onDelete={onDeleteWorkout}
-                onClick={onOpenWorkoutDetails}
-                onCopy={onCopyWorkout}
-                onCancelCopy={onCancelCopy}
-                t={t}
-                isDraggingGlobal={isDraggingGlobal}
-                isCopyMode={isCopyMode}
-                isCopySource={isCopyMode && copiedWorkoutId === workout.id}
-              />
-            ))}
-          </div>
-        ) : null}
       </div>
     </div>
   );
@@ -435,6 +440,7 @@ export const ProgramBuilder = ({
     sourceDay: number;
   } | null>(null);
   const [dragOverDay, setDragOverDay] = useState<{ week: number; day: number } | null>(null);
+  const [weekToClear, setWeekToClear] = useState<number | null>(null);
 
   // Copy mode state
   const [isCopyMode, setIsCopyMode] = useState<boolean>(false);
@@ -799,7 +805,6 @@ export const ProgramBuilder = ({
       );
     }
     saveToHistory(updatedWorkouts, newTotalWeeks);
-    setWorkoutsByDay(updatedWorkouts);
     setTotalWeeks(newTotalWeeks);
 
     // If currently in 2 or 4 week view, switch to 1 week view
@@ -807,7 +812,74 @@ export const ProgramBuilder = ({
       setSelectedWeek('1');
     }
 
-    toast.success(`Week ${weekNumber} duplicated successfully`);
+    toast.success(t('programs.builder.toast.weekDuplicated', { number: weekNumber }));
+  };
+
+  const handleInsertWeek = (afterWeek: number) => {
+    const newTotalWeeks = totalWeeks + 1;
+    const updatedWorkouts: {
+      [week: number]: { [day: number]: Array<Workout & { id: string }> };
+    } = {};
+
+    // Shift weeks down
+    Object.keys(workoutsByDay).forEach((weekKey) => {
+      const week = parseInt(weekKey, 10);
+      if (week <= afterWeek) {
+        updatedWorkouts[week] = workoutsByDay[week];
+      } else {
+        updatedWorkouts[week + 1] = workoutsByDay[week];
+      }
+    });
+
+    // Initialize the new week with empty days
+    updatedWorkouts[afterWeek + 1] = {};
+    for (let j = 1; j <= 7; j++) {
+      updatedWorkouts[afterWeek + 1][j] = [];
+    }
+
+    saveToHistory(updatedWorkouts, newTotalWeeks);
+    setWorkoutsByDay(updatedWorkouts);
+    setTotalWeeks(newTotalWeeks);
+
+    // If moving from single week view, we might want to stay on the current week or move to the new one
+    // But if we are inserting, we usually want to see where we inserted.
+    if (selectedWeek === '1') {
+      setCurrentWeek(afterWeek + 1);
+    }
+  };
+
+  const WeekDivider = ({ onClick, position = 'bottom' }: { onClick: () => void; position?: 'top' | 'bottom' | 'center' }) => {
+    // Determine tooltip placement based on divider position
+    const tooltipSide = position === 'top' ? 'bottom' : 'top';
+    const sideOffset = position === 'center' ? undefined : 4;
+
+    return (
+      <div
+        className="h-2 relative group flex items-center justify-center cursor-pointer z-40"
+        onClick={onClick}
+      >
+        <div className="absolute inset-x-0 h-[2px] top-1/2 -translate-y-1/2 bg-transparent group-hover:bg-primary transition-colors duration-200" />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "absolute size-6 bg-primary text-primary-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50",
+                  position === 'top' && 'top-[calc(50%+1px)] rounded-b-md rounded-t-none',
+                  position === 'bottom' && 'bottom-[calc(50%+1px)] rounded-t-md rounded-b-none',
+                  position === 'center' && 'top-1/2 -translate-y-1/2 rounded-md'
+                )}
+              >
+                <Plus className="size-4" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side={tooltipSide} sideOffset={sideOffset}>
+              <p>Insert week</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    );
   };
 
   const handleDeleteWeek = (weekNumber: number) => {
@@ -843,6 +915,26 @@ export const ProgramBuilder = ({
       }
       toast.success(`Week ${weekNumber} deleted successfully`);
     }
+  };
+
+  const handleClearWeek = () => {
+    if (weekToClear === null) return;
+
+    setWorkoutsByDay((prev) => {
+      const updated = { ...prev };
+      if (updated[weekToClear]) {
+        // Clear all days in this week
+        updated[weekToClear] = {};
+        for (let j = 1; j <= 7; j++) {
+          updated[weekToClear][j] = [];
+        }
+      }
+      saveToHistory(updated);
+      return updated;
+    });
+
+    toast.success(`Week ${weekToClear} cleared successfully`);
+    setWeekToClear(null);
   };
 
   const handleSaveDetails = async (details: { name: string; type: string; difficulty: string; description: string }) => {
@@ -1213,9 +1305,11 @@ export const ProgramBuilder = ({
 
   // Calculate days for each row
   const getDaysForRow = (rowIndex: number) => {
-    const weeksView = parseInt(selectedWeek, 10);
-    const startDay = rowIndex * 7 + 1;
-    const endDay = Math.min(startDay + 6, weeksView * 7);
+    // Determine the actual week number for this row based on the current scroll position (currentWeek)
+    const weekNumber = currentWeek + rowIndex;
+    // Calculate the start day number (1-based)
+    // Week 1 starts at day 1, Week 2 starts at day 8, etc.
+    const startDay = (weekNumber - 1) * 7 + 1;
     return Array.from({ length: 7 }, (_, i) => startDay + i);
   };
 
@@ -1459,97 +1553,132 @@ export const ProgramBuilder = ({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="w-full flex-1 overflow-auto bg-background p-4">
-          <div className="h-full flex flex-col gap-4">
+        <div className={cn("w-full flex-1 overflow-auto bg-background px-4 py-1", isShiftPressed && "select-none")}>
+          <div className="h-full flex flex-col">
             {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
               const weekNumber = currentWeek + rowIndex;
-              return (
-                <div key={rowIndex} className="flex gap-4 flex-1 min-h-0">
-                  <div className="w-8 bg-background rounded-lg border border-border flex-shrink-0 flex flex-col">
-                    <div className="flex flex-col items-center gap-1 p-1 flex-shrink-0">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => handleDuplicateWeek(weekNumber)}
-                              aria-label={t('programs.builder.duplicateWeekAria')}
-                            >
-                              <Copy className="size-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t('programs.builder.duplicateWeek')}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => handleDeleteWeek(weekNumber)}
-                              disabled={totalWeeks === 1}
-                              aria-label={t('programs.builder.deleteWeekAria')}
-                            >
-                              <Trash2 className="size-3" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>{t('programs.builder.deleteWeek')}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center">
-                      <span className="text-xs uppercase text-muted-foreground -rotate-90 whitespace-nowrap">
-                        {t('programs.builder.weekLabel', { number: weekNumber })}
-                      </span>
-                    </div>
-                  </div>
-                  {getDaysForRow(rowIndex).map((day) => {
-                    const { week, day: dayInWeek } = getWeekAndDay(day);
-                    const workouts = workoutsByDay[week]?.[dayInWeek] || [];
-                    const isDragOver = dragOverDay?.week === week && dragOverDay?.day === dayInWeek;
-                    const isSourceDay = draggedWorkout?.sourceWeek === week && draggedWorkout?.sourceDay === dayInWeek;
-                    const isCopySourceDay = copiedWorkout?.sourceWeek === week && copiedWorkout?.sourceDay === dayInWeek;
-                    const isHoveredForCopy = hoveredCopyDay?.week === week && hoveredCopyDay?.day === dayInWeek;
-                    const isPastedDay = pastedDays.some(pd => pd.week === week && pd.day === dayInWeek);
+              const weekWorkouts = workoutsByDay[weekNumber] || {};
+              const hasWorkoutsInWeek = Object.values(weekWorkouts).some(dayWorkouts => dayWorkouts.length > 0);
 
-                    return (
-                      <DroppableDayCard
-                        key={day}
-                        week={week}
-                        day={dayInWeek}
-                        dayNumber={day}
-                        workouts={workouts}
-                        isDragOver={isDragOver}
-                        isSourceDay={isSourceDay}
-                        isDraggingGlobal={!!draggedWorkout}
-                        onOpenAddWorkout={handleOpenAddWorkoutModal}
-                        onDeleteWorkout={handleDeleteWorkout}
-                        onOpenWorkoutDetails={handleOpenWorkoutDetails}
-                        onCopyWorkout={handleStartCopyMode}
-                        onCancelCopy={handleCancelCopyMode}
-                        onPasteWorkout={handlePasteWorkout}
-                        onCopyDayHover={handleCopyDayHover}
-                        onCopyDayLeave={handleCopyDayLeave}
-                        t={t}
-                        isCopyMode={isCopyMode}
-                        isCopySource={isCopySourceDay}
-                        isHoveredForCopy={isHoveredForCopy}
-                        isShiftPressed={isShiftPressed}
-                        copiedWorkoutId={copiedWorkout?.workout.id}
-                        isPastedDay={isPastedDay}
-                      />
-                    );
-                  })}
+              return (
+                <div key={rowIndex} className="flex flex-col flex-1 min-h-0">
+                  {/* Divider above the first week in view to allow insertion before it */}
+                  {rowIndex === 0 && (
+                    <WeekDivider onClick={() => handleInsertWeek(weekNumber - 1)} position="top" />
+                  )}
+                  <div className="flex gap-1.5 flex-1 min-h-0">
+                    <div className="w-8 bg-background rounded-md border border-border flex-shrink-0 flex flex-col justify-between py-1">
+                      <div className="flex items-center justify-center pt-5 pb-0">
+                        <span className="text-[10px] uppercase text-muted-foreground -rotate-90 whitespace-nowrap">
+                          {t('programs.builder.weekLabel', { number: weekNumber })}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0 p-1 flex-shrink-0">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => setWeekToClear(weekNumber)}
+                                disabled={!hasWorkoutsInWeek}
+                                aria-label={t('programs.builder.clearWeekAria')}
+                              >
+                                <Eraser className="size-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('programs.builder.clearWeek')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleDuplicateWeek(weekNumber)}
+                                disabled={!hasWorkoutsInWeek}
+                                aria-label={t('programs.builder.duplicateWeekAria')}
+                              >
+                                <Copy className="size-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('programs.builder.duplicateWeek')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleDeleteWeek(weekNumber)}
+                                disabled={totalWeeks === 1}
+                                aria-label={t('programs.builder.deleteWeekAria')}
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>{t('programs.builder.deleteWeek')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                    {getDaysForRow(rowIndex).map((day) => {
+                      const { week, day: dayInWeek } = getWeekAndDay(day);
+                      const workouts = workoutsByDay[week]?.[dayInWeek] || [];
+                      const isDragOver = dragOverDay?.week === week && dragOverDay?.day === dayInWeek;
+                      const isSourceDay = draggedWorkout?.sourceWeek === week && draggedWorkout?.sourceDay === dayInWeek;
+                      const isCopySourceDay = copiedWorkout?.sourceWeek === week && copiedWorkout?.sourceDay === dayInWeek;
+                      const isHoveredForCopy = hoveredCopyDay?.week === week && hoveredCopyDay?.day === dayInWeek;
+                      const isPastedDay = pastedDays.some(pd => pd.week === week && pd.day === dayInWeek);
+
+                      return (
+                        <DroppableDayCard
+                          key={day}
+                          week={week}
+                          day={dayInWeek}
+                          dayNumber={day}
+                          workouts={workouts}
+                          isDragOver={isDragOver}
+                          isSourceDay={isSourceDay}
+                          isDraggingGlobal={!!draggedWorkout}
+                          onOpenAddWorkout={handleOpenAddWorkoutModal}
+                          onDeleteWorkout={handleDeleteWorkout}
+                          onOpenWorkoutDetails={handleOpenWorkoutDetails}
+                          onCopyWorkout={handleStartCopyMode}
+                          onCancelCopy={handleCancelCopyMode}
+                          onPasteWorkout={handlePasteWorkout}
+                          onCopyDayHover={handleCopyDayHover}
+                          onCopyDayLeave={handleCopyDayLeave}
+                          t={t}
+                          isCopyMode={isCopyMode}
+                          isCopySource={isCopySourceDay}
+                          isHoveredForCopy={isHoveredForCopy}
+                          isShiftPressed={isShiftPressed}
+                          copiedWorkoutId={copiedWorkout?.workout.id}
+                          isPastedDay={isPastedDay}
+                        />
+                      );
+                    })}
+                  </div>
+                  {/* Always show divider after the week row to allow insertion */}
+                  <WeekDivider
+                    onClick={() => handleInsertWeek(weekNumber)}
+                    position={rowIndex < getRowsCount() - 1 ? 'center' : 'bottom'}
+                  />
                 </div>
               );
             })}
@@ -1722,6 +1851,15 @@ export const ProgramBuilder = ({
         open={isDiscardDialogOpen}
         onCancel={handleCancelDiscard}
         onConfirm={handleConfirmDiscard}
+      />
+      <ConfirmDeleteDialog
+        open={weekToClear !== null}
+        onOpenChange={(open) => !open && setWeekToClear(null)}
+        onConfirm={handleClearWeek}
+        title={weekToClear !== null ? t('programs.builder.clearWeekConfirmTitle', { number: weekToClear }) : ''}
+        description={weekToClear !== null ? t('programs.builder.clearWeekConfirmDescription', { number: weekToClear }) : ''}
+        confirmText={t('programs.builder.clearWeekAction')}
+        variant="default"
       />
     </div >
   );
