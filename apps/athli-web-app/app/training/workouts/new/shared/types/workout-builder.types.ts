@@ -23,6 +23,7 @@ export type WorkoutSection = {
   targetRounds?: number;
   category?: 'warmup' | 'cooldown' | 'mobility';
   notes?: string;
+  isLoading?: boolean;
 };
 
 /**

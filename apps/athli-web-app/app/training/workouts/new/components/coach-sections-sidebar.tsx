@@ -13,10 +13,12 @@ import type { Section } from '@/api/coach/coach-section-service';
 // Draggable Section Card
 const DraggableSectionCard = ({
     section,
-    onDragStart
+    onDragStart,
+    onDragEnd
 }: {
     section: Section;
     onDragStart: (section: Section) => void;
+    onDragEnd?: () => void;
 }) => {
     return (
         <Card
@@ -27,6 +29,7 @@ const DraggableSectionCard = ({
                 // Also call parent handler to set React state if needed
                 onDragStart(section);
             }}
+            onDragEnd={onDragEnd}
             className={cn(
                 "cursor-grab active:cursor-grabbing hover:border-primary transition-colors select-none"
             )}
@@ -46,10 +49,11 @@ const DraggableSectionCard = ({
 
 type CoachSectionsSidebarProps = {
     onDragStart: (section: Section) => void;
+    onDragEnd?: () => void;
     onNavigateRequest?: (path: string) => void;
 };
 
-export const CoachSectionsSidebar = ({ onDragStart, onNavigateRequest }: CoachSectionsSidebarProps) => {
+export const CoachSectionsSidebar = ({ onDragStart, onDragEnd, onNavigateRequest }: CoachSectionsSidebarProps) => {
     const { sections } = useTrainingData();
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -109,6 +113,7 @@ export const CoachSectionsSidebar = ({ onDragStart, onNavigateRequest }: CoachSe
                                 key={section.id}
                                 section={section}
                                 onDragStart={onDragStart}
+                                onDragEnd={onDragEnd}
                             />
                         ))}
                     </div>

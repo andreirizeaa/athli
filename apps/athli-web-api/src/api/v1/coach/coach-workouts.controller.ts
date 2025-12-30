@@ -168,7 +168,7 @@ export const coachWorkoutsController = {
      */
     deleteWorkout: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.body;
+        const id = req.params.id || req.body.id;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -201,7 +201,7 @@ export const coachWorkoutsController = {
      */
     duplicateWorkout: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.body;
+        const id = req.params.id || req.body.id;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -258,7 +258,7 @@ export const coachWorkoutsController = {
      */
     getWorkoutById: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.body;
+        const id = req.params.id || req.body.id;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });

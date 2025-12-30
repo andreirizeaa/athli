@@ -11,10 +11,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 
+import { useState } from 'react';
+import { Spinner } from '@/components/ui/spinner';
+
 interface ConfirmDeleteDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onConfirm: () => void;
+    onConfirm: () => Promise<void> | void;
     itemName?: string; // Name of single item being deleted
     count?: number; // Number of items for bulk delete
     itemType?: string; // e.g. "flow", "metric", "habit", "file"
@@ -37,6 +40,7 @@ export const ConfirmDeleteDialog = ({
     variant = 'default',
 }: ConfirmDeleteDialogProps) => {
     const t = useTranslations();
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const isSingleDelete = itemName !== undefined;
 
@@ -57,8 +61,21 @@ export const ConfirmDeleteDialog = ({
             });
     }
 
+    const handleConfirm = async () => {
+        setIsDeleting(true);
+        try {
+            await onConfirm();
+            onOpenChange(false);
+        } catch (error) {
+            // Error handling should be done in the parent component
+            console.error(error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={(open) => !isDeleting && onOpenChange(open)}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
@@ -72,6 +89,7 @@ export const ConfirmDeleteDialog = ({
                     <Button
                         variant="outline"
                         onClick={() => onOpenChange(false)}
+                        disabled={isDeleting}
                     >
                         {t('general.cancel')}
                     </Button>
@@ -79,11 +97,19 @@ export const ConfirmDeleteDialog = ({
                         variant={variant}
                         onClick={(e) => {
                             e.preventDefault();
-                            onConfirm();
-                            onOpenChange(false);
+                            handleConfirm();
                         }}
+                        disabled={isDeleting}
+                        className="gap-2 relative"
                     >
-                        {confirmText || t('general.delete')}
+                        <span className={isDeleting ? "invisible" : ""}>
+                            {confirmText || t('general.delete')}
+                        </span>
+                        {isDeleting && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Spinner className="size-4" />
+                            </div>
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

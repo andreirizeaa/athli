@@ -747,8 +747,18 @@ Focus on proper form and progressive overload.`;
         });
         return next;
       });
+
+      const selectedCount = selectedWorkouts.size;
+      if (selectedCount === 1) {
+        const workoutId = Array.from(selectedWorkouts)[0];
+        const workout = workouts.find((w) => w.id === workoutId);
+        const name = workout?.program || t('library.workout');
+        toast.success(t('workouts.detail.toast.starredSuccessfully', { name }));
+      } else {
+        toast.success(t('workouts.detail.toast.starredBulkSuccessfully', { count: selectedCount }));
+      }
+
       setSelectedWorkouts(new Set());
-      toast.success(t('workouts.detail.toast.starredSuccessfully'));
     } catch (error) {
       console.error('Failed to star workouts:', error);
     }
@@ -805,6 +815,8 @@ Focus on proper form and progressive overload.`;
     }
   };
 
+  const [isBulkDuplicating, setIsBulkDuplicating] = useState<boolean>(false);
+
   const handleDuplicateSelected = async () => {
     if (selectedWorkouts.size !== 1) return;
     const workoutId = Array.from(selectedWorkouts)[0];
@@ -814,6 +826,7 @@ Focus on proper form and progressive overload.`;
   };
 
   const handleDuplicateSelectedPerRow = async (workoutId: string, name: string) => {
+    setIsBulkDuplicating(true);
     try {
       await duplicateWorkout(workoutId);
       // Reload workouts to show the duplicated one
@@ -822,6 +835,8 @@ Focus on proper form and progressive overload.`;
       toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name: name }));
     } catch (error) {
       console.error('Failed to duplicate workout:', error);
+    } finally {
+      setIsBulkDuplicating(false);
     }
   };
 
@@ -1042,9 +1057,10 @@ Focus on proper form and progressive overload.`;
                       variant="ghost"
                       onClick={handleDuplicateSelected}
                       className="gap-2"
+                      disabled={isBulkDuplicating}
                       aria-label={t('workouts.actions.duplicateAria')}
                     >
-                      <Copy className="size-4" />
+                      {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
                       <span>{t('workouts.actions.duplicate')}</span>
                     </Button>
                   </TooltipTrigger>

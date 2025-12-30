@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Spinner } from '@/components/ui/spinner';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
 import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
@@ -378,8 +379,11 @@ const ExercisesPage = () => {
     exportToCSV(exportData, 'selected-exercises.csv');
   };
 
+  const [isBulkDuplicating, setIsBulkDuplicating] = useState<boolean>(false);
+
   const handleDuplicateSelected = async () => {
     if (selectedExercises.size === 0) return;
+    setIsBulkDuplicating(true);
     try {
       await duplicateExercises(Array.from(selectedExercises));
       await refreshExercises();
@@ -388,6 +392,8 @@ const ExercisesPage = () => {
     } catch (error) {
       console.error('Failed to duplicate exercises:', error);
       toast.error('Failed to duplicate exercises');
+    } finally {
+      setIsBulkDuplicating(false);
     }
   };
 
@@ -946,9 +952,10 @@ const ExercisesPage = () => {
                     variant="ghost"
                     onClick={handleDuplicateSelected}
                     className="gap-2"
+                    disabled={isBulkDuplicating}
                     aria-label="Duplicate selected"
                   >
-                    <Copy className="size-4" />
+                    {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
                     <span>Duplicate</span>
                   </Button>
                 </TooltipTrigger>

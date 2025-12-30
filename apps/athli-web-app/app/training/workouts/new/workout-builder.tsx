@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Dumbbell, Ellipsis, Info, Link2, Link2Off, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Dumbbell, Ellipsis, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +28,7 @@ import { ExerciseCard } from './components/exercise-card';
 import { ExerciseSelectionPanel } from './components/exercise-selection-panel';
 import { CoachSectionsSidebar } from './components/coach-sections-sidebar';
 import { InlineSectionCreator } from './components/inline-section-creator';
-import type { Section } from '@/api/coach/coach-section-service';
+import { getSectionById, type Section } from '@/api/coach/coach-section-service';
 import { SectionType } from '@/app/training/sections/section-type-utils';
 
 import { OverviewPanel } from './components/overview-panel';
@@ -378,7 +378,7 @@ export const StandardBuilder = ({
 
               const sets: SetData[] = (ex.sets || []).map((set: any) => ({
                 setNumber: set.setNumber,
-                type: set.isDropset ? 'dropset' : 'normal',
+                type: set.type || (set.isDropset ? 'dropset' : 'normal'),
                 reps: set.isDropset && set.repStages ? set.repStages.join('-') : set.reps?.toString() || '',
                 weight: set.isDropset && set.weightStages ? set.weightStages.join('-') : set.weight?.toString() || '',
                 rest: set.restSec?.toString() || '',
@@ -420,7 +420,7 @@ export const StandardBuilder = ({
 
             const sets: SetData[] = (ex.sets || []).map((set: any) => ({
               setNumber: set.setNumber,
-              type: 'normal',
+              type: set.type || 'normal',
               reps: set.reps?.toString() || '',
               weight: set.weight?.toString() || '',
               rest: set.restSec?.toString() || '',
@@ -644,14 +644,17 @@ export const StandardBuilder = ({
       // Let's manually implement insertion logic here similar to slot drop.
 
       setWorkoutSchema((prev) => {
-        // Create new section object
+        // Create new section object with loading state or minimal data
         const type = draggedSection.sectionType as any;
+        // Use a temporary ID that we'll match against when the async fetch completes
+        const tempId = `sec_${type}_${Date.now()}`;
+
         const newSection: WorkoutSection = {
-          id: `sec_${type}_${Date.now()}`,
+          id: tempId,
           type: type || 'regular',
-          exercises: [], // TODO: If we need to clone exercises, we need to fetch full section details. Sidebar section only has metadata.
-          // Assuming metadata only for now as per "one card for each section" usage in sidebar usually implies template usage.
+          exercises: [], // Initially empty, will be populated async
           name: draggedSection.program,
+          isLoading: true, // Set loading state
         };
 
         const newItem: WorkoutSchemaItem = {
@@ -667,6 +670,167 @@ export const StandardBuilder = ({
         } else {
           newItems.splice(dragOverTopLevelSlot, 0, newItem);
         }
+
+        // Trigger async fetch to populate the section
+        getSectionById(draggedSection.id).then((fullSection) => {
+          // Logic similar to EditSectionPage to hydrate exercises
+          let coreData = fullSection.section_data;
+          if (coreData?.items && Array.isArray(coreData.items) && coreData.items.length > 0 && coreData.items[0].itemType === 'section') {
+            coreData = coreData.items[0].data;
+          }
+
+          // Hydrate exercise details (name, image, etc.) from local DB
+          if (coreData && coreData.exercises && Array.isArray(coreData.exercises)) {
+
+            // Flatten exercises if nested (payload builder structure)
+            const hasNestedExercises = coreData.exercises.some((ex: any) => ex.exercises && Array.isArray(ex.exercises));
+            let exercisesToProcess = coreData.exercises;
+
+            if (hasNestedExercises) {
+              const flattenedExercises: any[] = [];
+              coreData.exercises.forEach((group: any) => {
+                const isSuperset = group.isSuperset;
+                const supersetGroupId = isSuperset ? crypto.randomUUID() : undefined;
+
+                if (group.exercises && Array.isArray(group.exercises)) {
+                  group.exercises.forEach((ex: any) => {
+                    flattenedExercises.push({
+                      ...ex,
+                      instanceId: crypto.randomUUID(),
+                      supersetGroupId,
+                    });
+                  });
+                }
+              });
+              exercisesToProcess = flattenedExercises;
+            } else {
+              // Ensure instanceId exists for already flat exercises
+              exercisesToProcess = exercisesToProcess.map((ex: any) => ({
+                ...ex,
+                instanceId: ex.instanceId || crypto.randomUUID(),
+              }));
+            }
+
+            coreData.exercises = exercisesToProcess.map((ex: any) => {
+              const fullExercise = searchExercises('').find(e => e.exerciseId === ex.id);
+              const exerciseData = fullExercise ? {
+                ...ex,
+                name: fullExercise.name,
+                imageUrl: fullExercise.imageUrl,
+                videoUrl: fullExercise.videoUrl,
+                equipments: fullExercise.equipments,
+                bodyParts: fullExercise.bodyParts,
+                targetMuscles: fullExercise.targetMuscles,
+                secondaryMuscles: fullExercise.secondaryMuscles,
+                keywords: fullExercise.keywords,
+                overview: fullExercise.overview,
+                instructions: fullExercise.instructions,
+                exerciseTips: fullExercise.exerciseTips,
+                variations: fullExercise.variations,
+                relatedExerciseIds: fullExercise.relatedExerciseIds,
+              } : ex;
+
+              // Ensure set type is preserved (referencing previous fix)
+              if (exerciseData.sets && Array.isArray(exerciseData.sets)) {
+                exerciseData.sets = exerciseData.sets.map((s: any) => ({
+                  ...s,
+                  type: s.type || 'normal',
+                  reps: s.reps !== null && s.reps !== undefined ? s.reps.toString() : '',
+                  weight: s.weight !== null && s.weight !== undefined ? s.weight.toString() : '',
+                  rest: s.rest !== null && s.rest !== undefined ? s.rest.toString() : (s.restSec !== null && s.restSec !== undefined ? s.restSec.toString() : ''), // Handle both rest and restSec if present
+                  distance: s.distance !== null && s.distance !== undefined ? s.distance.toString() : '',
+                  duration: s.duration !== null && s.duration !== undefined ? s.duration.toString() : (s.durationSec !== null && s.durationSec !== undefined ? s.durationSec.toString() : ''),
+                }))
+              }
+
+              return exerciseData;
+            });
+          }
+
+          // Normalize AMRAP/Timed/Circuits exercises to include sets
+          if (coreData && (coreData.type === 'amrap' || coreData.type === 'timed' || coreData.type === 'circuits')) {
+            if (coreData.exercises && Array.isArray(coreData.exercises)) {
+              coreData.exercises = coreData.exercises.map((ex: any) => {
+                if (ex.sets && ex.sets.length > 0) return ex;
+
+                const set = {
+                  setNumber: 1,
+                  type: 'normal',
+                  reps: ex.reps !== null && ex.reps !== undefined ? ex.reps.toString() : '',
+                  weight: ex.weight !== null && ex.weight !== undefined ? ex.weight.toString() : '',
+                  rest: ex.restSec !== null && ex.restSec !== undefined ? ex.restSec.toString() : '',
+                  distance: ex.distance !== null && ex.distance !== undefined ? ex.distance.toString() : '',
+                  duration: ex.durationSec !== null && ex.durationSec !== undefined ? ex.durationSec.toString() : '',
+                };
+
+                return {
+                  ...ex,
+                  sets: [set]
+                };
+              });
+            }
+          }
+
+          setWorkoutSchema(current => ({
+            ...current,
+            items: current.items.map(item => {
+              // Find our specific inserted section by the temp ID
+              if (item.itemType === 'section' && item.section.id === tempId) {
+                return {
+                  ...item,
+                  section: {
+                    ...item.section,
+                    ...coreData,
+                    id: tempId, // Keep temp ID or use real one? Real one might conflict if dragged twice. Keeping temp ID is safer for uniqueness in current session.
+                    // Actually, we should probably generate a NEW unique ID for this instance in the workout
+                    // but `tempId` is already unique for this session.
+                    // Let's ensure the type is correct.
+                    type: type || 'regular',
+                    name: draggedSection.program,
+                  }
+                }
+              }
+              return item;
+            })
+          }));
+
+          // Turn off loading state
+          setWorkoutSchema(current => ({
+            ...current,
+            items: current.items.map(item => {
+              if (item.itemType === 'section' && item.section.id === tempId) {
+                return {
+                  ...item,
+                  section: {
+                    ...item.section,
+                    isLoading: false
+                  }
+                };
+              }
+              return item;
+            })
+          }));
+
+        }).catch(err => {
+          console.error("Failed to fetch section details", err);
+          toast.error("Failed to load section exercises");
+          // Turn off loading state even on error
+          setWorkoutSchema(current => ({
+            ...current,
+            items: current.items.map(item => {
+              if (item.itemType === 'section' && item.section.id === tempId) {
+                return {
+                  ...item,
+                  section: {
+                    ...item.section,
+                    isLoading: false
+                  }
+                };
+              }
+              return item;
+            })
+          }));
+        });
 
         return { ...prev, items: newItems };
       });
@@ -1085,9 +1249,15 @@ export const StandardBuilder = ({
               >
                 <div className={cn(
                   'flex-1 w-full',
-                  section.exercises && section.exercises.length > 0 ? 'flex flex-col gap-0' : 'flex items-center justify-center'
+                  section.exercises && section.exercises.length > 0 ? 'flex flex-col gap-0' : 'flex items-center justify-center',
+                  section.isLoading ? 'min-h-[200px]' : ''
                 )}>
-                  {section.exercises && section.exercises.length > 0 ? (
+                  {section.isLoading ? (
+                    <div className="flex flex-col items-center justify-center gap-3">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground">Loading section...</p>
+                    </div>
+                  ) : section.exercises && section.exercises.length > 0 ? (
                     <div className="w-full flex flex-col gap-0">
                       {/* Drop zone before first exercise */}
                       <div
@@ -1494,7 +1664,13 @@ export const StandardBuilder = ({
             )}
             {builderMode === 'section' && !isSectionMode && (
               <div className="flex-1 min-h-0 mt-4">
-                <CoachSectionsSidebar onDragStart={handleSectionSourceDragStart} />
+                <CoachSectionsSidebar
+                  onDragStart={handleSectionSourceDragStart}
+                  onDragEnd={() => {
+                    handleDragEnd();
+                    setDraggedSection(null);
+                  }}
+                />
               </div>
             )}
           </CardContent>
@@ -1634,7 +1810,7 @@ export const StandardBuilder = ({
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-6 transition-all duration-200 relative p-4">
                 {/* Empty state content - hidden when dragging */}
-                {!(dragOverTopLevelSlot === 0 && draggedExercise) && (
+                {!(draggedExercise || draggedSection) && (
                   <div className="flex flex-col items-center gap-6 text-center w-full max-w-3xl">
                     <div className="flex flex-col gap-3 max-w-md mx-auto">
                       <h3 className="text-4xl font-bold">Start building your workout</h3>

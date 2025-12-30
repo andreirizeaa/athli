@@ -65,7 +65,8 @@ export const recomputeExerciseValidation = (
         } else {
           // Reps are required only for normal/warmUp (not dropset or failure)
           if (set.type !== 'failure') {
-            const hasReps = !!set.reps && set.reps.trim() !== '';
+            const repsStr = set.reps?.toString() || '';
+            const hasReps = repsStr.trim() !== '';
             if (!hasReps) {
               setErrors.reps = true;
             }
@@ -73,7 +74,8 @@ export const recomputeExerciseValidation = (
 
           // Weight is required for all weight_reps sets except dropsets
           if (exerciseType === 'weight_reps') {
-            const hasWeight = !!set.weight && set.weight.trim() !== '';
+            const weightStr = set.weight?.toString() || '';
+            const hasWeight = weightStr.trim() !== '';
             if (!hasWeight) {
               setErrors.weight = true;
             }
@@ -177,7 +179,8 @@ const validateExercise = (
       } else {
         // Reps required only for non-dropset, non-failure sets
         if (set.type !== 'failure') {
-          const hasReps = !!set.reps && set.reps.trim() !== '';
+          const repsStr = set.reps?.toString() || '';
+          const hasReps = repsStr.trim() !== '';
           if (!hasReps) {
             setErrors.reps = true;
           }
@@ -185,7 +188,8 @@ const validateExercise = (
 
         // Weight required for all weight_reps sets except dropsets
         if (exercise.exerciseType === 'weight_reps') {
-          const hasWeight = !!set.weight && set.weight.trim() !== '';
+          const weightStr = set.weight?.toString() || '';
+          const hasWeight = weightStr.trim() !== '';
           if (!hasWeight) {
             setErrors.weight = true;
           }

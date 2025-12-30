@@ -9,6 +9,7 @@ export type WorkoutStatus = 'not_started' | 'in_progress' | 'completed';
  * Common rest field shared by all exercise metric variants.
  */
 type BaseMetrics = {
+  type?: 'warmUp' | 'normal' | 'failure' | 'dropset'; // Matching BaseSet type
   restSec: number | null;
   completed?: boolean; // Whether this particular metric was completed (empty when coach creates)
 };
@@ -52,6 +53,7 @@ export type DropsetStage = {
 
 type BaseSet = {
   setNumber: number;
+  type: 'warmUp' | 'normal' | 'failure' | 'dropset';
   restSec: number | null;
   completed?: boolean; // Whether this set was completed (empty when coach creates)
   skipped?: boolean; // Whether this set was skipped (empty when coach creates)

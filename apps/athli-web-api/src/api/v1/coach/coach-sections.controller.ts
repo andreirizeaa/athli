@@ -150,7 +150,7 @@ export const coachSectionsController = {
      */
     getSectionById: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.body;
+        const id = req.params.id || req.body.id;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -217,7 +217,7 @@ export const coachSectionsController = {
      */
     deleteSection: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.body;
+        const id = req.params.id || req.body.id;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -265,7 +265,7 @@ export const coachSectionsController = {
      */
     duplicateSection: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { id } = req.body;
+        const id = req.params.id || req.body.id;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
