@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Dumbbell } from 'lucide-react';
+import { Dumbbell, Calendar, Info, Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import {
     Tooltip,
@@ -39,7 +39,8 @@ export const AddWorkoutSidePanel = ({
     const t = useTranslations();
     const [step, setStep] = useState<number>(1);
     const [workouts, setWorkouts] = useState<Workout[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
     const [selectedScheduleOption, setSelectedScheduleOption] = useState<string>('once');
     const [everyDaysInput, setEveryDaysInput] = useState<string>('1');
@@ -96,15 +97,22 @@ export const AddWorkoutSidePanel = ({
     const handleSave = async () => {
         if (!selectedWorkout) return;
 
-        let config = '';
-        if (selectedScheduleOption === 'every') {
-            config = everyDaysInput;
-        } else if (selectedScheduleOption === 'weekly') {
-            config = weeklyDayInput;
-        }
+        setIsSaving(true);
+        try {
+            let config = '';
+            if (selectedScheduleOption === 'every') {
+                config = everyDaysInput;
+            } else if (selectedScheduleOption === 'weekly') {
+                config = weeklyDayInput;
+            }
 
-        await onSave(selectedWorkout, selectedScheduleOption, config);
-        handleClose();
+            await onSave(selectedWorkout, selectedScheduleOption, config);
+            handleClose();
+        } catch (error) {
+            console.error('Failed to save workout:', error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const columns: ColumnDefinition<Workout>[] = useMemo(() => [
@@ -202,30 +210,38 @@ export const AddWorkoutSidePanel = ({
             onOpenChange={handleClose}
             title={title}
             footer={
-                <div className="flex w-full justify-start gap-2">
+                <div className="flex w-full justify-end gap-2">
                     {step === 1 ? (
                         <>
+                            <Button type="button" variant="outline" onClick={handleClose}>
+                                {t('general.cancel')}
+                            </Button>
                             <Button
                                 type="button"
                                 onClick={handleNext}
                                 disabled={!selectedWorkoutId}
+                                className="gap-2"
                             >
                                 {t('general.continue')}
-                            </Button>
-                            <Button type="button" variant="outline" onClick={handleClose}>
-                                {t('general.cancel')}
                             </Button>
                         </>
                     ) : (
                         <>
+                            <Button type="button" variant="outline" onClick={handleBack} disabled={isSaving}>
+                                {t('general.back')}
+                            </Button>
                             <Button
                                 type="button"
                                 onClick={handleSave}
+                                disabled={isSaving}
+                                className="gap-2"
                             >
+                                {isSaving ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                ) : (
+                                    <Check className="size-4" />
+                                )}
                                 {t('general.save')}
-                            </Button>
-                            <Button type="button" variant="outline" onClick={handleBack}>
-                                {t('general.back')}
                             </Button>
                         </>
                     )}

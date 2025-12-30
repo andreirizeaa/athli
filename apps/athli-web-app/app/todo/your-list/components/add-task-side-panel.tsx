@@ -127,17 +127,18 @@ export const AddTaskSidePanel = ({ open, onOpenChange, onSave }: AddTaskSidePane
       title={t('home.addTask')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={form.handleSubmit(handleSave)}
             disabled={!form.formState.isValid}
             aria-label={t('general.save')}
+            className="gap-2"
           >
             {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }

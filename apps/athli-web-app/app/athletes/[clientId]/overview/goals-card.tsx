@@ -15,7 +15,7 @@ import type { AthleteGoal } from '@/api/client/client-service';
 import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { ChevronDownIcon, Edit, Plus, X } from 'lucide-react';
+import { ChevronDownIcon, Edit, Plus, X, Check, Loader2 } from 'lucide-react';
 
 type GoalsCardProps = {
   clientId: string;
@@ -164,15 +164,17 @@ export const GoalsCard = ({ clientId }: GoalsCardProps) => {
         title={t('athletes.profile.editGoals')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button variant="outline" onClick={handleCancelGoalsEdit}>
+              {t('general.cancel')}
+            </Button>
             <Button
               onClick={handleSaveGoals}
               disabled={!hasGoalsChanges || editingGoals.some((g) => g.goal.trim() === '')}
+              className="gap-2"
             >
+              <Check className="size-4" />
               {t('general.save')}
-            </Button>
-            <Button variant="outline" onClick={handleCancelGoalsEdit}>
-              {t('general.cancel')}
             </Button>
           </div>
         }

@@ -13,7 +13,7 @@ export interface ClientData {
   category: string;
 }
 
-const REQUIRED_COLUMNS = ['FIRST NAME', 'LAST NAME', 'EMAIL', 'CATEGORY'];
+const REQUIRED_COLUMNS = ['FULL NAME', 'EMAIL', 'CATEGORY'];
 
 const removeDuplicates = (clients: ClientData[]): ClientData[] => {
   const seen = new Set<string>();
@@ -86,19 +86,25 @@ export const parseCSV = async (file: File): Promise<ParsedCSV> => {
       });
 
       // Map rows to structured client data
-      const firstNameIndex = headers.indexOf('FIRST NAME');
-      const lastNameIndex = headers.indexOf('LAST NAME');
+      const fullNameIndex = headers.indexOf('FULL NAME');
       const emailIndex = headers.indexOf('EMAIL');
       const categoryIndex = headers.indexOf('CATEGORY');
 
       const clients: ClientData[] = rows
         .filter((row) => row.length > 0 && row.some((cell) => cell.trim() !== ''))
-        .map((row) => ({
-          firstName: row[firstNameIndex] || '',
-          lastName: row[lastNameIndex] || '',
-          email: row[emailIndex] || '',
-          category: row[categoryIndex] || '',
-        }))
+        .map((row) => {
+          const fullName = row[fullNameIndex] || '';
+          const nameParts = fullName.trim().split(/\s+/);
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+
+          return {
+            firstName,
+            lastName,
+            email: row[emailIndex] || '',
+            category: row[categoryIndex] || '',
+          };
+        })
         .filter((client) => client.firstName || client.lastName || client.email);
 
       // Remove duplicates based on email (case-insensitive)

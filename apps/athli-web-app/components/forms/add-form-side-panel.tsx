@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, Info } from 'lucide-react';
+import { Edit, Info, Check, Loader2 } from 'lucide-react';
 import { addCheckIn, type AddCheckInData } from '@/api/coach/coach-check-in-service';
 import { addQuestionnaire, type AddQuestionnaireData } from '@/api/coach/coach-questionnaire-service';
 
@@ -59,6 +59,7 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
   const [monthlyOption, setMonthlyOption] = useState<'first' | 'last' | 'specific'>('last');
   const [specificDay, setSpecificDay] = useState<number>(1);
+  const [isSaving, setIsSaving] = useState(false);
 
   const formSchema = z.object({
     name: z
@@ -90,6 +91,7 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
   };
 
   const handleSave = async (values: FormFormValues) => {
+    setIsSaving(true);
     try {
       const newForm = formType === 'check-in'
         ? await addCheckIn(values)
@@ -100,6 +102,8 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
       handleClose();
     } catch (error) {
       console.error('Failed to save form:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -151,6 +155,7 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
 
   const handleSaveFromTemplate = async () => {
     if (selectedTemplate) {
+      setIsSaving(true);
       const values: AddFormData = {
         name: selectedTemplate.name,
         description: selectedTemplate.description || '',
@@ -165,6 +170,8 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
         handleClose();
       } catch (error) {
         console.error('Failed to save form:', error);
+      } finally {
+        setIsSaving(false);
       }
     }
   };
@@ -207,16 +214,21 @@ export const AddFormSidePanel = ({ open, onOpenChange, onSave }: AddFormSidePane
       title={t('forms.addFormTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate}
-            disabled={!isValid}
+            disabled={!isValid || isSaving}
           >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }

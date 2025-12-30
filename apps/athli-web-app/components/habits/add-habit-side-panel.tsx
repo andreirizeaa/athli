@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Target } from 'lucide-react';
+import { Search, Target, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
@@ -54,6 +54,7 @@ export const AddHabitSidePanel = ({
   const [yourLibrarySearchQuery, setYourLibrarySearchQuery] = useState<string>('');
   const [coachHabits, setCoachHabits] = useState<Habit[]>([]);
   const [isLoadingHabits, setIsLoadingHabits] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [selectedLibraryHabits, setSelectedLibraryHabits] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -120,6 +121,7 @@ export const AddHabitSidePanel = ({
   const handleSaveFromYourLibrary = async () => {
     if (selectedLibraryHabits.size > 0 && clientId) {
       // Assign habits from library to client
+      setIsSaving(true);
       try {
         for (const habitId of selectedLibraryHabits) {
           const habit = coachHabits.find(h => h.id === habitId);
@@ -136,13 +138,22 @@ export const AddHabitSidePanel = ({
         handleClose();
       } catch (error) {
         console.error('Failed to assign habits:', error);
+      } finally {
+        setIsSaving(false);
       }
     }
   };
 
   const handleSave = async (values: HabitFormValues) => {
-    await onSave(values);
-    handleClose();
+    setIsSaving(true);
+    try {
+      await onSave(values);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save habit:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
 
@@ -299,29 +310,39 @@ export const AddHabitSidePanel = ({
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
       footer={
         activeTab === 'yourLibrary' ? (
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={handleSaveFromYourLibrary}
-              disabled={selectedLibraryHabits.size === 0}
+              disabled={selectedLibraryHabits.size === 0 || isSaving}
             >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {getButtonText()}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
             </Button>
           </div>
         ) : activeTab === 'newHabit' ? (
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={form.handleSubmit(handleSave)}
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || isSaving}
             >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {clientId ? t('general.assign') : t('general.add')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
             </Button>
           </div>
         ) : null

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { Check, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -37,6 +38,7 @@ export const CreateSectionSidePanel = ({
   const [description, setDescription] = useState('');
   const [sectionType, setSectionType] = useState<SectionType>('regular');
   const [titleError, setTitleError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const sectionTypeOptions = getSectionTypeOptions();
   const selectedOption = sectionTypeOptions.find(opt => opt.value === sectionType);
@@ -50,22 +52,29 @@ export const CreateSectionSidePanel = ({
     onClose();
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     // Validate
     if (!title.trim()) {
       setTitleError('Section name is required');
       return;
     }
 
-    // Call parent handler
-    onCreateSection({
-      title: title.trim(),
-      description: description.trim(),
-      sectionType,
-    });
+    setIsSaving(true);
+    try {
+      // Call parent handler
+      await onCreateSection({
+        title: title.trim(),
+        description: description.trim(),
+        sectionType,
+      });
 
-    // Reset and close
-    handleClose();
+      // Reset and close
+      handleClose();
+    } catch (error) {
+      console.error('Failed to create section:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -74,12 +83,18 @@ export const CreateSectionSidePanel = ({
       onOpenChange={(open) => !open && handleClose()}
       title={t('library.sections.actions.newSection')}
       footer={
-        <div className="flex w-full justify-start gap-2">
-          <Button type="button" onClick={handleCreate} disabled={!title.trim()}>
-            {t('library.sections.actions.newSection')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving} className="gap-2">
             {t('general.cancel')}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleCreate}
+            disabled={!title.trim() || isSaving}
+            className="gap-2"
+          >
+            {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+            {t('library.sections.actions.newSection')}
           </Button>
         </div>
       }

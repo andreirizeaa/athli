@@ -1144,7 +1144,27 @@ Focus on proper form and progressive overload.`;
         }}
         title={t('library.newWorkout')}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseCreateWorkout}
+              disabled={isGenerating || isGeneratingStandard}
+              aria-label={t('library.cancelCreatingWorkout')}
+            >
+              {t('general.cancel')}
+            </Button>
+            {isCreateWorkoutStep2 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCreateWorkoutBack}
+                disabled={isGenerating || isGeneratingStandard}
+                aria-label={t('library.backToWorkoutDetails')}
+              >
+                {t('general.back')}
+              </Button>
+            )}
             <Button
               type="button"
               onClick={handleCreateWorkoutContinue}
@@ -1161,43 +1181,27 @@ Focus on proper form and progressive overload.`;
               aria-label={isCreateWorkoutStep2 ? t('library.generateWorkout') : t('library.continue')}
               className={cn(
                 ((isCreateWorkoutStep2 && isGenerating) || (!isCreateWorkoutStep2 && isGeneratingStandard)) &&
-                'min-w-[120px] justify-center'
+                'min-w-[120px] justify-center',
+                'gap-2'
               )}
             >
               {isCreateWorkoutStep2 ? (
                 isGenerating ? (
-                  <Spinner className="h-4 w-4" />
+                  <Spinner className="size-4" />
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className="size-4" />
                     {t('library.generate')}
                   </>
                 )
               ) : isGeneratingStandard ? (
-                <Spinner className="h-4 w-4" />
+                <Spinner className="size-4" />
               ) : (
-                t('library.continue')
+                <>
+                  <Check className="size-4" />
+                  {t('library.continue')}
+                </>
               )}
-            </Button>
-            {isCreateWorkoutStep2 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCreateWorkoutBack}
-                disabled={isGenerating || isGeneratingStandard}
-                aria-label={t('library.backToWorkoutDetails')}
-              >
-                {t('general.back')}
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseCreateWorkout}
-              disabled={isGenerating || isGeneratingStandard}
-              aria-label={t('library.cancelCreatingWorkout')}
-            >
-              {t('general.cancel')}
             </Button>
           </div>
         }

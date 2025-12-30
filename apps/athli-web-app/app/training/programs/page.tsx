@@ -949,7 +949,15 @@ const ProgramsPage = () => {
         }}
         title={t('programs.addProgram.title')}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseCreateProgram}
+              aria-label={t('programs.addProgram.cancelAria')}
+            >
+              {t('programs.addProgram.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={handleCreateProgramContinue}
@@ -960,17 +968,9 @@ const ProgramsPage = () => {
                 !newProgramDifficulty
               }
               aria-label={t('programs.addProgram.continueAria')}
-              className={cn(isNavigating && 'min-w-[120px] justify-center')}
+              className={cn('gap-2', isNavigating && 'min-w-[120px] justify-center')}
             >
-              {isNavigating ? <Spinner className="h-4 w-4" /> : t('programs.addProgram.continue')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseCreateProgram}
-              aria-label={t('programs.addProgram.cancelAria')}
-            >
-              {t('programs.addProgram.cancel')}
+              {isNavigating ? <Spinner className="size-4" /> : t('programs.addProgram.continue')}
             </Button>
           </div>
         }

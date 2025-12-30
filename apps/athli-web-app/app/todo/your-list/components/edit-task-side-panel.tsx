@@ -21,7 +21,7 @@ import {
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, Trash2, Check } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { format } from 'date-fns';
 import { YourListTask } from '@/api/coach/coach-todo-service';
@@ -163,20 +163,29 @@ export const EditTaskSidePanel = ({ open, onOpenChange, task, onSave, onDelete }
       title={t('home.editTask')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose}>
+            {t('general.cancel')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleDelete}
+            aria-label={t('general.delete')}
+            className="gap-2"
+          >
+            <Trash2 className="size-4" />
+            {t('general.delete')}
+          </Button>
           <Button
             type="button"
             onClick={form.handleSubmit(handleSave)}
             disabled={!hasChanges || !form.formState.isValid}
             aria-label={t('general.save')}
+            className="gap-2"
           >
+            <Check className="size-4" />
             {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleDelete} aria-label={t('general.delete')}>
-            {t('general.delete')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }

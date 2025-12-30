@@ -22,7 +22,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ChevronDownIcon, Info, X } from 'lucide-react';
+import { ChevronDownIcon, Info, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { createProgram, type ProgramData } from '@/api/coach/coach-program-service';
 import { useQueryClient } from '@tanstack/react-query';
@@ -267,12 +267,13 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
       onOpenChange={(open) => !open && handleClose()}
       title={t('athletes.trainingCalendar.saveAsProgram.title')}
       footer={
-        <div className="flex w-full justify-start gap-2">
-          <Button type="button" onClick={handleSave} disabled={isSaving || !isFormValid}>
-            {isSaving ? t('general.saving') : t('general.save')}
-          </Button>
+        <div className="flex w-full justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
             {t('general.cancel')}
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={isSaving || !isFormValid} className="gap-2">
+            {isSaving && <Loader2 className="size-4 animate-spin" />}
+            {isSaving ? t('general.saving') : t('general.save')}
           </Button>
         </div>
       }
@@ -291,56 +292,56 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
                 <Label htmlFor="from-date" className="text-[11px] text-muted-foreground uppercase font-semibold flex items-center gap-[0.1px]">
                   {t('athletes.trainingCalendar.saveAsProgram.fromDate')}
                 </Label>
-              {fromDate && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFromDate(undefined);
-                    if (fromDateError) setFromDateError(null);
-                  }}
-                  className="text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 mr-1"
-                  title={t('general.clearSelection')}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  <span className="text-xs font-medium">{t('general.clear')}</span>
-                </button>
-              )}
+                {fromDate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromDate(undefined);
+                      if (fromDateError) setFromDateError(null);
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 mr-1"
+                    title={t('general.clearSelection')}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">{t('general.clear')}</span>
+                  </button>
+                )}
+              </div>
+              <Popover open={isFromCalendarOpen} onOpenChange={setIsFromCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    id="from-date"
+                    className={cn(
+                      'w-full justify-between font-normal bg-sidebar border-muted-foreground/20 transition-colors',
+                      fromDateError && 'border-destructive'
+                    )}
+                    aria-label={t('athletes.trainingCalendar.saveAsProgram.selectFromDateAria')}
+                  >
+                    <span className="text-sm">
+                      {fromDate ? fromDate.toLocaleDateString() : t('athletes.trainingCalendar.saveAsProgram.selectDatePlaceholder')}
+                    </span>
+                    <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={fromDate}
+                    captionLayout="dropdown"
+                    fromYear={2020}
+                    toYear={currentYear + 2}
+                    onSelect={(date) => {
+                      setFromDate(date);
+                      setIsFromCalendarOpen(false);
+                      if (fromDateError) setFromDateError(null);
+                    }}
+                    disabled={getAvailableDates(toDate, true)}
+                  />
+                </PopoverContent>
+              </Popover>
+              {fromDateError && <p className="text-sm text-destructive">{fromDateError}</p>}
             </div>
-            <Popover open={isFromCalendarOpen} onOpenChange={setIsFromCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  id="from-date"
-                  className={cn(
-                    'w-full justify-between font-normal bg-sidebar border-muted-foreground/20 transition-colors',
-                    fromDateError && 'border-destructive'
-                  )}
-                  aria-label={t('athletes.trainingCalendar.saveAsProgram.selectFromDateAria')}
-                >
-                  <span className="text-sm">
-                    {fromDate ? fromDate.toLocaleDateString() : t('athletes.trainingCalendar.saveAsProgram.selectDatePlaceholder')}
-                  </span>
-                  <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={fromDate}
-                  captionLayout="dropdown"
-                  fromYear={2020}
-                  toYear={currentYear + 2}
-                  onSelect={(date) => {
-                    setFromDate(date);
-                    setIsFromCalendarOpen(false);
-                    if (fromDateError) setFromDateError(null);
-                  }}
-                  disabled={getAvailableDates(toDate, true)}
-                />
-              </PopoverContent>
-            </Popover>
-            {fromDateError && <p className="text-sm text-destructive">{fromDateError}</p>}
-          </div>
 
             {/* To Date */}
             <div className="flex flex-col gap-2 flex-1">
@@ -348,54 +349,54 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
                 <Label htmlFor="to-date" className="text-[11px] text-muted-foreground uppercase font-semibold flex items-center gap-[0.1px]">
                   {t('athletes.trainingCalendar.saveAsProgram.toDate')}
                 </Label>
-              {toDate && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setToDate(undefined);
-                    if (toDateError) setToDateError(null);
-                  }}
-                  className="text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 mr-1"
-                  title={t('general.clearSelection')}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  <span className="text-xs font-medium">{t('general.clear')}</span>
-                </button>
-              )}
-            </div>
-            <Popover open={isToCalendarOpen} onOpenChange={setIsToCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  id="to-date"
-                  className={cn(
-                    'w-full justify-between font-normal bg-sidebar border-muted-foreground/20 transition-colors',
-                    toDateError && 'border-destructive'
-                  )}
-                  aria-label={t('athletes.trainingCalendar.saveAsProgram.selectToDateAria')}
-                >
-                  <span className="text-sm">
-                    {toDate ? toDate.toLocaleDateString() : t('athletes.trainingCalendar.saveAsProgram.selectDatePlaceholder')}
-                  </span>
-                  <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={toDate}
-                  captionLayout="dropdown"
-                  fromYear={2020}
-                  toYear={currentYear + 2}
-                  onSelect={(date) => {
-                    setToDate(date);
-                    setIsToCalendarOpen(false);
-                    if (toDateError) setToDateError(null);
-                  }}
-                  disabled={getAvailableDates(fromDate, false)}
-                />
-              </PopoverContent>
-            </Popover>
+                {toDate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToDate(undefined);
+                      if (toDateError) setToDateError(null);
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 mr-1"
+                    title={t('general.clearSelection')}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">{t('general.clear')}</span>
+                  </button>
+                )}
+              </div>
+              <Popover open={isToCalendarOpen} onOpenChange={setIsToCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    id="to-date"
+                    className={cn(
+                      'w-full justify-between font-normal bg-sidebar border-muted-foreground/20 transition-colors',
+                      toDateError && 'border-destructive'
+                    )}
+                    aria-label={t('athletes.trainingCalendar.saveAsProgram.selectToDateAria')}
+                  >
+                    <span className="text-sm">
+                      {toDate ? toDate.toLocaleDateString() : t('athletes.trainingCalendar.saveAsProgram.selectDatePlaceholder')}
+                    </span>
+                    <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={toDate}
+                    captionLayout="dropdown"
+                    fromYear={2020}
+                    toYear={currentYear + 2}
+                    onSelect={(date) => {
+                      setToDate(date);
+                      setIsToCalendarOpen(false);
+                      if (toDateError) setToDateError(null);
+                    }}
+                    disabled={getAvailableDates(fromDate, false)}
+                  />
+                </PopoverContent>
+              </Popover>
               {toDateError && <p className="text-sm text-destructive">{toDateError}</p>}
             </div>
           </div>

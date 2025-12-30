@@ -214,10 +214,10 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
   const response = await apiFetch<{ data: { clients: any[] } }>('/clients/new', {
     method: 'POST',
     body: JSON.stringify({
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      category: data.coachingType,
+      email: data.email.toLowerCase().trim(),
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      category: data.coachingType.toLowerCase().trim(),
     }) as any,
   });
 
@@ -255,10 +255,10 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
  */
 export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
   const payload = data.clients.map(c => ({
-    email: c.email,
-    firstName: c.firstName,
-    lastName: c.lastName,
-    category: c.category,
+    email: c.email.toLowerCase().trim(),
+    firstName: c.firstName.trim(),
+    lastName: c.lastName.trim(),
+    category: c.category.toLowerCase().trim(),
   }));
 
   const response = await apiFetch<{ data: { clients: any[] } }>('/clients/new', {

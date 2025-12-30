@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Search, Info, Activity } from 'lucide-react';
+import { Search, Info, Activity, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ export const AddExerciseSidePanel = ({
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -59,9 +60,16 @@ export const AddExerciseSidePanel = ({
     };
 
     const handleSave = async () => {
-        if (!selectedExercise) return;
-        await onSave(selectedExercise);
-        handleClose();
+        if (!selectedExercise || isSaving) return;
+        setIsSaving(true);
+        try {
+            await onSave(selectedExercise);
+            handleClose();
+        } catch (error) {
+            console.error('Failed to add exercise:', error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const columns: ColumnDefinition<Exercise>[] = useMemo(() => [
@@ -107,16 +115,22 @@ export const AddExerciseSidePanel = ({
             onOpenChange={handleClose}
             title={t('athletes.trainingCalendar.addExerciseTitle')}
             footer={
-                <div className="flex w-full justify-start gap-2">
+                <div className="flex w-full justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+                        {t('general.cancel')}
+                    </Button>
                     <Button
                         type="button"
                         onClick={handleSave}
-                        disabled={!selectedExerciseId}
+                        disabled={!selectedExerciseId || isSaving}
+                        className="gap-2"
                     >
+                        {isSaving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <Check className="size-4" />
+                        )}
                         {t('general.add')}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleClose}>
-                        {t('general.cancel')}
                     </Button>
                 </div>
             }
