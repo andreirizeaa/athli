@@ -17,6 +17,17 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil, MoreHorizontal, Save, ChevronUp, ChevronDown } from 'lucide-react';
 import {
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -59,6 +70,213 @@ type ProgramSchema = Array<{
   day: number;
   workouts: WorkoutPayload[] // Full workout schemas instead of just IDs
 }>;
+
+// Helper component for draggable workout card
+const DraggableWorkoutCard = ({
+  workout,
+  week,
+  day,
+  onDelete,
+  onClick,
+  t,
+  isDraggingGlobal,
+}: {
+  workout: Workout & { id: string };
+  week: number;
+  day: number;
+  onDelete: (week: number, day: number, workoutId: string) => void;
+  onClick: (week: number, day: number, workout: Workout & { id: string }) => void;
+  t: any;
+  isDraggingGlobal?: boolean;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging, transform, node } = useDraggable({
+    id: `workout-${workout.id}`,
+    data: {
+      type: 'workout',
+      workout,
+      week,
+      day,
+    },
+  });
+
+  // Get the original width from the node before it becomes fixed
+  const originalWidth = node.current?.offsetWidth;
+
+  const style: React.CSSProperties = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(3deg)`
+      : undefined,
+    transformOrigin: 'center center',
+    zIndex: isDragging ? 99999 : 1,
+    position: isDragging ? 'fixed' : 'relative',
+    pointerEvents: isDragging ? 'none' : undefined,
+    width: isDragging && originalWidth ? `${originalWidth}px` : undefined,
+    transition: isDragging ? 'none' : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      role="button"
+      tabIndex={0}
+      aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
+      onClick={(e) => {
+        if (isDragging) return; // Don't trigger click when dragging
+        e.stopPropagation();
+        onClick(week, day, workout);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          onClick(week, day, workout);
+        }
+      }}
+      className={cn(
+        'workout-card rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden cursor-grab active:cursor-grabbing transition-transform duration-200',
+        !isDraggingGlobal && 'hover:border-primary/50 hover:rotate-[3deg]'
+      )}
+    >
+      <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
+        <span
+          className="text-[11px] font-medium block truncate"
+          title={workout.program}
+        >
+          {workout.program}
+        </span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="size-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              toast.info('Copy feature coming soon');
+            }}>
+              <Copy className="mr-2 size-3.5" />
+              <span>Copy</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => {
+              e.stopPropagation();
+              toast.info('Save to library feature coming soon');
+            }}>
+              <Save className="mr-2 size-3.5" />
+              <span>Save to Library</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(week, day, workout.id);
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 size-3.5" />
+              <span>{t('general.delete')}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="px-2 py-1">
+        <span className="text-[10px] text-muted-foreground block">
+          {workout.totalExercises}{' '}
+          {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// Helper component for droppable day card
+const DroppableDayCard = ({
+  week,
+  day,
+  dayNumber,
+  workouts,
+  isDragOver,
+  isSourceDay,
+  isDraggingGlobal,
+  onOpenAddWorkout,
+  onDeleteWorkout,
+  onOpenWorkoutDetails,
+  t,
+}: {
+  week: number;
+  day: number;
+  dayNumber: number;
+  workouts: Array<Workout & { id: string }>;
+  isDragOver: boolean;
+  isSourceDay: boolean;
+  isDraggingGlobal: boolean;
+  onOpenAddWorkout: (day: number) => void;
+  onDeleteWorkout: (week: number, day: number, workoutId: string) => void;
+  onOpenWorkoutDetails: (week: number, day: number, workout: Workout & { id: string }) => void;
+  t: any;
+}) => {
+  const { setNodeRef } = useDroppable({
+    id: `day-${week}-${day}`,
+    data: {
+      type: 'day-drop-zone',
+      week,
+      day,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      onClick={() => onOpenAddWorkout(dayNumber)}
+      className="group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full cursor-pointer transition-colors hover:[&:not(:has(.workout-card:hover))]:border-primary/50"
+    >
+      <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
+        <span className="text-xs uppercase text-muted-foreground">{t('programs.builder.dayLabel', { number: dayNumber })}</span>
+        <Button
+          type="button"
+          size="icon"
+          className={cn(
+            'h-4 w-4 -mr-1 rounded-full transition-opacity',
+            isDragOver ? 'opacity-100' : 'opacity-0 group-hover/day:opacity-100 group-has-[.workout-card:hover]/day:opacity-0'
+          )}
+          aria-label={t('programs.builder.addWorkout.addAria')}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenAddWorkout(dayNumber);
+          }}
+        >
+          <Plus className="size-3" />
+        </Button>
+      </div>
+      <div className="flex-1 p-3 min-h-0 relative overflow-visible">
+        {workouts.length > 0 ? (
+          <div className="flex flex-col gap-2 relative z-20">
+            {workouts.map((workout) => (
+              <DraggableWorkoutCard
+                key={workout.id}
+                workout={workout}
+                week={week}
+                day={day}
+                onDelete={onDeleteWorkout}
+                onClick={onOpenWorkoutDetails}
+                t={t}
+                isDraggingGlobal={isDraggingGlobal}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
 
 type ProgramBuilderProps = {
   mode: 'new' | 'edit';
@@ -107,6 +325,16 @@ export const ProgramBuilder = ({
     workout: Workout & { id: string };
   } | null>(null);
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
+  const [draggedWorkout, setDraggedWorkout] = useState<{
+    workout: Workout & { id: string };
+    sourceWeek: number;
+    sourceDay: number;
+  } | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<{ week: number; day: number } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   useEffect(() => {
     const fetchWorkouts = async () => {
@@ -517,10 +745,11 @@ export const ProgramBuilder = ({
   const handleSaveWorkoutFromPanel = async (workout: Workout, scheduleOption: string, config: string) => {
     if (!workout || selectedDay === null) return;
 
-    const workoutToAdd = {
+    // Helper to create a workout with a unique ID
+    const createWorkoutInstance = () => ({
       ...workout,
-      id: `${workout.id}-${Date.now()}`,
-    };
+      id: `${workout.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    });
 
     setWorkoutsByDay((prev) => {
       const updated = { ...prev };
@@ -529,7 +758,7 @@ export const ProgramBuilder = ({
         const { week, day } = getWeekAndDay(selectedDay);
         updated[week] = {
           ...(updated[week] || {}),
-          [day]: [...(updated[week]?.[day] || []), workoutToAdd],
+          [day]: [...(updated[week]?.[day] || []), createWorkoutInstance()],
         };
       } else if (scheduleOption === 'every' && config) {
         const daysInterval = parseInt(config, 10);
@@ -539,7 +768,7 @@ export const ProgramBuilder = ({
             const { week, day } = getWeekAndDay(dayNum);
             updated[week] = {
               ...(updated[week] || {}),
-              [day]: [...(updated[week]?.[day] || []), workoutToAdd],
+              [day]: [...(updated[week]?.[day] || []), createWorkoutInstance()],
             };
           }
         }
@@ -565,7 +794,7 @@ export const ProgramBuilder = ({
             if (dayNum >= selectedDay) {
               updated[week] = {
                 ...(updated[week] || {}),
-                [targetDay]: [...(updated[week]?.[targetDay] || []), workoutToAdd],
+                [targetDay]: [...(updated[week]?.[targetDay] || []), createWorkoutInstance()],
               };
             }
           }
@@ -667,6 +896,83 @@ export const ProgramBuilder = ({
       return t('programs.builder.weekRange', { start: startWeek, total: totalWeeks });
     }
     return t('programs.builder.weekRangeMultiple', { start: startWeek, end: endWeek, total: totalWeeks });
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const data = active.data.current;
+    if (data?.type === 'workout') {
+      setDraggedWorkout({
+        workout: data.workout,
+        sourceWeek: data.week,
+        sourceDay: data.day,
+      });
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    if (!over) {
+      setDragOverDay(null);
+      return;
+    }
+    const data = over.data.current;
+    if (data?.type === 'day-drop-zone') {
+      setDragOverDay({ week: data.week, day: data.day });
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || !draggedWorkout) {
+      setDraggedWorkout(null);
+      setDragOverDay(null);
+      return;
+    }
+
+    const overData = over.data.current;
+    if (overData?.type === 'day-drop-zone') {
+      const targetWeek = overData.week;
+      const targetDay = overData.day;
+      const { sourceWeek, sourceDay, workout } = draggedWorkout;
+
+      // Don't do anything if dropping on the same day
+      if (sourceWeek === targetWeek && sourceDay === targetDay) {
+        setDraggedWorkout(null);
+        setDragOverDay(null);
+        return;
+      }
+
+      // Move workout from source to target
+      setWorkoutsByDay((prev) => {
+        const updated = { ...prev };
+
+        // Remove from source
+        if (updated[sourceWeek]?.[sourceDay]) {
+          updated[sourceWeek] = {
+            ...updated[sourceWeek],
+            [sourceDay]: updated[sourceWeek][sourceDay].filter((w) => w.id !== workout.id),
+          };
+        }
+
+        // Add to target
+        if (!updated[targetWeek]) {
+          updated[targetWeek] = {};
+        }
+        updated[targetWeek] = {
+          ...updated[targetWeek],
+          [targetDay]: [...(updated[targetWeek]?.[targetDay] || []), workout],
+        };
+
+        saveToHistory(updated);
+        return updated;
+      });
+    }
+
+    setDraggedWorkout(null);
+    setDragOverDay(null);
   };
 
   // Check if 2 weeks view is available
@@ -887,175 +1193,95 @@ export const ProgramBuilder = ({
 
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 overflow-auto bg-background p-4">
-        <div className="h-full flex flex-col gap-4">
-          {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
-            const weekNumber = currentWeek + rowIndex;
-            return (
-              <div key={rowIndex} className="flex gap-4 flex-1 min-h-0">
-                <div className="w-8 bg-background rounded-lg border border-border flex-shrink-0 flex flex-col">
-                  <div className="flex flex-col items-center gap-1 p-1 flex-shrink-0">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleDuplicateWeek(weekNumber)}
-                            aria-label={t('programs.builder.duplicateWeekAria')}
-                          >
-                            <Copy className="size-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{t('programs.builder.duplicateWeek')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => handleDeleteWeek(weekNumber)}
-                            disabled={totalWeeks === 1}
-                            aria-label={t('programs.builder.deleteWeekAria')}
-                          >
-                            <Trash2 className="size-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>{t('programs.builder.deleteWeek')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <div className="flex-1 flex items-center justify-center">
-                    <span className="text-xs uppercase text-muted-foreground -rotate-90 whitespace-nowrap">
-                      {t('programs.builder.weekLabel', { number: weekNumber })}
-                    </span>
-                  </div>
-                </div>
-                {getDaysForRow(rowIndex).map((day) => {
-                  const { week, day: dayInWeek } = getWeekAndDay(day);
-                  const workouts = workoutsByDay[week]?.[dayInWeek] || [];
-                  return (
-                    <div
-                      key={day}
-                      onClick={() => handleOpenAddWorkoutModal(day)}
-                      className="group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full cursor-pointer transition-colors hover:[&:not(:has(.workout-card:hover))]:border-primary/50"
-                    >
-                      <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
-                        <span className="text-xs uppercase text-muted-foreground">{t('programs.builder.dayLabel', { number: day })}</span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          className="h-4 w-4 -mr-1 rounded-full opacity-0 group-hover/day:opacity-100 group-has-[.workout-card:hover]/day:opacity-0 transition-opacity"
-                          aria-label={t('programs.builder.addWorkout.addAria')}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenAddWorkoutModal(day);
-                          }}
-                        >
-                          <Plus className="size-3" />
-                        </Button>
-                      </div>
-                      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 min-h-0 relative">
-
-                        {workouts.length > 0 ? (
-                          <div className="flex flex-col gap-2 relative z-20">
-                            {workouts.map((workout) => (
-                              <div
-                                key={workout.id}
-                                role="button"
-                                tabIndex={0}
-                                aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenWorkoutDetails(week, dayInWeek, workout);
-                                }}
-                                onKeyDown={(event) => {
-                                  if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    handleOpenWorkoutDetails(week, dayInWeek, workout);
-                                  }
-                                }}
-                                className="workout-card rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
-                              >
-                                <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
-                                  <span
-                                    className="text-[11px] font-medium block truncate"
-                                    title={workout.program}
-                                  >
-                                    {workout.program}
-                                  </span>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <MoreHorizontal className="size-3" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
-                                      <DropdownMenuItem onClick={(e) => {
-                                        e.stopPropagation();
-                                        // TODO: Implement copy
-                                        toast.info('Copy feature coming soon');
-                                      }}>
-                                        <Copy className="mr-2 size-3.5" />
-                                        <span>Copy</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={(e) => {
-                                        e.stopPropagation();
-                                        // TODO: Implement save to library
-                                        toast.info('Save to library feature coming soon');
-                                      }}>
-                                        <Save className="mr-2 size-3.5" />
-                                        <span>Save to Library</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteWorkout(week, dayInWeek, workout.id);
-                                        }}
-                                        className="text-destructive focus:text-destructive"
-                                      >
-                                        <Trash2 className="mr-2 size-3.5" />
-                                        <span>{t('general.delete')}</span>
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                                <div className="px-2 py-1">
-                                  <span className="text-[10px] text-muted-foreground block">
-                                    {workout.totalExercises}{' '}
-                                    {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="w-full flex-1 overflow-auto bg-background p-4">
+          <div className="h-full flex flex-col gap-4">
+            {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
+              const weekNumber = currentWeek + rowIndex;
+              return (
+                <div key={rowIndex} className="flex gap-4 flex-1 min-h-0">
+                  <div className="w-8 bg-background rounded-lg border border-border flex-shrink-0 flex flex-col">
+                    <div className="flex flex-col items-center gap-1 p-1 flex-shrink-0">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleDuplicateWeek(weekNumber)}
+                              aria-label={t('programs.builder.duplicateWeekAria')}
+                            >
+                              <Copy className="size-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t('programs.builder.duplicateWeek')}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleDeleteWeek(weekNumber)}
+                              disabled={totalWeeks === 1}
+                              aria-label={t('programs.builder.deleteWeekAria')}
+                            >
+                              <Trash2 className="size-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>{t('programs.builder.deleteWeek')}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+                    <div className="flex-1 flex items-center justify-center">
+                      <span className="text-xs uppercase text-muted-foreground -rotate-90 whitespace-nowrap">
+                        {t('programs.builder.weekLabel', { number: weekNumber })}
+                      </span>
+                    </div>
+                  </div>
+                  {getDaysForRow(rowIndex).map((day) => {
+                    const { week, day: dayInWeek } = getWeekAndDay(day);
+                    const workouts = workoutsByDay[week]?.[dayInWeek] || [];
+                    const isDragOver = dragOverDay?.week === week && dragOverDay?.day === dayInWeek;
+                    const isSourceDay = draggedWorkout?.sourceWeek === week && draggedWorkout?.sourceDay === dayInWeek;
+
+                    return (
+                      <DroppableDayCard
+                        key={day}
+                        week={week}
+                        day={dayInWeek}
+                        dayNumber={day}
+                        workouts={workouts}
+                        isDragOver={isDragOver}
+                        isSourceDay={isSourceDay}
+                        isDraggingGlobal={!!draggedWorkout}
+                        onOpenAddWorkout={handleOpenAddWorkoutModal}
+                        onDeleteWorkout={handleDeleteWorkout}
+                        onOpenWorkoutDetails={handleOpenWorkoutDetails}
+                        t={t}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </DndContext>
       <AddWorkoutSidePanel
         open={isAddWorkoutModalOpen}
         onOpenChange={(open) => {
