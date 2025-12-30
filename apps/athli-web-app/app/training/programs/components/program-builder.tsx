@@ -38,6 +38,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
+import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
 import {
   Dialog,
   DialogContent,
@@ -80,6 +81,7 @@ const DraggableWorkoutCard = ({
   onDelete,
   onClick,
   onCopy,
+  onSaveToLibrary,
   onCancelCopy,
   t,
   isDraggingGlobal,
@@ -92,6 +94,7 @@ const DraggableWorkoutCard = ({
   onDelete: (week: number, day: number, workoutId: string) => void;
   onClick: (week: number, day: number, workout: Workout & { id: string }) => void;
   onCopy: (week: number, day: number, workout: Workout & { id: string }) => void;
+  onSaveToLibrary: (workout: Workout & { id: string }) => void;
   onCancelCopy: () => void;
   t: any;
   isDraggingGlobal?: boolean;
@@ -184,7 +187,7 @@ const DraggableWorkoutCard = ({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={(e) => {
               e.stopPropagation();
-              toast.info('Save to library feature coming soon');
+              onSaveToLibrary(workout);
             }}>
               <Save className="mr-2 size-3.5" />
               <span>Save to Library</span>
@@ -226,6 +229,7 @@ const DroppableDayCard = ({
   onDeleteWorkout,
   onOpenWorkoutDetails,
   onCopyWorkout,
+  onSaveToLibrary,
   onCancelCopy,
   onPasteWorkout,
   onCopyDayHover,
@@ -249,6 +253,7 @@ const DroppableDayCard = ({
   onDeleteWorkout: (week: number, day: number, workoutId: string) => void;
   onOpenWorkoutDetails: (week: number, day: number, workout: Workout & { id: string }) => void;
   onCopyWorkout: (week: number, day: number, workout: Workout & { id: string }) => void;
+  onSaveToLibrary: (workout: Workout & { id: string }) => void;
   onCancelCopy: () => void;
   onPasteWorkout: (week: number, day: number) => void;
   onCopyDayHover: (week: number, day: number) => void;
@@ -334,6 +339,7 @@ const DroppableDayCard = ({
                   onDelete={onDeleteWorkout}
                   onClick={onOpenWorkoutDetails}
                   onCopy={onCopyWorkout}
+                  onSaveToLibrary={onSaveToLibrary}
                   onCancelCopy={onCancelCopy}
                   t={t}
                   isDraggingGlobal={isDraggingGlobal}
@@ -405,7 +411,7 @@ export const ProgramBuilder = ({
 }: ProgramBuilderProps) => {
   const t = useTranslations();
   const router = useRouter();
-  const { refreshPrograms } = useTrainingData();
+  const { workouts: availableWorkouts, refreshPrograms, refreshWorkouts } = useTrainingData();
   const [programMeta, setProgramMeta] = useState<ProgramMeta | null>(initialProgramMeta || null);
   const [selectedWeek, setSelectedWeek] = useState<string>('1');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
@@ -433,7 +439,6 @@ export const ProgramBuilder = ({
     day: number;
     workout: Workout & { id: string };
   } | null>(null);
-  const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
   const [draggedWorkout, setDraggedWorkout] = useState<{
     workout: Workout & { id: string };
     sourceWeek: number;
@@ -441,6 +446,8 @@ export const ProgramBuilder = ({
   } | null>(null);
   const [dragOverDay, setDragOverDay] = useState<{ week: number; day: number } | null>(null);
   const [weekToClear, setWeekToClear] = useState<number | null>(null);
+  const [isSaveToLibraryOpen, setIsSaveToLibraryOpen] = useState(false);
+  const [workoutToSave, setWorkoutToSave] = useState<WorkoutPayload | null>(null);
 
   // Copy mode state
   const [isCopyMode, setIsCopyMode] = useState<boolean>(false);
@@ -457,17 +464,6 @@ export const ProgramBuilder = ({
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  useEffect(() => {
-    const fetchWorkouts = async () => {
-      try {
-        const workouts = await getWorkouts();
-        setAvailableWorkouts(workouts);
-      } catch (error) {
-        console.error('Failed to fetch workouts:', error);
-      }
-    };
-    fetchWorkouts();
-  }, []);
 
   // Copy mode keyboard event handlers
   useEffect(() => {
@@ -1081,6 +1077,21 @@ export const ProgramBuilder = ({
     setSelectedWorkoutDetails(null);
   };
 
+  const handleSaveToLibrary = (workout: Workout & { id: string }) => {
+    // Convert Workout to WorkoutPayload for CreateWorkoutSidePanel
+    const workoutPayload: WorkoutPayload = {
+      title: workout.program,
+      description: workout.description || '',
+      type: workout.type,
+      difficulty: workout.difficulty || 'intermediate',
+      equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
+      totalExercises: workout.totalExercises,
+      items: workout.workout_data?.items || [],
+    };
+    setWorkoutToSave(workoutPayload);
+    setIsSaveToLibraryOpen(true);
+  };
+
   // Format date from dd-mm-yy format to "7 Mar, 2025"
   const formatDate = (dateStr: string): string => {
     const [day, month, year] = dateStr.split('-');
@@ -1660,6 +1671,7 @@ export const ProgramBuilder = ({
                           onDeleteWorkout={handleDeleteWorkout}
                           onOpenWorkoutDetails={handleOpenWorkoutDetails}
                           onCopyWorkout={handleStartCopyMode}
+                          onSaveToLibrary={handleSaveToLibrary}
                           onCancelCopy={handleCancelCopyMode}
                           onPasteWorkout={handlePasteWorkout}
                           onCopyDayHover={handleCopyDayHover}
@@ -1862,7 +1874,17 @@ export const ProgramBuilder = ({
         confirmText={t('programs.builder.clearWeekAction')}
         variant="default"
       />
-    </div >
+      <CreateWorkoutSidePanel
+        open={isSaveToLibraryOpen}
+        onOpenChange={setIsSaveToLibraryOpen}
+        initialData={workoutToSave || undefined}
+        onSuccess={() => {
+          setIsSaveToLibraryOpen(false);
+          setWorkoutToSave(null);
+          refreshPrograms();
+        }}
+      />
+    </div>
   );
 };
 

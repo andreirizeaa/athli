@@ -1290,7 +1290,7 @@ export const enMessages = {
     },
     new: {
       toast: {
-        savedSuccessfully: '{type} workout "{name}" saved successfully',
+        savedSuccessfully: 'Successfully saved',
         failedToSave: 'Failed to save workout',
       },
     },

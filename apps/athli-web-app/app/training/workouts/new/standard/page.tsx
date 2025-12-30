@@ -111,7 +111,7 @@ const StandardWorkoutPage = () => {
     try {
       await createWorkout(payload);
 
-      toast.success(t('workouts.new.toast.savedSuccessfully', { name: payload.title, type: payload.type }), {
+      toast.success(t('workouts.new.toast.savedSuccessfully'), {
         style: {
           background: 'rgb(220 252 231)',
           color: 'rgb(20 83 45)',
