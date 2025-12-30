@@ -304,7 +304,7 @@ export const ProgramBuilder = ({
           type: workout.type,
           difficulty: 'intermediate',
           equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : [],
-          sections: [] as WorkoutSectionPayload[], // In a real app, this would be the actual workout data
+          items: [], // In a real app, this would be the actual workout data
           totalExercises: workout.totalExercises,
         };
       });
@@ -693,16 +693,16 @@ export const ProgramBuilder = ({
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="px-0.5 capitalize">
-                    {mode === 'new' ? t('general.new') : t('general.edit')}
+                  <BreadcrumbPage className="px-0.5 font-semibold text-foreground">
+                    {programMeta.name}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {programMeta.name}
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5 capitalize">
+                    {mode === 'new' ? t('general.new') : t('general.edit')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>

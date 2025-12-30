@@ -183,7 +183,7 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
         type: workoutType,
         difficulty: difficulty,
         equipment: clientWorkout.equipment || [],
-        sections: sections,
+        items: sections.map((section: any) => ({ itemType: 'section' as const, data: section })),
         totalExercises: totalExercises,
         totalDurationMin: clientWorkout.workout_data?.totalDurationMin || 0,
       };
