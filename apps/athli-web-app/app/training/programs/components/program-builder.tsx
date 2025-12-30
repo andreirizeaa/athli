@@ -15,7 +15,15 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil, MoreHorizontal, Save, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
@@ -98,6 +106,19 @@ export const ProgramBuilder = ({
     day: number;
     workout: Workout & { id: string };
   } | null>(null);
+  const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
+
+  useEffect(() => {
+    const fetchWorkouts = async () => {
+      try {
+        const workouts = await getWorkouts();
+        setAvailableWorkouts(workouts);
+      } catch (error) {
+        console.error('Failed to fetch workouts:', error);
+      }
+    };
+    fetchWorkouts();
+  }, []);
 
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
 
@@ -360,23 +381,18 @@ export const ProgramBuilder = ({
   };
 
   const handlePreviousWeek = () => {
-    const weeksView = parseInt(selectedWeek, 10);
-    const newWeek = currentWeek - weeksView;
+    const newWeek = currentWeek - 1;
     if (newWeek >= 1) {
       setCurrentWeek(newWeek);
-    } else {
-      setCurrentWeek(1);
     }
   };
 
   const handleNextWeek = () => {
     const weeksView = parseInt(selectedWeek, 10);
-    const newWeek = currentWeek + weeksView;
-    const maxStartWeek = totalWeeks - weeksView + 1;
+    const newWeek = currentWeek + 1;
+    const maxStartWeek = Math.max(1, totalWeeks - weeksView + 1);
     if (newWeek <= maxStartWeek) {
       setCurrentWeek(newWeek);
-    } else {
-      setCurrentWeek(Math.max(1, maxStartWeek));
     }
   };
 
@@ -384,6 +400,11 @@ export const ProgramBuilder = ({
     const newTotalWeeks = totalWeeks + 1;
     saveToHistory(workoutsByDay, newTotalWeeks);
     setTotalWeeks(newTotalWeeks);
+
+    // If currently in 2 or 4 week view, switch to 1 week view
+    if (selectedWeek === '2' || selectedWeek === '4') {
+      setSelectedWeek('1');
+    }
   };
 
   const handleDuplicateWeek = (weekNumber: number) => {
@@ -398,6 +419,12 @@ export const ProgramBuilder = ({
     saveToHistory(updatedWorkouts, newTotalWeeks);
     setWorkoutsByDay(updatedWorkouts);
     setTotalWeeks(newTotalWeeks);
+
+    // If currently in 2 or 4 week view, switch to 1 week view
+    if (selectedWeek === '2' || selectedWeek === '4') {
+      setSelectedWeek('1');
+    }
+
     toast.success(`Week ${weekNumber} duplicated successfully`);
   };
 
@@ -422,6 +449,12 @@ export const ProgramBuilder = ({
       saveToHistory(reindexedWorkouts, newTotalWeeks);
       setWorkoutsByDay(reindexedWorkouts);
       setTotalWeeks(newTotalWeeks);
+
+      // Force switch to 1 week view if currently in 2 or 4 week view
+      if (selectedWeek === '2' || selectedWeek === '4') {
+        setSelectedWeek('1');
+      }
+
       // Adjust current week if needed
       if (currentWeek > newTotalWeeks) {
         setCurrentWeek(Math.max(1, newTotalWeeks));
@@ -747,7 +780,7 @@ export const ProgramBuilder = ({
               className="h-8 w-8"
               aria-label={t('programs.builder.previousWeekAria')}
             >
-              <ChevronLeft className="size-4" />
+              <ChevronUp className="size-4" />
             </Button>
             <div className="flex items-center gap-2">
               <Calendar className="size-4 text-muted-foreground" />
@@ -768,7 +801,7 @@ export const ProgramBuilder = ({
               className="h-8 w-8"
               aria-label={t('programs.builder.nextWeekAria')}
             >
-              <ChevronRight className="size-4" />
+              <ChevronDown className="size-4" />
             </Button>
             <Button
               type="button"
@@ -914,91 +947,106 @@ export const ProgramBuilder = ({
                   return (
                     <div
                       key={day}
-                      className="flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full"
+                      onClick={() => handleOpenAddWorkoutModal(day)}
+                      className="group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full cursor-pointer transition-colors hover:[&:not(:has(.workout-card:hover))]:border-primary/50"
                     >
                       <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
                         <span className="text-xs uppercase text-muted-foreground">{t('programs.builder.dayLabel', { number: day })}</span>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 -mr-1 hover:bg-background"
-                                aria-label={t('programs.builder.addWorkout.addAria')}
-                                onClick={() => handleOpenAddWorkoutModal(day)}
-                              >
-                                <Plus className="size-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t('programs.builder.addWorkout.add')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Button
+                          type="button"
+                          size="icon"
+                          className="h-4 w-4 -mr-1 rounded-full opacity-0 group-hover/day:opacity-100 group-has-[.workout-card:hover]/day:opacity-0 transition-opacity"
+                          aria-label={t('programs.builder.addWorkout.addAria')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenAddWorkoutModal(day);
+                          }}
+                        >
+                          <Plus className="size-3" />
+                        </Button>
                       </div>
-                      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 min-h-0">
+                      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 min-h-0 relative">
+
                         {workouts.length > 0 ? (
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-2 relative z-20">
                             {workouts.map((workout) => (
                               <div
                                 key={workout.id}
                                 role="button"
                                 tabIndex={0}
                                 aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
-                                onClick={() => handleOpenWorkoutDetails(week, dayInWeek, workout)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenWorkoutDetails(week, dayInWeek, workout);
+                                }}
                                 onKeyDown={(event) => {
                                   if (event.key === 'Enter' || event.key === ' ') {
                                     event.preventDefault();
+                                    event.stopPropagation();
                                     handleOpenWorkoutDetails(week, dayInWeek, workout);
                                   }
                                 }}
-                                className="p-2 rounded-lg border border-border bg-background flex items-start justify-between gap-2 cursor-pointer"
+                                className="workout-card rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
                               >
-                                <div className="flex-1 min-w-0">
+                                <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
                                   <span
-                                    className="text-[10px] font-medium block break-words line-clamp-2"
+                                    className="text-[11px] font-medium block truncate"
                                     title={workout.program}
                                   >
                                     {workout.program}
                                   </span>
-                                  <span className="text-[10px] text-muted-foreground">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <MoreHorizontal className="size-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+                                      <DropdownMenuItem onClick={(e) => {
+                                        e.stopPropagation();
+                                        // TODO: Implement copy
+                                        toast.info('Copy feature coming soon');
+                                      }}>
+                                        <Copy className="mr-2 size-3.5" />
+                                        <span>Copy</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={(e) => {
+                                        e.stopPropagation();
+                                        // TODO: Implement save to library
+                                        toast.info('Save to library feature coming soon');
+                                      }}>
+                                        <Save className="mr-2 size-3.5" />
+                                        <span>Save to Library</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteWorkout(week, dayInWeek, workout.id);
+                                        }}
+                                        className="text-destructive focus:text-destructive"
+                                      >
+                                        <Trash2 className="mr-2 size-3.5" />
+                                        <span>{t('general.delete')}</span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                                <div className="px-2 py-1">
+                                  <span className="text-[10px] text-muted-foreground block">
                                     {workout.totalExercises}{' '}
                                     {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
                                   </span>
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 flex-shrink-0"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    handleDeleteWorkout(week, dayInWeek, workout.id);
-                                  }}
-                                  aria-label={t('general.delete')}
-                                >
-                                  <Trash2 className="size-3 text-muted-foreground hover:text-destructive" />
-                                </Button>
                               </div>
                             ))}
                           </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5 text-xs h-7 px-2 text-muted-foreground"
-                              aria-label={t('programs.builder.addWorkout.addAria')}
-                              onClick={() => handleOpenAddWorkoutModal(day)}
-                            >
-                              <Plus className="size-3" />
-                              <span>{t('programs.builder.addWorkout.add')}</span>
-                            </Button>
-                          </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -1018,6 +1066,8 @@ export const ProgramBuilder = ({
         }}
         onSave={handleSaveWorkoutFromPanel}
         workoutTitle={selectedDay ? t('programs.builder.addWorkout.titleDay', { day: selectedDay }) : undefined}
+        mode="program"
+        availableWorkouts={availableWorkouts}
       />
       <Dialog open={!!selectedWorkoutDetails} onOpenChange={(open) => !open && handleCloseWorkoutDetails()}>
         <DialogContent className="max-w-5xl sm:max-w-5xl h-[600px] flex flex-col">

@@ -232,7 +232,7 @@ export const enMessages = {
       email: 'Email',
       emailPlaceholder: 'Enter email address',
       saveChanges: 'Save Changes',
-      saving: 'Saving...',
+      saving: 'Saving',
       updatedSuccessfully: 'Profile updated successfully',
       updateFailed: 'Failed to update profile',
       imageUploadFailed: 'Failed to upload image',
@@ -564,7 +564,7 @@ export const enMessages = {
   },
   general: {
     save: 'Save',
-    saving: 'Saving...',
+    saving: 'Saving',
     cancel: 'Cancel',
     delete: 'Delete',
     edit: 'Edit',

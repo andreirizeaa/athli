@@ -61,6 +61,7 @@ import {
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
 } from '@/api/client/client-service';
+import { getWorkouts } from '@/api/coach/coach-workout-service';
 import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
 import { AddProgramSidePanel } from './add-program-side-panel';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
@@ -88,6 +89,20 @@ const ClientTrainingCalendarPage = () => {
   const [workoutsByDate, setWorkoutsByDate] = useState<{
     [dateKey: string]: Array<Workout & { id: string }>;
   }>({});
+  const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
+
+  useEffect(() => {
+    const fetchWorkouts = async () => {
+      try {
+        const workouts = await getWorkouts();
+        setAvailableWorkouts(workouts);
+      } catch (error) {
+        console.error('Failed to fetch workouts:', error);
+      }
+    };
+    fetchWorkouts();
+  }, []);
+
   const [startDate] = useState<Date>(() => {
     // Start from the beginning of the current week (Monday)
     const today = new Date();
@@ -1902,6 +1917,8 @@ const ClientTrainingCalendarPage = () => {
         onOpenChange={setIsAddWorkoutPanelOpen}
         onSave={handleSaveWorkout}
         selectedDate={selectedDateForWorkout ?? undefined}
+        mode="calendar"
+        availableWorkouts={availableWorkouts}
       />
       <AddProgramSidePanel
         open={isAddProgramPanelOpen}
