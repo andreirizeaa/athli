@@ -78,16 +78,24 @@ const DraggableWorkoutCard = ({
   day,
   onDelete,
   onClick,
+  onCopy,
+  onCancelCopy,
   t,
   isDraggingGlobal,
+  isCopySource,
+  isCopyMode,
 }: {
   workout: Workout & { id: string };
   week: number;
   day: number;
   onDelete: (week: number, day: number, workoutId: string) => void;
   onClick: (week: number, day: number, workout: Workout & { id: string }) => void;
+  onCopy: (week: number, day: number, workout: Workout & { id: string }) => void;
+  onCancelCopy: () => void;
   t: any;
   isDraggingGlobal?: boolean;
+  isCopySource?: boolean;
+  isCopyMode?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, isDragging, transform, node } = useDraggable({
     id: `workout-${workout.id}`,
@@ -97,6 +105,7 @@ const DraggableWorkoutCard = ({
       week,
       day,
     },
+    disabled: isCopyMode, // Disable dragging during copy mode
   });
 
   // Get the original width from the node before it becomes fixed
@@ -107,10 +116,9 @@ const DraggableWorkoutCard = ({
       ? `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(3deg)`
       : undefined,
     transformOrigin: 'center center',
-    zIndex: isDragging ? 99999 : 1,
-    position: isDragging ? 'fixed' : 'relative',
+    position: 'relative',
+    zIndex: transform ? 99999 : undefined,
     pointerEvents: isDragging ? 'none' : undefined,
-    width: isDragging && originalWidth ? `${originalWidth}px` : undefined,
     transition: isDragging ? 'none' : undefined,
   };
 
@@ -118,17 +126,17 @@ const DraggableWorkoutCard = ({
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
+      {...(isCopyMode ? {} : { ...attributes, ...listeners })}
       role="button"
       tabIndex={0}
       aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
       onClick={(e) => {
-        if (isDragging) return; // Don't trigger click when dragging
+        if (isDragging || isCopyMode) return;
         e.stopPropagation();
         onClick(week, day, workout);
       }}
       onKeyDown={(event) => {
+        if (isCopyMode) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           event.stopPropagation();
@@ -136,8 +144,9 @@ const DraggableWorkoutCard = ({
         }
       }}
       className={cn(
-        'workout-card rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden cursor-grab active:cursor-grabbing transition-transform duration-200',
-        !isDraggingGlobal && 'hover:border-primary/50 hover:rotate-[3deg]'
+        'workout-card rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-transform duration-200',
+        !isDraggingGlobal && !isCopyMode && 'cursor-grab active:cursor-grabbing hover:border-primary/50',
+        isDragging && 'opacity-0'
       )}
     >
       <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
@@ -152,8 +161,14 @@ const DraggableWorkoutCard = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground"
+              className={cn(
+                "h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground",
+                isCopyMode && "invisible"
+              )}
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              disabled={isCopyMode}
             >
               <MoreHorizontal className="size-3" />
             </Button>
@@ -161,7 +176,7 @@ const DraggableWorkoutCard = ({
           <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onClick={(e) => {
               e.stopPropagation();
-              toast.info('Copy feature coming soon');
+              onCopy(week, day, workout);
             }}>
               <Copy className="mr-2 size-3.5" />
               <span>Copy</span>
@@ -209,7 +224,18 @@ const DroppableDayCard = ({
   onOpenAddWorkout,
   onDeleteWorkout,
   onOpenWorkoutDetails,
+  onCopyWorkout,
+  onCancelCopy,
+  onPasteWorkout,
+  onCopyDayHover,
+  onCopyDayLeave,
   t,
+  isCopyMode,
+  isCopySource,
+  isHoveredForCopy,
+  isShiftPressed,
+  copiedWorkoutId,
+  isPastedDay,
 }: {
   week: number;
   day: number;
@@ -221,7 +247,18 @@ const DroppableDayCard = ({
   onOpenAddWorkout: (day: number) => void;
   onDeleteWorkout: (week: number, day: number, workoutId: string) => void;
   onOpenWorkoutDetails: (week: number, day: number, workout: Workout & { id: string }) => void;
+  onCopyWorkout: (week: number, day: number, workout: Workout & { id: string }) => void;
+  onCancelCopy: () => void;
+  onPasteWorkout: (week: number, day: number) => void;
+  onCopyDayHover: (week: number, day: number) => void;
+  onCopyDayLeave: () => void;
   t: any;
+  isCopyMode?: boolean;
+  isCopySource?: boolean;
+  isHoveredForCopy?: boolean;
+  isShiftPressed?: boolean;
+  copiedWorkoutId?: string;
+  isPastedDay?: boolean;
 }) => {
   const { setNodeRef } = useDroppable({
     id: `day-${week}-${day}`,
@@ -235,28 +272,91 @@ const DroppableDayCard = ({
   return (
     <div
       ref={setNodeRef}
-      onClick={() => onOpenAddWorkout(dayNumber)}
-      className="group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full cursor-pointer transition-colors hover:[&:not(:has(.workout-card:hover))]:border-primary/50"
+      onClick={() => {
+        if (isCopyMode && !isCopySource && !isPastedDay) {
+          // In copy mode, clicking pastes the workout
+          onPasteWorkout(week, day);
+        } else if (!isCopyMode) {
+          onOpenAddWorkout(dayNumber);
+        }
+      }}
+      onMouseEnter={() => {
+        if (isCopyMode && !isCopySource) {
+          onCopyDayHover(week, day);
+        }
+      }}
+      onMouseLeave={() => {
+        if (isCopyMode) {
+          onCopyDayLeave();
+        }
+      }}
+      className={cn(
+        'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
+        !isCopyMode && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
+        isCopyMode && !isCopySource && !isPastedDay && 'cursor-pointer hover:border-primary/50'
+      )}
     >
       <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
         <span className="text-xs uppercase text-muted-foreground">{t('programs.builder.dayLabel', { number: dayNumber })}</span>
-        <Button
-          type="button"
-          size="icon"
-          className={cn(
-            'h-4 w-4 -mr-1 rounded-full transition-opacity',
-            isDragOver ? 'opacity-100' : 'opacity-0 group-hover/day:opacity-100 group-has-[.workout-card:hover]/day:opacity-0'
-          )}
-          aria-label={t('programs.builder.addWorkout.addAria')}
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenAddWorkout(dayNumber);
-          }}
-        >
-          <Plus className="size-3" />
-        </Button>
+        {!isCopyMode && (
+          <Button
+            type="button"
+            size="icon"
+            className={cn(
+              'h-4 w-4 -mr-1 rounded-full transition-opacity',
+              isDragOver ? 'opacity-100' : 'opacity-0 group-hover/day:opacity-100 group-has-[.workout-card:hover]/day:opacity-0'
+            )}
+            aria-label={t('programs.builder.addWorkout.addAria')}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenAddWorkout(dayNumber);
+            }}
+          >
+            <Plus className="size-3" />
+          </Button>
+        )}
       </div>
-      <div className="flex-1 p-3 min-h-0 relative overflow-visible">
+      <div className={cn(
+        "flex-1 p-3 min-h-0 relative",
+        (isCopySource || isHoveredForCopy) ? "overflow-hidden" : "overflow-y-auto"
+      )}>
+        {/* Source day overlay - shown below header */}
+        {isCopySource && (
+          <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+            <span className="text-xs text-center text-muted-foreground">
+              Hold shift to paste to multiple days
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-xs gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelCopy();
+              }}
+            >
+              <X className="size-3" />
+              Cancel
+            </Button>
+          </div>
+        )}
+        {/* Destination day overlay - shown below header */}
+        {isHoveredForCopy && (
+          <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPasteWorkout(week, day);
+              }}
+            >
+              <Copy className="size-3" />
+              {isShiftPressed ? 'Paste' : 'Copy'}
+            </Button>
+          </div>
+        )}
         {workouts.length > 0 ? (
           <div className="flex flex-col gap-2 relative z-20">
             {workouts.map((workout) => (
@@ -267,8 +367,12 @@ const DroppableDayCard = ({
                 day={day}
                 onDelete={onDeleteWorkout}
                 onClick={onOpenWorkoutDetails}
+                onCopy={onCopyWorkout}
+                onCancelCopy={onCancelCopy}
                 t={t}
                 isDraggingGlobal={isDraggingGlobal}
+                isCopyMode={isCopyMode}
+                isCopySource={isCopyMode && copiedWorkoutId === workout.id}
               />
             ))}
           </div>
@@ -332,6 +436,17 @@ export const ProgramBuilder = ({
   } | null>(null);
   const [dragOverDay, setDragOverDay] = useState<{ week: number; day: number } | null>(null);
 
+  // Copy mode state
+  const [isCopyMode, setIsCopyMode] = useState<boolean>(false);
+  const [copiedWorkout, setCopiedWorkout] = useState<{
+    workout: Workout & { id: string };
+    sourceWeek: number;
+    sourceDay: number;
+  } | null>(null);
+  const [isShiftPressed, setIsShiftPressed] = useState<boolean>(false);
+  const [pastedDays, setPastedDays] = useState<Array<{ week: number; day: number }>>([]);
+  const [hoveredCopyDay, setHoveredCopyDay] = useState<{ week: number; day: number } | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
@@ -347,6 +462,45 @@ export const ProgramBuilder = ({
     };
     fetchWorkouts();
   }, []);
+
+  // Copy mode keyboard event handlers
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(true);
+      }
+      if (e.key === 'Escape' && isCopyMode) {
+        setIsCopyMode(false);
+        setCopiedWorkout(null);
+        setPastedDays([]);
+        setHoveredCopyDay(null);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isCopyMode]);
+
+  // Exit copy mode when shift is released after pasting at least once
+  useEffect(() => {
+    if (isCopyMode && !isShiftPressed && pastedDays.length > 0) {
+      setIsCopyMode(false);
+      setCopiedWorkout(null);
+      setPastedDays([]);
+      setHoveredCopyDay(null);
+    }
+  }, [isCopyMode, isShiftPressed, pastedDays.length]);
 
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
 
@@ -975,6 +1129,77 @@ export const ProgramBuilder = ({
     setDragOverDay(null);
   };
 
+  // Copy mode handlers
+  const handleStartCopyMode = (week: number, day: number, workout: Workout & { id: string }) => {
+    setIsCopyMode(true);
+    setCopiedWorkout({ workout, sourceWeek: week, sourceDay: day });
+    setPastedDays([]);
+    setHoveredCopyDay(null);
+  };
+
+  const handleCancelCopyMode = () => {
+    setIsCopyMode(false);
+    setCopiedWorkout(null);
+    setPastedDays([]);
+    setHoveredCopyDay(null);
+  };
+
+  const handlePasteWorkout = (week: number, day: number) => {
+    if (!copiedWorkout) return;
+
+    // Create a new workout instance with a unique ID
+    const newWorkout: Workout & { id: string } = {
+      ...copiedWorkout.workout,
+      id: `${copiedWorkout.workout.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+
+    setWorkoutsByDay((prev) => {
+      const updated = { ...prev };
+      if (!updated[week]) {
+        updated[week] = {};
+      }
+      updated[week] = {
+        ...updated[week],
+        [day]: [...(updated[week]?.[day] || []), newWorkout],
+      };
+      saveToHistory(updated);
+      return updated;
+    });
+
+    // Track pasted days
+    setPastedDays((prev) => [...prev, { week, day }]);
+
+    // Clear the hovered day to hide overlay after clicking
+    setHoveredCopyDay(null);
+
+    // If not holding shift, exit copy mode after single paste
+    if (!isShiftPressed) {
+      setIsCopyMode(false);
+      setCopiedWorkout(null);
+      setPastedDays([]);
+    }
+  };
+
+  const handleCopyDayHover = (week: number, day: number) => {
+    if (isCopyMode && copiedWorkout) {
+      // Don't hover over source day
+      if (copiedWorkout.sourceWeek === week && copiedWorkout.sourceDay === day) {
+        setHoveredCopyDay(null);
+        return;
+      }
+      // Don't hover over days that have already been pasted to
+      if (pastedDays.some(pd => pd.week === week && pd.day === day)) {
+        setHoveredCopyDay(null);
+        return;
+      }
+      setHoveredCopyDay({ week, day });
+    }
+  };
+
+  const handleCopyDayLeave = () => {
+    setHoveredCopyDay(null);
+  };
+
   // Check if 2 weeks view is available
   const is2WeeksAvailable = totalWeeks % 2 === 0;
   // Check if 4 weeks view is available
@@ -1077,71 +1302,106 @@ export const ProgramBuilder = ({
       <div className="w-full relative">
         <div className="w-full px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handlePreviousWeek}
-              disabled={currentWeek === 1}
-              className="h-8 w-8"
-              aria-label={t('programs.builder.previousWeekAria')}
-            >
-              <ChevronUp className="size-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Calendar className="size-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{getWeekRange()}</span>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={handleNextWeek}
-              disabled={
-                (() => {
-                  const weeksView = parseInt(selectedWeek, 10);
-                  const maxStartWeek = totalWeeks - weeksView + 1;
-                  return currentWeek >= maxStartWeek;
-                })()
-              }
-              className="h-8 w-8"
-              aria-label={t('programs.builder.nextWeekAria')}
-            >
-              <ChevronDown className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddWeek}
-              className="gap-2 h-8"
-              aria-label={t('programs.builder.addWeekAria')}
-            >
-              <Plus className="size-4" />
-              <span>{t('programs.builder.addWeek')}</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleUndo}
-              disabled={historyIndex <= 0}
-              className="h-8 w-8 p-0"
-              aria-label={t('programs.builder.undoAria')}
-            >
-              <Undo className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
-              className="h-8 w-8 p-0"
-              aria-label={t('programs.builder.redoAria')}
-            >
-              <Redo className="size-4" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handlePreviousWeek}
+                    disabled={currentWeek === 1}
+                    className="h-8 w-8"
+                    aria-label={t('programs.builder.previousWeekAria')}
+                  >
+                    <ChevronUp className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.builder.previousWeek')}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="flex items-center gap-2">
+                <Calendar className="size-4 text-muted-foreground" />
+                <span className="text-sm font-medium">{getWeekRange()}</span>
+              </div>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleNextWeek}
+                    disabled={
+                      (() => {
+                        const weeksView = parseInt(selectedWeek, 10);
+                        const maxStartWeek = totalWeeks - weeksView + 1;
+                        return currentWeek >= maxStartWeek;
+                      })()
+                    }
+                    className="h-8 w-8"
+                    aria-label={t('programs.builder.nextWeekAria')}
+                  >
+                    <ChevronDown className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.builder.nextWeek')}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddWeek}
+                className="gap-2 h-8"
+                aria-label={t('programs.builder.addWeekAria')}
+              >
+                <Plus className="size-4" />
+                <span>{t('programs.builder.addWeek')}</span>
+              </Button>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUndo}
+                    disabled={historyIndex <= 0}
+                    className="h-8 w-8 p-0"
+                    aria-label={t('programs.builder.undoAria')}
+                  >
+                    <Undo className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.builder.undo')}</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRedo}
+                    disabled={historyIndex >= history.length - 1}
+                    className="h-8 w-8 p-0"
+                    aria-label={t('programs.builder.redoAria')}
+                  >
+                    <Redo className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('programs.builder.redo')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <Tabs value={selectedWeek} onValueChange={setSelectedWeek}>
             <TabsList className="w-auto">
@@ -1258,6 +1518,9 @@ export const ProgramBuilder = ({
                     const workouts = workoutsByDay[week]?.[dayInWeek] || [];
                     const isDragOver = dragOverDay?.week === week && dragOverDay?.day === dayInWeek;
                     const isSourceDay = draggedWorkout?.sourceWeek === week && draggedWorkout?.sourceDay === dayInWeek;
+                    const isCopySourceDay = copiedWorkout?.sourceWeek === week && copiedWorkout?.sourceDay === dayInWeek;
+                    const isHoveredForCopy = hoveredCopyDay?.week === week && hoveredCopyDay?.day === dayInWeek;
+                    const isPastedDay = pastedDays.some(pd => pd.week === week && pd.day === dayInWeek);
 
                     return (
                       <DroppableDayCard
@@ -1272,7 +1535,18 @@ export const ProgramBuilder = ({
                         onOpenAddWorkout={handleOpenAddWorkoutModal}
                         onDeleteWorkout={handleDeleteWorkout}
                         onOpenWorkoutDetails={handleOpenWorkoutDetails}
+                        onCopyWorkout={handleStartCopyMode}
+                        onCancelCopy={handleCancelCopyMode}
+                        onPasteWorkout={handlePasteWorkout}
+                        onCopyDayHover={handleCopyDayHover}
+                        onCopyDayLeave={handleCopyDayLeave}
                         t={t}
+                        isCopyMode={isCopyMode}
+                        isCopySource={isCopySourceDay}
+                        isHoveredForCopy={isHoveredForCopy}
+                        isShiftPressed={isShiftPressed}
+                        copiedWorkoutId={copiedWorkout?.workout.id}
+                        isPastedDay={isPastedDay}
                       />
                     );
                   })}
@@ -1281,6 +1555,23 @@ export const ProgramBuilder = ({
             })}
           </div>
         </div>
+        <DragOverlay>
+          {draggedWorkout && (
+            <div className="rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden shadow-lg rotate-3">
+              <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
+                <span className="text-[11px] font-medium block truncate">
+                  {draggedWorkout.workout.program}
+                </span>
+              </div>
+              <div className="px-2 py-1">
+                <span className="text-[10px] text-muted-foreground block">
+                  {draggedWorkout.workout.totalExercises}{' '}
+                  {draggedWorkout.workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
+                </span>
+              </div>
+            </div>
+          )}
+        </DragOverlay>
       </DndContext>
       <AddWorkoutSidePanel
         open={isAddWorkoutModalOpen}
