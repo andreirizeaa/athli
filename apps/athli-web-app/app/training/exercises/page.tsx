@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -43,13 +43,12 @@ import {
   User,
   UserPlus,
   Star,
-  Archive,
   Trash2,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/api/coach/coach-program-service';
-import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
+import { starPrograms, deletePrograms } from '@/api/coach/coach-program-service';
+import { getExercises, starExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
@@ -314,18 +313,6 @@ const ExercisesPage = () => {
     }
   };
 
-  const handleArchiveSelected = async () => {
-    if (selectedExercises.size === 0) return;
-    try {
-      await archiveExercises(Array.from(selectedExercises), true);
-      // Refresh exercises after archiving
-      await refreshExercises();
-      // Clear selection after archiving
-      setSelectedExercises(new Set());
-    } catch (error) {
-      console.error('Failed to archive exercises:', error);
-    }
-  };
 
   const handleBulkDelete = async () => {
     if (selectedExercises.size === 0) return;
@@ -454,7 +441,7 @@ const ExercisesPage = () => {
 
   // Create column definitions for DataGrid
   // Add "exercise" column for sorting (not in filteredColumnOrder so it won't render)
-  const allColumns: ColumnDefinition<Program>[] = [
+  const allColumns: ColumnDefinition<Program>[] = useMemo(() => [
     {
       id: 'exercise',
       label: t('exercises.columns.exercise'),
@@ -603,10 +590,10 @@ const ExercisesPage = () => {
           };
       }
     }),
-  ];
+  ], [t, filteredColumnOrder]);
 
   // Add actions column
-  const actionsColumn: ColumnDefinition<Program> = {
+  const actionsColumn: ColumnDefinition<Program> = useMemo(() => ({
     id: 'actions',
     label: '',
     sortable: false,
@@ -627,12 +614,12 @@ const ExercisesPage = () => {
         </Button>
       </div>
     ),
-  };
+  }), [t]);
 
-  const columns: ColumnDefinition<Program>[] = [...allColumns, actionsColumn];
+  const columns: ColumnDefinition<Program>[] = useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
 
   // Create filter definitions
-  const filters: FilterDefinition<Program>[] = [
+  const filters: FilterDefinition<Program>[] = useMemo(() => [
     {
       id: 'category',
       label: t('exercises.columns.category'),
@@ -669,10 +656,10 @@ const ExercisesPage = () => {
       ],
       getFilterValue: (row) => (starredExercises.has(row.id) ? 'starred' : 'unstarred'),
     },
-  ];
+  ], [t, starredExercises]);
 
   // Create first column renderer
-  const renderFirstColumn = (exercise: Program, isSelected: boolean) => {
+  const renderFirstColumn = useCallback((exercise: Program, isSelected: boolean) => {
     const isStarred = starredExercises.has(exercise.id);
     return (
       <div className="flex items-center gap-3 h-full w-full">
@@ -735,11 +722,10 @@ const ExercisesPage = () => {
         </div>
       </div>
     );
-  };
+  }, [starredExercises, handleToggleExercise, handleToggleStar, handleStarKeyDown, t]);
 
   // Create first column header with sorting
-  const renderFirstColumnHeader = ({
-    isSorted,
+  const renderFirstColumnHeader = useCallback(({
     isAscending,
     isDescending,
     onSort,
@@ -795,7 +781,7 @@ const ExercisesPage = () => {
         </DropdownMenu>
       </div>
     );
-  };
+  }, [t]);
 
   const handleStartCreating = () => {
     setIsCreateExerciseOpen(true);
@@ -926,24 +912,6 @@ const ExercisesPage = () => {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('exercises.actions.starSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleArchiveSelected}
-                    className="gap-2"
-                    aria-label={t('exercises.actions.archiveSelectedAria')}
-                  >
-                    <Archive className="size-4" />
-                    <span>{t('exercises.actions.archiveSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('exercises.actions.archiveSelected')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

@@ -41,3 +41,10 @@ export const DIFFICULTY_LEVELS = [
     { value: 'intermediate', label: 'Intermediate' },
     { value: 'advanced', label: 'Advanced' },
 ] as const;
+
+export const SECTION_TYPES = [
+    { value: 'regular', label: 'Regular', description: 'Standard strength training with sets, reps, and rest periods' },
+    { value: 'amrap', label: 'AMRAP', description: 'As Many Rounds/Reps As Possible within a time limit' },
+    { value: 'timed', label: 'Timed', description: 'Work and rest intervals with specified durations' },
+    { value: 'circuits', label: 'Circuits', description: 'Multiple exercises performed in sequence with minimal rest' },
+] as const;

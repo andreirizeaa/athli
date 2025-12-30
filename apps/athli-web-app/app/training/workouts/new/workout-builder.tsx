@@ -91,6 +91,9 @@ type StandardBuilderProps = {
   onDirtyChange?: () => void;
   saveSignal?: number;
   onSaveSuccess?: (payload: WorkoutProgramPayload) => void;
+  onSaveError?: () => void;
+  mode?: 'workout' | 'section'; // Mode: workout (default) or section
+  sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'; // Required when mode is 'section'
 };
 
 export const StandardBuilder = ({
@@ -98,10 +101,33 @@ export const StandardBuilder = ({
   onDirtyChange,
   saveSignal,
   onSaveSuccess,
+  onSaveError,
+  mode = 'workout',
+  sectionType,
 }: StandardBuilderProps) => {
+  const isSectionMode = mode === 'section';
+
   // Initialize with empty items array (no required default section)
+  // OR initialize with a single section when in section mode
   const getInitialSchema = (): WorkoutSchema => {
     if (typeof window === 'undefined') {
+      if (isSectionMode && sectionType) {
+        // Create initial section for section mode
+        return {
+          items: [{
+            itemType: 'section' as const,
+            section: {
+              id: `section_${Date.now()}`,
+              type: sectionType,
+              exercises: [],
+              ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
+              ...(sectionType === 'timed' && { targetRounds: undefined }),
+              ...(sectionType === 'circuits' && { targetRounds: undefined }),
+              ...(sectionType === 'auxiliary' && { category: 'warmup' }),
+            },
+          }],
+        };
+      }
       return { items: [] };
     }
 
@@ -127,6 +153,24 @@ export const StandardBuilder = ({
       } catch (error) {
         console.error('Error parsing workout schema from localStorage:', error);
       }
+    }
+
+    // For section mode, always start with one section
+    if (isSectionMode && sectionType) {
+      return {
+        items: [{
+          itemType: 'section' as const,
+          section: {
+            id: `section_${Date.now()}`,
+            type: sectionType,
+            exercises: [],
+            ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
+            ...(sectionType === 'timed' && { targetRounds: undefined }),
+            ...(sectionType === 'circuits' && { targetRounds: undefined }),
+            ...(sectionType === 'auxiliary' && { category: 'warmup' }),
+          },
+        }],
+      };
     }
 
     return { items: [] };
@@ -499,6 +543,7 @@ export const StandardBuilder = ({
       setSectionValidationErrors(sectionErrors);
 
       toast.error('Please fill out all fields');
+      if (onSaveError) onSaveError();
       return;
     }
 
@@ -508,6 +553,7 @@ export const StandardBuilder = ({
     const payload = buildWorkoutPayload(workoutSchema, meta);
     if (!payload) {
       toast.error('Workout details are missing');
+      if (onSaveError) onSaveError();
       return;
     }
 
@@ -865,22 +911,25 @@ export const StandardBuilder = ({
                     />
                   </div>
                 )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:border-destructive bg-background border-input shadow-none shrink-0"
-                  onClick={() => setSectionToDelete(section)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSectionToDelete(section);
-                    }
-                  }}
-                  aria-label={`Delete ${section.type} section`}
-                >
-                  <Trash2 className="size-3" />
-                </Button>
+                {/* Hide delete button in section mode */}
+                {!isSectionMode && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:border-destructive bg-background border-input shadow-none shrink-0"
+                    onClick={() => setSectionToDelete(section)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSectionToDelete(section);
+                      }
+                    }}
+                    aria-label={`Delete ${section.type} section`}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -1269,29 +1318,32 @@ export const StandardBuilder = ({
       <div className="flex-[1.5] p-2 h-full flex flex-col min-h-0">
         <Card className="relative h-full" style={{ height: '100%' }}>
           <CardContent className="absolute inset-0 p-4 overflow-y-auto flex flex-col">
-            <Tabs
-              value={builderMode}
-              onValueChange={(value) => {
-                if (value) setBuilderMode(value as 'exercise' | 'section');
-              }}
-            >
-              <TabsList className="w-full">
-                <TabsTrigger
-                  value="exercise"
-                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  Exercises
-                </TabsTrigger>
-                <TabsTrigger
-                  value="section"
-                  className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                >
-                  Sections
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {builderMode === 'exercise' && (
-              <div className="flex-1 min-h-0 mt-4">
+            {/* Hide tabs in section mode - only show exercise panel */}
+            {!isSectionMode && (
+              <Tabs
+                value={builderMode}
+                onValueChange={(value) => {
+                  if (value) setBuilderMode(value as 'exercise' | 'section');
+                }}
+              >
+                <TabsList className="w-full">
+                  <TabsTrigger
+                    value="exercise"
+                    className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                  >
+                    Exercises
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="section"
+                    className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                  >
+                    Sections
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+            {(builderMode === 'exercise' || isSectionMode) && (
+              <div className={cn("flex-1 min-h-0", !isSectionMode && "mt-4")}>
                 <ExerciseSelectionPanel
                   onExerciseClick={handleExerciseClick}
                   onDragStart={handleDragStart}
@@ -1300,7 +1352,7 @@ export const StandardBuilder = ({
                 />
               </div>
             )}
-            {builderMode === 'section' && (
+            {builderMode === 'section' && !isSectionMode && (
               <div className="flex-1 min-h-0 mt-4">
                 <SectionSelectionPanel onSectionSelect={handleSectionSelect} />
               </div>
@@ -1401,50 +1453,53 @@ export const StandardBuilder = ({
                     </React.Fragment>
                   );
                 })}
-                <div className="flex items-center justify-center gap-2 py-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs h-7 px-2"
-                    onClick={handleAddTopLevelExercise}
-                  >
-                    <Plus className="size-3" />
-                    <span>Add exercise</span>
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs h-7 px-2"
-                        aria-label="Add new section"
-                      >
-                        <Plus className="size-3" />
-                        <span>Add section</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
-                        <Dumbbell className="mr-2 size-4 text-foreground" />
-                        Regular
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
-                        <NotebookPen className="mr-2 size-4 text-foreground" />
-                        AMRAP
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
-                        <Timer className="mr-2 size-4 text-foreground" />
-                        Timed
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
-                        <Repeat className="mr-2 size-4 text-foreground" />
-                        Circuits
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                {/* Hide "Add exercise" and "Add section" buttons in section mode */}
+                {!isSectionMode && (
+                  <div className="flex items-center justify-center gap-2 py-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs h-7 px-2"
+                      onClick={handleAddTopLevelExercise}
+                    >
+                      <Plus className="size-3" />
+                      <span>Add exercise</span>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs h-7 px-2"
+                          aria-label="Add new section"
+                        >
+                          <Plus className="size-3" />
+                          <span>Add section</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => handleSectionSelect('regular')}>
+                          <Dumbbell className="mr-2 size-4 text-foreground" />
+                          Regular
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSectionSelect('amrap')}>
+                          <NotebookPen className="mr-2 size-4 text-foreground" />
+                          AMRAP
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSectionSelect('timed')}>
+                          <Timer className="mr-2 size-4 text-foreground" />
+                          Timed
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleSectionSelect('circuits')}>
+                          <Repeat className="mr-2 size-4 text-foreground" />
+                          Circuits
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-6 transition-all duration-200 relative">
@@ -1546,6 +1601,7 @@ export const StandardBuilder = ({
               groupExercisesBySuperset={groupExercisesBySuperset as any}
               onExerciseClick={handleExerciseClickByIdWrapper}
               validationErrors={validationErrors}
+              isSectionMode={isSectionMode}
             />
           </CardContent>
         </Card>

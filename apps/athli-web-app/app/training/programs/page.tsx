@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipRoot, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -57,15 +57,15 @@ import {
   Settings,
   User,
   Star,
-  Archive,
   Trash2,
   Copy,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { getPrograms, starPrograms, archivePrograms, deletePrograms, duplicateProgram, createProgram } from '@/api/coach/coach-program-service';
+import { getPrograms, starPrograms, deletePrograms, duplicateProgram, createProgram, getProgramById } from '@/api/coach/coach-program-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
+import { ProgramNameCell } from './components/program-name-cell';
 
 type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'actions';
 
@@ -144,12 +144,11 @@ const ProgramsPage = () => {
   useEffect(() => {
     // Initialize filteredCount and starred programs from context data
     setFilteredCount(programs.length);
-    setFilteredCount(programs.length);
     const starred = new Set(programs.filter(p => p.isFavourite).map(p => p.id));
     setStarredPrograms(starred);
   }, [programs]);
 
-  const handleToggleProgram = (programId: string) => {
+  const handleToggleProgram = React.useCallback((programId: string) => {
     setSelectedPrograms((prev) => {
       const next = new Set(prev);
       if (next.has(programId)) {
@@ -159,11 +158,11 @@ const ProgramsPage = () => {
       }
       return next;
     });
-  };
+  }, []);
 
-  const handleNavigateToProgram = (programId: string) => {
+  const handleNavigateToProgram = React.useCallback((programId: string) => {
     router.push(`/training/programs/${programId}/edit`);
-  };
+  }, [router]);
 
   const handleNavigateToAthletes = () => {
     router.push('/athletes');
@@ -173,14 +172,16 @@ const ProgramsPage = () => {
     setIsAssignProgramOpen(true);
   };
 
-  const handleToggleStar = async (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
+  const handleOpenAssignIndividualProgram = React.useCallback((program: Program) => {
+    setSelectedProgramForAssignment(program);
+    setIsAssignIndividualProgramOpen(true);
+  }, []);
+
+  const handleToggleStar = React.useCallback(async (programId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
       const isStarred = starredPrograms.has(programId);
       await starPrograms(programId, !isStarred);
-
-      const program = programs.find((p) => p.id === programId);
-      const programName = program?.program || t('programs.program');
 
       setStarredPrograms((prev) => {
         const next = new Set(prev);
@@ -193,23 +194,23 @@ const ProgramsPage = () => {
       });
 
       if (isStarred) {
-        toast.success(t('programs.detail.toast.unstarredSuccessfully', { name: programName }));
+        toast.success(t('programs.detail.toast.unstarredSuccessfully', { name: t('programs.program') }));
       } else {
-        toast.success(t('programs.detail.toast.starredSuccessfully', { name: programName }));
+        toast.success(t('programs.detail.toast.starredSuccessfully', { name: t('programs.program') }));
       }
     } catch (error) {
       console.error('Failed to star program:', error);
       toast.error(t('general.error'));
     }
-  };
+  }, [starredPrograms, t]);
 
-  const handleStarKeyDown = (programId: string, e: React.KeyboardEvent) => {
+  const handleStarKeyDown = React.useCallback((programId: string, e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       e.stopPropagation();
       handleToggleStar(programId, e);
     }
-  };
+  }, [handleToggleStar]);
 
   const handleClearSelected = () => {
     setSelectedPrograms(new Set());
@@ -236,16 +237,6 @@ const ProgramsPage = () => {
     }
   };
 
-  const handleArchiveSelected = async () => {
-    if (selectedPrograms.size === 0) return;
-    try {
-      await archivePrograms(Array.from(selectedPrograms), true);
-      // Clear selection after archiving
-      setSelectedPrograms(new Set());
-    } catch (error) {
-      console.error('Failed to archive programs:', error);
-    }
-  };
 
   const handleBulkDelete = async () => {
     if (selectedPrograms.size === 0) return;
@@ -302,16 +293,30 @@ const ProgramsPage = () => {
     const programId = Array.from(selectedPrograms)[0];
     const program = programs.find((p) => p.id === programId);
     if (!program) return;
+    handleDuplicateSelectedPerRow(programId, program.program);
+  };
+
+  const handleDuplicateSelectedPerRow = React.useCallback(async (programId: string, name: string) => {
     try {
-      const duplicatedProgram = await duplicateProgram(programId);
+      const fullProgram = await getProgramById(programId);
+      await createProgram({
+        name: fullProgram.program,
+        description: fullProgram.description,
+        type: fullProgram.type,
+        difficulty: fullProgram.program_data.difficulty,
+        weeks: fullProgram.program_data.weeks,
+        schema: fullProgram.program_data.schema,
+        days: fullProgram.program_data.days
+      });
       // Reload programs to show the duplicated one
       await refreshPrograms();
       // Clear selection after duplicating
       setSelectedPrograms(new Set());
+      toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name }));
     } catch (error) {
       console.error('Failed to duplicate program:', error);
     }
-  };
+  }, [refreshPrograms, t]);
 
   const resetCreateProgramState = () => {
     setNewProgramName('');
@@ -452,19 +457,16 @@ const ProgramsPage = () => {
     return queryIndex === normalizedQuery.length;
   };
 
-  const filteredColumnOrder = columnOrder.filter((colId) => visibleColumns.has(colId) && colId !== 'actions');
+  const filteredColumnOrder = React.useMemo(() =>
+    columnOrder.filter((colId) => visibleColumns.has(colId) && colId !== 'actions'),
+    [columnOrder, visibleColumns]
+  );
 
-  const uniqueTypes = Array.from(new Set(programs.map((w) => w.type))).sort();
-  const uniqueLengths = Array.from(new Set(programs.map((w) => w.length))).sort((a, b) => {
-    const aWeeks = parseInt(a.split(' ')[0]);
-    const bWeeks = parseInt(b.split(' ')[0]);
-    if (isNaN(aWeeks) || isNaN(bWeeks)) return a.localeCompare(b);
-    return aWeeks - bWeeks;
-  });
+  const uniqueTypes = React.useMemo(() => Array.from(new Set(programs.map((w) => w.type))).sort(), [programs]);
 
   // Create column definitions for DataGrid
   // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
-  const allColumns: ColumnDefinition<Program>[] = [
+  const allColumns: ColumnDefinition<Program>[] = React.useMemo(() => [
     {
       id: 'program',
       label: t('programs.columns.program'),
@@ -488,20 +490,9 @@ const ProgramsPage = () => {
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
             renderCell: (row) => (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center h-full min-w-0 w-full">
-                    <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="max-w-[250px] break-words"
-                  side="top"
-                  align="start"
-                >
-                  <p className="whitespace-pre-wrap">{row.description}</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="flex items-center h-full min-w-0 w-full" title={row.description}>
+                <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+              </div>
             ),
           };
         case 'type':
@@ -570,20 +561,9 @@ const ProgramsPage = () => {
             tooltip: t('programs.columnTooltips.equipment'),
             getSortValue: (row) => row.equipment.toLowerCase(),
             renderCell: (row) => (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center h-full min-w-0 w-full">
-                    <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent
-                  className="max-w-[200px] break-words"
-                  side="top"
-                  align="start"
-                >
-                  <p>{row.equipment}</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="flex items-center h-full min-w-0 w-full" title={row.equipment}>
+                <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
+              </div>
             ),
           };
         default:
@@ -595,10 +575,10 @@ const ProgramsPage = () => {
           };
       }
     }),
-  ];
+  ], [filteredColumnOrder, t]);
 
   // Add actions column
-  const actionsColumn: ColumnDefinition<Program> = {
+  const actionsColumn: ColumnDefinition<Program> = React.useMemo(() => ({
     id: 'actions',
     label: '',
     sortable: false,
@@ -619,12 +599,12 @@ const ProgramsPage = () => {
         </Button>
       </div>
     ),
-  };
+  }), [t]);
 
-  const columns: ColumnDefinition<Program>[] = [...allColumns, actionsColumn];
+  const columns: ColumnDefinition<Program>[] = React.useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
 
   // Create filter definitions
-  const filters: FilterDefinition<Program>[] = [
+  const filters: FilterDefinition<Program>[] = React.useMemo(() => [
     {
       id: 'type',
       label: t('programs.filters.type'),
@@ -642,76 +622,26 @@ const ProgramsPage = () => {
       ],
       getFilterValue: (row) => (starredPrograms.has(row.id) ? 'starred' : 'unstarred'),
     },
-  ];
+  ], [t, uniqueTypes, starredPrograms]);
 
   // Create first column renderer
-  const renderFirstColumn = (program: Program, isSelected: boolean) => {
+  const renderFirstColumn = React.useCallback((program: Program, isSelected: boolean) => {
     const isStarred = starredPrograms.has(program.id);
     return (
-      <div className="flex items-center gap-3 h-full w-full">
-        <div className="flex items-center justify-center h-full" data-no-row-link="true">
-          <Checkbox checked={isSelected} onCheckedChange={() => handleToggleProgram(program.id)} />
-        </div>
-        <span className="text-sm truncate flex-1 min-w-0">{program.program}</span>
-        <div className="flex items-center justify-end flex-shrink-0 gap-1" data-no-row-link="true">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedProgramForAssignment(program);
-                    setIsAssignIndividualProgramOpen(true);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedProgramForAssignment(program);
-                      setIsAssignIndividualProgramOpen(true);
-                    }
-                  }}
-                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label={t('programs.actions.assignProgramToClient')}
-                >
-                  <User className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('programs.actions.assignProgramToClient')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={(e) => handleToggleStar(program.id, e)}
-                  onKeyDown={(e) => handleStarKeyDown(program.id, e)}
-                  className="p-1 rounded text-foreground hover:text-primary hover:bg-accent transition-colors"
-                  aria-label={t('programs.actions.starProgram')}
-                >
-                  {isStarred ? (
-                    <Star className="h-4 w-4 fill-primary text-primary" />
-                  ) : (
-                    <Star className="h-4 w-4" />
-                  )}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('programs.actions.starProgram')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      </div>
+      <ProgramNameCell
+        program={program}
+        isSelected={isSelected}
+        isStarred={isStarred}
+        onToggleProgram={handleToggleProgram}
+        onAssign={handleOpenAssignIndividualProgram}
+        onToggleStar={handleToggleStar}
+        onStarKeyDown={handleStarKeyDown}
+      />
     );
-  };
+  }, [starredPrograms, handleToggleProgram, handleOpenAssignIndividualProgram, handleToggleStar, handleStarKeyDown]);
 
   // Create first column header with sorting
-  const renderFirstColumnHeader = ({
+  const renderFirstColumnHeader = React.useCallback(({
     isSorted,
     isAscending,
     isDescending,
@@ -768,7 +698,7 @@ const ProgramsPage = () => {
         </DropdownMenu>
       </div>
     );
-  };
+  }, [t]);
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -833,100 +763,51 @@ const ProgramsPage = () => {
         defaultVisibleColumns={COLUMN_ORDER}
         selectionActions={
           <div className="flex items-center gap-1">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleClearSelected}
-                    className="gap-2"
-                    aria-label={t('programs.actions.clearSelectedAria')}
-                  >
-                    <X className="size-4" />
-                    <span>
-                      {t('general.clearSelected', { count: selectedPrograms.size })}
-                    </span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('programs.actions.clearSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              variant="ghost"
+              onClick={handleClearSelected}
+              className="gap-2"
+              aria-label={t('programs.actions.clearSelectedAria')}
+              title={t('programs.actions.clearSelected')}
+            >
+              <X className="size-4" />
+              <span>
+                {t('general.clearSelected', { count: selectedPrograms.size })}
+              </span>
+            </Button>
+            {/* RESTORED Duplicate Selected */}
             {selectedPrograms.size === 1 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      onClick={handleDuplicateSelected}
-                      className="gap-2"
-                      aria-label={t('programs.actions.duplicateAria')}
-                    >
-                      <Copy className="size-4" />
-                      <span>{t('programs.actions.duplicate')}</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t('programs.actions.duplicate')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Button
+                variant="ghost"
+                onClick={handleDuplicateSelected}
+                className="gap-2"
+                aria-label={t('programs.actions.duplicateAria')}
+                title={t('programs.actions.duplicate')}
+              >
+                <Copy className="size-4" />
+                <span>{t('programs.actions.duplicate')}</span>
+              </Button>
             )}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleStarSelected}
-                    className="gap-2"
-                    aria-label={t('programs.actions.starSelectedAria')}
-                  >
-                    <Star className="size-4" />
-                    <span>{t('programs.actions.starSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('programs.actions.starSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleArchiveSelected}
-                    className="gap-2"
-                    aria-label={t('programs.actions.archiveSelectedAria')}
-                  >
-                    <Archive className="size-4" />
-                    <span>{t('programs.actions.archiveSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('programs.actions.archiveSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setIsBulkDeleteOpen(true)}
-                    className="gap-2 text-destructive hover:text-destructive"
-                    aria-label={t('programs.actions.deleteSelectedAria')}
-                  >
-                    <Trash2 className="size-4" />
-                    <span>{t('programs.actions.deleteSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('programs.actions.deleteSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              variant="ghost"
+              onClick={handleStarSelected}
+              className="gap-2"
+              aria-label={t('programs.actions.starSelectedAria')}
+              title={t('programs.actions.starSelected')}
+            >
+              <Star className="size-4" />
+              <span>{t('programs.actions.starSelected')}</span>
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsBulkDeleteOpen(true)}
+              className="gap-2 text-destructive hover:text-destructive"
+              aria-label={t('programs.actions.deleteSelectedAria')}
+              title={t('programs.actions.deleteSelected')}
+            >
+              <Trash2 className="size-4" />
+              <span>{t('programs.actions.deleteSelected')}</span>
+            </Button>
           </div>
         }
         emptyMessage={t('programs.emptyMessage')}

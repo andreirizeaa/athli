@@ -469,12 +469,9 @@ export function DataGrid<T extends Record<string, any>>({
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const handlePageDropdownTriggerRef = (node: HTMLButtonElement | null) => {
+  const handlePageDropdownTriggerRef = React.useCallback((node: HTMLButtonElement | null) => {
     pageDropdownTriggerRef.current = node;
-    if (node) {
-      setPageDropdownWidth(node.offsetWidth);
-    }
-  };
+  }, []);
 
   // DataGrid is fully controlled when enableRowSelection is true
   // When row selection is enabled, selectedRowIds and onSelectionChange must be provided
@@ -978,20 +975,6 @@ export function DataGrid<T extends Record<string, any>>({
 
     const headerWidth = column.width?.pixel || '130px';
 
-    const headerButton = (
-      <Button
-        variant="ghost"
-        className="flex items-center gap-2 h-full w-full justify-start rounded-none px-0 hover:bg-transparent"
-      >
-        <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground py-1">
-          {column.icon && <div className="text-muted-foreground">{column.icon}</div>}
-          {column.label}
-        </span>
-        {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
-        {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
-      </Button>
-    );
-
     return (
       <TableHead
         key={column.id}
@@ -1009,13 +992,21 @@ export function DataGrid<T extends Record<string, any>>({
         }}
       >
         <DropdownMenu>
-          {column.tooltip ? (
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 h-full w-full justify-start rounded-none px-0 hover:bg-transparent"
+            >
+              <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground py-1">
+                {column.icon && <div className="text-muted-foreground">{column.icon}</div>}
+                {column.label}
+              </span>
+              {isAscending && <ArrowUpNarrowWide className="size-3 text-muted-foreground" />}
+              {isDescending && <ArrowDownWideNarrow className="size-3 text-muted-foreground" />}
+            </Button>
+          </DropdownMenuTrigger>
+          {column.tooltip && (
             <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  {headerButton}
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
               <TooltipContent
                 className="whitespace-normal break-words text-left"
                 style={{ maxWidth: headerWidth }}
@@ -1023,10 +1014,6 @@ export function DataGrid<T extends Record<string, any>>({
                 {column.tooltip}
               </TooltipContent>
             </Tooltip>
-          ) : (
-            <DropdownMenuTrigger asChild>
-              {headerButton}
-            </DropdownMenuTrigger>
           )}
           <DropdownMenuContent align="start">
             {column.sortable !== false && (
@@ -1073,8 +1060,6 @@ export function DataGrid<T extends Record<string, any>>({
       </TableHead>
     );
   };
-
-
 
   // Check if toolbar has any content to show
   const hasToolbarContent = enableSearch || filters.length > 0 || filterBarActions || enableEditColumns || enableExport;
