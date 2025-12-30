@@ -72,9 +72,9 @@ const SectionsPage = () => {
   const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
   const itemsPerPage = 25;
 
-  // Helper to check if value is empty
+  // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
   const isEmpty = (value: any): boolean => {
-    if (value === null || value === undefined || value === '') return true;
+    if (value === null || value === undefined || value === '' || value === 0) return true;
     if (Array.isArray(value) && value.length === 0) return true;
     return false;
   };

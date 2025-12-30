@@ -865,16 +865,30 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
       const idx = sourceList.findIndex(i => i.itemType === 'exercise' && i.exercise.instanceId === id);
 
       if (idx !== -1) {
-        const ex = sourceList[idx].exercise;
+        const item = sourceList[idx];
+        if (item.itemType !== 'exercise') return;
+        const ex = item.exercise;
         if (ex.supersetGroupId) {
           payloadType = 'superset';
           let start = idx;
-          while (start > 0 && sourceList[start - 1].itemType === 'exercise' && sourceList[start - 1].exercise?.supersetGroupId === ex.supersetGroupId) start--;
+          while (start > 0) {
+            const prevItem = sourceList[start - 1];
+            if (prevItem.itemType === 'exercise' && prevItem.exercise?.supersetGroupId === ex.supersetGroupId) {
+              start--;
+            } else {
+              break;
+            }
+          }
           const group: ExerciseWithSuperset[] = [];
           let curr = start;
-          while (curr < sourceList.length && sourceList[curr].itemType === 'exercise' && sourceList[curr].exercise?.supersetGroupId === ex.supersetGroupId) {
-            group.push(sourceList[curr].exercise!);
-            curr++;
+          while (curr < sourceList.length) {
+            const currItem = sourceList[curr];
+            if (currItem.itemType === 'exercise' && currItem.exercise?.supersetGroupId === ex.supersetGroupId) {
+              group.push(currItem.exercise);
+              curr++;
+            } else {
+              break;
+            }
           }
           movedItems = group;
           sourceList.splice(start, group.length);
@@ -887,21 +901,23 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
       const [, secId, exId] = sourceId.split('|');
       const secIdx = sourceList.findIndex(i => i.itemType === 'section' && i.section.id === secId);
       if (secIdx !== -1) {
-        const sec = sourceList[secIdx].section;
-        const exIdx = sec.exercises?.findIndex(e => e.instanceId === exId) ?? -1;
+        const secItem = sourceList[secIdx];
+        if (secItem.itemType !== 'section') return;
+        const sec = secItem.section;
+        const exIdx = sec.exercises?.findIndex((e: ExerciseWithSuperset) => e.instanceId === exId) ?? -1;
         if (exIdx !== -1 && sec.exercises) {
           const ex = sec.exercises[exIdx];
           if (ex.supersetGroupId) {
             payloadType = 'superset';
-            const group = sec.exercises.filter(e => e.supersetGroupId === ex.supersetGroupId);
+            const group = sec.exercises.filter((e: ExerciseWithSuperset) => e.supersetGroupId === ex.supersetGroupId);
             movedItems = group;
-            sec.exercises = sec.exercises.filter(e => e.supersetGroupId !== ex.supersetGroupId);
+            sec.exercises = sec.exercises.filter((e: ExerciseWithSuperset) => e.supersetGroupId !== ex.supersetGroupId);
           } else {
             movedItems = [ex];
             sec.exercises.splice(exIdx, 1);
           }
         }
-        sourceList[secIdx] = { ...sourceList[secIdx], section: { ...sec } };
+        sourceList[secIdx] = { itemType: 'section', section: { ...sec } };
       }
     }
 
@@ -991,7 +1007,9 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
       const secId = targetData.sectionId;
       const secIdx = sourceList.findIndex(i => i.itemType === 'section' && i.section.id === secId);
       if (secIdx !== -1) {
-        const sec = sourceList[secIdx].section;
+        const secItem = sourceList[secIdx];
+        if (secItem.itemType !== 'section') return;
+        const sec = secItem.section;
         const newExercises = [...(sec.exercises || [])];
         let insertIndex = targetData.index;
 
@@ -1062,7 +1080,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
         }
 
         newExercises.splice(insertIndex, 0, ...movedItems);
-        sourceList[secIdx] = { ...sourceList[secIdx], section: { ...sec, exercises: newExercises } };
+        sourceList[secIdx] = { itemType: 'section', section: { ...sec, exercises: newExercises } };
       }
     }
 

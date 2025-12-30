@@ -720,7 +720,7 @@ export const enMessages = {
       exercises: 'Exercises',
       created: 'Created',
       searchPlaceholder: 'Search...',
-      sectionNamePlaceholder: 'e.g., Upper Body Strength',
+      sectionNamePlaceholder: 'Name...',
       selectTypePlaceholder: 'Select section type',
       descriptionPlaceholder: 'Add notes about this section...',
       emptyMessage: 'No sections found',

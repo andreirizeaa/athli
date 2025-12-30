@@ -115,15 +115,34 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
   return widths[colId]?.[format] || (format === 'class' ? 'min-w-[130px]' : '130px');
 };
 
+// Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
+const isEmpty = (value: any): boolean => {
+  if (value === null || value === undefined || value === '' || value === 0) return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  return false;
+};
+
 // Helper function to format program type for display
 const formatProgramType = (type: string): string => {
   if (!type) return '-';
+  // Handle common abbreviations and special cases
+  const abbreviations: Record<string, string> = {
+    hiit: 'HIIT',
+    amrap: 'AMRAP',
+    crossfit: 'CrossFit',
+    emom: 'EMOM',
+  };
+
+  if (abbreviations[type.toLowerCase()]) {
+    return abbreviations[type.toLowerCase()];
+  }
+
   // Convert snake_case or kebab-case to Title Case
   return type
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
     .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 };
 
@@ -501,11 +520,27 @@ const ProgramsPage = () => {
             getSortValue: (row) => row.description.toLowerCase(),
             getSearchValue: (row) =>
               `${row.program} ${row.description} ${row.type} ${row.equipment}`,
-            renderCell: (row) => (
-              <div className="flex items-center h-full min-w-0 w-full" title={row.description}>
-                <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
-              </div>
-            ),
+            renderCell: (row) =>
+              isEmpty(row.description) ? (
+                <div className="flex items-center h-full min-w-0 w-full">
+                  <span className="text-sm truncate block min-w-0 w-full">--</span>
+                </div>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center h-full min-w-0 w-full">
+                      <span className="text-sm truncate block min-w-0 w-full">{row.description}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="max-w-[250px] break-words"
+                    side="top"
+                    align="start"
+                  >
+                    <p className="whitespace-pre-wrap">{row.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ),
           };
         case 'type':
           return {
@@ -520,7 +555,9 @@ const ProgramsPage = () => {
             getSortValue: (row) => row.type.toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
-                <span className="text-sm">{row.type}</span>
+                <span className="text-sm">
+                  {isEmpty(row.type) ? '--' : formatProgramType(row.type)}
+                </span>
               </div>
             ),
           };
@@ -540,7 +577,9 @@ const ProgramsPage = () => {
             },
             renderCell: (row) => (
               <div className="flex items-center h-full">
-                <span className="text-sm">{row.length}</span>
+                <span className="text-sm">
+                  {isEmpty(row.length) ? '--' : row.length}
+                </span>
               </div>
             ),
           };
@@ -557,7 +596,9 @@ const ProgramsPage = () => {
             getSortValue: (row) => row.totalExercises,
             renderCell: (row) => (
               <div className="flex items-center w-full">
-                <span className="text-sm">{row.totalExercises}</span>
+                <span className="text-sm">
+                  {isEmpty(row.totalExercises) ? '--' : row.totalExercises}
+                </span>
               </div>
             ),
           };
@@ -572,11 +613,27 @@ const ProgramsPage = () => {
             },
             tooltip: t('programs.columnTooltips.equipment'),
             getSortValue: (row) => row.equipment.toLowerCase(),
-            renderCell: (row) => (
-              <div className="flex items-center h-full min-w-0 w-full" title={row.equipment}>
-                <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
-              </div>
-            ),
+            renderCell: (row) =>
+              isEmpty(row.equipment) ? (
+                <div className="flex items-center h-full min-w-0 w-full">
+                  <span className="text-sm truncate block min-w-0 w-full">--</span>
+                </div>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center h-full min-w-0 w-full">
+                      <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    className="max-w-[200px] break-words"
+                    side="top"
+                    align="start"
+                  >
+                    <p>{row.equipment}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ),
           };
         default:
           return {
