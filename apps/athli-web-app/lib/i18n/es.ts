@@ -1193,7 +1193,7 @@ export const esMessages = {
     },
     new: {
       toast: {
-        savedSuccessfully: 'El entrenamiento "{name}" de tipo {type} ha sido guardado',
+        savedSuccessfully: 'Guardado exitosamente',
         failedToSave: 'Error al guardar el entrenamiento',
       },
     },

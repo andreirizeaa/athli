@@ -169,87 +169,89 @@ export const BasicInformation = ({
           className="resize-none"
         />
       </div>
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium">
-          {t('workouts.addWorkout.selectBuilder')}<RequiredAsterisk />
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={handleAIBuilderClick}
-            className={cn(
-              'relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left',
-              selectedBuilder === 'ai'
-                ? 'border-primary bg-primary/5 shadow-sm'
-                : 'bg-background hover:bg-accent/30'
-            )}
-            aria-label={t('workouts.addWorkout.athliAiAria')}
-          >
-            <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.athliAi')}</p>
-            <p
+      {selectedBuilder !== null && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-medium">
+            {t('workouts.addWorkout.selectBuilder')}<RequiredAsterisk />
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={handleAIBuilderClick}
               className={cn(
-                'text-xs',
-                selectedBuilder === 'ai' ? 'text-foreground/80' : 'text-muted-foreground'
-              )}
-            >
-              {t('workouts.addWorkout.athliAiDescription')}
-            </p>
-            <div
-              aria-hidden="true"
-              className={cn(
-                'absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2',
+                'relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left',
                 selectedBuilder === 'ai'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-input bg-background'
+                  ? 'border-primary bg-primary/5 shadow-sm'
+                  : 'bg-background hover:bg-accent/30'
               )}
+              aria-label={t('workouts.addWorkout.athliAiAria')}
             >
-              <div
+              <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.athliAi')}</p>
+              <p
                 className={cn(
-                  'h-2.5 w-2.5 rounded-full',
-                  selectedBuilder === 'ai' ? 'bg-primary' : 'bg-transparent'
+                  'text-xs',
+                  selectedBuilder === 'ai' ? 'text-foreground/80' : 'text-muted-foreground'
                 )}
-              />
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={handleStandardBuilderClick}
-            className={cn(
-              'relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left',
-              selectedBuilder === 'standard'
-                ? 'border-primary bg-primary/5 shadow-sm'
-                : 'bg-background hover:bg-accent/30'
-            )}
-            aria-label={t('workouts.addWorkout.standardBuilderAria')}
-          >
-            <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.standardBuilder')}</p>
-            <p
+              >
+                {t('workouts.addWorkout.athliAiDescription')}
+              </p>
+              <div
+                aria-hidden="true"
+                className={cn(
+                  'absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2',
+                  selectedBuilder === 'ai'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-input bg-background'
+                )}
+              >
+                <div
+                  className={cn(
+                    'h-2.5 w-2.5 rounded-full',
+                    selectedBuilder === 'ai' ? 'bg-primary' : 'bg-transparent'
+                  )}
+                />
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={handleStandardBuilderClick}
               className={cn(
-                'text-xs',
-                selectedBuilder === 'standard' ? 'text-foreground/80' : 'text-muted-foreground'
-              )}
-            >
-              {t('workouts.addWorkout.standardBuilderDescription')}
-            </p>
-            <div
-              aria-hidden="true"
-              className={cn(
-                'absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2',
+                'relative h-24 rounded-lg border border-input p-4 flex flex-col items-start justify-center gap-1.5 transition-colors text-left',
                 selectedBuilder === 'standard'
-                  ? 'border-primary bg-primary/10'
-                  : 'border-input bg-background'
+                  ? 'border-primary bg-primary/5 shadow-sm'
+                  : 'bg-background hover:bg-accent/30'
               )}
+              aria-label={t('workouts.addWorkout.standardBuilderAria')}
             >
-              <div
+              <p className="text-sm font-semibold mb-1">{t('workouts.addWorkout.standardBuilder')}</p>
+              <p
                 className={cn(
-                  'h-2.5 w-2.5 rounded-full',
-                  selectedBuilder === 'standard' ? 'bg-primary' : 'bg-transparent'
+                  'text-xs',
+                  selectedBuilder === 'standard' ? 'text-foreground/80' : 'text-muted-foreground'
                 )}
-              />
-            </div>
-          </button>
+              >
+                {t('workouts.addWorkout.standardBuilderDescription')}
+              </p>
+              <div
+                aria-hidden="true"
+                className={cn(
+                  'absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full border-2',
+                  selectedBuilder === 'standard'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-input bg-background'
+                )}
+              >
+                <div
+                  className={cn(
+                    'h-2.5 w-2.5 rounded-full',
+                    selectedBuilder === 'standard' ? 'bg-primary' : 'bg-transparent'
+                  )}
+                />
+              </div>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

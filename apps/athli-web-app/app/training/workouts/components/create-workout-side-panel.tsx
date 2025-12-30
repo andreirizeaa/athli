@@ -23,13 +23,16 @@ import {
     Sparkles,
     BrainCog,
 } from 'lucide-react';
+import type { WorkoutPayload } from '../new/workout-schema';
 
 interface CreateWorkoutSidePanelProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    initialData?: WorkoutPayload;
+    onSuccess?: () => void;
 }
 
-export const CreateWorkoutSidePanel = ({ open, onOpenChange }: CreateWorkoutSidePanelProps) => {
+export const CreateWorkoutSidePanel = ({ open, onOpenChange, initialData, onSuccess }: CreateWorkoutSidePanelProps) => {
     const t = useTranslations();
     const router = useRouter();
     const { refreshWorkouts } = useTrainingData();
@@ -49,6 +52,16 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange }: CreateWorkoutSide
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [isGeneratingStandard, setIsGeneratingStandard] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+        if (open && initialData) {
+            setNewWorkoutName(initialData.title ? `${initialData.title} Copy` : '');
+            setNewWorkoutType(initialData.type || '');
+            setNewDifficulty(initialData.difficulty || 'all_levels');
+            setNewDescription(initialData.description || '');
+            setNewSelectedBuilder('standard');
+        }
+    }, [open, initialData]);
 
     const resetCreateWorkoutState = () => {
         setNewWorkoutName('');
@@ -94,29 +107,28 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange }: CreateWorkoutSide
             }
 
             // If standard builder, create workout directly and close panel
-            const meta = {
+            const meta: any = {
                 title: newWorkoutName.trim(),
                 description: newDescription.trim(),
                 type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
                 difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
-                equipment: [],
-                totalExercises: 0,
-                sections: [
-                    {
-                        id: `sec_regular_${Date.now()}`,
-                        type: 'regular' as const,
-                        exercises: [],
-                    },
-                ]
+                equipment: initialData?.equipment || [],
+                totalExercises: initialData?.totalExercises || 0,
+                ...(initialData?.items ? { items: initialData.items } : {
+                    sections: [
+                        {
+                            id: `sec_regular_${Date.now()}`,
+                            type: 'regular' as const,
+                            exercises: [],
+                        },
+                    ]
+                })
             };
 
             setIsGeneratingStandard(true);
             try {
-                await createWorkout(meta as any);
-                toast.success(t('workouts.new.toast.savedSuccessfully', {
-                    name: meta.title,
-                    type: meta.type.charAt(0).toUpperCase() + meta.type.slice(1)
-                }), {
+                await createWorkout(meta);
+                toast.success(t('workouts.new.toast.savedSuccessfully'), {
                     style: {
                         background: 'rgb(220 252 231)',
                         color: 'rgb(20 83 45)',
@@ -124,7 +136,11 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange }: CreateWorkoutSide
                     },
                 });
                 await refreshWorkouts();
-                onOpenChange(false);
+                if (onSuccess) {
+                    onSuccess();
+                } else {
+                    onOpenChange(false);
+                }
                 resetCreateWorkoutState();
             } catch (error) {
                 console.error('Failed to create workout:', error);
@@ -317,6 +333,7 @@ Focus on proper form and progressive overload.`;
                     resetCreateWorkoutState();
                 }
             }}
+            onOpenAutoFocus={(e) => e.preventDefault()}
             title={t('library.newWorkout')}
             footer={
                 <div className="flex w-full justify-end gap-2">
@@ -398,7 +415,7 @@ Focus on proper form and progressive overload.`;
                     setTypeError={setNewTypeError}
                     difficultyError={newDifficultyError}
                     setDifficultyError={setNewDifficultyError}
-                    selectedBuilder={newSelectedBuilder}
+                    selectedBuilder={initialData ? null : newSelectedBuilder}
                     setSelectedBuilder={setNewSelectedBuilder}
                 />
             ) : (
