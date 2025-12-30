@@ -7,6 +7,7 @@ import { coachHabitRouter } from './routes/habits.routes';
 import { coachMetricRouter } from './routes/metrics.routes';
 import { coachExerciseRouter } from './routes/training/exercises.routes';
 import { coachWorkoutRouter } from './routes/training/workouts.routes';
+import { coachSectionRouter } from './routes/training/sections.routes';
 import { coachProgramRouter } from './routes/training/programs.routes';
 import { coachCheckInRouter } from './routes/forms/check-ins.routes';
 import { coachQuestionnaireRouter } from './routes/forms/questionnaires.routes';
@@ -18,6 +19,7 @@ export const coachRouter = Router();
 const trainingRouter = Router();
 trainingRouter.use('/exercises', coachExerciseRouter);
 trainingRouter.use('/workouts', coachWorkoutRouter);
+trainingRouter.use('/sections', coachSectionRouter);
 trainingRouter.use('/programs', coachProgramRouter);
 
 // Forms sub-routes

@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
+import { Spinner } from '@/components/ui/spinner';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { archiveUser, archiveUser as archiveClient, type Athlete } from '@/api/coach/coach-client-service';
@@ -97,7 +98,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     connected: { class: 'min-w-[150px]', pixel: '150px' },
     email: { class: 'min-w-[220px]', pixel: '310px' },
     phone: { class: 'min-w-[160px]', pixel: '240px' },
-    country: { class: 'min-w-[100px]', pixel: '100px' },
+    country: { class: 'min-w-[120px]', pixel: '120px' },
     birthDate: { class: 'min-w-[140px]', pixel: '140px' },
     clientFor: { class: 'min-w-[150px]', pixel: '150px' },
   };
@@ -276,7 +277,10 @@ const AthletesPage = () => {
     setIsArchiveConfirmOpen(true);
   };
 
+  const [isArchiving, setIsArchiving] = useState<boolean>(false);
+
   const handleConfirmArchive = async () => {
+    setIsArchiving(true);
     try {
       const athleteIds = Array.from(selectedAthletes);
       // Get names of athletes being archived
@@ -301,6 +305,8 @@ const AthletesPage = () => {
     } catch (error) {
       toast.error(t('athletes.notifications.archiveError', { defaultValue: 'Failed to archive athlete(s)' }));
       console.error(error);
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -1312,9 +1318,10 @@ const AthletesPage = () => {
                     variant="ghost"
                     onClick={handleArchiveSelected}
                     className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={isArchiving}
                     aria-label={t('athletes.actions.archiveSelectedAria')}
                   >
-                    <Archive className="size-4" />
+                    {isArchiving ? <Spinner className="size-4" /> : <Archive className="size-4" />}
                     <span>{t('athletes.actions.archive')}</span>
                   </Button>
                 </TooltipTrigger>

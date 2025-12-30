@@ -3,7 +3,7 @@
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dumbbell, NotebookPen, Repeat, Sparkles, Timer } from 'lucide-react';
 
-type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits';
 
 type SectionSelectionPanelProps = {
   onSectionSelect: (type: SectionType) => void;
@@ -19,24 +19,6 @@ export const SectionSelectionPanel = ({ onSectionSelect }: SectionSelectionPanel
 
   return (
     <div className="mt-4 flex flex-col gap-4">
-      <Card
-        role="button"
-        tabIndex={0}
-        onClick={() => onSectionSelect('auxiliary')}
-        onKeyDown={(e) => handleKeyDown(e, 'auxiliary')}
-        className="cursor-pointer transition-colors hover:bg-accent"
-        aria-label="Select Warm up / Cool down / Mobility section type"
-      >
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-foreground" />
-            Warm up / Cool down / Mobility
-          </CardTitle>
-          <CardDescription>
-            Warm up, cool down, or mobility exercises. Follow the sets and reps specified.
-          </CardDescription>
-        </CardHeader>
-      </Card>
       <Card
         role="button"
         tabIndex={0}

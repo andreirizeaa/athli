@@ -84,6 +84,7 @@ export type Workout = {
   totalExercises: number;
   equipment: string | string[];
   created: string; // dd-mm-yy format
+  isFavourite: boolean;
   workout_data?: any;
 };
 
@@ -96,6 +97,7 @@ export type Program = {
   totalExercises: number;
   equipment: string;
   created: string; // dd-mm-yy format
+  isFavourite: boolean;
   program_data?: any;
 };
 
@@ -108,6 +110,7 @@ export type Exercise = {
   equipment: string;
   modality: string;
   created: string; // dd-mm-yy format
+  isFavourite: boolean;
   videoLink?: string;
 };
 

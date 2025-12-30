@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { Plus, Loader2, X } from 'lucide-react';
+import { Plus, Loader2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -478,16 +478,18 @@ const FilesPage = () => {
         }}
         title={t('files.editFile.title')}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleCloseEdit}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={handleSaveEdit}
               disabled={!hasEditChanges}
+              className="gap-2"
             >
+              <Check className="size-4" />
               {t('general.save')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleCloseEdit}>
-              {t('general.cancel')}
             </Button>
           </div>
         }

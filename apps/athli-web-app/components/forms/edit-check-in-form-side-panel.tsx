@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, Trash2 } from 'lucide-react';
+import { Info, Trash2, Check, Loader2 } from 'lucide-react';
 import { editCheckInDetails, deleteCheckIn, type CheckIn as FormType } from '@/api/coach/coach-check-in-service';
 import { formTemplates } from '@/constants/forms';
 import { toast } from 'sonner';
@@ -54,6 +54,8 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
   const [monthlyOption, setMonthlyOption] = useState<'first' | 'last' | 'specific'>('last');
   const [specificDay, setSpecificDay] = useState<number>(1);
   const [scheduleChanged, setScheduleChanged] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Get schedule from database or fallback to template
   const scheduleData = useMemo(() => {
@@ -123,6 +125,7 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
   const handleSave = async (values: FormFormValues) => {
     if (!form) return;
 
+    setIsSaving(true);
     try {
       // Build schedule data and cron expression from UI state
       const scheduleData = {
@@ -154,12 +157,15 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
     } catch (error) {
       console.error('Failed to save form:', error);
       toast.error(t('forms.toast.updateError'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async () => {
     if (!form) return;
 
+    setIsDeleting(true);
     try {
       await deleteCheckIn(form.id);
       toast.success(t('forms.toast.deleteSuccess'));
@@ -170,6 +176,8 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
     } catch (error) {
       console.error('Failed to delete form:', error);
       toast.error(t('forms.toast.deleteError'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -215,26 +223,38 @@ export const EditCheckInFormSidePanel = ({ open, onOpenChange, form, onSave, onD
       title={t('forms.editDetailsAndSchedule')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full gap-2">
-          <Button
-            type="button"
-            onClick={reactForm.handleSubmit(handleSave)}
-            disabled={!reactForm.formState.isValid || !hasChanges}
-          >
-            {t('general.save')}
-          </Button>
+        <div className="flex w-full justify-between gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={handleDelete}
-            className="gap-2"
+            className="gap-2 text-destructive hover:bg-destructive/10"
+            disabled={isDeleting || isSaving}
           >
-            <Trash2 className="size-4" />
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
             <span>{t('general.delete')}</span>
           </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
+              {t('general.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={reactForm.handleSubmit(handleSave)}
+              disabled={!reactForm.formState.isValid || !hasChanges || isDeleting || isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {t('general.save')}
+            </Button>
+          </div>
         </div>
       }
     >

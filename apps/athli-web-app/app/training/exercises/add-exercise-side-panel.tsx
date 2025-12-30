@@ -16,9 +16,10 @@ import {
 import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Spinner } from '@/components/ui/spinner';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { createExercise } from '@/api/coach/coach-exercise-service';
+import { toast } from 'sonner';
 
 const EXERCISE_CATEGORIES = ['Weight & Reps', 'Reps', 'Distance / Duration'] as const;
 
@@ -279,6 +280,11 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
     onOpenChange(false);
   };
 
+  const isFormValid =
+    exerciseName.trim() !== '' &&
+    category !== '' &&
+    (videoLink.trim() !== '' || videoFile !== null);
+
   const handleSave = async () => {
     let hasError = false;
 
@@ -369,6 +375,7 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
       };
 
       await createExercise(exerciseData);
+      toast.success(t('exercises.actions.createSuccess') || 'Exercise created successfully');
       onSave();
       handleClose();
     } catch (error) {
@@ -387,24 +394,30 @@ export const AddExerciseSidePanel = ({ open, onOpenChange, onSave }: AddExercise
       }}
       title={t('exercises.addExercise.title')}
       footer={
-        <div className="flex w-full justify-start gap-2">
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            aria-label={t('exercises.addExercise.saveAria')}
-            className={cn(isSaving && 'min-w-[120px] justify-center')}
-          >
-            {isSaving ? <Spinner className="h-4 w-4" /> : t('general.save')}
-          </Button>
+        <div className="flex w-full justify-end gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={handleClose}
             disabled={isSaving}
             aria-label={t('exercises.addExercise.cancelAria')}
+            className="gap-2"
           >
             {t('general.cancel')}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || !isFormValid}
+            aria-label={t('exercises.addExercise.saveAria')}
+            className={cn("gap-2", isSaving && 'min-w-[120px] justify-center')}
+          >
+            {isSaving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Check className="size-4" />
+            )}
+            {t('general.save')}
           </Button>
         </div>
       }

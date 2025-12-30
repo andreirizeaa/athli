@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -55,13 +55,12 @@ import {
   Settings,
   Star,
   User,
-  Archive,
   Trash2,
   Copy,
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
-import { getWorkouts, starWorkouts, archiveWorkouts, deleteWorkouts, duplicateWorkout, createWorkout } from '@/api/coach/coach-workout-service';
+import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, createWorkout, getWorkoutById } from '@/api/coach/coach-workout-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
 
@@ -143,9 +142,9 @@ const WorkoutsPage = () => {
   const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to check if value is empty (null, undefined, empty string, or empty array)
+  // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
   const isEmpty = (value: any): boolean => {
-    if (value === null || value === undefined || value === '') return true;
+    if (value === null || value === undefined || value === '' || value === 0) return true;
     if (Array.isArray(value) && value.length === 0) return true;
     return false;
   };
@@ -153,7 +152,8 @@ const WorkoutsPage = () => {
   useEffect(() => {
     // Initialize filteredCount and starred workouts from context data
     setFilteredCount(workouts.length);
-    const starred = new Set(workouts.filter(w => (w as any).starred).map(w => w.id));
+    setFilteredCount(workouts.length);
+    const starred = new Set(workouts.filter(w => w.isFavourite).map(w => w.id));
     setStarredWorkouts(starred);
   }, [workouts]);
 
@@ -170,7 +170,7 @@ const WorkoutsPage = () => {
   };
 
   const handleNavigateToWorkout = (workoutId: string) => {
-    router.push(`/training/workouts/${workoutId}/edit/standard`);
+    router.push(`/training/workouts/${workoutId}/edit`);
   };
 
   const handleNavigateToAthletes = () => {
@@ -232,38 +232,42 @@ const WorkoutsPage = () => {
         return;
       }
 
-      // If standard builder, create workout directly without navigation
-      setIsGeneratingStandard(true);
-
-      const workoutData = {
+      // If standard builder, create workout directly and close panel
+      const meta = {
         title: newWorkoutName.trim(),
         description: newDescription.trim(),
         type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
-        equipment: [] as string[],
+        equipment: [],
+        totalExercises: 0,
         sections: [
           {
             id: `sec_regular_${Date.now()}`,
             type: 'regular' as const,
             exercises: [],
-          }
-        ],
-        totalExercises: 0,
+          },
+        ]
       };
 
+      setIsGeneratingStandard(true);
       try {
-        const createdWorkout = await createWorkout(workoutData);
-        toast.success(t('library.workoutCreatedSuccessfully', { name: newWorkoutName }));
-
-        // Reload workouts to show the new one
+        await createWorkout(meta as any);
+        toast.success(t('workouts.new.toast.savedSuccessfully', {
+          name: meta.title,
+          type: meta.type.charAt(0).toUpperCase() + meta.type.slice(1)
+        }), {
+          style: {
+            background: 'rgb(220 252 231)',
+            color: 'rgb(20 83 45)',
+            border: '1px solid rgb(187 247 208)',
+          },
+        });
         await refreshWorkouts();
-
-        // Close side panel and reset state
         setIsCreateWorkoutOpen(false);
         resetCreateWorkoutState();
       } catch (error) {
         console.error('Failed to create workout:', error);
-        toast.error(t('library.workoutCreationFailed'));
+        toast.error(t('general.error'));
       } finally {
         setIsGeneratingStandard(false);
       }
@@ -274,7 +278,7 @@ const WorkoutsPage = () => {
 
       const meta = {
         title: newWorkoutName.trim(),
-        description: prompt,
+        description: newDescription.trim(),
         type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
         difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
         builder: newSelectedBuilder,
@@ -362,7 +366,7 @@ const WorkoutsPage = () => {
 
       // Wait a bit longer before navigation to ensure everything is ready
       setTimeout(() => {
-        const targetPath = '/training/workouts/new/standard';
+        const targetPath = '/training/workouts/new';
         router.push(targetPath);
 
         // Keep sidebar open during navigation, close after a brief delay
@@ -641,7 +645,7 @@ Focus on proper form and progressive overload.`;
   ];
 
   // Add actions column
-  const actionsColumn: ColumnDefinition<Workout> = {
+  const actionsColumn: ColumnDefinition<Workout> = useMemo(() => ({
     id: 'actions',
     label: '',
     sortable: false,
@@ -662,17 +666,17 @@ Focus on proper form and progressive overload.`;
         </Button>
       </div>
     ),
-  };
+  }), [t]);
 
-  const columns: ColumnDefinition<Workout>[] = [...allColumns, actionsColumn];
+  const columns: ColumnDefinition<Workout>[] = useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
 
   // Create filter definitions
-  const filters: FilterDefinition<Workout>[] = [
+  const filters: FilterDefinition<Workout>[] = useMemo(() => [
     {
       id: 'type',
       label: t('general.type'),
       icon: <Tag className="size-4" />,
-      options: uniqueTypes.map((type) => ({ value: type, label: type })),
+      options: uniqueTypes.map((type) => ({ value: type, label: formatWorkoutType(type) })),
       getFilterValue: (row) => row.type,
     },
     {
@@ -685,12 +689,17 @@ Focus on proper form and progressive overload.`;
       ],
       getFilterValue: (row) => (starredWorkouts.has(row.id) ? 'starred' : 'unstarred'),
     },
-  ];
+  ], [t, uniqueTypes, starredWorkouts]);
 
   const handleToggleStar = async (workoutId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starWorkouts(workoutId, !starredWorkouts.has(workoutId));
+      const isStarred = starredWorkouts.has(workoutId);
+      await starWorkouts(workoutId, !isStarred);
+
+      const workout = workouts.find((w) => w.id === workoutId);
+      const workoutName = workout?.program || t('library.workout');
+
       setStarredWorkouts((prev) => {
         const next = new Set(prev);
         if (next.has(workoutId)) {
@@ -700,8 +709,15 @@ Focus on proper form and progressive overload.`;
         }
         return next;
       });
+
+      if (isStarred) {
+        toast.success(t('workouts.detail.toast.unstarredSuccessfully', { name: workoutName }));
+      } else {
+        toast.success(t('workouts.detail.toast.starredSuccessfully', { name: workoutName }));
+      }
     } catch (error) {
       console.error('Failed to star workout:', error);
+      toast.error(t('general.error'));
     }
   };
 
@@ -731,23 +747,23 @@ Focus on proper form and progressive overload.`;
         });
         return next;
       });
-      // Clear selection after starring
+
+      const selectedCount = selectedWorkouts.size;
+      if (selectedCount === 1) {
+        const workoutId = Array.from(selectedWorkouts)[0];
+        const workout = workouts.find((w) => w.id === workoutId);
+        const name = workout?.program || t('library.workout');
+        toast.success(t('workouts.detail.toast.starredSuccessfully', { name }));
+      } else {
+        toast.success(t('workouts.detail.toast.starredBulkSuccessfully', { count: selectedCount }));
+      }
+
       setSelectedWorkouts(new Set());
     } catch (error) {
       console.error('Failed to star workouts:', error);
     }
   };
 
-  const handleArchiveSelected = async () => {
-    if (selectedWorkouts.size === 0) return;
-    try {
-      await archiveWorkouts(Array.from(selectedWorkouts), true);
-      // Clear selection after archiving
-      setSelectedWorkouts(new Set());
-    } catch (error) {
-      console.error('Failed to archive workouts:', error);
-    }
-  };
 
   const handleBulkDelete = async () => {
     if (selectedWorkouts.size === 0) return;
@@ -766,9 +782,9 @@ Focus on proper form and progressive overload.`;
       await refreshWorkouts();
 
       if (deleteCount === 1 && singleItemName) {
-        toast.success(`Successfully deleted ${singleItemName}`);
+        toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       } else {
-        toast.success(`Successfully deleted ${deleteCount} workout${deleteCount === 1 ? '' : 's'}`);
+        toast.success(t('workouts.detail.toast.deletedBulkSuccessfully', { count: deleteCount }));
       }
 
       // Clear selection after deleting
@@ -787,9 +803,9 @@ Focus on proper form and progressive overload.`;
       await refreshWorkouts();
 
       if (workout) {
-        toast.success(`Successfully deleted ${workout.program}`);
+        toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       } else {
-        toast.success('Successfully deleted workout');
+        toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       }
 
       setWorkoutToDelete(null);
@@ -799,24 +815,33 @@ Focus on proper form and progressive overload.`;
     }
   };
 
+  const [isBulkDuplicating, setIsBulkDuplicating] = useState<boolean>(false);
+
   const handleDuplicateSelected = async () => {
     if (selectedWorkouts.size !== 1) return;
     const workoutId = Array.from(selectedWorkouts)[0];
     const workout = workouts.find((w) => w.id === workoutId);
     if (!workout) return;
+    handleDuplicateSelectedPerRow(workoutId, workout.program);
+  };
+
+  const handleDuplicateSelectedPerRow = async (workoutId: string, name: string) => {
+    setIsBulkDuplicating(true);
     try {
-      const duplicatedWorkout = await duplicateWorkout(workoutId);
+      await duplicateWorkout(workoutId);
       // Reload workouts to show the duplicated one
       await refreshWorkouts();
-      // Clear selection after duplicating
       setSelectedWorkouts(new Set());
+      toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name: name }));
     } catch (error) {
       console.error('Failed to duplicate workout:', error);
+    } finally {
+      setIsBulkDuplicating(false);
     }
   };
 
   // Create first column renderer
-  const renderFirstColumn = (workout: Workout, isSelected: boolean) => {
+  const renderFirstColumn = useCallback((workout: Workout, isSelected: boolean) => {
     const isStarred = starredWorkouts.has(workout.id);
     return (
       <div className="flex items-center gap-3 h-full w-full">
@@ -879,11 +904,10 @@ Focus on proper form and progressive overload.`;
         </div>
       </div>
     );
-  };
+  }, [starredWorkouts, handleToggleWorkout, handleToggleStar, handleStarKeyDown, t]);
 
   // Create first column header with sorting
-  const renderFirstColumnHeader = ({
-    isSorted,
+  const renderFirstColumnHeader = useCallback(({
     isAscending,
     isDescending,
     onSort,
@@ -939,7 +963,7 @@ Focus on proper form and progressive overload.`;
         </DropdownMenu>
       </div>
     );
-  };
+  }, [t]);
 
   return (
     <div className="h-full w-full flex flex-col">
@@ -1024,6 +1048,7 @@ Focus on proper form and progressive overload.`;
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            {/* RESTORED Duplicate Selected */}
             {selectedWorkouts.size === 1 && (
               <TooltipProvider>
                 <Tooltip>
@@ -1032,9 +1057,10 @@ Focus on proper form and progressive overload.`;
                       variant="ghost"
                       onClick={handleDuplicateSelected}
                       className="gap-2"
+                      disabled={isBulkDuplicating}
                       aria-label={t('workouts.actions.duplicateAria')}
                     >
-                      <Copy className="size-4" />
+                      {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
                       <span>{t('workouts.actions.duplicate')}</span>
                     </Button>
                   </TooltipTrigger>
@@ -1059,24 +1085,6 @@ Focus on proper form and progressive overload.`;
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('workouts.actions.starSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleArchiveSelected}
-                    className="gap-2"
-                    aria-label={t('workouts.actions.archiveSelectedAria')}
-                  >
-                    <Archive className="size-4" />
-                    <span>{t('workouts.actions.archiveSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('workouts.actions.archiveSelected')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -1152,7 +1160,27 @@ Focus on proper form and progressive overload.`;
         }}
         title={t('library.newWorkout')}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseCreateWorkout}
+              disabled={isGenerating || isGeneratingStandard}
+              aria-label={t('library.cancelCreatingWorkout')}
+            >
+              {t('general.cancel')}
+            </Button>
+            {isCreateWorkoutStep2 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCreateWorkoutBack}
+                disabled={isGenerating || isGeneratingStandard}
+                aria-label={t('library.backToWorkoutDetails')}
+              >
+                {t('general.back')}
+              </Button>
+            )}
             <Button
               type="button"
               onClick={handleCreateWorkoutContinue}
@@ -1169,43 +1197,27 @@ Focus on proper form and progressive overload.`;
               aria-label={isCreateWorkoutStep2 ? t('library.generateWorkout') : t('library.continue')}
               className={cn(
                 ((isCreateWorkoutStep2 && isGenerating) || (!isCreateWorkoutStep2 && isGeneratingStandard)) &&
-                'min-w-[120px] justify-center'
+                'min-w-[120px] justify-center',
+                'gap-2'
               )}
             >
               {isCreateWorkoutStep2 ? (
                 isGenerating ? (
-                  <Spinner className="h-4 w-4" />
+                  <Spinner className="size-4" />
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className="size-4" />
                     {t('library.generate')}
                   </>
                 )
               ) : isGeneratingStandard ? (
-                <Spinner className="h-4 w-4" />
+                <Spinner className="size-4" />
               ) : (
-                t('library.continue')
+                <>
+                  <Check className="size-4" />
+                  {t('library.continue')}
+                </>
               )}
-            </Button>
-            {isCreateWorkoutStep2 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCreateWorkoutBack}
-                disabled={isGenerating || isGeneratingStandard}
-                aria-label={t('library.backToWorkoutDetails')}
-              >
-                {t('general.back')}
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseCreateWorkout}
-              disabled={isGenerating || isGeneratingStandard}
-              aria-label={t('library.cancelCreatingWorkout')}
-            >
-              {t('general.cancel')}
             </Button>
           </div>
         }

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { Info, Play, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Ellipsis, Play, Plus, Trash2, X } from 'lucide-react';
 import { Exercise, searchExercises } from '@/api/exercise/exercise-search';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +39,15 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/general/utils';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { MultiAsyncSelect, type Option } from '@/components/ui/multi-async-select';
 
 export type SetData = {
   setNumber: number;
@@ -61,6 +70,7 @@ export type SetFieldValidation = {
 type ExerciseWithSets = Exercise & {
   sets?: SetData[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
+  notes?: string; // Exercise-specific notes
 };
 
 type ExerciseCardProps = {
@@ -68,11 +78,16 @@ type ExerciseCardProps = {
   onVideoClick: (exercise: Exercise) => void;
   onExerciseChange: (newExercise: ExerciseWithSets) => void;
   onDelete: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
   isLinkedToPrev?: boolean;
   isLinkedToNext?: boolean;
   sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
   validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
+  hasSupersetError?: boolean;
 };
 
 type DropsetData = {
@@ -85,16 +100,21 @@ export const ExerciseCard = ({
   onVideoClick,
   onExerciseChange,
   onDelete,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = false,
+  canMoveDown = false,
   isLinkedToPrev = false,
   isLinkedToNext = false,
   sectionType = 'regular',
   validationErrors,
   onClearValidationField,
+  hasSupersetError = false,
 }: ExerciseCardProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [isSearchBarVisible, setIsSearchBarVisible] = useState(false);
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
   // Initialize alternatives from exercise prop if available, or load from exercise IDs
   const [alternatives, setAlternatives] = useState<Exercise[]>(() => {
     if (exercise.alternatives && exercise.alternatives.length > 0) {
@@ -105,11 +125,9 @@ export const ExerciseCard = ({
     }
     return [];
   });
-  const [isAlternativesSearchVisible, setIsAlternativesSearchVisible] = useState(false);
-  const [alternativesSearchQuery, setAlternativesSearchQuery] = useState('');
-  const [isAlternativesSearchOpen, setIsAlternativesSearchOpen] = useState(false);
-  const alternativesSearchInputRef = useRef<HTMLInputElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isAlternativesVisible, setIsAlternativesVisible] = useState(
+    exercise.alternatives && exercise.alternatives.length > 0
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const isEmpty = !exercise.name || exercise.name === '';
   const isSingleSetOnly = sectionType === 'amrap' || sectionType === 'timed' || sectionType === 'circuits';
@@ -130,6 +148,23 @@ export const ExerciseCard = ({
     ];
   });
   const [dropsetPopoverOpen, setDropsetPopoverOpen] = useState<number | null>(null);
+  const [alternativeSearchResults, setAlternativeSearchResults] = useState<Exercise[]>([]);
+
+  const handleAlternativesSearch = (query: string = '') => {
+    const results = searchExercises(query).filter(
+      (e) =>
+        e.exerciseId !== exercise.exerciseId &&
+        !(exercise.alternatives || []).includes(e.exerciseId)
+    );
+    setAlternativeSearchResults(results);
+  };
+
+  // Pre-load alternatives search results
+  useEffect(() => {
+    if (isAlternativesVisible) {
+      handleAlternativesSearch('');
+    }
+  }, [isAlternativesVisible, exercise.exerciseId, exercise.alternatives]);
   const [dropsetData, setDropsetData] = useState<{
     setIndex: number;
     repsDrops: DropsetData[];
@@ -144,14 +179,6 @@ export const ExerciseCard = ({
     return searchExercises(searchQuery);
   }, [searchQuery]);
 
-  const alternativesSearchResults = useMemo(() => {
-    if (!alternativesSearchQuery.trim()) {
-      // Show first 10 exercises when search is open but no query
-      return searchExercises('').slice(0, 10);
-    }
-    return searchExercises(alternativesSearchQuery);
-  }, [alternativesSearchQuery]);
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -165,20 +192,6 @@ export const ExerciseCard = ({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isSearchOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsAlternativesSearchOpen(false);
-        setAlternativesSearchQuery('');
-      }
-    };
-
-    if (isAlternativesSearchOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isAlternativesSearchOpen]);
 
   useEffect(() => {
     if (dropsetPopoverOpen) {
@@ -212,7 +225,7 @@ export const ExerciseCard = ({
   const handleExerciseSelect = (selectedExercise: Exercise) => {
     // When a new exercise is selected, reset the local sets and notify parent
     setIsSearchOpen(false);
-    setIsSearchBarVisible(false);
+    setIsSelectOpen(false);
     setSearchQuery('');
     // Reset sets to default values when exercise changes based on exercise type and section type
     let nextSets: SetData[];
@@ -299,46 +312,74 @@ export const ExerciseCard = ({
 
   useEffect(() => {
     if (isEmpty) {
-      setIsSearchBarVisible(true);
+      setIsSelectOpen(true);
       setIsSearchOpen(true);
       setSearchQuery('');
     }
   }, [isEmpty]);
 
-  const handleInputFocus = () => {
-    setIsSearchOpen(true);
-  };
+  const handleAlternativesChange = (selectedIds: string[]) => {
+    // Resolve full exercise objects
+    const updatedAlternatives = selectedIds
+      .map((id) => searchExercises('').find((e) => e.exerciseId === id))
+      .filter((e): e is Exercise => e !== undefined);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    setIsSearchOpen(true);
-  };
-
-  const handleAlternativesInputFocus = () => {
-    setIsAlternativesSearchOpen(true);
-  };
-
-  const handleAlternativesInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAlternativesSearchQuery(e.target.value);
-    setIsAlternativesSearchOpen(true);
-  };
-
-  const handleAlternativeSelect = (selectedExercise: Exercise) => {
-    // Check if exercise is already in alternatives
-    if (alternatives.some((alt) => alt.exerciseId === selectedExercise.exerciseId)) {
-      return;
-    }
-    const updatedAlternatives = [...alternatives, selectedExercise];
     setAlternatives(updatedAlternatives);
-    setIsAlternativesSearchOpen(false);
-    setAlternativesSearchQuery('');
 
     // Notify parent about updated alternatives
     onExerciseChange({
       ...exercise,
-      alternatives: updatedAlternatives.map((alt) => alt.exerciseId),
+      alternatives: selectedIds,
     });
-    // Keep search bar visible so user can add more alternatives
+
+    if (selectedIds.length === 0) {
+      setIsAlternativesVisible(false);
+    }
+  };
+
+  const renderExercisePill = (option: Option, onRemove: () => void) => {
+    const exerciseOption = alternatives.find((a) => a.exerciseId === option.value);
+
+    return (
+      <div className="flex items-center gap-1.5 bg-muted/40 rounded-md py-0.5 px-1.5 border border-border hover:border-foreground/20 transition-colors group/pill">
+        <div
+          className="relative w-5 h-5 flex-shrink-0 rounded cursor-pointer group/thumbnail-pill"
+          onClick={() => exerciseOption && onVideoClick(exerciseOption)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              exerciseOption && onVideoClick(exerciseOption);
+            }
+          }}
+        >
+          <Image
+            src={option.imageUrl || '/demo-img.png'}
+            alt={option.label}
+            fill
+            className="object-cover rounded"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumbnail-pill:bg-black/30 transition-colors rounded">
+            <div className="opacity-0 group-hover/thumbnail-pill:opacity-100 transition-opacity bg-black/60 rounded-full p-0.5">
+              <Play className="size-1.5 text-white fill-white" />
+            </div>
+          </div>
+        </div>
+        <span className="text-[10px] font-medium truncate max-w-[100px]">{option.label}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+          aria-label={`Remove ${option.label}`}
+        >
+          <X className="size-3" />
+        </button>
+      </div>
+    );
   };
 
   const handleSetChange = (index: number, field: keyof SetData, value: string) => {
@@ -564,7 +605,9 @@ export const ExerciseCard = ({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex flex-col gap-3 p-3 bg-background border',
+        'relative flex flex-col gap-3 p-3 bg-background',
+        // Border color: red if superset error, otherwise default
+        hasSupersetError ? 'border-2 border-destructive' : 'border',
         // Shape logic:
         // - standalone: fully rounded
         // - top of superset: rounded top only
@@ -579,377 +622,180 @@ export const ExerciseCard = ({
               : 'rounded-lg'
       )}
     >
-      <div className="flex items-start gap-2">
-        <div className="flex-1 relative flex items-center gap-2">
-          {isEmpty ? (
-            <div className="relative flex-1 flex items-center gap-2">
-              <Input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={handleInputChange}
-                onFocus={handleInputFocus}
-                placeholder="Choose an exercise..."
-                className={cn('h-7 pr-7 text-[13px] flex-1', searchQuery && 'pr-7')}
-                autoFocus
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setIsSearchOpen(false);
-                  }}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-              {isSearchOpen && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-12 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                  {searchResults.map((result) => (
-                    <div
-                      key={result.exerciseId}
-                      onClick={() => handleExerciseSelect(result)}
-                      className="flex items-center gap-2 p-2 hover:bg-accent cursor-pointer transition-colors"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleExerciseSelect(result);
-                        }
-                      }}
-                      aria-label={`Select ${result.name}`}
-                    >
-                      <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden">
-                        <Image
-                          src={result.imageUrl || '/demo-img.png'}
-                          alt={result.name || 'Exercise thumbnail'}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <span className="text-sm flex-1">{result.name}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setIsInfoModalOpen(true)}
-                      aria-label="View exercise info"
-                      disabled={isEmpty}
-                      className="h-7 w-7 hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      <Info className="size-3" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View exercise info</p>
-                  </TooltipContent>
-                </Tooltip>
-                <DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          aria-label="Delete exercise"
-                          className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-colors"
-                        >
-                          <Trash2 className="size-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Delete exercise</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={onDelete}
-                      className="text-destructive focus:text-destructive text-center justify-center"
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+      {/* New Header */}
+      <div className="flex items-center gap-1">
+        {/* Thumbnail with hover play button */}
+        {exercise.name && (
+          <div
+            className="relative w-9 h-9 flex-shrink-0 rounded-md cursor-pointer group/thumbnail border border-input overflow-hidden"
+            onClick={() => onVideoClick(exercise as Exercise)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onVideoClick(exercise as Exercise);
+              }
+            }}
+            aria-label={`Play video for ${exercise.name}`}
+          >
+            <Image
+              src={exercise.imageUrl || '/demo-img.png'}
+              alt={exercise.name}
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover/thumbnail:bg-black/30 transition-colors">
+              <div className="opacity-0 group-hover/thumbnail:opacity-100 transition-opacity bg-black/60 rounded-full p-1">
+                <Play className="size-2.5 text-white fill-white" />
               </div>
             </div>
-          ) : (
-            <>
-              <div className="flex flex-col gap-2 flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-                    <span className="text-sm font-medium truncate">{exercise.name}</span>
-                    {alternatives.map((alt) => (
-                      <Tooltip key={alt.exerciseId}>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updatedAlternatives = alternatives.filter(
-                                (a) => a.exerciseId !== alt.exerciseId
-                              );
-                              setAlternatives(updatedAlternatives);
-                              onExerciseChange({
-                                ...exercise,
-                                alternatives: updatedAlternatives.map((a) => a.exerciseId),
-                              });
-                            }}
-                            className="text-sm font-medium truncate hover:text-destructive transition-colors cursor-pointer"
-                            aria-label={`Remove alternative exercise ${alt.name}`}
-                          >
-                            <span className="text-sm text-muted-foreground"> / </span>
-                            {alt.name}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Remove alternative exercise</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                  <span className="text-sm text-muted-foreground flex-shrink-0">/</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (isAlternativesSearchVisible) {
-                            setIsAlternativesSearchVisible(false);
-                            setIsAlternativesSearchOpen(false);
-                            setAlternativesSearchQuery('');
-                          } else {
-                            setIsAlternativesSearchVisible(true);
-                            setIsAlternativesSearchOpen(true);
-                            setAlternativesSearchQuery('');
-                          }
+          </div>
+        )}
+
+        {/* Exercise Select / Combobox */}
+        <div className="flex-1 min-w-0">
+          <Popover open={isSelectOpen} onOpenChange={setIsSelectOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={isSelectOpen}
+                className="w-full justify-between h-9 text-sm font-normal"
+              >
+                <span className="truncate">{exercise.name || 'Choose an exercise...'}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[400px] p-0" align="start">
+              <Command>
+                <CommandInput
+                  placeholder="Search exercises..."
+                  value={searchQuery}
+                  onValueChange={setSearchQuery}
+                />
+                <CommandList>
+                  <CommandEmpty>No exercise found.</CommandEmpty>
+                  <CommandGroup>
+                    {searchResults.slice(0, 20).map((result) => (
+                      <CommandItem
+                        key={result.exerciseId}
+                        value={result.name}
+                        onSelect={() => {
+                          handleExerciseSelect(result);
                         }}
-                        aria-label="Add alternatives"
-                        className="h-7 w-7 hover:bg-accent hover:text-accent-foreground transition-colors flex-shrink-0"
+                        className="flex items-center gap-2"
                       >
-                        <Plus className="size-3" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Add alternatives</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                {isAlternativesSearchVisible && (
-                  <div className="relative w-[400px]">
-                    <Input
-                      ref={alternativesSearchInputRef}
-                      type="text"
-                      value={alternativesSearchQuery}
-                      onChange={handleAlternativesInputChange}
-                      onFocus={handleAlternativesInputFocus}
-                      placeholder="Search for alternative..."
-                      className={cn('h-7 pr-7 text-[13px] w-full', alternativesSearchQuery && 'pr-7')}
-                      autoFocus
-                    />
-                    {alternativesSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAlternativesSearchQuery('');
-                          setIsAlternativesSearchOpen(false);
-                        }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label="Clear search"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    )}
-                    {isAlternativesSearchOpen && alternativesSearchResults.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                        {alternativesSearchResults.map((result) => (
-                          <div
-                            key={result.exerciseId}
-                            onClick={() => handleAlternativeSelect(result)}
-                            className="flex items-center gap-2 p-2 hover:bg-accent cursor-pointer transition-colors"
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleAlternativeSelect(result);
-                              }
-                            }}
-                            aria-label={`Select ${result.name}`}
-                          >
-                            <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden">
-                              <Image
-                                src={result.imageUrl}
-                                alt={result.name}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                            <span className="text-sm flex-1">{result.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              {isSearchBarVisible && (
-                <div className="relative flex-1 self-start">
-                  <Input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={handleInputChange}
-                    onFocus={handleInputFocus}
-                    placeholder="Search for exercise..."
-                    className={cn('h-7 pr-7 text-[13px]', searchQuery && 'pr-7')}
-                    autoFocus
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setIsSearchOpen(false);
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label="Clear search"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  )}
-                  {isSearchOpen && searchResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                      {searchResults.map((result) => (
-                        <div
-                          key={result.exerciseId}
-                          onClick={() => handleExerciseSelect(result)}
-                          className="flex items-center gap-2 p-2 hover:bg-accent cursor-pointer transition-colors"
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleExerciseSelect(result);
-                            }
-                          }}
-                          aria-label={`Select ${result.name}`}
-                        >
-                          <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden">
-                            <Image
-                              src={result.imageUrl}
-                              alt={result.name}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <span className="text-sm flex-1">{result.name}</span>
+                        <div className="relative w-8 h-8 flex-shrink-0 rounded overflow-hidden">
+                          <Image
+                            src={result.imageUrl || '/demo-img.png'}
+                            alt={result.name}
+                            fill
+                            className="object-cover"
+                          />
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="flex items-center gap-1 flex-shrink-0 self-start">
-                {alternatives.length === 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setIsSearchBarVisible(!isSearchBarVisible);
-                          if (!isSearchBarVisible) {
-                            setSearchQuery('');
-                            setIsSearchOpen(true);
-                          } else {
-                            setIsSearchOpen(false);
-                            setSearchQuery('');
-                          }
-                        }}
-                        aria-label="Change exercise"
-                        className="h-7 w-7 hover:bg-accent hover:text-accent-foreground transition-colors"
-                      >
-                        <RefreshCw className="size-3" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Change exercise</p>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setIsInfoModalOpen(true)}
-                      aria-label="View exercise info"
-                      className="h-7 w-7 hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      <Info className="size-3" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>View exercise info</p>
-                  </TooltipContent>
-                </Tooltip>
-                <DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          aria-label="Delete exercise"
-                          className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive hover:border-destructive transition-colors"
-                        >
-                          <Trash2 className="size-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Delete exercise</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={onDelete}
-                      className="text-destructive focus:text-destructive text-center justify-center"
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </>
-          )}
+                        <span className="flex-1">{result.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
+
+        {/* Actions Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 flex-shrink-0"
+              aria-label="Exercise actions"
+            >
+              <Ellipsis className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {canMoveUp && onMoveUp && (
+              <DropdownMenuItem onClick={onMoveUp}>
+                <ArrowUp className="size-4 mr-2" />
+                Move up
+              </DropdownMenuItem>
+            )}
+            {canMoveDown && onMoveDown && (
+              <DropdownMenuItem onClick={onMoveDown}>
+                <ArrowDown className="size-4 mr-2" />
+                Move down
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={() => {
+                setIsAlternativesVisible(true);
+              }}
+            >
+              <Plus className="size-4 mr-2" />
+              Add alternative exercise
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={onDelete}
+            >
+              <Trash2 className="size-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      {(exercise.exerciseType === 'weight_reps' ||
-        exercise.exerciseType === 'reps' ||
-        exercise.exerciseType === 'distance_duration') && (
-          <div className="w-full border rounded-lg overflow-hidden">
+
+      {/* Exercise Notes */}
+      <div className="w-full relative">
+        <Input
+          placeholder="Notes"
+          value={exercise.notes || ''}
+          onChange={(e) => {
+            onExerciseChange({
+              ...exercise,
+              notes: e.target.value,
+            });
+          }}
+          className="w-full pr-8"
+        />
+        {exercise.notes && (
+          <button
+            type="button"
+            onClick={() => {
+              onExerciseChange({
+                ...exercise,
+                notes: '',
+              });
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Clear notes"
+          >
+            <X className="size-4" />
+          </button>
+        )}
+      </div>
+
+      {
+        (exercise.exerciseType === 'weight_reps' ||
+          exercise.exerciseType === 'reps' ||
+          exercise.exerciseType === 'distance_duration') && (
+          <div className="w-full border rounded-md overflow-hidden">
             <Table className="text-[11px] leading-tight">
               <TableHeader className="bg-transparent">
                 <TableRow className="h-8">
-                  <TableHead className="text-center h-8 py-1 px-2">Set</TableHead>
+                  <TableHead className="text-center h-8 py-1 px-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddSet}
+                      className="h-5 px-3 text-[11px] font-medium border"
+                      aria-label="Add set"
+                    >
+                      Add set
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
                   {exercise.exerciseType === 'distance_duration' ? (
                     <>
@@ -1305,32 +1151,51 @@ export const ExerciseCard = ({
                     </TableCell>
                   </TableRow>
                 ))}
-                {!isSingleSetOnly && (
-                  <TableRow
-                    className="h-8 bg-background cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={handleAddSet}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleAddSet();
-                      }
-                    }}
-                    aria-label="Add set"
-                  >
-                    <TableCell
-                      colSpan={exercise.exerciseType === 'reps' ? 5 : 6}
-                      className="text-center py-1 text-[11px]"
-                    >
-                      Add set
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </div>
-        )}
+        )
+      }
+
+      {/* Alternative Exercises Multi-Select */}
+      {isAlternativesVisible && (
+        <div className="flex flex-col gap-1.5 mt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Alternative Exercises
+            </span>
+          </div>
+          <MultiAsyncSelect
+            async
+            placeholder="Search for alternative exercises..."
+            options={alternativeSearchResults.map((e) => ({
+              label: e.name,
+              value: e.exerciseId,
+              imageUrl: e.imageUrl,
+            }))}
+            value={exercise.alternatives || []}
+            onValueChange={handleAlternativesChange}
+            onSearch={handleAlternativesSearch}
+            renderPill={renderExercisePill}
+            labelFunc={(option) => (
+              <div className="flex items-center gap-2">
+                <div className="relative w-7 h-7 rounded overflow-hidden flex-shrink-0">
+                  <Image
+                    src={option.imageUrl || '/demo-img.png'}
+                    alt={option.label}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <span>{option.label}</span>
+              </div>
+            )}
+            className="w-full bg-transparent border-input h-9 shadow-none"
+            maxCount={10}
+          />
+        </div>
+      )}
+
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
         <DialogContent
           className="w-full max-w-[60vw] sm:max-w-[60vw] max-h-[85vh] flex flex-col overflow-y-auto"

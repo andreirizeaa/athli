@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Search, FileText, Info, Edit } from 'lucide-react';
+import { Search, FileText, Info, Edit, Check, Loader2 } from 'lucide-react';
 import { getCheckIns, type CheckIn as Form } from '@/api/coach/coach-check-in-service';
 import { assignForm, convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
 import { formTemplates } from '@/constants/forms';
@@ -36,6 +36,7 @@ export const AddCheckInSidePanel = ({
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedForms, setSelectedForms] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -113,6 +114,7 @@ export const AddCheckInSidePanel = ({
   const handleSave = async () => {
     if (selectedForms.size === 0 || !clientId || !coachId) return;
 
+    setIsSaving(true);
     try {
       for (const formId of selectedForms) {
         const form = forms.find(f => f.id === formId);
@@ -138,6 +140,8 @@ export const AddCheckInSidePanel = ({
       handleClose();
     } catch (error) {
       console.error('Failed to assign forms:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -248,16 +252,21 @@ export const AddCheckInSidePanel = ({
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px] h-full flex flex-col"
       footer={
         forms.length > 0 ? (
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={handleSave}
-              disabled={selectedForms.size === 0}
+              disabled={selectedForms.size === 0 || isSaving}
             >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {selectedForms.size > 0 ? `${t('general.assign')} ${selectedForms.size} ${selectedForms.size === 1 ? 'Check-in' : 'Check-ins'}` : t('general.assign')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
             </Button>
           </div>
         ) : null

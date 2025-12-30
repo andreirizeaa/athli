@@ -12,17 +12,34 @@ export type ExerciseWithSuperset = Exercise & {
 };
 
 /**
+ * Section type for the builder UI
+ */
+export type WorkoutSection = {
+  id: string;
+  name?: string;
+  type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
+  exercises?: ExerciseWithSuperset[];
+  roundDurationSec?: number;
+  targetRounds?: number;
+  category?: 'warmup' | 'cooldown' | 'mobility';
+  notes?: string;
+  isLoading?: boolean;
+};
+
+/**
+ * A workout schema item can be either:
+ * - A top-level exercise (possibly part of a superset with adjacent exercises)
+ * - A section containing exercises
+ */
+export type WorkoutSchemaItem =
+  | { itemType: 'exercise'; exercise: ExerciseWithSuperset }
+  | { itemType: 'section'; section: WorkoutSection };
+
+/**
  * Workout schema used in the builder UI
  */
 export type WorkoutSchema = {
-  sections: Array<{
-    id: string;
-    type: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
-    exercises?: ExerciseWithSuperset[];
-    roundDurationSec?: number;
-    targetRounds?: number;
-    category?: 'warmup' | 'cooldown' | 'mobility';
-  }>;
+  items: WorkoutSchemaItem[];
 };
 
 /**
@@ -47,9 +64,14 @@ export type SetFieldValidation = {
 };
 
 /**
- * Validation errors for exercises (keyed by instanceId, then set index)
+ * Validation errors for exercises (keyed by instanceId)
+ * Can contain set-level errors (indexed by set number) and/or a supersetMismatch flag
  */
-export type ValidationErrors = Record<string, Record<number, SetFieldValidation>>;
+export type ExerciseValidationError = Record<number, SetFieldValidation> & {
+  supersetMismatch?: boolean;
+};
+
+export type ValidationErrors = Record<string, ExerciseValidationError>;
 
 /**
  * Validation errors for sections

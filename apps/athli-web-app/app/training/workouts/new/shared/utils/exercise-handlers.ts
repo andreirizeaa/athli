@@ -1,4 +1,26 @@
-import type { WorkoutSchema, ExerciseWithSuperset } from '../types/workout-builder.types';
+import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset } from '../types/workout-builder.types';
+
+/**
+ * Handles deleting a top-level exercise from the items array
+ *
+ * @param exerciseInstanceId - The instance ID of the exercise to delete
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema
+ */
+export const handleDeleteTopLevelExercise = (
+  exerciseInstanceId: string,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  return {
+    ...currentSchema,
+    items: currentSchema.items.filter((item) => {
+      if (item.itemType === 'exercise') {
+        return item.exercise.instanceId !== exerciseInstanceId;
+      }
+      return true;
+    }),
+  };
+};
 
 /**
  * Handles deleting an exercise from a section (called from overview panel)
@@ -15,14 +37,17 @@ export const handleDeleteExerciseFromOverview = (
 ): WorkoutSchema => {
   return {
     ...currentSchema,
-    sections: currentSchema.sections.map((section) => {
-      if (section.id === sectionId && section.exercises) {
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
         return {
-          ...section,
-          exercises: section.exercises.filter((exercise) => exercise.exerciseId !== exerciseId),
+          ...item,
+          section: {
+            ...item.section,
+            exercises: item.section.exercises.filter((exercise) => exercise.exerciseId !== exerciseId),
+          },
         };
       }
-      return section;
+      return item;
     }),
   };
 };
@@ -42,18 +67,61 @@ export const handleDeleteSupersetFromOverview = (
 ): WorkoutSchema => {
   return {
     ...currentSchema,
-    sections: currentSchema.sections.map((section) => {
-      if (section.id === sectionId && section.exercises) {
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
         const exerciseIdSet = new Set(exerciseIds);
         return {
-          ...section,
-          exercises: section.exercises.filter(
-            (exercise) => !exerciseIdSet.has(exercise.exerciseId)
-          ),
+          ...item,
+          section: {
+            ...item.section,
+            exercises: item.section.exercises.filter(
+              (exercise) => !exerciseIdSet.has(exercise.exerciseId)
+            ),
+          },
         };
       }
-      return section;
+      return item;
     }),
+  };
+};
+
+/**
+ * Handles adding a manual empty exercise at the top level
+ *
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema
+ */
+export const handleAddTopLevelExercise = (
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  const emptyExercise: ExerciseWithSuperset = {
+    exerciseId: `empty_${Date.now()}`,
+    name: '',
+    imageUrl: '',
+    videoUrl: '',
+    equipments: [],
+    bodyParts: [],
+    exerciseType: 'weight_reps',
+    targetMuscles: [],
+    secondaryMuscles: [],
+    keywords: [],
+    overview: '',
+    instructions: [],
+    exerciseTips: [],
+    variations: [],
+    relatedExerciseIds: [],
+    supersetGroupId: null,
+    instanceId: `empty_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  };
+
+  const newItem: WorkoutSchemaItem = {
+    itemType: 'exercise',
+    exercise: emptyExercise,
+  };
+
+  return {
+    ...currentSchema,
+    items: [...currentSchema.items, newItem],
   };
 };
 
@@ -90,14 +158,17 @@ export const handleAddExercise = (
 
   return {
     ...currentSchema,
-    sections: currentSchema.sections.map((section) => {
-      if (section.id === sectionId && section.exercises) {
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId) {
         return {
-          ...section,
-          exercises: [...section.exercises, emptyExercise],
+          ...item,
+          section: {
+            ...item.section,
+            exercises: [...(item.section.exercises || []), emptyExercise],
+          },
         };
       }
-      return section;
+      return item;
     }),
   };
 };

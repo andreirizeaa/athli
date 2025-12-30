@@ -140,24 +140,25 @@ export const RestoreClientsSidePanel = ({
             onOpenChange={handleOpenChange}
             title={t('athletes.restorePanel.title')}
             footer={
-                <div className="flex w-full justify-start gap-2">
-                    <Button
-                        onClick={handleRestore}
-                        disabled={selectedClientIds.size === 0 || isRestoring}
-                    >
-                        {isRestoring ? <Spinner className="mr-2" /> : null}
-                        {selectedClientIds.size === 0
-                            ? t('athletes.restorePanel.restoreButton')
-                            : selectedClientIds.size === 1
-                                ? 'Restore 1 client'
-                                : `Restore ${selectedClientIds.size} clients`}
-                    </Button>
+                <div className="flex w-full justify-end gap-2">
                     <Button
                         variant="outline"
                         onClick={() => handleOpenChange(false)}
                         disabled={isRestoring}
                     >
                         {t('general.cancel')}
+                    </Button>
+                    <Button
+                        onClick={handleRestore}
+                        disabled={selectedClientIds.size === 0 || isRestoring}
+                        className="gap-2"
+                    >
+                        {isRestoring ? <Spinner className="size-4" /> : null}
+                        {selectedClientIds.size === 0
+                            ? t('athletes.restorePanel.restoreButton')
+                            : selectedClientIds.size === 1
+                                ? 'Restore 1 client'
+                                : `Restore ${selectedClientIds.size} clients`}
                     </Button>
                 </div>
             }

@@ -150,4 +150,129 @@ export const coachExercisesController = {
             message: 'Coach exercise deleted successfully',
         });
     },
+
+    /**
+     * Toggle favorite status
+     */
+    toggleFavorite: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+        const { isFavourite } = req.body;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        if (typeof isFavourite !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'isFavourite boolean is required' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        const { data: exercise, error } = await supabase
+            .from('coach_exercises')
+            .update({
+                is_favourite: isFavourite,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', id)
+            .eq('coach_id', userId)
+            .select()
+            .single();
+
+        if (error) {
+            return internalError(res, { message: error.message });
+        }
+
+        if (!exercise) {
+            return notFound(res, { message: 'Exercise not found' });
+        }
+
+        success(res, {
+            message: `Exercise ${isFavourite ? 'starred' : 'unstarred'} successfully`,
+            data: { exercise },
+        });
+    },
+    /**
+     * Get exercise by ID
+     */
+    getExerciseById: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+        const { data: exercise, error } = await supabase
+            .from('coach_exercises')
+            .select('*')
+            .eq('id', id)
+            .eq('coach_id', userId)
+            .single();
+
+        if (error || !exercise) {
+            return notFound(res, { message: 'Exercise not found' });
+        }
+
+        success(res, {
+            message: 'Coach exercise retrieved successfully',
+            data: { exercise },
+        });
+    },
+
+    /**
+     * Duplicate a coach exercise
+     */
+    duplicateExercise: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const { id } = req.params || req.body;
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Get existing exercise
+        const { data: existing, error: fetchError } = await supabase
+            .from('coach_exercises')
+            .select('*')
+            .eq('id', id)
+            .eq('coach_id', userId)
+            .single();
+
+        if (fetchError || !existing) {
+            return notFound(res, { message: 'Exercise not found' });
+        }
+
+        // Create duplicate
+        const { data: exercise, error } = await supabase
+            .from('coach_exercises')
+            .insert({
+                coach_id: userId,
+                name: `${existing.name} (Copy)`,
+                description: existing.description,
+                category: existing.category,
+                muscle_group: existing.muscle_group,
+                equipment: existing.equipment,
+                modality: existing.modality,
+                video_link: existing.video_link,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            return internalError(res, { message: error.message });
+        }
+
+        created(res, {
+            message: 'Coach exercise duplicated successfully',
+            data: { exercise },
+        });
+    },
 };

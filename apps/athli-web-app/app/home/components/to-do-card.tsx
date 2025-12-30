@@ -33,7 +33,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Calendar, Search } from 'lucide-react';
+import { Plus, Calendar, Search, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { mockAthletes } from '@/components/app/app-shell';
 import { format } from 'date-fns';
@@ -434,56 +434,56 @@ export const ToDoCard = () => {
                 {filteredAndSortedTasks.map((task) => {
                   const isOverdue = isTaskOverdue(task);
                   return (
-                  <div
-                    key={task.id}
-                    className={cn(
-                      'border-b transition-colors hover:bg-accent cursor-pointer',
-                      isOverdue && 'bg-primary/5 border-primary/20'
-                    )}
-                    onClick={() => handleTaskRowClick(task)}
-                  >
-                    <div className="grid grid-cols-[1fr_120px_100px_60px] gap-4 py-4 px-4 items-center">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex flex-col min-w-0">
-                          <span className={cn('text-sm font-medium', task.completed && 'line-through text-muted-foreground')}>
-                            {task.title}
-                          </span>
-                          {task.information && (
-                            <span className={cn('text-xs text-muted-foreground', task.completed && 'line-through')}>
-                              {truncateText(task.information, 80)}
+                    <div
+                      key={task.id}
+                      className={cn(
+                        'border-b transition-colors hover:bg-accent cursor-pointer',
+                        isOverdue && 'bg-primary/5 border-primary/20'
+                      )}
+                      onClick={() => handleTaskRowClick(task)}
+                    >
+                      <div className="grid grid-cols-[1fr_120px_100px_60px] gap-4 py-4 px-4 items-center">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex flex-col min-w-0">
+                            <span className={cn('text-sm font-medium', task.completed && 'line-through text-muted-foreground')}>
+                              {task.title}
+                            </span>
+                            {task.information && (
+                              <span className={cn('text-xs text-muted-foreground', task.completed && 'line-through')}>
+                                {truncateText(task.information, 80)}
+                              </span>
+                            )}
+                          </div>
+                          {task.type === 'client' && task.clientAvatar && (
+                            <Avatar className="h-8 w-8 flex-shrink-0">
+                              <AvatarImage src={task.clientAvatar} alt={task.clientName} />
+                              <AvatarFallback>{task.clientName?.charAt(0) || 'C'}</AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                        <div className="text-sm whitespace-nowrap text-right">
+                          {isOverdue ? (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                              {formatDueDate(task.dueDate)}
+                            </Badge>
+                          ) : (
+                            <span className={cn('text-muted-foreground', task.completed && 'line-through')}>
+                              {formatDueDate(task.dueDate)}
                             </span>
                           )}
                         </div>
-                        {task.type === 'client' && task.clientAvatar && (
-                          <Avatar className="h-8 w-8 flex-shrink-0">
-                            <AvatarImage src={task.clientAvatar} alt={task.clientName} />
-                            <AvatarFallback>{task.clientName?.charAt(0) || 'C'}</AvatarFallback>
-                          </Avatar>
-                        )}
-                      </div>
-                      <div className="text-sm whitespace-nowrap text-right">
-                        {isOverdue ? (
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                            {formatDueDate(task.dueDate)}
-                          </Badge>
-                        ) : (
-                          <span className={cn('text-muted-foreground', task.completed && 'line-through')}>
-                            {formatDueDate(task.dueDate)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground whitespace-nowrap text-right">
-                        {task.type === 'client' ? t('home.taskTypeClient') : t('home.taskTypeGeneral')}
-                      </div>
-                      <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={task.completed}
-                          onCheckedChange={() => handleToggleComplete(task.id)}
-                          aria-label={task.completed ? t('home.markIncomplete') : t('home.markComplete')}
-                        />
+                        <div className="text-sm text-muted-foreground whitespace-nowrap text-right">
+                          {task.type === 'client' ? t('home.taskTypeClient') : t('home.taskTypeGeneral')}
+                        </div>
+                        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={task.completed}
+                            onCheckedChange={() => handleToggleComplete(task.id)}
+                            aria-label={task.completed ? t('home.markIncomplete') : t('home.markComplete')}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
                   );
                 })}
               </div>
@@ -499,17 +499,19 @@ export const ToDoCard = () => {
         title={t('home.addTask')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleCloseTaskPanel}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={form.handleSubmit(handleSaveTask)}
               disabled={!form.formState.isValid}
               aria-label={t('general.save')}
+              className="gap-2"
             >
+              <Check className="size-4" />
               {t('general.save')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleCloseTaskPanel}>
-              {t('general.cancel')}
             </Button>
           </div>
         }
@@ -699,25 +701,29 @@ export const ToDoCard = () => {
         title={t('home.editTask')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button
-              type="button"
-              onClick={editForm.handleSubmit(handleSaveEditTask)}
-              disabled={!hasEditChanges || !editForm.formState.isValid}
-              aria-label={t('general.save')}
-            >
-              {t('general.save')}
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleCloseEditTaskPanel}>
+              {t('general.cancel')}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={handleDeleteTask}
               aria-label={t('general.delete')}
+              className="gap-2"
             >
+              <Trash2 className="size-4" />
               {t('general.delete')}
             </Button>
-            <Button type="button" variant="outline" onClick={handleCloseEditTaskPanel}>
-              {t('general.cancel')}
+            <Button
+              type="button"
+              onClick={editForm.handleSubmit(handleSaveEditTask)}
+              disabled={!hasEditChanges || !editForm.formState.isValid}
+              aria-label={t('general.save')}
+              className="gap-2"
+            >
+              <Check className="size-4" />
+              {t('general.save')}
             </Button>
           </div>
         }

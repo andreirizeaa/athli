@@ -184,3 +184,5 @@ coachProgramRouter.patch('/:id', supabaseAuthenticate, coachProgramsController.u
 coachProgramRouter.delete('/:id', supabaseAuthenticate, coachProgramsController.deleteProgram);
 
 coachProgramRouter.post('/:id/duplicate', supabaseAuthenticate, coachProgramsController.duplicateProgram);
+
+coachProgramRouter.patch('/:id/toggle-favorite', supabaseAuthenticate, coachProgramsController.toggleFavorite);

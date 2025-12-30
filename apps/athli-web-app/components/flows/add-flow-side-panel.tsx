@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search } from 'lucide-react';
+import { Search, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ export const AddFlowSidePanel = ({ open, onOpenChange }: AddFlowSidePanelProps) 
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'manual' | 'library'>('library');
   const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const formSchema = z.object({
     name: z
@@ -66,6 +67,7 @@ export const AddFlowSidePanel = ({ open, onOpenChange }: AddFlowSidePanelProps) 
   };
 
   const handleSave = async (values: FormFormValues) => {
+    setIsSaving(true);
     try {
       const newFlow = await createFlow({
         name: values.name,
@@ -76,10 +78,13 @@ export const AddFlowSidePanel = ({ open, onOpenChange }: AddFlowSidePanelProps) 
       router.push(`/flows/${newFlow.id}`);
     } catch (error) {
       console.error('Failed to create flow:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleSelectTemplate = async (template: FlowTemplate) => {
+    setIsSaving(true);
     try {
       // Create flow with template name and description
       const newFlow = await createFlow({
@@ -99,6 +104,8 @@ export const AddFlowSidePanel = ({ open, onOpenChange }: AddFlowSidePanelProps) 
       router.push(`/flows/${newFlow.id}`);
     } catch (error) {
       console.error('Failed to create flow from template:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -157,16 +164,21 @@ export const AddFlowSidePanel = ({ open, onOpenChange }: AddFlowSidePanelProps) 
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
       footer={
         activeTab === 'manual' ? (
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={reactForm.handleSubmit(handleSave)}
-              disabled={!reactForm.formState.isValid}
+              disabled={!reactForm.formState.isValid || isSaving}
             >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {t('general.save')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
             </Button>
           </div>
         ) : null

@@ -105,16 +105,7 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
       onOpenChange={handleOpenChange}
       title={t('athletes.addClient.title')}
       footer={
-        <div className="flex w-full justify-start gap-2">
-          <Button
-            type="button"
-            onClick={form.handleSubmit(handleSubmitInvitation)}
-            disabled={!form.formState.isValid || isSubmitting}
-            aria-label={t('athletes.addClient.sendInvitationAria')}
-          >
-            {isSubmitting ? <Spinner className="mr-2" /> : null}
-            {t('athletes.addClient.sendInvitation')}
-          </Button>
+        <div className="flex w-full justify-end gap-2">
           <Button
             type="button"
             variant="outline"
@@ -122,6 +113,16 @@ export const AddClientSidePanel = ({ open, onOpenChange }: AddClientSidePanelPro
             aria-label={t('athletes.addClient.cancelAria')}
           >
             {t('general.cancel')}
+          </Button>
+          <Button
+            type="button"
+            onClick={form.handleSubmit(handleSubmitInvitation)}
+            disabled={!form.formState.isValid || isSubmitting}
+            aria-label={t('athletes.addClient.sendInvitationAria')}
+            className="gap-2"
+          >
+            {isSubmitting ? <Spinner className="size-4" /> : null}
+            {t('athletes.addClient.sendInvitation')}
           </Button>
         </div>
       }

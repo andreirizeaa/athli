@@ -173,6 +173,17 @@ const QuestionnaireFormDetailPage = () => {
               <BreadcrumbList className="text-xs gap-1">
                 <BreadcrumbItem>
                   <BreadcrumbLink
+                    onClick={() => handleBreadcrumbClick('/training')}
+                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                  >
+                    {t('sidebar.links.training')}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbLink
                     onClick={() => handleBreadcrumbClick('/forms')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >

@@ -11,6 +11,7 @@ import {
   Trash2,
   UserPlus,
   Pencil,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
@@ -321,7 +322,10 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
   const renderFooter = () => {
     if (step === 1) {
       return (
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={handleContinue}
@@ -329,19 +333,16 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
           >
             {t('general.continue')}
           </Button>
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-            {t('general.cancel')}
-          </Button>
         </div>
       );
     } else if (step === 2 || step === 3) {
       return (
-        <div className="flex w-full justify-start gap-2">
-          <Button type="button" onClick={handleContinue} disabled={step === 2 && selectedClientIds.size === 0}>
-            {t('general.continue')}
-          </Button>
+        <div className="flex w-full justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleBack}>
             {t('general.back')}
+          </Button>
+          <Button type="button" onClick={handleContinue} disabled={step === 2 && selectedClientIds.size === 0}>
+            {t('general.continue')}
           </Button>
         </div>
       );
@@ -353,12 +354,18 @@ export const BroadcastSidePanel = ({ open, onOpenChange }: BroadcastSidePanelPro
           : t('messages.broadcastPanel.broadcastToClients', { count: selectedClients.length });
 
       return (
-        <div className="flex w-full justify-start gap-2">
-          <Button type="button" onClick={handleSave} disabled={isSaving || !message.trim() || selectedClientIds.size === 0}>
-            {broadcastButtonText}
-          </Button>
+        <div className="flex w-full justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             {t('general.cancel')}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving || !message.trim() || selectedClientIds.size === 0}
+            className="gap-2"
+          >
+            {isSaving && <Loader2 className="size-4 animate-spin" />}
+            {broadcastButtonText}
           </Button>
         </div>
       );

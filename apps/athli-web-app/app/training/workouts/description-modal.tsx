@@ -81,7 +81,7 @@ const DescriptionModal = ({
   };
 
   const handleEditWorkout = () => {
-    router.push(`/training/workouts/${workoutId}/edit/standard`);
+    router.push(`/training/workouts/${workoutId}/edit`);
   };
 
   return (
