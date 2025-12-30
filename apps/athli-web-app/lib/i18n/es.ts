@@ -848,7 +848,7 @@ export const esMessages = {
     },
     new: {
       toast: {
-        savedSuccessfully: 'Programa "{name}" creado exitosamente',
+        savedSuccessfully: 'Programa "{name}" guardado exitosamente',
       },
     },
     assigning: {

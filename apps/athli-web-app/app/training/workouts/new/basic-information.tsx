@@ -89,39 +89,6 @@ export const BasicInformation = ({
           {nameError && <p className="text-sm text-destructive">{nameError}</p>}
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="workout-type" className="text-sm font-medium">
-            {t('workouts.addWorkout.type')}<RequiredAsterisk />
-          </label>
-          <Select
-            value={workoutType}
-            onValueChange={(value) => {
-              setWorkoutType(value);
-              if (typeError) {
-                setTypeError(null);
-              }
-            }}
-          >
-            <SelectTrigger
-              id="workout-type"
-              className={cn(
-                'w-full',
-                typeError && 'border-destructive aria-invalid:border-destructive'
-              )}
-              aria-invalid={!!typeError}
-            >
-              <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              {WORKOUT_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-        </div>
-        <div className="flex flex-col gap-2">
           <label htmlFor="workout-difficulty" className="text-sm font-medium">
             {t('workouts.addWorkout.difficulty')}<RequiredAsterisk />
           </label>
@@ -153,6 +120,39 @@ export const BasicInformation = ({
             </SelectContent>
           </Select>
           {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="workout-type" className="text-sm font-medium">
+            {t('workouts.addWorkout.type')}
+          </label>
+          <Select
+            value={workoutType}
+            onValueChange={(value) => {
+              setWorkoutType(value);
+              if (typeError) {
+                setTypeError(null);
+              }
+            }}
+          >
+            <SelectTrigger
+              id="workout-type"
+              className={cn(
+                'w-full',
+                typeError && 'border-destructive aria-invalid:border-destructive'
+              )}
+              aria-invalid={!!typeError}
+            >
+              <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {WORKOUT_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {typeError && <p className="text-sm text-destructive">{typeError}</p>}
         </div>
       </div>
 

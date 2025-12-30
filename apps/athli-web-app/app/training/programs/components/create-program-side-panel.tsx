@@ -36,7 +36,7 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
 
     const [newProgramName, setNewProgramName] = useState<string>('');
     const [newProgramType, setNewProgramType] = useState<string>('');
-    const [newProgramDifficulty, setNewProgramDifficulty] = useState<string>('all levels');
+    const [newProgramDifficulty, setNewProgramDifficulty] = useState<string>('all_levels');
     const [newProgramWeeks, setNewProgramWeeks] = useState<string>('');
     const [newProgramDescription, setNewProgramDescription] = useState<string>('');
     const [newProgramError, setNewProgramError] = useState<string | null>(null);
@@ -62,10 +62,11 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
             return;
         }
 
-        if (!newProgramType) {
-            setNewProgramTypeError(t('programs.addProgram.programTypeRequiredError'));
-            return;
-        }
+        // Type is optional now
+        // if (!newProgramType) {
+        //     setNewProgramTypeError(t('programs.addProgram.programTypeRequiredError'));
+        //     return;
+        // }
 
         if (!newProgramDifficulty) {
             setNewProgramDifficultyError(t('programs.addProgram.difficultyRequiredError'));
@@ -126,7 +127,6 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                         disabled={
                             isNavigating ||
                             !newProgramName.trim() ||
-                            !newProgramType ||
                             !newProgramDifficulty
                         }
                         aria-label={t('programs.addProgram.continueAria')}
@@ -159,41 +159,6 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                             aria-invalid={!!newProgramError}
                         />
                         {newProgramError && <p className="text-sm text-destructive">{newProgramError}</p>}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <label htmlFor="program-type" className="text-sm font-medium">
-                            {t('programs.addProgram.type')}<RequiredAsterisk />
-                        </label>
-                        <Select
-                            value={newProgramType}
-                            onValueChange={(value) => {
-                                setNewProgramType(value);
-                                if (newProgramTypeError) {
-                                    setNewProgramTypeError(null);
-                                }
-                            }}
-                        >
-                            <SelectTrigger
-                                id="program-type"
-                                className={cn(
-                                    'w-full',
-                                    newProgramTypeError && 'border-destructive aria-invalid:border-destructive'
-                                )}
-                                aria-invalid={!!newProgramTypeError}
-                            >
-                                <SelectValue placeholder={t('general.select')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {PROGRAM_TYPES.map((type) => (
-                                    <SelectItem key={type.value} value={type.value}>
-                                        {type.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {newProgramTypeError && (
-                            <p className="text-sm text-destructive">{newProgramTypeError}</p>
-                        )}
                     </div>
                     <div className="flex flex-col gap-2">
                         <label htmlFor="program-difficulty" className="text-sm font-medium">
@@ -229,6 +194,41 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                         </Select>
                         {newProgramDifficultyError && (
                             <p className="text-sm text-destructive">{newProgramDifficultyError}</p>
+                        )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label htmlFor="program-type" className="text-sm font-medium">
+                            {t('programs.addProgram.type')}
+                        </label>
+                        <Select
+                            value={newProgramType}
+                            onValueChange={(value) => {
+                                setNewProgramType(value);
+                                if (newProgramTypeError) {
+                                    setNewProgramTypeError(null);
+                                }
+                            }}
+                        >
+                            <SelectTrigger
+                                id="program-type"
+                                className={cn(
+                                    'w-full',
+                                    newProgramTypeError && 'border-destructive aria-invalid:border-destructive'
+                                )}
+                                aria-invalid={!!newProgramTypeError}
+                            >
+                                <SelectValue placeholder={t('general.select')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {PROGRAM_TYPES.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                        {type.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {newProgramTypeError && (
+                            <p className="text-sm text-destructive">{newProgramTypeError}</p>
                         )}
                     </div>
                     <div className="flex flex-col gap-2">

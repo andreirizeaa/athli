@@ -11,8 +11,8 @@ export type ProgramData = {
   difficulty: string;
   weeks: string;
   description: string;
-  schema?: Array<{ day: number; workouts: string[] }>;
-  days?: Array<{ day: number; workouts: string[] }>; // Alternative field name
+  schema?: Array<{ day: number; workouts: any[] }>;
+  days?: Array<{ day: number; workouts: any[] }>; // Alternative field name
 };
 
 /**
