@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import {
@@ -42,6 +43,7 @@ export const EditFlowSidePanel = ({
   onSave,
 }: EditFlowSidePanelProps) => {
   const t = useTranslations();
+  const [isSaving, setIsSaving] = useState(false);
 
   const formSchema = z.object({
     name: z
@@ -76,6 +78,7 @@ export const EditFlowSidePanel = ({
   };
 
   const handleSave = async (values: FormFormValues) => {
+    setIsSaving(true);
     try {
       await onSave({
         name: values.name,
@@ -84,6 +87,8 @@ export const EditFlowSidePanel = ({
       handleClose();
     } catch (error) {
       console.error('Failed to update flow details:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -94,16 +99,21 @@ export const EditFlowSidePanel = ({
       title={t('flows.editFlow')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={reactForm.handleSubmit(handleSave)}
-            disabled={!reactForm.formState.isValid}
+            disabled={!reactForm.formState.isValid || isSaving}
           >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }

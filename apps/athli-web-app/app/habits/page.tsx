@@ -98,6 +98,7 @@ const HabitsPage = () => {
     isDeleting,
     isDuplicating
   } = useCoachHabits();
+  const { clients } = useCoachClients();
 
   const [selectedHabits, setSelectedHabits] = useState<Set<string>>(new Set());
   const { user } = useUserProfile();
@@ -1028,16 +1029,16 @@ const HabitsPage = () => {
         contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
         footer={
           activeTab === 'manual' ? (
-            <div className="flex w-full justify-start gap-2">
+            <div className="flex w-full justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleCloseAddHabit}>
+                {t('general.cancel')}
+              </Button>
               <Button
                 type="button"
                 onClick={form.handleSubmit(handleSaveHabit)}
                 disabled={!form.formState.isValid}
               >
                 {t('general.save')}
-              </Button>
-              <Button type="button" variant="outline" onClick={handleCloseAddHabit}>
-                {t('general.cancel')}
               </Button>
             </div>
           ) : null
@@ -1126,24 +1127,25 @@ const HabitsPage = () => {
         onOpenAutoFocus={(e) => e.preventDefault()}
         contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleCloseEditHabit}>
+              {t('general.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDeleteHabit}
+              className="gap-2"
+            >
+              <Trash2 className="size-4" />
+              {t('general.delete')}
+            </Button>
             <Button
               type="button"
               onClick={form.handleSubmit(handleSaveHabit)}
               disabled={!form.formState.isValid}
             >
               {t('general.save')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDeleteHabit}
-            >
-              <Trash2 className="size-4 mr-2" />
-              {t('general.delete')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleCloseEditHabit}>
-              {t('general.cancel')}
             </Button>
           </div>
         }

@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { Edit, User, Mail, Users, Phone, MapPin, ArrowUp10, Camera, Upload, ChevronDown, Loader2 } from 'lucide-react';
+import { Edit, User, Mail, Users, Phone, MapPin, ArrowUp10, Camera, Upload, ChevronDown, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { useClientProfileContext } from '../client-profile-context';
 import { useUpdateClientDetails } from '@/hooks/use-client-details';
@@ -379,16 +379,30 @@ export const ClientDetailsCard = ({ clientId }: ClientDetailsCardProps) => {
         title={t('athletes.profile.editDetails')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button onClick={handleSaveDetails} disabled={!hasChanges || updateDetailsMutation.isPending} className="gap-2">
-              {updateDetailsMutation.isPending ? (
-                t('general.saving', { defaultValue: 'Saving...' })
-              ) : (
-                t('general.save')
-              )}
-            </Button>
-            <Button variant="outline" onClick={handleCancelEdit}>
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelEdit}
+              disabled={updateDetailsMutation.isPending}
+            >
               {t('general.cancel')}
+            </Button>
+            <Button
+              onClick={handleSaveDetails}
+              disabled={!hasChanges || updateDetailsMutation.isPending}
+              className="gap-2"
+            >
+              {updateDetailsMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t('general.saving', { defaultValue: 'Saving...' })}
+                </>
+              ) : (
+                <>
+                  <Check className="size-4" />
+                  {t('general.save')}
+                </>
+              )}
             </Button>
           </div>
         }

@@ -109,7 +109,7 @@ export function SearchComponent() {
   };
 
   const handleWorkoutSearchResultClick = (workoutId: string) => {
-    router.push(`/training/workouts/${workoutId}/edit/standard`);
+    router.push(`/training/workouts/${workoutId}/edit`);
     setIsSearchOpen(false);
     setSearchQuery('');
   };

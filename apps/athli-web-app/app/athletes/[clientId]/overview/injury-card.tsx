@@ -15,7 +15,7 @@ import type { AthleteInjury } from '@/api/client/client-service';
 import { format, parseISO } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { ChevronDownIcon, Edit, Plus, X } from 'lucide-react';
+import { ChevronDownIcon, Edit, Plus, X, Check, Loader2 } from 'lucide-react';
 
 type InjuryCardProps = {
   clientId: string;
@@ -164,15 +164,17 @@ export const InjuryCard = ({ clientId }: InjuryCardProps) => {
         title={t('athletes.profile.editInjuries')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button variant="outline" onClick={handleCancelInjuriesEdit}>
+              {t('general.cancel')}
+            </Button>
             <Button
               onClick={handleSaveInjuries}
               disabled={!hasInjuriesChanges || editingInjuries.some((i) => i.injury.trim() === '')}
+              className="gap-2"
             >
+              <Check className="size-4" />
               {t('general.save')}
-            </Button>
-            <Button variant="outline" onClick={handleCancelInjuriesEdit}>
-              {t('general.cancel')}
             </Button>
           </div>
         }

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { SidePanel } from '@/components/app/side-panel';
-import { Edit } from 'lucide-react';
+import { Edit, Check, Loader2 } from 'lucide-react';
 import { useClientProfileContext } from '../client-profile-context';
 import { useUpdateClientBio } from '@/hooks/use-client-bio';
 
@@ -99,12 +99,13 @@ export const ClientBioCard = ({ clientId }: ClientBioCardProps) => {
         title={t('athletes.profile.editBio')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button onClick={handleSaveBio} disabled={!hasBioChanges}>
-              {t('general.save')}
-            </Button>
+          <div className="flex w-full justify-end gap-2">
             <Button variant="outline" onClick={handleCancelBioEdit}>
               {t('general.cancel')}
+            </Button>
+            <Button onClick={handleSaveBio} disabled={!hasBioChanges} className="gap-2">
+              <Check className="size-4" />
+              {t('general.save')}
             </Button>
           </div>
         }

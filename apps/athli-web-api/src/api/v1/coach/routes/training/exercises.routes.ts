@@ -126,5 +126,7 @@ coachExerciseRouter.patch('/:id', supabaseAuthenticate, coachExercisesController
  *         description: Coach exercise deleted successfully
  */
 coachExerciseRouter.post('/', supabaseAuthenticate, coachExercisesController.createExercise);
-
+coachExerciseRouter.get('/:id', supabaseAuthenticate, coachExercisesController.getExerciseById);
 coachExerciseRouter.delete('/:id', supabaseAuthenticate, coachExercisesController.deleteExercise);
+coachExerciseRouter.post('/:id/duplicate', supabaseAuthenticate, coachExercisesController.duplicateExercise);
+coachExerciseRouter.patch('/:id/toggle-favorite', supabaseAuthenticate, coachExercisesController.toggleFavorite);

@@ -5,6 +5,7 @@ import type {
   SectionValidationErrors,
   SectionValidation,
   WorkoutSchema,
+  ExerciseWithSuperset,
 } from '../types/workout-builder.types';
 
 /**
@@ -64,7 +65,8 @@ export const recomputeExerciseValidation = (
         } else {
           // Reps are required only for normal/warmUp (not dropset or failure)
           if (set.type !== 'failure') {
-            const hasReps = !!set.reps && set.reps.trim() !== '';
+            const repsStr = set.reps?.toString() || '';
+            const hasReps = repsStr.trim() !== '';
             if (!hasReps) {
               setErrors.reps = true;
             }
@@ -72,7 +74,8 @@ export const recomputeExerciseValidation = (
 
           // Weight is required for all weight_reps sets except dropsets
           if (exerciseType === 'weight_reps') {
-            const hasWeight = !!set.weight && set.weight.trim() !== '';
+            const weightStr = set.weight?.toString() || '';
+            const hasWeight = weightStr.trim() !== '';
             if (!hasWeight) {
               setErrors.weight = true;
             }
@@ -137,6 +140,73 @@ export const clearSetValidationField = (
 };
 
 /**
+ * Validates a single exercise and adds any errors to the nextErrors object
+ */
+const validateExercise = (
+  exercise: ExerciseWithSuperset,
+  nextErrors: ValidationErrors
+): void => {
+  const sets = exercise.sets || [];
+
+  sets.forEach((set, index) => {
+    const setErrors: SetFieldValidation = {};
+
+    const hasRest = !!set.rest && set.rest.trim() !== '';
+    if (!hasRest) {
+      setErrors.rest = true;
+    }
+
+    if (exercise.exerciseType === 'distance_duration') {
+      const hasDistance = !!set.distance && set.distance.trim() !== '';
+      const hasDuration = !!set.duration && set.duration.trim() !== '';
+
+      if (!hasDistance && !hasDuration) {
+        setErrors.distance = true;
+        setErrors.duration = true;
+      }
+    } else {
+      if (set.type === 'dropset') {
+        // For dropsets, at least one drop stage is required in reps or weight
+        const hasReps = !!set.reps && set.reps.trim() !== '';
+        const hasWeight =
+          exercise.exerciseType === 'weight_reps' && !!set.weight && set.weight.trim() !== '';
+        if (!hasReps && !hasWeight) {
+          setErrors.reps = true;
+          if (exercise.exerciseType === 'weight_reps') {
+            setErrors.weight = true;
+          }
+        }
+      } else {
+        // Reps required only for non-dropset, non-failure sets
+        if (set.type !== 'failure') {
+          const repsStr = set.reps?.toString() || '';
+          const hasReps = repsStr.trim() !== '';
+          if (!hasReps) {
+            setErrors.reps = true;
+          }
+        }
+
+        // Weight required for all weight_reps sets except dropsets
+        if (exercise.exerciseType === 'weight_reps') {
+          const weightStr = set.weight?.toString() || '';
+          const hasWeight = weightStr.trim() !== '';
+          if (!hasWeight) {
+            setErrors.weight = true;
+          }
+        }
+      }
+    }
+
+    if (Object.keys(setErrors).length > 0) {
+      if (!nextErrors[exercise.instanceId]) {
+        nextErrors[exercise.instanceId] = {};
+      }
+      nextErrors[exercise.instanceId][index] = setErrors;
+    }
+  });
+};
+
+/**
  * Validates the entire workout schema and returns all validation errors
  *
  * @param workoutSchema - The workout schema to validate
@@ -148,103 +218,58 @@ export const validateWorkoutSchema = (
   const nextErrors: ValidationErrors = {};
   const nextSectionErrors: SectionValidationErrors = {};
 
-  workoutSchema.sections.forEach((section) => {
-    const sectionErrors: SectionValidation = {};
+  workoutSchema.items.forEach((item) => {
+    if (item.itemType === 'exercise') {
+      // Validate top-level exercise
+      validateExercise(item.exercise, nextErrors);
+    } else if (item.itemType === 'section') {
+      const section = item.section;
+      const sectionErrors: SectionValidation = {};
 
-    // Validate section configuration
-    if (section.type === 'amrap') {
-      if (!section.roundDurationSec || section.roundDurationSec <= 0) {
-        sectionErrors.missingConfig = true;
-      }
-    }
-
-    if (section.type === 'timed') {
-      if (!section.targetRounds || section.targetRounds <= 0) {
-        sectionErrors.missingConfig = true;
-      }
-    }
-
-    if (section.type === 'circuits') {
-      if (!section.targetRounds || section.targetRounds <= 0) {
-        sectionErrors.missingConfig = true;
-      }
-    }
-
-    if (section.type === 'auxiliary') {
-      if (!section.category) {
-        sectionErrors.missingConfig = true;
-      }
-    }
-
-    // Validate section has exercises
-    if (!section.exercises || section.exercises.length === 0) {
-      sectionErrors.emptyExercises = true;
-    }
-
-    if (Object.keys(sectionErrors).length > 0) {
-      nextSectionErrors[section.id] = sectionErrors;
-    }
-
-    // Validate individual exercises
-    section.exercises?.forEach((exercise) => {
-      const sets = exercise.sets || [];
-
-      sets.forEach((set, index) => {
-        const setErrors: SetFieldValidation = {};
-
-        const hasRest = !!set.rest && set.rest.trim() !== '';
-        if (!hasRest) {
-          setErrors.rest = true;
+      // Validate section configuration
+      if (section.type === 'amrap') {
+        if (!section.roundDurationSec || section.roundDurationSec <= 0) {
+          sectionErrors.missingConfig = true;
         }
+      }
 
-        if (exercise.exerciseType === 'distance_duration') {
-          const hasDistance = !!set.distance && set.distance.trim() !== '';
-          const hasDuration = !!set.duration && set.duration.trim() !== '';
-
-          if (!hasDistance && !hasDuration) {
-            setErrors.distance = true;
-            setErrors.duration = true;
-          }
-        } else {
-          if (set.type === 'dropset') {
-            // For dropsets, at least one drop stage is required in reps or weight
-            const hasReps = !!set.reps && set.reps.trim() !== '';
-            const hasWeight =
-              exercise.exerciseType === 'weight_reps' && !!set.weight && set.weight.trim() !== '';
-            if (!hasReps && !hasWeight) {
-              setErrors.reps = true;
-              if (exercise.exerciseType === 'weight_reps') {
-                setErrors.weight = true;
-              }
-            }
-          } else {
-            // Reps required only for non-dropset, non-failure sets
-            if (set.type !== 'failure') {
-              const hasReps = !!set.reps && set.reps.trim() !== '';
-              if (!hasReps) {
-                setErrors.reps = true;
-              }
-            }
-
-            // Weight required for all weight_reps sets except dropsets
-            if (exercise.exerciseType === 'weight_reps') {
-              const hasWeight = !!set.weight && set.weight.trim() !== '';
-              if (!hasWeight) {
-                setErrors.weight = true;
-              }
-            }
-          }
+      if (section.type === 'timed') {
+        if (!section.targetRounds || section.targetRounds <= 0) {
+          sectionErrors.missingConfig = true;
         }
+      }
 
-        if (Object.keys(setErrors).length > 0) {
-          if (!nextErrors[exercise.instanceId]) {
-            nextErrors[exercise.instanceId] = {};
-          }
-          nextErrors[exercise.instanceId][index] = setErrors;
+      if (section.type === 'circuits') {
+        if (!section.targetRounds || section.targetRounds <= 0) {
+          sectionErrors.missingConfig = true;
         }
+      }
+
+      if (section.type === 'auxiliary') {
+        if (!section.category) {
+          sectionErrors.missingConfig = true;
+        }
+      }
+
+      // Validate section has exercises
+      if (!section.exercises || section.exercises.length === 0) {
+        sectionErrors.emptyExercises = true;
+      }
+
+      if (Object.keys(sectionErrors).length > 0) {
+        nextSectionErrors[section.id] = sectionErrors;
+      }
+
+      // Validate individual exercises within section
+      section.exercises?.forEach((exercise) => {
+        validateExercise(exercise, nextErrors);
       });
-    });
+
+
+    }
   });
+
+
 
   return { exerciseErrors: nextErrors, sectionErrors: nextSectionErrors };
 };

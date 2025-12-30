@@ -33,7 +33,7 @@ import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { type Habit } from '@/api/coach/coach-habit-service';
 import { checkExistingHabitLog } from '@/api/client/client-habit-log-service';
-import { Info, ChevronDownIcon } from 'lucide-react';
+import { Info, ChevronDownIcon, Check, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type LogHabitFormValues = {
@@ -63,6 +63,7 @@ export const LogHabitSidePanel = ({
   const t = useTranslations();
   const [existingLog, setExistingLog] = useState<{ value: number; status: string } | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
@@ -139,8 +140,15 @@ export const LogHabitSidePanel = ({
   };
 
   const handleSave = async (values: LogHabitFormValues) => {
-    await onSave(values.assignmentId, Number(values.value), selectedDate);
-    handleClose();
+    setIsSaving(true);
+    try {
+      await onSave(values.assignmentId, Number(values.value), selectedDate);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to log habit:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const isSaveDisabled = !form.watch('assignmentId') || !form.watch('value') || !selectedDate;
@@ -152,12 +160,17 @@ export const LogHabitSidePanel = ({
       title={t('habits.logHabitTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex items-center justify-start gap-2">
-          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled}>
-            {t('general.save')}
-          </Button>
-          <Button variant="outline" onClick={handleClose}>
+        <div className="flex w-full justify-end gap-2">
+          <Button variant="outline" onClick={handleClose} disabled={isSaving}>
             {t('general.cancel')}
+          </Button>
+          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled || isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
+            {t('general.save')}
           </Button>
         </div>
       }

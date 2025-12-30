@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Spinner } from '@/components/ui/spinner';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignTrainingToClientSidePanel } from '@/components/training/assign-training-to-client-side-panel';
 import { SelectClientSidePanel } from '@/components/training/select-client-side-panel';
@@ -43,13 +44,13 @@ import {
   User,
   UserPlus,
   Star,
-  Archive,
   Trash2,
+  Copy,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
-import { starPrograms, archivePrograms, deletePrograms } from '@/api/coach/coach-program-service';
-import { getExercises, starExercises, archiveExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
+import { starPrograms, deletePrograms } from '@/api/coach/coach-program-service';
+import { getExercises, starExercises, deleteExercises as deleteExercisesService, createExercise, editExercise, duplicateExercises, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import { EditExerciseSidePanel } from './edit-exercise-side-panel';
@@ -169,9 +170,9 @@ const ExercisesPage = () => {
   const [isAssignIndividualExerciseOpen, setIsAssignIndividualExerciseOpen] = useState<boolean>(false);
   const [selectedExerciseForAssignment, setSelectedExerciseForAssignment] = useState<Program | null>(null);
 
-  // Helper to check if value is empty (null, undefined, empty string, or empty array)
+  // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
   const isEmpty = (value: any): boolean => {
-    if (value === null || value === undefined || value === '') return true;
+    if (value === null || value === undefined || value === '' || value === 0) return true;
     if (Array.isArray(value) && value.length === 0) return true;
     return false;
   };
@@ -225,6 +226,7 @@ const ExercisesPage = () => {
       muscleGroups: ex.muscle_group || [], // Keep array for filtering
       modality: ex.modality || '',
       videoLink: ex.video_link || '',
+      isFavourite: ex.isFavourite || false,
     }));
     setExercises(mappedExercises);
   }, [contextExercises]);
@@ -253,7 +255,12 @@ const ExercisesPage = () => {
   const handleToggleStar = async (exerciseId: string, e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     try {
-      await starExercises(exerciseId, !starredExercises.has(exerciseId));
+      const isStarred = starredExercises.has(exerciseId);
+      await starExercises(exerciseId, !isStarred);
+
+      const exercise = exercises.find((e) => e.id === exerciseId);
+      const exerciseName = exercise?.program || t('exercises.exercise');
+
       setStarredExercises((prev) => {
         const next = new Set(prev);
         if (next.has(exerciseId)) {
@@ -263,9 +270,15 @@ const ExercisesPage = () => {
         }
         return next;
       });
+
+      if (isStarred) {
+        toast.success(t('exercises.detail.toast.unstarredSuccessfully', { name: exerciseName }));
+      } else {
+        toast.success(t('exercises.detail.toast.starredSuccessfully', { name: exerciseName }));
+      }
     } catch (error) {
-      // Error handling - could show toast here
       console.error('Failed to star exercise:', error);
+      toast.error(t('general.error'));
     }
   };
 
@@ -302,18 +315,6 @@ const ExercisesPage = () => {
     }
   };
 
-  const handleArchiveSelected = async () => {
-    if (selectedExercises.size === 0) return;
-    try {
-      await archiveExercises(Array.from(selectedExercises), true);
-      // Refresh exercises after archiving
-      await refreshExercises();
-      // Clear selection after archiving
-      setSelectedExercises(new Set());
-    } catch (error) {
-      console.error('Failed to archive exercises:', error);
-    }
-  };
 
   const handleBulkDelete = async () => {
     if (selectedExercises.size === 0) return;
@@ -376,6 +377,24 @@ const ExercisesPage = () => {
       Equipment: (row as any).equipment || row.equipment || '',
     }));
     exportToCSV(exportData, 'selected-exercises.csv');
+  };
+
+  const [isBulkDuplicating, setIsBulkDuplicating] = useState<boolean>(false);
+
+  const handleDuplicateSelected = async () => {
+    if (selectedExercises.size === 0) return;
+    setIsBulkDuplicating(true);
+    try {
+      await duplicateExercises(Array.from(selectedExercises));
+      await refreshExercises();
+      toast.success('Exercises duplicated successfully');
+      setSelectedExercises(new Set());
+    } catch (error) {
+      console.error('Failed to duplicate exercises:', error);
+      toast.error('Failed to duplicate exercises');
+    } finally {
+      setIsBulkDuplicating(false);
+    }
   };
 
   const handleOpenCreateExercise = () => {
@@ -442,7 +461,7 @@ const ExercisesPage = () => {
 
   // Create column definitions for DataGrid
   // Add "exercise" column for sorting (not in filteredColumnOrder so it won't render)
-  const allColumns: ColumnDefinition<Program>[] = [
+  const allColumns: ColumnDefinition<Program>[] = useMemo(() => [
     {
       id: 'exercise',
       label: t('exercises.columns.exercise'),
@@ -471,7 +490,14 @@ const ExercisesPage = () => {
               return `${row.program} ${category}`;
             },
             renderCell: (row) => {
-              const category = (row as any).category || '';
+              const category = (row as any).category;
+              if (isEmpty(category)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <div className="flex items-center h-full">
                   <span className="text-sm">{category}</span>
@@ -499,6 +525,13 @@ const ExercisesPage = () => {
             },
             renderCell: (row) => {
               const muscleGroup = (row as any).muscleGroup || '';
+              if (isEmpty(muscleGroup)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -536,7 +569,14 @@ const ExercisesPage = () => {
               return `${row.program} ${modality}`;
             },
             renderCell: (row) => {
-              const modality = (row as any).modality || '';
+              const modality = (row as any).modality;
+              if (isEmpty(modality)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <div className="flex items-center h-full">
                   <span className="text-sm">{modality}</span>
@@ -563,7 +603,14 @@ const ExercisesPage = () => {
               return `${row.program} ${equipment}`;
             },
             renderCell: (row) => {
-              const equipment = (row as any).equipment || row.equipment || '';
+              const equipment = (row as any).equipment || row.equipment;
+              if (isEmpty(equipment)) {
+                return (
+                  <div className="flex items-center h-full min-w-0 w-full">
+                    <span className="text-sm truncate block min-w-0 w-full">--</span>
+                  </div>
+                );
+              }
               return (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -591,10 +638,10 @@ const ExercisesPage = () => {
           };
       }
     }),
-  ];
+  ], [t, filteredColumnOrder]);
 
   // Add actions column
-  const actionsColumn: ColumnDefinition<Program> = {
+  const actionsColumn: ColumnDefinition<Program> = useMemo(() => ({
     id: 'actions',
     label: '',
     sortable: false,
@@ -615,12 +662,12 @@ const ExercisesPage = () => {
         </Button>
       </div>
     ),
-  };
+  }), [t]);
 
-  const columns: ColumnDefinition<Program>[] = [...allColumns, actionsColumn];
+  const columns: ColumnDefinition<Program>[] = useMemo(() => [...allColumns, actionsColumn], [allColumns, actionsColumn]);
 
   // Create filter definitions
-  const filters: FilterDefinition<Program>[] = [
+  const filters: FilterDefinition<Program>[] = useMemo(() => [
     {
       id: 'category',
       label: t('exercises.columns.category'),
@@ -657,10 +704,10 @@ const ExercisesPage = () => {
       ],
       getFilterValue: (row) => (starredExercises.has(row.id) ? 'starred' : 'unstarred'),
     },
-  ];
+  ], [t, starredExercises]);
 
   // Create first column renderer
-  const renderFirstColumn = (exercise: Program, isSelected: boolean) => {
+  const renderFirstColumn = useCallback((exercise: Program, isSelected: boolean) => {
     const isStarred = starredExercises.has(exercise.id);
     return (
       <div className="flex items-center gap-3 h-full w-full">
@@ -723,11 +770,10 @@ const ExercisesPage = () => {
         </div>
       </div>
     );
-  };
+  }, [starredExercises, handleToggleExercise, handleToggleStar, handleStarKeyDown, t]);
 
   // Create first column header with sorting
-  const renderFirstColumnHeader = ({
-    isSorted,
+  const renderFirstColumnHeader = useCallback(({
     isAscending,
     isDescending,
     onSort,
@@ -783,7 +829,7 @@ const ExercisesPage = () => {
         </DropdownMenu>
       </div>
     );
-  };
+  }, [t]);
 
   const handleStartCreating = () => {
     setIsCreateExerciseOpen(true);
@@ -904,6 +950,25 @@ const ExercisesPage = () => {
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
+                    onClick={handleDuplicateSelected}
+                    className="gap-2"
+                    disabled={isBulkDuplicating}
+                    aria-label="Duplicate selected"
+                  >
+                    {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
+                    <span>Duplicate</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Duplicate selected</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
                     onClick={handleStarSelected}
                     className="gap-2"
                     aria-label={t('exercises.actions.starSelectedAria')}
@@ -914,24 +979,6 @@ const ExercisesPage = () => {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>{t('exercises.actions.starSelected')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    onClick={handleArchiveSelected}
-                    className="gap-2"
-                    aria-label={t('exercises.actions.archiveSelectedAria')}
-                  >
-                    <Archive className="size-4" />
-                    <span>{t('exercises.actions.archiveSelected')}</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('exercises.actions.archiveSelected')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

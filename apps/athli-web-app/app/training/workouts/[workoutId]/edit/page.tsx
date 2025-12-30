@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, ChevronRight, X, Pencil } from 'lucide-react';
+import { Check, ChevronRight, X, Pencil, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup, ButtonGroupSeparator } from '@/components/ui/button-group';
@@ -16,11 +16,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { StandardBuilder } from '../../../new/standard/standard-builder';
-import type { WorkoutProgramPayload } from '../../../new/workout-schema';
+import { StandardBuilder } from '../../new/workout-builder';
+import type { WorkoutProgramPayload } from '../../new/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
-import { getWorkoutById, updateWorkoutDetails, deleteWorkouts } from '@/api/coach/coach-workout-service';
-import { EditWorkoutDetailsSidePanel } from '../../../components/edit-workout-details-side-panel';
+import { getWorkoutById, updateWorkoutDetails, deleteWorkouts, editWorkout } from '@/api/coach/coach-workout-service';
+import { EditWorkoutDetailsSidePanel } from '../../components/edit-workout-details-side-panel';
+import { useTrainingData } from '../../../training-data-context';
+import { convertPayloadToBuilderFormat } from '../../new/shared/utils/payload-converter';
 
 type WorkoutMeta = {
   title: string;
@@ -35,9 +37,12 @@ const EditStandardWorkoutPage = () => {
   const router = useRouter();
   const params = useParams();
   const workoutId = params.workoutId as string;
+  const { refreshWorkouts } = useTrainingData();
   const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [saveSignal, setSaveSignal] = useState(0);
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
 
@@ -67,8 +72,12 @@ const EditStandardWorkoutPage = () => {
     const fetchWorkout = async () => {
       try {
         const workout = await getWorkoutById(workoutId);
+        // Mapping fix: API returns 'name', but Workout type expects 'program'.
+        // Cast to any to access 'name' if present.
+        const title = (workout as any).name || workout.program || 'Workout';
+
         setWorkoutMeta({
-          title: workout.program || 'Workout',
+          title: title,
           description: workout.description || '',
           type: workout.type || 'Push',
           difficulty: workout.difficulty || 'intermediate',
@@ -77,7 +86,8 @@ const EditStandardWorkoutPage = () => {
 
         // Set the schema in localStorage for the builder
         if (workout.workout_data) {
-          window.localStorage.setItem('athli_workout_schema', JSON.stringify(workout.workout_data));
+          const builderSchema = convertPayloadToBuilderFormat(workout.workout_data);
+          window.localStorage.setItem('athli_workout_schema', JSON.stringify(builderSchema));
         }
       } catch (error) {
         console.error('Failed to fetch workout:', error);
@@ -104,34 +114,36 @@ const EditStandardWorkoutPage = () => {
   const handleConfirmDiscard = () => {
     setIsDiscardDialogOpen(false);
     setHasUnsavedChanges(false);
+    setIsSaving(false);
     navigateBackToWorkouts();
   };
 
-  const handleSaveClick = () => {
-    // Signal the builder to attempt a save; builder will handle validation and call onSaveSuccess
+  const handleSaveClick = async () => {
+    setIsSaving(true);
     setSaveSignal((prev) => prev + 1);
   };
 
-  const handleSaveSuccess = (payload: WorkoutProgramPayload) => {
-    // Styled console.log with green background
-    // eslint-disable-next-line no-console
-    console.log(
-      '%cWorkout payload',
-      'background: #16a34a; color: white; padding: 4px 8px; border-radius: 4px;'
-    );
-    // eslint-disable-next-line no-console
-    console.log(payload);
+  const handleSaveSuccess = async (payload: WorkoutProgramPayload) => {
+    try {
+      await editWorkout(workoutId, payload);
 
-    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }), {
-      style: {
-        background: 'rgb(220 252 231)',
-        color: 'rgb(20 83 45)',
-        border: '1px solid rgb(187 247 208)',
-      },
-    });
+      toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }), {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
 
-    setHasUnsavedChanges(false);
-    navigateBackToWorkouts();
+      setHasUnsavedChanges(false);
+      await refreshWorkouts();
+      navigateBackToWorkouts();
+    } catch (error) {
+      console.error('Failed to save workout:', error);
+      toast.error(t('general.error'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveDetails = async (details: { title: string; type: string; difficulty: string; description: string }) => {
@@ -142,6 +154,7 @@ const EditStandardWorkoutPage = () => {
     try {
       await updateWorkoutDetails(workoutId, details);
       toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: details.title }));
+      await refreshWorkouts();
     } catch (error) {
       console.error('Failed to update workout details:', error);
       toast.error('Failed to update details');
@@ -151,7 +164,8 @@ const EditStandardWorkoutPage = () => {
   const handleDeleteWorkout = async () => {
     try {
       await deleteWorkouts(workoutId);
-      toast.success('Workout deleted successfully');
+      await refreshWorkouts();
+      toast.success(t('workouts.detail.toast.deletedSuccessfully'));
       router.push('/training/workouts');
     } catch (error) {
       console.error('Failed to delete workout:', error);
@@ -160,7 +174,11 @@ const EditStandardWorkoutPage = () => {
   };
 
   if (!workoutMeta) {
-    return null;
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const handleBreadcrumbClick = (path: string) => {
@@ -169,11 +187,7 @@ const EditStandardWorkoutPage = () => {
       return;
     }
 
-    if (path === '/library') {
-      router.push('/library');
-    } else if (path === '/training/workouts') {
-      router.push('/training/workouts');
-    }
+    router.push(path);
   };
 
   return (
@@ -185,10 +199,10 @@ const EditStandardWorkoutPage = () => {
               <BreadcrumbList className="text-xs gap-1">
                 <BreadcrumbItem>
                   <BreadcrumbLink
-                    onClick={() => handleBreadcrumbClick('/library')}
+                    onClick={() => handleBreadcrumbClick('/training')}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
-                    {t('workouts.edit.breadcrumb.library')}
+                    {t('sidebar.links.training')}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="text-muted-foreground/60">
@@ -206,7 +220,7 @@ const EditStandardWorkoutPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
+                  <BreadcrumbPage className="px-0.5 font-semibold text-foreground">
                     {workoutMeta?.title || t('workouts.detail.breadcrumb.workout')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -214,8 +228,8 @@ const EditStandardWorkoutPage = () => {
                   <ChevronRight className="h-2 w-2" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {t('workouts.edit.breadcrumb.editWorkout')}
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5 capitalize">
+                    {t('general.edit')}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -240,8 +254,13 @@ const EditStandardWorkoutPage = () => {
               <X className="size-4" />
               <span>{t('workouts.edit.cancel')}</span>
             </Button>
-            <Button onClick={handleSaveClick} className="gap-2" aria-label={t('workouts.edit.saveAria')}>
-              <Check className="size-4" />
+            <Button
+              onClick={handleSaveClick}
+              disabled={isSaving}
+              className="gap-2"
+              aria-label={t('workouts.edit.saveAria')}
+            >
+              {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
               <span>{t('workouts.edit.save')}</span>
             </Button>
           </ButtonGroup>
@@ -250,10 +269,12 @@ const EditStandardWorkoutPage = () => {
       </div>
       <div className="w-full flex-1 overflow-auto bg-sidebar">
         <StandardBuilder
+          key={workoutMeta.title}
           meta={workoutMeta}
-          onDirtyChange={() => setHasUnsavedChanges(true)}
           saveSignal={saveSignal}
           onSaveSuccess={handleSaveSuccess}
+          onSaveError={() => setIsSaving(false)}
+          onDirtyChange={() => setHasUnsavedChanges(true)}
         />
       </div>
       {workoutMeta && (

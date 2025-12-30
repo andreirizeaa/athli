@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Edit, Plus, X } from 'lucide-react';
+import { Edit, Plus, X, Check } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { getAllMetrics, type Metric } from '@/api/coach/coach-metric-service';
 
@@ -272,16 +272,17 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
       title={t('forms.detail.editQuestion.title')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={handleSave}
             disabled={!isValid}
           >
+            <Check className="h-4 w-4" />
             {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }
@@ -566,4 +567,5 @@ export const EditQuestionSidePanel = ({ open, onOpenChange, question, onSave, qu
     </SidePanel>
   );
 };
+
 

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Search, Info, Activity } from 'lucide-react';
+import { Search, Info, Activity, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ export const AddExerciseSidePanel = ({
     const [exercises, setExercises] = useState<Exercise[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -59,63 +60,51 @@ export const AddExerciseSidePanel = ({
     };
 
     const handleSave = async () => {
-        if (!selectedExercise) return;
-        await onSave(selectedExercise);
-        handleClose();
+        if (!selectedExercise || isSaving) return;
+        setIsSaving(true);
+        try {
+            await onSave(selectedExercise);
+            handleClose();
+        } catch (error) {
+            console.error('Failed to add exercise:', error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const columns: ColumnDefinition<Exercise>[] = useMemo(() => [
         {
-            id: 'select',
-            label: '',
-            width: { class: 'w-[50px] min-w-[50px] max-w-[50px]', pixel: '50px' },
-            renderHeader: () => null,
-            renderCell: (row) => (
-                <div className="flex items-center justify-center h-full">
-                    <Checkbox
-                        checked={selectedExerciseId === row.id}
-                        onCheckedChange={() => setSelectedExerciseId(row.id)}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            ),
-        },
-        {
             id: 'name',
             label: t('athletes.trainingCalendar.table.name'),
-            width: { class: 'min-w-[200px]', pixel: '200px' },
-            sortable: true,
-            renderCell: (row) => (
-                <div className="flex flex-col gap-1 py-1">
-                    <span className="font-medium text-sm">{row.name}</span>
-                    {row.description && (
-                        <span className="text-xs text-muted-foreground line-clamp-1">{row.description}</span>
-                    )}
+            width: { class: 'w-full', pixel: '100%' },
+            renderHeader: ({ isAllSelected, onToggleAll }) => (
+                <div className="flex items-center gap-3 h-full w-full">
+                    <Checkbox checked={isAllSelected} onCheckedChange={onToggleAll} aria-label="Select all" />
+                    <div className="flex items-center gap-2">
+                        <Activity className="size-3 text-muted-foreground" />
+                        <span className="text-xs uppercase text-muted-foreground">{t('athletes.trainingCalendar.table.name')}</span>
+                    </div>
                 </div>
             ),
-        },
-        {
-            id: 'muscle_group',
-            label: t('athletes.trainingCalendar.table.muscleGroup'),
-            width: { class: 'min-w-[150px]', pixel: '150px' },
-            sortable: true,
-            renderCell: (row) => (
-                <div className="flex flex-wrap gap-1">
-                    {row.muscle_group?.map((mg) => (
-                        <Badge key={mg} variant="outline" className="text-xs font-normal">
-                            {mg}
-                        </Badge>
-                    ))}
+            renderCell: (row, isSelected) => (
+                <div className="flex items-center gap-3 h-full w-full">
+                    <div
+                        className="flex items-center justify-center h-full flex-shrink-0"
+                        data-no-row-link="true"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedExerciseId(row.id);
+                        }}
+                    >
+                        <Checkbox checked={isSelected} />
+                    </div>
+                    <div className="flex flex-col gap-1 py-1 min-w-0">
+                        <span className="font-medium text-sm truncate">{row.name}</span>
+                        {row.description && (
+                            <span className="text-xs text-muted-foreground line-clamp-1">{row.description}</span>
+                        )}
+                    </div>
                 </div>
-            ),
-        },
-        {
-            id: 'equipment',
-            label: t('general.equipment'),
-            width: { class: 'min-w-[100px]', pixel: '100px' },
-            sortable: true,
-            renderCell: (row) => (
-                <span className="text-sm text-muted-foreground">{row.equipment}</span>
             ),
         },
     ], [t, selectedExerciseId]);
@@ -126,16 +115,22 @@ export const AddExerciseSidePanel = ({
             onOpenChange={handleClose}
             title={t('athletes.trainingCalendar.addExerciseTitle')}
             footer={
-                <div className="flex w-full justify-start gap-2">
+                <div className="flex w-full justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+                        {t('general.cancel')}
+                    </Button>
                     <Button
                         type="button"
                         onClick={handleSave}
-                        disabled={!selectedExerciseId}
+                        disabled={!selectedExerciseId || isSaving}
+                        className="gap-2"
                     >
+                        {isSaving ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <Check className="size-4" />
+                        )}
                         {t('general.add')}
-                    </Button>
-                    <Button type="button" variant="outline" onClick={handleClose}>
-                        {t('general.cancel')}
                     </Button>
                 </div>
             }
@@ -146,23 +141,28 @@ export const AddExerciseSidePanel = ({
                         <span className="text-muted-foreground">{t('general.loading')}</span>
                     </div>
                 ) : (
-                    <DataGrid
-                        data={exercises}
-                        columns={columns}
-                        getRowId={(row) => row.id}
-                        gridKey="add-exercise-grid"
-                        searchPlaceholder={t('athletes.trainingCalendar.searchExercisesPlaceholder')}
-                        searchFields={[(row) => row.name]}
-                        enableSearch={true}
-                        enableRowSelection={false}
-                        onRowClick={(row) => setSelectedExerciseId(row.id)}
-                        selectedRowIds={new Set(selectedExerciseId ? [selectedExerciseId] : [])}
-                        emptyMessage={t('athletes.trainingCalendar.noExercisesFound')}
-                        rowHeight="60px"
-                        compactMode={true}
-                        showPagination={false}
-                        gridPadding={false}
-                    />
+                    <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
+                        <DataGrid
+                            data={exercises}
+                            columns={columns}
+                            getRowId={(row) => row.id}
+                            gridKey="add-exercise-grid"
+                            searchPlaceholder={t('athletes.trainingCalendar.searchExercisesPlaceholder')}
+                            searchFields={[(row) => row.name]}
+                            enableSearch={true}
+                            enableEditColumns={false}
+                            enableExport={false}
+                            enableRowSelection={true}
+                            selectOnRowClick={true}
+                            selectedRowIds={new Set(selectedExerciseId ? [selectedExerciseId] : [])}
+                            onSelectionChange={(ids) => setSelectedExerciseId(ids.size > 0 ? Array.from(ids)[0] : null)}
+                            emptyMessage={t('athletes.trainingCalendar.noExercisesFound')}
+                            rowHeight="54px"
+                            compactMode={true}
+                            showPagination={false}
+                            gridPadding={false}
+                        />
+                    </div>
                 )}
             </div>
         </SidePanel>

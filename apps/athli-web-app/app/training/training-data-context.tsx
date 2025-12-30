@@ -5,22 +5,28 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
 import { useCoachPrograms } from '@/hooks/use-coach-programs';
 import { useCoachExercises } from '@/hooks/use-coach-exercises';
+import { useCoachSections } from '@/hooks/use-coach-sections';
 import type { Workout, Program } from '@/components/app/app-shell';
 import type { Exercise } from '@/api/coach/coach-exercise-service';
+import type { Section } from '@/api/coach/coach-section-service';
 
 type TrainingDataContextType = {
   workouts: Workout[];
   programs: Program[];
   exercises: Exercise[];
+  sections: Section[];
   isLoadingWorkouts: boolean;
   isLoadingPrograms: boolean;
   isLoadingExercises: boolean;
+  isLoadingSections: boolean;
   refreshWorkouts: () => Promise<void>;
   refreshPrograms: () => Promise<void>;
   refreshExercises: () => Promise<void>;
+  refreshSections: () => Promise<void>;
   setWorkouts: React.Dispatch<React.SetStateAction<Workout[]>>;
   setPrograms: React.Dispatch<React.SetStateAction<Program[]>>;
   setExercises: React.Dispatch<React.SetStateAction<Exercise[]>>;
+  setSections: React.Dispatch<React.SetStateAction<Section[]>>;
 };
 
 const TrainingDataContext = createContext<TrainingDataContextType | null>(null);
@@ -44,24 +50,30 @@ export const TrainingDataProvider = ({ children }: TrainingDataProviderProps) =>
   const { workouts: cachedWorkouts, isLoading: isWLoading } = useCoachWorkouts();
   const { programs: cachedPrograms, isLoading: isPLoading } = useCoachPrograms();
   const { exercises: cachedExercises, isLoading: isELoading } = useCoachExercises();
+  const { sections: cachedSections, isLoading: isSLoading } = useCoachSections();
 
   // Maintain local state for context consumers (compatibility)
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [sections, setSections] = useState<Section[]>([]);
 
-  // Sync cache to local state
+  // Sync cache to local state - only update if data actually changed
   useEffect(() => {
-    if (cachedWorkouts) setWorkouts(cachedWorkouts);
-  }, [cachedWorkouts]);
-
-  useEffect(() => {
-    if (cachedPrograms) setPrograms(cachedPrograms);
-  }, [cachedPrograms]);
+    if (cachedWorkouts && cachedWorkouts !== workouts) setWorkouts(cachedWorkouts);
+  }, [cachedWorkouts, workouts]);
 
   useEffect(() => {
-    if (cachedExercises) setExercises(cachedExercises);
-  }, [cachedExercises]);
+    if (cachedPrograms && cachedPrograms !== programs) setPrograms(cachedPrograms);
+  }, [cachedPrograms, programs]);
+
+  useEffect(() => {
+    if (cachedExercises && cachedExercises !== exercises) setExercises(cachedExercises);
+  }, [cachedExercises, exercises]);
+
+  useEffect(() => {
+    if (cachedSections && cachedSections !== sections) setSections(cachedSections);
+  }, [cachedSections, sections]);
 
   // Refresh functions invalidate queries to trigger refetch
   const refreshWorkouts = async () => {
@@ -76,19 +88,27 @@ export const TrainingDataProvider = ({ children }: TrainingDataProviderProps) =>
     await queryClient.invalidateQueries({ queryKey: ['coach-exercises'] });
   };
 
+  const refreshSections = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['coach-sections'] });
+  };
+
   const value = {
     workouts,
     programs,
     exercises,
+    sections,
     isLoadingWorkouts: isWLoading,
     isLoadingPrograms: isPLoading,
     isLoadingExercises: isELoading,
+    isLoadingSections: isSLoading,
     refreshWorkouts,
     refreshPrograms,
     refreshExercises,
+    refreshSections,
     setWorkouts,
     setPrograms,
     setExercises,
+    setSections,
   };
 
   return (

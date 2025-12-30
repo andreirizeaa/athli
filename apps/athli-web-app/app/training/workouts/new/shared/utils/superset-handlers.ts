@@ -1,4 +1,4 @@
-import type { WorkoutSchema, ExerciseWithSuperset } from '../types/workout-builder.types';
+import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '../types/workout-builder.types';
 
 /**
  * Groups consecutive exercises by their superset ID for display purposes
@@ -42,7 +42,167 @@ export const groupExercisesBySuperset = (
 };
 
 /**
- * Links two consecutive exercises into a superset
+ * Links two consecutive top-level exercises into a superset
+ *
+ * @param itemIndex - The index of the first exercise item in the items array
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema
+ */
+export const handleTopLevelSupersetLink = (
+  itemIndex: number,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  const items = [...currentSchema.items];
+  const currentItem = items[itemIndex];
+  const nextItem = items[itemIndex + 1];
+
+  // Both must be exercise items
+  if (
+    !currentItem ||
+    !nextItem ||
+    currentItem.itemType !== 'exercise' ||
+    nextItem.itemType !== 'exercise'
+  ) {
+    return currentSchema;
+  }
+
+  // Determine the contiguous block we are (or will be) linking
+  let start = itemIndex;
+  let end = itemIndex + 1;
+
+  // Extend upwards while part of any existing superset chain (and is exercise)
+  while (
+    start > 0 &&
+    items[start - 1].itemType === 'exercise' &&
+    (items[start - 1] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise.supersetGroupId
+  ) {
+    start -= 1;
+  }
+
+  // Extend downwards while part of any existing superset chain (and is exercise)
+  while (
+    end < items.length - 1 &&
+    items[end + 1].itemType === 'exercise' &&
+    (items[end + 1] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise.supersetGroupId
+  ) {
+    end += 1;
+  }
+
+  // Use an existing group id if present, otherwise create a new one
+  const existingGroupId =
+    currentItem.exercise.supersetGroupId ||
+    nextItem.exercise.supersetGroupId ||
+    (items[start] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise.supersetGroupId ||
+    (items[end] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise.supersetGroupId;
+
+  const supersetGroupId =
+    existingGroupId || `superset_toplevel_${itemIndex}_${Date.now()}`;
+
+  // Assign the same supersetGroupId to the entire contiguous block
+  for (let i = start; i <= end; i += 1) {
+    const item = items[i];
+    if (item.itemType === 'exercise') {
+      items[i] = {
+        ...item,
+        exercise: {
+          ...item.exercise,
+          supersetGroupId,
+        },
+      };
+    }
+  }
+
+  return {
+    ...currentSchema,
+    items,
+  };
+};
+
+/**
+ * Unlinks two consecutive top-level exercises in a superset
+ *
+ * @param itemIndex - The index of the first exercise item in the link to break
+ * @param currentSchema - The current workout schema
+ * @returns Updated workout schema
+ */
+export const handleTopLevelSupersetUnlink = (
+  itemIndex: number,
+  currentSchema: WorkoutSchema
+): WorkoutSchema => {
+  const items = [...currentSchema.items];
+  const currentItem = items[itemIndex];
+  const nextItem = items[itemIndex + 1];
+
+  // Both must be exercise items with same superset group
+  if (
+    !currentItem ||
+    !nextItem ||
+    currentItem.itemType !== 'exercise' ||
+    nextItem.itemType !== 'exercise'
+  ) {
+    return currentSchema;
+  }
+
+  const currentExercise = currentItem.exercise;
+  const nextExercise = nextItem.exercise;
+
+  if (
+    !currentExercise.supersetGroupId ||
+    currentExercise.supersetGroupId !== nextExercise.supersetGroupId
+  ) {
+    return currentSchema;
+  }
+
+  const groupId = currentExercise.supersetGroupId;
+
+  // Find contiguous segment ABOVE including itemIndex that belongs to this group
+  let upperStart = itemIndex;
+  while (
+    upperStart > 0 &&
+    items[upperStart - 1].itemType === 'exercise' &&
+    (items[upperStart - 1] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise.supersetGroupId === groupId
+  ) {
+    upperStart -= 1;
+  }
+
+  // Find contiguous segment BELOW starting at itemIndex + 1 that belongs to this group
+  let lowerStart = itemIndex + 1;
+  let lowerEnd = lowerStart;
+  while (
+    lowerEnd < items.length - 1 &&
+    items[lowerEnd + 1].itemType === 'exercise' &&
+    (items[lowerEnd + 1] as { itemType: 'exercise'; exercise: ExerciseWithSuperset }).exercise.supersetGroupId === groupId
+  ) {
+    lowerEnd += 1;
+  }
+
+  // Lower segment becomes either a new superset group (if at least 2 exercises)
+  // or is fully unlinked if it's only a single exercise.
+  const lowerLength = lowerEnd - lowerStart + 1;
+  const newGroupId =
+    lowerLength >= 2 ? `superset_toplevel_${lowerStart}_${Date.now()}` : null;
+
+  for (let i = lowerStart; i <= lowerEnd; i += 1) {
+    const item = items[i];
+    if (item.itemType === 'exercise') {
+      items[i] = {
+        ...item,
+        exercise: {
+          ...item.exercise,
+          supersetGroupId: newGroupId,
+        },
+      };
+    }
+  }
+
+  return {
+    ...currentSchema,
+    items,
+  };
+};
+
+/**
+ * Links two consecutive exercises within a section into a superset
  *
  * @param sectionId - The ID of the section containing the exercises
  * @param exerciseIndex - The index of the first exercise in the superset
@@ -56,9 +216,9 @@ export const handleSupersetLink = (
 ): WorkoutSchema => {
   return {
     ...currentSchema,
-    sections: currentSchema.sections.map((section) => {
-      if (section.id === sectionId && section.exercises) {
-        const exercises = [...section.exercises];
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
+        const exercises = [...item.section.exercises];
         const currentExercise = exercises[exerciseIndex];
         const nextExercise = exercises[exerciseIndex + 1];
 
@@ -97,17 +257,20 @@ export const handleSupersetLink = (
         }
 
         return {
-          ...section,
-          exercises,
+          ...item,
+          section: {
+            ...item.section,
+            exercises,
+          },
         };
       }
-      return section;
+      return item;
     }),
   };
 };
 
 /**
- * Unlinks two consecutive exercises in a superset
+ * Unlinks two consecutive exercises within a section in a superset
  *
  * @param sectionId - The ID of the section containing the exercises
  * @param exerciseIndex - The index of the first exercise in the link to break
@@ -121,9 +284,9 @@ export const handleSupersetUnlink = (
 ): WorkoutSchema => {
   return {
     ...currentSchema,
-    sections: currentSchema.sections.map((section) => {
-      if (section.id === sectionId && section.exercises) {
-        const exercises = [...section.exercises];
+    items: currentSchema.items.map((item) => {
+      if (item.itemType === 'section' && item.section.id === sectionId && item.section.exercises) {
+        const exercises = [...item.section.exercises];
         const currentExercise = exercises[exerciseIndex];
         const nextExercise = exercises[exerciseIndex + 1];
 
@@ -135,16 +298,11 @@ export const handleSupersetUnlink = (
         ) {
           const groupId = currentExercise.supersetGroupId;
 
-          // We want to break the chain only at the selected boundary:
-          // - Keep the chain above exerciseIndex as one superset group
-          // - Keep the chain below exerciseIndex+1 as a separate superset group (if 2+ cards)
-
           // Find contiguous segment ABOVE including exerciseIndex that belongs to this group
           let upperStart = exerciseIndex;
           while (upperStart > 0 && exercises[upperStart - 1].supersetGroupId === groupId) {
             upperStart -= 1;
           }
-          const upperEnd = exerciseIndex;
 
           // Find contiguous segment BELOW starting at exerciseIndex + 1 that belongs to this group
           let lowerStart = exerciseIndex + 1;
@@ -155,8 +313,6 @@ export const handleSupersetUnlink = (
           ) {
             lowerEnd += 1;
           }
-
-          // Upper segment stays with the original groupId (no change needed)
 
           // Lower segment becomes either a new superset group (if at least 2 exercises)
           // or is fully unlinked if it's only a single exercise.
@@ -173,11 +329,14 @@ export const handleSupersetUnlink = (
         }
 
         return {
-          ...section,
-          exercises,
+          ...item,
+          section: {
+            ...item.section,
+            exercises,
+          },
         };
       }
-      return section;
+      return item;
     }),
   };
 };

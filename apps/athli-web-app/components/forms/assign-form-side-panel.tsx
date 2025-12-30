@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { Search, Edit, FileText, ChevronDownIcon, Info } from 'lucide-react';
+import { Search, Edit, FileText, ChevronDownIcon, Info, Check, Loader2 } from 'lucide-react';
 import { getCheckIns, type CheckIn } from '@/api/coach/coach-check-in-service';
 import { getQuestionnaires, type Questionnaire } from '@/api/coach/coach-questionnaire-service';
 
@@ -57,6 +57,7 @@ export const AssignFormSidePanel = ({
   const [sendNow, setSendNow] = useState<boolean>(true);
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (open && step === 1) {
@@ -152,6 +153,7 @@ export const AssignFormSidePanel = ({
   const handleSave = async () => {
     if (!selectedForm || !clientId) return;
 
+    setIsSaving(true);
     const scheduleData: AssignFormScheduleData = {
       type: scheduleType,
       frequency: scheduleType === 'check-in' ? checkInFrequency : undefined,
@@ -180,6 +182,8 @@ export const AssignFormSidePanel = ({
     } catch (error) {
       console.error('Failed to assign form:', error);
       // TODO: Show error toast to user
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -244,7 +248,10 @@ export const AssignFormSidePanel = ({
       footer={
         step === 1 ? (
           forms.length > 0 ? (
-            <div className="flex w-full justify-start gap-2">
+            <div className="flex w-full justify-end gap-2">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                {t('general.cancel')}
+              </Button>
               <Button
                 type="button"
                 onClick={handleContinue}
@@ -252,22 +259,24 @@ export const AssignFormSidePanel = ({
               >
                 {t('general.continue')}
               </Button>
-              <Button type="button" variant="outline" onClick={handleClose}>
-                {t('general.cancel')}
-              </Button>
             </div>
           ) : null
         ) : (
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={handleSave}
-              disabled={!isValidStep2()}
+              disabled={!isValidStep2() || isSaving}
             >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {t('general.save')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
             </Button>
           </div>
         )

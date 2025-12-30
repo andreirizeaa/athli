@@ -61,7 +61,7 @@ import {
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
 } from '@/api/client/client-service';
-import { AddWorkoutSidePanel } from './add-workout-side-panel';
+import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
 import { AddProgramSidePanel } from './add-program-side-panel';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-service';
@@ -504,6 +504,7 @@ const ClientTrainingCalendarPage = () => {
           convertedCalendar[isoKey] = calendar[dateKey].map((workout) => ({
             ...workout,
             id: workout.id,
+            isFavourite: (workout as any).isFavourite || false,
           }));
         });
 
@@ -1070,6 +1071,7 @@ const ClientTrainingCalendarPage = () => {
       totalExercises: selectedProgram.totalExercises,
       equipment: selectedProgram.equipment,
       created: selectedProgram.created,
+      isFavourite: false,
     };
 
     setWorkoutsByDate((previousWorkouts) => {
@@ -1127,6 +1129,7 @@ const ClientTrainingCalendarPage = () => {
       totalExercises: 1,
       equipment: selectedExercise.equipment || [],
       created: formatDate(new Date()),
+      isFavourite: false,
       workout_data: {
         sections: [
           {

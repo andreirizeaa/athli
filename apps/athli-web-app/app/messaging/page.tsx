@@ -2931,7 +2931,18 @@ const MessagingPage = () => {
         onOpenChange={setIsCreateNoteOpen}
         title={t('messages.createNote')}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCreateNoteOpen(false);
+                setNoteTitle('');
+                setNoteContent('');
+                setIsNoteEmpty(true);
+              }}
+            >
+              {t('general.cancel')}
+            </Button>
             <Button
               onClick={() => {
                 // TODO: Handle save note
@@ -2945,17 +2956,6 @@ const MessagingPage = () => {
               disabled={!noteTitle.trim()}
             >
               {t('general.save')}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsCreateNoteOpen(false);
-                setNoteTitle('');
-                setNoteContent('');
-                setIsNoteEmpty(true);
-              }}
-            >
-              {t('general.cancel')}
             </Button>
           </div>
         }
@@ -2996,9 +2996,9 @@ const MessagingPage = () => {
         onOpenChange={setIsViewNoteOpen}
         title={t('messages.viewNote')}
         footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button onClick={handleSaveNote} disabled={!hasNoteChanges}>
-              {t('general.save')}
+          <div className="flex w-full justify-end gap-2">
+            <Button variant="outline" onClick={handleCancelNoteEdit}>
+              {t('general.cancel')}
             </Button>
             <DropdownMenu open={isDeleteNoteMenuOpen} onOpenChange={setIsDeleteNoteMenuOpen}>
               <DropdownMenuTrigger asChild>
@@ -3007,14 +3007,14 @@ const MessagingPage = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-40">
-                <DropdownMenuItem onClick={handleDeleteNote} aria-label={t('general.delete')}>
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <DropdownMenuItem onClick={handleDeleteNote} aria-label={t('general.delete')} className="gap-2">
+                  <Trash2 className="size-4" />
                   {t('general.delete')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" onClick={handleCancelNoteEdit}>
-              {t('general.cancel')}
+            <Button onClick={handleSaveNote} disabled={!hasNoteChanges}>
+              {t('general.save')}
             </Button>
           </div>
         }

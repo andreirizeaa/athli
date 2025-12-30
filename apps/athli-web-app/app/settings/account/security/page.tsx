@@ -322,7 +322,7 @@ const SecurityPage = () => {
                       disabled={!hasPasswordChanges || isSavingPassword}
                     >
                       {isSavingPassword ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('settings.profile.saving')}</>
+                        <><Loader2 className="h-4 w-4 animate-spin" /> {t('settings.profile.saving')}</>
                       ) : (
                         t('settings.profile.saveChanges')
                       )}

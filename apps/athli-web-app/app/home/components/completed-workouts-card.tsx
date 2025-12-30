@@ -129,7 +129,7 @@ const getMissedWorkouts = (): MissedWorkout[] => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   yesterday.setHours(0, 0, 0, 0);
-  
+
   return [
     {
       id: '1',
@@ -183,7 +183,7 @@ const getCompletedWorkouts = (): CompletedWorkout[] => {
   // Always use today's date for completed workouts
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const mockWorkout = mockWorkouts[0] || {
     program: 'Strength Builder',
     description: 'A comprehensive strength training workout',
@@ -434,7 +434,7 @@ export const CompletedWorkoutsCard = () => {
     yesterday.setHours(0, 0, 0, 0);
     const selected = new Date(selectedDate);
     selected.setHours(0, 0, 0, 0);
-    
+
     if (workoutType === 'missed') {
       return selected.getTime() === yesterday.getTime();
     } else {
@@ -446,7 +446,7 @@ export const CompletedWorkoutsCard = () => {
     if (!selectedDate || workoutType !== 'missed') return [];
     const selected = new Date(selectedDate);
     selected.setHours(0, 0, 0, 0);
-    
+
     const missedWorkouts = getMissedWorkouts();
     return missedWorkouts.filter((workout) => {
       const workoutDate = new Date(workout.workoutDate);
@@ -459,7 +459,7 @@ export const CompletedWorkoutsCard = () => {
     if (!selectedDate || workoutType !== 'completed') return [];
     const selected = new Date(selectedDate);
     selected.setHours(0, 0, 0, 0);
-    
+
     const completedWorkouts = getCompletedWorkouts();
     return completedWorkouts.filter((workout) => {
       const workoutDate = new Date(workout.workoutDate);
@@ -481,7 +481,7 @@ export const CompletedWorkoutsCard = () => {
   };
 
   const handleNavigateToWorkout = (workoutId: string) => {
-    router.push(`/training/workouts/${workoutId}/edit/standard`);
+    router.push(`/training/workouts/${workoutId}/edit`);
   };
 
   const handleWorkoutKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, workoutId: string) => {
@@ -550,7 +550,7 @@ export const CompletedWorkoutsCard = () => {
                 className={cn(
                   'h-7 text-xs',
                   isTodayOrYesterdaySelected &&
-                    '!bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90'
+                  '!bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90'
                 )}
                 aria-label={workoutType === 'missed' ? t('home.yesterday') : t('home.today')}
               >
@@ -680,8 +680,8 @@ export const CompletedWorkoutsCard = () => {
                                 workout.percentage <= 25
                                   ? 'text-green-600 dark:text-green-500'
                                   : workout.percentage <= 60
-                                  ? 'text-amber-600 dark:text-amber-500'
-                                  : 'text-red-600 dark:text-red-500'
+                                    ? 'text-amber-600 dark:text-amber-500'
+                                    : 'text-red-600 dark:text-red-500'
                               )}
                             />
                             <div className="flex flex-col items-center gap-0.5">

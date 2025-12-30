@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, ChevronDownIcon, X, Plus, Info } from 'lucide-react';
+import { Upload, ChevronDownIcon, X, Plus, Info, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import {
@@ -290,17 +290,22 @@ export const AddPhotoSidePanel = ({
       onOpenChange={onOpenChange}
       title={t('photos.addPhoto')}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={handleSave}
             disabled={!hasAnyPhoto || !recordedAt || isSaving}
             className="min-w-[80px]"
           >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             {isSaving ? t('general.saving') : t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }

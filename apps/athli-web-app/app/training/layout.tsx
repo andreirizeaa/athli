@@ -4,13 +4,6 @@ import React from 'react';
 import { useRouter, useSelectedLayoutSegments } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageTabs } from '@/components/page-tabs';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Store } from 'lucide-react';
 import { TrainingDataProvider } from './training-data-context';
 
 type LibraryLayoutProps = {
@@ -26,6 +19,10 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
     {
       value: 'workouts',
       label: t('library.workouts'),
+    },
+    {
+      value: 'sections',
+      label: t('library.sections.title'),
     },
     {
       value: 'programs',
@@ -58,22 +55,6 @@ const LibraryLayout = ({ children }: LibraryLayoutProps) => {
           <div className="w-full px-4">
             <div className="flex items-center justify-between mb-2 mt-2">
               <h1 className="text-[22px] font-semibold">{t('library.title')}</h1>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="gap-2" aria-label={t('library.openMarketplace')}>
-                    <Store className="size-4" />
-                    {t('library.marketplace')}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-80 bg-neutral-800 text-white dark:bg-white dark:text-neutral-800"
-                >
-                  <div className="p-4 flex items-center justify-center min-h-[80px]">
-                    <p className="text-sm text-center">{t('library.marketplaceComingSoon')}</p>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
             <PageTabs
               tabs={tabs}
