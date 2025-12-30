@@ -139,6 +139,7 @@ export const mapSetDataToPayload = (
 ): SetPayload => {
   const base = {
     setNumber: set.setNumber,
+    type: set.type || 'normal',
     restSec: set.rest ? (parseNumber(set.rest, 'null') ?? null) : null,
   };
 
@@ -242,15 +243,22 @@ const buildSectionPayload = (
   }
 
   if (section.type === 'amrap') {
-    const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
-      id: exercise.exerciseId ?? exercise.id,
-      exerciseType: exercise.exerciseType,
-      weight: exercise.weight ?? null,
-      reps: exercise.reps ?? null,
-      distance: exercise.distance ?? null,
-      durationSec: exercise.durationSec ?? null,
-      restSec: exercise.restSec ?? null,
-    }));
+    const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => {
+      const firstSet = exercise.sets?.[0];
+      // Builder uses 'rest' (string) in sets, payload uses 'restSec' (number)
+      // Builder uses 'duration' (string) in sets, payload uses 'durationSec' (number)
+
+      return {
+        id: exercise.exerciseId ?? exercise.id,
+        exerciseType: exercise.exerciseType,
+        type: firstSet?.type || 'normal',
+        weight: parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null,
+        reps: parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null,
+        distance: parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null,
+        durationSec: parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null,
+        restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
+      };
+    });
 
     return {
       id: section.id,
@@ -328,15 +336,20 @@ const buildSectionPayload = (
   }
 
   // Timed section
-  const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => ({
-    id: exercise.exerciseId ?? exercise.id,
-    exerciseType: exercise.exerciseType,
-    weight: exercise.weight ?? null,
-    reps: exercise.reps ?? null,
-    distance: exercise.distance ?? null,
-    durationSec: exercise.durationSec ?? null,
-    restSec: exercise.restSec ?? null,
-  }));
+  const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => {
+    const firstSet = exercise.sets?.[0];
+
+    return {
+      id: exercise.exerciseId ?? exercise.id,
+      exerciseType: exercise.exerciseType,
+      type: firstSet?.type || 'normal',
+      weight: parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null,
+      reps: parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null,
+      distance: parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null,
+      durationSec: parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null,
+      restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
+    };
+  });
 
   return {
     id: section.id,

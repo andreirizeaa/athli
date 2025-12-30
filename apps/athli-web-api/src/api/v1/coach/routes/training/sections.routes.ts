@@ -68,11 +68,13 @@ coachSectionRouter.post('/', supabaseAuthenticate, coachSectionsController.creat
 coachSectionRouter.post('/bulk', supabaseAuthenticate, coachSectionsController.getSectionsByIds);
 
 coachSectionRouter.post('/get', supabaseAuthenticate, coachSectionsController.getSectionById);
+coachSectionRouter.get('/:id', supabaseAuthenticate, coachSectionsController.getSectionById);
 
 coachSectionRouter.post('/update', supabaseAuthenticate, coachSectionsController.updateSection);
 
 coachSectionRouter.post('/delete', supabaseAuthenticate, coachSectionsController.deleteSection);
+coachSectionRouter.delete('/:id', supabaseAuthenticate, coachSectionsController.deleteSection);
 
 coachSectionRouter.post('/duplicate', supabaseAuthenticate, coachSectionsController.duplicateSection);
-
+coachSectionRouter.post('/:id/duplicate', supabaseAuthenticate, coachSectionsController.duplicateSection);
 coachSectionRouter.post('/toggle-favorite', supabaseAuthenticate, coachSectionsController.toggleFavorite);

@@ -25,7 +25,7 @@ type EditSectionDetailsSidePanelProps = {
         description: string;
     };
     onSave: (data: { title: string; sectionType: SectionType; description: string }) => Promise<void>;
-    onDelete?: () => void; // Optional, only for existing sections
+    onDelete?: () => Promise<void>;
 };
 
 export const EditSectionDetailsSidePanel = ({
@@ -143,7 +143,7 @@ export const EditSectionDetailsSidePanel = ({
                 }
             >
                 <div className="flex flex-col gap-6">
-                    <div className="flex flex-col">
+                    <div className="flex flex-col gap-2">
                         <Label htmlFor="section-title" className="text-sm font-medium">
                             {t('library.sections.sectionName') || 'Section Name'}<RequiredAsterisk />
                         </Label>
@@ -167,7 +167,7 @@ export const EditSectionDetailsSidePanel = ({
                         {titleError && <p className="text-sm text-destructive">{titleError}</p>}
                     </div>
 
-                    <div className="flex flex-col">
+                    <div className="flex flex-col gap-2">
                         <Label htmlFor="section-type" className="text-sm font-medium">
                             {t('library.sections.type') || 'Type'}
                         </Label>

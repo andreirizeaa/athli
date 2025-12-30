@@ -23,7 +23,8 @@ import {
 import { StandardBuilder } from '../../../workouts/new/workout-builder';
 import type { WorkoutProgramPayload } from '../../../workouts/new/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
-import { getSectionById, updateSection } from '@/api/coach/coach-section-service';
+import { getSectionById, updateSection, deleteSections } from '@/api/coach/coach-section-service';
+import { searchExercises } from '@/api/exercise/exercise-search';
 import type { SectionType } from '../../section-type-utils';
 
 type SectionMeta = {
@@ -61,8 +62,99 @@ const EditSectionPage = () => {
           // Wrap section data in items format for the builder
           // Ensure we merge the metadata (type, title/name) back into the section data
           // because it might be stripped from the JSONB if using the new schema
+          // Unwrap section data if it's nested in an items array (from payload builder)
+          let coreData = section.section_data;
+          if (coreData?.items && Array.isArray(coreData.items) && coreData.items.length > 0 && coreData.items[0].itemType === 'section') {
+            coreData = coreData.items[0].data;
+          }
+
+          // Flatten exercises and ensure instanceIds
+          if (coreData && coreData.exercises && Array.isArray(coreData.exercises)) {
+            const hasNestedExercises = coreData.exercises.some((ex: any) => ex.exercises && Array.isArray(ex.exercises));
+
+            if (hasNestedExercises) {
+              const flattenedExercises: any[] = [];
+              coreData.exercises.forEach((group: any) => {
+                const isSuperset = group.isSuperset;
+                const supersetGroupId = isSuperset ? crypto.randomUUID() : undefined;
+
+                if (group.exercises && Array.isArray(group.exercises)) {
+                  group.exercises.forEach((ex: any) => {
+                    flattenedExercises.push({
+                      ...ex,
+                      instanceId: crypto.randomUUID(),
+                      supersetGroupId,
+                    });
+                  });
+                }
+              });
+              coreData.exercises = flattenedExercises;
+            } else {
+              // Ensure instanceId exists for already flat exercises (e.g. AMRAP)
+              coreData.exercises = coreData.exercises.map((ex: any) => ({
+                ...ex,
+                instanceId: ex.instanceId || crypto.randomUUID(),
+              }));
+            }
+          }
+
+          // Hydrate exercise details (name, image, etc.) from local DB
+          if (coreData && coreData.exercises && Array.isArray(coreData.exercises)) {
+            coreData.exercises = coreData.exercises.map((ex: any) => {
+              const fullExercise = searchExercises('').find(e => e.exerciseId === ex.id);
+              if (fullExercise) {
+                return {
+                  ...ex,
+                  name: fullExercise.name,
+                  imageUrl: fullExercise.imageUrl,
+                  videoUrl: fullExercise.videoUrl,
+                  equipments: fullExercise.equipments,
+                  bodyParts: fullExercise.bodyParts,
+                  targetMuscles: fullExercise.targetMuscles,
+                  secondaryMuscles: fullExercise.secondaryMuscles,
+                  keywords: fullExercise.keywords,
+                  overview: fullExercise.overview,
+                  instructions: fullExercise.instructions,
+                  exerciseTips: fullExercise.exerciseTips,
+                  variations: fullExercise.variations,
+                  relatedExerciseIds: fullExercise.relatedExerciseIds,
+                };
+              }
+              return ex;
+            });
+          }
+
+          // Normalize AMRAP/Timed/Circuits exercises to include sets
+          // The API returns flat metrics (weight, reps, etc.) for these types,
+          // but the builder UI expects a 'sets' array.
+          if (coreData && (coreData.type === 'amrap' || coreData.type === 'timed' || coreData.type === 'circuits')) {
+            if (coreData.exercises && Array.isArray(coreData.exercises)) {
+              coreData.exercises = coreData.exercises.map((ex: any) => {
+                // If sets already exist, leave it
+                if (ex.sets && ex.sets.length > 0) return ex;
+
+                // Create a single set from root props
+                // Map API numbers to Builder strings
+                const set = {
+                  setNumber: 1,
+                  type: 'normal',
+                  reps: ex.reps !== null && ex.reps !== undefined ? ex.reps.toString() : '',
+                  weight: ex.weight !== null && ex.weight !== undefined ? ex.weight.toString() : '',
+                  rest: ex.restSec !== null && ex.restSec !== undefined ? ex.restSec.toString() : '',
+                  distance: ex.distance !== null && ex.distance !== undefined ? ex.distance.toString() : '',
+                  duration: ex.durationSec !== null && ex.durationSec !== undefined ? ex.durationSec.toString() : '',
+                };
+
+                return {
+                  ...ex,
+                  sets: [set]
+                };
+              });
+            }
+          }
+
           const sectionData = {
-            ...section.section_data,
+            ...coreData,
             id: section.id,
             type: section.section_type,
             name: section.name,
@@ -175,6 +267,24 @@ const EditSectionPage = () => {
     } catch (error) {
       console.error('Failed to update section details:', error);
       toast.error(t('library.sections.toast.failedToSave'));
+    }
+  };
+
+  const handleDeleteSection = async () => {
+    try {
+      await deleteSections(sectionId);
+      toast.success(t('library.sections.toast.deletedSuccessfully', { name: sectionMeta?.title || '' }), {
+        style: {
+          background: 'rgb(220 252 231)',
+          color: 'rgb(20 83 45)',
+          border: '1px solid rgb(187 247 208)',
+        },
+      });
+      navigateBackToSections();
+      await refreshSections();
+    } catch (error) {
+      console.error('Failed to delete section:', error);
+      toast.error(t('library.sections.toast.failedToDelete'));
     }
   };
 
@@ -298,6 +408,7 @@ const EditSectionPage = () => {
         onOpenChange={setIsEditDetailsOpen}
         sectionMeta={sectionMeta}
         onSave={handleSaveDetails}
+        onDelete={handleDeleteSection}
       />
 
       <DiscardChangesDialog

@@ -65,9 +65,8 @@ export const deleteWorkouts = async (workoutIds: string | string[]): Promise<voi
 
   await Promise.all(
     ids.map((id) =>
-      apiFetch('/coach/training/workouts/delete', {
-        method: 'POST',
-        body: JSON.stringify({ id }),
+      apiFetch(`/coach/training/workouts/${id}`, {
+        method: 'DELETE',
       })
     )
   );
@@ -78,17 +77,21 @@ export const deleteWorkouts = async (workoutIds: string | string[]): Promise<voi
  */
 export const createWorkout = async (workoutData: WorkoutProgramPayload): Promise<Workout> => {
   // Calculate total exercises from items
-  const totalExercises = workoutData.items.reduce((total, item) => {
+  const totalExercises = (workoutData.items || []).reduce((total, item) => {
     if (item.itemType === 'exercise') {
-      return total + item.data.exercises.length;
+      // Top-level exercises count as 1
+      return total + 1;
     } else if (item.itemType === 'section') {
       const section = item.data;
       if (section.type === 'regular' || section.type === 'auxiliary') {
-        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        // Handle potentially undefined exercises array
+        const exercises = section.exercises || [];
+        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'circuits') {
-        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        const exercises = section.exercises || [];
+        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'amrap' || section.type === 'timed') {
-        return total + section.exercises.length;
+        return total + (section.exercises?.length || 0);
       }
     }
     return total;
@@ -133,17 +136,21 @@ export const editWorkout = async (
   workoutData: WorkoutProgramPayload
 ): Promise<Workout> => {
   // Calculate total exercises from items
-  const totalExercises = workoutData.items.reduce((total, item) => {
+  const totalExercises = (workoutData.items || []).reduce((total, item) => {
     if (item.itemType === 'exercise') {
-      return total + item.data.exercises.length;
+      // Top-level exercises count as 1
+      return total + 1;
     } else if (item.itemType === 'section') {
       const section = item.data;
       if (section.type === 'regular' || section.type === 'auxiliary') {
-        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        // Handle potentially undefined exercises array
+        const exercises = section.exercises || [];
+        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'circuits') {
-        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        const exercises = section.exercises || [];
+        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'amrap' || section.type === 'timed') {
-        return total + section.exercises.length;
+        return total + (section.exercises?.length || 0);
       }
     }
     return total;
@@ -200,9 +207,8 @@ export const updateWorkoutDetails = async (
  * Duplicate a workout
  */
 export const duplicateWorkout = async (workoutId: string): Promise<Workout> => {
-  const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/duplicate', {
+  const response = await apiFetch<ApiResponse<{ workout: Workout }>>(`/coach/training/workouts/${workoutId}/duplicate`, {
     method: 'POST',
-    body: JSON.stringify({ id: workoutId }),
   });
   if (!response.data) throw new Error('No workout returned');
   return response.data.workout;
@@ -212,10 +218,7 @@ export const duplicateWorkout = async (workoutId: string): Promise<Workout> => {
  * Get workout by ID
  */
 export const getWorkoutById = async (workoutId: string): Promise<Workout & { workout_data: WorkoutProgramPayload }> => {
-  const response = await apiFetch<ApiResponse<{ workout: Workout & { workout_data: WorkoutProgramPayload } }>>('/coach/training/workouts/get', {
-    method: 'POST',
-    body: JSON.stringify({ id: workoutId }),
-  });
+  const response = await apiFetch<ApiResponse<{ workout: Workout & { workout_data: WorkoutProgramPayload } }>>(`/coach/training/workouts/${workoutId}`);
   if (!response.data) throw new Error('No workout returned');
   return response.data.workout;
 };

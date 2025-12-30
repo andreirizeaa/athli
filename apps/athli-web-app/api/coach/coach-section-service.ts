@@ -71,9 +71,8 @@ export const deleteSections = async (sectionIds: string | string[]): Promise<voi
 
   await Promise.all(
     ids.map((id) =>
-      apiFetch('/coach/training/sections/delete', {
-        method: 'POST',
-        body: JSON.stringify({ id }),
+      apiFetch(`/coach/training/sections/${id}`, {
+        method: 'DELETE',
       })
     )
   );
@@ -116,6 +115,7 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
     }),
   });
 
+  if (!response.data) throw new Error('No section returned');
   const s = response.data.section;
   return {
     id: s.id,
@@ -138,26 +138,26 @@ export const updateSection = async (
   // Calculate total exercises if items provided
   const totalExercises = sectionData.items
     ? sectionData.items.reduce((total, item) => {
-        if (item.itemType === 'exercise') {
-          return total + item.data.exercises.length;
-        } else if (item.itemType === 'section') {
-          const section = item.data;
-          if (section.type === 'regular' || section.type === 'auxiliary') {
-            return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
-          } else if (section.type === 'circuits') {
-            return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
-          } else if (section.type === 'amrap' || section.type === 'timed') {
-            return total + section.exercises.length;
-          }
+      if (item.itemType === 'exercise') {
+        return total + item.data.exercises.length;
+      } else if (item.itemType === 'section') {
+        const section = item.data;
+        if (section.type === 'regular' || section.type === 'auxiliary') {
+          return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        } else if (section.type === 'circuits') {
+          return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        } else if (section.type === 'amrap' || section.type === 'timed') {
+          return total + section.exercises.length;
         }
-        return total;
-      }, 0)
+      }
+      return total;
+    }, 0)
     : undefined;
 
   const cleanSectionData = sectionData.items
     ? {
-        items: sectionData.items,
-      }
+      items: sectionData.items,
+    }
     : undefined;
 
   const updatePayload: any = {
@@ -173,6 +173,7 @@ export const updateSection = async (
     body: JSON.stringify(updatePayload),
   });
 
+  if (!response.data) throw new Error('No section returned');
   const s = response.data.section;
   return {
     id: s.id,
@@ -189,11 +190,9 @@ export const updateSection = async (
  * Get section by ID
  */
 export const getSectionById = async (sectionId: string): Promise<any> => {
-  const response = await apiFetch<ApiResponse<{ section: any }>>('/coach/training/sections/get', {
-    method: 'POST',
-    body: JSON.stringify({ id: sectionId }),
-  });
+  const response = await apiFetch<ApiResponse<{ section: any }>>(`/coach/training/sections/${sectionId}`);
 
+  if (!response.data) throw new Error('No section returned');
   return response.data.section;
 };
 
@@ -201,11 +200,11 @@ export const getSectionById = async (sectionId: string): Promise<any> => {
  * Duplicate a section
  */
 export const duplicateSection = async (sectionId: string): Promise<Section> => {
-  const response = await apiFetch<ApiResponse<{ section: any }>>('/coach/training/sections/duplicate', {
+  const response = await apiFetch<ApiResponse<{ section: any }>>(`/coach/training/sections/${sectionId}/duplicate`, {
     method: 'POST',
-    body: JSON.stringify({ id: sectionId }),
   });
 
+  if (!response.data) throw new Error('No section returned');
   const s = response.data.section;
   return {
     id: s.id,

@@ -1278,6 +1278,7 @@ export const enMessages = {
         archivedSuccessfully: 'Workout archived successfully',
         unarchivedSuccessfully: 'Workout restored successfully',
         starredSuccessfully: '{name} starred successfully',
+        starredBulkSuccessfully: '{count} workouts starred successfully',
         unstarredSuccessfully: '{name} unstarred successfully',
       },
     },

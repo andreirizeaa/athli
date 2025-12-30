@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip, TooltipContent, TooltipRoot, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -327,7 +327,10 @@ const ProgramsPage = () => {
     handleDuplicateSelectedPerRow(programId, program.program);
   };
 
+  const [isBulkDuplicating, setIsBulkDuplicating] = useState<boolean>(false);
+
   const handleDuplicateSelectedPerRow = React.useCallback(async (programId: string, name: string) => {
+    setIsBulkDuplicating(true);
     try {
       const fullProgram = await getProgramById(programId);
       await createProgram({
@@ -346,6 +349,8 @@ const ProgramsPage = () => {
       toast.success(t('workouts.detail.toast.duplicatedSuccessfully', { name }));
     } catch (error) {
       console.error('Failed to duplicate program:', error);
+    } finally {
+      setIsBulkDuplicating(false);
     }
   }, [refreshPrograms, t]);
 
@@ -846,16 +851,26 @@ const ProgramsPage = () => {
             </Button>
             {/* RESTORED Duplicate Selected */}
             {selectedPrograms.size === 1 && (
-              <Button
-                variant="ghost"
-                onClick={handleDuplicateSelected}
-                className="gap-2"
-                aria-label={t('programs.actions.duplicateAria')}
-                title={t('programs.actions.duplicate')}
-              >
-                <Copy className="size-4" />
-                <span>{t('programs.actions.duplicate')}</span>
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={handleDuplicateSelected}
+                      className="gap-2"
+                      disabled={isBulkDuplicating}
+                      aria-label={t('programs.actions.duplicateAria')}
+                      title={t('programs.actions.duplicate')}
+                    >
+                      {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
+                      <span>{t('programs.actions.duplicate')}</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{t('programs.actions.duplicate')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             <Button
               variant="ghost"

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Spinner } from '@/components/ui/spinner';
 import { DataGrid, type ColumnDefinition, type FilterDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
@@ -140,18 +141,25 @@ const SectionsPage = () => {
     }
   };
 
-  const handleDeleteSection = async () => {
-    if (!sectionToDelete) return;
-    try {
-      await deleteSections([sectionToDelete]);
-      await refreshSections();
+  const handleDeleteSection = async (sectionId: string) => {
+    // Optimistic update: Remove locally first
+    setSections((prev) => prev.filter((s) => s.id !== sectionId));
 
-      toast.success(t('library.sections.toast.deletedSuccessfully'));
-      setSectionToDelete(null);
-    } catch (error) {
-      console.error('Failed to delete section:', error);
-      toast.error(t('general.error'));
-    }
+    // Create promise for the deletion
+    const deletePromise = async () => {
+      await deleteSections(sectionId);
+      await refreshSections();
+    };
+
+    toast.promise(deletePromise(), {
+      loading: t('library.sections.toast.deleting'),
+      success: t('library.sections.toast.deletedSuccessfully', { name: 'Section' }), // Generic name since we might lose reference
+      error: (err) => {
+        // Revert optimistic update on error (fetch fresh data)
+        refreshSections();
+        return t('library.sections.toast.failedToDelete');
+      },
+    });
   };
 
   const handleBulkDelete = async () => {
@@ -242,7 +250,10 @@ const SectionsPage = () => {
     handleDuplicateSelectedPerRow(sectionId, section.program);
   };
 
+  const [isBulkDuplicating, setIsBulkDuplicating] = useState<boolean>(false);
+
   const handleDuplicateSelectedPerRow = async (sectionId: string, name: string) => {
+    setIsBulkDuplicating(true);
     try {
       await duplicateSection(sectionId);
       await refreshSections();
@@ -251,6 +262,8 @@ const SectionsPage = () => {
     } catch (error) {
       console.error('Failed to duplicate section:', error);
       toast.error(t('general.error'));
+    } finally {
+      setIsBulkDuplicating(false);
     }
   };
 
@@ -560,8 +573,8 @@ const SectionsPage = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" onClick={handleDuplicateSelected} className="gap-2" aria-label={t('library.sections.actions.duplicateAria')}>
-                      <Copy className="size-4" />
+                    <Button variant="ghost" onClick={handleDuplicateSelected} className="gap-2" disabled={isBulkDuplicating} aria-label={t('library.sections.actions.duplicateAria')}>
+                      {isBulkDuplicating ? <Spinner className="size-4" /> : <Copy className="size-4" />}
                       <span>{t('library.sections.actions.duplicate')}</span>
                     </Button>
                   </TooltipTrigger>
@@ -638,7 +651,7 @@ const SectionsPage = () => {
       <ConfirmDeleteDialog
         open={sectionToDelete !== null}
         onOpenChange={(open) => !open && setSectionToDelete(null)}
-        onConfirm={handleDeleteSection}
+        onConfirm={() => sectionToDelete && handleDeleteSection(sectionToDelete)}
         itemName={sections.find((s) => s.id === sectionToDelete)?.program}
         itemType="section"
       />
