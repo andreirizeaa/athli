@@ -87,6 +87,7 @@ type ExerciseCardProps = {
   sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
   validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
+  hasSupersetError?: boolean;
 };
 
 type DropsetData = {
@@ -108,6 +109,7 @@ export const ExerciseCard = ({
   sectionType = 'regular',
   validationErrors,
   onClearValidationField,
+  hasSupersetError = false,
 }: ExerciseCardProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -603,7 +605,9 @@ export const ExerciseCard = ({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex flex-col gap-3 p-3 bg-background border',
+        'relative flex flex-col gap-3 p-3 bg-background',
+        // Border color: red if superset error, otherwise default
+        hasSupersetError ? 'border-2 border-destructive' : 'border',
         // Shape logic:
         // - standalone: fully rounded
         // - top of superset: rounded top only

@@ -30,9 +30,9 @@ export const starWorkouts = async (workoutIds: string | string[], starred: boole
 
   await Promise.all(
     ids.map((id) =>
-      apiFetch(`/coach/training/workouts/${id}/toggle-favorite`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isFavourite: starred }),
+      apiFetch('/coach/training/workouts/toggle-favorite', {
+        method: 'POST',
+        body: JSON.stringify({ id, isFavourite: starred }),
       })
     )
   );
@@ -49,9 +49,9 @@ export const archiveWorkouts = async (
 
   await Promise.all(
     ids.map((id) =>
-      apiFetch(`/coach/training/workouts/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ archived }),
+      apiFetch('/coach/training/workouts/update', {
+        method: 'POST',
+        body: JSON.stringify({ id, archived }),
       })
     )
   );
@@ -65,8 +65,9 @@ export const deleteWorkouts = async (workoutIds: string | string[]): Promise<voi
 
   await Promise.all(
     ids.map((id) =>
-      apiFetch(`/coach/training/workouts/${id}`, {
-        method: 'DELETE',
+      apiFetch('/coach/training/workouts/delete', {
+        method: 'POST',
+        body: JSON.stringify({ id }),
       })
     )
   );
@@ -76,17 +77,26 @@ export const deleteWorkouts = async (workoutIds: string | string[]): Promise<voi
  * Create a new workout
  */
 export const createWorkout = async (workoutData: WorkoutProgramPayload): Promise<Workout> => {
-  // Calculate total exercises from sections
-  const totalExercises = workoutData.sections.reduce((total, section) => {
-    if (section.type === 'regular') {
-      return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+  // Calculate total exercises from items
+  const totalExercises = workoutData.items.reduce((total, item) => {
+    if (item.itemType === 'exercise') {
+      return total + item.data.exercises.length;
+    } else if (item.itemType === 'section') {
+      const section = item.data;
+      if (section.type === 'regular' || section.type === 'auxiliary') {
+        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+      } else if (section.type === 'circuits') {
+        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+      } else if (section.type === 'amrap' || section.type === 'timed') {
+        return total + section.exercises.length;
+      }
     }
-    return total + section.exercises.length;
+    return total;
   }, 0);
 
   // Separate metadata from workout data
   const cleanWorkoutData = {
-    sections: workoutData.sections,
+    items: workoutData.items,
     ...(workoutData.status && { status: workoutData.status }),
     ...(workoutData.startedAt && { startedAt: workoutData.startedAt }),
     ...(workoutData.completedAt && { completedAt: workoutData.completedAt }),
@@ -122,17 +132,26 @@ export const editWorkout = async (
   workoutId: string,
   workoutData: WorkoutProgramPayload
 ): Promise<Workout> => {
-  // Calculate total exercises from sections
-  const totalExercises = workoutData.sections.reduce((total, section) => {
-    if (section.type === 'regular') {
-      return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+  // Calculate total exercises from items
+  const totalExercises = workoutData.items.reduce((total, item) => {
+    if (item.itemType === 'exercise') {
+      return total + item.data.exercises.length;
+    } else if (item.itemType === 'section') {
+      const section = item.data;
+      if (section.type === 'regular' || section.type === 'auxiliary') {
+        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+      } else if (section.type === 'circuits') {
+        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+      } else if (section.type === 'amrap' || section.type === 'timed') {
+        return total + section.exercises.length;
+      }
     }
-    return total + section.exercises.length;
+    return total;
   }, 0);
 
   // Separate metadata from workout data
   const cleanWorkoutData = {
-    sections: workoutData.sections,
+    items: workoutData.items,
     ...(workoutData.status && { status: workoutData.status }),
     ...(workoutData.startedAt && { startedAt: workoutData.startedAt }),
     ...(workoutData.completedAt && { completedAt: workoutData.completedAt }),
@@ -145,9 +164,10 @@ export const editWorkout = async (
     ...(workoutData.rating && { rating: workoutData.rating }),
   };
 
-  const response = await apiFetch<ApiResponse<{ workout: Workout }>>(`/coach/training/workouts/${workoutId}`, {
-    method: 'PATCH',
+  const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {
+    method: 'POST',
     body: JSON.stringify({
+      id: workoutId,
       title: workoutData.title,
       description: workoutData.description,
       type: workoutData.type,
@@ -168,9 +188,9 @@ export const updateWorkoutDetails = async (
   workoutId: string,
   details: { title: string; type: string; difficulty: string; description: string }
 ): Promise<Workout> => {
-  const response = await apiFetch<ApiResponse<{ workout: Workout }>>(`/coach/training/workouts/${workoutId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(details),
+  const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {
+    method: 'POST',
+    body: JSON.stringify({ id: workoutId, ...details }),
   });
   if (!response.data) throw new Error('No workout returned');
   return response.data.workout;
@@ -180,8 +200,9 @@ export const updateWorkoutDetails = async (
  * Duplicate a workout
  */
 export const duplicateWorkout = async (workoutId: string): Promise<Workout> => {
-  const response = await apiFetch<ApiResponse<{ workout: Workout }>>(`/coach/training/workouts/${workoutId}/duplicate`, {
+  const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/duplicate', {
     method: 'POST',
+    body: JSON.stringify({ id: workoutId }),
   });
   if (!response.data) throw new Error('No workout returned');
   return response.data.workout;
@@ -191,7 +212,10 @@ export const duplicateWorkout = async (workoutId: string): Promise<Workout> => {
  * Get workout by ID
  */
 export const getWorkoutById = async (workoutId: string): Promise<Workout & { workout_data: WorkoutProgramPayload }> => {
-  const response = await apiFetch<ApiResponse<{ workout: Workout & { workout_data: WorkoutProgramPayload } }>>(`/coach/training/workouts/${workoutId}`);
+  const response = await apiFetch<ApiResponse<{ workout: Workout & { workout_data: WorkoutProgramPayload } }>>('/coach/training/workouts/get', {
+    method: 'POST',
+    body: JSON.stringify({ id: workoutId }),
+  });
   if (!response.data) throw new Error('No workout returned');
   return response.data.workout;
 };
