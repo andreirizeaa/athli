@@ -36,7 +36,7 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange }: CreateWorkoutSide
 
     const [newWorkoutName, setNewWorkoutName] = useState<string>('');
     const [newWorkoutType, setNewWorkoutType] = useState<string>('');
-    const [newDifficulty, setNewDifficulty] = useState<string>('all levels');
+    const [newDifficulty, setNewDifficulty] = useState<string>('all_levels');
     const [newDescription, setNewDescription] = useState<string>('');
     const [newNameError, setNewNameError] = useState<string | null>(null);
     const [newTypeError, setNewTypeError] = useState<string | null>(null);
@@ -74,10 +74,11 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange }: CreateWorkoutSide
                 setNewNameError(t('library.workoutNameRequired'));
                 return;
             }
-            if (!newWorkoutType) {
-                setNewTypeError(t('library.workoutTypeRequired'));
-                return;
-            }
+            // Type is optional now
+            // if (!newWorkoutType) {
+            //     setNewTypeError(t('library.workoutTypeRequired'));
+            //     return;
+            // }
             if (!newDifficulty) {
                 setNewDifficultyError(t('library.difficultyRequired'));
                 return;
@@ -348,7 +349,6 @@ Focus on proper form and progressive overload.`;
                             (isCreateWorkoutStep2
                                 ? !aiPrompt.trim()
                                 : !newWorkoutName.trim() ||
-                                !newWorkoutType ||
                                 !newDifficulty ||
                                 !newSelectedBuilder)
                         }

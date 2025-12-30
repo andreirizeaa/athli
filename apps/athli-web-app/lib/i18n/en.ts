@@ -905,7 +905,7 @@ export const enMessages = {
     },
     new: {
       toast: {
-        savedSuccessfully: 'Program "{name}" created successfully',
+        savedSuccessfully: 'Program "{name}" saved successfully',
       },
     },
     assigning: {
@@ -1022,8 +1022,8 @@ export const enMessages = {
       },
       toast: {
         savedSuccessfully: 'Program saved successfully',
-        failedToSave: 'Failed to save program',
-        weekDuplicated: 'Week {number} duplicated',
+        saveFailed: 'Failed to save program',
+        weekDuplicated: 'Week {number} duplicated successfully',
       },
     },
   },

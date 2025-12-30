@@ -15,7 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil, MoreHorizontal, Save, ChevronUp, ChevronDown, Eraser } from 'lucide-react';
+import { Calendar, Check, ChevronLeft, ChevronRight, Copy, Plus, Redo, Search, Trash2, Undo, X, Pencil, MoreHorizontal, Save, ChevronUp, ChevronDown, Eraser, Loader2 } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -427,7 +427,7 @@ export const ProgramBuilder = ({
     workoutsByDay: { [week: number]: { [day: number]: Array<Workout & { id: string }> } };
     totalWeeks: number;
   }>({ workoutsByDay: {}, totalWeeks: 1 });
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [selectedWorkoutDetails, setSelectedWorkoutDetails] = useState<{
     week: number;
     day: number;
@@ -695,47 +695,45 @@ export const ProgramBuilder = ({
   const handleSave = async () => {
     if (!programMeta) return;
 
-    // Build the program schema: list of days with full workout schemas
-    const programSchema: ProgramSchema = [];
-
-    // Iterate through all days (1 to totalWeeks * 7)
-    for (let dayNum = 1; dayNum <= totalWeeks * 7; dayNum++) {
-      const { week, day } = getWeekAndDay(dayNum);
-      const workouts = workoutsByDay[week]?.[day] || [];
-
-      // Each workout should already be a WorkoutPayload
-      // Store the full workout schemas as-is
-      const workoutSchemas: WorkoutPayload[] = workouts.map((workout) => {
-        // Temporary placeholder that matches WorkoutPayload structure
-        return {
-          title: workout.program,
-          description: workout.description || '',
-          type: workout.type,
-          difficulty: 'intermediate',
-          equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : [],
-          items: [], // In a real app, this would be the actual workout data
-          totalExercises: workout.totalExercises,
-        };
-      });
-
-      if (workoutSchemas.length > 0) {
-        programSchema.push({
-          day: dayNum,
-          workouts: workoutSchemas,
-        });
-      }
-    }
-
-    const programData: ProgramData = {
-      name: programMeta.name,
-      description: programMeta.description,
-      type: programMeta.type,
-      difficulty: programMeta.difficulty,
-      weeks: totalWeeks.toString(),
-      // We store the full schema in program_data via the service
-    };
-
+    setIsSaving(true);
     try {
+      // Build the program schema: list of days with full workout schemas
+      const programSchema: any[] = [];
+
+      // Iterate through all days (1 to totalWeeks * 7)
+      for (let dayNum = 1; dayNum <= totalWeeks * 7; dayNum++) {
+        const { week, day } = getWeekAndDay(dayNum);
+        const workouts = workoutsByDay[week]?.[day] || [];
+
+        const workoutSchemas: any[] = workouts.map((workout) => {
+          return {
+            title: workout.program,
+            description: workout.description || '',
+            type: workout.type,
+            difficulty: workout.difficulty || 'intermediate',
+            equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
+            totalExercises: workout.totalExercises,
+            items: workout.workout_data?.items || [],
+          };
+        });
+
+        if (workoutSchemas.length > 0) {
+          programSchema.push({
+            day: dayNum,
+            workouts: workoutSchemas,
+          });
+        }
+      }
+
+      const programData: ProgramData = {
+        name: programMeta.name,
+        description: programMeta.description,
+        type: programMeta.type,
+        difficulty: programMeta.difficulty,
+        weeks: totalWeeks.toString(),
+        schema: programSchema,
+      };
+
       if (mode === 'edit' && programId) {
         await editProgram(programId, programData);
       } else {
@@ -751,12 +749,11 @@ export const ProgramBuilder = ({
       router.push('/training/programs');
     } catch (error) {
       console.error('Failed to save program:', error);
-      toast.error(t('programs.builder.saveFailed'));
+      toast.error(t('programs.builder.toast.saveFailed'));
+    } finally {
+      setIsSaving(false);
     }
   };
-
-
-
 
   const handleSaveClick = async () => {
     await handleSave();
@@ -1313,7 +1310,7 @@ export const ProgramBuilder = ({
     return Array.from({ length: 7 }, (_, i) => startDay + i);
   };
 
-  if (isLoading || !programMeta) {
+  if (!programMeta) {
     return null;
   }
 
@@ -1385,8 +1382,12 @@ export const ProgramBuilder = ({
               <X className="size-4" />
               <span>{t('programs.builder.cancel')}</span>
             </Button>
-            <Button onClick={handleSaveClick} className="gap-2" aria-label={t('programs.builder.saveAria')}>
-              <Check className="size-4" />
+            <Button onClick={handleSaveClick} disabled={isSaving} className="gap-2" aria-label={t('programs.builder.saveAria')}>
+              {isSaving ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Check className="size-4" />
+              )}
               <span>{t('programs.builder.save')}</span>
             </Button>
           </ButtonGroup>
