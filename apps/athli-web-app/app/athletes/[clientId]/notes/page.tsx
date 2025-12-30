@@ -393,21 +393,22 @@ const ClientNotesPage = () => {
         title={t('messages.viewNote')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button onClick={handleSaveNote} disabled={!hasNoteChanges}>
-              {t('general.save')}
+          <div className="flex w-full justify-end gap-2">
+            <Button variant="outline" onClick={handleCancelNoteEdit}>
+              {t('general.cancel')}
             </Button>
             <Button
               variant="outline"
               type="button"
               onClick={handleDeleteNoteFromPanel}
               aria-label={t('general.delete')}
+              className="gap-2"
             >
               <Trash2 className="size-4" />
               {t('general.delete')}
             </Button>
-            <Button variant="outline" onClick={handleCancelNoteEdit}>
-              {t('general.cancel')}
+            <Button onClick={handleSaveNote} disabled={!hasNoteChanges}>
+              {t('general.save')}
             </Button>
           </div>
         }
@@ -466,10 +467,7 @@ const ClientNotesPage = () => {
         title={t('messages.createNote')}
         onOpenAutoFocus={(e) => e.preventDefault()}
         footer={
-          <div className="flex w-full justify-start gap-2">
-            <Button onClick={handleCreateNote} disabled={!noteTitle.trim()}>
-              {t('general.save')}
-            </Button>
+          <div className="flex w-full justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -479,6 +477,9 @@ const ClientNotesPage = () => {
               }}
             >
               {t('general.cancel')}
+            </Button>
+            <Button onClick={handleCreateNote} disabled={!noteTitle.trim()}>
+              {t('general.save')}
             </Button>
           </div>
         }

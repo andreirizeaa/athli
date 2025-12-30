@@ -22,7 +22,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ChevronDownIcon, Info, X } from 'lucide-react';
+import { ChevronDownIcon, Info, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { createWorkout } from '@/api/coach/coach-workout-service';
 import { useQueryClient } from '@tanstack/react-query';
@@ -209,12 +209,13 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
       onOpenChange={(open) => !open && handleClose()}
       title={t('athletes.trainingCalendar.saveAsWorkout.title')}
       footer={
-        <div className="flex w-full justify-start gap-2">
-          <Button type="button" onClick={handleSave} disabled={isSaving || !isFormValid}>
-            {isSaving ? t('general.saving') : t('general.save')}
-          </Button>
+        <div className="flex w-full justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
             {t('general.cancel')}
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={isSaving || !isFormValid} className="gap-2">
+            {isSaving && <Loader2 className="size-4 animate-spin" />}
+            {isSaving ? t('general.saving') : t('general.save')}
           </Button>
         </div>
       }

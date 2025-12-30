@@ -97,7 +97,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     connected: { class: 'min-w-[150px]', pixel: '150px' },
     email: { class: 'min-w-[220px]', pixel: '310px' },
     phone: { class: 'min-w-[160px]', pixel: '240px' },
-    country: { class: 'min-w-[100px]', pixel: '100px' },
+    country: { class: 'min-w-[120px]', pixel: '120px' },
     birthDate: { class: 'min-w-[140px]', pixel: '140px' },
     clientFor: { class: 'min-w-[150px]', pixel: '150px' },
   };

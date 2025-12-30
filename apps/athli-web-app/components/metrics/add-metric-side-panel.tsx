@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Info, Target, X } from 'lucide-react';
+import { Search, Info, Target, X, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -59,6 +59,7 @@ export const AddMetricSidePanel = ({
   const [athliLibrarySearchQuery, setAthliLibrarySearchQuery] = useState<string>('');
   const [coachMetrics, setCoachMetrics] = useState<Metric[]>([]);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [selectedCoachMetrics, setSelectedCoachMetrics] = useState<Set<string>>(new Set());
 
   const metricSchema = z.object({
@@ -105,20 +106,34 @@ export const AddMetricSidePanel = ({
   };
 
   const handleSave = async (values: MetricFormValues) => {
-    await onSave(values.name, values.unit || '', values.description);
-    handleClose();
+    setIsSaving(true);
+    try {
+      await onSave(values.name, values.unit || '', values.description);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save metric:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSaveFromYourLibrary = async () => {
     if (selectedCoachMetrics.size > 0) {
       // Save all selected metrics
-      for (const metricId of selectedCoachMetrics) {
-        const metric = coachMetrics.find(m => m.id === metricId);
-        if (metric) {
-          await onSave(metric.name, metric.unit, metric.description);
+      setIsSaving(true);
+      try {
+        for (const metricId of selectedCoachMetrics) {
+          const metric = coachMetrics.find(m => m.id === metricId);
+          if (metric) {
+            await onSave(metric.name, metric.unit, metric.description);
+          }
         }
+        handleClose();
+      } catch (error) {
+        console.error('Failed to assign metrics:', error);
+      } finally {
+        setIsSaving(false);
       }
-      handleClose();
     }
   };
 
@@ -252,25 +267,35 @@ export const AddMetricSidePanel = ({
       contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
       footer={
         activeTab === 'yourLibrary' ? (
-          <div className="flex w-full justify-start gap-2">
-            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedCoachMetrics.size === 0}>
-              {getButtonText()}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
               {t('general.cancel')}
+            </Button>
+            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedCoachMetrics.size === 0 || isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {getButtonText()}
             </Button>
           </div>
         ) : activeTab === 'newMetric' ? (
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+              {t('general.cancel')}
+            </Button>
             <Button
               type="button"
               onClick={form.handleSubmit(handleSave)}
-              disabled={!form.watch('name')}
+              disabled={!form.watch('name') || isSaving}
             >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {clientId ? t('general.assign') : t('general.add')}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('general.cancel')}
             </Button>
           </div>
         ) : null

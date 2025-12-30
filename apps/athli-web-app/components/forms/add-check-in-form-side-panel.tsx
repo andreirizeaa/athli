@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, Info } from 'lucide-react';
+import { Edit, Info, Check, Loader2 } from 'lucide-react';
 import { addCheckIn, type AddCheckInData as AddFormData } from '@/api/coach/coach-check-in-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { convertScheduleToCron, type AssignFormScheduleData } from '@/api/client/client-form-service';
@@ -59,6 +59,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
   const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
   const [monthlyOption, setMonthlyOption] = useState<'first' | 'last' | 'specific'>('last');
   const [specificDay, setSpecificDay] = useState<number>(1);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Filter templates to only show check-in templates
   const checkInTemplates = useMemo(() => {
@@ -113,6 +114,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
   };
 
   const handleSave = async (values: FormFormValues) => {
+    setIsSaving(true);
     try {
       const { scheduleConfig, cronExpression } = buildScheduleData();
       const questions = selectedTemplate?.questions || [];
@@ -132,6 +134,8 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
     } catch (error) {
       console.error('Failed to save form:', error);
       toast.error(t('general.error'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -174,6 +178,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
 
   const handleSaveFromTemplate = async () => {
     if (selectedTemplate) {
+      setIsSaving(true);
       const { scheduleConfig, cronExpression } = buildScheduleData();
       const values: any = {
         name: selectedTemplate.name,
@@ -193,6 +198,8 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
       } catch (error) {
         console.error('Failed to save form:', error);
         toast.error(t('general.error'));
+      } finally {
+        setIsSaving(false);
       }
     }
   };
@@ -259,16 +266,21 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
       title={t('forms.addCheckInTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate}
-            disabled={!isValid}
+            disabled={!isValid || isSaving}
           >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }
@@ -557,7 +569,7 @@ export const AddCheckInFormSidePanel = ({ open, onOpenChange, onSave }: AddCheck
           </div>
         </TabsContent>
       </Tabs>
-    </SidePanel>
+    </SidePanel >
   );
 };
 

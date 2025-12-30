@@ -100,13 +100,11 @@ export const coachClientController = {
         let lastError: string | null = null;
 
         for (const clientData of clientsToCreate) {
-            const { email, firstName, lastName, category = 'online' } = clientData;
+            const { email: rawEmail, firstName, lastName, category = 'online' } = clientData;
+            const email = rawEmail.toLowerCase().trim();
             const fullName = `${firstName} ${lastName}`.trim();
 
             try {
-                // 0. Generate a unique 8-character alphanumeric invitation token
-                const invitationToken = crypto.randomBytes(4).toString('hex').slice(0, 8).toUpperCase();
-
                 // 1. Check if any profiles exist for this email to get the clientId
                 const { data: profiles, error: profileFetchError } = await supabase
                     .from('user_profiles')
@@ -130,15 +128,15 @@ export const coachClientController = {
                     });
 
                     if (createError) {
-                        if (createError.message.toLowerCase().includes('already exists')) {
+                        const errorMsg = createError.message.toLowerCase();
+                        if (errorMsg.includes('already exists') || errorMsg.includes('already registered')) {
                             // User exists in auth but not in user_profiles
-                            // We need to find their ID. Since we can't easily query auth.users,
-                            // we'll use listUsers as a fallback.
+                            // We need to find their ID.
                             const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
                             if (listError) throw listError;
 
                             const existingUser = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-                            if (!existingUser) throw new Error('User supposedly exists but could not be found');
+                            if (!existingUser) throw new Error(`User ${email} supposedly exists but could not be found`);
 
                             clientId = existingUser.id;
                         } else {
@@ -163,8 +161,24 @@ export const coachClientController = {
 
                 if (!clientId) throw new Error('Could not determine clientId');
 
+                // 2.5 Check if assignment already exists for this coach and client
+                const { data: existingAssignment, error: checkError } = await supabase
+                    .from('coach_client_assignments')
+                    .select('client_id')
+                    .eq('coach_id', coachId)
+                    .eq('client_id', clientId)
+                    .maybeSingle();
+
+                if (checkError) throw checkError;
+
+                if (existingAssignment) {
+                    // Assignment already exists, just add to results and continue
+                    results.push(clientId);
+                    continue;
+                }
+
+                // 3. User exists but doesn't have a 'client' profile record
                 if (!hasClientProfile) {
-                    // 3. User exists but doesn't have a 'client' profile record
                     const { error: profileError } = await supabase
                         .from('user_profiles')
                         .upsert({
@@ -179,7 +193,6 @@ export const coachClientController = {
                 }
 
                 // 4. Ensure client_profiles entry exists
-                // Note: category, status, and coach_id have been moved to coach_client_assignments
                 const { error: clientProfileError } = await supabase
                     .from('client_profiles')
                     .upsert({
@@ -189,6 +202,7 @@ export const coachClientController = {
                 if (clientProfileError) throw clientProfileError;
 
                 // 5. Ensure coach_client_assignments entry exists (many-to-many)
+                const invitationToken = crypto.randomBytes(4).toString('hex').slice(0, 8).toUpperCase();
                 const { error: assignmentError } = await supabase
                     .from('coach_client_assignments')
                     .upsert({

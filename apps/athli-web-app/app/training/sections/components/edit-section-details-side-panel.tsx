@@ -12,6 +12,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { cn } from '@/lib/general/utils';
+import { Check, Loader2, Trash2 } from 'lucide-react';
 
 import { getSectionTypeOptions, type SectionType } from '../section-type-utils';
 
@@ -39,6 +40,7 @@ export const EditSectionDetailsSidePanel = ({
     const [sectionType, setSectionType] = useState<SectionType>(sectionMeta.sectionType);
     const [description, setDescription] = useState(sectionMeta.description);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [titleError, setTitleError] = useState<string | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -106,20 +108,36 @@ export const EditSectionDetailsSidePanel = ({
                 title="Edit Section Details"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 footer={
-                    <div className="flex w-full justify-start gap-2">
-                        <Button onClick={handleSave} disabled={!isSaveEnabled}>
-                            {isSaving ? 'Saving...' : 'Save'}
+                    <div className="flex w-full justify-end gap-2">
+                        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving || isDeleting}>
+                            {t('general.cancel') || 'Cancel'}
                         </Button>
                         {onDelete && (
                             <Button
                                 variant="outline"
                                 onClick={() => setIsDeleteDialogOpen(true)}
+                                disabled={isSaving || isDeleting}
+                                className="gap-2"
                             >
-                                Delete
+                                {isDeleting ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                ) : (
+                                    <Trash2 className="size-4" />
+                                )}
+                                {t('general.delete') || 'Delete'}
                             </Button>
                         )}
-                        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                            Cancel
+                        <Button
+                            onClick={handleSave}
+                            disabled={!isSaveEnabled || isDeleting}
+                            className="gap-2"
+                        >
+                            {isSaving ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Check className="size-4" />
+                            )}
+                            {t('general.save') || 'Save'}
                         </Button>
                     </div>
                 }
@@ -194,9 +212,14 @@ export const EditSectionDetailsSidePanel = ({
             <ConfirmDeleteDialog
                 open={isDeleteDialogOpen}
                 onOpenChange={setIsDeleteDialogOpen}
-                onConfirm={() => {
+                onConfirm={async () => {
                     setIsDeleteDialogOpen(false);
-                    onDelete?.();
+                    setIsDeleting(true);
+                    try {
+                        await onDelete?.();
+                    } finally {
+                        setIsDeleting(false);
+                    }
                 }}
                 itemName={title}
                 itemType="section"

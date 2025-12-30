@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useCoachClients } from '@/hooks/use-coach-clients';
 import { Athlete } from '@/api/coach/coach-client-service';
 import { Spinner } from '@/components/ui/spinner';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Check, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 
 interface AssignToClientsSidePanelProps {
@@ -142,20 +142,25 @@ export const AssignToClientsSidePanel = ({
             onOpenChange={onOpenChange}
             title={title}
             footer={
-                <div className="flex w-full justify-start gap-2">
-                    <Button
-                        onClick={handleAssign}
-                        disabled={selectedClientIds.size === 0 || loadingState}
-                    >
-                        {loadingState && <Spinner className="mr-2" />}
-                        {label}
-                    </Button>
+                <div className="flex w-full justify-end gap-2">
                     <Button
                         variant="outline"
                         onClick={() => onOpenChange(false)}
                         disabled={loadingState}
                     >
                         {t('general.cancel')}
+                    </Button>
+                    <Button
+                        onClick={handleAssign}
+                        disabled={selectedClientIds.size === 0 || loadingState}
+                        className="gap-2"
+                    >
+                        {loadingState ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <Check className="size-4" />
+                        )}
+                        {label}
                     </Button>
                 </div>
             }

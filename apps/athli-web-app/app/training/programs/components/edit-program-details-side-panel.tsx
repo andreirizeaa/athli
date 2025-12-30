@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { toast } from 'sonner';
 import { cn } from '@/lib/general/utils';
+import { Check, Loader2, Trash2 } from 'lucide-react';
 
 import { DIFFICULTY_LEVELS, PROGRAM_TYPES } from '@/lib/constants/training';
 
@@ -42,6 +43,7 @@ export const EditProgramDetailsSidePanel = ({
     const [difficulty, setDifficulty] = useState(programMeta.difficulty);
     const [description, setDescription] = useState(programMeta.description);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [nameError, setNameError] = useState<string | null>(null);
     const [typeError, setTypeError] = useState<string | null>(null);
     const [difficultyError, setDifficultyError] = useState<string | null>(null);
@@ -127,20 +129,40 @@ export const EditProgramDetailsSidePanel = ({
                 title="Edit Program Details"
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 footer={
-                    <div className="flex w-full justify-start gap-2">
-                        <Button onClick={handleSave} disabled={!isSaveEnabled}>
-                            {isSaving ? 'Saving...' : 'Save'}
+                    <div className="flex w-full justify-end gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            disabled={isSaving || isDeleting}
+                        >
+                            {t('general.cancel') || 'Cancel'}
                         </Button>
                         {onDelete && (
                             <Button
                                 variant="outline"
                                 onClick={() => setIsDeleteDialogOpen(true)}
+                                disabled={isSaving || isDeleting}
+                                className="gap-2"
                             >
-                                Delete
+                                {isDeleting ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                ) : (
+                                    <Trash2 className="size-4" />
+                                )}
+                                {t('general.delete') || 'Delete'}
                             </Button>
                         )}
-                        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                            Cancel
+                        <Button
+                            onClick={handleSave}
+                            disabled={!isSaveEnabled || isDeleting}
+                            className="gap-2"
+                        >
+                            {isSaving ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Check className="size-4" />
+                            )}
+                            {t('general.save') || 'Save'}
                         </Button>
                     </div>
                 }
@@ -258,9 +280,14 @@ export const EditProgramDetailsSidePanel = ({
             <ConfirmDeleteDialog
                 open={isDeleteDialogOpen}
                 onOpenChange={setIsDeleteDialogOpen}
-                onConfirm={() => {
+                onConfirm={async () => {
                     setIsDeleteDialogOpen(false);
-                    onDelete?.();
+                    setIsDeleting(true);
+                    try {
+                        await onDelete?.();
+                    } finally {
+                        setIsDeleting(false);
+                    }
                 }}
                 itemName={name}
                 itemType="program"

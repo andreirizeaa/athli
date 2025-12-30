@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Upload, Check, FileText, X } from 'lucide-react';
+import { Upload, Check, FileText, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { Input } from '@/components/ui/input';
@@ -77,6 +77,7 @@ export const AddFileSidePanel = ({
   const [coachFiles, setCoachFiles] = useState<CoachFile[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState<boolean>(false);
   const [selectedLibraryFiles, setSelectedLibraryFiles] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
 
@@ -115,6 +116,7 @@ export const AddFileSidePanel = ({
   const handleSaveFromYourLibrary = async () => {
     if (selectedLibraryFiles.size > 0 && clientId) {
       // Assign files from library to client
+      setIsSaving(true);
       try {
         const fileIds = Array.from(selectedLibraryFiles);
         if (onSave) {
@@ -129,14 +131,23 @@ export const AddFileSidePanel = ({
         handleClose();
       } catch (error) {
         console.error('Failed to assign files:', error);
+      } finally {
+        setIsSaving(false);
       }
     }
   };
 
   const handleSave = async () => {
     if (!fileName.trim() || !selectedFile) return;
-    await onUpload(selectedFile, fileName.trim(), selectedTags);
-    handleClose();
+    setIsSaving(true);
+    try {
+      await onUpload(selectedFile, fileName.trim(), selectedTags);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const renderFirstColumnHeader = ({
@@ -256,21 +267,31 @@ export const AddFileSidePanel = ({
       title={t('files.addFile')}
       footer={
         clientId && activeTab === 'yourLibrary' ? (
-          <div className="flex w-full justify-start gap-2">
-            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedLibraryFiles.size === 0}>
-              {getButtonText()}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
               {t('general.cancel')}
+            </Button>
+            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedLibraryFiles.size === 0 || isSaving}>
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {getButtonText()}
             </Button>
           </div>
         ) : (
-          <div className="flex w-full justify-start gap-2">
-            <Button type="button" onClick={handleSave} disabled={!isValid || isUploading}>
-              {isUploading ? t('general.uploading') : 'Add'}
-            </Button>
-            <Button type="button" variant="outline" onClick={handleClose}>
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isUploading || isSaving}>
               {t('general.cancel')}
+            </Button>
+            <Button type="button" onClick={handleSave} disabled={!isValid || isUploading || isSaving}>
+              {isUploading || isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {isUploading || isSaving ? t('general.uploading') : 'Add'}
             </Button>
           </div>
         )

@@ -193,31 +193,33 @@ export const AddProgramSidePanel = ({
             onOpenChange={handleClose}
             title={step === 1 ? t('athletes.trainingCalendar.addProgramTitle') : t('athletes.trainingCalendar.configureProgramTitle')}
             footer={
-                <div className="flex w-full justify-start gap-2">
+                <div className="flex w-full justify-end gap-2">
                     {step === 1 ? (
                         <>
+                            <Button type="button" variant="outline" onClick={handleClose}>
+                                {t('general.cancel')}
+                            </Button>
                             <Button
                                 type="button"
                                 onClick={handleNext}
                                 disabled={!selectedProgramId}
+                                className="gap-2"
                             >
                                 {t('general.continue')}
-                            </Button>
-                            <Button type="button" variant="outline" onClick={handleClose}>
-                                {t('general.cancel')}
                             </Button>
                         </>
                     ) : (
                         <>
+                            <Button type="button" variant="outline" onClick={handleBack}>
+                                {t('general.back')}
+                            </Button>
                             <Button
                                 type="button"
                                 onClick={handleSave}
                                 disabled={!startDate}
+                                className="gap-2"
                             >
                                 {t('general.save')}
-                            </Button>
-                            <Button type="button" variant="outline" onClick={handleBack}>
-                                {t('general.back')}
                             </Button>
                         </>
                     )}

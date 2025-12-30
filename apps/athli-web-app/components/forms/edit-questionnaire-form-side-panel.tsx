@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, Trash2 } from 'lucide-react';
+import { Info, Trash2, Check, Loader2 } from 'lucide-react';
 import { editQuestionnaireDetails, deleteQuestionnaire, type Questionnaire as FormType } from '@/api/coach/coach-questionnaire-service';
 import { toast } from 'sonner';
 
@@ -47,6 +47,9 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
     description: z.string().optional(),
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const reactForm = useForm<FormFormValues>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
@@ -73,6 +76,7 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
   const handleSave = async (values: FormFormValues) => {
     if (!form) return;
 
+    setIsSaving(true);
     try {
       const updatedForm = await editQuestionnaireDetails({
         id: form.id,
@@ -89,12 +93,15 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
     } catch (error) {
       console.error('Failed to save form:', error);
       toast.error(t('forms.toast.updateError'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleDelete = async () => {
     if (!form) return;
 
+    setIsDeleting(true);
     try {
       await deleteQuestionnaire(form.id);
       toast.success(t('forms.toast.deleteSuccess'));
@@ -105,6 +112,8 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
     } catch (error) {
       console.error('Failed to delete form:', error);
       toast.error(t('forms.toast.deleteError'));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -122,26 +131,38 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
       title={t('forms.editFormTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full gap-2">
-          <Button
-            type="button"
-            onClick={reactForm.handleSubmit(handleSave)}
-            disabled={!reactForm.formState.isValid || !hasChanges}
-          >
-            {t('general.save')}
-          </Button>
+        <div className="flex w-full justify-between gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={handleDelete}
-            className="gap-2"
+            className="gap-2 text-destructive hover:bg-destructive/10"
+            disabled={isDeleting || isSaving}
           >
-            <Trash2 className="size-4" />
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
             <span>{t('general.delete')}</span>
           </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
+              {t('general.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={reactForm.handleSubmit(handleSave)}
+              disabled={!reactForm.formState.isValid || !hasChanges || isDeleting || isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {t('general.save')}
+            </Button>
+          </div>
         </div>
       }
     >
@@ -205,7 +226,7 @@ export const EditQuestionnaireFormSidePanel = ({ open, onOpenChange, form, onSav
           </Alert>
         </form>
       </Form>
-    </SidePanel>
+    </SidePanel >
   );
 };
 

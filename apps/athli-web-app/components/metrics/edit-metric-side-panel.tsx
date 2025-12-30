@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +17,7 @@ import {
   FormLabel,
 } from '@/components/ui/form';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Check, Loader2 } from 'lucide-react';
 
 type MetricFormValues = {
   name: string;
@@ -46,6 +46,8 @@ export const EditMetricSidePanel = ({
   onDelete,
 }: EditMetricSidePanelProps) => {
   const t = useTranslations();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const metricSchema = z.object({
     name: z.string().min(1, t('metrics.form.nameRequired')),
@@ -72,7 +74,7 @@ export const EditMetricSidePanel = ({
 
   // Watch form values to detect changes
   const currentValues = form.watch();
-  
+
   // Check if form values have changed
   const hasChanges = useMemo(() => {
     return (
@@ -98,13 +100,27 @@ export const EditMetricSidePanel = ({
   };
 
   const handleSave = async (values: MetricFormValues) => {
-    await onSave(values.name, values.unit || '', values.description);
-    handleClose();
+    setIsSaving(true);
+    try {
+      await onSave(values.name, values.unit || '', values.description);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to save metric:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
-    await onDelete(metric.id);
-    handleClose();
+    setIsDeleting(true);
+    try {
+      await onDelete(metric.id);
+      handleClose();
+    } catch (error) {
+      console.error('Failed to delete metric:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -121,27 +137,39 @@ export const EditMetricSidePanel = ({
       onOpenAutoFocus={(e) => e.preventDefault()}
       contentClassName="w-full sm:w-[400px] sm:max-w-[400px]"
       footer={
-        <div className="flex w-full justify-start gap-2">
-          <Button
-            type="button"
-            onClick={form.handleSubmit(handleSave)}
-            disabled={!form.formState.isValid || !hasChanges}
-          >
-            {t('general.save')}
-          </Button>
+        <div className="flex w-full justify-between gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={handleDelete}
-            className="gap-2"
+            className="gap-2 text-destructive hover:bg-destructive/10"
+            disabled={isDeleting || isSaving}
             aria-label={t('metrics.actions.deleteAria', { name: metric.name })}
           >
-            <Trash2 className="size-4" />
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="size-4" />
+            )}
             <span>{t('general.delete')}</span>
           </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
-          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isDeleting || isSaving}>
+              {t('general.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={form.handleSubmit(handleSave)}
+              disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
+              {t('general.save')}
+            </Button>
+          </div>
         </div>
       }
     >

@@ -17,7 +17,7 @@ import {
 import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Spinner } from '@/components/ui/spinner';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Check, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { editExercise, type Exercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
@@ -125,6 +125,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
   const [equipmentError, setEquipmentError] = useState<string | null>(null);
   const [modalityError, setModalityError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [originalExerciseData, setOriginalExerciseData] = useState<{
     name: string;
@@ -414,34 +415,46 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
         }}
         title={t('exercises.addExercise.editTitle')}
         footer={
-          <div className="flex w-full justify-start gap-2">
+          <div className="flex w-full justify-end gap-2">
             <Button
               type="button"
-              onClick={handleSave}
-              disabled={isSaving || !hasFormChanged()}
-              aria-label={t('exercises.addExercise.saveAria')}
-              className={cn(isSaving && 'min-w-[120px] justify-center')}
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSaving || isDeleting}
+              aria-label={t('exercises.addExercise.cancelAria')}
+              className="gap-2"
             >
-              {isSaving ? <Spinner className="h-4 w-4" /> : t('general.save')}
+              {t('general.cancel')}
             </Button>
             {onDelete && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={isSaving}
+                disabled={isSaving || isDeleting}
+                className="gap-2"
               >
-                Delete
+                {isDeleting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Trash2 className="size-4" />
+                )}
+                {t('general.delete') || 'Delete'}
               </Button>
             )}
             <Button
               type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSaving}
-              aria-label={t('exercises.addExercise.cancelAria')}
+              onClick={handleSave}
+              disabled={isSaving || isDeleting || !hasFormChanged()}
+              aria-label={t('exercises.addExercise.saveAria')}
+              className={cn('gap-2', isSaving && 'min-w-[120px] justify-center')}
             >
-              {t('general.cancel')}
+              {isSaving ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Check className="size-4" />
+              )}
+              {t('general.save')}
             </Button>
           </div>
         }
@@ -800,9 +813,14 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
       <ConfirmDeleteDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={() => {
+        onConfirm={async () => {
           setIsDeleteDialogOpen(false);
-          onDelete?.();
+          setIsDeleting(true);
+          try {
+            await onDelete?.();
+          } finally {
+            setIsDeleting(false);
+          }
         }}
         itemName={exerciseName}
         itemType="exercise"

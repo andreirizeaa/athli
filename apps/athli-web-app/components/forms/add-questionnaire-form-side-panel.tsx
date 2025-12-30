@@ -21,7 +21,7 @@ import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Edit, Info, FileText } from 'lucide-react';
+import { Edit, Info, FileText, Check, Loader2 } from 'lucide-react';
 import { addQuestionnaire, type AddQuestionnaireData as AddFormData } from '@/api/coach/coach-questionnaire-service';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
 import { cn } from '@/lib/general/utils';
@@ -43,6 +43,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
   const t = useTranslations();
   const [activeTab, setActiveTab] = useState<'new' | 'templates'>('new');
   const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Filter templates to only show questionnaire templates
   const questionnaireTemplates = useMemo(() => {
@@ -76,6 +77,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
   };
 
   const handleSave = async (values: FormFormValues) => {
+    setIsSaving(true);
     try {
       const questions = selectedTemplate?.questions || [];
       const payload: any = {
@@ -92,6 +94,8 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
     } catch (error) {
       console.error('Failed to save form:', error);
       toast.error(t('general.error'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -107,6 +111,7 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
 
   const handleSaveFromTemplate = async () => {
     if (selectedTemplate) {
+      setIsSaving(true);
       const values: any = {
         name: selectedTemplate.name,
         description: selectedTemplate.description || '',
@@ -123,6 +128,8 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
       } catch (error) {
         console.error('Failed to save form:', error);
         toast.error(t('general.error'));
+      } finally {
+        setIsSaving(false);
       }
     }
   };
@@ -162,16 +169,21 @@ export const AddQuestionnaireFormSidePanel = ({ open, onOpenChange, onSave }: Ad
       title={t('forms.addQuestionnaireTitle')}
       onOpenAutoFocus={(e) => e.preventDefault()}
       footer={
-        <div className="flex w-full justify-start gap-2">
+        <div className="flex w-full justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
+            {t('general.cancel')}
+          </Button>
           <Button
             type="button"
             onClick={activeTab === 'new' ? form.handleSubmit(handleSave) : handleSaveFromTemplate}
-            disabled={!isValid}
+            disabled={!isValid || isSaving}
           >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             {t('general.save')}
-          </Button>
-          <Button type="button" variant="outline" onClick={handleClose}>
-            {t('general.cancel')}
           </Button>
         </div>
       }
