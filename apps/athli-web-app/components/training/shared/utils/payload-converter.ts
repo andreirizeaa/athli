@@ -81,6 +81,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                     supersetGroupId: exerciseGroup.isSuperset ? `superset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null,
                     sets,
+                    notes: exercisePayload.notes || '',
                 };
 
                 items.push({
@@ -94,8 +95,10 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
             const section: WorkoutSection = {
                 id: sectionPayload.id,
+                name: sectionPayload.name || '',
                 type: sectionPayload.type,
                 exercises: [],
+                notes: sectionPayload.notes || '',
                 ...(sectionPayload.type === 'amrap' && { roundDurationSec: sectionPayload.durationSec }),
                 ...(sectionPayload.type === 'timed' && { targetRounds: sectionPayload.targetRounds }),
                 ...(sectionPayload.type === 'circuits' && { targetRounds: sectionPayload.targetRounds }),
@@ -128,6 +131,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                             supersetGroupId,
                             sets,
+                            notes: exercisePayload.notes || '',
                         });
                     });
                 });
@@ -157,6 +161,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                             supersetGroupId,
                             sets,
+                            notes: exercisePayload.notes || '',
                         });
                     });
                 });
@@ -173,6 +178,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                         instanceId: `${cleanedId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
                         supersetGroupId: null,
                         sets: [],
+                        notes: exercisePayload.notes || '',
                     });
                 });
             }

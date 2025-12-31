@@ -1,5 +1,5 @@
 import type { Exercise } from '@/api/exercise/exercise-search';
-import type { SetData } from '../../components/exercise-card';
+import type { SetData } from '@/components/training/builder/exercise-card';
 
 /**
  * Exercise extended with superset grouping and instance tracking
@@ -9,6 +9,7 @@ export type ExerciseWithSuperset = Exercise & {
   instanceId: string;
   sets?: SetData[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
+  notes?: string;
 };
 
 /**

@@ -91,7 +91,7 @@ const EditProgramPage = () => {
                 // Map the schema object back to our Workout type
                 const workout: Workout & { id: string } = {
                   id: `${workoutData.id || 'temp'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                  program: workoutData.title || 'Untitled Workout',
+                  name: workoutData.title || 'Untitled Workout',
                   description: workoutData.description || '',
                   type: workoutData.type || 'strength',
                   difficulty: workoutData.difficulty || 'intermediate',

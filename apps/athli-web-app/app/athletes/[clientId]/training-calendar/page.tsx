@@ -77,7 +77,11 @@ import {
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
 } from '@/api/client/client-service';
-import { getWorkouts, getWorkoutById } from '@/api/coach/coach-workout-service';
+// import { getWorkouts } from '@/api/coach/coach-workout-service'; // Removed direct import of getWorkouts
+import { getWorkoutById } from '@/api/coach/coach-workout-service';
+import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
+import { useClientTraining } from '@/hooks/use-client-training';
+import { useQueryClient } from '@tanstack/react-query';
 import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
 import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
 import { TrainingDataProvider, useTrainingData } from '@/app/training/training-data-context';
@@ -89,6 +93,7 @@ import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-servi
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
+import { assignWorkout, deleteClientWorkout, getClientWorkoutInstance } from '@/api/client/client-training-service';
 
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -173,6 +178,7 @@ const DraggableWorkoutWrapper = ({
 const ClientTrainingCalendarPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useParams();
   const searchParams = useSearchParams();
   const clientId = useMemo(() => (params.clientId as string) || '', [params.clientId]);
@@ -189,19 +195,9 @@ const ClientTrainingCalendarPage = () => {
   const [workoutsByDate, setWorkoutsByDate] = useState<{
     [dateKey: string]: Array<Workout & { id: string }>;
   }>({});
-  const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
-
-  useEffect(() => {
-    const fetchWorkouts = async () => {
-      try {
-        const workouts = await getWorkouts();
-        setAvailableWorkouts(workouts);
-      } catch (error) {
-        console.error('Failed to fetch workouts:', error);
-      }
-    };
-    fetchWorkouts();
-  }, []);
+  // React Query Hooks
+  const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
+  const { useCalendarRange, useCompletionLogs, assignWorkout: apiAssignWorkout, deleteWorkout: apiDeleteWorkout, updateCalendar } = useClientTraining(clientId);
 
   const [startDate] = useState<Date>(() => {
     // Start from the beginning of the current week (Monday)
@@ -342,7 +338,7 @@ const ClientTrainingCalendarPage = () => {
           {
             exerciseId: 'ex-1',
             instanceId: 'ex-1-inst',
-            name: `${workout.program} - Main lift`,
+            name: `${workout.name} - Main lift`,
             imageUrl: '/demo-img.png',
             equipments: equipmentList,
             bodyParts: workout.type ? [workout.type] : [],
@@ -586,13 +582,6 @@ const ClientTrainingCalendarPage = () => {
     return schema;
   };
 
-  // Track the currently loaded date range to avoid redundant fetches
-  const [loadedDateRange, setLoadedDateRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({ start: null, end: null });
-  const [isLoadingTraining, setIsLoadingTraining] = useState<boolean>(false);
-
   // Calculate the required date range based on current view
   const requiredDateRange = useMemo(() => {
     const weeksView = parseInt(selectedWeek, 10);
@@ -616,129 +605,109 @@ const ClientTrainingCalendarPage = () => {
     return { start: bufferStart, end: bufferEnd };
   }, [selectedWeek, currentWeek, startDate]);
 
-  // Load training calendar and completion logs when date range changes
+
+  // Format dates for API
+  const formatDateForAPI = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const startDateStr = requiredDateRange.start ? formatDateForAPI(requiredDateRange.start) : '';
+  const endDateStr = requiredDateRange.end ? formatDateForAPI(requiredDateRange.end) : '';
+
+  // Use the new hook for calendar data
+  // We condition the query on having valid dates
+  const { data: calendarData, isLoading: isLoadingTraining } = useCalendarRange(
+    startDateStr,
+    endDateStr,
+    { enabled: !!clientId && !!startDateStr && !!endDateStr }
+  );
+
+  // Sync React Query data to local state
+  // We keep the local state 'workoutsByDate' to support the extensive optimistic updates in this file
+  // but we hydrate it from the server data when it arrives.
   useEffect(() => {
-    const loadTrainingData = async () => {
-      if (!clientId) return;
+    if (calendarData) {
+      const convertedCalendar: {
+        [dateKey: string]: Array<Workout & { id: string }>;
+      } = {};
 
-      // Check if we need to fetch new data
-      const needsFetch =
-        !loadedDateRange.start ||
-        !loadedDateRange.end ||
-        requiredDateRange.start < loadedDateRange.start ||
-        requiredDateRange.end > loadedDateRange.end;
-
-      if (!needsFetch) {
-        // Data already loaded for this range
-        return;
-      }
-
-      setIsLoadingTraining(true);
-
-      try {
-        // Format dates as YYYY-MM-DD for API
-        const formatDateForAPI = (date: Date): string => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        };
-
-        const startDateStr = formatDateForAPI(requiredDateRange.start);
-        const endDateStr = formatDateForAPI(requiredDateRange.end);
-
-        // Load training calendar with date range
-        const calendar = await getTrainingCalendarRange(clientId, startDateStr, endDateStr);
-
-        // Convert calendar format from dd-mm-yyyy to YYYY-MM-DD
-        const convertedCalendar: {
-          [dateKey: string]: Array<Workout & { id: string }>;
-        } = {};
-
-        Object.keys(calendar).forEach((dateKey) => {
-          // dateKey is in dd-mm-yyyy format
-          const [day, month, year] = dateKey.split('-').map(Number);
-          const date = new Date(year, month - 1, day);
-          const isoKey = getDateKey(date);
-          convertedCalendar[isoKey] = calendar[dateKey].map((workout) => ({
-            ...workout,
-            id: workout.id,
-            isFavourite: (workout as any).isFavourite || false,
-          }));
-        });
-
-        // Merge with existing data (don't replace, extend)
-        setWorkoutsByDate((prev) => ({
-          ...prev,
-          ...convertedCalendar,
+      Object.keys(calendarData).forEach((dateKey) => {
+        // dateKey is in dd-mm-yyyy format
+        const [day, month, year] = dateKey.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        const isoKey = getDateKey(date);
+        convertedCalendar[isoKey] = calendarData[dateKey].map((workout) => ({
+          ...workout,
+          id: workout.id,
+          name: (workout as any).name || (workout as any).workout,
+          isFavourite: (workout as any).isFavourite || false,
         }));
+      });
 
-        // Update loaded range
-        setLoadedDateRange({
-          start: requiredDateRange.start,
-          end: requiredDateRange.end,
-        });
+      // Merge with existing data
+      setWorkoutsByDate((prev) => ({
+        ...prev,
+        ...convertedCalendar,
+      }));
+    }
+  }, [calendarData]);
 
-        // Load completion logs (only once on mount, not on every range change)
-        if (!loadedDateRange.start) {
-          const completionLogs = await getTrainingCalendarCompletionLogs(clientId);
+  // Use hook for completion logs
+  const { data: completionLogs } = useCompletionLogs({ enabled: !!clientId });
 
-          // Convert completion logs to state format
-          const workoutStatusMap: {
-            [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
-          } = {};
+  useEffect(() => {
+    if (completionLogs) {
+      // Convert completion logs to state format
+      const workoutStatusMap: {
+        [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
+      } = {};
 
-          completionLogs.workouts.forEach((workout) => {
-            workoutStatusMap[workout.workoutId] = workout.status;
-          });
+      completionLogs.workouts.forEach((workout) => {
+        workoutStatusMap[workout.workoutId] = workout.status;
+      });
 
-          setWorkoutStatus(workoutStatusMap);
+      setWorkoutStatus(workoutStatusMap);
 
-          const setStatusMap: {
-            [workoutId: string]: {
-              [exerciseInstanceId: string]: {
-                [setNumber: number]: 'not_started' | 'completed';
-              };
-            };
-          } = {};
+      const setStatusMap: {
+        [workoutId: string]: {
+          [exerciseInstanceId: string]: {
+            [setNumber: number]: 'not_started' | 'completed';
+          };
+        };
+      } = {};
 
-          completionLogs.sets.forEach((set) => {
-            if (!setStatusMap[set.workoutId]) {
-              setStatusMap[set.workoutId] = {};
-            }
-            if (!setStatusMap[set.workoutId][set.exerciseInstanceId]) {
-              setStatusMap[set.workoutId][set.exerciseInstanceId] = {};
-            }
-            setStatusMap[set.workoutId][set.exerciseInstanceId][set.setNumber] = set.status;
-          });
-
-          setSetStatus(setStatusMap);
-
-          // Load section completion status (for AMRAP and timed sections)
-          const sectionStatusMap: {
-            [workoutId: string]: {
-              [sectionId: string]: 'not_started' | 'in_progress' | 'completed';
-            };
-          } = {};
-
-          completionLogs.sections?.forEach((section) => {
-            if (!sectionStatusMap[section.workoutId]) {
-              sectionStatusMap[section.workoutId] = {};
-            }
-            sectionStatusMap[section.workoutId][section.sectionId] = section.status;
-          });
-
-          setSectionStatus(sectionStatusMap);
+      completionLogs.sets.forEach((set) => {
+        if (!setStatusMap[set.workoutId]) {
+          setStatusMap[set.workoutId] = {};
         }
-      } catch (error) {
-        console.error('Failed to load training data:', error);
-      } finally {
-        setIsLoadingTraining(false);
-      }
-    };
+        if (!setStatusMap[set.workoutId][set.exerciseInstanceId]) {
+          setStatusMap[set.workoutId][set.exerciseInstanceId] = {};
+        }
+        setStatusMap[set.workoutId][set.exerciseInstanceId][set.setNumber] = set.status;
+      });
 
-    loadTrainingData();
-  }, [clientId, requiredDateRange, loadedDateRange]);
+      setSetStatus(setStatusMap);
+
+      const sectionStatusMap: {
+        [workoutId: string]: {
+          [sectionId: string]: 'not_started' | 'in_progress' | 'completed';
+        };
+      } = {};
+
+      completionLogs.sections?.forEach((section) => {
+        if (!sectionStatusMap[section.workoutId]) {
+          sectionStatusMap[section.workoutId] = {};
+        }
+        sectionStatusMap[section.workoutId][section.sectionId] = section.status;
+      });
+
+      setSectionStatus(sectionStatusMap);
+    }
+  }, [completionLogs]);
+
 
   // Restore view state from URL params (when navigating back from edit page)
   useEffect(() => {
@@ -808,34 +777,17 @@ const ClientTrainingCalendarPage = () => {
     const schema = buildTrainingCalendarSchema(workoutsByDate);
     console.log('Training Calendar Schema:', schema);
 
-    // Call the service to update the training calendar
-    if (clientId) {
-      updateTrainingCalendar(clientId, schema).catch((error) => {
-        console.error('Failed to update training calendar:', error);
-      });
-    }
-  }, [workoutsByDate, clientId]);
+    // Use RQ mutation instead of direct update
+    // Only call if schema has changed significantly or rely on explicit save actions.
+    // The previous code logged and updated on EVERY workoutsByDate change, which might be too frequent.
+    // However, workoutsByDate is local. 
+    // Since we now use apiAssignWorkout for explicit updates, maybe we don't need this catch-all?
+    // The catch-all was "Log schema and update service whenever workoutsByDate changes".
+    // This implies auto-saving ANY local change. 
+    // I will use updateCalendar from hook.
 
-  // Format workout created date from dd-mm-yy format (used in mockWorkouts)
-  const formatWorkoutCreatedDate = (dateStr: string): string => {
-    const [day, month, year] = dateStr.split('-');
-    const date = new Date(2000 + parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return `${date.getDate()} ${months[date.getMonth()]}, 20${year}`;
-  };
+    // Auto-save removed in favor of explicit save interactions
+  }, [workoutsByDate, clientId]);
 
   const getWeekRange = () => {
     const weeksView = parseInt(selectedWeek, 10);
@@ -1451,7 +1403,11 @@ const ClientTrainingCalendarPage = () => {
     // Fetch full workout data including workout_data
     let fullWorkout: Workout & { workout_data?: any };
     try {
-      fullWorkout = await getWorkoutById(selectedWorkout.id);
+      fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['coach-workout', selectedWorkout.id],
+        queryFn: () => getWorkoutById(selectedWorkout.id),
+        staleTime: 5 * 60 * 1000,
+      });
     } catch (error) {
       console.error('Failed to fetch full workout data:', error);
       // Fall back to using the workout without workout_data
@@ -1463,67 +1419,96 @@ const ClientTrainingCalendarPage = () => {
       id: `${selectedWorkout.id}-${Date.now()}`,
     };
 
-    setWorkoutsByDate((prev) => {
-      const updated: {
-        [dateKey: string]: Array<Workout & { id: string }>;
-      } = { ...prev };
 
-      const addToDate = (date: Date) => {
-        const key = getDateKey(date);
-        updated[key] = [...(updated[key] ?? []), workoutToAdd];
-      };
+    setIsAddWorkoutPanelOpen(false); // Close immediately or wait?
 
-      // Calculate upper bound based on configured total weeks
-      const calendarEndDate = new Date(startDate);
-      calendarEndDate.setDate(startDate.getDate() + totalWeeks * 7 - 1);
+    // Calculate dates to add
+    const datesToAdd: Date[] = [];
 
-      if (scheduleOption === 'every' && config) {
-        const daysInterval = parseInt(config, 10);
-        if (Number.isFinite(daysInterval) && daysInterval > 0) {
-          const current = new Date(selectedDateForWorkout);
-          current.setHours(0, 0, 0, 0);
+    // Calculate upper bound based on configured total weeks
+    const calendarEndDate = new Date(startDate);
+    calendarEndDate.setDate(startDate.getDate() + totalWeeks * 7 - 1);
 
-          while (current <= calendarEndDate) {
-            addToDate(current);
-            current.setDate(current.getDate() + daysInterval);
-          }
-        } else {
-          addToDate(selectedDateForWorkout);
-        }
-      } else if (scheduleOption === 'weekly' && config) {
-        // config is day name (Monday, Tuesday etc)
-        const daysMap: { [key: string]: number } = {
-          'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7
-        };
-        const dayOfWeek = daysMap[config];
+    const addDate = (date: Date) => {
+      // Clone date to avoid reference issues
+      datesToAdd.push(new Date(date));
+    };
 
-        if (dayOfWeek) {
-          for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
-            const monday = new Date(startDate);
-            monday.setDate(startDate.getDate() + weekIndex * 7);
-            monday.setHours(0, 0, 0, 0);
+    if (scheduleOption === 'every' && config) {
+      const daysInterval = parseInt(config, 10);
+      if (Number.isFinite(daysInterval) && daysInterval > 0) {
+        const current = new Date(selectedDateForWorkout);
+        current.setHours(0, 0, 0, 0);
 
-            const target = new Date(monday);
-            target.setDate(monday.getDate() + (dayOfWeek - 1));
-            target.setHours(0, 0, 0, 0);
-
-            // Only add if target date is same or after selected date (which initiated the add)
-            if (target >= selectedDateForWorkout && target <= calendarEndDate) {
-              addToDate(target);
-            }
-          }
-        } else {
-          addToDate(selectedDateForWorkout);
+        while (current <= calendarEndDate) {
+          addDate(current);
+          current.setDate(current.getDate() + daysInterval);
         }
       } else {
-        // Default: add only for the selected day
-        addToDate(selectedDateForWorkout);
+        addDate(selectedDateForWorkout);
+      }
+    } else if (scheduleOption === 'weekly' && config) {
+      // config is day name (Monday, Tuesday etc)
+      const daysMap: { [key: string]: number } = {
+        'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7
+      };
+      const dayOfWeek = daysMap[config];
+
+      if (dayOfWeek) {
+        for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
+          const monday = new Date(startDate);
+          monday.setDate(startDate.getDate() + weekIndex * 7);
+          monday.setHours(0, 0, 0, 0);
+
+          const target = new Date(monday);
+          target.setDate(monday.getDate() + (dayOfWeek - 1));
+          target.setHours(0, 0, 0, 0);
+
+          // Only add if target date is same or after selected date (which initiated the add)
+          if (target >= selectedDateForWorkout && target <= calendarEndDate) {
+            addDate(target);
+          }
+        }
+      } else {
+        addDate(selectedDateForWorkout);
+      }
+    } else {
+      // Default: add only for the selected day
+      addDate(selectedDateForWorkout);
+    }
+
+    try {
+      const promises = datesToAdd.map(date =>
+        apiAssignWorkout({
+          clientId,
+          date: getDateKey(date),
+          workoutId: selectedWorkout.id
+        })
+      );
+
+      await Promise.all(promises);
+
+      if (datesToAdd.length === 1) {
+        const dateStr = datesToAdd[0].toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        toast.success(`Workout assigned to ${dateStr}`);
+      } else {
+        toast.success(`Successfully assigned ${datesToAdd.length} days of training`);
       }
 
-      return updated;
-    });
+      // Update local state optimistically
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        datesToAdd.forEach(date => {
+          const key = getDateKey(date);
+          updated[key] = [...(updated[key] ?? []), workoutToAdd];
+        });
+        return updated;
+      });
 
-    setIsAddWorkoutPanelOpen(false);
+    } catch (error) {
+      console.error('Failed to assign workouts:', error);
+      toast.error('Failed to save workouts');
+    }
   };
 
   const handleSaveProgram = async (selectedProgram: Program, startDateInput: Date) => {
@@ -1536,12 +1521,11 @@ const ClientTrainingCalendarPage = () => {
     start.setHours(0, 0, 0, 0);
 
     const weeksText = selectedProgram.length.split(' ')[0];
-    const weeksNumber = parseInt(weeksText, 10);
-    const totalProgramWeeks = Number.isFinite(weeksNumber) && weeksNumber > 0 ? weeksNumber : 1;
+    const totalProgramWeeks = Number.isFinite(parseInt(weeksText, 10)) && parseInt(weeksText, 10) > 0 ? parseInt(weeksText, 10) : 1;
 
     const baseWorkout: Workout = {
       id: selectedProgram.id,
-      program: selectedProgram.program,
+      name: selectedProgram.program,
       description: selectedProgram.description,
       type: selectedProgram.type,
       difficulty: 'Intermediate',
@@ -1599,7 +1583,7 @@ const ClientTrainingCalendarPage = () => {
 
     const workoutFromExercise: Workout & { id: string } = {
       id: `${selectedExercise.id}-${dateKey}-${Date.now()}`,
-      program: selectedExercise.name,
+      name: selectedExercise.name,
       description: selectedExercise.description || '',
       type: selectedExercise.category || '',
       difficulty: 'Intermediate',
@@ -1618,7 +1602,7 @@ const ClientTrainingCalendarPage = () => {
               {
                 id: `ex-${Date.now()}`,
                 exercise_id: selectedExercise.id,
-                program: selectedExercise.name,
+                workout: selectedExercise.name,
                 description: selectedExercise.description || '',
                 equipment: selectedExercise.equipment ? [selectedExercise.equipment] : [],
                 videoLink: selectedExercise.video_link,
@@ -1656,17 +1640,12 @@ const ClientTrainingCalendarPage = () => {
     setIsLoadingWorkoutData(true);
     setIsWorkoutBuilderOpen(true);
 
-    // If workout_data is already present, use it directly
-    if (workout.workout_data?.items?.length > 0) {
-      setFetchedWorkoutData(workout.workout_data);
-      setIsLoadingWorkoutData(false);
-      return;
-    }
-
     // Extract the real workout ID (format: "workoutId-timestamp-random")
     const realWorkoutId = workout.id.split('-')[0];
 
     // Check if it's an inline-created or temp workout (no need to fetch - use existing data)
+    // OR if we already have the full data (e.g. newly created, though backend strip might affect this on reload)
+    // Since backend now strips data, we should prefer fetching unless we find it blank.
     if (realWorkoutId === 'inline' || realWorkoutId === 'temp') {
       setFetchedWorkoutData(workout.workout_data || { items: [] });
       setIsLoadingWorkoutData(false);
@@ -1674,104 +1653,113 @@ const ClientTrainingCalendarPage = () => {
     }
 
     try {
-      const fullWorkout = await getWorkoutById(realWorkoutId);
-      setFetchedWorkoutData(fullWorkout.workout_data || { items: [] });
-
-      // Also update the workout in state with the fetched data
-      setWorkoutsByDate((prev) => {
-        const workoutsForDate = prev[dateKey];
-        if (!workoutsForDate) return prev;
-
-        const updatedWorkouts = workoutsForDate.map((w) => {
-          if (w.id === workout.id) {
-            return { ...w, workout_data: fullWorkout.workout_data };
-          }
-          return w;
-        });
-
-        return {
-          ...prev,
-          [dateKey]: updatedWorkouts,
-        };
+      // Use new endpoint to get specific instance data
+      const fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['client-workout-instance', clientId, dateKey, workout.id],
+        queryFn: () => getClientWorkoutInstance(clientId, dateKey, workout.id),
+        staleTime: 0, // Always fetch fresh to get latest instance state
       });
+
+      const workoutData = fullWorkout || { items: [] };
+      setFetchedWorkoutData(workoutData);
+
+      // We explicitly DON'T update the calendar state with the full data anymore
+      // to keep the main list lightweight. We only use it for the builder.
+
     } catch (error) {
-      console.error('Failed to fetch workout data:', error);
-      // Fall back to whatever data is available
+      console.error('Failed to fetch workout instance:', error);
+      // Fall back to lightweight data if fetch fails (better than nothing)
       setFetchedWorkoutData(workout.workout_data || { items: [] });
+      toast.error('Failed to load full workout details');
     } finally {
       setIsLoadingWorkoutData(false);
     }
   };
 
-  const handleSaveEditedWorkout = (payload: WorkoutProgramPayload) => {
-    if (!editingWorkout) return;
+  const handleSaveEditedWorkout = async (payload: WorkoutProgramPayload) => {
+    // If we are editing an existing workout
+    if (editingWorkout) {
+      const { dateKey, workout } = editingWorkout;
 
-    const { dateKey, workout } = editingWorkout;
+      try {
+        // Optimistic update for UI (optional, but good for perceived speed)
+        // However, since we invalidate queries, let's just show a saving state or standard loading
+        // For now, keeping the optimistic update to be safe if queries take time, 
+        // BUT relying on invalidation for source of truth.
 
-    setWorkoutsByDate((prev) => {
-      const workoutsForDate = prev[dateKey];
-      if (!workoutsForDate) return prev;
+        // 1. Await the API call to ensure data is saved
+        await apiAssignWorkout({
+          clientId,
+          date: dateKey,
+          workoutId: workout.id,
+          workoutPayload: payload,
+          isNew: false,
+          skipInvalidation: true
+        });
 
-      const workoutIndex = workoutsForDate.findIndex((w) => w.id === workout.id);
-      if (workoutIndex === -1) return prev;
+        // 2. Close dialog immediately after success
+        setIsWorkoutBuilderOpen(false);
+        setEditingWorkout(null);
+        toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }));
 
-      const updatedWorkout: Workout & { id: string } = {
-        ...workoutsForDate[workoutIndex],
-        program: payload.title,
-        description: payload.description || '',
-        type: payload.type,
-        difficulty: payload.difficulty || 'Intermediate',
-        equipment: payload.equipment || [],
-        totalExercises: payload.totalExercises,
-        workout_data: {
-          items: payload.items || [],
-        },
-      };
+        // 3. Invalidate queries in background (do not await) to prevent UI lag
+        // Defer invalidation slightly to allow dialog to close nicely
+        setTimeout(() => {
+          queryClient.invalidateQueries({
+            queryKey: ['client-workout-instance', clientId, dateKey, workout.id]
+          });
+          queryClient.invalidateQueries({
+            queryKey: ['client-training-calendar', clientId]
+          });
+        }, 50);
 
-      const updatedWorkouts = [...workoutsForDate];
-      updatedWorkouts[workoutIndex] = updatedWorkout;
+      } catch (error) {
+        console.error('Failed to update workout:', error);
+      }
+    } else if (selectedDateForWorkout) {
+      // Creating a NEW workout
+      try {
+        const dateKey = getDateKey(selectedDateForWorkout);
 
-      return {
-        ...prev,
-        [dateKey]: updatedWorkouts,
-      };
-    });
+        // 1. Await API
+        await apiAssignWorkout({
+          clientId,
+          date: dateKey,
+          workoutPayload: payload,
+          isNew: true,
+          skipInvalidation: true
+        });
 
-    setIsWorkoutBuilderOpen(false);
-    setEditingWorkout(null);
-    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }));
+        // 2. Close dialog immediately
+        setIsWorkoutBuilderOpen(false);
+        toast.success('Workout created successfully');
+
+        // No need to manually reset loadedDateRange, hook handles invalidation
+        // Actually we skipped it, so we need to valid manually with delay
+        setTimeout(() => {
+          queryClient.invalidateQueries({
+            queryKey: ['client-training-calendar', clientId]
+          });
+        }, 50);
+
+      } catch (error) {
+        console.error(error);
+        // Hook handles toast error if using mutation, otherwise handled here
+      }
+    }
   };
 
   const handleCloseWorkoutDetails = () => {
     setSelectedWorkoutDetails(null);
   };
 
-  const handleDeleteWorkout = (dateKey: string, workoutId: string) => {
-    setWorkoutsByDate((previousWorkouts) => {
-      const workoutsForDate = previousWorkouts[dateKey];
-
-      if (!workoutsForDate) {
-        return previousWorkouts;
-      }
-
-      const updatedWorkoutsForDate = workoutsForDate.filter((workout) => workout.id !== workoutId);
-
-      let updatedState: {
-        [dateKey: string]: Array<Workout & { id: string }>;
-      };
-
-      if (updatedWorkoutsForDate.length === 0) {
-        const { [dateKey]: _, ...rest } = previousWorkouts;
-        updatedState = rest;
-      } else {
-        updatedState = {
-          ...previousWorkouts,
-          [dateKey]: updatedWorkoutsForDate,
-        };
-      }
-
-      return updatedState;
-    });
+  const handleDeleteWorkout = async (dateKey: string, workoutId: string) => {
+    // Call API using hook
+    try {
+      await apiDeleteWorkout({ workoutId, date: dateKey });
+    } catch (error) {
+      // Hook handles toast and error
+    }
   };
 
   // Handle date selection from calendar popup
@@ -1849,7 +1837,7 @@ const ClientTrainingCalendarPage = () => {
                 <PopoverTrigger asChild>
                   <div className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
                     <Calendar className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{getWeekRange()}</span>
+                    <span className="font-medium text-sm truncate">{getWeekRange()}</span>
                   </div>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -2054,11 +2042,11 @@ const ClientTrainingCalendarPage = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleOpenAddWorkoutPanel(date)} className="gap-2">
-                                      <Dumbbell className="size-3.5 text-muted-foreground" />
+                                      <Dumbbell className="mr-2 size-3.5" />
                                       <span>{t('athletes.trainingCalendar.addWorkout')}</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleOpenAddProgramPanel(date)} className="gap-2">
-                                      <FileText className="size-3.5 text-muted-foreground" />
+                                      <FileText className="mr-2 size-3.5" />
                                       <span>{t('athletes.trainingCalendar.addProgram')}</span>
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -2088,7 +2076,7 @@ const ClientTrainingCalendarPage = () => {
                                           <div
                                             role="button"
                                             tabIndex={0}
-                                            aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.program })}
+                                            aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.name })}
                                             onClick={() => {
                                               if (isCopyMode) return;
                                               handleOpenWorkoutDetails(dateKey, workout);
@@ -2115,9 +2103,9 @@ const ClientTrainingCalendarPage = () => {
                                                 </div>
                                                 <span
                                                   className="text-[11px] font-medium block truncate"
-                                                  title={workout.program}
+                                                  title={workout.name}
                                                 >
-                                                  {workout.program}
+                                                  {workout.name}
                                                 </span>
                                               </div>
                                               <div className="flex items-center gap-0.5">
@@ -2137,7 +2125,7 @@ const ClientTrainingCalendarPage = () => {
                                                   <Checkbox
                                                     checked={isWorkoutSelected(dateKey, workout.id)}
                                                     onCheckedChange={() => handleToggleWorkoutSelection(dateKey, workout)}
-                                                    aria-label={t('athletes.trainingCalendar.multiSelect.selectWorkoutAria', { name: workout.program })}
+                                                    aria-label={t('athletes.trainingCalendar.multiSelect.selectWorkoutAria', { name: workout.name })}
                                                     className="size-3.5"
                                                   />
                                                 </div>
@@ -2311,7 +2299,7 @@ const ClientTrainingCalendarPage = () => {
                 <div className="rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden shadow-lg rotate-3">
                   <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
                     <span className="text-[11px] font-medium block truncate">
-                      {draggedWorkout.workout.program}
+                      {draggedWorkout.workout.name}
                     </span>
                   </div>
                   <div className="px-2 py-1">
@@ -2603,7 +2591,11 @@ const ClientTrainingCalendarPage = () => {
         onSave={handleSaveWorkout}
         onCreateNewWorkout={() => {
           setIsAddWorkoutPanelOpen(false);
-          setIsCreateWorkoutPanelOpen(true);
+          // Open Workout Builder instead of CreateWorkoutSidePanel
+          setIsWorkoutBuilderOpen(true);
+          // Ensure editingWorkout is null so we know it's a new one
+          setEditingWorkout(null);
+          // selectedDateForWorkout is already set by the dropdown that opened this panel
         }}
         selectedDate={selectedDateForWorkout ?? undefined}
         mode="program"
@@ -2616,7 +2608,7 @@ const ClientTrainingCalendarPage = () => {
           onSuccess={() => {
             setIsCreateWorkoutPanelOpen(false);
             // Refresh workouts to include the newly created one
-            getWorkouts().then((workouts) => setAvailableWorkouts(workouts));
+            queryClient.invalidateQueries({ queryKey: ['coach-workouts'] });
           }}
         />
       </TrainingDataProvider>
@@ -2642,7 +2634,7 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
         meta={editingWorkout ? {
-          title: editingWorkout.workout.program,
+          title: editingWorkout.workout.name,
           type: editingWorkout.workout.type,
           difficulty: editingWorkout.workout.difficulty || 'Intermediate',
           description: editingWorkout.workout.description || '',

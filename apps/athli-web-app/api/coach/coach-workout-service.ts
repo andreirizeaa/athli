@@ -10,7 +10,7 @@ export const getWorkouts = async (): Promise<Workout[]> => {
   const response = await apiFetch<ApiResponse<{ workouts: any[] }>>('/coach/training/workouts');
   return (response.data?.workouts || []).map((w) => ({
     id: w.id,
-    program: w.name,
+    name: w.name,
     description: w.description || '',
     type: w.type || '',
     difficulty: w.difficulty || '',
@@ -228,7 +228,7 @@ export const getWorkoutById = async (workoutId: string): Promise<Workout & { wor
   // Map API response fields to Workout type
   return {
     id: w.id,
-    program: w.name, // API returns 'name', app uses 'program'
+    name: w.name,
     description: w.description || '',
     type: w.type || '',
     difficulty: w.difficulty || '',

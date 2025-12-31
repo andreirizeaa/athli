@@ -74,7 +74,7 @@ export const AddWorkoutSidePanel = ({
 
     const columns: ColumnDefinition<Workout>[] = useMemo(() => [
         {
-            id: 'program',
+            id: 'workout',
             label: t('athletes.trainingCalendar.table.name'),
             width: { class: 'w-1/2', pixel: '50%' },
             renderHeader: () => {
@@ -115,7 +115,7 @@ export const AddWorkoutSidePanel = ({
                                 )}
                             </Tooltip>
                         </TooltipProvider>
-                        <span className="font-medium text-sm truncate">{row.program}</span>
+                        <span className="font-medium text-sm truncate">{row.name}</span>
                     </div>
                 );
             },
@@ -213,7 +213,7 @@ export const AddWorkoutSidePanel = ({
                         getRowId={(row) => row.id}
                         gridKey="add-workout-grid"
                         searchPlaceholder={t('athletes.trainingCalendar.searchWorkoutsPlaceholder')}
-                        searchFields={[(row) => row.program]}
+                        searchFields={[(row) => row.name]}
                         enableSearch={true}
                         enableEditColumns={false}
                         enableExport={false}

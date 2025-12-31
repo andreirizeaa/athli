@@ -25,7 +25,11 @@ export const getPrograms = async (): Promise<Program[]> => {
     program: p.name,
     description: p.description || '',
     type: p.type || p.program_data?.type || '',
-    length: p.weeks ? `${p.weeks} weeks` : (p.program_data?.weeks ? `${p.program_data.weeks} weeks` : '0 weeks'),
+    difficulty: p.difficulty || p.program_data?.difficulty || '',
+    length: (() => {
+      const weeksInt = Number(p.weeks || p.program_data?.weeks || 0);
+      return `${weeksInt} week${weeksInt === 1 ? '' : 's'}`;
+    })(),
     totalExercises: p.total_exercises || 0,
     equipment: Array.isArray(p.equipment) ? p.equipment.join(', ') : p.equipment || '',
     created: p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
@@ -190,7 +194,11 @@ export const getProgramById = async (programId: string): Promise<Program & { pro
     program: p.name,
     description: p.description || '',
     type: p.type || p.program_data?.type || '',
-    length: p.weeks ? `${p.weeks} weeks` : (p.program_data?.weeks ? `${p.program_data.weeks} weeks` : '0 weeks'),
+    difficulty: p.difficulty || p.program_data?.difficulty || '',
+    length: (() => {
+      const weeksInt = Number(p.weeks || p.program_data?.weeks || 0);
+      return `${weeksInt} week${weeksInt === 1 ? '' : 's'}`;
+    })(),
     totalExercises: p.total_exercises || 0,
     equipment: Array.isArray(p.equipment) ? p.equipment.join(', ') : p.equipment || '',
     created: p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',

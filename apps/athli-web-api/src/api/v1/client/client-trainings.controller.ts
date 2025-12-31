@@ -91,9 +91,20 @@ export const clientTrainingsController = {
                 const formattedDate = `${day}-${month}-${year}`;
 
                 // training_data is a JSONB array of workouts
-                calendar[formattedDate] = Array.isArray(entry.training_data)
-                    ? entry.training_data
-                    : [];
+                const workouts = Array.isArray(entry.training_data) ? entry.training_data : [];
+
+                // OPTIMIZATION: Return only metadata
+                calendar[formattedDate] = workouts.map((workout: any) => ({
+                    id: workout.id,
+                    workout: workout.program || workout.title || workout.name || workout.workoutName || 'Untitled Workout', // Map title/name to workout
+                    description: workout.description,
+                    totalExercises: workout.totalExercises || workout.total_exercises || workout.exercises?.length || 0, // Handle snake_case total_exercises
+                    type: workout.type,
+                    difficulty: workout.difficulty,
+                    equipment: workout.equipment,
+                    isFavourite: workout.isFavourite || workout.is_favourite, // Handle snake_case is_favourite
+                    // Strip heavy fields: items, sections, workout_data
+                }));
             });
         }
 
@@ -103,6 +114,222 @@ export const clientTrainingsController = {
         });
     },
 
+    /**
+     * Get a specific workout instance from the calendar
+     * Request body: { clientId, date, workoutId }
+     */
+    getWorkoutInstance: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { clientId, date, workoutId } = req.body;
+
+        if (!clientId || !date || !workoutId) {
+            return res.status(400).json({ success: false, message: 'clientId, date, and workoutId are required' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        const { data: entry, error } = await supabase
+            .from('client_training')
+            .select('training_data')
+            .eq('client_id', clientId)
+            .eq('date', date)
+            .single();
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        if (!entry || !entry.training_data) {
+            return res.status(404).json({ success: false, message: 'Training entry not found' });
+        }
+
+        const workout = (entry.training_data as any[]).find((w: any) => w.id === workoutId);
+
+        if (!workout) {
+            return res.status(404).json({ success: false, message: 'Workout instance not found' });
+        }
+
+        // Return FULL workout data
+        success(res, {
+            message: 'Workout instance retrieved successfully',
+            data: { workout },
+        });
+    },
+
+
+    /**
+     * Assign a workout to a client's calendar
+     * Request body: { clientId, date, workoutId, workoutPayload, isNew, coachId }
+     */
+    assignWorkout: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { clientId, date, workoutId, workoutPayload, isNew, coachId } = req.body;
+
+        if (!clientId || !date) {
+            return res.status(400).json({ success: false, message: 'clientId and date are required' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Fetch existing day entry
+        const { data: existingEntry, error: fetchError } = await supabase
+            .from('client_training')
+            .select('*')
+            .eq('client_id', clientId)
+            .eq('date', date)
+            .single();
+
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+            return res.status(500).json({ success: false, message: fetchError.message });
+        }
+
+        let trainingData: any[] = existingEntry?.training_data || [];
+
+        // Prepare workout object
+        let workoutToSave: any;
+
+        if (isNew && workoutPayload) {
+            // New workout created in-place
+            workoutToSave = {
+                ...workoutPayload,
+                id: workoutPayload.id || `workout-${Date.now()}`,
+                assigned_by: userId,
+                assigned_at: new Date().toISOString()
+            };
+        } else if (workoutId) {
+            // Assigning existing workout (fetch from coach_workouts if needed, or just partial data)
+            // Ideally we should fetch full workout content if not provided.
+            // For now assuming the frontend sends enough or we fetch.
+            // If just ID is sent, we need to fetch it.
+            if (!workoutPayload) {
+                const { data: coachWorkout, error: workoutError } = await supabase
+                    .from('coach_workouts')
+                    .select('*')
+                    .eq('id', workoutId)
+                    .single();
+
+                if (workoutError || !coachWorkout) {
+                    return res.status(404).json({ success: false, message: 'Workout not found' });
+                }
+                workoutToSave = coachWorkout;
+            } else {
+                workoutToSave = workoutPayload;
+            }
+
+            // Ensure ID is preserved or made unique for this instance?
+            // Usually valid to have same workout ID multiple times, 
+            // but for tracking completion, unique instance IDs are better.
+            // The frontend logic seems to generate unique IDs with timestamp suffix.
+            // We'll trust the payload's ID or fallback.
+            workoutToSave = {
+                ...workoutToSave,
+                id: workoutToSave.id || workoutId,
+                assigned_by: userId,
+                assigned_at: new Date().toISOString()
+            };
+        } else {
+            return res.status(400).json({ success: false, message: 'workoutId or workoutPayload required' });
+        }
+
+        // Add or Update in array
+        // If ID exists, update. Else push.
+        const existingIndex = trainingData.findIndex((w: any) => w.id === workoutToSave.id);
+        if (existingIndex >= 0) {
+            trainingData[existingIndex] = workoutToSave;
+        } else {
+            trainingData.push(workoutToSave);
+        }
+
+        // 2. Upsert
+        const { error: upsertError } = await supabase
+            .from('client_training')
+            .upsert({
+                client_id: clientId,
+                date: date,
+                coach_id: coachId || userId, // Fallback to current user (coach)
+                training_data: trainingData,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'client_id, date, coach_id' });
+
+        if (upsertError) {
+            console.error('Upsert error:', upsertError);
+            return res.status(500).json({ success: false, message: upsertError.message });
+        }
+
+        success(res, { message: 'Workout assigned successfully' });
+    },
+
+    /**
+     * Delete a workout from specific date
+     */
+    deleteWorkout: async (req: Request, res: Response) => {
+        const { clientId, workoutId } = req.params;
+        const { date } = req.query; // Date is usually query param here
+
+        if (!clientId || !workoutId || !date) {
+            return res.status(400).json({ success: false, message: 'clientId, workoutId and date are required' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Fetch existing
+        const { data: existingEntry, error: fetchError } = await supabase
+            .from('client_training')
+            .select('*')
+            .eq('client_id', clientId)
+            .eq('date', date)
+            .single();
+
+        if (fetchError) {
+            return res.status(404).json({ success: false, message: 'Calendar entry not found' });
+        }
+
+        let trainingData: any[] = existingEntry.training_data || [];
+        const initialLength = trainingData.length;
+
+        // Filter out
+        trainingData = trainingData.filter((w: any) => w.id !== workoutId);
+
+        if (trainingData.length === initialLength) {
+            return res.status(404).json({ success: false, message: 'Workout instance not found in this date' });
+        }
+
+        // 2. Update or Delete Row
+        if (trainingData.length === 0) {
+            // Delete row if empty
+            const { error: deleteError } = await supabase
+                .from('client_training')
+                .delete()
+                .eq('client_id', clientId)
+                .eq('date', date);
+
+            if (deleteError) return res.status(500).json({ success: false, message: deleteError.message });
+        } else {
+            // Update with filtered list
+            const { error: updateError } = await supabase
+                .from('client_training')
+                .update({
+                    training_data: trainingData,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('client_id', clientId)
+                .eq('date', date);
+
+            if (updateError) return res.status(500).json({ success: false, message: updateError.message });
+        }
+
+        success(res, { message: 'Workout deleted successfully' });
+    },
 
     /**
      * Update training status

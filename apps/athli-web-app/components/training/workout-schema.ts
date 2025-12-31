@@ -38,6 +38,7 @@ type DistanceDurationMetrics = BaseMetrics & {
  */
 export type RoundExercisePayload = {
   id: string;
+  notes?: string; // User notes for this exercise
 } & (WeightRepsMetrics | RepsMetrics | DistanceDurationMetrics);
 
 /**
@@ -106,6 +107,7 @@ export type ExerciseGroupPayload = {
 
 export type RegularSectionPayload = {
   id: string;
+  name: string;
   type: 'regular';
   exercises: ExerciseGroupPayload[];
   notes?: string; // User notes for this section (empty when coach creates)
@@ -113,6 +115,7 @@ export type RegularSectionPayload = {
 
 export type AmrapSectionPayload = {
   id: string;
+  name: string;
   type: 'amrap';
   durationSec: number; // Planned duration
   actualDurationSec?: number; // Actual duration completed (empty when coach creates)
@@ -123,6 +126,7 @@ export type AmrapSectionPayload = {
 
 export type TimedSectionPayload = {
   id: string;
+  name: string;
   type: 'timed';
   targetRounds: number; // Planned rounds
   actualRounds?: number; // Actual rounds completed (empty when coach creates)
@@ -137,6 +141,7 @@ export type TimedSectionPayload = {
  */
 export type CircuitExercisePayload = Omit<RegularExercisePayload, 'sets'> & {
   set: SetPayload;
+  notes?: string;
 };
 
 export type CircuitExerciseGroupPayload = {
@@ -146,6 +151,7 @@ export type CircuitExerciseGroupPayload = {
 
 export type CircuitsSectionPayload = {
   id: string;
+  name: string;
   type: 'circuits';
   targetRounds: number; // Planned rounds
   actualRounds?: number; // Actual rounds completed (empty when coach creates)
@@ -156,6 +162,7 @@ export type CircuitsSectionPayload = {
 
 export type AuxiliarySectionPayload = {
   id: string;
+  name: string;
   type: 'auxiliary';
   category: AuxiliaryCategory;
   exercises: ExerciseGroupPayload[];

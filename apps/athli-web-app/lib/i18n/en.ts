@@ -839,17 +839,14 @@ export const enMessages = {
       description: 'Description',
       type: 'Type',
       length: 'Length',
-      totalExercises: 'Total Exercises',
-      equipment: 'Equipment',
       created: 'Created',
     },
     columnTooltips: {
       program: 'The name of the program',
       description: 'A brief overview of the program',
       type: 'The category or style of the program',
+      difficulty: 'The difficulty level of the program',
       length: 'The duration of the program',
-      totalExercises: 'The number of exercises in the program',
-      equipment: 'The equipment required for this program',
       created: 'The date when the program was created',
     },
     actions: {

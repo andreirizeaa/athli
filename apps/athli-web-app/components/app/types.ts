@@ -76,7 +76,7 @@ export type Athlete = {
 
 export type Workout = {
   id: string;
-  program: string;
+  name: string; // Renamed from workout to match backend
   description: string;
   type: string;
   difficulty: string;
@@ -93,6 +93,7 @@ export type Program = {
   program: string;
   description: string;
   type: string;
+  difficulty: string;
   length: string;
   totalExercises: number;
   equipment: string;

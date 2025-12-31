@@ -59,6 +59,7 @@ import {
   Star,
   Trash2,
   Copy,
+  BrainCog,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
@@ -67,24 +68,23 @@ import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
 import { CreateProgramSidePanel } from './components/create-program-side-panel';
 import { ProgramNameCell } from './components/program-name-cell';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/training';
 
-type ColumnId = 'description' | 'type' | 'length' | 'totalExercises' | 'equipment' | 'actions';
+type ColumnId = 'description' | 'type' | 'difficulty' | 'length' | 'actions';
 
 const COLUMN_ORDER: ColumnId[] = [
   'description',
   'type',
+  'difficulty',
   'length',
-  'totalExercises',
-  'equipment',
   'actions',
 ];
 
 const PROGRAM_COLUMN_DEFINITIONS = [
   { id: 'description', label: 'Description', icon: <FileText className="size-3" /> },
   { id: 'type', label: 'Type', icon: <Tag className="size-3" /> },
+  { id: 'difficulty', label: 'Difficulty', icon: <BrainCog className="size-3" /> },
   { id: 'length', label: 'Length', icon: <Clock className="size-3" /> },
-  { id: 'totalExercises', label: 'Total Exercises', icon: <Hash className="size-3" /> },
-  { id: 'equipment', label: 'Equipment', icon: <Wrench className="size-3" /> },
 ];
 
 const PROGRAM_TYPES = [
@@ -101,15 +101,14 @@ const PROGRAM_TYPES = [
   'Combination',
 ] as const;
 
-const PROGRAM_DIFFICULTY_LEVELS = ['All levels', 'Beginner', 'Intermediate', 'Advanced'] as const;
+const PROGRAM_DIFFICULTY_LEVELS = DIFFICULTY_LEVELS.map(level => level.label);
 
 const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): string => {
   const widths: Record<ColumnId, { class: string; pixel: string }> = {
     description: { class: 'min-w-[250px]', pixel: '250px' },
     type: { class: 'min-w-[140px]', pixel: '140px' },
+    difficulty: { class: 'min-w-[140px]', pixel: '140px' },
     length: { class: 'min-w-[130px]', pixel: '130px' },
-    totalExercises: { class: 'min-w-[170px]', pixel: '170px' },
-    equipment: { class: 'min-w-[200px]', pixel: '200px' },
     actions: { class: 'w-[100px]', pixel: '100px' },
   };
 
@@ -142,6 +141,20 @@ const formatProgramType = (type: string): string => {
   return type
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+// Helper function to format difficulty for display
+const formatDifficulty = (difficulty: string): string => {
+  if (!difficulty) return '-';
+  const level = DIFFICULTY_LEVELS.find((l) => l.value === difficulty.toLowerCase());
+  if (level) return level.label;
+
+  // Fallback for case sensitivity or non-standard values
+  return difficulty
+    .replace(/_/g, ' ')
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
@@ -521,58 +534,27 @@ const ProgramsPage = () => {
               </div>
             ),
           };
-        case 'totalExercises':
+        case 'difficulty':
           return {
-            id: 'totalExercises',
-            label: t('programs.columns.totalExercises'),
-            icon: <Hash className="size-3" />,
+            id: 'difficulty',
+            label: t('general.difficulty'),
+            icon: <BrainCog className="size-3" />,
             width: {
-              class: getColumnWidth('totalExercises', 'class'),
-              pixel: getColumnWidth('totalExercises', 'pixel'),
+              class: getColumnWidth('difficulty', 'class'),
+              pixel: getColumnWidth('difficulty', 'pixel'),
             },
-            tooltip: t('programs.columnTooltips.totalExercises'),
-            getSortValue: (row) => row.totalExercises,
+            tooltip: t('programs.columnTooltips.difficulty'),
+            getSortValue: (row) => row.difficulty.toLowerCase(),
             renderCell: (row) => (
-              <div className="flex items-center w-full">
+              <div className="flex items-center h-full">
                 <span className="text-sm">
-                  {isEmpty(row.totalExercises) ? '--' : row.totalExercises}
+                  {isEmpty(row.difficulty) ? '--' : formatDifficulty(row.difficulty)}
                 </span>
               </div>
             ),
           };
-        case 'equipment':
-          return {
-            id: 'equipment',
-            label: t('general.equipment'),
-            icon: <Wrench className="size-3" />,
-            width: {
-              class: getColumnWidth('equipment', 'class'),
-              pixel: getColumnWidth('equipment', 'pixel'),
-            },
-            tooltip: t('programs.columnTooltips.equipment'),
-            getSortValue: (row) => row.equipment.toLowerCase(),
-            renderCell: (row) =>
-              isEmpty(row.equipment) ? (
-                <div className="flex items-center h-full min-w-0 w-full">
-                  <span className="text-sm truncate block min-w-0 w-full">--</span>
-                </div>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center h-full min-w-0 w-full">
-                      <span className="text-sm truncate block min-w-0 w-full">{row.equipment}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    className="max-w-[200px] break-words"
-                    side="top"
-                    align="start"
-                  >
-                    <p>{row.equipment}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ),
-          };
+
+
         default:
           return {
             id: columnId,
@@ -618,6 +600,13 @@ const ProgramsPage = () => {
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: formatProgramType(type) })),
       getFilterValue: (row) => row.type,
+    },
+    {
+      id: 'difficulty',
+      label: t('general.difficulty'),
+      icon: <BrainCog className="size-4" />,
+      options: DIFFICULTY_LEVELS.map(level => ({ value: level.value, label: level.label })),
+      getFilterValue: (row) => row.difficulty,
     },
     {
       id: 'show',

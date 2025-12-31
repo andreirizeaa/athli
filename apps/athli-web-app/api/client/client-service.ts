@@ -169,7 +169,7 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
 export interface TrainingCalendarSchema {
   [date: string]: Array<{
     id: string;
-    program: string;
+    workout: string; // Renamed from program to match backend
     description: string;
     type: string;
     difficulty: string;
@@ -310,10 +310,7 @@ export const updateTrainingCalendar = async (
   // TODO: Connect to backend API
   // This is a placeholder that logs the data for now
 
-  console.log('Updating training calendar:', {
-    clientId,
-    schema,
-  });
+
 
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -358,7 +355,7 @@ const mockJohnSmithTrainingCalendar: TrainingCalendarSchema = (() => {
     calendar[mondayKey] = [
       {
         id: `1-${mondayKey}-strength`,
-        program: 'Strength Builder',
+        workout: 'Strength Builder',
         description:
           'A comprehensive strength training program designed to build muscle mass and increase overall strength.',
         type: 'Strength',
@@ -396,7 +393,7 @@ const mockJohnSmithTrainingCalendar: TrainingCalendarSchema = (() => {
     calendar[fridayKey] = [
       {
         id: `3-${fridayKey}-strength`,
-        program: 'Strength Builder',
+        workout: 'Strength Builder',
         description:
           'A comprehensive strength training program designed to build muscle mass and increase overall strength.',
         type: 'Strength',
@@ -534,10 +531,7 @@ export const getWorkoutStatistics = async (
   clientId: string,
   period: 'last7Days' | 'last30Days' | 'nextWeek'
 ): Promise<WorkoutStatistics> => {
-  console.log('Getting workout statistics:', {
-    clientId,
-    period,
-  });
+
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -595,9 +589,7 @@ export interface AssignedItem {
  * This will be connected to the backend in the future
  */
 export const getCurrentAssignedItem = async (clientId: string): Promise<AssignedItem | null> => {
-  console.log('Getting current assigned item:', {
-    clientId,
-  });
+
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -644,9 +636,7 @@ export interface WeightDataPoint {
 export const getStrengthOverview = async (
   clientId: string
 ): Promise<StrengthDataPoint[]> => {
-  console.log('Getting strength overview:', {
-    clientId,
-  });
+
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -727,9 +717,7 @@ export const getStrengthOverview = async (
 export const getWeightOverview = async (
   clientId: string
 ): Promise<WeightOverviewResult> => {
-  console.log('Getting weight overview:', {
-    clientId,
-  });
+
 
   await new Promise((resolve) => setTimeout(resolve, 100));
 
