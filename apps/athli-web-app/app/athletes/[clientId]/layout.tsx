@@ -60,7 +60,7 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       label: t('athletes.profile.notes'),
     },
     {
-      value: 'training-calendar',
+      value: 'training',
       label: t('athletes.profile.trainingCalendar'),
     },
     {
@@ -106,7 +106,7 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   const isPhotosRoute = segments.includes('photos');
   const isSettingsRoute = segments.includes('settings');
   const isUpdatesRoute = segments.includes('updates');
-  const isTrainingCalendarRoute = segments.includes('training-calendar');
+  const isTrainingCalendarRoute = segments.includes('training');
 
   // Determine active tab
   const activeTab = isCheckInRoute
@@ -120,7 +120,7 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
           : isUpdatesRoute
             ? 'updates'
             : isTrainingCalendarRoute
-              ? 'training-calendar'
+              ? 'training'
               : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const handleTabChange = (value: string) => {

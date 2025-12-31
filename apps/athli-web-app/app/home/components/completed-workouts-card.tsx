@@ -208,7 +208,7 @@ const getCompletedWorkouts = (): CompletedWorkout[] => {
       weight: 500,
       workoutDescription: mockWorkout.description,
       workoutType: mockWorkout.type,
-      workoutEquipment: mockWorkout.equipment,
+      workoutEquipment: Array.isArray(mockWorkout.equipment) ? mockWorkout.equipment.join(', ') : mockWorkout.equipment,
       workoutCreated: mockWorkout.created,
       sections: buildMockPreviewSections('Strength Builder'),
       comments: [
@@ -469,7 +469,7 @@ export const CompletedWorkoutsCard = () => {
   }, [selectedDate, workoutType]);
 
   const handleNavigateToTrainingCalendar = (clientId: string) => {
-    router.push(`/athletes/${clientId}/training-calendar`);
+    router.push(`/athletes/${clientId}/training`);
   };
 
   const handleNavigateToMessages = (clientId: string) => {

@@ -95,6 +95,7 @@ export type Program = {
   type: string;
   difficulty: string;
   length: string;
+  totalWorkouts: number;
   totalExercises: number;
   equipment: string;
   created: string; // dd-mm-yy format

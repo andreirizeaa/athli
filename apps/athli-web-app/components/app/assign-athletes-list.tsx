@@ -50,7 +50,7 @@ export const AssignAthletesList = ({
         params.set('programName', programName);
       }
 
-      router.push(`/athletes/${targetId}/training-calendar?${params.toString()}`);
+      router.push(`/athletes/${targetId}/training?${params.toString()}`);
     } else if (onAthleteSelected) {
       onAthleteSelected(athlete.id);
     }

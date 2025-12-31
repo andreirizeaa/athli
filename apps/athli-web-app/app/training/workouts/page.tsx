@@ -253,11 +253,11 @@ const WorkoutsPage = () => {
   // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
   const allColumns: ColumnDefinition<Workout>[] = [
     {
-      id: 'program',
+      id: 'name',
       label: t('library.workoutColumn'),
       icon: <FileText className="size-3" />,
-      getSortValue: (row) => row.program.toLowerCase(),
-      getSearchValue: (row) => row.program,
+      getSortValue: (row) => row.name.toLowerCase(),
+      getSearchValue: (row) => row.name,
     },
     ...filteredColumnOrder.map((columnId): ColumnDefinition<Workout> => {
       switch (columnId) {
@@ -273,7 +273,7 @@ const WorkoutsPage = () => {
             tooltip: t('library.briefOverviewWorkout'),
             getSortValue: (row) => row.description.toLowerCase(),
             getSearchValue: (row) =>
-              `${row.program} ${row.description} ${row.type} ${row.equipment}`,
+              `${row.name} ${row.description} ${row.type} ${row.equipment}`,
             renderCell: (row) =>
               isEmpty(row.description) ? (
                 <div className="flex items-center h-full min-w-0 w-full">
@@ -409,7 +409,7 @@ const WorkoutsPage = () => {
             setWorkoutToDelete(row.id);
           }}
           className="h-8 w-8 text-muted-foreground hover:text-destructive transition-colors"
-          aria-label={`Delete ${row.program}`}
+          aria-label={`Delete ${row.name}`}
         >
           <Trash2 className="h-4 w-4" />
         </Button>
@@ -447,7 +447,7 @@ const WorkoutsPage = () => {
       await starWorkouts(workoutId, !isStarred);
 
       const workout = workouts.find((w) => w.id === workoutId);
-      const workoutName = workout?.program || t('library.workout');
+      const workoutName = workout?.name || t('library.workout');
 
       setStarredWorkouts((prev) => {
         const next = new Set(prev);
@@ -501,7 +501,7 @@ const WorkoutsPage = () => {
       if (selectedCount === 1) {
         const workoutId = Array.from(selectedWorkouts)[0];
         const workout = workouts.find((w) => w.id === workoutId);
-        const name = workout?.program || t('library.workout');
+        const name = workout?.name || t('library.workout');
         toast.success(t('workouts.detail.toast.starredSuccessfully', { name }));
       } else {
         toast.success(t('workouts.detail.toast.starredBulkSuccessfully', { count: selectedCount }));
@@ -523,7 +523,7 @@ const WorkoutsPage = () => {
       let singleItemName = '';
       if (deleteCount === 1) {
         const item = workouts.find(w => w.id === idsToDelete[0]);
-        if (item) singleItemName = item.program;
+        if (item) singleItemName = item.name;
       }
 
       await deleteWorkouts(idsToDelete);
@@ -571,7 +571,7 @@ const WorkoutsPage = () => {
     const workoutId = Array.from(selectedWorkouts)[0];
     const workout = workouts.find((w) => w.id === workoutId);
     if (!workout) return;
-    handleDuplicateSelectedPerRow(workoutId, workout.program);
+    handleDuplicateSelectedPerRow(workoutId, workout.name);
   };
 
   const handleDuplicateSelectedPerRow = async (workoutId: string, name: string) => {
@@ -597,7 +597,7 @@ const WorkoutsPage = () => {
         <div className="flex items-center justify-center h-full" data-no-row-link="true">
           <Checkbox checked={isSelected} onCheckedChange={() => handleToggleWorkout(workout.id)} />
         </div>
-        <span className="text-sm truncate flex-1 min-w-0">{workout.program}</span>
+        <span className="text-sm truncate flex-1 min-w-0">{workout.name}</span>
         <div className="flex items-center justify-end flex-shrink-0 gap-1" data-no-row-link="true">
           <TooltipProvider>
             <Tooltip>
@@ -875,7 +875,7 @@ const WorkoutsPage = () => {
         rowHeight="54px"
         stickyFirstColumn={true}
         firstColumnWidth="320px"
-        firstColumnId="program"
+        firstColumnId="name"
         renderFirstColumn={renderFirstColumn}
         renderFirstColumnHeader={renderFirstColumnHeader}
         showPagination={true}
@@ -895,7 +895,7 @@ const WorkoutsPage = () => {
         open={workoutToDelete !== null}
         onOpenChange={(open) => !open && setWorkoutToDelete(null)}
         onConfirm={handleConfirmSingleDelete}
-        itemName={workouts.find(w => w.id === workoutToDelete)?.program}
+        itemName={workouts.find(w => w.id === workoutToDelete)?.name}
         itemType="workout"
       />
 
@@ -919,7 +919,7 @@ const WorkoutsPage = () => {
         selectedItem={selectedWorkoutForAssignment ? {
           type: 'workout',
           id: selectedWorkoutForAssignment.id,
-          name: selectedWorkoutForAssignment.program
+          name: selectedWorkoutForAssignment.name
         } : null}
       />
 
@@ -930,7 +930,7 @@ const WorkoutsPage = () => {
           initialData={selectedWorkoutData}
           isLoadingInitialData={isLoadingWorkoutData}
           meta={{
-            title: selectedWorkoutForBuilder.program,
+            title: selectedWorkoutForBuilder.name,
             description: selectedWorkoutForBuilder.description,
             type: selectedWorkoutForBuilder.type,
             difficulty: selectedWorkoutForBuilder.difficulty,
