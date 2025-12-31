@@ -16,8 +16,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { StandardBuilder } from '@/app/training/workouts/new/workout-builder';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { mockWorkouts } from '@/components/app/app-shell';
 
@@ -33,6 +33,8 @@ type TrainingCalendarViewState = {
   currentWeek: number;
   selectedWeek: string;
 };
+
+const MOCK_WORKOUT_SCHEMA = { items: [] };
 
 const EditTrainingCalendarWorkoutPage = () => {
   const t = useTranslations();
@@ -256,11 +258,13 @@ const EditTrainingCalendarWorkoutPage = () => {
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 overflow-auto bg-sidebar">
-        <StandardBuilder
+        <WorkoutBuilder
           meta={workoutMeta}
           onDirtyChange={() => setHasUnsavedChanges(true)}
           saveSignal={saveSignal}
           onSaveSuccess={handleSaveSuccess}
+          open={true}
+          onOpenChange={() => { }}
         />
       </div>
       <DiscardChangesDialog

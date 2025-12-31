@@ -58,12 +58,13 @@ import {
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
-import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, editWorkout } from '@/api/coach/coach-workout-service';
-import type { WorkoutProgramPayload } from './new/workout-schema';
+import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, editWorkout, getWorkoutById } from '@/api/coach/coach-workout-service';
+import { WorkoutBuilder } from './workout-builder';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
 import { CreateWorkoutSidePanel } from './components/create-workout-side-panel';
-import { StandardBuilder } from './new/workout-builder';
+
 
 type ColumnId = 'description' | 'type' | 'difficulty' | 'totalExercises' | 'equipment' | 'actions';
 
@@ -129,6 +130,8 @@ const WorkoutsPage = () => {
   const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
   const [isWorkoutBuilderOpen, setIsWorkoutBuilderOpen] = useState<boolean>(false);
   const [selectedWorkoutForBuilder, setSelectedWorkoutForBuilder] = useState<Workout | null>(null);
+  const [selectedWorkoutData, setSelectedWorkoutData] = useState<any>(null);
+  const [isLoadingWorkoutData, setIsLoadingWorkoutData] = useState(false);
 
   // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
   const isEmpty = (value: any): boolean => {
@@ -157,11 +160,26 @@ const WorkoutsPage = () => {
     });
   };
 
-  const handleNavigateToWorkout = (workoutId: string) => {
+  const handleNavigateToWorkout = async (workoutId: string) => {
     const workout = workouts.find(w => w.id === workoutId);
     if (workout) {
+      // Open the dialog immediately and show loading inside
       setSelectedWorkoutForBuilder(workout);
+      setSelectedWorkoutData(null);
+      setIsLoadingWorkoutData(true);
       setIsWorkoutBuilderOpen(true);
+
+      try {
+        // Fetch full workout data including workout_data in background
+        const fullWorkout = await getWorkoutById(workoutId);
+        setSelectedWorkoutData(fullWorkout.workout_data);
+      } catch (error) {
+        console.error('Failed to fetch workout data:', error);
+        toast.error(t('general.error'));
+        setIsWorkoutBuilderOpen(false);
+      } finally {
+        setIsLoadingWorkoutData(false);
+      }
     }
   };
 
@@ -906,10 +924,11 @@ const WorkoutsPage = () => {
       />
 
       {selectedWorkoutForBuilder && (
-        <StandardBuilder
+        <WorkoutBuilder
           open={isWorkoutBuilderOpen}
           onOpenChange={setIsWorkoutBuilderOpen}
-          initialData={selectedWorkoutForBuilder.workout_data}
+          initialData={selectedWorkoutData}
+          isLoadingInitialData={isLoadingWorkoutData}
           meta={{
             title: selectedWorkoutForBuilder.program,
             description: selectedWorkoutForBuilder.description,

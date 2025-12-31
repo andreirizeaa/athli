@@ -8,10 +8,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { createWorkout } from '@/api/coach/coach-workout-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../../training-data-context';
-import { BasicInformation } from '../new/basic-information';
+import { BasicInformation } from '@/components/training/basic-information';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { Check } from 'lucide-react';
-import type { WorkoutPayload } from '../new/workout-schema';
+import type { WorkoutPayload } from '@/components/training/workout-schema';
 
 interface CreateWorkoutSidePanelProps {
     open: boolean;

@@ -47,19 +47,19 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/general/utils';
 import type { Workout } from '@/components/app/app-shell';
-import { getWorkouts } from '@/api/coach/coach-workout-service';
+import { getWorkouts, getWorkoutById } from '@/api/coach/coach-workout-service';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
-import type { WorkoutPayload, WorkoutSectionPayload } from '@/app/training/workouts/new/workout-schema';
+
 import { createProgram, editProgram, deletePrograms, updateProgramDetails, type ProgramData } from '@/api/coach/coach-program-service';
 import { toast } from 'sonner';
 import { EditProgramDetailsSidePanel } from './edit-program-details-side-panel';
 import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { useTrainingData } from '../../training-data-context';
-import { StandardBuilder } from '@/app/training/workouts/new/workout-builder';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
+import type { WorkoutPayload, WorkoutSectionPayload, WorkoutProgramPayload } from '@/components/training/workout-schema';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
 
@@ -1226,9 +1226,19 @@ export const ProgramBuilder = ({
   const handleSaveWorkoutFromPanel = async (workout: Workout, scheduleOption: string, config: string) => {
     if (!workout || selectedDay === null) return;
 
+    // Fetch full workout data including workout_data
+    let fullWorkout: Workout & { workout_data?: any };
+    try {
+      fullWorkout = await getWorkoutById(workout.id);
+    } catch (error) {
+      console.error('Failed to fetch full workout data:', error);
+      // Fall back to using the workout without workout_data
+      fullWorkout = workout;
+    }
+
     // Helper to create a workout with a unique ID
     const createWorkoutInstance = () => ({
-      ...workout,
+      ...fullWorkout,
       id: `${workout.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     });
 
@@ -2264,7 +2274,7 @@ export const ProgramBuilder = ({
         }}
       />
       {/* Inline workout builder for creating new workouts */}
-      <StandardBuilder
+      <WorkoutBuilder
         open={isWorkoutBuilderOpen}
         onOpenChange={(open) => {
           setIsWorkoutBuilderOpen(open);

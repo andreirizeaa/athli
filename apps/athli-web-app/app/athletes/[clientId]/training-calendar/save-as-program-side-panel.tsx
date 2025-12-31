@@ -157,7 +157,7 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
     fromDate !== undefined &&
     toDate !== undefined &&
     programName.trim() !== '' &&
-    difficulty !== '' &&
+
     hasWorkoutData;
 
   const handleSave = async () => {
@@ -193,12 +193,7 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
     //   setTypeError(null);
     // }
 
-    if (!difficulty) {
-      setDifficultyError(t('athletes.trainingCalendar.saveAsProgram.errors.difficultyRequired'));
-      hasError = true;
-    } else {
-      setDifficultyError(null);
-    }
+
 
     if (hasError) return;
 
@@ -440,7 +435,6 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
         <div className="flex flex-col gap-2">
           <Label htmlFor="program-difficulty" className="text-sm font-medium flex items-center gap-[0.1px]">
             {t('programs.addProgram.difficulty')}
-            <RequiredAsterisk />
           </Label>
           <Select
             value={difficulty}

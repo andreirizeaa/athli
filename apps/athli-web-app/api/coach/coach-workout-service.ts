@@ -19,7 +19,8 @@ export const getWorkouts = async (): Promise<Workout[]> => {
     equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
     created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: w.is_favourite || false,
-    workout_data: w.workout_data,
+    // Note: workout_data intentionally excluded to reduce payload size
+    // Use getWorkoutById() to fetch full workout data when editing
   }));
 };
 
