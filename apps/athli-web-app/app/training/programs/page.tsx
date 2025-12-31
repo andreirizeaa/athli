@@ -60,6 +60,7 @@ import {
   Trash2,
   Copy,
   BrainCog,
+  Dumbbell,
 } from 'lucide-react';
 
 import type { Program } from '@/components/app/app-shell';
@@ -70,13 +71,14 @@ import { CreateProgramSidePanel } from './components/create-program-side-panel';
 import { ProgramNameCell } from './components/program-name-cell';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/training';
 
-type ColumnId = 'description' | 'type' | 'difficulty' | 'length' | 'actions';
+type ColumnId = 'description' | 'type' | 'difficulty' | 'length' | 'totalWorkouts' | 'actions';
 
 const COLUMN_ORDER: ColumnId[] = [
   'description',
   'type',
   'difficulty',
   'length',
+  'totalWorkouts',
   'actions',
 ];
 
@@ -85,6 +87,7 @@ const PROGRAM_COLUMN_DEFINITIONS = [
   { id: 'type', label: 'Type', icon: <Tag className="size-3" /> },
   { id: 'difficulty', label: 'Difficulty', icon: <BrainCog className="size-3" /> },
   { id: 'length', label: 'Length', icon: <Clock className="size-3" /> },
+  { id: 'totalWorkouts', label: 'Workouts', icon: <Dumbbell className="size-3" /> },
 ];
 
 const PROGRAM_TYPES = [
@@ -109,6 +112,7 @@ const getColumnWidth = (colId: ColumnId, format: 'class' | 'pixel' = 'class'): s
     type: { class: 'min-w-[140px]', pixel: '140px' },
     difficulty: { class: 'min-w-[140px]', pixel: '140px' },
     length: { class: 'min-w-[130px]', pixel: '130px' },
+    totalWorkouts: { class: 'min-w-[120px]', pixel: '120px' },
     actions: { class: 'w-[100px]', pixel: '100px' },
   };
 
@@ -549,6 +553,25 @@ const ProgramsPage = () => {
               <div className="flex items-center h-full">
                 <span className="text-sm">
                   {isEmpty(row.difficulty) ? '--' : formatDifficulty(row.difficulty)}
+                </span>
+              </div>
+            ),
+          };
+        case 'totalWorkouts':
+          return {
+            id: 'totalWorkouts',
+            label: t('programs.columns.totalWorkouts'),
+            icon: <Dumbbell className="size-3" />,
+            width: {
+              class: getColumnWidth('totalWorkouts', 'class'),
+              pixel: getColumnWidth('totalWorkouts', 'pixel'),
+            },
+            tooltip: t('programs.columnTooltips.totalWorkouts'),
+            getSortValue: (row) => row.totalWorkouts,
+            renderCell: (row) => (
+              <div className="flex items-center h-full">
+                <span className="text-sm">
+                  {row.totalWorkouts} {row.totalWorkouts === 1 ? 'workout' : 'workouts'}
                 </span>
               </div>
             ),

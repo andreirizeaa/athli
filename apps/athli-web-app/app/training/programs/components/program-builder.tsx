@@ -274,7 +274,7 @@ const DraggableWorkoutCard = ({
             <TooltipTrigger asChild>
               <div
                 className={cn(
-                  "h-5 w-5 -mr-1 rounded-full text-primary flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
+                  "h-5 w-5 -mr-1 rounded-full text-foreground flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
                   (isCopyMode || isMultiSelectMode || isMultiSelectCopyMode) && "invisible"
                 )}
                 onClick={(e) => {

@@ -1768,8 +1768,13 @@ const ClientTrainingCalendarPage = () => {
     }
   };
 
-  const handleSaveProgram = async (selectedProgram: Program, startDateInput: Date) => {
-    if (!selectedProgram || !startDateInput) {
+  const handleSaveProgram = async (
+    selectedProgram: Program,
+    startDateInput: Date,
+    detailedProgram?: Program & { program_data: any },
+    range?: { start: number; end: number }
+  ) => {
+    if (!selectedProgram || !startDateInput || !detailedProgram) {
       setIsAddProgramPanelOpen(false);
       return;
     }
@@ -1777,55 +1782,95 @@ const ClientTrainingCalendarPage = () => {
     const start = new Date(startDateInput);
     start.setHours(0, 0, 0, 0);
 
-    const weeksText = selectedProgram.length.split(' ')[0];
-    const totalProgramWeeks = Number.isFinite(parseInt(weeksText, 10)) && parseInt(weeksText, 10) > 0 ? parseInt(weeksText, 10) : 1;
+    // Filter days based on range
+    const startDay = range?.start ?? 1;
+    const endDay = range?.end ?? 1000;
 
-    const baseWorkout: Workout = {
-      id: selectedProgram.id,
-      name: selectedProgram.program,
-      description: selectedProgram.description,
-      type: selectedProgram.type,
-      difficulty: 'Intermediate',
-      length: selectedProgram.length,
-      totalExercises: selectedProgram.totalExercises,
-      equipment: selectedProgram.equipment,
-      created: selectedProgram.created,
-      isFavourite: false,
-    };
+    const schema = detailedProgram.program_data.schema || detailedProgram.program_data.days || [];
 
-    setWorkoutsByDate((previousWorkouts) => {
-      const updated: {
-        [dateKey: string]: Array<Workout & { id: string }>;
-      } = { ...previousWorkouts };
-
-      const addToDate = (date: Date) => {
-        const key = getDateKey(date);
-        const workoutToAdd: Workout & { id: string } = {
-          ...baseWorkout,
-          id: `${baseWorkout.id}-${key}-${Date.now()}`,
-        };
-        updated[key] = [...(updated[key] ?? []), workoutToAdd];
-      };
-
-      for (let weekIndex = 0; weekIndex < totalProgramWeeks; weekIndex += 1) {
-        const weekStart = new Date(start);
-        weekStart.setDate(start.getDate() + weekIndex * 7);
-        weekStart.setHours(0, 0, 0, 0);
-
-        const offsets = [0, 2, 4]; // three sessions per week
-        offsets.forEach((offset) => {
-          const sessionDate = new Date(weekStart);
-          sessionDate.setDate(weekStart.getDate() + offset);
-          sessionDate.setHours(0, 0, 0, 0);
-
-          if (sessionDate >= start) {
-            addToDate(sessionDate);
-          }
-        });
-      }
-
-      return updated;
+    const daysToAssign = schema.filter((day: any, idx: number) => {
+      // Use logic matching SidePanel
+      const dayNumber = day.day || (schema.indexOf(day) ?? 0) + 1;
+      return dayNumber >= startDay && dayNumber <= endDay;
     });
+
+    // Calculate workouts to assign
+    const workoutsToAssign: Array<{ workoutId: string, date: Date }> = [];
+
+    // Sort days by day number to ensure correct sequence order
+    daysToAssign.sort((a: any, b: any) => {
+      const dayNumA = a.day || 0;
+      const dayNumB = b.day || 0;
+      return dayNumA - dayNumB;
+    });
+
+    daysToAssign.forEach((day: any) => {
+      const workouts = day.workouts || [];
+      // Calculate target date
+      // Logic: Day [startDay] maps to [start] date.
+      // Day [X] maps to [start] + (X - startDay) days.
+
+      // Get the day number of this day item
+      const dayNumber = day.day || (schema.indexOf(day) ?? 0) + 1;
+
+      const dayOffset = dayNumber - startDay;
+      const targetDate = new Date(start);
+      targetDate.setDate(start.getDate() + dayOffset);
+
+      workouts.forEach((workout: any) => {
+        if (workout.id) {
+          workoutsToAssign.push({
+            workoutId: workout.id,
+            date: targetDate
+          });
+        }
+      });
+    });
+
+    // Execute assignments
+    if (workoutsToAssign.length === 0) {
+      toast.info("No workouts found in the selected range.");
+      setIsAddProgramPanelOpen(false);
+      return;
+    }
+
+    try {
+      const promises = workoutsToAssign.map(assignment =>
+        apiAssignWorkout({
+          clientId,
+          date: getDateKey(assignment.date),
+          workoutId: assignment.workoutId
+        })
+      );
+
+      await Promise.all(promises);
+      toast.success(`Assigned ${workoutsToAssign.length} workouts from ${selectedProgram.program}`);
+
+      // Optimistically update UI?
+      // Reuse logic from handleSaveWorkout or re-fetch?
+      // Since we have multiple dates, simpler to invalidate queries or rely on the hook's update logic if present.
+      // But handleSaveWorkout updates local state manually. Let's try minimal update logic or refetch.
+      // Since we are using React Query hook `useClientTraining`, checking if it returns `refetch` or similar.
+      // The implementation showed `useClientTraining` returns `workouts` etc but usually it's better to invalidate.
+      // For now, let's trigger a refetch of the range.
+      // However, handleSaveWorkout did this:
+      /*
+        setWorkoutsByDate((prev) => {
+          const updated = { ...prev };
+          datesToAdd.forEach(date => { ... });
+          return updated;
+        });
+      */
+      // We can do similar if we had full workout objects. 
+      // detailedProgram workouts might be partial. 
+      // We will just invalidate the query.
+
+      queryClient.invalidateQueries({ queryKey: ['client-training-calendar'] });
+
+    } catch (error) {
+      console.error("Failed to assign program workouts", error);
+      toast.error("Failed to assign program");
+    }
 
     setIsAddProgramPanelOpen(false);
   };
@@ -2123,7 +2168,7 @@ const ClientTrainingCalendarPage = () => {
               </Button>
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <div className="flex items-center justify-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors min-w-[180px]">
+                  <div className="flex items-center justify-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors w-[240px]">
                     {isNavigationLoading ? (
                       <Loader2 className="size-4 text-primary animate-spin" />
                     ) : (
@@ -2232,7 +2277,12 @@ const ClientTrainingCalendarPage = () => {
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col">
+        <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col relative">
+          {isLoadingTraining && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          )}
           {/* Day names header - only at the top */}
           <div className="flex gap-4 flex-shrink-0 mb-1">
             {calendarDates[0]?.map((date, dayIndex) => (
@@ -2314,7 +2364,7 @@ const ClientTrainingCalendarPage = () => {
                               isDragOver && isFutureDay && 'border-primary',
                             )}
                           >
-                            <div className="px-3 py-0 border-b border-border flex-shrink-0 flex items-center justify-between">
+                            <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
                               <span className={cn(
                                 "text-xs uppercase flex items-center justify-center",
                                 isToday(date)
@@ -2507,7 +2557,7 @@ const ClientTrainingCalendarPage = () => {
                                                   <TooltipTrigger asChild>
                                                     <div
                                                       className={cn(
-                                                        "h-5 w-5 -mr-1 rounded-full text-primary flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
+                                                        "h-5 w-5 -mr-1 rounded-full text-foreground flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
                                                         isCopyMode && "invisible"
                                                       )}
                                                       onClick={(e) => {
@@ -2625,7 +2675,7 @@ const ClientTrainingCalendarPage = () => {
               handleCloseWorkoutDetails();
             }
           }}
-          title={selectedWorkoutDetails?.workout.program || ''}
+          title={selectedWorkoutDetails?.workout.name || ''}
           contentClassName="w-full sm:w-[800px] sm:max-w-[800px]"
         >
           {selectedWorkoutDetails && (() => {

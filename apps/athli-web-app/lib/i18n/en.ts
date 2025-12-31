@@ -839,6 +839,7 @@ export const enMessages = {
       description: 'Description',
       type: 'Type',
       length: 'Length',
+      totalWorkouts: 'Workouts',
       created: 'Created',
     },
     columnTooltips: {
@@ -847,6 +848,7 @@ export const enMessages = {
       type: 'The category or style of the program',
       difficulty: 'The difficulty level of the program',
       length: 'The duration of the program',
+      totalWorkouts: 'The total number of workouts in the program',
       created: 'The date when the program was created',
     },
     actions: {
@@ -1735,7 +1737,7 @@ export const enMessages = {
       files: 'Files',
       habits: 'Habits',
       bookings: 'Bookings',
-      trainingCalendar: 'Training Calendar',
+      trainingCalendar: 'Training',
       updates: 'Updates',
       appSettings: 'App Settings',
       clientNotFound: 'Client not found',
