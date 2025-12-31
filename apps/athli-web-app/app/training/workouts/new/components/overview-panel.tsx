@@ -1103,7 +1103,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
 
   return (
     <>
-      <h2 className="text-left mb-0">Overview</h2>
+      <h2 className="text-left mb-0 px-1">Overview</h2>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}

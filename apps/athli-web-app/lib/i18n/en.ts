@@ -1222,6 +1222,7 @@ export const enMessages = {
       backAria: 'Back to workout details',
       cancel: 'Cancel',
       cancelAria: 'Cancel creating workout',
+      openWorkoutDetails: 'Open workout details',
       generate: 'Generate',
       generateAria: 'Generate workout',
       workoutNameRequiredError: 'Workout name is required',
@@ -1964,6 +1965,10 @@ export const enMessages = {
       configureWorkoutDescription: 'Configure how this workout should be added to the calendar.',
       addThisWorkoutWeeklyOn: 'Add this workout weekly on',
       configurations: 'Configurations',
+      noExercisesInWorkout: 'No exercises in this workout',
+      addExerciseToWorkout: 'Add exercise',
+      createNewWorkout: 'Create new workout',
+      or: 'OR',
 
       /* Add Program Side Panel */
       addProgramTitle: 'Add Program',

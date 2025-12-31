@@ -237,6 +237,8 @@ const StandardWorkoutPage = () => {
         <StandardBuilder
           key={workoutMeta.title}
           meta={workoutMeta}
+          open={true}
+          onOpenChange={() => { }}
           saveSignal={saveSignal}
           onSaveSuccess={handleSaveSuccess}
           onSaveError={() => setIsSaving(false)}

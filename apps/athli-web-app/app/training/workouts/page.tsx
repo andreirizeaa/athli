@@ -58,10 +58,12 @@ import {
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
-import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout } from '@/api/coach/coach-workout-service';
+import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, editWorkout } from '@/api/coach/coach-workout-service';
+import type { WorkoutProgramPayload } from './new/workout-schema';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
 import { CreateWorkoutSidePanel } from './components/create-workout-side-panel';
+import { StandardBuilder } from './new/workout-builder';
 
 type ColumnId = 'description' | 'type' | 'difficulty' | 'totalExercises' | 'equipment' | 'actions';
 
@@ -125,6 +127,8 @@ const WorkoutsPage = () => {
   const [selectedWorkoutForAssignment, setSelectedWorkoutForAssignment] = useState<Workout | null>(null);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
+  const [isWorkoutBuilderOpen, setIsWorkoutBuilderOpen] = useState<boolean>(false);
+  const [selectedWorkoutForBuilder, setSelectedWorkoutForBuilder] = useState<Workout | null>(null);
 
   // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
   const isEmpty = (value: any): boolean => {
@@ -154,7 +158,11 @@ const WorkoutsPage = () => {
   };
 
   const handleNavigateToWorkout = (workoutId: string) => {
-    router.push(`/training/workouts/${workoutId}/edit`);
+    const workout = workouts.find(w => w.id === workoutId);
+    if (workout) {
+      setSelectedWorkoutForBuilder(workout);
+      setIsWorkoutBuilderOpen(true);
+    }
   };
 
   const handleNavigateToAthletes = () => {
@@ -896,6 +904,33 @@ const WorkoutsPage = () => {
           name: selectedWorkoutForAssignment.program
         } : null}
       />
+
+      {selectedWorkoutForBuilder && (
+        <StandardBuilder
+          open={isWorkoutBuilderOpen}
+          onOpenChange={setIsWorkoutBuilderOpen}
+          initialData={selectedWorkoutForBuilder.workout_data}
+          meta={{
+            title: selectedWorkoutForBuilder.program,
+            description: selectedWorkoutForBuilder.description,
+            type: selectedWorkoutForBuilder.type,
+            difficulty: selectedWorkoutForBuilder.difficulty,
+          }}
+          onSaveSuccess={async (payload: WorkoutProgramPayload) => {
+            if (selectedWorkoutForBuilder?.id) {
+              try {
+                await editWorkout(selectedWorkoutForBuilder.id, payload);
+                await refreshWorkouts();
+                toast.success('Workout updated successfully');
+                setIsWorkoutBuilderOpen(false);
+              } catch (error) {
+                console.error('Failed to update workout:', error);
+                toast.error('Failed to update workout');
+              }
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

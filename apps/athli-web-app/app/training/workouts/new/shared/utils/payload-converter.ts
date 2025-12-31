@@ -4,6 +4,28 @@ import type { SetData } from '../../components/exercise-card';
 import { searchExercises } from '@/api/exercise/exercise-search';
 
 /**
+ * Creates a fallback exercise object when exercise is not found in the database
+ * This ensures exercises are never silently dropped during conversion
+ */
+const createFallbackExercise = (exerciseId: string, exerciseType?: string) => ({
+    exerciseId,
+    name: exerciseId, // Use ID as name placeholder
+    imageUrl: '',
+    videoUrl: '',
+    equipments: [],
+    bodyParts: [],
+    exerciseType: exerciseType || 'weight_reps',
+    targetMuscles: [],
+    secondaryMuscles: [],
+    keywords: [],
+    overview: '',
+    instructions: [],
+    exerciseTips: [],
+    variations: [],
+    relatedExerciseIds: [],
+});
+
+/**
  * Converts a payload format workout to builder format
  * Used when loading a workout from the backend
  */
@@ -22,13 +44,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
             if (!exerciseGroup || !exerciseGroup.exercises) return;
 
             exerciseGroup.exercises.forEach((exercisePayload) => {
-                // Find exercise details from the exercise database
-                const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id);
-
-                if (!exerciseDetails) {
-                    console.warn(`Exercise ${exercisePayload.id} not found in database`);
-                    return;
-                }
+                // Find exercise details from the exercise database, or use fallback
+                const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id)
+                    || createFallbackExercise(exercisePayload.id, exercisePayload.exerciseType);
 
                 // Convert sets from payload format to builder format
                 const sets: SetData[] = exercisePayload.sets.map((set) => ({
@@ -73,12 +91,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     const supersetGroupId = group.isSuperset ? `superset_${sectionPayload.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
 
                     group.exercises.forEach((exercisePayload) => {
-                        const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id);
-
-                        if (!exerciseDetails) {
-                            console.warn(`Exercise ${exercisePayload.id} not found in database`);
-                            return;
-                        }
+                        // Find exercise details from the exercise database, or use fallback
+                        const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id)
+                            || createFallbackExercise(exercisePayload.id, exercisePayload.exerciseType);
 
                         const sets: SetData[] = exercisePayload.sets.map((set) => ({
                             setNumber: set.setNumber,
@@ -103,12 +118,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     const supersetGroupId = group.isSuperset ? `superset_${sectionPayload.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}` : null;
 
                     group.exercises.forEach((exercisePayload) => {
-                        const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id);
-
-                        if (!exerciseDetails) {
-                            console.warn(`Exercise ${exercisePayload.id} not found in database`);
-                            return;
-                        }
+                        // Find exercise details from the exercise database, or use fallback
+                        const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id)
+                            || createFallbackExercise(exercisePayload.id, exercisePayload.exerciseType);
 
                         // For circuits, convert the single set to an array
                         const sets: SetData[] = [{
@@ -132,12 +144,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
             } else if ((sectionPayload.type === 'amrap' || sectionPayload.type === 'timed') && sectionPayload.exercises) {
                 // For AMRAP and Timed sections, exercises don't have sets in the builder
                 sectionPayload.exercises.forEach((exercisePayload) => {
-                    const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id);
-
-                    if (!exerciseDetails) {
-                        console.warn(`Exercise ${exercisePayload.id} not found in database`);
-                        return;
-                    }
+                    // Find exercise details from the exercise database, or use fallback
+                    const exerciseDetails = searchExercises('').find((e) => e.exerciseId === exercisePayload.id)
+                        || createFallbackExercise(exercisePayload.id, exercisePayload.exerciseType);
 
                     section.exercises.push({
                         ...exerciseDetails,

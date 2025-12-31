@@ -1,11 +1,16 @@
 'use client';
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Dumbbell, Ellipsis, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import Image from 'next/image';
+import { ArrowDown, ArrowUp, BrainCog, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -15,9 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/general/utils';
+import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
-import type { GeneratedWorkout } from '@/api/exercise/generate-exercise';
+import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
 import { useExerciseDragDrop } from './hooks/use-exercise-drag-drop';
 import type {
@@ -41,6 +54,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import type {
   ExerciseWithSuperset,
   WorkoutSchema,
@@ -61,6 +75,9 @@ import {
 import {
   buildWorkoutPayload,
 } from './shared/utils/payload-builder';
+import {
+  convertPayloadToBuilderFormat,
+} from './shared/utils/payload-converter';
 import {
   handleSectionSelect as selectSection,
   handleDeleteSection as deleteSection,
@@ -92,74 +109,52 @@ import {
 
 type StandardBuilderProps = {
   meta: WorkoutMeta | null;
+  initialData?: any; // Workout data to initialize the builder with
   onDirtyChange?: () => void;
   saveSignal?: number;
-  onSaveSuccess?: (payload: WorkoutProgramPayload) => void;
+  onSaveSuccess?: (payload: WorkoutProgramPayload) => Promise<void> | void;
   onSaveError?: () => void;
   mode?: 'workout' | 'section'; // Mode: workout (default) or section
   sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'; // Required when mode is 'section'
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 export const StandardBuilder = ({
   meta,
+  initialData,
   onDirtyChange,
   saveSignal,
   onSaveSuccess,
   onSaveError,
   mode = 'workout',
   sectionType,
+  open,
+  onOpenChange,
 }: StandardBuilderProps) => {
+  const t = useTranslations();
   const isSectionMode = mode === 'section';
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(true);
+  const [isTitleExpanded, setIsTitleExpanded] = useState(false);
+  const [workoutTitle, setWorkoutTitle] = useState(meta?.title || '');
+  const [workoutType, setWorkoutType] = useState(meta?.type || '');
+  const [difficulty, setDifficulty] = useState(meta?.difficulty || 'all_levels');
+  const [description, setDescription] = useState(meta?.description || '');
 
   // Initialize with empty items array (no required default section)
   // OR initialize with a single section when in section mode
+  // OR use initialData if provided (converted from payload format)
   const getInitialSchema = (): WorkoutSchema => {
-    if (typeof window === 'undefined') {
-      if (isSectionMode && sectionType) {
-        // Create initial section for section mode
-        return {
-          items: [{
-            itemType: 'section' as const,
-            section: {
-              id: `section_${Date.now()}`,
-              type: sectionType,
-              exercises: [],
-              ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
-              ...(sectionType === 'timed' && { targetRounds: undefined }),
-              ...(sectionType === 'circuits' && { targetRounds: undefined }),
-              ...(sectionType === 'auxiliary' && { category: 'warmup' }),
-            },
-          }],
-        };
-      }
-      return { items: [] };
+    // Priority 1: Use initialData prop if provided
+    if (initialData) {
+      // Convert from backend payload format to builder format
+      const converted = convertPayloadToBuilderFormat(initialData);
+      return converted;
     }
 
-    const accessFlag = window.localStorage.getItem('athli_workout_builder_access');
-    if (accessFlag === 'edit-standard') {
-      try {
-        const savedSchema = window.localStorage.getItem('athli_workout_schema');
-        if (savedSchema) {
-          const parsed = JSON.parse(savedSchema);
-          // Handle both old (sections) and new (items) format
-          if (parsed.items && parsed.items.length > 0) {
-            return parsed;
-          }
-          // Legacy format with sections - convert to items
-          if (parsed.sections && parsed.sections.length > 0) {
-            const legacyItems: WorkoutSchemaItem[] = parsed.sections.map((section: any) => ({
-              itemType: 'section' as const,
-              section: section,
-            }));
-            return { items: legacyItems };
-          }
-        }
-      } catch (error) {
-        console.error('Error parsing workout schema from localStorage:', error);
-      }
-    }
-
-    // For section mode, always start with one section
+    // Priority 2: For section mode, create initial section
     if (isSectionMode && sectionType) {
       return {
         items: [{
@@ -177,6 +172,7 @@ export const StandardBuilder = ({
       };
     }
 
+    // Default: empty workout
     return { items: [] };
   };
 
@@ -200,6 +196,14 @@ export const StandardBuilder = ({
   const [isCreatingSection, setIsCreatingSection] = useState(false);
   const creatorRef = useRef<HTMLDivElement>(null);
 
+  // AI Builder state
+  const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>('manual');
+  const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDraggingAiFile, setIsDraggingAiFile] = useState<boolean>(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Scroll to creator when opened
   useEffect(() => {
     if (isCreatingSection && creatorRef.current) {
@@ -213,6 +217,57 @@ export const StandardBuilder = ({
       setBuilderMode('exercise');
     }
   }, [workoutSchema.items.length]);
+
+  // Reset save loading status and reset schema when dialog opens
+  useEffect(() => {
+    if (open) {
+      setIsSaving(false);
+
+      // Reset schema based on initialData when dialog opens
+      if (initialData) {
+        // Convert from backend payload format to builder format
+        const converted = convertPayloadToBuilderFormat(initialData);
+        setWorkoutSchema(converted);
+      } else if (isSectionMode && sectionType) {
+        // Section mode: start with one section
+        setWorkoutSchema({
+          items: [{
+            itemType: 'section' as const,
+            section: {
+              id: `section_${Date.now()}`,
+              type: sectionType,
+              exercises: [],
+              ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
+              ...(sectionType === 'timed' && { targetRounds: undefined }),
+              ...(sectionType === 'circuits' && { targetRounds: undefined }),
+              ...(sectionType === 'auxiliary' && { category: 'warmup' }),
+            },
+          }],
+        });
+      } else {
+        // New workout: start with empty items
+        setWorkoutSchema({ items: [] });
+      }
+    }
+  }, [open, initialData, isSectionMode, sectionType]);
+
+  // Sync workout fields with meta
+  useEffect(() => {
+    if (meta) {
+      if (meta.title) {
+        setWorkoutTitle(meta.title);
+      }
+      if (meta.type) {
+        setWorkoutType(meta.type);
+      }
+      if (meta.difficulty) {
+        setDifficulty(meta.difficulty);
+      }
+      if (meta.description) {
+        setDescription(meta.description);
+      }
+    }
+  }, [meta]);
 
   const {
     draggedExercise,
@@ -240,123 +295,40 @@ export const StandardBuilder = ({
     },
   });
 
-  // Load shared mock schema in edit mode if no schema exists
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  const processGeneratedWorkout = (aiGenerated: GeneratedWorkout) => {
+    // Convert AI generated sections to items format
+    const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
+      const sectionData: WorkoutSection = {
+        id: section.id as string,
+        type: section.type as 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary',
+        exercises: [] as ExerciseWithSuperset[],
+        ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
+        ...(section.type === 'timed' && { targetRounds: section.targetRounds }),
+        ...(section.type === 'circuits' && { targetRounds: section.targetRounds }),
+        ...(section.type === 'auxiliary' && { category: section.category }),
+      };
+      return {
+        itemType: 'section' as const,
+        section: sectionData,
+      };
+    });
 
-    const accessFlag = window.localStorage.getItem('athli_workout_builder_access');
-    const isEditMode = accessFlag === 'edit-standard';
+    // Set items structure first
+    setWorkoutSchema({ items: sectionsWithStructure });
 
-    if (isEditMode) {
-      const savedSchema = window.localStorage.getItem('athli_workout_schema');
-      if (savedSchema) {
-        try {
-          const parsed = JSON.parse(savedSchema);
-          // Handle new format with items
-          if (parsed.items && parsed.items.length > 0) {
-            setWorkoutSchema(parsed);
-            return;
-          }
-          // Handle legacy format with sections
-          if (parsed.sections && parsed.sections.length > 0) {
-            const legacyItems: WorkoutSchemaItem[] = parsed.sections.map((section: any) => ({
-              itemType: 'section' as const,
-              section: section,
-            }));
-            setWorkoutSchema({ items: legacyItems });
-            return;
-          }
-        } catch (error) {
-          console.error('Error parsing workout schema from localStorage:', error);
-        }
-      }
-    }
-  }, []);
+    // Collect all exercises to add gradually
+    const exercisesToAdd: Array<{
+      sectionId: string;
+      exercise: ExerciseWithSuperset;
+    }> = [];
 
-  // Load AI generated workout on mount with gradual loading
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+    aiGenerated.sections.forEach((section: any) => {
+      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'circuits') {
+        section.exercises?.forEach((group: any) => {
+          if (group.isSuperset && group.exercises) {
+            const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-    const aiGeneratedRaw = window.localStorage.getItem('athli_ai_generated_workout');
-    if (!aiGeneratedRaw) return;
-
-    try {
-      const aiGenerated: GeneratedWorkout = JSON.parse(aiGeneratedRaw);
-
-      // Convert AI generated sections to items format
-      const sectionsWithStructure: WorkoutSchemaItem[] = aiGenerated.sections.map((section: any) => {
-        const sectionData: WorkoutSection = {
-          id: section.id as string,
-          type: section.type as 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary',
-          exercises: [] as ExerciseWithSuperset[],
-          ...(section.type === 'amrap' && { roundDurationSec: section.roundDurationSec }),
-          ...(section.type === 'timed' && { targetRounds: section.targetRounds }),
-          ...(section.type === 'circuits' && { targetRounds: section.targetRounds }),
-          ...(section.type === 'auxiliary' && { category: section.category }),
-        };
-        return {
-          itemType: 'section' as const,
-          section: sectionData,
-        };
-      });
-
-      // Set items structure first
-      setWorkoutSchema({ items: sectionsWithStructure });
-
-      // Collect all exercises to add gradually
-      const exercisesToAdd: Array<{
-        sectionId: string;
-        exercise: ExerciseWithSuperset;
-      }> = [];
-
-      aiGenerated.sections.forEach((section: any) => {
-        if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'circuits') {
-          section.exercises?.forEach((group: any) => {
-            if (group.isSuperset && group.exercises) {
-              const supersetGroupId = `superset_${section.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-              group.exercises.forEach((ex: any) => {
-                const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
-                const exercise = foundExercise || {
-                  exerciseId: ex.id,
-                  name: ex.name,
-                  imageUrl: '',
-                  videoUrl: '',
-                  equipments: ex.equipment || [],
-                  bodyParts: [],
-                  exerciseType: ex.exerciseType,
-                  targetMuscles: [],
-                  secondaryMuscles: [],
-                  keywords: [],
-                  overview: '',
-                  instructions: [],
-                  exerciseTips: [],
-                  variations: [],
-                  relatedExerciseIds: [],
-                };
-
-                const sets: SetData[] = (ex.sets || []).map((set: any) => ({
-                  setNumber: set.setNumber,
-                  type: set.isDropset ? 'dropset' : 'normal',
-                  reps: set.isDropset && set.repStages ? set.repStages.join('-') : set.reps?.toString() || '',
-                  weight: set.isDropset && set.weightStages ? set.weightStages.join('-') : set.weight?.toString() || '',
-                  rest: set.restSec?.toString() || '',
-                  distance: set.distance?.toString() || '',
-                  duration: set.durationSec?.toString() || '',
-                }));
-
-                exercisesToAdd.push({
-                  sectionId: section.id,
-                  exercise: {
-                    ...exercise,
-                    instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                    supersetGroupId,
-                    sets,
-                  },
-                });
-              });
-            } else if (group.exercises && group.exercises.length > 0) {
-              const ex = group.exercises[0];
+            group.exercises.forEach((ex: any) => {
               const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
               const exercise = foundExercise || {
                 exerciseId: ex.id,
@@ -378,7 +350,7 @@ export const StandardBuilder = ({
 
               const sets: SetData[] = (ex.sets || []).map((set: any) => ({
                 setNumber: set.setNumber,
-                type: set.type || (set.isDropset ? 'dropset' : 'normal'),
+                type: set.isDropset ? 'dropset' : 'normal',
                 reps: set.isDropset && set.repStages ? set.repStages.join('-') : set.reps?.toString() || '',
                 weight: set.isDropset && set.weightStages ? set.weightStages.join('-') : set.weight?.toString() || '',
                 rest: set.restSec?.toString() || '',
@@ -391,14 +363,13 @@ export const StandardBuilder = ({
                 exercise: {
                   ...exercise,
                   instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                  supersetGroupId: null,
+                  supersetGroupId,
                   sets,
                 },
               });
-            }
-          });
-        } else {
-          section.exercises?.forEach((ex: any) => {
+            });
+          } else if (group.exercises && group.exercises.length > 0) {
+            const ex = group.exercises[0];
             const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
             const exercise = foundExercise || {
               exerciseId: ex.id,
@@ -420,9 +391,9 @@ export const StandardBuilder = ({
 
             const sets: SetData[] = (ex.sets || []).map((set: any) => ({
               setNumber: set.setNumber,
-              type: set.type || 'normal',
-              reps: set.reps?.toString() || '',
-              weight: set.weight?.toString() || '',
+              type: set.type || (set.isDropset ? 'dropset' : 'normal'),
+              reps: set.isDropset && set.repStages ? set.repStages.join('-') : set.reps?.toString() || '',
+              weight: set.isDropset && set.weightStages ? set.weightStages.join('-') : set.weight?.toString() || '',
               rest: set.restSec?.toString() || '',
               distance: set.distance?.toString() || '',
               duration: set.durationSec?.toString() || '',
@@ -437,58 +408,188 @@ export const StandardBuilder = ({
                 sets,
               },
             });
-          });
-        }
-      });
+          }
+        });
+      } else {
+        section.exercises?.forEach((ex: any) => {
+          const foundExercise = searchExercises('').find((e) => e.exerciseId === ex.id);
+          const exercise = foundExercise || {
+            exerciseId: ex.id,
+            name: ex.name,
+            imageUrl: '',
+            videoUrl: '',
+            equipments: ex.equipment || [],
+            bodyParts: [],
+            exerciseType: ex.exerciseType,
+            targetMuscles: [],
+            secondaryMuscles: [],
+            keywords: [],
+            overview: '',
+            instructions: [],
+            exerciseTips: [],
+            variations: [],
+            relatedExerciseIds: [],
+          };
 
-      // Mark as dirty if there are items or exercises to add
-      if (sectionsWithStructure.length > 0 || exercisesToAdd.length > 0) {
-        onDirtyChange?.();
-      }
-
-      // Calculate delay per exercise
-      const totalDuration = 5000;
-      const delayPerExercise = exercisesToAdd.length > 0 ? totalDuration / exercisesToAdd.length : 0;
-
-      // Show loading overlay
-      setIsLoadingAiWorkout(true);
-
-      // Add exercises gradually
-      exercisesToAdd.forEach((item, index) => {
-        setTimeout(() => {
-          setWorkoutSchema((prev) => ({
-            ...prev,
-            items: prev.items.map((schemaItem) => {
-              if (schemaItem.itemType === 'section' && schemaItem.section.id === item.sectionId) {
-                return {
-                  ...schemaItem,
-                  section: {
-                    ...schemaItem.section,
-                    exercises: [...(schemaItem.section.exercises || []), item.exercise],
-                  },
-                };
-              }
-              return schemaItem;
-            }),
+          const sets: SetData[] = (ex.sets || []).map((set: any) => ({
+            setNumber: set.setNumber,
+            type: set.type || 'normal',
+            reps: set.reps?.toString() || '',
+            weight: set.weight?.toString() || '',
+            rest: set.restSec?.toString() || '',
+            distance: set.distance?.toString() || '',
+            duration: set.durationSec?.toString() || '',
           }));
 
-          if (index === 0) {
-            onDirtyChange?.();
-          }
+          exercisesToAdd.push({
+            sectionId: section.id,
+            exercise: {
+              ...exercise,
+              instanceId: `${ex.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+              supersetGroupId: null,
+              sets,
+            },
+          });
+        });
+      }
+    });
 
-          if (index === exercisesToAdd.length - 1) {
-            setTimeout(() => {
-              setIsLoadingAiWorkout(false);
-            }, 100);
-          }
-        }, index * delayPerExercise);
-      });
+    // Mark as dirty if there are items or exercises to add
+    if (sectionsWithStructure.length > 0 || exercisesToAdd.length > 0) {
+      onDirtyChange?.();
+    }
 
+    // Calculate delay per exercise
+    const totalDuration = 5000;
+    const delayPerExercise = exercisesToAdd.length > 0 ? totalDuration / exercisesToAdd.length : 0;
+
+    // Show loading overlay
+    setIsLoadingAiWorkout(true);
+
+    // Add exercises gradually
+    exercisesToAdd.forEach((item, index) => {
+      setTimeout(() => {
+        setWorkoutSchema((prev) => ({
+          ...prev,
+          items: prev.items.map((schemaItem) => {
+            if (schemaItem.itemType === 'section' && schemaItem.section.id === item.sectionId) {
+              return {
+                ...schemaItem,
+                section: {
+                  ...schemaItem.section,
+                  exercises: [...(schemaItem.section.exercises || []), item.exercise],
+                },
+              };
+            }
+            return schemaItem;
+          }),
+        }));
+
+        if (index === 0) {
+          onDirtyChange?.();
+        }
+
+        if (index === exercisesToAdd.length - 1) {
+          setTimeout(() => {
+            setIsLoadingAiWorkout(false);
+          }, 100);
+        }
+      }, index * delayPerExercise);
+    });
+  };
+
+  // NOTE: We no longer load from localStorage here.
+  // The schema is initialized via the initialData prop in the useEffect above.
+  // This prevents stale localStorage data from overwriting the current workout data.
+
+  // Load AI generated workout on mount with gradual loading
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const aiGeneratedRaw = window.localStorage.getItem('athli_ai_generated_workout');
+    if (!aiGeneratedRaw) return;
+
+    try {
+      const aiGenerated: GeneratedWorkout = JSON.parse(aiGeneratedRaw);
+      processGeneratedWorkout(aiGenerated);
       window.localStorage.removeItem('athli_ai_generated_workout');
     } catch (error) {
       console.error('Failed to load AI generated workout', error);
     }
   }, [onDirtyChange]);
+
+  // AI Generation logic
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+
+    setIsGeneratingAi(true);
+    let pdfContent: string | null = null;
+
+    if (selectedFile) {
+      try {
+        pdfContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsArrayBuffer(selectedFile);
+        });
+      } catch (error) {
+        console.error('Error reading PDF:', error);
+      }
+    }
+
+    try {
+      const generated = await generateWorkoutFromPrompt(aiPrompt.trim(), pdfContent);
+      if (generated) {
+        processGeneratedWorkout(generated);
+        setActiveBuilder('manual'); // Switch back to manual to see the results
+      } else {
+        toast.error('Failed to generate workout');
+      }
+    } catch (error) {
+      console.error('Failed to generate workout from AI', error);
+      toast.error('An error occurred during generation');
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
+
+  const handleAiFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleRemoveAiFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleUseAiExample = () => {
+    const examplePrompt = `Create a full-body strength and conditioning workout for intermediate level. Include:
+
+- 3-4 compound exercises (squats, deadlifts, bench press variations)
+- 2-3 accessory movements for arms and core
+- 3-4 sets per exercise
+- Progressive rep ranges (8-12 reps for strength, 12-15 for hypertrophy)
+- 60-90 seconds rest between sets
+- Total workout duration: 45-60 minutes
+
+Focus on proper form and progressive overload.`;
+    setAiPrompt(examplePrompt);
+  };
 
   const handleExerciseClick = (exercise: Exercise) => {
     scrollToExercise(
@@ -543,12 +644,36 @@ export const StandardBuilder = ({
 
 
 
-  useEffect(() => {
-    if (!saveSignal || saveSignal === 0) {
+  const handleSave = async () => {
+    setHasAttemptedSave(true);
+
+    // Validate workout title is not empty
+    if (!workoutTitle || workoutTitle.trim() === '') {
+      toast.error('Please enter a workout name');
+      if (onSaveError) onSaveError();
       return;
     }
 
-    setHasAttemptedSave(true);
+    // Check for blank exercise cards (exercises without a selected exercise)
+    const hasBlankExercises = workoutSchema.items.some((item) => {
+      if (item.itemType === 'exercise') {
+        // Check if exercise has no name (blank exercise card)
+        return !item.exercise.name || item.exercise.name.trim() === '';
+      }
+      if (item.itemType === 'section') {
+        // Check exercises within sections
+        return item.section.exercises?.some(
+          (ex) => !ex.name || ex.name.trim() === ''
+        );
+      }
+      return false;
+    });
+
+    if (hasBlankExercises) {
+      toast.error('Please select an exercise for all exercise cards');
+      if (onSaveError) onSaveError();
+      return;
+    }
 
     const { exerciseErrors, sectionErrors } = validateWorkoutSchema(workoutSchema);
 
@@ -564,7 +689,15 @@ export const StandardBuilder = ({
     setValidationErrors({});
     setSectionValidationErrors({});
 
-    const payload = buildWorkoutPayload(workoutSchema, meta);
+    // Use updated values from state
+    const updatedMeta = meta ? {
+      ...meta,
+      title: workoutTitle,
+      type: workoutType,
+      difficulty: difficulty,
+      description: description,
+    } : null;
+    const payload = buildWorkoutPayload(workoutSchema, updatedMeta);
     if (!payload) {
       toast.error('Workout details are missing');
       if (onSaveError) onSaveError();
@@ -572,8 +705,32 @@ export const StandardBuilder = ({
     }
 
     if (onSaveSuccess) {
-      onSaveSuccess(payload);
+      setIsSaving(true);
+      try {
+        const result = onSaveSuccess(payload);
+        // If onSaveSuccess returns a Promise, await it
+        // The parent component handles showing toasts and closing the dialog
+        if (result instanceof Promise) {
+          await result;
+          setIsSaving(false);
+        } else {
+          // If it doesn't return a Promise, the parent handles everything
+          // Just reset loading state - parent will close dialog and show toast
+          setIsSaving(false);
+        }
+      } catch (error) {
+        setIsSaving(false);
+        toast.error('Failed to save workout');
+        if (onSaveError) onSaveError();
+      }
     }
+  };
+
+  useEffect(() => {
+    if (!saveSignal || saveSignal === 0) {
+      return;
+    }
+    handleSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSignal]);
 
@@ -1043,7 +1200,7 @@ export const StandardBuilder = ({
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-foreground bg-background border-input shadow-none shrink-0"
+                      className="h-7 w-7 text-foreground bg-background border-input shadow-none shrink-0"
                       onClick={() => {
                         setCollapsedSections((prev) => {
                           const next = new Set(prev);
@@ -1157,7 +1314,7 @@ export const StandardBuilder = ({
                         type="button"
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground bg-background border-input shadow-none shrink-0"
+                        className="h-7 w-7 text-foreground bg-background border-input shadow-none shrink-0"
                       >
                         <Ellipsis className="size-3" />
                       </Button>
@@ -1186,34 +1343,25 @@ export const StandardBuilder = ({
                 )}
               </div>
             </div>
-            {/* Section Notes */}
-            {!isCollapsed && (
-              <div className="px-3 pb-2 w-full relative">
-                <Input
-                  placeholder="Notes"
-                  value={section.notes || ''}
-                  onChange={(e) => {
-                    const newNotes = e.target.value;
-                    onDirtyChange?.();
-                    setWorkoutSchema((prev) => ({
-                      ...prev,
-                      items: prev.items.map((item) => {
-                        if (item.itemType === 'section' && item.section.id === section.id) {
-                          return {
-                            ...item,
-                            section: { ...item.section, notes: newNotes },
-                          };
-                        }
-                        return item;
-                      }),
-                    }));
-                  }}
-                  className="w-full text-xs h-7 border-input bg-background shadow-none pr-8"
-                />
-                {section.notes && (
-                  <button
-                    type="button"
-                    onClick={() => {
+
+          </CardHeader>
+          {!isCollapsed && (
+            <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
+              <CardContent
+                ref={(el) => registerSectionRef(section.id, el)}
+                data-workout-section
+                className="flex-1 flex flex-col px-3 pt-0.5 pb-0"
+                onDragOver={(e) => handleSectionDragOver(e, section.id, section.exercises?.length || 0)}
+                onDragLeave={handleSectionDragLeave}
+                onDrop={(e) => handleSectionDrop(e, section.id)}
+              >
+                {/* Section Notes - Moved to Top of Content */}
+                <div className="w-full relative mb-1">
+                  <Input
+                    placeholder="Notes"
+                    value={section.notes || ''}
+                    onChange={(e) => {
+                      const newNotes = e.target.value;
                       onDirtyChange?.();
                       setWorkoutSchema((prev) => ({
                         ...prev,
@@ -1221,32 +1369,40 @@ export const StandardBuilder = ({
                           if (item.itemType === 'section' && item.section.id === section.id) {
                             return {
                               ...item,
-                              section: { ...item.section, notes: '' },
+                              section: { ...item.section, notes: newNotes },
                             };
                           }
                           return item;
                         }),
                       }));
                     }}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Clear notes"
-                  >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </div>
-            )}
-          </CardHeader>
-          {!isCollapsed && (
-            <div className="overflow-hidden transition-all duration-300 ease-in-out" style={{ maxHeight: '10000px', opacity: 1 }}>
-              <CardContent
-                ref={(el) => registerSectionRef(section.id, el)}
-                data-workout-section
-                className="flex-1 flex flex-col px-3 py-1.5 pb-0"
-                onDragOver={(e) => handleSectionDragOver(e, section.id, section.exercises?.length || 0)}
-                onDragLeave={handleSectionDragLeave}
-                onDrop={(e) => handleSectionDrop(e, section.id)}
-              >
+                    className="w-full text-xs h-7 border-input bg-background shadow-none pr-8"
+                  />
+                  {section.notes && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDirtyChange?.();
+                        setWorkoutSchema((prev) => ({
+                          ...prev,
+                          items: prev.items.map((item) => {
+                            if (item.itemType === 'section' && item.section.id === section.id) {
+                              return {
+                                ...item,
+                                section: { ...item.section, notes: '' },
+                              };
+                            }
+                            return item;
+                          }),
+                        }));
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Clear notes"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
                 <div className={cn(
                   'flex-1 w-full',
                   section.exercises && section.exercises.length > 0 ? 'flex flex-col gap-0' : 'flex items-center justify-center',
@@ -1624,303 +1780,700 @@ export const StandardBuilder = ({
   };
 
   return (
-    <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-background p-2">
-      <div className="flex-[1.5] p-2 h-full flex flex-col min-h-0">
-        <Card className="relative h-full" style={{ height: '100%' }}>
-          <CardContent className="absolute inset-0 p-4 overflow-y-auto flex flex-col">
-            {/* Hide tabs in section mode - only show exercise panel */}
-            {!isSectionMode && (
-              <Tabs
-                value={builderMode}
-                onValueChange={(value) => {
-                  if (value) setBuilderMode(value as 'exercise' | 'section');
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          showCloseButton={false}
+          className="!max-w-[95vw] sm:!max-w-[95vw] !w-[95vw] !h-[90vh] flex flex-col p-0 overflow-hidden ring-0 border-none outline-none bg-transparent shadow-none"
+          onInteractOutside={(e) => {
+            e.preventDefault();
+            setShowCloseConfirm(true);
+          }}
+          onEscapeKeyDown={(e) => {
+            e.preventDefault();
+            setShowCloseConfirm(true);
+          }}
+        >
+          <DialogTitle className="sr-only">Workout Builder</DialogTitle>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-transparent gap-4">
+              <div className="flex h-full overflow-hidden rounded-xl border bg-background shadow-sm flex-1 transition-all duration-500 ease-in-out">
+                <div className="flex-[2] h-full flex flex-col min-h-0 border-r py-4 bg-muted/30">
+                  {/* Main Builder Toggle */}
+                  <div className="flex-shrink-0 px-4">
+                    <ButtonGroup className="w-full">
+                      <Button
+                        variant={activeBuilder === 'ai' ? 'default' : 'outline'}
+                        onClick={() => setActiveBuilder('ai')}
+                        className={cn(
+                          'flex-1 gap-2 h-9',
+                          activeBuilder === 'ai' && 'bg-primary text-primary-foreground'
+                        )}
+                      >
+                        <Sparkles className="size-4" />
+                        <span>Athli AI</span>
+                      </Button>
+                      <Button
+                        variant={activeBuilder === 'manual' ? 'default' : 'outline'}
+                        onClick={() => setActiveBuilder('manual')}
+                        className={cn(
+                          'flex-1 gap-2 h-9',
+                          activeBuilder === 'manual' && 'bg-primary text-primary-foreground'
+                        )}
+                      >
+                        <NotebookPen className="size-4" />
+                        <span>Manual</span>
+                      </Button>
+                    </ButtonGroup>
+                  </div>
+
+                  <div className="flex-1 overflow-hidden flex flex-col pt-4">
+                    {activeBuilder === 'manual' ? (
+                      <div className="flex flex-col px-4 h-full min-h-0">
+                        {/* Hide tabs in section mode - only show exercise panel */}
+                        {!isSectionMode && (
+                          <Tabs
+                            value={builderMode}
+                            onValueChange={(value) => {
+                              if (value) setBuilderMode(value as 'exercise' | 'section');
+                            }}
+                            className="mb-4"
+                          >
+                            <TabsList className="w-full">
+                              <TabsTrigger
+                                value="exercise"
+                                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                              >
+                                Exercises
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="section"
+                                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                              >
+                                Sections
+                              </TabsTrigger>
+                            </TabsList>
+                          </Tabs>
+                        )}
+                        {(builderMode === 'exercise' || isSectionMode) && (
+                          <div className="flex-1 min-h-0">
+                            <ExerciseSelectionPanel
+                              onExerciseClick={handleExerciseClick}
+                              onDragStart={handleDragStart}
+                              onDragEnd={handleDragEnd}
+                              activeExerciseIds={activeExerciseIds}
+                            />
+                          </div>
+                        )}
+                        {builderMode === 'section' && !isSectionMode && (
+                          <div className="flex-1 min-h-0">
+                            <CoachSectionsSidebar
+                              onDragStart={handleSectionSourceDragStart}
+                              onDragEnd={() => {
+                                handleDragEnd();
+                                setDraggedSection(null);
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        className="flex flex-col h-full relative"
+                        onDragEnter={(e) => {
+                          if (selectedFile) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDraggingAiFile(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                            setIsDraggingAiFile(false);
+                          }
+                        }}
+                        onDragOver={(e) => {
+                          if (selectedFile) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        onDrop={(e) => {
+                          if (selectedFile) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setIsDraggingAiFile(false);
+                          const files = Array.from(e.dataTransfer.files);
+                          const validFile = files.find((file) => file.type === 'application/pdf');
+                          if (validFile) {
+                            setSelectedFile(validFile);
+                          }
+                        }}
+                      >
+                        {!selectedFile && isDraggingAiFile && (
+                          <div
+                            className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm border-2 border-dashed border-primary flex items-center justify-center pointer-events-auto rounded-lg"
+                            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDraggingAiFile(true); }}
+                            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setIsDraggingAiFile(false);
+                              const files = Array.from(e.dataTransfer.files);
+                              const validFile = files.find((file) => file.type === 'application/pdf');
+                              if (validFile) {
+                                setSelectedFile(validFile);
+                              }
+                            }}
+                          >
+                            <div className="flex flex-col items-center gap-4 text-center">
+                              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-background/50 backdrop-blur-sm shadow-xl p-3 border border-white/20">
+                                <Image
+                                  src="/icons/pdf.png"
+                                  alt="PDF"
+                                  width={40}
+                                  height={40}
+                                  className="object-contain"
+                                />
+                              </div>
+                              <div>
+                                <p className="text-lg font-semibold">{t('library.dropPdfHere')}</p>
+                                <p className="text-sm text-muted-foreground">{t('library.pdfFilesOnly')}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex-col items-center gap-4 flex-shrink-0 pb-4 flex relative z-0">
+                          <div className="relative flex items-center justify-center py-6 px-6">
+                            <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl"></div>
+                            <div className="absolute inset-4 rounded-full bg-primary/20 blur-sm"></div>
+                            <div className="relative z-10 inline-flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground shadow-lg shadow-primary/10">
+                              <BrainCog className="h-10 w-10" />
+                            </div>
+                          </div>
+                          <h2 className="text-xl font-semibold text-center">{t('library.athliAiBuilder')}</h2>
+                          <p className="text-sm text-foreground text-center max-w-md">
+                            {t('library.dragDropPdf')}
+                          </p>
+                        </div>
+                        <div className="flex-1 overflow-y-auto flex flex-col px-4">
+                          <div className="flex-1 flex flex-col min-h-0">
+                            <div className="flex flex-col gap-2 flex-1 min-h-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-primary-foreground">
+                                  <Sparkles className="h-4 w-4" />
+                                </div>
+                                <h3 className="text-sm font-semibold">
+                                  {t('library.letsBuildWorkout')}<RequiredAsterisk />
+                                </h3>
+                              </div>
+                              <div className="relative flex-1 min-h-0 flex flex-col">
+                                <Textarea
+                                  value={aiPrompt}
+                                  onChange={(e) => setAiPrompt(e.target.value)}
+                                  className="resize-none text-sm flex-1 min-h-[200px] pb-12 bg-muted/30"
+                                  placeholder={t('library.workoutPromptPlaceholder')}
+                                />
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept=".pdf"
+                                  onChange={handleAiFileChange}
+                                  className="hidden"
+                                  aria-label={t('library.selectPdfFile')}
+                                />
+                                {!aiPrompt.trim() && (
+                                  <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={handleUseAiExample}
+                                      className="h-7 px-3 text-xs"
+                                      aria-label={t('library.useExample')}
+                                    >
+                                      {t('library.useExample')}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() => fileInputRef.current?.click()}
+                                      disabled={!!selectedFile}
+                                      className="h-7 px-3 text-xs gap-1.5"
+                                      aria-label={t('library.selectPdfFile')}
+                                    >
+                                      <FileText className="h-3.5 w-3.5" />
+                                      {t('messages.pdf')}
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                              {selectedFile && (
+                                <div className="flex items-center gap-2 p-2 rounded-lg border bg-background mt-2">
+                                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-transparent flex-shrink-0">
+                                    <Image
+                                      src="/icons/pdf.png"
+                                      alt="PDF"
+                                      width={24}
+                                      height={24}
+                                      className="object-contain"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] font-medium text-foreground truncate">
+                                      {selectedFile.name}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">{t('messages.pdf')}</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={handleRemoveAiFile}
+                                    className="flex-shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all p-1 rounded-md"
+                                    aria-label={t('library.removePdfFile')}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
+                              <div className="pt-2 mt-auto pb-1">
+                                <Button
+                                  onClick={handleAiGenerate}
+                                  disabled={isGeneratingAi || !aiPrompt.trim()}
+                                  className="w-full gap-2 h-11 font-bold shadow-lg"
+                                >
+                                  {isGeneratingAi ? (
+                                    <>
+                                      <Loader2 className="h-5 w-5 animate-spin" />
+                                      {t('library.generate')}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="h-5 w-5" />
+                                      {t('library.generate')}
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-[3] flex flex-col h-full min-h-0">
+                  <div className="flex-1 flex min-h-0">
+                    <div className="flex-1 h-full flex flex-col min-h-0 relative">
+                      {isLoadingAiWorkout && (
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                            <p className="text-sm text-muted-foreground">Generating workout...</p>
+                          </div>
+                        </div>
+                      )}
+                      {/* Fixed title container above exercise area */}
+                      <div className="flex-shrink-0 w-full bg-background px-4 py-3">
+                        <div className="flex items-center gap-2 w-full">
+                          <Input
+                            className="flex-1 h-9 text-sm shadow-none"
+                            placeholder="Workout title"
+                            value={workoutTitle}
+                            onChange={(e) => {
+                              const newTitle = e.target.value;
+                              setWorkoutTitle(newTitle);
+                              onDirtyChange?.();
+                              // Update meta if needed - parent component should handle this
+                            }}
+                          />
+                          <Popover open={isTitleExpanded} onOpenChange={setIsTitleExpanded}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-9 w-9 shrink-0 border-input bg-background shadow-none"
+                                    aria-label={isTitleExpanded ? 'Collapse' : 'Expand'}
+                                  >
+                                    {isTitleExpanded ? (
+                                      <ChevronUp className="size-4" />
+                                    ) : (
+                                      <ChevronDown className="size-4" />
+                                    )}
+                                  </Button>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {t('workouts.addWorkout.openWorkoutDetails')}
+                              </TooltipContent>
+                            </Tooltip>
+                            <PopoverContent className="w-[600px] p-4" align="end">
+                              <div className="flex flex-col gap-4">
+                                {/* Type */}
+                                <div className="flex flex-col gap-2">
+                                  <label htmlFor="workout-type" className="text-sm font-medium">
+                                    {t('workouts.addWorkout.type')}
+                                  </label>
+                                  <Select
+                                    value={workoutType}
+                                    onValueChange={(value) => {
+                                      setWorkoutType(value);
+                                      onDirtyChange?.();
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      id="workout-type"
+                                      className="w-full"
+                                    >
+                                      <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {WORKOUT_TYPES.map((type) => (
+                                        <SelectItem key={type.value} value={type.value}>
+                                          {type.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Difficulty */}
+                                <div className="flex flex-col gap-2">
+                                  <label htmlFor="workout-difficulty" className="text-sm font-medium">
+                                    {t('workouts.addWorkout.difficulty')}
+                                  </label>
+                                  <Select
+                                    value={difficulty}
+                                    onValueChange={(value) => {
+                                      setDifficulty(value);
+                                      onDirtyChange?.();
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      id="workout-difficulty"
+                                      className="w-full"
+                                    >
+                                      <SelectValue placeholder={t('workouts.addWorkout.difficultyPlaceholder')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {DIFFICULTY_LEVELS.map((level) => (
+                                        <SelectItem key={level.value} value={level.value}>
+                                          {level.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Description */}
+                                <div className="flex flex-col gap-2">
+                                  <label htmlFor="workout-description" className="text-sm font-medium">
+                                    {t('workouts.addWorkout.description')}
+                                  </label>
+                                  <Textarea
+                                    id="workout-description"
+                                    placeholder={t('workouts.addWorkout.descriptionPlaceholder')}
+                                    value={description}
+                                    onChange={(e) => {
+                                      setDescription(e.target.value);
+                                      onDirtyChange?.();
+                                    }}
+                                    rows={5}
+                                    className="resize-none"
+                                  />
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      <div
+                        ref={(el) => {
+                          contentScrollRef.current = el;
+                          registerTopLevelContainerRef(el);
+                        }}
+                        data-top-level-container
+                        className="flex-1 p-4 overflow-y-auto"
+                        onDragOver={(e) => hookHandleTopLevelDragOver(e, workoutSchema.items.length)}
+                        onDragLeave={hookHandleTopLevelDragLeave}
+                        onDrop={handleTopLevelDropHandler}
+                      >
+                        {workoutSchema.items.length > 0 ? (
+                          <div className="flex flex-col gap-2 w-full min-h-0">
+                            {workoutSchema.items.map((item, itemIndex) => {
+                              const nextItem = workoutSchema.items[itemIndex + 1];
+                              const prevItem = itemIndex > 0 ? workoutSchema.items[itemIndex - 1] : null;
+
+                              // Check if this item is linked to previous or next
+                              const isLinkedToPrev = !!(
+                                item.itemType === 'exercise' &&
+                                prevItem?.itemType === 'exercise' &&
+                                item.exercise?.supersetGroupId &&
+                                prevItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
+                              );
+
+                              const isLinkedToNext = !!(
+                                item.itemType === 'exercise' &&
+                                nextItem?.itemType === 'exercise' &&
+                                item.exercise?.supersetGroupId &&
+                                nextItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
+                              );
+
+                              // Check if current/prev/next items are sections
+                              const isSection = item.itemType === 'section';
+                              const isPrevSection = prevItem?.itemType === 'section';
+                              const isNextSection = nextItem?.itemType === 'section';
+
+                              // Check if there's a superset button area that will handle the drop zone
+                              const hasSupersetButtonAfter = item.itemType === 'exercise' && nextItem?.itemType === 'exercise';
+
+                              // Determine where drop zones CAN appear:
+                              // - Before: not if linked to previous, AND not if previous item is an exercise (superset area handles it)
+                              //   Special case: allow before sections if there's no previous item (top of list)
+                              // - After: not if linked to next, AND not if superset button area exists (it handles the drop zone internally)
+                              const canShowDropZoneBefore = !isLinkedToPrev && prevItem?.itemType !== 'exercise' && (!isSection || !prevItem);
+                              const canShowDropZoneAfter = !isLinkedToNext && !hasSupersetButtonAfter;
+
+                              // ONLY ONE drop zone appears at a time - the one matching dragOverTopLevelSlot
+                              // Priority: "after" drop zones take precedence over "before" drop zones to avoid duplicates
+                              const isDraggingSomething = draggedExercise || draggedSection;
+                              const isPrevItemShowingDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex && prevItem;
+                              // Sections can drop anywhere at top level but not between exercises in superset or inside sections
+                              const showDropZoneBefore = isDraggingSomething && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
+                              const showDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
+
+                              // Add extra spacing around sections
+                              const extraTopMargin = isSection && isPrevSection ? 'mt-2' : isSection && prevItem ? 'mt-4' : '';
+                              const extraBottomMargin = isSection && isNextSection ? 'mb-2' : isSection && nextItem ? 'mb-4' : '';
+
+                              return (
+                                <React.Fragment key={item.itemType === 'section' ? item.section.id : item.exercise.instanceId}>
+                                  {/* Drop zone before this item - ONLY if this is the nearest slot and NOT inside a section */}
+                                  {showDropZoneBefore && (
+                                    <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                      <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
+                                    </div>
+                                  )}
+
+                                  {/* Render the item (section or exercise) with extra spacing */}
+                                  <div className={cn(extraTopMargin, extraBottomMargin)}>
+                                    {item.itemType === 'section'
+                                      ? (item.section ? renderSectionItem(item.section, itemIndex) : null)
+                                      : (item.exercise ? renderExerciseItem(item.exercise, itemIndex) : null)
+                                    }
+                                  </div>
+
+                                  {/* Drop zone after this item - ONLY if this is the nearest slot and NOT in superset area */}
+                                  {showDropZoneAfter && (
+                                    <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
+                                      <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
+                                    </div>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                            {/* Hide "Add exercise" and "Add section" buttons in section mode */}
+                            {!isSectionMode && (
+                              <div className="flex flex-col gap-2 py-2 w-full">
+                                {isCreatingSection && (
+                                  <div ref={creatorRef} className="w-full mb-2">
+                                    <InlineSectionCreator
+                                      onCreate={handleCreateSection}
+                                      onCancel={() => setIsCreatingSection(false)}
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2 w-full">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 gap-1.5 text-xs h-9 px-2"
+                                    onClick={handleAddTopLevelExercise}
+                                  >
+                                    <Plus className="size-3" />
+                                    <span>Add exercise</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 gap-1.5 text-xs h-9 px-2"
+                                    onClick={() => setIsCreatingSection(true)}
+                                  >
+                                    <Plus className="size-3" />
+                                    <span>Create section</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full gap-6 transition-all duration-200 relative p-4">
+                            {/* Empty state content - hidden when dragging */}
+                            {!(draggedExercise || draggedSection) && (
+                              <div className="flex flex-col items-center gap-6 text-center w-full max-w-3xl">
+                                <div className="flex flex-col gap-3 max-w-md mx-auto">
+                                  <h3 className="text-4xl font-bold">Start building your workout</h3>
+                                  <p className="text-l font-semibold text-muted-foreground">
+                                    Add exercises or create sections to organize your training
+                                  </p>
+                                </div>
+
+                                {isCreatingSection && (
+                                  <div ref={creatorRef} className="w-full mb-4">
+                                    <InlineSectionCreator
+                                      onCreate={handleCreateSection}
+                                      onCancel={() => setIsCreatingSection(false)}
+                                    />
+                                  </div>
+                                )}
+
+                                <div className="flex gap-2 items-center justify-center w-full">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="gap-2"
+                                    onClick={() => setIsCreatingSection(true)}
+                                  >
+                                    <Plus className="size-4" />
+                                    <span>Create section</span>
+                                  </Button>
+
+                                  <Button
+                                    type="button"
+                                    className="gap-2"
+                                    onClick={handleAddTopLevelExercise}
+                                  >
+                                    <Plus className="size-4" />
+                                    <span>Add exercise</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Drag overlay - shown when dragging */}
+                            {(draggedExercise || draggedSection) && (
+                              <div className="absolute inset-0 border-2 border-dashed rounded-lg border-primary bg-primary/5 flex items-center justify-center">
+                                <p className="text-primary font-medium text-lg">
+                                  {draggedExercise ? 'Drop your exercise here' : 'Drop your section here'}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                  <div className="flex-shrink-0 border-t p-2 flex items-center justify-end gap-2 bg-background">
+                    <Button variant="outline" onClick={() => setShowCloseConfirm(true)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                      {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className={cn(
+                "flex flex-col h-full min-h-0 transition-all duration-500 ease-in-out",
+                isOverviewOpen ? "w-[22%]" : "w-14"
+              )}>
+                {/* Toggle Button Area - Positioned at top */}
+                <div className="flex-shrink-0 flex flex-col justify-start pb-4 items-start pt-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-10 w-10 rounded-full bg-background border shadow-sm hover:bg-muted"
+                        onClick={() => setIsOverviewOpen(!isOverviewOpen)}
+                      >
+                        {isOverviewOpen ? <ChevronLeft className="size-5" /> : <ChevronRight className="size-5" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      <p>{isOverviewOpen ? "Collapse overview" : "Expand overview"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {/* Overview Panel - Fills remaining space to align bottom with left section */}
+                <div className={cn(
+                  "overflow-hidden rounded-xl border bg-background shadow-sm flex flex-col transition-all duration-500 ease-in-out origin-bottom flex-1 min-h-0",
+                  isOverviewOpen ? "opacity-100" : "h-0 border-0 opacity-0"
+                )}>
+                  <div className="flex-1 overflow-y-auto px-2 py-4">
+                    <OverviewPanel
+                      items={workoutSchema.items}
+                      onItemsChange={(items: WorkoutSchemaItem[]) => {
+                        onDirtyChange?.();
+                        setWorkoutSchema((prev) => ({
+                          ...prev,
+                          items,
+                        }));
+                      }}
+                      onDeleteSection={handleDeleteSection}
+                      onDeleteExercise={handleDeleteExerciseFromOverview}
+                      onDeleteTopLevelExercise={(instanceId: string) => {
+                        setWorkoutSchema((prev) => deleteTopLevelExercise(instanceId, prev));
+                        onDirtyChange?.();
+                      }}
+                      onDeleteSuperset={handleDeleteSupersetFromOverview}
+                      onDeleteTopLevelSuperset={(exerciseIds: string[]) => {
+                        setWorkoutSchema((prev) => ({
+                          ...prev,
+                          items: prev.items.filter(
+                            (item) => !(item.itemType === 'exercise' && exerciseIds.includes(item.exercise.instanceId))
+                          ),
+                        }));
+                        onDirtyChange?.();
+                      }}
+                      onUnlinkSuperset={handleSupersetUnlink}
+                      onUnlinkTopLevelSuperset={handleTopLevelSupersetUnlink}
+                      groupExercisesBySuperset={groupExercisesBySuperset as any}
+                      onExerciseClick={handleExerciseClickByIdWrapper}
+                      validationErrors={validationErrors}
+                      isSectionMode={isSectionMode}
+                    />
+                  </div>
+                </div>
+              </div>
+              <VideoModal
+                open={isVideoModalOpen}
+                onOpenChange={setIsVideoModalOpen}
+                exercise={selectedExercise}
+              />
+              <ConfirmDeleteDialog
+                open={!!sectionToDelete}
+                onOpenChange={(open) => !open && setSectionToDelete(null)}
+                onConfirm={() => {
+                  if (sectionToDelete) {
+                    handleDeleteSection(sectionToDelete.id);
+                    setSectionToDelete(null);
+                  }
                 }}
-              >
-                <TabsList className="w-full">
-                  <TabsTrigger
-                    value="exercise"
-                    className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                  >
-                    Exercises
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="section"
-                    className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                  >
-                    Sections
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            )}
-            {(builderMode === 'exercise' || isSectionMode) && (
-              <div className={cn("flex-1 min-h-0", !isSectionMode && "mt-4")}>
-                <ExerciseSelectionPanel
-                  onExerciseClick={handleExerciseClick}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                  activeExerciseIds={activeExerciseIds}
-                />
-              </div>
-            )}
-            {builderMode === 'section' && !isSectionMode && (
-              <div className="flex-1 min-h-0 mt-4">
-                <CoachSectionsSidebar
-                  onDragStart={handleSectionSourceDragStart}
-                  onDragEnd={() => {
-                    handleDragEnd();
-                    setDraggedSection(null);
-                  }}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <div className="flex-[3.25] p-2 h-full flex flex-col min-h-0">
-        <Card className="relative h-full" style={{ height: '100%' }}>
-          {isLoadingAiWorkout && (
-            <div className="absolute inset-0 mt-[1px] bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-sm text-muted-foreground">Generating workout...</p>
-              </div>
-            </div>
-          )}
-          <CardContent
-            ref={(el) => {
-              contentScrollRef.current = el;
-              registerTopLevelContainerRef(el);
-            }}
-            data-top-level-container
-            className="absolute inset-0 p-4 overflow-y-auto"
-            onDragOver={(e) => hookHandleTopLevelDragOver(e, workoutSchema.items.length)}
-            onDragLeave={hookHandleTopLevelDragLeave}
-            onDrop={handleTopLevelDropHandler}
-          >
-            {workoutSchema.items.length > 0 ? (
-              <div className="flex flex-col gap-2 w-full min-h-0">
-                {workoutSchema.items.map((item, itemIndex) => {
-                  const nextItem = workoutSchema.items[itemIndex + 1];
-                  const prevItem = itemIndex > 0 ? workoutSchema.items[itemIndex - 1] : null;
-
-                  // Check if this item is linked to previous or next
-                  const isLinkedToPrev = !!(
-                    item.itemType === 'exercise' &&
-                    prevItem?.itemType === 'exercise' &&
-                    item.exercise?.supersetGroupId &&
-                    prevItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
-                  );
-
-                  const isLinkedToNext = !!(
-                    item.itemType === 'exercise' &&
-                    nextItem?.itemType === 'exercise' &&
-                    item.exercise?.supersetGroupId &&
-                    nextItem.exercise?.supersetGroupId === item.exercise.supersetGroupId
-                  );
-
-                  // Check if current/prev/next items are sections
-                  const isSection = item.itemType === 'section';
-                  const isPrevSection = prevItem?.itemType === 'section';
-                  const isNextSection = nextItem?.itemType === 'section';
-
-                  // Check if there's a superset button area that will handle the drop zone
-                  const hasSupersetButtonAfter = item.itemType === 'exercise' && nextItem?.itemType === 'exercise';
-
-                  // Determine where drop zones CAN appear:
-                  // - Before: not if linked to previous, AND not if previous item is an exercise (superset area handles it)
-                  //   Special case: allow before sections if there's no previous item (top of list)
-                  // - After: not if linked to next, AND not if superset button area exists (it handles the drop zone internally)
-                  const canShowDropZoneBefore = !isLinkedToPrev && prevItem?.itemType !== 'exercise' && (!isSection || !prevItem);
-                  const canShowDropZoneAfter = !isLinkedToNext && !hasSupersetButtonAfter;
-
-                  // ONLY ONE drop zone appears at a time - the one matching dragOverTopLevelSlot
-                  // Priority: "after" drop zones take precedence over "before" drop zones to avoid duplicates
-                  const isDraggingSomething = draggedExercise || draggedSection;
-                  const isPrevItemShowingDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex && prevItem;
-                  // Sections can drop anywhere at top level but not between exercises in superset or inside sections
-                  const showDropZoneBefore = isDraggingSomething && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
-                  const showDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
-
-                  // Add extra spacing around sections
-                  const extraTopMargin = isSection && isPrevSection ? 'mt-2' : isSection && prevItem ? 'mt-4' : '';
-                  const extraBottomMargin = isSection && isNextSection ? 'mb-2' : isSection && nextItem ? 'mb-4' : '';
-
-                  return (
-                    <React.Fragment key={item.itemType === 'section' ? item.section.id : item.exercise.instanceId}>
-                      {/* Drop zone before this item - ONLY if this is the nearest slot and NOT inside a section */}
-                      {showDropZoneBefore && (
-                        <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                          <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
-                        </div>
-                      )}
-
-                      {/* Render the item (section or exercise) with extra spacing */}
-                      <div className={cn(extraTopMargin, extraBottomMargin)}>
-                        {item.itemType === 'section'
-                          ? (item.section ? renderSectionItem(item.section, itemIndex) : null)
-                          : (item.exercise ? renderExerciseItem(item.exercise, itemIndex) : null)
-                        }
-                      </div>
-
-                      {/* Drop zone after this item - ONLY if this is the nearest slot and NOT in superset area */}
-                      {showDropZoneAfter && (
-                        <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                          <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
-                        </div>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-                {/* Hide "Add exercise" and "Add section" buttons in section mode */}
-                {!isSectionMode && (
-                  <div className="flex flex-col gap-2 py-2 w-full">
-                    {isCreatingSection && (
-                      <div ref={creatorRef} className="w-full mb-2">
-                        <InlineSectionCreator
-                          onCreate={handleCreateSection}
-                          onCancel={() => setIsCreatingSection(false)}
-                        />
-                      </div>
-                    )}
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs h-7 px-2"
-                        onClick={handleAddTopLevelExercise}
-                      >
-                        <Plus className="size-3" />
-                        <span>Add exercise</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5 text-xs h-7 px-2"
-                        onClick={() => setIsCreatingSection(true)}
-                      >
-                        <Plus className="size-3" />
-                        <span>Create section</span>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-6 transition-all duration-200 relative p-4">
-                {/* Empty state content - hidden when dragging */}
-                {!(draggedExercise || draggedSection) && (
-                  <div className="flex flex-col items-center gap-6 text-center w-full max-w-3xl">
-                    <div className="flex flex-col gap-3 max-w-md mx-auto">
-                      <h3 className="text-4xl font-bold">Start building your workout</h3>
-                      <p className="text-l font-semibold text-muted-foreground">
-                        Add exercises or create sections to organize your training
-                      </p>
-                    </div>
-
-                    {isCreatingSection && (
-                      <div ref={creatorRef} className="w-full mb-4">
-                        <InlineSectionCreator
-                          onCreate={handleCreateSection}
-                          onCancel={() => setIsCreatingSection(false)}
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 items-center justify-center w-full">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => setIsCreatingSection(true)}
-                      >
-                        <Plus className="size-4" />
-                        <span>Create section</span>
-                      </Button>
-
-                      <Button
-                        type="button"
-                        className="gap-2"
-                        onClick={handleAddTopLevelExercise}
-                      >
-                        <Plus className="size-4" />
-                        <span>Add exercise</span>
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Drag overlay - shown when dragging */}
-                {(draggedExercise || draggedSection) && (
-                  <div className="absolute inset-0 border-2 border-dashed rounded-lg border-primary bg-primary/5 flex items-center justify-center">
-                    <p className="text-primary font-medium text-lg">
-                      {draggedExercise ? 'Drop your exercise here' : 'Drop your section here'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <div className="flex-[1.25] p-2 h-full flex flex-col min-h-0">
-        <Card className="relative h-full" style={{ height: '100%' }}>
-          <CardContent className="absolute inset-0 p-4 overflow-y-auto">
-
-            <OverviewPanel
-              items={workoutSchema.items}
-              onItemsChange={(items: WorkoutSchemaItem[]) => {
-                onDirtyChange?.();
-                setWorkoutSchema((prev) => ({
-                  ...prev,
-                  items,
-                }));
-              }}
-              onDeleteSection={handleDeleteSection}
-              onDeleteExercise={handleDeleteExerciseFromOverview}
-              onDeleteTopLevelExercise={(instanceId: string) => {
-                setWorkoutSchema((prev) => deleteTopLevelExercise(instanceId, prev));
-                onDirtyChange?.();
-              }}
-              onDeleteSuperset={handleDeleteSupersetFromOverview}
-              onDeleteTopLevelSuperset={(exerciseIds: string[]) => {
-                setWorkoutSchema((prev) => ({
-                  ...prev,
-                  items: prev.items.filter(
-                    (item) => !(item.itemType === 'exercise' && exerciseIds.includes(item.exercise.instanceId))
-                  ),
-                }));
-                onDirtyChange?.();
-              }}
-              onUnlinkSuperset={handleSupersetUnlink}
-              onUnlinkTopLevelSuperset={handleTopLevelSupersetUnlink}
-              groupExercisesBySuperset={groupExercisesBySuperset as any}
-              onExerciseClick={handleExerciseClickByIdWrapper}
-              validationErrors={validationErrors}
-              isSectionMode={isSectionMode}
-            />
-          </CardContent>
-        </Card>
-      </div>
-      <VideoModal
-        open={isVideoModalOpen}
-        onOpenChange={setIsVideoModalOpen}
-        exercise={selectedExercise}
-      />
-      <ConfirmDeleteDialog
-        open={!!sectionToDelete}
-        onOpenChange={(open) => !open && setSectionToDelete(null)}
+                itemName={sectionToDelete?.name || sectionToDelete?.type.charAt(0).toUpperCase() + (sectionToDelete?.type.slice(1) || '') + ' section'}
+                itemType="section"
+                variant="default"
+              />
+            </div >
+          </div>
+        </DialogContent >
+      </Dialog >
+      <DiscardChangesDialog
+        open={showCloseConfirm}
+        onCancel={() => setShowCloseConfirm(false)}
         onConfirm={() => {
-          if (sectionToDelete) {
-            handleDeleteSection(sectionToDelete.id);
-            setSectionToDelete(null);
-          }
+          setShowCloseConfirm(false);
+          onOpenChange(false);
         }}
-        itemName={sectionToDelete?.name || sectionToDelete?.type.charAt(0).toUpperCase() + (sectionToDelete?.type.slice(1) || '') + ' section'}
-        itemType="section"
-        variant="default"
       />
-    </div >
+    </>
   );
 };
