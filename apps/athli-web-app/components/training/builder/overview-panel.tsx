@@ -33,7 +33,7 @@ import type {
   WorkoutSection,
   WorkoutSchemaItem,
   ValidationErrors,
-} from '../shared/types/workout-builder.types';
+} from '@/components/training/shared/types/workout-builder.types';
 
 type ActiveOverviewItem =
   | {
@@ -1103,7 +1103,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
 
   return (
     <>
-      <h2 className="text-left mb-0 px-1">Overview</h2>
+      <h2 className="text-left mb-0 px-1 pb-2">Overview</h2>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -1123,14 +1123,16 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                 let itemIndex = 0;
 
                 // Add initial gap (before first item)
-                renderedItems.push(
-                  <DropGap
-                    key="gap-root-0"
-                    id={`gap-root-0`}
-                    data={{ type: 'gap', level: 'root', index: 0 }}
-                    isActive={activeGapId === 'gap-root-0'}
-                  />
-                );
+                if (!isSectionMode) {
+                  renderedItems.push(
+                    <DropGap
+                      key="gap-root-0"
+                      id={`gap-root-0`}
+                      data={{ type: 'gap', level: 'root', index: 0 }}
+                      isActive={activeGapId === 'gap-root-0'}
+                    />
+                  );
+                }
 
                 while (itemIndex < items.length) {
                   const item = items[itemIndex];
@@ -1278,14 +1280,16 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                   }
 
                   // Add gap after this item (using the CURRENT itemIndex which points to the next item)
-                  renderedItems.push(
-                    <DropGap
-                      key={`gap-root-${itemIndex}`}
-                      id={`gap-root-${itemIndex}`}
-                      data={{ type: 'gap', level: 'root', index: itemIndex }}
-                      isActive={activeGapId === `gap-root-${itemIndex}`}
-                    />
-                  );
+                  if (!isSectionMode) {
+                    renderedItems.push(
+                      <DropGap
+                        key={`gap-root-${itemIndex}`}
+                        id={`gap-root-${itemIndex}`}
+                        data={{ type: 'gap', level: 'root', index: itemIndex }}
+                        isActive={activeGapId === `gap-root-${itemIndex}`}
+                      />
+                    );
+                  }
                 }
 
                 return renderedItems;
@@ -1293,12 +1297,14 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
             ) : (
               // If completely empty, show one gap
               <>
-                <DropGap
-                  key="gap-root-0"
-                  id="gap-root-0"
-                  data={{ type: 'gap', level: 'root', index: 0 }}
-                  isActive={activeGapId === 'gap-root-0'}
-                />
+                {!isSectionMode && (
+                  <DropGap
+                    key="gap-root-0"
+                    id="gap-root-0"
+                    data={{ type: 'gap', level: 'root', index: 0 }}
+                    isActive={activeGapId === 'gap-root-0'}
+                  />
+                )}
                 <p className="text-xs text-muted-foreground">
                   Exercises and sections will appear here once created.
                 </p>

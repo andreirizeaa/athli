@@ -77,13 +77,13 @@ import {
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
 } from '@/api/client/client-service';
-import { getWorkouts } from '@/api/coach/coach-workout-service';
+import { getWorkouts, getWorkoutById } from '@/api/coach/coach-workout-service';
 import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
 import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
 import { TrainingDataProvider, useTrainingData } from '@/app/training/training-data-context';
 import { AddProgramSidePanel } from './add-program-side-panel';
-import { StandardBuilder } from '@/app/training/workouts/new/workout-builder';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
@@ -1445,8 +1445,18 @@ const ClientTrainingCalendarPage = () => {
       return;
     }
 
+    // Fetch full workout data including workout_data
+    let fullWorkout: Workout & { workout_data?: any };
+    try {
+      fullWorkout = await getWorkoutById(selectedWorkout.id);
+    } catch (error) {
+      console.error('Failed to fetch full workout data:', error);
+      // Fall back to using the workout without workout_data
+      fullWorkout = selectedWorkout;
+    }
+
     const workoutToAdd = {
-      ...selectedWorkout,
+      ...fullWorkout,
       id: `${selectedWorkout.id}-${Date.now()}`,
     };
 
@@ -2570,7 +2580,7 @@ const ClientTrainingCalendarPage = () => {
         onOpenChange={setIsAddExercisePanelOpen}
         onSave={handleSaveExercise}
       />
-      <StandardBuilder
+      <WorkoutBuilder
         open={isWorkoutBuilderOpen}
         onOpenChange={(open) => {
           setIsWorkoutBuilderOpen(open);

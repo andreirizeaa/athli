@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { isEqual } from 'lodash';
 import {
   Dialog,
   DialogContent,
@@ -33,20 +34,20 @@ import { WORKOUT_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
 import { generateWorkoutFromPrompt, type GeneratedWorkout } from '@/api/exercise/generate-exercise';
 import { toast } from 'sonner';
-import { useExerciseDragDrop } from './hooks/use-exercise-drag-drop';
+import { useExerciseDragDrop } from '@/components/training/hooks/use-exercise-drag-drop';
 import type {
   WorkoutProgramPayload,
-} from './workout-schema';
-import type { SetData } from './components/exercise-card';
-import { ExerciseCard } from './components/exercise-card';
-import { ExerciseSelectionPanel } from './components/exercise-selection-panel';
-import { CoachSectionsSidebar } from './components/coach-sections-sidebar';
-import { InlineSectionCreator } from './components/inline-section-creator';
+} from '@/components/training/workout-schema';
+import type { SetData } from '@/components/training/builder/exercise-card';
+import { ExerciseCard } from '@/components/training/builder/exercise-card';
+import { ExerciseSelectionPanel } from '@/components/training/builder/exercise-selection-panel';
+import { CoachSectionsSidebar } from '@/components/training/builder/coach-sections-sidebar';
+import { InlineSectionCreator } from '@/components/training/builder/inline-section-creator';
 import { getSectionById, type Section } from '@/api/coach/coach-section-service';
 import { SectionType } from '@/app/training/sections/section-type-utils';
 
-import { OverviewPanel } from './components/overview-panel';
-import { VideoModal } from './components/video-modal';
+import { OverviewPanel } from '@/components/training/builder/overview-panel';
+import { VideoModal } from '@/components/training/builder/video-modal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,84 +66,93 @@ import type {
   SetFieldValidation,
   ValidationErrors,
   SectionValidationErrors,
-} from './shared/types/workout-builder.types';
+} from '@/components/training/shared/types/workout-builder.types';
 import {
   recomputeExerciseValidation as recomputeValidation,
   clearSetValidationField as clearFieldValidation,
   validateWorkoutSchema,
   clearEmptyExercisesError,
   clearMissingConfigError,
-} from './shared/utils/validation';
+} from '@/components/training/shared/utils/validation';
 import {
   buildWorkoutPayload,
-} from './shared/utils/payload-builder';
+} from '@/components/training/shared/utils/payload-builder';
 import {
   convertPayloadToBuilderFormat,
-} from './shared/utils/payload-converter';
+} from '@/components/training/shared/utils/payload-converter';
 import {
   handleSectionSelect as selectSection,
   handleDeleteSection as deleteSection,
   getSectionDescription,
-} from './shared/utils/section-handlers';
+} from '@/components/training/shared/utils/section-handlers';
 import {
   handleDeleteExerciseFromOverview as deleteExerciseFromOverview,
   handleDeleteSupersetFromOverview as deleteSupersetFromOverview,
   handleAddExercise as addExercise,
   handleAddTopLevelExercise as addTopLevelExercise,
   handleDeleteTopLevelExercise as deleteTopLevelExercise,
-} from './shared/utils/exercise-handlers';
+} from '@/components/training/shared/utils/exercise-handlers';
 import {
   groupExercisesBySuperset,
   handleSupersetLink as linkSuperset,
   handleSupersetUnlink as unlinkSuperset,
   handleTopLevelSupersetLink as linkTopLevelSuperset,
   handleTopLevelSupersetUnlink as unlinkTopLevelSuperset,
-} from './shared/utils/superset-handlers';
+} from '@/components/training/shared/utils/superset-handlers';
 import {
   handleDrop as dropExercise,
   handleSlotDrop,
   handleTopLevelSlotDrop,
-} from './shared/utils/drop-handlers';
+} from '@/components/training/shared/utils/drop-handlers';
 import {
   handleExerciseClick as scrollToExercise,
   handleExerciseClickById,
-} from './shared/utils/exercise-scroll';
+} from '@/components/training/shared/utils/exercise-scroll';
 
-type StandardBuilderProps = {
+type WorkoutBuilderProps = {
   meta: WorkoutMeta | null;
   initialData?: any; // Workout data to initialize the builder with
+  isLoadingInitialData?: boolean; // True when initial data is being fetched
   onDirtyChange?: () => void;
   saveSignal?: number;
   onSaveSuccess?: (payload: WorkoutProgramPayload) => Promise<void> | void;
   onSaveError?: () => void;
-  mode?: 'workout' | 'section'; // Mode: workout (default) or section
-  sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'; // Required when mode is 'section'
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-export const StandardBuilder = ({
+export const WorkoutBuilder = ({
   meta,
   initialData,
+  isLoadingInitialData = false,
   onDirtyChange,
   saveSignal,
   onSaveSuccess,
   onSaveError,
-  mode = 'workout',
-  sectionType,
   open,
   onOpenChange,
-}: StandardBuilderProps) => {
+}: WorkoutBuilderProps) => {
   const t = useTranslations();
-  const isSectionMode = mode === 'section';
+  const isSectionMode = false;
   const router = useRouter();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
 
+  // Store initial state for deep comparison
+  const initialState = useRef<{
+    schema: WorkoutSchema;
+    title: string;
+    type: string;
+    difficulty: string;
+    description: string;
+  } | null>(null);
+
   const markDirty = () => {
-    setIsDirty(true);
-    onDirtyChange?.();
+    // Deprecated? We will use effect to track dirty state
+    // But keeping it for manual triggers if needed, although effect covers most cases
+    // actually, let's keep it but rely on effect for true dirty checking
+    // setIsDirty(true); 
   };
 
   const [isSaving, setIsSaving] = useState(false);
@@ -153,8 +163,7 @@ export const StandardBuilder = ({
   const [difficulty, setDifficulty] = useState(meta?.difficulty || 'all_levels');
   const [description, setDescription] = useState(meta?.description || '');
 
-  // Initialize with empty items array (no required default section)
-  // OR initialize with a single section when in section mode
+  // Initialize with empty items array (default for new workout)
   // OR use initialData if provided (converted from payload format)
   const getInitialSchema = (): WorkoutSchema => {
     // Priority 1: Use initialData prop if provided
@@ -162,24 +171,6 @@ export const StandardBuilder = ({
       // Convert from backend payload format to builder format
       const converted = convertPayloadToBuilderFormat(initialData);
       return converted;
-    }
-
-    // Priority 2: For section mode, create initial section
-    if (isSectionMode && sectionType) {
-      return {
-        items: [{
-          itemType: 'section' as const,
-          section: {
-            id: `section_${Date.now()}`,
-            type: sectionType,
-            exercises: [],
-            ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
-            ...(sectionType === 'timed' && { targetRounds: undefined }),
-            ...(sectionType === 'circuits' && { targetRounds: undefined }),
-            ...(sectionType === 'auxiliary' && { category: 'warmup' }),
-          },
-        }],
-      };
     }
 
     // Default: empty workout
@@ -233,33 +224,65 @@ export const StandardBuilder = ({
     if (open) {
       setIsSaving(false);
 
+      let initialSchema: WorkoutSchema;
+
       // Reset schema based on initialData when dialog opens
-      if (initialData) {
+      if (initialData && (initialData.items?.length > 0)) {
         // Convert from backend payload format to builder format
         const converted = convertPayloadToBuilderFormat(initialData);
+        initialSchema = converted;
         setWorkoutSchema(converted);
-      } else if (isSectionMode && sectionType) {
-        // Section mode: start with one section
-        setWorkoutSchema({
-          items: [{
-            itemType: 'section' as const,
-            section: {
-              id: `section_${Date.now()}`,
-              type: sectionType,
-              exercises: [],
-              ...(sectionType === 'amrap' && { roundDurationSec: undefined }),
-              ...(sectionType === 'timed' && { targetRounds: undefined }),
-              ...(sectionType === 'circuits' && { targetRounds: undefined }),
-              ...(sectionType === 'auxiliary' && { category: 'warmup' }),
-            },
-          }],
-        });
       } else {
         // New workout: start with empty items
+        initialSchema = { items: [] };
         setWorkoutSchema({ items: [] });
       }
+
+      // Capture initial state
+      initialState.current = {
+        schema: initialSchema,
+        title: meta?.title || '',
+        type: meta?.type || '',
+        difficulty: meta?.difficulty || 'all_levels',
+        description: meta?.description || '',
+      };
+
+      setIsDirty(false);
+      if (onDirtyChange) onDirtyChange();
     }
-  }, [open, initialData, isSectionMode, sectionType]);
+  }, [open, initialData, meta]);
+
+  // Deep compare current state with initial state to determine isDirty
+  useEffect(() => {
+    if (!open || !initialState.current) return;
+
+    const currentState = {
+      schema: workoutSchema,
+      title: workoutTitle,
+      type: workoutType,
+      difficulty: difficulty,
+      description: description,
+    };
+
+    // Helper to clean schema for comparison (ignore volatile IDs if necessary, or assume stable structure)
+    // Actually, lodash isEqual handles deep comparison well.
+    // However, we need to be careful about order and generated IDs if they change on re-render (they shouldn't)
+
+    // Note: If IDs are generated randomly on "new section", the comparison will fail correctly (it IS a change).
+    // If we delete a new section and go back to empty, it should match initial empty state.
+
+    const isNowDirty = !isEqual(initialState.current, currentState);
+
+    // Additional check: valid form state?
+    // User might want "save" enabled only if valid? No, dirty is distinct from valid.
+
+    if (isDirty !== isNowDirty) {
+      setIsDirty(isNowDirty);
+      if (isNowDirty) {
+        onDirtyChange?.();
+      }
+    }
+  }, [workoutSchema, workoutTitle, workoutType, difficulty, description, open, isDirty, onDirtyChange]);
 
   // Sync workout fields with meta
   useEffect(() => {
@@ -278,6 +301,8 @@ export const StandardBuilder = ({
       }
     }
   }, [meta]);
+
+
 
   const {
     draggedExercise,
@@ -724,11 +749,26 @@ Focus on proper form and progressive overload.`;
           await result;
           setIsSaving(false);
           setIsDirty(false);
+          // Update initial state to match the saved state
+          initialState.current = {
+            schema: workoutSchema,
+            title: workoutTitle,
+            type: workoutType,
+            difficulty: difficulty,
+            description: description,
+          };
         } else {
           // If it doesn't return a Promise, the parent handles everything
           // Just reset loading state - parent will close dialog and show toast
           setIsSaving(false);
           setIsDirty(false);
+          initialState.current = {
+            schema: workoutSchema,
+            title: workoutTitle,
+            type: workoutType,
+            difficulty: difficulty,
+            description: description,
+          };
         }
       } catch (error) {
         setIsSaving(false);
@@ -895,6 +935,9 @@ Focus on proper form and progressive overload.`;
               const fullExercise = searchExercises('').find(e => e.exerciseId === ex.id);
               const exerciseData = fullExercise ? {
                 ...ex,
+                // IMPORTANT: Explicitly set exerciseId from the original payload id
+                // The payload uses 'id' but the builder expects 'exerciseId'
+                exerciseId: ex.id,
                 name: fullExercise.name,
                 imageUrl: fullExercise.imageUrl,
                 videoUrl: fullExercise.videoUrl,
@@ -908,7 +951,24 @@ Focus on proper form and progressive overload.`;
                 exerciseTips: fullExercise.exerciseTips,
                 variations: fullExercise.variations,
                 relatedExerciseIds: fullExercise.relatedExerciseIds,
-              } : ex;
+              } : {
+                ...ex,
+                exerciseId: ex.id || ex.exerciseId,
+                name: ex.name || ex.id || 'Unknown Exercise',
+                imageUrl: ex.imageUrl || '',
+                videoUrl: ex.videoUrl || '',
+                equipments: ex.equipments || [],
+                bodyParts: ex.bodyParts || [],
+                exerciseType: ex.exerciseType || 'weight_reps',
+                targetMuscles: ex.targetMuscles || [],
+                secondaryMuscles: ex.secondaryMuscles || [],
+                keywords: ex.keywords || [],
+                overview: ex.overview || '',
+                instructions: ex.instructions || [],
+                exerciseTips: ex.exerciseTips || [],
+                variations: ex.variations || [],
+                relatedExerciseIds: ex.relatedExerciseIds || [],
+              };
 
               // Ensure set type is preserved (referencing previous fix)
               if (exerciseData.sets && Array.isArray(exerciseData.sets)) {
@@ -1245,9 +1305,10 @@ Focus on proper form and progressive overload.`;
                   </TooltipContent>
                 </Tooltip>
                 <Input
+                  disabled={isSectionMode}
                   className="h-7 flex-1 border-input bg-background text-sm focus-visible:ring-primary shadow-none"
                   placeholder={section.type ? (section.type.charAt(0).toUpperCase() + section.type.slice(1)) : 'Section'}
-                  value={section.name || ''}
+                  value={isSectionMode ? workoutTitle : (section.name || '')}
                   onChange={(e) => {
                     const newName = e.target.value;
                     markDirty();
@@ -1263,6 +1324,10 @@ Focus on proper form and progressive overload.`;
                         return item;
                       }),
                     }));
+                    // Sync to Top Title if in Section Mode
+                    if (isSectionMode) {
+                      setWorkoutTitle(newName);
+                    }
                   }}
                 />
                 {section.type && (
@@ -1379,10 +1444,11 @@ Focus on proper form and progressive overload.`;
                 onDrop={(e) => handleSectionDrop(e, section.id)}
               >
                 {/* Section Notes - Moved to Top of Content */}
-                <div className="w-full relative mb-1 pt-1">
+                <div className="w-full relative mb-3 pt-1">
                   <Input
                     placeholder="Notes"
                     value={section.notes || ''}
+                    className="w-full pr-8 border-input bg-background shadow-none"
                     onChange={(e) => {
                       const newNotes = e.target.value;
                       markDirty();
@@ -1399,7 +1465,6 @@ Focus on proper form and progressive overload.`;
                         }),
                       }));
                     }}
-                    className="w-full text-xs h-7 border-input bg-background shadow-none pr-8"
                   />
                   {section.notes && (
                     <button
@@ -1861,32 +1926,30 @@ Focus on proper form and progressive overload.`;
                   <div className="flex-1 overflow-hidden flex flex-col pt-4">
                     {activeBuilder === 'manual' ? (
                       <div className="flex flex-col px-4 h-full min-h-0">
-                        {/* Hide tabs in section mode - only show exercise panel */}
-                        {!isSectionMode && (
-                          <Tabs
-                            value={builderMode}
-                            onValueChange={(value) => {
-                              if (value) setBuilderMode(value as 'exercise' | 'section');
-                            }}
-                            className="mb-4"
-                          >
-                            <TabsList className="w-full">
-                              <TabsTrigger
-                                value="exercise"
-                                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                              >
-                                Exercises
-                              </TabsTrigger>
-                              <TabsTrigger
-                                value="section"
-                                className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
-                              >
-                                Sections
-                              </TabsTrigger>
-                            </TabsList>
-                          </Tabs>
-                        )}
-                        {(builderMode === 'exercise' || isSectionMode) && (
+                        <Tabs
+                          value={builderMode}
+                          onValueChange={(value) => {
+                            if (value) setBuilderMode(value as 'exercise' | 'section');
+                          }}
+                          className="mb-4"
+                        >
+                          <TabsList className="w-full">
+                            <TabsTrigger
+                              value="exercise"
+                              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                            >
+                              Exercises
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="section"
+                              className="flex-1 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary/5 dark:data-[state=active]:text-primary"
+                            >
+                              Sections
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+
+                        {builderMode === 'exercise' && (
                           <div className="flex-1 min-h-0">
                             <ExerciseSelectionPanel
                               onExerciseClick={handleExerciseClick}
@@ -1896,7 +1959,7 @@ Focus on proper form and progressive overload.`;
                             />
                           </div>
                         )}
-                        {builderMode === 'section' && !isSectionMode && (
+                        {builderMode === 'section' && (
                           <div className="flex-1 min-h-0">
                             <CoachSectionsSidebar
                               onDragStart={handleSectionSourceDragStart}
@@ -2116,7 +2179,23 @@ Focus on proper form and progressive overload.`;
                               const newTitle = e.target.value;
                               setWorkoutTitle(newTitle);
                               markDirty();
-                              // Update meta if needed - parent component should handle this
+
+                              // Sync title to section name if in section mode
+                              if (isSectionMode) {
+                                setWorkoutSchema((prev) => ({
+                                  ...prev,
+                                  items: prev.items.map((item, idx) => {
+                                    // Assuming the first item is the main section in section mode
+                                    if (idx === 0 && item.itemType === 'section') {
+                                      return {
+                                        ...item,
+                                        section: { ...item.section, name: newTitle },
+                                      };
+                                    }
+                                    return item;
+                                  }),
+                                }));
+                              }
                             }}
                           />
                           <Popover open={isTitleExpanded} onOpenChange={setIsTitleExpanded}>
@@ -2233,7 +2312,13 @@ Focus on proper form and progressive overload.`;
                         onDragLeave={hookHandleTopLevelDragLeave}
                         onDrop={handleTopLevelDropHandler}
                       >
-                        {workoutSchema.items.length > 0 ? (
+                        {isLoadingInitialData ? (
+                          <div className="flex-1 flex items-center justify-center h-full">
+                            <div className="flex flex-col items-center gap-3">
+                              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                            </div>
+                          </div>
+                        ) : workoutSchema.items.length > 0 ? (
                           <div className="flex flex-col gap-2 w-full min-h-0">
                             {workoutSchema.items.map((item, itemIndex) => {
                               const nextItem = workoutSchema.items[itemIndex + 1];
@@ -2325,20 +2410,20 @@ Focus on proper form and progressive overload.`;
                                     variant="outline"
                                     size="sm"
                                     className="flex-1 gap-1.5 text-xs h-9 px-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                                    onClick={handleAddTopLevelExercise}
+                                    onClick={() => setIsCreatingSection(true)}
                                   >
                                     <Plus className="size-3" />
-                                    <span>Add exercise</span>
+                                    <span>Create section</span>
                                   </Button>
                                   <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
                                     className="flex-1 gap-1.5 text-xs h-9 px-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                                    onClick={() => setIsCreatingSection(true)}
+                                    onClick={handleAddTopLevelExercise}
                                   >
                                     <Plus className="size-3" />
-                                    <span>Create section</span>
+                                    <span>Add exercise</span>
                                   </Button>
                                 </div>
                               </div>
@@ -2488,38 +2573,44 @@ Focus on proper form and progressive overload.`;
                   }}
                 >
                   <div className="flex-1 overflow-y-auto px-2 py-4">
-                    <OverviewPanel
-                      items={workoutSchema.items}
-                      onItemsChange={(items: WorkoutSchemaItem[]) => {
-                        markDirty();
-                        setWorkoutSchema((prev) => ({
-                          ...prev,
-                          items,
-                        }));
-                      }}
-                      onDeleteSection={handleDeleteSection}
-                      onDeleteExercise={handleDeleteExerciseFromOverview}
-                      onDeleteTopLevelExercise={(instanceId: string) => {
-                        setWorkoutSchema((prev) => deleteTopLevelExercise(instanceId, prev));
-                        markDirty();
-                      }}
-                      onDeleteSuperset={handleDeleteSupersetFromOverview}
-                      onDeleteTopLevelSuperset={(exerciseIds: string[]) => {
-                        setWorkoutSchema((prev) => ({
-                          ...prev,
-                          items: prev.items.filter(
-                            (item) => !(item.itemType === 'exercise' && exerciseIds.includes(item.exercise.instanceId))
-                          ),
-                        }));
-                        markDirty();
-                      }}
-                      onUnlinkSuperset={handleSupersetUnlink}
-                      onUnlinkTopLevelSuperset={handleTopLevelSupersetUnlink}
-                      groupExercisesBySuperset={groupExercisesBySuperset as any}
-                      onExerciseClick={handleExerciseClickByIdWrapper}
-                      validationErrors={validationErrors}
-                      isSectionMode={isSectionMode}
-                    />
+                    {isLoadingInitialData ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    ) : (
+                      <OverviewPanel
+                        items={workoutSchema.items}
+                        onItemsChange={(items: WorkoutSchemaItem[]) => {
+                          markDirty();
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            items,
+                          }));
+                        }}
+                        onDeleteSection={handleDeleteSection}
+                        onDeleteExercise={handleDeleteExerciseFromOverview}
+                        onDeleteTopLevelExercise={(instanceId: string) => {
+                          setWorkoutSchema((prev) => deleteTopLevelExercise(instanceId, prev));
+                          markDirty();
+                        }}
+                        onDeleteSuperset={handleDeleteSupersetFromOverview}
+                        onDeleteTopLevelSuperset={(exerciseIds: string[]) => {
+                          setWorkoutSchema((prev) => ({
+                            ...prev,
+                            items: prev.items.filter(
+                              (item) => !(item.itemType === 'exercise' && exerciseIds.includes(item.exercise.instanceId))
+                            ),
+                          }));
+                          markDirty();
+                        }}
+                        onUnlinkSuperset={handleSupersetUnlink}
+                        onUnlinkTopLevelSuperset={handleTopLevelSupersetUnlink}
+                        groupExercisesBySuperset={groupExercisesBySuperset as any}
+                        onExerciseClick={handleExerciseClickByIdWrapper}
+                        validationErrors={validationErrors}
+                        isSectionMode={isSectionMode}
+                      />
+                    )}
                   </div>
                 </div>
               </div>

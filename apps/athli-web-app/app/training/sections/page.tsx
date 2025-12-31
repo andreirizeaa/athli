@@ -38,8 +38,8 @@ import type { Section } from '@/api/coach/coach-section-service';
 import { starSections, deleteSections, duplicateSection, createSection, getSectionById, updateSection } from '@/api/coach/coach-section-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
-import { StandardBuilder } from '../workouts/new/workout-builder';
-import type { WorkoutProgramPayload } from '../workouts/new/workout-schema';
+import { SectionBuilder } from './section-builder';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 
 type ColumnId = 'description' | 'sectionType' | 'totalExercises' | 'created' | 'actions';
 
@@ -104,12 +104,15 @@ const SectionsPage = () => {
     });
   };
 
+  const [isLoadingSectionData, setIsLoadingSectionData] = useState(false);
+
   const handleNavigateToSection = async (sectionId: string) => {
     const section = sections.find(s => s.id === sectionId);
     if (section) {
-      // Open the dialog immediately for instant feedback
+      // Open the dialog immediately and show loading inside
       setSelectedSectionForBuilder(section);
-      setSelectedSectionData(null); // Reset to show loading state
+      setSelectedSectionData(null);
+      setIsLoadingSectionData(true);
       setIsSectionBuilderOpen(true);
 
       try {
@@ -120,6 +123,8 @@ const SectionsPage = () => {
         console.error('Failed to fetch section data:', error);
         toast.error(t('general.error'));
         setIsSectionBuilderOpen(false);
+      } finally {
+        setIsLoadingSectionData(false);
       }
     }
   };
@@ -688,12 +693,12 @@ const SectionsPage = () => {
       />
 
       {selectedSectionForBuilder && (
-        <StandardBuilder
+        <SectionBuilder
           open={isSectionBuilderOpen}
           onOpenChange={setIsSectionBuilderOpen}
-          mode="section"
           sectionType={selectedSectionForBuilder.sectionType as 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'}
           initialData={selectedSectionData}
+          isLoadingInitialData={isLoadingSectionData}
           meta={{
             title: selectedSectionForBuilder.program,
             description: selectedSectionForBuilder.description,

@@ -1,5 +1,5 @@
 import type { Exercise } from '@/api/exercise/exercise-search';
-import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '../types/workout-builder.types';
+import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '@/components/training/shared/types/workout-builder.types';
 
 /**
  * Handles dropping an exercise at the end of all items (top-level)
