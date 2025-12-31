@@ -79,3 +79,42 @@ export const getClientWorkoutInstance = async (clientId: string, date: string, w
   });
   return response.data?.workout;
 };
+
+export interface DuplicateWorkoutData {
+  clientId: string;
+  sourceDate: string;      // YYYY-MM-DD format
+  sourceWorkoutId: string; // The specific workout ID to duplicate
+  targetDate: string;      // YYYY-MM-DD format
+}
+
+export interface DuplicateWorkoutResponse {
+  newWorkoutId: string;
+  workout: any;
+}
+
+/**
+ * Service method to duplicate a workout from one date to another
+ */
+export const duplicateWorkout = async (data: DuplicateWorkoutData): Promise<DuplicateWorkoutResponse> => {
+  const response = await apiFetch<ApiResponse<DuplicateWorkoutResponse>>('/client/trainings/calendar/duplicate', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  return response.data!;
+};
+
+export interface DeleteWorkoutByKeyData {
+  clientId: string;
+  sourceDate: string;  // YYYY-MM-DD format
+  workoutId: string;
+}
+
+/**
+ * Service method to delete a workout using sourceDate and workoutId
+ */
+export const deleteWorkoutByKey = async (data: DeleteWorkoutByKeyData): Promise<void> => {
+  await apiFetch('/client/trainings/calendar/delete', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};

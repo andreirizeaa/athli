@@ -34,6 +34,7 @@ import {
   Copy,
   Dumbbell,
   FileText,
+  Loader2,
   MoreHorizontal,
   Plus,
   Save,
@@ -93,6 +94,7 @@ import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-servi
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
+import { CardLoaderOverlay } from '@/components/ui/card-loader-overlay';
 import { assignWorkout, deleteClientWorkout, getClientWorkoutInstance } from '@/api/client/client-training-service';
 
 
@@ -188,6 +190,14 @@ const ClientTrainingCalendarPage = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(undefined);
 
+  // Navigation loading state - when navigating to a week that requires data fetch
+  const [pendingNavigationWeek, setPendingNavigationWeek] = useState<number | null>(null);
+  const [isNavigationLoading, setIsNavigationLoading] = useState<boolean>(false);
+
+  // Calendar data fetching configuration
+  const FETCH_CHUNK_WEEKS = 8; // Fetch data in 8-week chunks
+  const PREFETCH_THRESHOLD_WEEKS = 2; // Prefetch when within 2 weeks of chunk edge
+
   const [isAddWorkoutPanelOpen, setIsAddWorkoutPanelOpen] = useState<boolean>(false);
   const [isSaveAsWorkoutOpen, setIsSaveAsWorkoutOpen] = useState<boolean>(false);
   const [isSaveAsProgramOpen, setIsSaveAsProgramOpen] = useState<boolean>(false);
@@ -197,7 +207,10 @@ const ClientTrainingCalendarPage = () => {
   }>({});
   // React Query Hooks
   const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
-  const { useCalendarRange, useCompletionLogs, assignWorkout: apiAssignWorkout, deleteWorkout: apiDeleteWorkout, updateCalendar } = useClientTraining(clientId);
+  const { useCalendarRange, useCompletionLogs, assignWorkout: apiAssignWorkout, deleteWorkout: apiDeleteWorkout, duplicateWorkout: apiDuplicateWorkout, deleteWorkoutByKey: apiDeleteWorkoutByKey, updateCalendar } = useClientTraining(clientId);
+
+  // Loading state for workout cards during API operations (duplicate, delete)
+  const [loadingWorkoutIds, setLoadingWorkoutIds] = useState<Set<string>>(new Set());
 
   const [startDate] = useState<Date>(() => {
     // Start from the beginning of the current week (Monday)
@@ -470,11 +483,32 @@ const ClientTrainingCalendarPage = () => {
     return groups;
   };
 
+  // Helper to check if a week is in a different chunk than current
+  const isWeekInDifferentChunk = (targetWeek: number): boolean => {
+    const currentChunkIndex = Math.floor((currentWeek - 1) / FETCH_CHUNK_WEEKS);
+    const targetChunkIndex = Math.floor((targetWeek - 1) / FETCH_CHUNK_WEEKS);
+    return currentChunkIndex !== targetChunkIndex;
+  };
+
+  // Navigate to week, triggering loading state if chunk not loaded
+  const navigateToWeek = (targetWeek: number) => {
+    if (isWeekInDifferentChunk(targetWeek)) {
+      // Set pending navigation and show loading
+      setPendingNavigationWeek(targetWeek);
+      setIsNavigationLoading(true);
+      // Update currentWeek to trigger the data fetch for the new chunk
+      setCurrentWeek(targetWeek);
+    } else {
+      // Same chunk, navigate immediately
+      setCurrentWeek(targetWeek);
+    }
+  };
+
   const handlePreviousWeek = () => {
     const weeksView = parseInt(selectedWeek, 10);
     const newWeek = currentWeek - weeksView;
     // Allow going to past weeks without limit
-    setCurrentWeek(newWeek);
+    navigateToWeek(newWeek);
   };
 
   const handleNextWeek = () => {
@@ -482,7 +516,7 @@ const ClientTrainingCalendarPage = () => {
     const maxStartWeek = totalWeeks - weeksView + 1;
     const newWeek = currentWeek + weeksView;
     if (newWeek <= maxStartWeek) {
-      setCurrentWeek(newWeek);
+      navigateToWeek(newWeek);
     }
   };
 
@@ -503,9 +537,9 @@ const ClientTrainingCalendarPage = () => {
     const maxWeek = totalWeeks;
 
     if (weekNumber <= maxWeek) {
-      setCurrentWeek(weekNumber);
+      navigateToWeek(weekNumber);
     } else {
-      setCurrentWeek(maxWeek);
+      navigateToWeek(maxWeek);
     }
   };
 
@@ -583,27 +617,60 @@ const ClientTrainingCalendarPage = () => {
   };
 
   // Calculate the required date range based on current view
-  const requiredDateRange = useMemo(() => {
-    const weeksView = parseInt(selectedWeek, 10);
+  // Uses 8-week chunks with smart prefetching when approaching edges
 
-    // Calculate the start of the visible range
+  // Calculate which 8-week chunk the current view falls into
+  const getCurrentChunk = useMemo(() => {
     const weekOffset = currentWeek - 1;
-    const visibleStart = new Date(startDate);
-    visibleStart.setDate(startDate.getDate() + weekOffset * 7);
+    // Calculate chunk index (0-indexed, chunks are 8 weeks each)
+    const chunkIndex = Math.floor(weekOffset / FETCH_CHUNK_WEEKS);
+    return chunkIndex;
+  }, [currentWeek]);
 
-    // Calculate the end of the visible range
-    const visibleEnd = new Date(visibleStart);
-    visibleEnd.setDate(visibleStart.getDate() + weeksView * 7 - 1);
+  // Calculate the date range for a given chunk index
+  const getChunkDateRange = (chunkIndex: number) => {
+    const chunkStartWeekOffset = chunkIndex * FETCH_CHUNK_WEEKS;
+    const chunkStart = new Date(startDate);
+    chunkStart.setDate(startDate.getDate() + chunkStartWeekOffset * 7);
 
-    // Add buffer: ±1 week for smooth navigation
-    const bufferStart = new Date(visibleStart);
-    bufferStart.setDate(visibleStart.getDate() - 7);
+    const chunkEnd = new Date(chunkStart);
+    chunkEnd.setDate(chunkStart.getDate() + FETCH_CHUNK_WEEKS * 7 - 1);
 
-    const bufferEnd = new Date(visibleEnd);
-    bufferEnd.setDate(visibleEnd.getDate() + 7);
+    return { start: chunkStart, end: chunkEnd };
+  };
 
-    return { start: bufferStart, end: bufferEnd };
-  }, [selectedWeek, currentWeek, startDate]);
+  // Required date range is the current chunk
+  const requiredDateRange = useMemo(() => {
+    return getChunkDateRange(getCurrentChunk);
+  }, [getCurrentChunk, startDate]);
+
+  // Check if we need to prefetch adjacent chunks
+  const shouldPrefetchPrev = useMemo(() => {
+    const weekOffset = currentWeek - 1;
+    const weeksIntoChunk = weekOffset % FETCH_CHUNK_WEEKS;
+    // Prefetch previous chunk if we're within threshold of chunk start
+    return weeksIntoChunk < PREFETCH_THRESHOLD_WEEKS && getCurrentChunk > 0;
+  }, [currentWeek, getCurrentChunk]);
+
+  const shouldPrefetchNext = useMemo(() => {
+    const weekOffset = currentWeek - 1;
+    const weeksView = parseInt(selectedWeek, 10);
+    const weeksIntoChunk = weekOffset % FETCH_CHUNK_WEEKS;
+    const weeksUntilChunkEnd = FETCH_CHUNK_WEEKS - weeksIntoChunk - weeksView;
+    // Prefetch next chunk if we're within threshold of chunk end
+    return weeksUntilChunkEnd < PREFETCH_THRESHOLD_WEEKS;
+  }, [currentWeek, selectedWeek, getCurrentChunk]);
+
+  // Calculate prefetch ranges
+  const prevChunkRange = useMemo(() => {
+    if (!shouldPrefetchPrev) return null;
+    return getChunkDateRange(getCurrentChunk - 1);
+  }, [shouldPrefetchPrev, getCurrentChunk, startDate]);
+
+  const nextChunkRange = useMemo(() => {
+    if (!shouldPrefetchNext) return null;
+    return getChunkDateRange(getCurrentChunk + 1);
+  }, [shouldPrefetchNext, getCurrentChunk, startDate]);
 
 
   // Format dates for API
@@ -617,43 +684,77 @@ const ClientTrainingCalendarPage = () => {
   const startDateStr = requiredDateRange.start ? formatDateForAPI(requiredDateRange.start) : '';
   const endDateStr = requiredDateRange.end ? formatDateForAPI(requiredDateRange.end) : '';
 
-  // Use the new hook for calendar data
-  // We condition the query on having valid dates
+  // Prefetch date strings
+  const prevStartStr = prevChunkRange?.start ? formatDateForAPI(prevChunkRange.start) : '';
+  const prevEndStr = prevChunkRange?.end ? formatDateForAPI(prevChunkRange.end) : '';
+  const nextStartStr = nextChunkRange?.start ? formatDateForAPI(nextChunkRange.start) : '';
+  const nextEndStr = nextChunkRange?.end ? formatDateForAPI(nextChunkRange.end) : '';
+
+  // Main query for current chunk
   const { data: calendarData, isLoading: isLoadingTraining } = useCalendarRange(
     startDateStr,
     endDateStr,
     { enabled: !!clientId && !!startDateStr && !!endDateStr }
   );
 
+  // Prefetch queries for adjacent chunks (run in background)
+  const { data: prevChunkData } = useCalendarRange(
+    prevStartStr,
+    prevEndStr,
+    { enabled: !!clientId && !!prevStartStr && !!prevEndStr && shouldPrefetchPrev }
+  );
+
+  const { data: nextChunkData } = useCalendarRange(
+    nextStartStr,
+    nextEndStr,
+    { enabled: !!clientId && !!nextStartStr && !!nextEndStr && shouldPrefetchNext }
+  );
+
+  // Helper to convert calendar data to local format
+  const convertCalendarData = (data: typeof calendarData) => {
+    if (!data) return {};
+    const converted: { [dateKey: string]: Array<Workout & { id: string }> } = {};
+
+    Object.keys(data).forEach((dateKey) => {
+      // dateKey is in dd-mm-yyyy format
+      const [day, month, year] = dateKey.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      const isoKey = getDateKey(date);
+      converted[isoKey] = data[dateKey].map((workout) => ({
+        ...workout,
+        id: workout.id,
+        name: (workout as any).name || (workout as any).workout,
+        isFavourite: (workout as any).isFavourite || false,
+      }));
+    });
+
+    return converted;
+  };
+
   // Sync React Query data to local state
   // We keep the local state 'workoutsByDate' to support the extensive optimistic updates in this file
   // but we hydrate it from the server data when it arrives.
   useEffect(() => {
-    if (calendarData) {
-      const convertedCalendar: {
-        [dateKey: string]: Array<Workout & { id: string }>;
-      } = {};
+    const allData = {
+      ...convertCalendarData(calendarData),
+      ...convertCalendarData(prevChunkData),
+      ...convertCalendarData(nextChunkData),
+    };
 
-      Object.keys(calendarData).forEach((dateKey) => {
-        // dateKey is in dd-mm-yyyy format
-        const [day, month, year] = dateKey.split('-').map(Number);
-        const date = new Date(year, month - 1, day);
-        const isoKey = getDateKey(date);
-        convertedCalendar[isoKey] = calendarData[dateKey].map((workout) => ({
-          ...workout,
-          id: workout.id,
-          name: (workout as any).name || (workout as any).workout,
-          isFavourite: (workout as any).isFavourite || false,
-        }));
-      });
-
-      // Merge with existing data
+    if (Object.keys(allData).length > 0) {
+      // Merge with existing data (existing data takes precedence for optimistic updates)
       setWorkoutsByDate((prev) => ({
+        ...allData,
         ...prev,
-        ...convertedCalendar,
       }));
     }
-  }, [calendarData]);
+
+    // Clear navigation loading state when data arrives
+    if (isNavigationLoading && calendarData !== undefined) {
+      setIsNavigationLoading(false);
+      setPendingNavigationWeek(null);
+    }
+  }, [calendarData, prevChunkData, nextChunkData, isNavigationLoading]);
 
   // Use hook for completion logs
   const { data: completionLogs } = useCompletionLogs({ enabled: !!clientId });
@@ -1145,30 +1246,72 @@ const ClientTrainingCalendarPage = () => {
     setHoveredCopyDay(null);
   };
 
-  // Paste workout handler
-  const handlePasteWorkout = (targetDateKey: string) => {
+  // Paste workout handler - calls API to duplicate workout
+  const handlePasteWorkout = async (targetDateKey: string) => {
     if (!copiedWorkout || targetDateKey === copiedWorkout.dateKey || pastedDays.includes(targetDateKey)) {
       return;
     }
 
-    const newWorkout = {
+    // Generate temporary ID for optimistic UI
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const tempWorkout = {
       ...copiedWorkout.workout,
-      id: `${copiedWorkout.workout.id.split('-')[0]}-${targetDateKey}-${Date.now()}`,
+      id: tempId,
     };
 
+    // Optimistic update with loading state
+    setLoadingWorkoutIds((prev) => new Set(prev).add(tempId));
     setWorkoutsByDate((prev) => ({
       ...prev,
-      [targetDateKey]: [...(prev[targetDateKey] ?? []), newWorkout],
+      [targetDateKey]: [...(prev[targetDateKey] ?? []), tempWorkout],
     }));
-
     setPastedDays((prev) => [...prev, targetDateKey]);
 
     // If not holding shift, exit copy mode after paste
-    if (!isShiftPressed) {
+    const shouldExitCopyMode = !isShiftPressed;
+    if (shouldExitCopyMode) {
       setIsCopyMode(false);
       setCopiedWorkout(null);
       setPastedDays([]);
       setHoveredCopyDay(null);
+    }
+
+    try {
+      // Call API to duplicate workout
+      const result = await apiDuplicateWorkout({
+        clientId,
+        sourceDate: copiedWorkout.dateKey,
+        sourceWorkoutId: copiedWorkout.workout.id,
+        targetDate: targetDateKey,
+      });
+
+      // Update with actual server ID
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        if (updated[targetDateKey]) {
+          updated[targetDateKey] = updated[targetDateKey].map((w) =>
+            w.id === tempId ? { ...w, id: result.newWorkoutId } : w
+          );
+        }
+        return updated;
+      });
+    } catch (error) {
+      // Rollback on error
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        if (updated[targetDateKey]) {
+          updated[targetDateKey] = updated[targetDateKey].filter((w) => w.id !== tempId);
+        }
+        return updated;
+      });
+      toast.error('Failed to duplicate workout');
+    } finally {
+      // Remove loading state
+      setLoadingWorkoutIds((prev) => {
+        const next = new Set(prev);
+        next.delete(tempId);
+        return next;
+      });
     }
   };
 
@@ -1213,17 +1356,61 @@ const ClientTrainingCalendarPage = () => {
     setMultiSelectHoveredDay(null);
   };
 
-  const handleDeleteSelectedWorkouts = () => {
-    setWorkoutsByDate((prev) => {
-      const updated = { ...prev };
-      selectedWorkouts.forEach(({ dateKey, workout }) => {
-        if (updated[dateKey]) {
-          updated[dateKey] = updated[dateKey].filter((w) => w.id !== workout.id);
-        }
-      });
-      return updated;
+  const handleDeleteSelectedWorkouts = async () => {
+    if (selectedWorkouts.length === 0) return;
+
+    // Add loading state to all selected workout cards
+    const workoutIds = selectedWorkouts.map((sw) => sw.workout.id);
+    setLoadingWorkoutIds((prev) => {
+      const next = new Set(prev);
+      workoutIds.forEach((id) => next.add(id));
+      return next;
     });
+
+    // Exit multi-select mode immediately
+    const workoutsToDelete = [...selectedWorkouts];
     handleCancelMultiSelect();
+
+    // Call API for each workout in parallel
+    const results = await Promise.allSettled(
+      workoutsToDelete.map(async ({ dateKey, workout }) => {
+        try {
+          await apiDeleteWorkoutByKey({
+            clientId,
+            sourceDate: dateKey,
+            workoutId: workout.id,
+          });
+
+          // Remove from local state
+          setWorkoutsByDate((prev) => {
+            const updated = { ...prev };
+            if (updated[dateKey]) {
+              updated[dateKey] = updated[dateKey].filter((w) => w.id !== workout.id);
+            }
+            return updated;
+          });
+
+          return { success: true, workoutId: workout.id };
+        } catch (error) {
+          return { success: false, workoutId: workout.id };
+        } finally {
+          // Remove loading state for this workout
+          setLoadingWorkoutIds((prev) => {
+            const next = new Set(prev);
+            next.delete(workout.id);
+            return next;
+          });
+        }
+      })
+    );
+
+    // Show summary toast
+    const successes = results.filter((r) => r.status === 'fulfilled' && (r.value as any).success);
+    const failures = results.filter((r) => r.status === 'fulfilled' && !(r.value as any).success);
+
+    if (failures.length > 0) {
+      toast.error(`Failed to delete ${failures.length} workout(s)`);
+    }
   };
 
   const handleStartMultiSelectCopy = () => {
@@ -1232,7 +1419,7 @@ const ClientTrainingCalendarPage = () => {
     setMultiSelectHoveredDay(null);
   };
 
-  const handleMultiSelectPaste = (targetDateKey: string) => {
+  const handleMultiSelectPaste = async (targetDateKey: string) => {
     if (selectedWorkouts.length === 0) return;
 
     // Sort selected workouts by dateKey to maintain relative positions
@@ -1245,39 +1432,109 @@ const ClientTrainingCalendarPage = () => {
     const earliestDate = new Date(earliestDateKey);
     const targetDate = new Date(targetDateKey);
 
+    // Build list of workouts to duplicate with their temp IDs and target dates
+    const duplicateTasks: Array<{
+      workout: Workout & { id: string };
+      sourceDate: string;
+      targetDateKey: string;
+      tempId: string;
+    }> = [];
+
+    sortedWorkouts.forEach(({ workout, dateKey }) => {
+      // Calculate the offset from the earliest date
+      const workoutDate = new Date(dateKey);
+      const dayOffset = Math.floor(
+        (workoutDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Calculate the target date for this workout
+      const newTargetDate = new Date(targetDate);
+      newTargetDate.setDate(newTargetDate.getDate() + dayOffset);
+      const newTargetDateKey = newTargetDate.toISOString().split('T')[0];
+
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      duplicateTasks.push({
+        workout,
+        sourceDate: dateKey,
+        targetDateKey: newTargetDateKey,
+        tempId,
+      });
+    });
+
+    // Optimistic update: add all temp workouts with loading state
+    const tempIds = duplicateTasks.map((t) => t.tempId);
+    setLoadingWorkoutIds((prev) => {
+      const next = new Set(prev);
+      tempIds.forEach((id) => next.add(id));
+      return next;
+    });
+
     setWorkoutsByDate((prev) => {
       const updated = { ...prev };
-
-      sortedWorkouts.forEach(({ workout, dateKey }) => {
-        // Calculate the offset from the earliest date
-        const workoutDate = new Date(dateKey);
-        const dayOffset = Math.floor(
-          (workoutDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        // Calculate the target date for this workout
-        const newTargetDate = new Date(targetDate);
-        newTargetDate.setDate(newTargetDate.getDate() + dayOffset);
-        const newTargetDateKey = newTargetDate.toISOString().split('T')[0];
-
-        // Create a new workout with a unique ID
-        const newWorkout = {
-          ...workout,
-          id: `${workout.id.split('-')[0]}-${newTargetDateKey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        };
-
-        // Add to the target date
-        updated[newTargetDateKey] = [...(updated[newTargetDateKey] ?? []), newWorkout];
+      duplicateTasks.forEach(({ workout, targetDateKey: tdk, tempId }) => {
+        const tempWorkout = { ...workout, id: tempId };
+        updated[tdk] = [...(updated[tdk] ?? []), tempWorkout];
       });
-
       return updated;
     });
 
     setMultiSelectPastedDays((prev) => [...prev, targetDateKey]);
 
-    // Exit multi-select copy mode after paste
+    // Exit multi-select copy mode immediately
     handleCancelMultiSelect();
+
+    // Call API for each workout in parallel
+    const results = await Promise.allSettled(
+      duplicateTasks.map(async ({ workout, sourceDate, targetDateKey: tdk, tempId }) => {
+        try {
+          const result = await apiDuplicateWorkout({
+            clientId,
+            sourceDate,
+            sourceWorkoutId: workout.id,
+            targetDate: tdk,
+          });
+
+          // Update with actual server ID
+          setWorkoutsByDate((prev) => {
+            const updated = { ...prev };
+            if (updated[tdk]) {
+              updated[tdk] = updated[tdk].map((w) =>
+                w.id === tempId ? { ...w, id: result.newWorkoutId } : w
+              );
+            }
+            return updated;
+          });
+
+          return { success: true, tempId };
+        } catch (error) {
+          // Rollback this specific workout
+          setWorkoutsByDate((prev) => {
+            const updated = { ...prev };
+            if (updated[tdk]) {
+              updated[tdk] = updated[tdk].filter((w) => w.id !== tempId);
+            }
+            return updated;
+          });
+          return { success: false, tempId };
+        } finally {
+          // Remove loading state for this workout
+          setLoadingWorkoutIds((prev) => {
+            const next = new Set(prev);
+            next.delete(tempId);
+            return next;
+          });
+        }
+      })
+    );
+
+    // Show error if any failed
+    const failures = results.filter((r) => r.status === 'fulfilled' && !(r.value as any).success);
+    if (failures.length > 0) {
+      toast.error(`Failed to duplicate ${failures.length} workout(s)`);
+    }
   };
+
 
   const handleMultiSelectDayHover = (dateKey: string) => {
     if (isMultiSelectCopyMode && !multiSelectPastedDays.includes(dateKey)) {
@@ -1754,11 +2011,36 @@ const ClientTrainingCalendarPage = () => {
   };
 
   const handleDeleteWorkout = async (dateKey: string, workoutId: string) => {
-    // Call API using hook
+    // Add loading state to the workout card
+    setLoadingWorkoutIds((prev) => new Set(prev).add(workoutId));
+
     try {
-      await apiDeleteWorkout({ workoutId, date: dateKey });
+      // Call API using the new deleteWorkoutByKey
+      await apiDeleteWorkoutByKey({
+        clientId,
+        sourceDate: dateKey,
+        workoutId,
+      });
+
+      // Optimistically remove from local state after successful delete
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        if (updated[dateKey]) {
+          updated[dateKey] = updated[dateKey].filter((w) => w.id !== workoutId);
+        }
+        return updated;
+      });
+
+      // Success - no toast needed
     } catch (error) {
-      // Hook handles toast and error
+      // Hook handles toast error - just remove loading state
+    } finally {
+      // Remove loading state
+      setLoadingWorkoutIds((prev) => {
+        const next = new Set(prev);
+        next.delete(workoutId);
+        return next;
+      });
     }
   };
 
@@ -1803,7 +2085,7 @@ const ClientTrainingCalendarPage = () => {
     const maxWeek = totalWeeks;
 
     const finalWeekNumber = weekNumber <= maxWeek ? weekNumber : maxWeek;
-    setCurrentWeek(finalWeekNumber);
+    navigateToWeek(finalWeekNumber);
     setIsCalendarOpen(false);
   };
 
@@ -1820,6 +2102,7 @@ const ClientTrainingCalendarPage = () => {
                 onClick={handleToday}
                 className="h-8 border-primary"
                 aria-label={t('athletes.trainingCalendar.goToToday')}
+                disabled={isNavigationLoading}
               >
                 {t('athletes.trainingCalendar.today')}
               </Button>
@@ -1830,14 +2113,25 @@ const ClientTrainingCalendarPage = () => {
                 onClick={handlePreviousWeek}
                 className="h-8 w-8"
                 aria-label={t('athletes.trainingCalendar.previousWeek')}
+                disabled={isNavigationLoading}
               >
-                <ChevronLeft className="size-4" />
+                {isNavigationLoading && pendingNavigationWeek !== null && pendingNavigationWeek < currentWeek ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ChevronLeft className="size-4" />
+                )}
               </Button>
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <div className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
-                    <Calendar className="size-4 text-muted-foreground" />
-                    <span className="font-medium text-sm truncate">{getWeekRange()}</span>
+                  <div className="flex items-center justify-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors min-w-[180px]">
+                    {isNavigationLoading ? (
+                      <Loader2 className="size-4 text-primary animate-spin" />
+                    ) : (
+                      <>
+                        <Calendar className="size-4 text-muted-foreground" />
+                        <span className="font-medium text-sm truncate">{getWeekRange()}</span>
+                      </>
+                    )}
                   </div>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -1860,6 +2154,7 @@ const ClientTrainingCalendarPage = () => {
                 size="icon"
                 onClick={handleNextWeek}
                 disabled={
+                  isNavigationLoading ||
                   (() => {
                     const weeksView = parseInt(selectedWeek, 10);
                     const maxStartWeek = totalWeeks - weeksView + 1;
@@ -1869,7 +2164,11 @@ const ClientTrainingCalendarPage = () => {
                 className="h-8 w-8"
                 aria-label={t('athletes.trainingCalendar.nextWeek')}
               >
-                <ChevronRight className="size-4" />
+                {isNavigationLoading && pendingNavigationWeek !== null && pendingNavigationWeek > currentWeek ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ChevronRight className="size-4" />
+                )}
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -2015,11 +2314,11 @@ const ClientTrainingCalendarPage = () => {
                               isDragOver && isFutureDay && 'border-primary',
                             )}
                           >
-                            <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
+                            <div className="px-3 py-0 border-b border-border flex-shrink-0 flex items-center justify-between">
                               <span className={cn(
                                 "text-xs uppercase flex items-center justify-center",
                                 isToday(date)
-                                  ? "bg-primary text-primary-foreground rounded-full size-5 font-medium"
+                                  ? "text-primary font-bold"
                                   : "text-muted-foreground"
                               )}>{date.getDate()}</span>
                               {!isDateInPast(date) && !isCopyMode && (
@@ -2089,13 +2388,15 @@ const ClientTrainingCalendarPage = () => {
                                               }
                                             }}
                                             className={cn(
-                                              "workout-card rounded-lg border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-all duration-200",
+                                              "workout-card rounded-lg border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-all duration-200 relative",
                                               !isCopyMode && !draggedWorkout && "cursor-pointer hover:border-primary/50",
                                               isFutureDay && !isCopyMode && !draggedWorkout && "cursor-grab active:cursor-grabbing",
                                               isWorkoutCopySource && "opacity-50",
                                               "border-border"
                                             )}
                                           >
+                                            {/* Loading overlay for duplicate/delete operations */}
+                                            {loadingWorkoutIds.has(workout.id) && <CardLoaderOverlay />}
                                             <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
                                               <div className="flex-1 min-w-0 flex items-center gap-1.5">
                                                 <div className="flex-shrink-0">
@@ -2184,6 +2485,8 @@ const ClientTrainingCalendarPage = () => {
                                                     <DropdownMenuItem
                                                       onClick={(e) => {
                                                         e.stopPropagation();
+                                                        // Blur the focused element to prevent focus ring on loading overlay
+                                                        (document.activeElement as HTMLElement)?.blur();
                                                         handleDeleteWorkout(dateKey, workout.id);
                                                       }}
                                                     >

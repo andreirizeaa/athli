@@ -368,4 +368,161 @@ export const clientTrainingsController = {
             data: { assignment: data },
         });
     },
+
+    /**
+     * Duplicate a workout from one date to another
+     * Request body: { clientId, sourceDate, sourceWorkoutId, targetDate }
+     */
+    duplicateWorkout: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { clientId, sourceDate, sourceWorkoutId, targetDate } = req.body;
+
+        if (!clientId || !sourceDate || !sourceWorkoutId || !targetDate) {
+            return res.status(400).json({
+                success: false,
+                message: 'clientId, sourceDate, sourceWorkoutId, and targetDate are required'
+            });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Fetch source workout from source date
+        const { data: sourceEntry, error: sourceError } = await supabase
+            .from('client_training')
+            .select('training_data, coach_id')
+            .eq('client_id', clientId)
+            .eq('date', sourceDate)
+            .single();
+
+        if (sourceError || !sourceEntry) {
+            return res.status(404).json({ success: false, message: 'Source training entry not found' });
+        }
+
+        const sourceWorkouts = Array.isArray(sourceEntry.training_data) ? sourceEntry.training_data : [];
+        const workoutToDuplicate = sourceWorkouts.find((w: any) => w.id === sourceWorkoutId);
+
+        if (!workoutToDuplicate) {
+            return res.status(404).json({ success: false, message: 'Workout not found in source date' });
+        }
+
+        // 2. Create new workout with unique ID
+        const newWorkoutId = `${sourceWorkoutId.split('-')[0]}-${targetDate}-${Date.now()}`;
+        const duplicatedWorkout = {
+            ...workoutToDuplicate,
+            id: newWorkoutId,
+            duplicated_from: sourceWorkoutId,
+            duplicated_at: new Date().toISOString(),
+            assigned_by: userId,
+            assigned_at: new Date().toISOString()
+        };
+
+        // 3. Fetch or create target date entry
+        const { data: targetEntry, error: targetFetchError } = await supabase
+            .from('client_training')
+            .select('*')
+            .eq('client_id', clientId)
+            .eq('date', targetDate)
+            .single();
+
+        if (targetFetchError && targetFetchError.code !== 'PGRST116') {
+            return res.status(500).json({ success: false, message: targetFetchError.message });
+        }
+
+        let targetTrainingData: any[] = targetEntry?.training_data || [];
+        targetTrainingData.push(duplicatedWorkout);
+
+        // 4. Upsert target date
+        const { error: upsertError } = await supabase
+            .from('client_training')
+            .upsert({
+                client_id: clientId,
+                date: targetDate,
+                coach_id: sourceEntry.coach_id || userId,
+                training_data: targetTrainingData,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'client_id, date, coach_id' });
+
+        if (upsertError) {
+            return res.status(500).json({ success: false, message: upsertError.message });
+        }
+
+        success(res, {
+            message: 'Workout duplicated successfully',
+            data: { newWorkoutId, workout: duplicatedWorkout }
+        });
+    },
+
+    /**
+     * Delete a workout using sourceDate and workoutId as the key
+     * Request body: { clientId, sourceDate, workoutId }
+     */
+    deleteWorkoutByKey: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { clientId, sourceDate, workoutId } = req.body;
+
+        if (!clientId || !sourceDate || !workoutId) {
+            return res.status(400).json({
+                success: false,
+                message: 'clientId, sourceDate, and workoutId are required'
+            });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Fetch existing entry
+        const { data: existingEntry, error: fetchError } = await supabase
+            .from('client_training')
+            .select('*')
+            .eq('client_id', clientId)
+            .eq('date', sourceDate)
+            .single();
+
+        if (fetchError) {
+            return res.status(404).json({ success: false, message: 'Calendar entry not found' });
+        }
+
+        let trainingData: any[] = existingEntry.training_data || [];
+        const initialLength = trainingData.length;
+
+        // Filter out the workout
+        trainingData = trainingData.filter((w: any) => w.id !== workoutId);
+
+        if (trainingData.length === initialLength) {
+            return res.status(404).json({ success: false, message: 'Workout not found in this date' });
+        }
+
+        // 2. Update or delete row
+        if (trainingData.length === 0) {
+            const { error: deleteError } = await supabase
+                .from('client_training')
+                .delete()
+                .eq('client_id', clientId)
+                .eq('date', sourceDate);
+
+            if (deleteError) return res.status(500).json({ success: false, message: deleteError.message });
+        } else {
+            const { error: updateError } = await supabase
+                .from('client_training')
+                .update({
+                    training_data: trainingData,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('client_id', clientId)
+                .eq('date', sourceDate);
+
+            if (updateError) return res.status(500).json({ success: false, message: updateError.message });
+        }
+
+        success(res, { message: 'Workout deleted successfully' });
+    },
 };
