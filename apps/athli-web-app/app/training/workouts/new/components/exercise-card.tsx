@@ -784,7 +784,7 @@ export const ExerciseCard = ({
             <Table className="text-[11px] leading-tight">
               <TableHeader className="bg-transparent">
                 <TableRow className="h-8">
-                  <TableHead className="text-center h-8 py-1 px-2">
+                  <TableHead className="text-center h-8 py-1 px-2 w-[130px]">
                     <Button
                       type="button"
                       variant="outline"
@@ -796,7 +796,6 @@ export const ExerciseCard = ({
                       Add set
                     </Button>
                   </TableHead>
-                  <TableHead className="text-center h-8 py-1 px-2 w-[130px]">Type</TableHead>
                   {exercise.exerciseType === 'distance_duration' ? (
                     <>
                       <TableHead className="text-center h-8 py-1 px-2">Distance</TableHead>
@@ -817,7 +816,6 @@ export const ExerciseCard = ({
               <TableBody>
                 {sets.map((set, index) => (
                   <TableRow key={index} className="h-10 bg-background">
-                    <TableCell className="font-medium text-center py-1 px-2">{index + 1}</TableCell>
                     <TableCell className="py-1 px-2 w-[130px]">
                       <div className="flex justify-center">
                         <Select

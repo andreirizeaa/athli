@@ -58,6 +58,8 @@ import { toast } from 'sonner';
 import { EditProgramDetailsSidePanel } from './edit-program-details-side-panel';
 import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { useTrainingData } from '../../training-data-context';
+import { StandardBuilder } from '@/app/training/workouts/new/workout-builder';
+import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
 
 type ProgramMeta = {
   name: string;
@@ -87,6 +89,7 @@ const DraggableWorkoutCard = ({
   isDraggingGlobal,
   isCopySource,
   isCopyMode,
+  isInLibrary,
 }: {
   workout: Workout & { id: string };
   week: number;
@@ -100,6 +103,7 @@ const DraggableWorkoutCard = ({
   isDraggingGlobal?: boolean;
   isCopySource?: boolean;
   isCopyMode?: boolean;
+  isInLibrary?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, isDragging, transform, node } = useDraggable({
     id: `workout-${workout.id}`,
@@ -185,13 +189,32 @@ const DraggableWorkoutCard = ({
               <Copy className="mr-2 size-3.5" />
               <span>Copy</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onSaveToLibrary(workout);
-            }}>
-              <Save className="mr-2 size-3.5" />
-              <span>Save to Library</span>
-            </DropdownMenuItem>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div>
+                    <DropdownMenuItem
+                      disabled={isInLibrary}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isInLibrary) {
+                          onSaveToLibrary(workout);
+                        }
+                      }}
+                      className={isInLibrary ? 'opacity-50 cursor-not-allowed' : ''}
+                    >
+                      <Save className="mr-2 size-3.5" />
+                      <span>Save to Library</span>
+                    </DropdownMenuItem>
+                  </div>
+                </TooltipTrigger>
+                {isInLibrary && (
+                  <TooltipContent side="left">
+                    <p>This workout is already saved</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={(e) => {
@@ -241,6 +264,7 @@ const DroppableDayCard = ({
   isShiftPressed,
   copiedWorkoutId,
   isPastedDay,
+  checkIsInLibrary,
 }: {
   week: number;
   day: number;
@@ -265,6 +289,7 @@ const DroppableDayCard = ({
   isShiftPressed?: boolean;
   copiedWorkoutId?: string;
   isPastedDay?: boolean;
+  checkIsInLibrary?: (workoutId: string) => boolean;
 }) => {
   const { setNodeRef } = useDroppable({
     id: `day-${week}-${day}`,
@@ -345,6 +370,7 @@ const DroppableDayCard = ({
                   isDraggingGlobal={isDraggingGlobal}
                   isCopyMode={isCopyMode}
                   isCopySource={isCopyMode && copiedWorkoutId === workout.id}
+                  isInLibrary={checkIsInLibrary ? checkIsInLibrary(workout.id) : false}
                 />
               ))}
             </div>
@@ -505,6 +531,10 @@ export const ProgramBuilder = ({
   }, [isCopyMode, isShiftPressed, pastedDays.length]);
 
   const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
+
+  // Workout builder state for creating new workouts inline
+  const [isWorkoutBuilderOpen, setIsWorkoutBuilderOpen] = useState(false);
+  const [pendingWorkoutDay, setPendingWorkoutDay] = useState<number | null>(null);
 
 
   type PreviewExercise = {
@@ -979,6 +1009,52 @@ export const ProgramBuilder = ({
   const handleOpenAddWorkoutModal = (day: number) => {
     setSelectedDay(day);
     setIsAddWorkoutModalOpen(true);
+  };
+
+  // Handler for "Create new workout" button in AddWorkoutSidePanel
+  const handleCreateNewWorkout = () => {
+    // Store the day for which we're creating the workout
+    setPendingWorkoutDay(selectedDay);
+    // Open the workout builder dialog
+    setIsWorkoutBuilderOpen(true);
+  };
+
+  // Handler for saving a workout from the inline builder
+  const handleSaveWorkoutFromBuilder = async (payload: WorkoutProgramPayload) => {
+    if (pendingWorkoutDay === null) return;
+
+    const { week, day } = getWeekAndDay(pendingWorkoutDay);
+
+    // Create a workout object from the payload
+    const newWorkout: Workout & { id: string } = {
+      id: `inline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      program: payload.title,
+      description: payload.description || '',
+      type: payload.type,
+      difficulty: payload.difficulty || 'intermediate',
+      length: '',
+      totalExercises: payload.totalExercises,
+      equipment: payload.equipment || [],
+      created: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-'),
+      isFavourite: false,
+      workout_data: { items: payload.items || [] },
+    };
+
+    setWorkoutsByDay((prev) => {
+      const updated = { ...prev };
+      updated[week] = {
+        ...(updated[week] || {}),
+        [day]: [...(updated[week]?.[day] || []), newWorkout],
+      };
+      saveToHistory(updated);
+      return updated;
+    });
+
+    // Close the builder dialog
+    setIsWorkoutBuilderOpen(false);
+    setPendingWorkoutDay(null);
+
+    toast.success(`Workout "${payload.title}" added to program`);
   };
 
   const handleSaveWorkoutFromPanel = async (workout: Workout, scheduleOption: string, config: string) => {
@@ -1683,6 +1759,12 @@ export const ProgramBuilder = ({
                           isShiftPressed={isShiftPressed}
                           copiedWorkoutId={copiedWorkout?.workout.id}
                           isPastedDay={isPastedDay}
+                          checkIsInLibrary={(workoutId) => {
+                            // Workouts added from library have IDs like "{libraryId}-{timestamp}-{random}"
+                            // Inline-created workouts have IDs like "inline-{timestamp}-{random}"
+                            // Check if workoutId starts with any library workout ID
+                            return availableWorkouts.some(w => workoutId.startsWith(w.id));
+                          }}
                         />
                       );
                     })}
@@ -1724,6 +1806,7 @@ export const ProgramBuilder = ({
           }
         }}
         onSave={handleSaveWorkoutFromPanel}
+        onCreateNewWorkout={handleCreateNewWorkout}
         workoutTitle={selectedDay ? t('programs.builder.addWorkout.titleDay', { day: selectedDay }) : undefined}
         mode="program"
         availableWorkouts={availableWorkouts}
@@ -1883,6 +1966,23 @@ export const ProgramBuilder = ({
           setWorkoutToSave(null);
           refreshPrograms();
         }}
+      />
+      {/* Inline workout builder for creating new workouts */}
+      <StandardBuilder
+        meta={{
+          title: '',
+          type: '',
+          difficulty: 'all_levels',
+          description: '',
+        }}
+        open={isWorkoutBuilderOpen}
+        onOpenChange={(open) => {
+          setIsWorkoutBuilderOpen(open);
+          if (!open) {
+            setPendingWorkoutDay(null);
+          }
+        }}
+        onSaveSuccess={handleSaveWorkoutFromBuilder}
       />
     </div>
   );

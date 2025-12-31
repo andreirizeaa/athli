@@ -68,10 +68,11 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
         //     return;
         // }
 
-        if (!newProgramDifficulty) {
-            setNewProgramDifficultyError(t('programs.addProgram.difficultyRequiredError'));
-            return;
-        }
+        // Difficulty is optional now
+        // if (!newProgramDifficulty) {
+        //     setNewProgramDifficultyError(t('programs.addProgram.difficultyRequiredError'));
+        //     return;
+        // }
 
         setIsNavigating(true);
 
@@ -126,8 +127,7 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                         onClick={handleCreateProgramContinue}
                         disabled={
                             isNavigating ||
-                            !newProgramName.trim() ||
-                            !newProgramDifficulty
+                            !newProgramName.trim()
                         }
                         aria-label={t('programs.addProgram.continueAria')}
                         className="gap-2"
@@ -162,7 +162,7 @@ export const CreateProgramSidePanel = ({ open, onOpenChange }: CreateProgramSide
                     </div>
                     <div className="flex flex-col gap-2">
                         <label htmlFor="program-difficulty" className="text-sm font-medium">
-                            {t('programs.addProgram.difficulty')}<RequiredAsterisk />
+                            {t('programs.addProgram.difficulty')}
                         </label>
                         <Select
                             value={newProgramDifficulty}

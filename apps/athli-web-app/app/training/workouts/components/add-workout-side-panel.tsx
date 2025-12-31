@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Dumbbell, Check, Loader2 } from 'lucide-react';
+import { Dumbbell, Check, Loader2, Plus } from 'lucide-react';
 import Link from 'next/link';
 import {
     Tooltip,
@@ -20,6 +20,7 @@ type AddWorkoutSidePanelProps = {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSave: (workout: Workout, scheduleOption: string, config: string) => Promise<void>;
+    onCreateNewWorkout?: () => void;
     selectedDate?: Date;
     workoutTitle?: string;
     mode?: 'program' | 'calendar';
@@ -30,6 +31,7 @@ export const AddWorkoutSidePanel = ({
     open,
     onOpenChange,
     onSave,
+    onCreateNewWorkout,
     selectedDate,
     workoutTitle,
     mode = 'calendar',
@@ -64,7 +66,7 @@ export const AddWorkoutSidePanel = ({
             await onSave(selectedWorkout, 'once', '');
             handleClose();
         } catch (error) {
-            console.error('Failed to save workout:', error);
+            // Error handling is done by parent component
         } finally {
             setIsSaving(false);
         }
@@ -108,17 +110,12 @@ export const AddWorkoutSidePanel = ({
                                 </TooltipTrigger>
                                 {isEmpty && (
                                     <TooltipContent>
-                                        <p>No exercises in this workout</p>
+                                        <p>{t('athletes.trainingCalendar.noExercisesInWorkout')}</p>
                                     </TooltipContent>
                                 )}
                             </Tooltip>
                         </TooltipProvider>
-                        <div className="flex flex-col gap-1 py-1 min-w-0">
-                            <span className="font-medium text-sm truncate">{row.program}</span>
-                            {row.description && (
-                                <span className="text-xs text-muted-foreground line-clamp-1">{row.description}</span>
-                            )}
-                        </div>
+                        <span className="font-medium text-sm truncate">{row.program}</span>
                     </div>
                 );
             },
@@ -137,7 +134,7 @@ export const AddWorkoutSidePanel = ({
                             className="text-sm text-primary hover:underline"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            Add exercise
+                            {t('athletes.trainingCalendar.addExerciseToWorkout')}
                         </Link>
                     );
                 }
@@ -175,6 +172,29 @@ export const AddWorkoutSidePanel = ({
             }
         >
             <div className="flex flex-col h-full min-h-0">
+                {/* Create new workout button - only show in program mode when handler is provided */}
+                {mode === 'program' && onCreateNewWorkout && (
+                    <>
+                        <div className="pt-1 pb-2">
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    handleClose();
+                                    onCreateNewWorkout();
+                                }}
+                                className="w-full gap-2"
+                            >
+                                <Plus className="size-4" />
+                                {t('athletes.trainingCalendar.createNewWorkout')}
+                            </Button>
+                        </div>
+                        <div className="flex items-center gap-3 py-3 pb-4">
+                            <div className="flex-1 h-px bg-border" />
+                            <span className="text-xs text-muted-foreground uppercase">{t('athletes.trainingCalendar.or')}</span>
+                            <div className="flex-1 h-px bg-border" />
+                        </div>
+                    </>
+                )}
                 <div className="flex-1 min-h-0 h-full [&_.border-t]:border-t-0">
                     <DataGrid
                         data={availableWorkouts}

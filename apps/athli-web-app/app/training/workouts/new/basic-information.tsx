@@ -90,7 +90,7 @@ export const BasicInformation = ({
         </div>
         <div className="flex flex-col gap-2">
           <label htmlFor="workout-difficulty" className="text-sm font-medium">
-            {t('workouts.addWorkout.difficulty')}<RequiredAsterisk />
+            {t('workouts.addWorkout.difficulty')}
           </label>
           <Select
             value={difficulty}
