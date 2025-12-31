@@ -1379,7 +1379,7 @@ Focus on proper form and progressive overload.`;
                 onDrop={(e) => handleSectionDrop(e, section.id)}
               >
                 {/* Section Notes - Moved to Top of Content */}
-                <div className="w-full relative mb-1">
+                <div className="w-full relative mb-1 pt-1">
                   <Input
                     placeholder="Notes"
                     value={section.notes || ''}
@@ -2324,7 +2324,7 @@ Focus on proper form and progressive overload.`;
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="flex-1 gap-1.5 text-xs h-9 px-2"
+                                    className="flex-1 gap-1.5 text-xs h-9 px-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                                     onClick={handleAddTopLevelExercise}
                                   >
                                     <Plus className="size-3" />
@@ -2334,7 +2334,7 @@ Focus on proper form and progressive overload.`;
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="flex-1 gap-1.5 text-xs h-9 px-2"
+                                    className="flex-1 gap-1.5 text-xs h-9 px-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                                     onClick={() => setIsCreatingSection(true)}
                                   >
                                     <Plus className="size-3" />
@@ -2369,7 +2369,7 @@ Focus on proper form and progressive overload.`;
                                   <Button
                                     type="button"
                                     variant="outline"
-                                    className="gap-2"
+                                    className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                                     onClick={() => setIsCreatingSection(true)}
                                   >
                                     <Plus className="size-4" />
@@ -2378,7 +2378,8 @@ Focus on proper form and progressive overload.`;
 
                                   <Button
                                     type="button"
-                                    className="gap-2"
+                                    variant="outline"
+                                    className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                                     onClick={handleAddTopLevelExercise}
                                   >
                                     <Plus className="size-4" />
@@ -2464,10 +2465,22 @@ Focus on proper form and progressive overload.`;
                 </div>
 
                 {/* Overview Panel - Fills remaining space to align bottom with left section */}
-                <div className={cn(
-                  "overflow-hidden rounded-xl border bg-background shadow-sm flex flex-col transition-all duration-500 ease-in-out origin-bottom flex-1 min-h-0",
-                  isOverviewOpen ? "opacity-100" : "h-0 border-0 opacity-0"
-                )}>
+                <div
+                  className={cn(
+                    "overflow-hidden rounded-xl border bg-background shadow-sm flex flex-col transition-all duration-500 ease-in-out origin-bottom min-h-0",
+                    isOverviewOpen ? "flex-1 opacity-100" : "h-0 border-0 opacity-0 flex-shrink-0"
+                  )}
+                  onClick={(e) => {
+                    // Only trigger close if clicking on the container itself (dead zone), not on child elements
+                    if (e.target === e.currentTarget) {
+                      if (isDirty) {
+                        setShowCloseConfirm(true);
+                      } else {
+                        onOpenChange(false);
+                      }
+                    }
+                  }}
+                >
                   <div className="flex-1 overflow-y-auto px-2 py-4">
                     <OverviewPanel
                       items={workoutSchema.items}
