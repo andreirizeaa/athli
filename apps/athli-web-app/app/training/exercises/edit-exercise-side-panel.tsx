@@ -343,12 +343,13 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
       setVideoLinkError(null);
     }
 
-    if (!category) {
-      setCategoryError(t('exercises.addExercise.categoryRequiredError'));
-      hasError = true;
-    } else {
-      setCategoryError(null);
-    }
+    // Category validation - Optional
+    // if (!category) {
+    //   setCategoryError(t('exercises.addExercise.categoryRequiredError'));
+    //   hasError = true;
+    // } else {
+    //   setCategoryError(null);
+    // }
 
     // Muscle groups validation - Optional
     // if (muscleGroups.length === 0) {
@@ -447,7 +448,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
               onClick={handleSave}
               disabled={isSaving || isDeleting || !hasFormChanged()}
               aria-label={t('exercises.addExercise.saveAria')}
-              className={cn('gap-2', isSaving && 'min-w-[120px] justify-center')}
+              className="gap-2"
             >
               {isSaving ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -697,7 +698,7 @@ export const EditExerciseSidePanel = ({ open, onOpenChange, exercise, onSave, on
 
             <div className="flex flex-col gap-2">
               <label htmlFor="category" className="text-sm font-medium">
-                {t('exercises.addExercise.category')}<RequiredAsterisk />
+                {t('exercises.addExercise.category')}
               </label>
               <Select
                 value={category}

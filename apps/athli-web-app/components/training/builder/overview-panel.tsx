@@ -25,7 +25,7 @@ import {
   restrictToVerticalAxis,
   restrictToFirstScrollableAncestor,
 } from '@dnd-kit/modifiers';
-import { Target, GripVertical, Link2, Link2Off, Trash2 } from 'lucide-react';
+import { Target, GripVertical, Link2, Link2Off, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/general/utils';
 import type {
@@ -33,7 +33,7 @@ import type {
   WorkoutSection,
   WorkoutSchemaItem,
   ValidationErrors,
-} from '../shared/types/workout-builder.types';
+} from '@/components/training/shared/types/workout-builder.types';
 
 type ActiveOverviewItem =
   | {
@@ -185,7 +185,13 @@ const OverviewSectionCard = ({
           )}
         </div>
         <div ref={setDroppableRef} className="min-h-[10px]">
-          {children}
+          {section.isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="size-4 animate-spin text-primary" />
+            </div>
+          ) : (
+            children
+          )}
         </div>
       </div>
     </div>
@@ -1103,7 +1109,7 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
 
   return (
     <>
-      <h2 className="text-left mb-0">Overview</h2>
+      <h2 className="text-left mb-0 px-1 pb-2">Overview</h2>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -1123,14 +1129,16 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                 let itemIndex = 0;
 
                 // Add initial gap (before first item)
-                renderedItems.push(
-                  <DropGap
-                    key="gap-root-0"
-                    id={`gap-root-0`}
-                    data={{ type: 'gap', level: 'root', index: 0 }}
-                    isActive={activeGapId === 'gap-root-0'}
-                  />
-                );
+                if (!isSectionMode) {
+                  renderedItems.push(
+                    <DropGap
+                      key="gap-root-0"
+                      id={`gap-root-0`}
+                      data={{ type: 'gap', level: 'root', index: 0 }}
+                      isActive={activeGapId === 'gap-root-0'}
+                    />
+                  );
+                }
 
                 while (itemIndex < items.length) {
                   const item = items[itemIndex];
@@ -1278,14 +1286,16 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
                   }
 
                   // Add gap after this item (using the CURRENT itemIndex which points to the next item)
-                  renderedItems.push(
-                    <DropGap
-                      key={`gap-root-${itemIndex}`}
-                      id={`gap-root-${itemIndex}`}
-                      data={{ type: 'gap', level: 'root', index: itemIndex }}
-                      isActive={activeGapId === `gap-root-${itemIndex}`}
-                    />
-                  );
+                  if (!isSectionMode) {
+                    renderedItems.push(
+                      <DropGap
+                        key={`gap-root-${itemIndex}`}
+                        id={`gap-root-${itemIndex}`}
+                        data={{ type: 'gap', level: 'root', index: itemIndex }}
+                        isActive={activeGapId === `gap-root-${itemIndex}`}
+                      />
+                    );
+                  }
                 }
 
                 return renderedItems;
@@ -1293,12 +1303,14 @@ export const OverviewPanel = ({ items, onItemsChange, groupExercisesBySuperset, 
             ) : (
               // If completely empty, show one gap
               <>
-                <DropGap
-                  key="gap-root-0"
-                  id="gap-root-0"
-                  data={{ type: 'gap', level: 'root', index: 0 }}
-                  isActive={activeGapId === 'gap-root-0'}
-                />
+                {!isSectionMode && (
+                  <DropGap
+                    key="gap-root-0"
+                    id="gap-root-0"
+                    data={{ type: 'gap', level: 'root', index: 0 }}
+                    isActive={activeGapId === 'gap-root-0'}
+                  />
+                )}
                 <p className="text-xs text-muted-foreground">
                   Exercises and sections will appear here once created.
                 </p>

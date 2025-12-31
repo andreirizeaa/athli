@@ -61,12 +61,17 @@ export const EditProgramDetailsSidePanel = ({
         if (open) {
             setName(programMeta.name);
             setType(programMeta.type);
-            setDifficulty(programMeta.difficulty);
+            // Normalize difficulty value to snake_case if it comes as "All levels" or "all levels"
+            let normalizedDifficulty = programMeta.difficulty;
+            if (programMeta.difficulty.toLowerCase() === 'all levels') {
+                normalizedDifficulty = 'all_levels';
+            }
+            setDifficulty(normalizedDifficulty);
             setDescription(programMeta.description);
             setOriginalValues({
                 name: programMeta.name,
                 type: programMeta.type,
-                difficulty: programMeta.difficulty,
+                difficulty: normalizedDifficulty,
                 description: programMeta.description,
             });
             setNameError(null);
@@ -83,7 +88,7 @@ export const EditProgramDetailsSidePanel = ({
         description !== originalValues.description;
 
     // Check if form is valid (all required fields filled)
-    const isFormValid = name.trim() !== '' && type.trim() !== '' && difficulty.trim() !== '';
+    const isFormValid = name.trim() !== '' && difficulty.trim() !== '';
 
     // Save button should be enabled only if there are changes AND form is valid
     const isSaveEnabled = hasChanges && isFormValid && !isSaving;
@@ -93,10 +98,11 @@ export const EditProgramDetailsSidePanel = ({
             setNameError(t('library.programNameRequired'));
             return;
         }
-        if (!type.trim()) {
-            setTypeError(t('library.programTypeRequired'));
-            return;
-        }
+        // Type is optional now
+        // if (!type.trim()) {
+        //     setTypeError(t('library.programTypeRequired'));
+        //     return;
+        // }
         if (!difficulty.trim()) {
             setDifficultyError(t('library.difficultyRequired'));
             return;
@@ -194,40 +200,6 @@ export const EditProgramDetailsSidePanel = ({
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label htmlFor="program-type" className="text-sm font-medium">
-                                {t('programs.addProgram.type')}<RequiredAsterisk />
-                            </label>
-                            <Select
-                                value={type}
-                                onValueChange={(value) => {
-                                    setType(value);
-                                    if (typeError) {
-                                        setTypeError(null);
-                                    }
-                                }}
-                            >
-                                <SelectTrigger
-                                    id="program-type"
-                                    className={cn(
-                                        'w-full',
-                                        typeError && 'border-destructive aria-invalid:border-destructive'
-                                    )}
-                                    aria-invalid={!!typeError}
-                                >
-                                    <SelectValue placeholder={t('programs.addProgram.typePlaceholder')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {PROGRAM_TYPES.map((programType) => (
-                                        <SelectItem key={programType.value} value={programType.value}>
-                                            {programType.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-                        </div>
-
-                        <div className="flex flex-col gap-2">
                             <label htmlFor="program-difficulty" className="text-sm font-medium">
                                 {t('programs.addProgram.difficulty')}<RequiredAsterisk />
                             </label>
@@ -259,6 +231,40 @@ export const EditProgramDetailsSidePanel = ({
                                 </SelectContent>
                             </Select>
                             {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="program-type" className="text-sm font-medium">
+                                {t('programs.addProgram.type')}
+                            </label>
+                            <Select
+                                value={type}
+                                onValueChange={(value) => {
+                                    setType(value);
+                                    if (typeError) {
+                                        setTypeError(null);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="program-type"
+                                    className={cn(
+                                        'w-full',
+                                        typeError && 'border-destructive aria-invalid:border-destructive'
+                                    )}
+                                    aria-invalid={!!typeError}
+                                >
+                                    <SelectValue placeholder={t('programs.addProgram.typePlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PROGRAM_TYPES.map((programType) => (
+                                        <SelectItem key={programType.value} value={programType.value}>
+                                            {programType.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {typeError && <p className="text-sm text-destructive">{typeError}</p>}
                         </div>
                     </div>
 

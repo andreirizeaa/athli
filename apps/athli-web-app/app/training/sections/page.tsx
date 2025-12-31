@@ -35,9 +35,11 @@ import {
 } from 'lucide-react';
 
 import type { Section } from '@/api/coach/coach-section-service';
-import { starSections, deleteSections, duplicateSection, createSection, getSectionById } from '@/api/coach/coach-section-service';
+import { starSections, deleteSections, duplicateSection, createSection, getSectionById, updateSection } from '@/api/coach/coach-section-service';
 import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
+import { SectionBuilder } from './section-builder';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 
 type ColumnId = 'description' | 'sectionType' | 'totalExercises' | 'created' | 'actions';
 
@@ -71,6 +73,9 @@ const SectionsPage = () => {
   const [isCreateSectionOpen, setIsCreateSectionOpen] = useState<boolean>(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [sectionToDelete, setSectionToDelete] = useState<string | null>(null);
+  const [isSectionBuilderOpen, setIsSectionBuilderOpen] = useState<boolean>(false);
+  const [selectedSectionForBuilder, setSelectedSectionForBuilder] = useState<Section | null>(null);
+  const [selectedSectionData, setSelectedSectionData] = useState<any>(null);
   const itemsPerPage = 25;
 
   // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
@@ -99,8 +104,29 @@ const SectionsPage = () => {
     });
   };
 
-  const handleNavigateToSection = (sectionId: string) => {
-    router.push(`/training/sections/${sectionId}/edit`);
+  const [isLoadingSectionData, setIsLoadingSectionData] = useState(false);
+
+  const handleNavigateToSection = async (sectionId: string) => {
+    const section = sections.find(s => s.id === sectionId);
+    if (section) {
+      // Open the dialog immediately and show loading inside
+      setSelectedSectionForBuilder(section);
+      setSelectedSectionData(null);
+      setIsLoadingSectionData(true);
+      setIsSectionBuilderOpen(true);
+
+      try {
+        // Fetch full section data including section_data in background
+        const fullSection = await getSectionById(sectionId);
+        setSelectedSectionData(fullSection.section_data);
+      } catch (error) {
+        console.error('Failed to fetch section data:', error);
+        toast.error(t('general.error'));
+        setIsSectionBuilderOpen(false);
+      } finally {
+        setIsLoadingSectionData(false);
+      }
+    }
   };
 
   const handleToggleStar = async (sectionId: string, e: React.MouseEvent | React.KeyboardEvent) => {
@@ -651,7 +677,11 @@ const SectionsPage = () => {
       <ConfirmDeleteDialog
         open={sectionToDelete !== null}
         onOpenChange={(open) => !open && setSectionToDelete(null)}
-        onConfirm={() => sectionToDelete && handleDeleteSection(sectionToDelete)}
+        onConfirm={() => {
+          if (sectionToDelete) {
+            handleDeleteSection(sectionToDelete);
+          }
+        }}
         itemName={sections.find((s) => s.id === sectionToDelete)?.program}
         itemType="section"
       />
@@ -661,6 +691,35 @@ const SectionsPage = () => {
         onClose={() => setIsCreateSectionOpen(false)}
         onCreateSection={handleCreateSection}
       />
+
+      {selectedSectionForBuilder && (
+        <SectionBuilder
+          open={isSectionBuilderOpen}
+          onOpenChange={setIsSectionBuilderOpen}
+          sectionType={selectedSectionForBuilder.sectionType as 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary'}
+          initialData={selectedSectionData}
+          isLoadingInitialData={isLoadingSectionData}
+          meta={{
+            title: selectedSectionForBuilder.program,
+            description: selectedSectionForBuilder.description,
+            type: '',
+            difficulty: '',
+          }}
+          onSaveSuccess={async (payload: WorkoutProgramPayload) => {
+            if (selectedSectionForBuilder?.id) {
+              try {
+                await updateSection(selectedSectionForBuilder.id, payload);
+                await refreshSections();
+                toast.success(t('library.sections.toast.savedSuccessfully', { name: selectedSectionForBuilder.program, type: '' }));
+                setIsSectionBuilderOpen(false);
+              } catch (error) {
+                console.error('Failed to update section:', error);
+                toast.error(t('general.error'));
+              }
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

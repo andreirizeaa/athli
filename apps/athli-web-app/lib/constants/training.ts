@@ -48,3 +48,39 @@ export const SECTION_TYPES = [
     { value: 'timed', label: 'Timed', description: 'Work and rest intervals with specified durations' },
     { value: 'circuits', label: 'Circuits', description: 'Multiple exercises performed in sequence with minimal rest' },
 ] as const;
+
+export const MUSCLE_OPTIONS = [
+    { label: 'Chest', value: 'Chest' },
+    { label: 'Back', value: 'Back' },
+    { label: 'Legs', value: 'Legs' },
+    { label: 'Shoulders', value: 'Shoulders' },
+    { label: 'Arms', value: 'Arms' },
+    { label: 'Core', value: 'Core' },
+    { label: 'Cardio', value: 'Cardio' },
+] as const;
+
+export const EXERCISE_TYPE_OPTIONS = [
+    { label: 'Weight & Reps', value: 'weight_reps' },
+    { label: 'Reps Only', value: 'reps' },
+    { label: 'Distance & Duration', value: 'distance_duration' },
+    { label: 'Time', value: 'time' },
+] as const;
+
+export const CATEGORY_OPTIONS = [
+    { label: 'Strength', value: 'Strength' },
+    { label: 'Cardio', value: 'Cardio' },
+    { label: 'Plyometrics', value: 'Plyometrics' },
+    { label: 'Stretching', value: 'Stretching' },
+    { label: 'Powerlifting', value: 'Powerlifting' },
+    { label: 'Olympic Weightlifting', value: 'Olympic Weightlifting' },
+] as const;
+
+export const EQUIPMENT_OPTIONS = [
+    { label: 'None', value: 'None' },
+    { label: 'Barbell', value: 'Barbell' },
+    { label: 'Dumbbell', value: 'Dumbbell' },
+    { label: 'Machine', value: 'Machine' },
+    { label: 'Kettlebell', value: 'Kettlebell' },
+    { label: 'Pull-up Bar', value: 'Pull-up Bar' },
+    { label: 'Bands', value: 'Bands' },
+] as const;

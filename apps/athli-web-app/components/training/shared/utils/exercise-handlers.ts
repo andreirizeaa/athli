@@ -1,4 +1,4 @@
-import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset } from '../types/workout-builder.types';
+import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset } from '@/components/training/shared/types/workout-builder.types';
 
 /**
  * Handles deleting a top-level exercise from the items array

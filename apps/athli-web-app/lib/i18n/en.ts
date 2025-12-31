@@ -232,7 +232,7 @@ export const enMessages = {
       email: 'Email',
       emailPlaceholder: 'Enter email address',
       saveChanges: 'Save Changes',
-      saving: 'Saving...',
+      saving: 'Saving',
       updatedSuccessfully: 'Profile updated successfully',
       updateFailed: 'Failed to update profile',
       imageUploadFailed: 'Failed to upload image',
@@ -564,13 +564,15 @@ export const enMessages = {
   },
   general: {
     save: 'Save',
-    saving: 'Saving...',
+    saving: 'Saving',
     cancel: 'Cancel',
     delete: 'Delete',
     edit: 'Edit',
     remove: 'Remove',
     add: 'Add',
     change: 'Change',
+    copy: 'Copy',
+    paste: 'Paste',
     back: 'Back',
     close: 'Close',
     open: 'Open',
@@ -730,6 +732,7 @@ export const enMessages = {
         action: 'Create Section',
       },
       actions: {
+        save: 'Save',
         newSection: 'New Section',
         duplicate: 'Duplicate',
         duplicateAria: 'Duplicate section',
@@ -758,7 +761,7 @@ export const enMessages = {
         starredWithNameSuccessfully: '{name} starred successfully',
         unstarredSuccessfully: 'Section unstarred successfully',
         unstarredWithNameSuccessfully: '{name} unstarred successfully',
-        savedSuccessfully: '{type} section "{name}" saved successfully',
+        savedSuccessfully: 'Section "{name}" saved successfully',
         updatedSuccessfully: 'Section "{name}" updated successfully',
         failedToSave: 'Failed to save section',
         failedToLoad: 'Failed to load section',
@@ -905,7 +908,7 @@ export const enMessages = {
     },
     new: {
       toast: {
-        savedSuccessfully: 'Program "{name}" created successfully',
+        savedSuccessfully: 'Program "{name}" saved successfully',
       },
     },
     assigning: {
@@ -964,6 +967,11 @@ export const enMessages = {
       addWeekAria: 'Add week',
       duplicateWeek: 'Duplicate week',
       duplicateWeekAria: 'Duplicate week',
+      clearWeek: 'Clear week',
+      clearWeekAria: 'Clear week',
+      clearWeekConfirmTitle: 'Clear week {number}?',
+      clearWeekConfirmDescription: 'Are you sure you want to clear all workouts from week {number}? This action cannot be undone.',
+      clearWeekAction: 'Clear',
       deleteWeek: 'Delete week',
       deleteWeekAria: 'Delete week',
       undo: 'Undo',
@@ -1017,7 +1025,16 @@ export const enMessages = {
       },
       toast: {
         savedSuccessfully: 'Program saved successfully',
-        failedToSave: 'Failed to save program',
+        saveFailed: 'Failed to save program',
+        weekDuplicated: 'Week {number} duplicated successfully',
+      },
+      multiSelect: {
+        workoutsSelected: '{count} workout(s) selected',
+        clickToAddWorkout: 'Click on a day to add this workout',
+        clickToAddWorkouts: 'Click on a day to add this group of workouts',
+        deleteAria: 'Delete selected workouts',
+        copyAria: 'Copy selected workouts',
+        selectWorkoutAria: 'Select workout {name}',
       },
     },
   },
@@ -1216,6 +1233,8 @@ export const enMessages = {
       backAria: 'Back to workout details',
       cancel: 'Cancel',
       cancelAria: 'Cancel creating workout',
+      openWorkoutDetails: 'Open workout details',
+      openSectionDetails: 'Edit section details',
       generate: 'Generate',
       generateAria: 'Generate workout',
       workoutNameRequiredError: 'Workout name is required',
@@ -1284,7 +1303,7 @@ export const enMessages = {
     },
     new: {
       toast: {
-        savedSuccessfully: '{type} workout "{name}" saved successfully',
+        savedSuccessfully: 'Successfully saved',
         failedToSave: 'Failed to save workout',
       },
     },
@@ -1958,6 +1977,10 @@ export const enMessages = {
       configureWorkoutDescription: 'Configure how this workout should be added to the calendar.',
       addThisWorkoutWeeklyOn: 'Add this workout weekly on',
       configurations: 'Configurations',
+      noExercisesInWorkout: 'No exercises in this workout',
+      addExerciseToWorkout: 'Add exercise',
+      createNewWorkout: 'Create new workout',
+      or: 'OR',
 
       /* Add Program Side Panel */
       addProgramTitle: 'Add Program',
@@ -1973,6 +1996,21 @@ export const enMessages = {
 
       searchWorkoutsPlaceholder: 'Search workouts...',
       noWorkoutsFound: 'No workouts found. Try adjusting your filters.',
+
+      /* Copy/Paste feature */
+      holdShiftToPaste: 'Hold shift to paste to multiple days',
+      saveToLibrary: 'Save to Library',
+      alreadySaved: 'This workout is already saved to your library',
+
+      /* Multi-select feature */
+      multiSelect: {
+        workoutsSelected: '{count} workout(s) selected',
+        clickToAddWorkout: 'Click on a day to add this workout',
+        clickToAddWorkouts: 'Click on a day to add this group of workouts',
+        deleteAria: 'Delete selected workouts',
+        copyAria: 'Copy selected workouts',
+        selectWorkoutAria: 'Select workout {name}',
+      },
 
     },
   },

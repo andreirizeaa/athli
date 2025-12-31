@@ -1,4 +1,4 @@
-import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '../types/workout-builder.types';
+import type { WorkoutSchema, WorkoutSchemaItem, ExerciseWithSuperset, WorkoutSection } from '@/components/training/shared/types/workout-builder.types';
 
 /**
  * Handles adding a new section to the workout

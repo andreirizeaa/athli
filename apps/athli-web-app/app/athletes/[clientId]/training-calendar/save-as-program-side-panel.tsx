@@ -67,7 +67,7 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
   const [isToCalendarOpen, setIsToCalendarOpen] = useState<boolean>(false);
   const [programName, setProgramName] = useState<string>('');
   const [programType, setProgramType] = useState<string>('');
-  const [difficulty, setDifficulty] = useState<string>('');
+  const [difficulty, setDifficulty] = useState<string>('all_levels');
   const [description, setDescription] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [hasWorkoutData, setHasWorkoutData] = useState<boolean>(true);
@@ -141,7 +141,7 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
     setToDate(undefined);
     setProgramName('');
     setProgramType('');
-    setDifficulty('');
+    setDifficulty('all_levels');
     setDescription('');
     setNameError(null);
     setTypeError(null);
@@ -157,8 +157,7 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
     fromDate !== undefined &&
     toDate !== undefined &&
     programName.trim() !== '' &&
-    programType !== '' &&
-    difficulty !== '' &&
+
     hasWorkoutData;
 
   const handleSave = async () => {
@@ -186,19 +185,15 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
       setNameError(null);
     }
 
-    if (!programType) {
-      setTypeError(t('athletes.trainingCalendar.saveAsProgram.errors.typeRequired'));
-      hasError = true;
-    } else {
-      setTypeError(null);
-    }
+    // Type is optional now
+    // if (!programType) {
+    //   setTypeError(t('athletes.trainingCalendar.saveAsProgram.errors.typeRequired'));
+    //   hasError = true;
+    // } else {
+    //   setTypeError(null);
+    // }
 
-    if (!difficulty) {
-      setDifficultyError(t('athletes.trainingCalendar.saveAsProgram.errors.difficultyRequired'));
-      hasError = true;
-    } else {
-      setDifficultyError(null);
-    }
+
 
     if (hasError) return;
 
@@ -436,45 +431,10 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
           {nameError && <p className="text-sm text-destructive">{nameError}</p>}
         </div>
 
-        {/* Program Type */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="program-type" className="text-sm font-medium flex items-center gap-[0.1px]">
-            {t('programs.addProgram.type')}
-            <RequiredAsterisk />
-          </Label>
-          <Select
-            value={programType}
-            onValueChange={(value) => {
-              setProgramType(value);
-              if (typeError) setTypeError(null);
-            }}
-          >
-            <SelectTrigger
-              id="program-type"
-              className={cn(
-                'w-full',
-                typeError && 'border-destructive aria-invalid:border-destructive'
-              )}
-              aria-invalid={!!typeError}
-            >
-              <SelectValue placeholder={t('programs.addProgram.typePlaceholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              {PROGRAM_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-        </div>
-
         {/* Difficulty */}
         <div className="flex flex-col gap-2">
           <Label htmlFor="program-difficulty" className="text-sm font-medium flex items-center gap-[0.1px]">
             {t('programs.addProgram.difficulty')}
-            <RequiredAsterisk />
           </Label>
           <Select
             value={difficulty}
@@ -502,6 +462,39 @@ export const SaveAsProgram: React.FC<SaveAsProgramProps> = ({ isOpen, onClose, c
             </SelectContent>
           </Select>
           {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+        </div>
+
+        {/* Program Type */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="program-type" className="text-sm font-medium flex items-center gap-[0.1px]">
+            {t('programs.addProgram.type')}
+          </Label>
+          <Select
+            value={programType}
+            onValueChange={(value) => {
+              setProgramType(value);
+              if (typeError) setTypeError(null);
+            }}
+          >
+            <SelectTrigger
+              id="program-type"
+              className={cn(
+                'w-full',
+                typeError && 'border-destructive aria-invalid:border-destructive'
+              )}
+              aria-invalid={!!typeError}
+            >
+              <SelectValue placeholder={t('programs.addProgram.typePlaceholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {PROGRAM_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {typeError && <p className="text-sm text-destructive">{typeError}</p>}
         </div>
 
         {/* Description */}

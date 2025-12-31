@@ -2,14 +2,25 @@
 
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
-import { GripVertical, Grid2x2, List, Play, Search, X } from 'lucide-react';
+import { GripVertical, Grid2x2, List, Play, Search, X, Filter, ChevronDown } from 'lucide-react';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { MultiAsyncSelect } from '@/components/ui/multi-async-select';
 import { cn } from '@/lib/general/utils';
-import { searchExercises, type Exercise } from '@/api/exercise/exercise-search';
+import { searchExercises, type Exercise, type ExerciseFilters } from '@/api/exercise/exercise-search';
+import {
+  MUSCLE_OPTIONS,
+  EXERCISE_TYPE_OPTIONS,
+  CATEGORY_OPTIONS,
+  DIFFICULTY_LEVELS,
+  EQUIPMENT_OPTIONS
+} from '@/lib/constants/training';
 
 type ExerciseSelectionPanelProps = {
   onExerciseClick?: (exercise: Exercise) => void;
@@ -26,8 +37,17 @@ export const ExerciseSelectionPanel = ({
 }: ExerciseSelectionPanelProps) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<ExerciseFilters>({
+    hideCustom: false,
+    muscles: [],
+    types: [],
+    categories: [],
+    difficulties: [],
+    equipments: [],
+  });
 
-  const exerciseResults = useMemo(() => searchExercises(searchQuery), [searchQuery]);
+  const exerciseResults = useMemo(() => searchExercises(searchQuery, filters), [searchQuery, filters]);
 
   const handleExerciseClick = (exercise: Exercise) => {
     if (onExerciseClick) {
@@ -35,28 +55,150 @@ export const ExerciseSelectionPanel = ({
     }
   };
 
+  const activeFiltersCount = (filters.muscles?.length || 0) +
+    (filters.types?.length || 0) +
+    (filters.categories?.length || 0) +
+    (filters.difficulties?.length || 0) +
+    (filters.equipments?.length || 0) +
+    (filters.hideCustom ? 1 : 0);
+
+  const clearFilters = () => {
+    setFilters({
+      hideCustom: false,
+      muscles: [],
+      types: [],
+      categories: [],
+      difficulties: [],
+      equipments: [],
+    });
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="flex-shrink-0">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-          <Input
-            type="text"
-            placeholder="Search for exercises.."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn('pl-9 w-full', searchQuery && 'pr-9')}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear search"
-            >
-              <X className="size-4" />
-            </button>
-          )}
+        <div className="flex gap-1 w-full">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Search for exercises.."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={cn('pl-9 w-full pr-9')}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
+
+          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  "group relative shrink-0",
+                  isFilterOpen && "bg-muted"
+                )}
+                aria-label="Filter exercises"
+              >
+                <Filter className={cn("size-4", activeFiltersCount > 0 && "text-primary fill-primary/20")} />
+                {activeFiltersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-4" align="end">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium leading-none">Filters</h4>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-primary"
+                    onClick={clearFilters}
+                  >
+                    Clear filters
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="hide-custom" className="text-xs text-muted-foreground">Hide custom exercises</Label>
+                  <Switch
+                    id="hide-custom"
+                    checked={filters.hideCustom}
+                    onCheckedChange={(checked) => setFilters(prev => ({ ...prev, hideCustom: checked }))}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Muscle Group</Label>
+                    <MultiAsyncSelect
+                      options={[...MUSCLE_OPTIONS]}
+                      value={filters.muscles}
+                      onValueChange={(val) => setFilters(prev => ({ ...prev, muscles: val }))}
+                      placeholder="Select muscles..."
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Exercise Type</Label>
+                    <MultiAsyncSelect
+                      options={[...EXERCISE_TYPE_OPTIONS]}
+                      value={filters.types}
+                      onValueChange={(val) => setFilters(prev => ({ ...prev, types: val }))}
+                      placeholder="Select types..."
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Category</Label>
+                    <MultiAsyncSelect
+                      options={[...CATEGORY_OPTIONS]}
+                      value={filters.categories}
+                      onValueChange={(val) => setFilters(prev => ({ ...prev, categories: val }))}
+                      placeholder="Select categories..."
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Difficulty</Label>
+                    <MultiAsyncSelect
+                      options={[...DIFFICULTY_LEVELS].filter(d => d.value !== 'all_levels')}
+                      value={filters.difficulties}
+                      onValueChange={(val) => setFilters(prev => ({ ...prev, difficulties: val }))}
+                      placeholder="Select difficulties..."
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Equipment</Label>
+                    <MultiAsyncSelect
+                      options={[...EQUIPMENT_OPTIONS]}
+                      value={filters.equipments}
+                      onValueChange={(val) => setFilters(prev => ({ ...prev, equipments: val }))}
+                      placeholder="Select equipment..."
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="mt-3 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
