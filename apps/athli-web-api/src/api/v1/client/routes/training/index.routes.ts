@@ -177,3 +177,71 @@ clientTrainingRouter.post('/workout-instance', supabaseAuthenticate, clientTrain
  */
 clientTrainingRouter.delete('/:clientId/workout/:workoutId', supabaseAuthenticate, clientTrainingsController.deleteWorkout);
 
+/**
+ * @swagger
+ * /api/v1/client/trainings/calendar/duplicate:
+ *   post:
+ *     summary: Duplicate a workout from one date to another
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - clientId
+ *               - sourceDate
+ *               - sourceWorkoutId
+ *               - targetDate
+ *             properties:
+ *               clientId:
+ *                 type: string
+ *               sourceDate:
+ *                 type: string
+ *                 format: date
+ *               sourceWorkoutId:
+ *                 type: string
+ *               targetDate:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Workout duplicated successfully
+ */
+clientTrainingRouter.post('/calendar/duplicate', supabaseAuthenticate, clientTrainingsController.duplicateWorkout);
+
+/**
+ * @swagger
+ * /api/v1/client/trainings/calendar/delete:
+ *   post:
+ *     summary: Delete a workout using sourceDate and workoutId
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - clientId
+ *               - sourceDate
+ *               - workoutId
+ *             properties:
+ *               clientId:
+ *                 type: string
+ *               sourceDate:
+ *                 type: string
+ *                 format: date
+ *               workoutId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Workout deleted successfully
+ */
+clientTrainingRouter.post('/calendar/delete', supabaseAuthenticate, clientTrainingsController.deleteWorkoutByKey);
+

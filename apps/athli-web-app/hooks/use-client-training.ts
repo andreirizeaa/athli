@@ -10,7 +10,12 @@ import {
 import {
     assignWorkout,
     deleteClientWorkout,
-    type AssignWorkoutData
+    duplicateWorkout,
+    deleteWorkoutByKey,
+    type AssignWorkoutData,
+    type DuplicateWorkoutData,
+    type DuplicateWorkoutResponse,
+    type DeleteWorkoutByKeyData
 } from '@/api/client/client-training-service';
 import { toast } from 'sonner';
 
@@ -52,14 +57,31 @@ export function useClientTraining(clientId: string) {
         }
     });
 
-    // Mutation for deleting workout
+    // Mutation for deleting workout (legacy, uses URL params)
     const deleteWorkoutMutation = useMutation({
         mutationFn: ({ workoutId, date }: { workoutId: string; date: string }) =>
             deleteClientWorkout(clientId, workoutId, date),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['client-training-calendar', clientId] });
-            toast.success('Workout deleted successfully');
         },
+        onError: (error: Error) => {
+            toast.error(error.message || 'Failed to delete workout');
+        }
+    });
+
+    // Mutation for duplicating a workout to another date
+    // No cache invalidation - page uses optimistic local state updates
+    const duplicateWorkoutMutation = useMutation({
+        mutationFn: (data: DuplicateWorkoutData) => duplicateWorkout(data),
+        onError: (error: Error) => {
+            toast.error(error.message || 'Failed to duplicate workout');
+        }
+    });
+
+    // Mutation for deleting workout by key (sourceDate + workoutId)
+    // No cache invalidation - page uses optimistic local state updates
+    const deleteWorkoutByKeyMutation = useMutation({
+        mutationFn: (data: DeleteWorkoutByKeyData) => deleteWorkoutByKey(data),
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to delete workout');
         }
@@ -83,9 +105,13 @@ export function useClientTraining(clientId: string) {
         useCompletionLogs,
         assignWorkout: assignWorkoutMutation.mutateAsync,
         deleteWorkout: deleteWorkoutMutation.mutateAsync,
+        duplicateWorkout: duplicateWorkoutMutation.mutateAsync,
+        deleteWorkoutByKey: deleteWorkoutByKeyMutation.mutateAsync,
         updateCalendar: updateCalendarMutation.mutateAsync,
         isAssigning: assignWorkoutMutation.isPending,
         isDeleting: deleteWorkoutMutation.isPending,
+        isDuplicating: duplicateWorkoutMutation.isPending,
+        isDeletingByKey: deleteWorkoutByKeyMutation.isPending,
         isUpdatingCalendar: updateCalendarMutation.isPending,
     };
 }
