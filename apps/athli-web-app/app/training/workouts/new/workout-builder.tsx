@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { ArrowDown, ArrowUp, BrainCog, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dumbbell, Ellipsis, FileText, Info, Link2, Link2Off, Loader2, NotebookPen, Plus, Repeat, Sparkles, Timer, Trash2, X, Check } from 'lucide-react';
@@ -134,7 +135,16 @@ export const StandardBuilder = ({
 }: StandardBuilderProps) => {
   const t = useTranslations();
   const isSectionMode = mode === 'section';
+  const router = useRouter();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
+
+  const markDirty = () => {
+    setIsDirty(true);
+    onDirtyChange?.();
+  };
+
   const [isSaving, setIsSaving] = useState(false);
   const [isOverviewOpen, setIsOverviewOpen] = useState(true);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
@@ -456,7 +466,7 @@ export const StandardBuilder = ({
 
     // Mark as dirty if there are items or exercises to add
     if (sectionsWithStructure.length > 0 || exercisesToAdd.length > 0) {
-      onDirtyChange?.();
+      markDirty();
     }
 
     // Calculate delay per exercise
@@ -486,7 +496,7 @@ export const StandardBuilder = ({
         }));
 
         if (index === 0) {
-          onDirtyChange?.();
+          markDirty();
         }
 
         if (index === exercisesToAdd.length - 1) {
@@ -713,10 +723,12 @@ Focus on proper form and progressive overload.`;
         if (result instanceof Promise) {
           await result;
           setIsSaving(false);
+          setIsDirty(false);
         } else {
           // If it doesn't return a Promise, the parent handles everything
           // Just reset loading state - parent will close dialog and show toast
           setIsSaving(false);
+          setIsDirty(false);
         }
       } catch (error) {
         setIsSaving(false);
@@ -740,7 +752,7 @@ Focus on proper form and progressive overload.`;
     }
 
     setWorkoutSchema((prev) => selectSection(type, prev));
-    onDirtyChange?.();
+    markDirty();
   };
 
   // After items change, restore scroll position
@@ -758,14 +770,25 @@ Focus on proper form and progressive overload.`;
   const handleCreateSection = (name: string, type: SectionType) => {
     setWorkoutSchema((prev) => selectSection(type, prev, { name: name }));
     setIsCreatingSection(false);
-    onDirtyChange?.();
+    markDirty();
   };
+
+  const handleNavigateRequest = (path: string) => {
+    if (isDirty) {
+      setPendingNavigationPath(path);
+      setShowCloseConfirm(true);
+    } else {
+      onOpenChange(false);
+      router.push(path);
+    }
+  };
+
 
   const handleDeleteSection = (sectionId: string) => {
     const result = deleteSection(sectionId, workoutSchema);
     setWorkoutSchema(result.schema);
 
-    onDirtyChange?.();
+    markDirty();
   };
 
 
@@ -773,14 +796,14 @@ Focus on proper form and progressive overload.`;
     setWorkoutSchema((prev) =>
       deleteExerciseFromOverview(sectionId, exerciseId, prev)
     );
-    onDirtyChange?.();
+    markDirty();
   };
 
   const handleDeleteSupersetFromOverview = (sectionId: string, exerciseIds: string[]) => {
     setWorkoutSchema((prev) =>
       deleteSupersetFromOverview(sectionId, exerciseIds, prev)
     );
-    onDirtyChange?.();
+    markDirty();
   };
 
   // Top-level drop handler
@@ -788,7 +811,7 @@ Focus on proper form and progressive overload.`;
     e.preventDefault();
     if (draggedExercise && dragOverTopLevelSlot !== null) {
       setWorkoutSchema((prev) => handleTopLevelSlotDrop(dragOverTopLevelSlot, draggedExercise, prev));
-      onDirtyChange?.();
+      markDirty();
     } else if (draggedSection && dragOverTopLevelSlot !== null) {
       // Handle dropping a section from the sidebar
       // We insert a NEW section at the slot index
@@ -991,7 +1014,7 @@ Focus on proper form and progressive overload.`;
 
         return { ...prev, items: newItems };
       });
-      onDirtyChange?.();
+      markDirty();
     }
     handleDragEnd();
     setDraggedSection(null);
@@ -1004,7 +1027,7 @@ Focus on proper form and progressive overload.`;
       setWorkoutSchema((prev) =>
         dropExercise(sectionId, draggedExercise, prev)
       );
-      onDirtyChange?.();
+      markDirty();
       setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
     }
     handleDragEnd();
@@ -1028,13 +1051,13 @@ Focus on proper form and progressive overload.`;
 
   const handleAddExercise = (sectionId: string) => {
     setWorkoutSchema((prev) => addExercise(sectionId, prev));
-    onDirtyChange?.();
+    markDirty();
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
   };
 
   const handleAddTopLevelExercise = () => {
     setWorkoutSchema((prev) => addTopLevelExercise(prev));
-    onDirtyChange?.();
+    markDirty();
   };
 
   const handleSlotDropWrapper = (e: React.DragEvent, sectionId: string, slotIndex: number) => {
@@ -1048,28 +1071,28 @@ Focus on proper form and progressive overload.`;
 
     setSectionValidationErrors((prev) => clearEmptyExercisesError(sectionId, prev));
 
-    onDirtyChange?.();
+    markDirty();
     handleDragEnd();
   };
 
   const handleSupersetLink = (sectionId: string, exerciseIndex: number) => {
     setWorkoutSchema((prev) => linkSuperset(sectionId, exerciseIndex, prev));
-    onDirtyChange?.();
+    markDirty();
   };
 
   const handleSupersetUnlink = (sectionId: string, exerciseIndex: number) => {
     setWorkoutSchema((prev) => unlinkSuperset(sectionId, exerciseIndex, prev));
-    onDirtyChange?.();
+    markDirty();
   };
 
   const handleTopLevelSupersetLink = (itemIndex: number) => {
     setWorkoutSchema((prev) => linkTopLevelSuperset(itemIndex, prev));
-    onDirtyChange?.();
+    markDirty();
   };
 
   const handleTopLevelSupersetUnlink = (itemIndex: number) => {
     setWorkoutSchema((prev) => unlinkTopLevelSuperset(itemIndex, prev));
-    onDirtyChange?.();
+    markDirty();
   };
 
   // Move handlers for exercises within sections
@@ -1091,7 +1114,7 @@ Focus on proper form and progressive overload.`;
         return item;
       }),
     }));
-    onDirtyChange?.();
+    markDirty();
   };
 
   const handleMoveExerciseDown = (sectionId: string, exerciseIndex: number, totalExercises: number) => {
@@ -1112,7 +1135,7 @@ Focus on proper form and progressive overload.`;
         return item;
       }),
     }));
-    onDirtyChange?.();
+    markDirty();
   };
 
   // Move handlers for top-level exercises
@@ -1125,7 +1148,7 @@ Focus on proper form and progressive overload.`;
       [items[itemIndex - 1], items[itemIndex]] = [items[itemIndex], items[itemIndex - 1]];
       return { ...prev, items };
     });
-    onDirtyChange?.();
+    markDirty();
   };
 
   const handleMoveTopLevelExerciseDown = (itemIndex: number) => {
@@ -1137,7 +1160,7 @@ Focus on proper form and progressive overload.`;
       [items[itemIndex], items[itemIndex + 1]] = [items[itemIndex + 1], items[itemIndex]];
       return { ...prev, items };
     });
-    onDirtyChange?.();
+    markDirty();
   };
 
   const activeExerciseIds = useMemo(() => {
@@ -1227,7 +1250,7 @@ Focus on proper form and progressive overload.`;
                   value={section.name || ''}
                   onChange={(e) => {
                     const newName = e.target.value;
-                    onDirtyChange?.();
+                    markDirty();
                     setWorkoutSchema((prev) => ({
                       ...prev,
                       items: prev.items.map((item) => {
@@ -1267,7 +1290,7 @@ Focus on proper form and progressive overload.`;
                         // Only allow digits
                         const value = rawValue.replace(/\D/g, '');
 
-                        onDirtyChange?.();
+                        markDirty();
                         setWorkoutSchema((prev) => ({
                           ...prev,
                           items: prev.items.map((item) => {
@@ -1362,7 +1385,7 @@ Focus on proper form and progressive overload.`;
                     value={section.notes || ''}
                     onChange={(e) => {
                       const newNotes = e.target.value;
-                      onDirtyChange?.();
+                      markDirty();
                       setWorkoutSchema((prev) => ({
                         ...prev,
                         items: prev.items.map((item) => {
@@ -1382,7 +1405,7 @@ Focus on proper form and progressive overload.`;
                     <button
                       type="button"
                       onClick={() => {
-                        onDirtyChange?.();
+                        markDirty();
                         setWorkoutSchema((prev) => ({
                           ...prev,
                           items: prev.items.map((item) => {
@@ -1482,7 +1505,7 @@ Focus on proper form and progressive overload.`;
                                 canMoveUp={exerciseIndex > 0}
                                 canMoveDown={exerciseIndex < (section.exercises?.length || 0) - 1}
                                 onExerciseChange={(newExercise) => {
-                                  onDirtyChange?.();
+                                  markDirty();
                                   const castExercise = newExercise as ExerciseWithSuperset;
                                   handleRecomputeExerciseValidation(
                                     exercise.instanceId,
@@ -1509,7 +1532,7 @@ Focus on proper form and progressive overload.`;
                                   }));
                                 }}
                                 onDelete={() => {
-                                  onDirtyChange?.();
+                                  markDirty();
                                   setWorkoutSchema((prev) => ({
                                     ...prev,
                                     items: prev.items.map((item) => {
@@ -1698,7 +1721,7 @@ Focus on proper form and progressive overload.`;
             canMoveUp={canMoveUp}
             canMoveDown={canMoveDown}
             onExerciseChange={(newExercise) => {
-              onDirtyChange?.();
+              markDirty();
               const castExercise = newExercise as ExerciseWithSuperset;
               handleRecomputeExerciseValidation(
                 exercise.instanceId,
@@ -1723,7 +1746,7 @@ Focus on proper form and progressive overload.`;
               }));
             }}
             onDelete={() => {
-              onDirtyChange?.();
+              markDirty();
               setWorkoutSchema((prev) => deleteTopLevelExercise(exercise.instanceId, prev));
             }}
           />
@@ -1753,13 +1776,13 @@ Focus on proper form and progressive overload.`;
                   Unlink
                 </Button>
               </div>
-            ) : draggedExercise && dragOverTopLevelSlot === itemIndex + 1 ? (
-              // Dragging and this is the drop slot - show drop zone
+            ) : (draggedExercise || draggedSection) && dragOverTopLevelSlot === itemIndex + 1 ? (
+              // Dragging and this is the drop slot - show drop zone (replaces superset button)
               <div className="h-14 my-2 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                <span>Drop exercise here</span>
+                <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
               </div>
             ) : (
-              // Show superset button (visible even when dragging, unless drop zone is showing here)
+              // Show superset button (visible while dragging, only hidden when drop zone shows at this slot)
               <div className="flex justify-center my-2">
                 <Button
                   type="button"
@@ -1787,11 +1810,19 @@ Focus on proper form and progressive overload.`;
           className="!max-w-[95vw] sm:!max-w-[95vw] !w-[95vw] !h-[90vh] flex flex-col p-0 overflow-hidden ring-0 border-none outline-none bg-transparent shadow-none"
           onInteractOutside={(e) => {
             e.preventDefault();
-            setShowCloseConfirm(true);
+            if (isDirty) {
+              setShowCloseConfirm(true);
+            } else {
+              onOpenChange(false);
+            }
           }}
           onEscapeKeyDown={(e) => {
             e.preventDefault();
-            setShowCloseConfirm(true);
+            if (isDirty) {
+              setShowCloseConfirm(true);
+            } else {
+              onOpenChange(false);
+            }
           }}
         >
           <DialogTitle className="sr-only">Workout Builder</DialogTitle>
@@ -1873,6 +1904,7 @@ Focus on proper form and progressive overload.`;
                                 handleDragEnd();
                                 setDraggedSection(null);
                               }}
+                              onNavigateRequest={handleNavigateRequest}
                             />
                           </div>
                         )}
@@ -2083,7 +2115,7 @@ Focus on proper form and progressive overload.`;
                             onChange={(e) => {
                               const newTitle = e.target.value;
                               setWorkoutTitle(newTitle);
-                              onDirtyChange?.();
+                              markDirty();
                               // Update meta if needed - parent component should handle this
                             }}
                           />
@@ -2121,7 +2153,7 @@ Focus on proper form and progressive overload.`;
                                     value={workoutType}
                                     onValueChange={(value) => {
                                       setWorkoutType(value);
-                                      onDirtyChange?.();
+                                      markDirty();
                                     }}
                                   >
                                     <SelectTrigger
@@ -2149,7 +2181,7 @@ Focus on proper form and progressive overload.`;
                                     value={difficulty}
                                     onValueChange={(value) => {
                                       setDifficulty(value);
-                                      onDirtyChange?.();
+                                      markDirty();
                                     }}
                                   >
                                     <SelectTrigger
@@ -2179,7 +2211,7 @@ Focus on proper form and progressive overload.`;
                                     value={description}
                                     onChange={(e) => {
                                       setDescription(e.target.value);
-                                      onDirtyChange?.();
+                                      markDirty();
                                     }}
                                     rows={5}
                                     className="resize-none"
@@ -2234,6 +2266,7 @@ Focus on proper form and progressive overload.`;
                               // - Before: not if linked to previous, AND not if previous item is an exercise (superset area handles it)
                               //   Special case: allow before sections if there's no previous item (top of list)
                               // - After: not if linked to next, AND not if superset button area exists (it handles the drop zone internally)
+                              // Note: The superset button area handles drop zones between exercises for BOTH exercises and sections
                               const canShowDropZoneBefore = !isLinkedToPrev && prevItem?.itemType !== 'exercise' && (!isSection || !prevItem);
                               const canShowDropZoneAfter = !isLinkedToNext && !hasSupersetButtonAfter;
 
@@ -2380,12 +2413,36 @@ Focus on proper form and progressive overload.`;
                   </div>
                 </div>
               </div>
-              <div className={cn(
-                "flex flex-col h-full min-h-0 transition-all duration-500 ease-in-out",
-                isOverviewOpen ? "w-[22%]" : "w-14"
-              )}>
+              <div
+                className={cn(
+                  "flex flex-col h-full min-h-0 transition-all duration-500 ease-in-out",
+                  isOverviewOpen ? "w-[22%]" : "w-14"
+                )}
+                onClick={(e) => {
+                  // Only trigger close if clicking on the container itself (dead zone), not on child elements
+                  if (e.target === e.currentTarget) {
+                    if (isDirty) {
+                      setShowCloseConfirm(true);
+                    } else {
+                      onOpenChange(false);
+                    }
+                  }
+                }}
+              >
                 {/* Toggle Button Area - Positioned at top */}
-                <div className="flex-shrink-0 flex flex-col justify-start pb-4 items-start pt-2">
+                <div
+                  className="flex-shrink-0 flex flex-col justify-start pb-4 items-start pt-2"
+                  onClick={(e) => {
+                    // Only trigger close if clicking on the container itself (dead zone), not on child elements
+                    if (e.target === e.currentTarget) {
+                      if (isDirty) {
+                        setShowCloseConfirm(true);
+                      } else {
+                        onOpenChange(false);
+                      }
+                    }
+                  }}
+                >
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -2415,7 +2472,7 @@ Focus on proper form and progressive overload.`;
                     <OverviewPanel
                       items={workoutSchema.items}
                       onItemsChange={(items: WorkoutSchemaItem[]) => {
-                        onDirtyChange?.();
+                        markDirty();
                         setWorkoutSchema((prev) => ({
                           ...prev,
                           items,
@@ -2425,7 +2482,7 @@ Focus on proper form and progressive overload.`;
                       onDeleteExercise={handleDeleteExerciseFromOverview}
                       onDeleteTopLevelExercise={(instanceId: string) => {
                         setWorkoutSchema((prev) => deleteTopLevelExercise(instanceId, prev));
-                        onDirtyChange?.();
+                        markDirty();
                       }}
                       onDeleteSuperset={handleDeleteSupersetFromOverview}
                       onDeleteTopLevelSuperset={(exerciseIds: string[]) => {
@@ -2435,7 +2492,7 @@ Focus on proper form and progressive overload.`;
                             (item) => !(item.itemType === 'exercise' && exerciseIds.includes(item.exercise.instanceId))
                           ),
                         }));
-                        onDirtyChange?.();
+                        markDirty();
                       }}
                       onUnlinkSuperset={handleSupersetUnlink}
                       onUnlinkTopLevelSuperset={handleTopLevelSupersetUnlink}
@@ -2475,6 +2532,10 @@ Focus on proper form and progressive overload.`;
         onConfirm={() => {
           setShowCloseConfirm(false);
           onOpenChange(false);
+          if (pendingNavigationPath) {
+            router.push(pendingNavigationPath);
+            setPendingNavigationPath(null);
+          }
         }}
       />
     </>
