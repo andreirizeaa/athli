@@ -2168,6 +2168,14 @@ Focus on proper form and progressive overload.`;
                           </div>
                         </div>
                       )}
+                      {isLoadingInitialData && (
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                            <p className="text-sm text-muted-foreground">Loading workout...</p>
+                          </div>
+                        </div>
+                      )}
                       {/* Fixed title container above exercise area */}
                       <div className="flex-shrink-0 w-full bg-background px-4 py-3">
                         <div className="flex items-center gap-2 w-full">
