@@ -535,6 +535,12 @@ export const ProgramBuilder = ({
   // Workout builder state for creating new workouts inline
   const [isWorkoutBuilderOpen, setIsWorkoutBuilderOpen] = useState(false);
   const [pendingWorkoutDay, setPendingWorkoutDay] = useState<number | null>(null);
+  // State for editing an existing workout
+  const [editingWorkout, setEditingWorkout] = useState<{
+    week: number;
+    day: number;
+    workout: Workout & { id: string };
+  } | null>(null);
 
 
   type PreviewExercise = {
@@ -1057,6 +1063,50 @@ export const ProgramBuilder = ({
     toast.success(`Workout "${payload.title}" added to program`);
   };
 
+  const handleSaveEditedWorkout = (payload: WorkoutProgramPayload) => {
+    if (!editingWorkout) return Promise.resolve();
+
+    const { week, day, workout } = editingWorkout;
+
+    setWorkoutsByDay((prev) => {
+      const next = { ...prev };
+      if (!next[week]) next[week] = {};
+      if (!next[week][day]) next[week][day] = [];
+
+      const currentWorkouts = next[week][day];
+      const workoutIndex = currentWorkouts.findIndex((w) => w.id === workout.id);
+
+      if (workoutIndex !== -1) {
+        // Update existing workout
+        const updatedWorkout = {
+          ...currentWorkouts[workoutIndex],
+          program: payload.title,
+          description: payload.description || '',
+          type: payload.type,
+          difficulty: payload.difficulty || 'intermediate',
+          equipment: payload.equipment || [],
+          totalExercises: payload.totalExercises,
+          workout_data: {
+            items: payload.items || []
+          }
+        };
+
+        const nextWorkouts = [...currentWorkouts];
+        nextWorkouts[workoutIndex] = updatedWorkout;
+        next[week][day] = nextWorkouts;
+
+        saveToHistory(next);
+      }
+
+      return next;
+    });
+
+    setIsWorkoutBuilderOpen(false);
+    setEditingWorkout(null);
+    toast.success('Workout updated');
+    return Promise.resolve();
+  };
+
   const handleSaveWorkoutFromPanel = async (workout: Workout, scheduleOption: string, config: string) => {
     if (!workout || selectedDay === null) return;
 
@@ -1146,7 +1196,9 @@ export const ProgramBuilder = ({
     day: number,
     workout: Workout & { id: string },
   ) => {
-    setSelectedWorkoutDetails({ week, day, workout });
+    // Instead of opening details modal, open the builder for editing
+    setEditingWorkout({ week, day, workout });
+    setIsWorkoutBuilderOpen(true);
   };
 
   const handleCloseWorkoutDetails = () => {
@@ -1969,22 +2021,31 @@ export const ProgramBuilder = ({
       />
       {/* Inline workout builder for creating new workouts */}
       <StandardBuilder
-        meta={{
-          title: '',
-          type: '',
-          difficulty: 'all_levels',
-          description: '',
-        }}
         open={isWorkoutBuilderOpen}
         onOpenChange={(open) => {
           setIsWorkoutBuilderOpen(open);
           if (!open) {
             setPendingWorkoutDay(null);
+            setEditingWorkout(null);
           }
         }}
-        onSaveSuccess={handleSaveWorkoutFromBuilder}
+        meta={editingWorkout ? {
+          title: editingWorkout.workout.program,
+          type: editingWorkout.workout.type,
+          difficulty: editingWorkout.workout.difficulty || 'intermediate',
+          description: editingWorkout.workout.description || '',
+        } : {
+          title: '',
+          type: '',
+          difficulty: 'Intermediate',
+          description: '',
+        }}
+        initialData={editingWorkout?.workout.workout_data}
+        saveSignal={0}
+        onSaveSuccess={editingWorkout ? handleSaveEditedWorkout : handleSaveWorkoutFromBuilder}
+        onSaveError={() => { }}
+        onDirtyChange={() => { }}
       />
     </div>
   );
 };
-

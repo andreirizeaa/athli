@@ -517,28 +517,75 @@ const isFuzzyMatch = (text: string, query: string): boolean => {
   return queryIndex === normalizedQuery.length;
 };
 
-export const searchExercises = (query: string): Exercise[] => {
+export type ExerciseFilters = {
+  hideCustom?: boolean;
+  muscles?: string[];
+  types?: string[];
+  categories?: string[];
+  difficulties?: string[];
+  equipments?: string[];
+};
+
+export const searchExercises = (query: string, filters?: ExerciseFilters): Exercise[] => {
   const normalizedQuery = query.trim().toLowerCase();
 
-  if (!normalizedQuery) {
-    return mockExercises;
+  let results = mockExercises;
+
+  // Apply text search if query exists
+  if (normalizedQuery) {
+    results = results.filter((exercise) => {
+      const matchesName = isFuzzyMatch(exercise.name, normalizedQuery);
+      const matchesBodyPart = exercise.bodyParts.some((part) => isFuzzyMatch(part, normalizedQuery));
+      const matchesEquipment = exercise.equipments.some((equipment) =>
+        isFuzzyMatch(equipment, normalizedQuery)
+      );
+      const matchesTargetMuscle = exercise.targetMuscles.some((muscle) =>
+        isFuzzyMatch(muscle, normalizedQuery)
+      );
+      const matchesKeyword = exercise.keywords.some((keyword) =>
+        isFuzzyMatch(keyword, normalizedQuery)
+      );
+
+      return (
+        matchesName || matchesBodyPart || matchesEquipment || matchesTargetMuscle || matchesKeyword
+      );
+    });
   }
 
-  return mockExercises.filter((exercise) => {
-    const matchesName = isFuzzyMatch(exercise.name, normalizedQuery);
-    const matchesBodyPart = exercise.bodyParts.some((part) => isFuzzyMatch(part, normalizedQuery));
-    const matchesEquipment = exercise.equipments.some((equipment) =>
-      isFuzzyMatch(equipment, normalizedQuery)
-    );
-    const matchesTargetMuscle = exercise.targetMuscles.some((muscle) =>
-      isFuzzyMatch(muscle, normalizedQuery)
-    );
-    const matchesKeyword = exercise.keywords.some((keyword) =>
-      isFuzzyMatch(keyword, normalizedQuery)
-    );
+  // Apply filters
+  if (filters) {
+    if (filters.hideCustom) {
+      // Logic for hiding custom exercises - assuming all mocks are 'standard' for now
+      // If we had a isCustom field, we would filter here.
+    }
 
-    return (
-      matchesName || matchesBodyPart || matchesEquipment || matchesTargetMuscle || matchesKeyword
-    );
-  });
+    if (filters.muscles && filters.muscles.length > 0) {
+      results = results.filter(ex =>
+        ex.targetMuscles.some(m => filters.muscles?.includes(m)) ||
+        ex.bodyParts.some(bp => filters.muscles?.includes(bp))
+      );
+    }
+
+    if (filters.types && filters.types.length > 0) {
+      results = results.filter(ex => filters.types?.includes(ex.exerciseType));
+    }
+
+    if (filters.equipments && filters.equipments.length > 0) {
+      results = results.filter(ex =>
+        ex.equipments.some(eq => filters.equipments?.includes(eq))
+      );
+    }
+
+    // Category and Difficulty are not currently in the mock data, 
+    // but we'll include the checks for future compatibility
+    if (filters.categories && filters.categories.length > 0) {
+      // Mock logic: results = results.filter(ex => filters.categories.includes(ex.category));
+    }
+
+    if (filters.difficulties && filters.difficulties.length > 0) {
+      // Mock logic: results = results.filter(ex => filters.difficulties.includes(ex.difficulty));
+    }
+  }
+
+  return results;
 };

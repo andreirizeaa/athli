@@ -1796,7 +1796,7 @@ Focus on proper form and progressive overload.`;
         >
           <DialogTitle className="sr-only">Workout Builder</DialogTitle>
           <div className="flex-1 min-h-0 overflow-hidden">
-            <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-transparent gap-4">
+            <div className="flex h-full max-h-full overflow-hidden min-h-0 bg-transparent gap-3">
               <div className="flex h-full overflow-hidden rounded-xl border bg-background shadow-sm flex-1 transition-all duration-500 ease-in-out">
                 <div className="flex-[2] h-full flex flex-col min-h-0 border-r py-4 bg-muted/30">
                   {/* Main Builder Toggle */}
@@ -2391,13 +2391,16 @@ Focus on proper form and progressive overload.`;
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-10 w-10 rounded-full bg-background border shadow-sm hover:bg-muted"
+                        className={cn(
+                          "h-10 w-10 rounded-full border shadow-sm hover:bg-muted",
+                          isOverviewOpen ? "bg-background" : "bg-background opacity-100"
+                        )}
                         onClick={() => setIsOverviewOpen(!isOverviewOpen)}
                       >
                         {isOverviewOpen ? <ChevronLeft className="size-5" /> : <ChevronRight className="size-5" />}
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="left">
+                    <TooltipContent side={isOverviewOpen ? "right" : "left"}>
                       <p>{isOverviewOpen ? "Collapse overview" : "Expand overview"}</p>
                     </TooltipContent>
                   </Tooltip>
