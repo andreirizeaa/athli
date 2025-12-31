@@ -571,6 +571,8 @@ export const enMessages = {
     remove: 'Remove',
     add: 'Add',
     change: 'Change',
+    copy: 'Copy',
+    paste: 'Paste',
     back: 'Back',
     close: 'Close',
     open: 'Open',
@@ -1025,6 +1027,14 @@ export const enMessages = {
         savedSuccessfully: 'Program saved successfully',
         saveFailed: 'Failed to save program',
         weekDuplicated: 'Week {number} duplicated successfully',
+      },
+      multiSelect: {
+        workoutsSelected: '{count} workout(s) selected',
+        clickToAddWorkout: 'Click on a day to add this workout',
+        clickToAddWorkouts: 'Click on a day to add this group of workouts',
+        deleteAria: 'Delete selected workouts',
+        copyAria: 'Copy selected workouts',
+        selectWorkoutAria: 'Select workout {name}',
       },
     },
   },
@@ -1985,6 +1995,21 @@ export const enMessages = {
 
       searchWorkoutsPlaceholder: 'Search workouts...',
       noWorkoutsFound: 'No workouts found. Try adjusting your filters.',
+
+      /* Copy/Paste feature */
+      holdShiftToPaste: 'Hold shift to paste to multiple days',
+      saveToLibrary: 'Save to Library',
+      alreadySaved: 'This workout is already saved to your library',
+
+      /* Multi-select feature */
+      multiSelect: {
+        workoutsSelected: '{count} workout(s) selected',
+        clickToAddWorkout: 'Click on a day to add this workout',
+        clickToAddWorkouts: 'Click on a day to add this group of workouts',
+        deleteAria: 'Delete selected workouts',
+        copyAria: 'Copy selected workouts',
+        selectWorkoutAria: 'Select workout {name}',
+      },
 
     },
   },

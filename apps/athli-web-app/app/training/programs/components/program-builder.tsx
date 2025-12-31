@@ -60,6 +60,8 @@ import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { useTrainingData } from '../../training-data-context';
 import { StandardBuilder } from '@/app/training/workouts/new/workout-builder';
 import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import { Checkbox } from '@/components/ui/checkbox';
+import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
 
 type ProgramMeta = {
   name: string;
@@ -85,11 +87,15 @@ const DraggableWorkoutCard = ({
   onCopy,
   onSaveToLibrary,
   onCancelCopy,
+  onToggleSelect,
   t,
   isDraggingGlobal,
   isCopySource,
   isCopyMode,
   isInLibrary,
+  isMultiSelectMode,
+  isMultiSelectCopyMode,
+  isSelected,
 }: {
   workout: Workout & { id: string };
   week: number;
@@ -99,11 +105,15 @@ const DraggableWorkoutCard = ({
   onCopy: (week: number, day: number, workout: Workout & { id: string }) => void;
   onSaveToLibrary: (workout: Workout & { id: string }) => void;
   onCancelCopy: () => void;
+  onToggleSelect: (week: number, day: number, workout: Workout & { id: string }) => void;
   t: any;
   isDraggingGlobal?: boolean;
   isCopySource?: boolean;
   isCopyMode?: boolean;
   isInLibrary?: boolean;
+  isMultiSelectMode?: boolean;
+  isMultiSelectCopyMode?: boolean;
+  isSelected?: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, isDragging, transform, node } = useDraggable({
     id: `workout-${workout.id}`,
@@ -113,7 +123,7 @@ const DraggableWorkoutCard = ({
       week,
       day,
     },
-    disabled: isCopyMode, // Disable dragging during copy mode
+    disabled: isCopyMode || isMultiSelectMode || isMultiSelectCopyMode, // Disable dragging during copy mode or multi-select
   });
 
   // Get the original width from the node before it becomes fixed
@@ -134,17 +144,17 @@ const DraggableWorkoutCard = ({
     <div
       ref={setNodeRef}
       style={style}
-      {...(isCopyMode ? {} : { ...attributes, ...listeners })}
+      {...((isCopyMode || isMultiSelectMode || isMultiSelectCopyMode) ? {} : { ...attributes, ...listeners })}
       role="button"
       tabIndex={0}
       aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
       onClick={(e) => {
-        if (isDragging || isCopyMode) return;
+        if (isDragging || isCopyMode || isMultiSelectCopyMode) return;
         e.stopPropagation();
         onClick(week, day, workout);
       }}
       onKeyDown={(event) => {
-        if (isCopyMode) return;
+        if (isCopyMode || isMultiSelectCopyMode) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           event.stopPropagation();
@@ -153,87 +163,132 @@ const DraggableWorkoutCard = ({
       }}
       className={cn(
         'workout-card rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-transform duration-200',
-        !isDraggingGlobal && !isCopyMode && 'cursor-grab active:cursor-grabbing hover:border-primary/50',
-        isDragging && 'opacity-0'
+        !isDraggingGlobal && !isCopyMode && !isMultiSelectMode && !isMultiSelectCopyMode && 'cursor-grab active:cursor-grabbing hover:border-primary/50',
+        isDragging && 'opacity-0',
+        isSelected && 'border-primary'
       )}
     >
-      <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
+      <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
         <span
           className="text-[11px] font-medium block truncate"
           title={workout.program}
         >
           {workout.program}
         </span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground",
-                isCopyMode && "invisible"
-              )}
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              disabled={isCopyMode}
-            >
-              <MoreHorizontal className="size-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              onCopy(week, day, workout);
-            }}>
-              <Copy className="mr-2 size-3.5" />
-              <span>Copy</span>
-            </DropdownMenuItem>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div>
-                    <DropdownMenuItem
-                      disabled={isInLibrary}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isInLibrary) {
-                          onSaveToLibrary(workout);
-                        }
-                      }}
-                      className={isInLibrary ? 'opacity-50 cursor-not-allowed' : ''}
-                    >
-                      <Save className="mr-2 size-3.5" />
-                      <span>Save to Library</span>
-                    </DropdownMenuItem>
-                  </div>
-                </TooltipTrigger>
-                {isInLibrary && (
-                  <TooltipContent side="left">
-                    <p>This workout is already saved</p>
-                  </TooltipContent>
+        <div className="flex items-center gap-0.5">
+          {/* Checkbox for multi-select - visible on hover or when in multi-select mode */}
+          <div
+            className={cn(
+              "flex-shrink-0 transition-opacity",
+              isMultiSelectMode || isSelected
+                ? "opacity-100"
+                : "opacity-0 group-hover/card-header:opacity-100",
+              (isCopyMode || isMultiSelectCopyMode) && "invisible"
+            )}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(week, day, workout)}
+              aria-label={t('programs.builder.multiSelect.selectWorkoutAria', { name: workout.program })}
+              className="size-3.5"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground",
+                  isCopyMode && "invisible"
                 )}
-              </Tooltip>
-            </TooltipProvider>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={(e) => {
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                disabled={isCopyMode}
+              >
+                <MoreHorizontal className="size-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => {
                 e.stopPropagation();
-                onDelete(week, day, workout.id);
-              }}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="mr-2 size-3.5" />
-              <span>{t('general.delete')}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                onCopy(week, day, workout);
+              }}>
+                <Copy className="mr-2 size-3.5" />
+                <span>Copy</span>
+              </DropdownMenuItem>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <DropdownMenuItem
+                        disabled={isInLibrary}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isInLibrary) {
+                            onSaveToLibrary(workout);
+                          }
+                        }}
+                        className={isInLibrary ? 'opacity-50 cursor-not-allowed' : ''}
+                      >
+                        <Save className="mr-2 size-3.5" />
+                        <span>Save to Library</span>
+                      </DropdownMenuItem>
+                    </div>
+                  </TooltipTrigger>
+                  {isInLibrary && (
+                    <TooltipContent side="left">
+                      <p>This workout is already saved</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(week, day, workout.id);
+                }}
+              >
+                <Trash2 className="mr-2 size-3.5" />
+                <span>{t('general.delete')}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-      <div className="px-2 py-1">
+      <div className="px-2 py-1 flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground block">
           {workout.totalExercises}{' '}
           {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
         </span>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "h-5 w-5 -mr-1 rounded-full text-primary flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
+                  (isCopyMode || isMultiSelectMode || isMultiSelectCopyMode) && "invisible"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isCopyMode && !isMultiSelectMode && !isMultiSelectCopyMode) {
+                    onClick(week, day, workout);
+                  }
+                }}
+              >
+                <Plus className="size-3" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('athletes.trainingCalendar.addExercise')}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
@@ -265,6 +320,14 @@ const DroppableDayCard = ({
   copiedWorkoutId,
   isPastedDay,
   checkIsInLibrary,
+  isMultiSelectMode,
+  isMultiSelectCopyMode,
+  isMultiSelectHovered,
+  onMultiSelectDayHover,
+  onMultiSelectDayLeave,
+  onMultiSelectPaste,
+  onToggleWorkoutSelect,
+  isWorkoutSelected,
 }: {
   week: number;
   day: number;
@@ -290,6 +353,14 @@ const DroppableDayCard = ({
   copiedWorkoutId?: string;
   isPastedDay?: boolean;
   checkIsInLibrary?: (workoutId: string) => boolean;
+  isMultiSelectMode?: boolean;
+  isMultiSelectCopyMode?: boolean;
+  isMultiSelectHovered?: boolean;
+  onMultiSelectDayHover?: (week: number, day: number) => void;
+  onMultiSelectDayLeave?: () => void;
+  onMultiSelectPaste?: (week: number, day: number) => void;
+  onToggleWorkoutSelect?: (week: number, day: number, workout: Workout & { id: string }) => void;
+  isWorkoutSelected?: (week: number, day: number, workoutId: string) => boolean;
 }) => {
   const { setNodeRef } = useDroppable({
     id: `day-${week}-${day}`,
@@ -304,33 +375,40 @@ const DroppableDayCard = ({
     <div
       ref={setNodeRef}
       onClick={() => {
-        if (isCopyMode && !isCopySource && !isPastedDay) {
+        if (isCopyMode && !isPastedDay) {
           // In copy mode, clicking pastes the workout
           onPasteWorkout(week, day);
-        } else if (!isCopyMode) {
+        } else if (isMultiSelectCopyMode && onMultiSelectPaste) {
+          onMultiSelectPaste(week, day);
+        } else if (!isCopyMode && !isMultiSelectCopyMode) {
           onOpenAddWorkout(dayNumber);
         }
       }}
       onMouseEnter={() => {
-        if (isCopyMode && !isCopySource) {
+        if (isCopyMode && !isPastedDay) {
           onCopyDayHover(week, day);
+        } else if (isMultiSelectCopyMode && onMultiSelectDayHover) {
+          onMultiSelectDayHover(week, day);
         }
       }}
       onMouseLeave={() => {
         if (isCopyMode) {
           onCopyDayLeave();
+        } else if (isMultiSelectCopyMode && onMultiSelectDayLeave) {
+          onMultiSelectDayLeave();
         }
       }}
       className={cn(
         'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
-        !isCopyMode && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
-        isCopyMode && !isCopySource && !isPastedDay && 'cursor-pointer hover:border-primary/50',
+        !isCopyMode && !isMultiSelectCopyMode && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
+        isCopyMode && !isPastedDay && 'cursor-pointer hover:border-primary/50',
+        isMultiSelectCopyMode && 'cursor-pointer hover:border-primary/50',
         isDragOver && 'border-primary/50'
       )}
     >
       <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
         <span className="text-xs uppercase text-muted-foreground">{t('programs.builder.dayLabel', { number: dayNumber })}</span>
-        {!isCopyMode && (
+        {!isCopyMode && !isMultiSelectCopyMode && (
           <Button
             type="button"
             size="icon"
@@ -366,11 +444,15 @@ const DroppableDayCard = ({
                   onCopy={onCopyWorkout}
                   onSaveToLibrary={onSaveToLibrary}
                   onCancelCopy={onCancelCopy}
+                  onToggleSelect={onToggleWorkoutSelect || (() => { })}
                   t={t}
                   isDraggingGlobal={isDraggingGlobal}
                   isCopyMode={isCopyMode}
                   isCopySource={isCopyMode && copiedWorkoutId === workout.id}
                   isInLibrary={checkIsInLibrary ? checkIsInLibrary(workout.id) : false}
+                  isMultiSelectMode={isMultiSelectMode}
+                  isMultiSelectCopyMode={isMultiSelectCopyMode}
+                  isSelected={isWorkoutSelected ? isWorkoutSelected(week, day, workout.id) : false}
                 />
               ))}
             </div>
@@ -378,7 +460,7 @@ const DroppableDayCard = ({
         </div>
 
         {/* Source day overlay - shown below header */}
-        {isCopySource && (
+        {isCopySource && !isHoveredForCopy && !isPastedDay && (
           <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
             <span className="text-xs text-center text-muted-foreground">
               Hold shift to paste to multiple days
@@ -411,6 +493,25 @@ const DroppableDayCard = ({
             >
               <Copy className="size-3" />
               {isShiftPressed ? 'Paste' : 'Copy'}
+            </Button>
+          </div>
+        )}
+        {/* Multi-select copy destination overlay */}
+        {isMultiSelectHovered && (
+          <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onMultiSelectPaste) {
+                  onMultiSelectPaste(week, day);
+                }
+              }}
+            >
+              <Copy className="size-3" />
+              Copy
             </Button>
           </div>
         )}
@@ -486,6 +587,16 @@ export const ProgramBuilder = ({
   const [pastedDays, setPastedDays] = useState<Array<{ week: number; day: number }>>([]);
   const [hoveredCopyDay, setHoveredCopyDay] = useState<{ week: number; day: number } | null>(null);
 
+  // Multi-select mode state
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState<boolean>(false);
+  const [selectedWorkouts, setSelectedWorkouts] = useState<Array<{
+    workout: Workout & { id: string };
+    week: number;
+    day: number;
+  }>>([]);
+  const [isMultiSelectCopyMode, setIsMultiSelectCopyMode] = useState<boolean>(false);
+  const [multiSelectHoveredDay, setMultiSelectHoveredDay] = useState<{ week: number; day: number } | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
@@ -497,11 +608,16 @@ export const ProgramBuilder = ({
       if (e.key === 'Shift') {
         setIsShiftPressed(true);
       }
-      if (e.key === 'Escape' && isCopyMode) {
-        setIsCopyMode(false);
-        setCopiedWorkout(null);
-        setPastedDays([]);
-        setHoveredCopyDay(null);
+      if (e.key === 'Escape') {
+        if (isCopyMode) {
+          setIsCopyMode(false);
+          setCopiedWorkout(null);
+          setPastedDays([]);
+          setHoveredCopyDay(null);
+        }
+        if (isMultiSelectMode || isMultiSelectCopyMode) {
+          handleCancelMultiSelect();
+        }
       }
     };
 
@@ -518,7 +634,7 @@ export const ProgramBuilder = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isCopyMode]);
+  }, [isCopyMode, isMultiSelectMode, isMultiSelectCopyMode]);
 
   // Exit copy mode when shift is released after pasting at least once
   useEffect(() => {
@@ -1428,6 +1544,126 @@ export const ProgramBuilder = ({
     setHoveredCopyDay(null);
   };
 
+  // Multi-select handlers
+  const handleToggleWorkoutSelection = (week: number, day: number, workout: Workout & { id: string }) => {
+    const isSelected = selectedWorkouts.some(
+      (sw) => sw.workout.id === workout.id && sw.week === week && sw.day === day
+    );
+
+    if (isSelected) {
+      // Deselect
+      const newSelection = selectedWorkouts.filter(
+        (sw) => !(sw.workout.id === workout.id && sw.week === week && sw.day === day)
+      );
+      setSelectedWorkouts(newSelection);
+
+      // If no more selected, exit multi-select mode
+      if (newSelection.length === 0) {
+        setIsMultiSelectMode(false);
+        setIsMultiSelectCopyMode(false);
+      }
+    } else {
+      // Select
+      setSelectedWorkouts([...selectedWorkouts, { workout, week, day }]);
+      setIsMultiSelectMode(true);
+    }
+  };
+
+  const handleCancelMultiSelect = () => {
+    setIsMultiSelectMode(false);
+    setIsMultiSelectCopyMode(false);
+    setSelectedWorkouts([]);
+    setMultiSelectHoveredDay(null);
+  };
+
+  const handleDeleteSelectedWorkouts = () => {
+    setWorkoutsByDay((prev) => {
+      const updated = { ...prev };
+      selectedWorkouts.forEach(({ week, day, workout }) => {
+        if (updated[week]?.[day]) {
+          updated[week][day] = updated[week][day].filter((w) => w.id !== workout.id);
+        }
+      });
+      saveToHistory(updated);
+      return updated;
+    });
+    handleCancelMultiSelect();
+  };
+
+  const handleStartMultiSelectCopy = () => {
+    setIsMultiSelectCopyMode(true);
+    setMultiSelectHoveredDay(null);
+  };
+
+  const handleMultiSelectPaste = (targetWeek: number, targetDay: number) => {
+    if (selectedWorkouts.length === 0) return;
+
+    // Sort selected workouts by day number to maintain relative positions
+    const sortedWorkouts = [...selectedWorkouts].sort((a, b) => {
+      const aDayNum = getDayNumber(a.week, a.day);
+      const bDayNum = getDayNumber(b.week, b.day);
+      return aDayNum - bDayNum;
+    });
+
+    // Get the earliest day number from the selection
+    const earliestDayNum = getDayNumber(sortedWorkouts[0].week, sortedWorkouts[0].day);
+    const targetDayNum = getDayNumber(targetWeek, targetDay);
+
+    setWorkoutsByDay((prev) => {
+      const updated = { ...prev };
+
+      sortedWorkouts.forEach(({ workout, week, day }) => {
+        // Calculate the offset from the earliest day
+        const workoutDayNum = getDayNumber(week, day);
+        const dayOffset = workoutDayNum - earliestDayNum;
+
+        // Calculate the target day for this workout
+        const newTargetDayNum = targetDayNum + dayOffset;
+        const { week: newWeek, day: newDay } = getWeekAndDay(newTargetDayNum);
+
+        // Only add if within bounds
+        if (newWeek >= 1 && newWeek <= totalWeeks && newDay >= 1 && newDay <= 7) {
+          // Create a new workout with a unique ID
+          const newWorkout = {
+            ...workout,
+            id: `${workout.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          };
+
+          // Initialize the week if needed
+          if (!updated[newWeek]) {
+            updated[newWeek] = {};
+          }
+
+          // Add to the target day
+          updated[newWeek][newDay] = [...(updated[newWeek]?.[newDay] || []), newWorkout];
+        }
+      });
+
+      saveToHistory(updated);
+      return updated;
+    });
+
+    // Exit multi-select copy mode after paste
+    handleCancelMultiSelect();
+  };
+
+  const handleMultiSelectDayHover = (week: number, day: number) => {
+    if (isMultiSelectCopyMode) {
+      setMultiSelectHoveredDay({ week, day });
+    }
+  };
+
+  const handleMultiSelectDayLeave = () => {
+    setMultiSelectHoveredDay(null);
+  };
+
+  // Check if a workout is selected
+  const isWorkoutSelected = (week: number, day: number, workoutId: string): boolean => {
+    return selectedWorkouts.some(
+      (sw) => sw.workout.id === workoutId && sw.week === week && sw.day === day
+    );
+  };
+
   // Check if 2 weeks view is available
   const is2WeeksAvailable = totalWeeks % 2 === 0;
   // Check if 4 weeks view is available
@@ -1817,6 +2053,14 @@ export const ProgramBuilder = ({
                             // Check if workoutId starts with any library workout ID
                             return availableWorkouts.some(w => workoutId.startsWith(w.id));
                           }}
+                          isMultiSelectMode={isMultiSelectMode}
+                          isMultiSelectCopyMode={isMultiSelectCopyMode}
+                          isMultiSelectHovered={multiSelectHoveredDay?.week === week && multiSelectHoveredDay?.day === dayInWeek}
+                          onMultiSelectDayHover={handleMultiSelectDayHover}
+                          onMultiSelectDayLeave={handleMultiSelectDayLeave}
+                          onMultiSelectPaste={handleMultiSelectPaste}
+                          onToggleWorkoutSelect={handleToggleWorkoutSelection}
+                          isWorkoutSelected={isWorkoutSelected}
                         />
                       );
                     })}
@@ -2045,6 +2289,14 @@ export const ProgramBuilder = ({
         onSaveSuccess={editingWorkout ? handleSaveEditedWorkout : handleSaveWorkoutFromBuilder}
         onSaveError={() => { }}
         onDirtyChange={() => { }}
+      />
+      <MultiSelectActionBar
+        selectedCount={selectedWorkouts.length}
+        isVisible={isMultiSelectMode || isMultiSelectCopyMode}
+        isCopyMode={isMultiSelectCopyMode}
+        onDelete={handleDeleteSelectedWorkouts}
+        onCopy={handleStartMultiSelectCopy}
+        onCancel={handleCancelMultiSelect}
       />
     </div>
   );

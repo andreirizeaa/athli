@@ -110,7 +110,6 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
   const isFormValid =
     selectedDate !== undefined &&
     workoutName.trim() !== '' &&
-    difficulty !== '' &&
     hasWorkoutData;
 
   const handleSave = async () => {
@@ -139,12 +138,9 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
     //   setTypeError(null);
     // }
 
-    if (!difficulty) {
-      setDifficultyError(t('athletes.trainingCalendar.saveAsWorkout.errors.difficultyRequired'));
-      hasError = true;
-    } else {
-      setDifficultyError(null);
-    }
+    // Difficulty is optional now
+    // Clear any existing error
+    setDifficultyError(null);
 
     if (hasError) return;
 
@@ -298,9 +294,8 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
 
         {/* Difficulty */}
         <div className="flex flex-col gap-2">
-          <Label htmlFor="workout-difficulty" className="text-sm font-medium flex items-center gap-[0.1px]">
+          <Label htmlFor="workout-difficulty" className="text-sm font-medium">
             {t('workouts.addWorkout.difficulty')}
-            <RequiredAsterisk />
           </Label>
           <Select
             value={difficulty}
