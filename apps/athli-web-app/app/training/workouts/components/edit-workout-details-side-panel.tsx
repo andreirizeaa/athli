@@ -59,12 +59,16 @@ export const EditWorkoutDetailsSidePanel = ({
         if (open) {
             setTitle(workoutMeta.title);
             setType(workoutMeta.type);
-            setDifficulty(workoutMeta.difficulty);
+            let normalizedDifficulty = workoutMeta.difficulty;
+            if (workoutMeta.difficulty.toLowerCase() === 'all levels') {
+                normalizedDifficulty = 'all_levels';
+            }
+            setDifficulty(normalizedDifficulty);
             setDescription(workoutMeta.description);
             setOriginalValues({
                 title: workoutMeta.title,
                 type: workoutMeta.type,
-                difficulty: workoutMeta.difficulty,
+                difficulty: normalizedDifficulty,
                 description: workoutMeta.description,
             });
             setTitleError(null);
@@ -81,7 +85,7 @@ export const EditWorkoutDetailsSidePanel = ({
         description !== originalValues.description;
 
     // Check if form is valid (all required fields filled)
-    const isFormValid = title.trim() !== '' && type.trim() !== '' && difficulty.trim() !== '';
+    const isFormValid = title.trim() !== '' && difficulty.trim() !== '';
 
     // Save button should be enabled only if there are changes AND form is valid
     const isSaveEnabled = hasChanges && isFormValid && !isSaving;
@@ -91,10 +95,11 @@ export const EditWorkoutDetailsSidePanel = ({
             setTitleError(t('library.workoutNameRequired'));
             return;
         }
-        if (!type.trim()) {
-            setTypeError(t('library.workoutTypeRequired'));
-            return;
-        }
+        // Type is optional now
+        // if (!type.trim()) {
+        //     setTypeError(t('library.workoutTypeRequired'));
+        //     return;
+        // }
         if (!difficulty.trim()) {
             setDifficultyError(t('library.difficultyRequired'));
             return;
@@ -188,40 +193,6 @@ export const EditWorkoutDetailsSidePanel = ({
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label htmlFor="workout-type" className="text-sm font-medium">
-                                {t('workouts.addWorkout.type')}<RequiredAsterisk />
-                            </label>
-                            <Select
-                                value={type}
-                                onValueChange={(value) => {
-                                    setType(value);
-                                    if (typeError) {
-                                        setTypeError(null);
-                                    }
-                                }}
-                            >
-                                <SelectTrigger
-                                    id="workout-type"
-                                    className={cn(
-                                        'w-full',
-                                        typeError && 'border-destructive aria-invalid:border-destructive'
-                                    )}
-                                    aria-invalid={!!typeError}
-                                >
-                                    <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {WORKOUT_TYPES.map((workoutType) => (
-                                        <SelectItem key={workoutType.value} value={workoutType.value}>
-                                            {workoutType.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-                        </div>
-
-                        <div className="flex flex-col gap-2">
                             <label htmlFor="workout-difficulty" className="text-sm font-medium">
                                 {t('workouts.addWorkout.difficulty')}<RequiredAsterisk />
                             </label>
@@ -253,6 +224,40 @@ export const EditWorkoutDetailsSidePanel = ({
                                 </SelectContent>
                             </Select>
                             {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label htmlFor="workout-type" className="text-sm font-medium">
+                                {t('workouts.addWorkout.type')}
+                            </label>
+                            <Select
+                                value={type}
+                                onValueChange={(value) => {
+                                    setType(value);
+                                    if (typeError) {
+                                        setTypeError(null);
+                                    }
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="workout-type"
+                                    className={cn(
+                                        'w-full',
+                                        typeError && 'border-destructive aria-invalid:border-destructive'
+                                    )}
+                                    aria-invalid={!!typeError}
+                                >
+                                    <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {WORKOUT_TYPES.map((workoutType) => (
+                                        <SelectItem key={workoutType.value} value={workoutType.value}>
+                                            {workoutType.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {typeError && <p className="text-sm text-destructive">{typeError}</p>}
                         </div>
                     </div>
 

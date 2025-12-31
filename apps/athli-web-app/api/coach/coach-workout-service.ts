@@ -19,6 +19,8 @@ export const getWorkouts = async (): Promise<Workout[]> => {
     equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
     created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: w.is_favourite || false,
+    // Note: workout_data intentionally excluded to reduce payload size
+    // Use getWorkoutById() to fetch full workout data when editing
   }));
 };
 
@@ -218,9 +220,25 @@ export const duplicateWorkout = async (workoutId: string): Promise<Workout> => {
  * Get workout by ID
  */
 export const getWorkoutById = async (workoutId: string): Promise<Workout & { workout_data: WorkoutProgramPayload }> => {
-  const response = await apiFetch<ApiResponse<{ workout: Workout & { workout_data: WorkoutProgramPayload } }>>(`/coach/training/workouts/${workoutId}`);
+  const response = await apiFetch<ApiResponse<{ workout: any }>>(`/coach/training/workouts/${workoutId}`);
   if (!response.data) throw new Error('No workout returned');
-  return response.data.workout;
+
+  const w = response.data.workout;
+
+  // Map API response fields to Workout type
+  return {
+    id: w.id,
+    program: w.name, // API returns 'name', app uses 'program'
+    description: w.description || '',
+    type: w.type || '',
+    difficulty: w.difficulty || '',
+    length: w.workout_data?.totalDurationMin ? `${w.workout_data.totalDurationMin} min` : '0 min',
+    totalExercises: w.total_exercises || 0, // API returns 'total_exercises'
+    equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
+    created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
+    isFavourite: w.is_favourite || false,
+    workout_data: w.workout_data,
+  };
 };
 
 /**

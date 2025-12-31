@@ -54,16 +54,8 @@ const EditProgramPage = () => {
             [week: number]: { [day: number]: Array<Workout & { id: string }> };
           } = {};
 
-          // Fetch all unique workout IDs in the schema
-          const allWorkoutIds = Array.from(new Set((schema as any[]).flatMap(s => s.workouts)));
-          const workoutsMap = new Map<string, Workout>();
-
-          // Fetch all workouts in one go
-          const workouts = await getWorkoutsByIds(allWorkoutIds);
-          workouts.forEach((w: Workout) => workoutsMap.set(w.id, w));
-
-          // Pre-fill workouts based on schema
-          (schema as any[]).forEach(({ day, workouts }) => {
+          // Pre-fill workouts based on schema (which now contains full objects)
+          (schema as any[]).forEach(({ day, workouts }: { day: number; workouts: any[] }) => {
             const week = Math.ceil(day / 7);
             const dayInWeek = ((day - 1) % 7) + 1;
             if (!preFilledWorkouts[week]) {
@@ -73,13 +65,44 @@ const EditProgramPage = () => {
               preFilledWorkouts[week][dayInWeek] = [];
             }
 
-            workouts.forEach((workoutId: string) => {
-              const workout = workoutsMap.get(workoutId);
-              if (workout) {
-                preFilledWorkouts[week][dayInWeek].push({
-                  ...workout,
-                  id: `${workout.id}-${Date.now()}-${Math.random()}`,
-                } as Workout & { id: string });
+            workouts.forEach((workoutData: any) => {
+              // Calculate totalExercises from items if not provided
+              let totalExercises = workoutData.totalExercises || 0;
+              if (!totalExercises && workoutData.items) {
+                totalExercises = (workoutData.items || []).reduce((total: number, item: any) => {
+                  if (item.itemType === 'exercise') {
+                    return total + 1;
+                  } else if (item.itemType === 'section') {
+                    const section = item.data;
+                    if (section?.exercises) {
+                      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'circuits') {
+                        return total + section.exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
+                      } else {
+                        return total + (section.exercises?.length || 0);
+                      }
+                    }
+                  }
+                  return total;
+                }, 0);
+              }
+
+              // Ensure we have a valid workout object - accept workouts with title or items
+              if (workoutData && (workoutData.title || workoutData.items)) {
+                // Map the schema object back to our Workout type
+                const workout: Workout & { id: string } = {
+                  id: `${workoutData.id || 'temp'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                  program: workoutData.title || 'Untitled Workout',
+                  description: workoutData.description || '',
+                  type: workoutData.type || 'strength',
+                  difficulty: workoutData.difficulty || 'intermediate',
+                  length: '0 min',
+                  totalExercises: totalExercises,
+                  equipment: workoutData.equipment || [],
+                  created: '',
+                  isFavourite: false,
+                  workout_data: { items: workoutData.items || [] }
+                };
+                preFilledWorkouts[week][dayInWeek].push(workout);
               }
             });
           });

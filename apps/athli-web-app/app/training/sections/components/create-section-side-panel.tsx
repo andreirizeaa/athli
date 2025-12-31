@@ -94,7 +94,7 @@ export const CreateSectionSidePanel = ({
             className="gap-2"
           >
             {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-            {t('library.sections.actions.newSection')}
+            {t('library.sections.actions.save')}
           </Button>
         </div>
       }
@@ -103,7 +103,9 @@ export const CreateSectionSidePanel = ({
         {/* Section Name */}
         <div className="flex flex-col">
           <Label htmlFor="section-name" className="text-sm font-medium">
-            {t('library.sections.section')}<RequiredAsterisk />
+            <span>
+              {t('library.sections.section')}<RequiredAsterisk />
+            </span>
           </Label>
           <Input
             id="section-name"
@@ -123,7 +125,9 @@ export const CreateSectionSidePanel = ({
         {/* Section Type */}
         <div className="flex flex-col">
           <Label htmlFor="section-type" className="text-sm font-medium">
-            {t('library.sections.sectionType')}<RequiredAsterisk />
+           <span>
+              {t('library.sections.section')}<RequiredAsterisk />
+            </span>
           </Label>
           <Select value={sectionType} onValueChange={(value) => setSectionType(value as SectionType)}>
             <SelectTrigger id="section-type" className="w-full">

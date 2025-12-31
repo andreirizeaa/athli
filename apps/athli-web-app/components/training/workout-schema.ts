@@ -11,7 +11,7 @@ export type WorkoutStatus = 'not_started' | 'in_progress' | 'completed';
 type BaseMetrics = {
   type?: 'warmUp' | 'normal' | 'failure' | 'dropset'; // Matching BaseSet type
   restSec: number | null;
-  completed?: boolean; // Whether this particular metric was completed (empty when coach creates)
+  completed: boolean; // Whether this particular metric was completed (default false)
 };
 
 type WeightRepsMetrics = BaseMetrics & {
@@ -48,14 +48,14 @@ export type RoundExercisePayload = {
 export type DropsetStage = {
   weight?: number;
   reps?: number;
-  completed?: boolean; // Whether this stage was completed (empty when coach creates)
+  completed: boolean; // Whether this stage was completed (default false)
 };
 
 type BaseSet = {
   setNumber: number;
   type: 'warmUp' | 'normal' | 'failure' | 'dropset';
   restSec: number | null;
-  completed?: boolean; // Whether this set was completed (empty when coach creates)
+  completed: boolean; // Whether this set was completed (default false)
   skipped?: boolean; // Whether this set was skipped (empty when coach creates)
 };
 
@@ -92,6 +92,7 @@ export type RegularExercisePayload = {
   sets: SetPayload[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
   notes?: string; // User notes for this exercise (empty when coach creates)
+  supersetId?: string; // Optional superset ID to link exercises
 };
 
 export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
@@ -174,7 +175,7 @@ export type WorkoutSectionPayload =
  * - A section containing exercises
  */
 export type WorkoutItem =
-  | { itemType: 'exercise'; data: ExerciseGroupPayload }
+  | { itemType: 'exercise'; data: RegularExercisePayload }
   | { itemType: 'section'; data: WorkoutSectionPayload };
 
 /**

@@ -62,7 +62,7 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [workoutName, setWorkoutName] = useState<string>('');
   const [workoutType, setWorkoutType] = useState<string>('');
-  const [difficulty, setDifficulty] = useState<string>('');
+  const [difficulty, setDifficulty] = useState<string>('all levels');
   const [description, setDescription] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [hasWorkoutData, setHasWorkoutData] = useState<boolean>(true);
@@ -96,7 +96,7 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
     setSelectedDate(new Date());
     setWorkoutName('');
     setWorkoutType('');
-    setDifficulty('');
+    setDifficulty('all levels');
     setDescription('');
     setNameError(null);
     setTypeError(null);
@@ -110,8 +110,6 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
   const isFormValid =
     selectedDate !== undefined &&
     workoutName.trim() !== '' &&
-    workoutType !== '' &&
-    difficulty !== '' &&
     hasWorkoutData;
 
   const handleSave = async () => {
@@ -132,19 +130,17 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
       setNameError(null);
     }
 
-    if (!workoutType) {
-      setTypeError(t('athletes.trainingCalendar.saveAsWorkout.errors.typeRequired'));
-      hasError = true;
-    } else {
-      setTypeError(null);
-    }
+    // Type is optional now
+    // if (!workoutType) {
+    //   setTypeError(t('athletes.trainingCalendar.saveAsWorkout.errors.typeRequired'));
+    //   hasError = true;
+    // } else {
+    //   setTypeError(null);
+    // }
 
-    if (!difficulty) {
-      setDifficultyError(t('athletes.trainingCalendar.saveAsWorkout.errors.difficultyRequired'));
-      hasError = true;
-    } else {
-      setDifficultyError(null);
-    }
+    // Difficulty is optional now
+    // Clear any existing error
+    setDifficultyError(null);
 
     if (hasError) return;
 
@@ -296,45 +292,10 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
           {nameError && <p className="text-sm text-destructive">{nameError}</p>}
         </div>
 
-        {/* Workout Type */}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="workout-type" className="text-sm font-medium flex items-center gap-[0.1px]">
-            {t('workouts.addWorkout.type')}
-            <RequiredAsterisk />
-          </Label>
-          <Select
-            value={workoutType}
-            onValueChange={(value) => {
-              setWorkoutType(value);
-              if (typeError) setTypeError(null);
-            }}
-          >
-            <SelectTrigger
-              id="workout-type"
-              className={cn(
-                'w-full',
-                typeError && 'border-destructive aria-invalid:border-destructive'
-              )}
-              aria-invalid={!!typeError}
-            >
-              <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              {WORKOUT_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {typeError && <p className="text-sm text-destructive">{typeError}</p>}
-        </div>
-
         {/* Difficulty */}
         <div className="flex flex-col gap-2">
-          <Label htmlFor="workout-difficulty" className="text-sm font-medium flex items-center gap-[0.1px]">
+          <Label htmlFor="workout-difficulty" className="text-sm font-medium">
             {t('workouts.addWorkout.difficulty')}
-            <RequiredAsterisk />
           </Label>
           <Select
             value={difficulty}
@@ -362,6 +323,39 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
             </SelectContent>
           </Select>
           {difficultyError && <p className="text-sm text-destructive">{difficultyError}</p>}
+        </div>
+
+        {/* Workout Type */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="workout-type" className="text-sm font-medium flex items-center gap-[0.1px]">
+            {t('workouts.addWorkout.type')}
+          </Label>
+          <Select
+            value={workoutType}
+            onValueChange={(value) => {
+              setWorkoutType(value);
+              if (typeError) setTypeError(null);
+            }}
+          >
+            <SelectTrigger
+              id="workout-type"
+              className={cn(
+                'w-full',
+                typeError && 'border-destructive aria-invalid:border-destructive'
+              )}
+              aria-invalid={!!typeError}
+            >
+              <SelectValue placeholder={t('workouts.addWorkout.typePlaceholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {WORKOUT_TYPES.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {typeError && <p className="text-sm text-destructive">{typeError}</p>}
         </div>
 
         {/* Description */}

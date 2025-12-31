@@ -1,4 +1,4 @@
-import type { SetData } from '../../components/exercise-card';
+import type { SetData } from '@/components/training/builder/exercise-card';
 import type {
   SetFieldValidation,
   ValidationErrors,
@@ -6,7 +6,7 @@ import type {
   SectionValidation,
   WorkoutSchema,
   ExerciseWithSuperset,
-} from '../types/workout-builder.types';
+} from '@/components/training/shared/types/workout-builder.types';
 
 /**
  * Recomputes validation errors for a single exercise based on its sets
