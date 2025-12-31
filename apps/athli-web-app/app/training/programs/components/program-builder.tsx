@@ -147,7 +147,7 @@ const DraggableWorkoutCard = ({
       {...((isCopyMode || isMultiSelectMode || isMultiSelectCopyMode) ? {} : { ...attributes, ...listeners })}
       role="button"
       tabIndex={0}
-      aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
+      aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.name })}
       onClick={(e) => {
         e.stopPropagation();
         if (isDragging || isCopyMode || isMultiSelectCopyMode) return;
@@ -171,9 +171,9 @@ const DraggableWorkoutCard = ({
       <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
         <span
           className="text-[11px] font-medium block truncate"
-          title={workout.program}
+          title={workout.name}
         >
-          {workout.program}
+          {workout.name}
         </span>
         <div className="flex items-center gap-0.5">
           {/* Checkbox for multi-select - visible on hover or when in multi-select mode */}
@@ -194,7 +194,7 @@ const DraggableWorkoutCard = ({
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => onToggleSelect(week, day, workout)}
-              aria-label={t('programs.builder.multiSelect.selectWorkoutAria', { name: workout.program })}
+              aria-label={t('programs.builder.multiSelect.selectWorkoutAria', { name: workout.name })}
               className="size-3.5"
               disabled={isMultiSelectCopyMode}
             />
@@ -693,7 +693,7 @@ export const ProgramBuilder = ({
         exercises: [
           {
             id: 'ex-1',
-            name: `${workout.program} - Main lift`,
+            name: `${workout.name} - Main lift`,
             sets: '3 x 8–10',
           },
           {
@@ -826,7 +826,7 @@ export const ProgramBuilder = ({
 
         const workoutSchemas: any[] = workouts.map((workout) => {
           return {
-            title: workout.program,
+            title: workout.name,
             description: workout.description || '',
             type: workout.type,
             difficulty: workout.difficulty || 'intermediate',
@@ -1121,7 +1121,7 @@ export const ProgramBuilder = ({
     // Create a workout object from the payload
     const newWorkout: Workout & { id: string } = {
       id: `inline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      program: payload.title,
+      name: payload.title,
       description: payload.description || '',
       type: payload.type,
       difficulty: payload.difficulty || 'intermediate',
@@ -1167,7 +1167,7 @@ export const ProgramBuilder = ({
         // Update existing workout
         const updatedWorkout = {
           ...currentWorkouts[workoutIndex],
-          program: payload.title,
+          name: payload.title,
           description: payload.description || '',
           type: payload.type,
           difficulty: payload.difficulty || 'intermediate',
@@ -1307,7 +1307,7 @@ export const ProgramBuilder = ({
   const handleSaveToLibrary = (workout: Workout & { id: string }) => {
     // Convert Workout to WorkoutPayload for CreateWorkoutSidePanel
     const workoutPayload: WorkoutPayload = {
-      title: workout.program,
+      title: workout.name,
       description: workout.description || '',
       type: workout.type,
       difficulty: workout.difficulty || 'intermediate',
@@ -2112,7 +2112,7 @@ export const ProgramBuilder = ({
             <div className="rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden shadow-lg rotate-3">
               <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
                 <span className="text-[11px] font-medium block truncate">
-                  {draggedWorkout.workout.program}
+                  {draggedWorkout.workout.name}
                 </span>
               </div>
               <div className="px-2 py-1">
@@ -2145,9 +2145,9 @@ export const ProgramBuilder = ({
             <DialogTitle className="flex-1 min-w-0">
               <span
                 className="block truncate text-left"
-                title={selectedWorkoutDetails?.workout.program}
+                title={selectedWorkoutDetails?.workout.name || ''}
               >
-                {selectedWorkoutDetails?.workout.program}
+                {selectedWorkoutDetails?.workout.name}
               </span>
             </DialogTitle>
           </DialogHeader>
@@ -2162,9 +2162,9 @@ export const ProgramBuilder = ({
                         <div className="flex items-center justify-between gap-2">
                           <span
                             className="text-sm font-medium truncate"
-                            title={selectedWorkoutDetails.workout.program}
+                            title={selectedWorkoutDetails.workout.name}
                           >
-                            {selectedWorkoutDetails.workout.program}
+                            {selectedWorkoutDetails.workout.name}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {formatDate(selectedWorkoutDetails.workout.created)}
@@ -2308,7 +2308,7 @@ export const ProgramBuilder = ({
           }
         }}
         meta={editingWorkout ? {
-          title: editingWorkout.workout.program,
+          title: editingWorkout.workout.name,
           type: editingWorkout.workout.type,
           difficulty: editingWorkout.workout.difficulty || 'intermediate',
           description: editingWorkout.workout.description || '',

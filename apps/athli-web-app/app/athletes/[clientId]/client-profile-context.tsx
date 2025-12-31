@@ -94,40 +94,7 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
         isFetchingBio || isFetchingGoals || isFetchingInjuries || isFetchingDetails || isFetchingWorkoutStats ||
         isFetchingUpdates;
 
-    // Debug logging
-    useEffect(() => {
-        if (isInitialLoad) {
-            console.log('[ClientProfile] Loading state:', {
-                athlete: !!athlete,
-                user: !!user,
-                isAnyLoading,
-                isAnyFetching,
-                individual: {
-                    profile: { loading: isLoadingProfile, fetching: isFetchingProfile },
-                    metrics: { loading: isLoadingMetrics, fetching: isFetchingMetrics },
-                    habits: { loading: isLoadingHabits, fetching: isFetchingHabits },
-                    photos: { loading: isLoadingPhotos, fetching: isFetchingPhotos },
-                    checkIns: { loading: isLoadingCheckIns, fetching: isFetchingCheckIns },
-                    questionnaires: { loading: isLoadingQuestionnaires, fetching: isFetchingQuestionnaires },
-                    files: { loading: isLoadingFiles, fetching: isFetchingFiles },
-                    notes: { loading: isLoadingNotes, fetching: isFetchingNotes },
-                    bio: { loading: isLoadingBio, fetching: isFetchingBio },
-                    goals: { loading: isLoadingGoals, fetching: isFetchingGoals },
-                    injuries: { loading: isLoadingInjuries, fetching: isFetchingInjuries },
-                    details: { loading: isLoadingDetails, fetching: isFetchingDetails },
-                    workoutStats: { loading: isLoadingWorkoutStats, fetching: isFetchingWorkoutStats },
-                    updates: { loading: isLoadingUpdates, fetching: isFetchingUpdates },
-                }
-            });
-        }
-    }, [isInitialLoad, isAnyLoading, isAnyFetching, athlete, user,
-        isLoadingProfile, isFetchingProfile, isLoadingMetrics, isFetchingMetrics,
-        isLoadingHabits, isFetchingHabits, isLoadingPhotos, isFetchingPhotos,
-        isLoadingCheckIns, isFetchingCheckIns, isLoadingQuestionnaires, isFetchingQuestionnaires,
-        isLoadingFiles, isFetchingFiles, isLoadingNotes, isFetchingNotes,
-        isLoadingBio, isFetchingBio, isLoadingGoals, isFetchingGoals,
-        isLoadingInjuries, isFetchingInjuries, isLoadingDetails, isFetchingDetails,
-        isLoadingWorkoutStats, isFetchingWorkoutStats, isLoadingUpdates, isFetchingUpdates]);
+
 
     // Reset initial load state when clientId changes
     useEffect(() => {

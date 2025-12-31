@@ -196,6 +196,7 @@ const buildSectionPayload = (
           ),
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || undefined,
+          notes: exercise.notes || '',
         };
       });
 
@@ -209,8 +210,10 @@ const buildSectionPayload = (
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'regular',
       exercises,
+      notes: section.notes || '',
     };
   }
 
@@ -235,14 +238,17 @@ const buildSectionPayload = (
         durationSec: parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null,
         restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
         completed: false,
+        notes: exercise.notes || '',
       };
     });
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'amrap',
       durationSec: section.roundDurationSec || 0,
       exercises,
+      notes: section.notes || '',
     };
   }
 
@@ -271,6 +277,7 @@ const buildSectionPayload = (
           set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet, parserType),
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || undefined,
+          notes: exercise.notes || '',
         };
       });
 
@@ -284,9 +291,11 @@ const buildSectionPayload = (
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'circuits',
       targetRounds: section.targetRounds || 0,
       exercises,
+      notes: section.notes || '',
     };
   }
 
@@ -308,6 +317,7 @@ const buildSectionPayload = (
           ),
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || undefined,
+          notes: exercise.notes || '',
         };
       });
 
@@ -321,9 +331,11 @@ const buildSectionPayload = (
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'auxiliary',
       category: section.category || 'warmup',
       exercises,
+      notes: section.notes || '',
     };
   }
 
@@ -346,14 +358,17 @@ const buildSectionPayload = (
       durationSec: parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null,
       restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
       completed: false,
+      notes: exercise.notes || '',
     };
   });
 
   return {
     id: section.id,
+    name: section.name || '',
     type: 'timed',
     targetRounds: section.targetRounds || 0,
     exercises,
+    notes: section.notes || '',
   };
 };
 
