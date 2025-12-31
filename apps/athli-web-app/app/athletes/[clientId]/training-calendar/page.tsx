@@ -252,6 +252,9 @@ const ClientTrainingCalendarPage = () => {
     dateKey: string;
     workout: Workout & { id: string };
   } | null>(null);
+  // Loading state for fetching workout data when opening builder
+  const [isLoadingWorkoutData, setIsLoadingWorkoutData] = useState(false);
+  const [fetchedWorkoutData, setFetchedWorkoutData] = useState<any>(null);
 
   // Drag and drop state
   const [draggedWorkout, setDraggedWorkout] = useState<{
@@ -1646,10 +1649,58 @@ const ClientTrainingCalendarPage = () => {
     setIsAddExercisePanelOpen(false);
   };
 
-  const handleOpenWorkoutDetails = (dateKey: string, workout: Workout & { id: string }) => {
+  const handleOpenWorkoutDetails = async (dateKey: string, workout: Workout & { id: string }) => {
     // Open the workout builder dialog for editing
     setEditingWorkout({ dateKey, workout });
+    setFetchedWorkoutData(null);
+    setIsLoadingWorkoutData(true);
     setIsWorkoutBuilderOpen(true);
+
+    // If workout_data is already present, use it directly
+    if (workout.workout_data?.items?.length > 0) {
+      setFetchedWorkoutData(workout.workout_data);
+      setIsLoadingWorkoutData(false);
+      return;
+    }
+
+    // Extract the real workout ID (format: "workoutId-timestamp-random")
+    const realWorkoutId = workout.id.split('-')[0];
+
+    // Check if it's an inline-created or temp workout (no need to fetch - use existing data)
+    if (realWorkoutId === 'inline' || realWorkoutId === 'temp') {
+      setFetchedWorkoutData(workout.workout_data || { items: [] });
+      setIsLoadingWorkoutData(false);
+      return;
+    }
+
+    try {
+      const fullWorkout = await getWorkoutById(realWorkoutId);
+      setFetchedWorkoutData(fullWorkout.workout_data || { items: [] });
+
+      // Also update the workout in state with the fetched data
+      setWorkoutsByDate((prev) => {
+        const workoutsForDate = prev[dateKey];
+        if (!workoutsForDate) return prev;
+
+        const updatedWorkouts = workoutsForDate.map((w) => {
+          if (w.id === workout.id) {
+            return { ...w, workout_data: fullWorkout.workout_data };
+          }
+          return w;
+        });
+
+        return {
+          ...prev,
+          [dateKey]: updatedWorkouts,
+        };
+      });
+    } catch (error) {
+      console.error('Failed to fetch workout data:', error);
+      // Fall back to whatever data is available
+      setFetchedWorkoutData(workout.workout_data || { items: [] });
+    } finally {
+      setIsLoadingWorkoutData(false);
+    }
   };
 
   const handleSaveEditedWorkout = (payload: WorkoutProgramPayload) => {
@@ -2586,6 +2637,8 @@ const ClientTrainingCalendarPage = () => {
           setIsWorkoutBuilderOpen(open);
           if (!open) {
             setEditingWorkout(null);
+            setFetchedWorkoutData(null);
+            setIsLoadingWorkoutData(false);
           }
         }}
         meta={editingWorkout ? {
@@ -2599,7 +2652,8 @@ const ClientTrainingCalendarPage = () => {
           difficulty: 'Intermediate',
           description: '',
         }}
-        initialData={editingWorkout?.workout.workout_data}
+        initialData={editingWorkout ? fetchedWorkoutData : undefined}
+        isLoadingInitialData={isLoadingWorkoutData}
         saveSignal={0}
         onSaveSuccess={handleSaveEditedWorkout}
         onSaveError={() => { }}

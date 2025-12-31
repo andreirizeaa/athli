@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -149,8 +149,8 @@ const DraggableWorkoutCard = ({
       tabIndex={0}
       aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
       onClick={(e) => {
-        if (isDragging || isCopyMode || isMultiSelectCopyMode) return;
         e.stopPropagation();
+        if (isDragging || isCopyMode || isMultiSelectCopyMode) return;
         onClick(week, day, workout);
       }}
       onKeyDown={(event) => {
@@ -183,7 +183,9 @@ const DraggableWorkoutCard = ({
               isMultiSelectMode || isSelected
                 ? "opacity-100"
                 : "opacity-0 group-hover/card-header:opacity-100",
-              (isCopyMode || isMultiSelectCopyMode) && "invisible"
+              // Hide checkbox in regular copy mode, but keep visible for selected items in multi-select copy mode
+              isCopyMode && "invisible",
+              isMultiSelectCopyMode && !isSelected && "invisible"
             )}
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
@@ -194,6 +196,7 @@ const DraggableWorkoutCard = ({
               onCheckedChange={() => onToggleSelect(week, day, workout)}
               aria-label={t('programs.builder.multiSelect.selectWorkoutAria', { name: workout.program })}
               className="size-3.5"
+              disabled={isMultiSelectCopyMode}
             />
           </div>
           <DropdownMenu>
@@ -480,16 +483,19 @@ const DroppableDayCard = ({
           </div>
         )}
         {/* Destination day overlay - shown below header */}
+        {/* Destination day overlay - shown below header */}
         {isHoveredForCopy && (
-          <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+          <div
+            className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPasteWorkout(week, day);
+            }}
+          >
             <Button
               variant="default"
               size="sm"
-              className="gap-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPasteWorkout(week, day);
-              }}
+              className="gap-1 pointer-events-none"
             >
               <Copy className="size-3" />
               {isShiftPressed ? 'Paste' : 'Copy'}
@@ -498,17 +504,19 @@ const DroppableDayCard = ({
         )}
         {/* Multi-select copy destination overlay */}
         {isMultiSelectHovered && (
-          <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+          <div
+            className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onMultiSelectPaste) {
+                onMultiSelectPaste(week, day);
+              }
+            }}
+          >
             <Button
               variant="default"
               size="sm"
-              className="gap-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onMultiSelectPaste) {
-                  onMultiSelectPaste(week, day);
-                }
-              }}
+              className="gap-1 pointer-events-none"
             >
               <Copy className="size-3" />
               Copy
@@ -575,6 +583,9 @@ export const ProgramBuilder = ({
   const [weekToClear, setWeekToClear] = useState<number | null>(null);
   const [isSaveToLibraryOpen, setIsSaveToLibraryOpen] = useState(false);
   const [workoutToSave, setWorkoutToSave] = useState<WorkoutPayload | null>(null);
+
+  // Paste lock to prevent double execution
+  const isProcessingPaste = useRef(false);
 
   // Copy mode state
   const [isCopyMode, setIsCopyMode] = useState<boolean>(false);
@@ -657,6 +668,9 @@ export const ProgramBuilder = ({
     day: number;
     workout: Workout & { id: string };
   } | null>(null);
+  // Loading state for fetching workout data when opening builder
+  const [isLoadingWorkoutData, setIsLoadingWorkoutData] = useState(false);
+  const [fetchedWorkoutData, setFetchedWorkoutData] = useState<any>(null);
 
 
   type PreviewExercise = {
@@ -723,57 +737,14 @@ export const ProgramBuilder = ({
     if (typeof window === 'undefined') return;
 
     if (mode === 'new') {
-      // Use a small delay to ensure localStorage is available after navigation
-      const timeoutId = setTimeout(() => {
-        // Check for access flag - if not present, redirect to programs
-        const accessFlag = window.localStorage.getItem('athli_program_builder_access');
-        if (accessFlag !== 'true') {
-          router.push('/training/programs');
-          return;
-        }
-
-        // Try to load meta from localStorage (if coming from create panel)
-        const raw = window.localStorage.getItem('athli_new_program_meta');
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw) as ProgramMeta;
-            setProgramMeta(parsed);
-
-            // Initialize total weeks from meta if available
-            if (parsed.weeks && parsed.weeks.trim() !== '') {
-              const weeksNum = parseInt(parsed.weeks, 10);
-              if (!Number.isNaN(weeksNum) && weeksNum > 0) {
-                setTotalWeeks(weeksNum);
-
-                // Initialize empty workouts structure for the specified weeks
-                const initialWorkouts = initializeEmptyWorkouts(weeksNum);
-                setWorkoutsByDay(initialWorkouts); // Ensure current state is also set
-
-                // Initialize history with the correct totalWeeks and empty schema
-                setHistory([{ workoutsByDay: initialWorkouts, totalWeeks: weeksNum }]);
-                // Update initial state
-                setInitialState({ workoutsByDay: initialWorkouts, totalWeeks: weeksNum });
-              }
-            }
-            // Clear the access flag after loading
-            window.localStorage.removeItem('athli_program_builder_access');
-            return;
-          } catch {
-            // If parsing fails, fall through to default values
-          }
-        }
-
-        // If no meta in localStorage, use default values
-        setProgramMeta({
-          name: t('programs.builder.newProgram'),
-          type: PROGRAM_TYPES[0].value,
-          difficulty: DIFFICULTY_LEVELS[0].value,
-          weeks: '',
-          description: '',
-        });
-      }, 50);
-
-      return () => clearTimeout(timeoutId);
+      // Set default values for new program
+      setProgramMeta({
+        name: t('programs.builder.newProgram'),
+        type: PROGRAM_TYPES[0].value,
+        difficulty: DIFFICULTY_LEVELS[0].value,
+        weeks: '',
+        description: '',
+      });
     } else if (mode === 'edit' && initialData) {
       // Load program data for edit mode
       setWorkoutsByDay(initialData.workoutsByDay);
@@ -1322,8 +1293,10 @@ export const ProgramBuilder = ({
     day: number,
     workout: Workout & { id: string },
   ) => {
-    // Instead of opening details modal, open the builder for editing
+    // Open the builder for editing - use workout data directly from state
     setEditingWorkout({ week, day, workout });
+    setFetchedWorkoutData(workout.workout_data || { items: [] });
+    setIsLoadingWorkoutData(false);
     setIsWorkoutBuilderOpen(true);
   };
 
@@ -1499,7 +1472,12 @@ export const ProgramBuilder = ({
   };
 
   const handlePasteWorkout = (week: number, day: number) => {
-    if (!copiedWorkout) return;
+    if (!copiedWorkout || isProcessingPaste.current) return;
+
+    isProcessingPaste.current = true;
+    setTimeout(() => {
+      isProcessingPaste.current = false;
+    }, 300);
 
     // Create a new workout instance with a unique ID
     const newWorkout: Workout & { id: string } = {
@@ -1556,27 +1534,38 @@ export const ProgramBuilder = ({
 
   // Multi-select handlers
   const handleToggleWorkoutSelection = (week: number, day: number, workout: Workout & { id: string }) => {
-    const isSelected = selectedWorkouts.some(
-      (sw) => sw.workout.id === workout.id && sw.week === week && sw.day === day
-    );
-
-    if (isSelected) {
-      // Deselect
-      const newSelection = selectedWorkouts.filter(
-        (sw) => !(sw.workout.id === workout.id && sw.week === week && sw.day === day)
+    setSelectedWorkouts(prev => {
+      const isSelected = prev.some(
+        (sw) => sw.workout.id === workout.id && sw.week === week && sw.day === day
       );
-      setSelectedWorkouts(newSelection);
 
-      // If no more selected, exit multi-select mode
-      if (newSelection.length === 0) {
-        setIsMultiSelectMode(false);
-        setIsMultiSelectCopyMode(false);
+      if (isSelected) {
+        // Deselect
+        const newSelection = prev.filter(
+          (sw) => !(sw.workout.id === workout.id && sw.week === week && sw.day === day)
+        );
+
+        // If no more selected, exit multi-select mode
+        if (newSelection.length === 0) {
+          setIsMultiSelectMode(false);
+          setIsMultiSelectCopyMode(false);
+        }
+
+        return newSelection;
+      } else {
+        // Check if already exists (safety guard)
+        const alreadyExists = prev.some(
+          (sw) => sw.workout.id === workout.id && sw.week === week && sw.day === day
+        );
+        if (alreadyExists) {
+          return prev;
+        }
+
+        // Select
+        setIsMultiSelectMode(true);
+        return [...prev, { workout, week, day }];
       }
-    } else {
-      // Select
-      setSelectedWorkouts([...selectedWorkouts, { workout, week, day }]);
-      setIsMultiSelectMode(true);
-    }
+    });
   };
 
   const handleCancelMultiSelect = () => {
@@ -1606,7 +1595,12 @@ export const ProgramBuilder = ({
   };
 
   const handleMultiSelectPaste = (targetWeek: number, targetDay: number) => {
-    if (selectedWorkouts.length === 0) return;
+    if (selectedWorkouts.length === 0 || isProcessingPaste.current) return;
+
+    isProcessingPaste.current = true;
+    setTimeout(() => {
+      isProcessingPaste.current = false;
+    }, 300);
 
     // Sort selected workouts by day number to maintain relative positions
     const sortedWorkouts = [...selectedWorkouts].sort((a, b) => {
@@ -1615,37 +1609,65 @@ export const ProgramBuilder = ({
       return aDayNum - bDayNum;
     });
 
+    // Deduplicate based on workout.id + week + day
+    const uniqueWorkouts = sortedWorkouts.filter((item, index, self) =>
+      index === self.findIndex((t) => (
+        t.workout.id === item.workout.id && t.week === item.week && t.day === item.day
+      ))
+    );
+
+    if (uniqueWorkouts.length === 0) return;
+
     // Get the earliest day number from the selection
-    const earliestDayNum = getDayNumber(sortedWorkouts[0].week, sortedWorkouts[0].day);
+    const earliestDayNum = getDayNumber(uniqueWorkouts[0].week, uniqueWorkouts[0].day);
     const targetDayNum = getDayNumber(targetWeek, targetDay);
 
+    // PRE-GENERATE all new workouts with their target positions BEFORE the state setter
+    // This is critical - creating them inside the setter causes duplicates in StrictMode
+    const workoutsToAdd: Array<{
+      newWeek: number;
+      newDay: number;
+      newWorkout: Workout & { id: string };
+    }> = [];
+
+    uniqueWorkouts.forEach(({ workout, week, day }) => {
+      // Calculate the offset from the earliest day
+      const workoutDayNum = getDayNumber(week, day);
+      const dayOffset = workoutDayNum - earliestDayNum;
+
+      // Calculate the target day for this workout
+      const newTargetDayNum = targetDayNum + dayOffset;
+      const { week: newWeek, day: newDay } = getWeekAndDay(newTargetDayNum);
+
+      // Only add if within bounds
+      if (newWeek >= 1 && newWeek <= totalWeeks && newDay >= 1 && newDay <= 7) {
+        // Create a new workout with a unique ID
+        const newWorkout: Workout & { id: string } = {
+          ...workout,
+          id: `${workout.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        };
+
+        workoutsToAdd.push({ newWeek, newDay, newWorkout });
+      }
+    });
+
+    // Now update state with the pre-generated workouts
     setWorkoutsByDay((prev) => {
       const updated = { ...prev };
 
-      sortedWorkouts.forEach(({ workout, week, day }) => {
-        // Calculate the offset from the earliest day
-        const workoutDayNum = getDayNumber(week, day);
-        const dayOffset = workoutDayNum - earliestDayNum;
+      workoutsToAdd.forEach(({ newWeek, newDay, newWorkout }) => {
+        // Initialize the week if needed
+        if (!updated[newWeek]) {
+          updated[newWeek] = {};
+        }
 
-        // Calculate the target day for this workout
-        const newTargetDayNum = targetDayNum + dayOffset;
-        const { week: newWeek, day: newDay } = getWeekAndDay(newTargetDayNum);
+        // Check if this workout already exists (handles StrictMode double-invocation)
+        const existingWorkouts = updated[newWeek]?.[newDay] || [];
+        const alreadyExists = existingWorkouts.some(w => w.id === newWorkout.id);
 
-        // Only add if within bounds
-        if (newWeek >= 1 && newWeek <= totalWeeks && newDay >= 1 && newDay <= 7) {
-          // Create a new workout with a unique ID
-          const newWorkout = {
-            ...workout,
-            id: `${workout.id.split('-')[0]}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          };
-
-          // Initialize the week if needed
-          if (!updated[newWeek]) {
-            updated[newWeek] = {};
-          }
-
+        if (!alreadyExists) {
           // Add to the target day
-          updated[newWeek][newDay] = [...(updated[newWeek]?.[newDay] || []), newWorkout];
+          updated[newWeek][newDay] = [...existingWorkouts, newWorkout];
         }
       });
 
@@ -2281,6 +2303,8 @@ export const ProgramBuilder = ({
           if (!open) {
             setPendingWorkoutDay(null);
             setEditingWorkout(null);
+            setFetchedWorkoutData(null);
+            setIsLoadingWorkoutData(false);
           }
         }}
         meta={editingWorkout ? {
@@ -2294,7 +2318,8 @@ export const ProgramBuilder = ({
           difficulty: 'Intermediate',
           description: '',
         }}
-        initialData={editingWorkout?.workout.workout_data}
+        initialData={editingWorkout ? fetchedWorkoutData : undefined}
+        isLoadingInitialData={isLoadingWorkoutData}
         saveSignal={0}
         onSaveSuccess={editingWorkout ? handleSaveEditedWorkout : handleSaveWorkoutFromBuilder}
         onSaveError={() => { }}

@@ -66,17 +66,37 @@ const EditProgramPage = () => {
             }
 
             workouts.forEach((workoutData: any) => {
-              // Ensure we have a valid workout object
-              if (workoutData && workoutData.title) {
+              // Calculate totalExercises from items if not provided
+              let totalExercises = workoutData.totalExercises || 0;
+              if (!totalExercises && workoutData.items) {
+                totalExercises = (workoutData.items || []).reduce((total: number, item: any) => {
+                  if (item.itemType === 'exercise') {
+                    return total + 1;
+                  } else if (item.itemType === 'section') {
+                    const section = item.data;
+                    if (section?.exercises) {
+                      if (section.type === 'regular' || section.type === 'auxiliary' || section.type === 'circuits') {
+                        return total + section.exercises.reduce((sum: number, group: any) => sum + (group.exercises?.length || 0), 0);
+                      } else {
+                        return total + (section.exercises?.length || 0);
+                      }
+                    }
+                  }
+                  return total;
+                }, 0);
+              }
+
+              // Ensure we have a valid workout object - accept workouts with title or items
+              if (workoutData && (workoutData.title || workoutData.items)) {
                 // Map the schema object back to our Workout type
                 const workout: Workout & { id: string } = {
                   id: `${workoutData.id || 'temp'}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                  program: workoutData.title,
+                  program: workoutData.title || 'Untitled Workout',
                   description: workoutData.description || '',
                   type: workoutData.type || 'strength',
                   difficulty: workoutData.difficulty || 'intermediate',
-                  length: '0 min', // We don't store this in the schema, but builder doesn't strictly need it for display
-                  totalExercises: workoutData.totalExercises || 0,
+                  length: '0 min',
+                  totalExercises: totalExercises,
                   equipment: workoutData.equipment || [],
                   created: '',
                   isFavourite: false,

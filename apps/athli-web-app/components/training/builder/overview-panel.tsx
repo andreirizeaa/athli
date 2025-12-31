@@ -25,7 +25,7 @@ import {
   restrictToVerticalAxis,
   restrictToFirstScrollableAncestor,
 } from '@dnd-kit/modifiers';
-import { Target, GripVertical, Link2, Link2Off, Trash2 } from 'lucide-react';
+import { Target, GripVertical, Link2, Link2Off, Trash2, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/general/utils';
 import type {
@@ -185,7 +185,13 @@ const OverviewSectionCard = ({
           )}
         </div>
         <div ref={setDroppableRef} className="min-h-[10px]">
-          {children}
+          {section.isLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="size-4 animate-spin text-primary" />
+            </div>
+          ) : (
+            children
+          )}
         </div>
       </div>
     </div>
