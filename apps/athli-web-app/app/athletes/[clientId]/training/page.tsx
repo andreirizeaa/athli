@@ -46,6 +46,7 @@ import {
   Info,
   Activity,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import {
   DndContext,
@@ -193,6 +194,8 @@ const ClientTrainingCalendarPage = () => {
   // Navigation loading state - when navigating to a week that requires data fetch
   const [pendingNavigationWeek, setPendingNavigationWeek] = useState<number | null>(null);
   const [isNavigationLoading, setIsNavigationLoading] = useState<boolean>(false);
+  // Sync loading state - when manually syncing calendar
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   // Calendar data fetching configuration
   const FETCH_CHUNK_WEEKS = 8; // Fetch data in 8-week chunks
@@ -1794,8 +1797,8 @@ const ClientTrainingCalendarPage = () => {
       return dayNumber >= startDay && dayNumber <= endDay;
     });
 
-    // Calculate workouts to assign
-    const workoutsToAssign: Array<{ workoutId: string, date: Date }> = [];
+    // Collect all workouts to assign - program workouts contain embedded data, not library references
+    const workoutsToAssign: Array<{ workout: any, date: Date }> = [];
 
     // Sort days by day number to ensure correct sequence order
     daysToAssign.sort((a: any, b: any) => {
@@ -1818,58 +1821,93 @@ const ClientTrainingCalendarPage = () => {
       targetDate.setDate(start.getDate() + dayOffset);
 
       workouts.forEach((workout: any) => {
-        if (workout.id) {
+        // All workouts from program schema are embedded data, not references to coach_workouts
+        // The workout.id here is an internal program identifier, not a coach_workouts table ID
+        if (workout.title || workout.items) {
           workoutsToAssign.push({
-            workoutId: workout.id,
-            date: targetDate
+            workout,
+            date: new Date(targetDate)
           });
         }
       });
     });
 
+    const totalWorkouts = workoutsToAssign.length;
+
     // Execute assignments
-    if (workoutsToAssign.length === 0) {
+    if (totalWorkouts === 0) {
       toast.info("No workouts found in the selected range.");
       setIsAddProgramPanelOpen(false);
       return;
     }
 
     try {
-      const promises = workoutsToAssign.map(assignment =>
-        apiAssignWorkout({
+      // Optimistically update local state first
+      const optimisticWorkouts: { [dateKey: string]: Array<Workout & { id: string }> } = {};
+
+      workoutsToAssign.forEach(assignment => {
+        const dateKey = getDateKey(assignment.date);
+        const workoutId = `${assignment.workout.id || 'prog'}-${dateKey}-${Date.now()}`;
+        const optimisticWorkout: Workout & { id: string } = {
+          id: workoutId,
+          name: assignment.workout.title,
+          description: assignment.workout.description || '',
+          type: assignment.workout.type || 'strength',
+          difficulty: assignment.workout.difficulty || 'intermediate',
+          length: '',
+          totalExercises: assignment.workout.totalExercises || 0,
+          equipment: assignment.workout.equipment || [],
+          created: formatDate(new Date()),
+          isFavourite: false,
+        };
+
+        if (!optimisticWorkouts[dateKey]) {
+          optimisticWorkouts[dateKey] = [];
+        }
+        optimisticWorkouts[dateKey].push(optimisticWorkout);
+      });
+
+      // Update local state immediately (optimistic)
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        Object.keys(optimisticWorkouts).forEach((dateKey) => {
+          updated[dateKey] = [...(updated[dateKey] || []), ...optimisticWorkouts[dateKey]];
+        });
+        return updated;
+      });
+
+      // Assign all workouts with full payload - program workouts have embedded data
+      // Skip invalidation since we're using optimistic updates
+      const promises = workoutsToAssign.map((assignment, index) => {
+        const dateKey = getDateKey(assignment.date);
+        const workoutId = optimisticWorkouts[dateKey][index % optimisticWorkouts[dateKey].length].id;
+        return apiAssignWorkout({
           clientId,
-          date: getDateKey(assignment.date),
-          workoutId: assignment.workoutId
-        })
-      );
+          date: dateKey,
+          workoutPayload: {
+            id: workoutId,
+            title: assignment.workout.title,
+            name: assignment.workout.title,
+            description: assignment.workout.description || '',
+            type: assignment.workout.type || 'strength',
+            difficulty: assignment.workout.difficulty || 'intermediate',
+            equipment: assignment.workout.equipment || [],
+            totalExercises: assignment.workout.totalExercises || 0,
+            items: assignment.workout.items || [],
+          },
+          isNew: true,
+          skipInvalidation: true,
+        });
+      });
 
       await Promise.all(promises);
-      toast.success(`Assigned ${workoutsToAssign.length} workouts from ${selectedProgram.program}`);
-
-      // Optimistically update UI?
-      // Reuse logic from handleSaveWorkout or re-fetch?
-      // Since we have multiple dates, simpler to invalidate queries or rely on the hook's update logic if present.
-      // But handleSaveWorkout updates local state manually. Let's try minimal update logic or refetch.
-      // Since we are using React Query hook `useClientTraining`, checking if it returns `refetch` or similar.
-      // The implementation showed `useClientTraining` returns `workouts` etc but usually it's better to invalidate.
-      // For now, let's trigger a refetch of the range.
-      // However, handleSaveWorkout did this:
-      /*
-        setWorkoutsByDate((prev) => {
-          const updated = { ...prev };
-          datesToAdd.forEach(date => { ... });
-          return updated;
-        });
-      */
-      // We can do similar if we had full workout objects. 
-      // detailedProgram workouts might be partial. 
-      // We will just invalidate the query.
-
-      queryClient.invalidateQueries({ queryKey: ['client-training-calendar'] });
+      toast.success('Successfully assigned program');
 
     } catch (error) {
       console.error("Failed to assign program workouts", error);
       toast.error("Failed to assign program");
+      // Revert optimistic update by re-fetching
+      queryClient.invalidateQueries({ queryKey: ['client-training-calendar'] });
     }
 
     setIsAddProgramPanelOpen(false);
@@ -2273,6 +2311,34 @@ const ClientTrainingCalendarPage = () => {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={async () => {
+                  setIsSyncing(true);
+                  try {
+                    const results = await queryClient.refetchQueries({ queryKey: ['client-training-calendar', clientId] });
+                    // After refetch, replace local state with fresh server data
+                    const freshData = {
+                      ...convertCalendarData(calendarData),
+                    };
+                    if (Object.keys(freshData).length > 0) {
+                      setWorkoutsByDate(freshData);
+                    }
+                  } finally {
+                    setIsSyncing(false);
+                  }
+                }}
+                disabled={isLoadingTraining || isSyncing}
+                className="gap-2"
+              >
+                {isSyncing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Sync
+              </Button>
             </div>
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
@@ -2358,7 +2424,7 @@ const ClientTrainingCalendarPage = () => {
                             }}
                             className={cn(
                               'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
-                              !isCopyMode && !isMultiSelectCopyMode && !isDateInPast(date) && !draggedWorkout && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
+                              !isCopyMode && !isMultiSelectCopyMode && !draggedWorkout && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
                               isCopyMode && !isPastedDay && 'cursor-pointer hover:border-primary/50',
                               isMultiSelectCopyMode && isFutureDay && 'cursor-pointer hover:border-primary/50',
                               isDragOver && isFutureDay && 'border-primary',
