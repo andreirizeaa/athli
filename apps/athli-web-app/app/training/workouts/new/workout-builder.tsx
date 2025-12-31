@@ -2404,10 +2404,16 @@ Focus on proper form and progressive overload.`;
 
                   </div>
                   <div className="flex-shrink-0 border-t p-2 flex items-center justify-end gap-2 bg-background">
-                    <Button variant="outline" onClick={() => setShowCloseConfirm(true)}>
+                    <Button variant="outline" onClick={() => {
+                      if (isDirty) {
+                        setShowCloseConfirm(true);
+                      } else {
+                        onOpenChange(false);
+                      }
+                    }}>
                       Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+                    <Button onClick={handleSave} disabled={isSaving || !isDirty} className="gap-2">
                       {isSaving ? <Loader2 className="animate-spin size-4" /> : <Check className="size-4" />}
                       Save
                     </Button>

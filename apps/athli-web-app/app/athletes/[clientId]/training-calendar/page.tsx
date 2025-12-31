@@ -18,21 +18,25 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
   Calendar,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Copy,
   Dumbbell,
   FileText,
+  MoreHorizontal,
   Plus,
+  Save,
   Search,
   Trash2,
   CircleX,
@@ -40,7 +44,19 @@ import {
   CircleCheck,
   Info,
   Activity,
+  X,
 } from 'lucide-react';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/general/utils';
 import type { Program, Workout, Exercise } from '@/components/app/app-shell';
 import { mockPrograms, mockWorkouts, mockExercises } from '@/components/app/app-shell';
@@ -63,12 +79,96 @@ import {
 } from '@/api/client/client-service';
 import { getWorkouts } from '@/api/coach/coach-workout-service';
 import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
+import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
+import { TrainingDataProvider, useTrainingData } from '@/app/training/training-data-context';
 import { AddProgramSidePanel } from './add-program-side-panel';
+import { StandardBuilder } from '@/app/training/workouts/new/workout-builder';
+import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-service';
+import { toast } from 'sonner';
+import { Checkbox } from '@/components/ui/checkbox';
+import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
 
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Helper component for droppable day wrapper
+const DroppableDayWrapper = ({
+  dateKey,
+  children,
+  isDraggingGlobal,
+  isFutureDay,
+}: {
+  dateKey: string;
+  children: React.ReactNode;
+  isDraggingGlobal: boolean;
+  isFutureDay: boolean;
+}) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `day-${dateKey}`,
+    data: {
+      type: 'day-drop-zone',
+      dateKey,
+    },
+    disabled: !isFutureDay,
+  });
+
+  return (
+    <div ref={setNodeRef} className="flex-1 flex flex-col min-h-0 h-full">
+      {React.cloneElement(children as React.ReactElement)}
+    </div>
+  );
+};
+
+// Helper component for draggable workout card wrapper
+const DraggableWorkoutWrapper = ({
+  workoutId,
+  dateKey,
+  workout,
+  children,
+  isCopyMode,
+  isFutureDay,
+}: {
+  workoutId: string;
+  dateKey: string;
+  workout: Workout & { id: string };
+  children: React.ReactNode;
+  isCopyMode: boolean;
+  isFutureDay: boolean;
+}) => {
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+    id: `workout-${workoutId}`,
+    data: {
+      type: 'workout',
+      workout,
+      dateKey,
+    },
+    disabled: isCopyMode || !isFutureDay,
+  });
+
+  const style: React.CSSProperties = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(3deg)`
+      : undefined,
+    transformOrigin: 'center center',
+    position: 'relative',
+    zIndex: transform ? 99999 : undefined,
+    pointerEvents: isDragging ? 'none' : undefined,
+    transition: isDragging ? 'none' : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...(isCopyMode || !isFutureDay ? {} : { ...attributes, ...listeners })}
+      className={cn(isDragging && 'opacity-0')}
+    >
+      {children}
+    </div>
+  );
+};
 
 const ClientTrainingCalendarPage = () => {
   const t = useTranslations();
@@ -122,6 +222,47 @@ const ClientTrainingCalendarPage = () => {
   const [isAddProgramPanelOpen, setIsAddProgramPanelOpen] = useState<boolean>(false);
   const [isAddExercisePanelOpen, setIsAddExercisePanelOpen] = useState<boolean>(false);
   const [preventAutoFocus, setPreventAutoFocus] = useState<boolean>(false);
+
+  // Copy mode state
+  const [isCopyMode, setIsCopyMode] = useState<boolean>(false);
+  const [copiedWorkout, setCopiedWorkout] = useState<{
+    workout: Workout & { id: string };
+    dateKey: string;
+  } | null>(null);
+  const [isShiftPressed, setIsShiftPressed] = useState<boolean>(false);
+  const [pastedDays, setPastedDays] = useState<string[]>([]);
+  const [hoveredCopyDay, setHoveredCopyDay] = useState<string | null>(null);
+
+  // Multi-select mode state
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState<boolean>(false);
+  const [selectedWorkouts, setSelectedWorkouts] = useState<Array<{
+    workout: Workout & { id: string };
+    dateKey: string;
+  }>>([]);
+  const [isMultiSelectCopyMode, setIsMultiSelectCopyMode] = useState<boolean>(false);
+  const [multiSelectPastedDays, setMultiSelectPastedDays] = useState<string[]>([]);
+  const [multiSelectHoveredDay, setMultiSelectHoveredDay] = useState<string | null>(null);
+
+  // Create workout panel state
+  const [isCreateWorkoutPanelOpen, setIsCreateWorkoutPanelOpen] = useState<boolean>(false);
+
+  // Workout builder state for editing workouts inline
+  const [isWorkoutBuilderOpen, setIsWorkoutBuilderOpen] = useState<boolean>(false);
+  const [editingWorkout, setEditingWorkout] = useState<{
+    dateKey: string;
+    workout: Workout & { id: string };
+  } | null>(null);
+
+  // Drag and drop state
+  const [draggedWorkout, setDraggedWorkout] = useState<{
+    workout: Workout & { id: string };
+    sourceDateKey: string;
+  } | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   // Track workout and set completion status
   // Format: { [workoutId]: 'not_started' | 'in_progress' | 'completed' }
@@ -767,6 +908,22 @@ const ClientTrainingCalendarPage = () => {
     return compareDate.getTime() === today.getTime();
   };
 
+  // Check if a date is tomorrow or later (future, not including today)
+  const isTomorrowOrLater = (date: Date): boolean => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate > today;
+  };
+
+  // Check if a dateKey represents tomorrow or later
+  const isDateKeyTomorrowOrLater = (dateKey: string): boolean => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return isTomorrowOrLater(date);
+  };
+
   // Get section status (for AMRAP and timed sections)
   const getSectionStatus = (
     workoutId: string,
@@ -972,6 +1129,299 @@ const ClientTrainingCalendarPage = () => {
           </Tooltip>
         );
     }
+  };
+
+  // Copy mode keyboard event handlers
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(true);
+      }
+      if (e.key === 'Escape') {
+        if (isCopyMode) {
+          setIsCopyMode(false);
+          setCopiedWorkout(null);
+          setPastedDays([]);
+          setHoveredCopyDay(null);
+        }
+        if (isMultiSelectMode || isMultiSelectCopyMode) {
+          handleCancelMultiSelect();
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [isCopyMode, isMultiSelectMode, isMultiSelectCopyMode]);
+
+  // Exit copy mode when shift is released after pasting at least once
+  useEffect(() => {
+    if (isCopyMode && !isShiftPressed && pastedDays.length > 0) {
+      setIsCopyMode(false);
+      setCopiedWorkout(null);
+      setPastedDays([]);
+      setHoveredCopyDay(null);
+    }
+  }, [isCopyMode, isShiftPressed, pastedDays.length]);
+
+  // Check if a workout is in the library (has a matching id in availableWorkouts)
+  const checkIsInLibrary = (workoutId: string): boolean => {
+    // Extract base ID (before any timestamp suffix like -YYYY-MM-DD or -timestamp)
+    const baseId = workoutId.split('-')[0];
+    return availableWorkouts.some(w => w.id === baseId || w.id === workoutId);
+  };
+
+  // Copy workout handler
+  const handleCopyWorkout = (dateKey: string, workout: Workout & { id: string }) => {
+    setIsCopyMode(true);
+    setCopiedWorkout({ workout, dateKey });
+    setPastedDays([]);
+    setHoveredCopyDay(null);
+  };
+
+  // Paste workout handler
+  const handlePasteWorkout = (targetDateKey: string) => {
+    if (!copiedWorkout || targetDateKey === copiedWorkout.dateKey || pastedDays.includes(targetDateKey)) {
+      return;
+    }
+
+    const newWorkout = {
+      ...copiedWorkout.workout,
+      id: `${copiedWorkout.workout.id.split('-')[0]}-${targetDateKey}-${Date.now()}`,
+    };
+
+    setWorkoutsByDate((prev) => ({
+      ...prev,
+      [targetDateKey]: [...(prev[targetDateKey] ?? []), newWorkout],
+    }));
+
+    setPastedDays((prev) => [...prev, targetDateKey]);
+
+    // If not holding shift, exit copy mode after paste
+    if (!isShiftPressed) {
+      setIsCopyMode(false);
+      setCopiedWorkout(null);
+      setPastedDays([]);
+      setHoveredCopyDay(null);
+    }
+  };
+
+  // Cancel copy mode
+  const handleCancelCopy = () => {
+    setIsCopyMode(false);
+    setCopiedWorkout(null);
+    setPastedDays([]);
+    setHoveredCopyDay(null);
+  };
+
+  // Multi-select handlers
+  const handleToggleWorkoutSelection = (dateKey: string, workout: Workout & { id: string }) => {
+    const isSelected = selectedWorkouts.some(
+      (sw) => sw.workout.id === workout.id && sw.dateKey === dateKey
+    );
+
+    if (isSelected) {
+      // Deselect
+      const newSelection = selectedWorkouts.filter(
+        (sw) => !(sw.workout.id === workout.id && sw.dateKey === dateKey)
+      );
+      setSelectedWorkouts(newSelection);
+
+      // If no more selected, exit multi-select mode
+      if (newSelection.length === 0) {
+        setIsMultiSelectMode(false);
+        setIsMultiSelectCopyMode(false);
+      }
+    } else {
+      // Select
+      setSelectedWorkouts([...selectedWorkouts, { workout, dateKey }]);
+      setIsMultiSelectMode(true);
+    }
+  };
+
+  const handleCancelMultiSelect = () => {
+    setIsMultiSelectMode(false);
+    setIsMultiSelectCopyMode(false);
+    setSelectedWorkouts([]);
+    setMultiSelectPastedDays([]);
+    setMultiSelectHoveredDay(null);
+  };
+
+  const handleDeleteSelectedWorkouts = () => {
+    setWorkoutsByDate((prev) => {
+      const updated = { ...prev };
+      selectedWorkouts.forEach(({ dateKey, workout }) => {
+        if (updated[dateKey]) {
+          updated[dateKey] = updated[dateKey].filter((w) => w.id !== workout.id);
+        }
+      });
+      return updated;
+    });
+    handleCancelMultiSelect();
+  };
+
+  const handleStartMultiSelectCopy = () => {
+    setIsMultiSelectCopyMode(true);
+    setMultiSelectPastedDays([]);
+    setMultiSelectHoveredDay(null);
+  };
+
+  const handleMultiSelectPaste = (targetDateKey: string) => {
+    if (selectedWorkouts.length === 0) return;
+
+    // Sort selected workouts by dateKey to maintain relative positions
+    const sortedWorkouts = [...selectedWorkouts].sort((a, b) => {
+      return a.dateKey.localeCompare(b.dateKey);
+    });
+
+    // Get the earliest dateKey from the selection
+    const earliestDateKey = sortedWorkouts[0].dateKey;
+    const earliestDate = new Date(earliestDateKey);
+    const targetDate = new Date(targetDateKey);
+
+    setWorkoutsByDate((prev) => {
+      const updated = { ...prev };
+
+      sortedWorkouts.forEach(({ workout, dateKey }) => {
+        // Calculate the offset from the earliest date
+        const workoutDate = new Date(dateKey);
+        const dayOffset = Math.floor(
+          (workoutDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        // Calculate the target date for this workout
+        const newTargetDate = new Date(targetDate);
+        newTargetDate.setDate(newTargetDate.getDate() + dayOffset);
+        const newTargetDateKey = newTargetDate.toISOString().split('T')[0];
+
+        // Create a new workout with a unique ID
+        const newWorkout = {
+          ...workout,
+          id: `${workout.id.split('-')[0]}-${newTargetDateKey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        };
+
+        // Add to the target date
+        updated[newTargetDateKey] = [...(updated[newTargetDateKey] ?? []), newWorkout];
+      });
+
+      return updated;
+    });
+
+    setMultiSelectPastedDays((prev) => [...prev, targetDateKey]);
+
+    // Exit multi-select copy mode after paste
+    handleCancelMultiSelect();
+  };
+
+  const handleMultiSelectDayHover = (dateKey: string) => {
+    if (isMultiSelectCopyMode && !multiSelectPastedDays.includes(dateKey)) {
+      setMultiSelectHoveredDay(dateKey);
+    }
+  };
+
+  const handleMultiSelectDayLeave = () => {
+    setMultiSelectHoveredDay(null);
+  };
+
+  // Check if a workout is selected
+  const isWorkoutSelected = (dateKey: string, workoutId: string): boolean => {
+    return selectedWorkouts.some(
+      (sw) => sw.workout.id === workoutId && sw.dateKey === dateKey
+    );
+  };
+
+  // Copy day hover handlers
+  const handleCopyDayHover = (dateKey: string) => {
+    if (isCopyMode && !pastedDays.includes(dateKey)) {
+      setHoveredCopyDay(dateKey);
+    }
+  };
+
+  const handleCopyDayLeave = () => {
+    setHoveredCopyDay(null);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const data = active.data.current;
+    if (data?.type === 'workout') {
+      setDraggedWorkout({
+        workout: data.workout,
+        sourceDateKey: data.dateKey,
+      });
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    if (!over) {
+      setDragOverDay(null);
+      return;
+    }
+    const data = over.data.current;
+    if (data?.type === 'day-drop-zone') {
+      setDragOverDay(data.dateKey);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { over } = event;
+
+    if (!over || !draggedWorkout) {
+      setDraggedWorkout(null);
+      setDragOverDay(null);
+      return;
+    }
+
+    const overData = over.data.current;
+    if (overData?.type === 'day-drop-zone') {
+      const targetDateKey = overData.dateKey;
+      const { sourceDateKey, workout } = draggedWorkout;
+
+      // Don't do anything if dropping on the same day
+      if (sourceDateKey === targetDateKey) {
+        setDraggedWorkout(null);
+        setDragOverDay(null);
+        return;
+      }
+
+      // Move workout from source to target
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+
+        // Remove from source
+        if (updated[sourceDateKey]) {
+          updated[sourceDateKey] = updated[sourceDateKey].filter((w) => w.id !== workout.id);
+        }
+
+        // Add to target
+        updated[targetDateKey] = [...(updated[targetDateKey] || []), workout];
+
+        return updated;
+      });
+    }
+
+    setDraggedWorkout(null);
+    setDragOverDay(null);
+  };
+
+  // Save workout to library handler
+  const handleSaveToLibrary = (workout: Workout & { id: string }) => {
+    // Open the create workout panel with the workout data pre-filled
+    setIsCreateWorkoutPanelOpen(true);
+    // Store the workout to save in a temporary state - we'll use initialData prop
   };
 
   const handleOpenAddWorkoutPanel = (date: Date) => {
@@ -1187,45 +1637,48 @@ const ClientTrainingCalendarPage = () => {
   };
 
   const handleOpenWorkoutDetails = (dateKey: string, workout: Workout & { id: string }) => {
-    // Parse the dateKey to check if it's in the future
-    const [year, month, day] = dateKey.split('-').map(Number);
-    const workoutDate = new Date(year, month - 1, day);
-    workoutDate.setHours(0, 0, 0, 0);
+    // Open the workout builder dialog for editing
+    setEditingWorkout({ dateKey, workout });
+    setIsWorkoutBuilderOpen(true);
+  };
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const handleSaveEditedWorkout = (payload: WorkoutProgramPayload) => {
+    if (!editingWorkout) return;
 
-    // If workout is in the future, navigate to edit page instead of opening side panel
-    if (workoutDate > today) {
-      // Build workout schema
-      const workoutSchema = buildWorkoutSchema(workout);
+    const { dateKey, workout } = editingWorkout;
 
-      // Store workout schema and view state in localStorage
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('athli_workout_schema', JSON.stringify({ sections: workoutSchema }));
-        window.localStorage.setItem('athli_training_calendar_view_state', JSON.stringify({
-          currentWeek,
-          selectedWeek,
-        }));
-        window.localStorage.setItem('athli_workout_builder_access', 'edit-standard');
-        window.localStorage.setItem('athli_new_workout_meta', JSON.stringify({
-          title: workout.program || 'Workout',
-          description: workout.description || '',
-          type: workout.type || 'Push',
-          difficulty: 'Intermediate',
-          builder: 'standard',
-        }));
-        // Store workout date for breadcrumb
-        window.localStorage.setItem('athli_workout_date', dateKey);
-      }
+    setWorkoutsByDate((prev) => {
+      const workoutsForDate = prev[dateKey];
+      if (!workoutsForDate) return prev;
 
-      // Navigate to edit page
-      router.push(`/athletes/${clientId}/training-calendar/${workout.id}/edit`);
-      return;
-    }
+      const workoutIndex = workoutsForDate.findIndex((w) => w.id === workout.id);
+      if (workoutIndex === -1) return prev;
 
-    // For past or today workouts, open side panel as before
-    setSelectedWorkoutDetails({ dateKey, workout });
+      const updatedWorkout: Workout & { id: string } = {
+        ...workoutsForDate[workoutIndex],
+        program: payload.title,
+        description: payload.description || '',
+        type: payload.type,
+        difficulty: payload.difficulty || 'Intermediate',
+        equipment: payload.equipment || [],
+        totalExercises: payload.totalExercises,
+        workout_data: {
+          items: payload.items || [],
+        },
+      };
+
+      const updatedWorkouts = [...workoutsForDate];
+      updatedWorkouts[workoutIndex] = updatedWorkout;
+
+      return {
+        ...prev,
+        [dateKey]: updatedWorkouts,
+      };
+    });
+
+    setIsWorkoutBuilderOpen(false);
+    setEditingWorkout(null);
+    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }));
   };
 
   const handleCloseWorkoutDetails = () => {
@@ -1443,202 +1896,373 @@ const ClientTrainingCalendarPage = () => {
             ))}
           </div>
           {/* Calendar rows - one row per week */}
-          <div className="flex-1 flex flex-col min-h-0" style={{ gap: '1rem' }}>
-            {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
-              const weekDates = calendarDates[rowIndex] || [];
-              const rowsCount = getRowsCount();
-              // Calculate height: (100% - gaps) / rowsCount
-              // Each gap is 1rem, so we calculate: calc((100% - (n-1) * 1rem) / n)
-              const gapCount = rowsCount - 1;
-              return (
-                <div
-                  key={rowIndex}
-                  className="flex gap-4 min-h-0 flex-shrink-0"
-                  style={{
-                    height: gapCount > 0
-                      ? `calc((100% - ${gapCount} * 1rem) / ${rowsCount})`
-                      : '100%'
-                  }}
-                >
-                  {weekDates.map((date, dayIndex) => {
-                    const dateKey = getDateKey(date);
-                    const workoutsForDate = workoutsByDate[dateKey] ?? [];
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className={cn("flex-1 flex flex-col min-h-0", isShiftPressed && "select-none")} style={{ gap: '1rem' }}>
+              {Array.from({ length: getRowsCount() }, (_, rowIndex) => {
+                const weekDates = calendarDates[rowIndex] || [];
+                const rowsCount = getRowsCount();
+                // Calculate height: (100% - gaps) / rowsCount
+                // Each gap is 1rem, so we calculate: calc((100% - (n-1) * 1rem) / n)
+                const gapCount = rowsCount - 1;
+                return (
+                  <div
+                    key={rowIndex}
+                    className="flex gap-4 min-h-0 flex-shrink-0"
+                    style={{
+                      height: gapCount > 0
+                        ? `calc((100% - ${gapCount} * 1rem) / ${rowsCount})`
+                        : '100%'
+                    }}
+                  >
+                    {weekDates.map((date, dayIndex) => {
+                      const dateKey = getDateKey(date);
+                      const workoutsForDate = workoutsByDate[dateKey] ?? [];
+                      const isCopySource = isCopyMode && copiedWorkout?.dateKey === dateKey;
+                      const isHoveredForCopy = isCopyMode && hoveredCopyDay === dateKey && !pastedDays.includes(dateKey);
+                      const isPastedDay = pastedDays.includes(dateKey);
+                      const isFutureDay = isTomorrowOrLater(date);
+                      const isDragOver = dragOverDay === dateKey;
+                      const isSourceDay = draggedWorkout?.sourceDateKey === dateKey;
 
-                    return (
-                      <div
-                        key={dayIndex}
-                        className={cn(
-                          'flex-1 bg-muted rounded-lg border flex flex-col min-h-0 h-full',
-                          isToday(date) ? 'border-primary' : 'border-border',
-                        )}
-                      >
-                        <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
-                          <span className="text-xs uppercase text-muted-foreground">{date.getDate()}</span>
-                          {!isDateInPast(date) && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 -mr-1 hover:bg-background"
-                                  aria-label={t('athletes.trainingCalendar.addWorkoutOrProgram')}
-                                >
-                                  <Plus className="size-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleOpenAddWorkoutPanel(date)} className="gap-2">
-                                  <Dumbbell className="size-3.5 text-muted-foreground" />
-                                  <span>{t('athletes.trainingCalendar.addWorkout')}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenAddProgramPanel(date)} className="gap-2">
-                                  <FileText className="size-3.5 text-muted-foreground" />
-                                  <span>{t('athletes.trainingCalendar.addProgram')}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleOpenAddExercisePanel(date)} className="gap-2">
-                                  <Activity className="size-3.5 text-muted-foreground" />
-                                  <span>{t('athletes.trainingCalendar.addExercise')}</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </div>
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 min-h-0">
-                          {workoutsForDate.length > 0 ? (
-                            <div className="flex flex-col gap-2">
-                              {workoutsForDate.map((workout) => {
-                                const status = getWorkoutStatus(workout.id);
-                                return (
-                                  <div
-                                    key={workout.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.program })}
-                                    onClick={() => handleOpenWorkoutDetails(dateKey, workout)}
-                                    onKeyDown={(event) => {
-                                      if (event.key === 'Enter' || event.key === ' ') {
-                                        event.preventDefault();
-                                        handleOpenWorkoutDetails(dateKey, workout);
-                                      }
-                                    }}
-                                    className="p-2 rounded-lg border border-border bg-background flex items-start justify-between gap-2 cursor-pointer"
-                                  >
-                                    <div className="flex-1 min-w-0 flex items-start gap-2">
-                                      <div className="flex-shrink-0 mt-0.5">
-                                        {renderWorkoutStatusIcon(status)}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <span
-                                          className="text-[10px] font-medium block break-words line-clamp-2"
-                                          title={workout.program}
-                                        >
-                                          {workout.program}
-                                        </span>
-                                        <span className="text-[10px] text-muted-foreground">
-                                          {workout.totalExercises}{' '}
-                                          {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
-                                        </span>
-                                      </div>
-                                    </div>
+                      return (
+                        <DroppableDayWrapper
+                          key={dayIndex}
+                          dateKey={dateKey}
+                          isDraggingGlobal={!!draggedWorkout}
+                          isFutureDay={isFutureDay}
+                        >
+                          <div
+                            onClick={() => {
+                              if (isCopyMode && !isPastedDay) {
+                                handlePasteWorkout(dateKey);
+                              } else if (isMultiSelectCopyMode && !isDateInPast(date)) {
+                                handleMultiSelectPaste(dateKey);
+                              }
+                            }}
+                            onMouseEnter={() => {
+                              if (isCopyMode && !isPastedDay) {
+                                handleCopyDayHover(dateKey);
+                              } else if (isMultiSelectCopyMode && !isDateInPast(date)) {
+                                handleMultiSelectDayHover(dateKey);
+                              }
+                            }}
+                            onMouseLeave={() => {
+                              if (isCopyMode) {
+                                handleCopyDayLeave();
+                              } else if (isMultiSelectCopyMode) {
+                                handleMultiSelectDayLeave();
+                              }
+                            }}
+                            className={cn(
+                              'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
+                              !isCopyMode && !isMultiSelectCopyMode && !isDateInPast(date) && !draggedWorkout && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
+                              isCopyMode && !isPastedDay && 'cursor-pointer hover:border-primary/50',
+                              isMultiSelectCopyMode && isFutureDay && 'cursor-pointer hover:border-primary/50',
+                              isDragOver && isFutureDay && 'border-primary',
+                            )}
+                          >
+                            <div className="px-3 py-[2px] border-b border-border flex-shrink-0 flex items-center justify-between">
+                              <span className={cn(
+                                "text-xs uppercase flex items-center justify-center",
+                                isToday(date)
+                                  ? "bg-primary text-primary-foreground rounded-full size-5 font-medium"
+                                  : "text-muted-foreground"
+                              )}>{date.getDate()}</span>
+                              {!isDateInPast(date) && !isCopyMode && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
                                     <Button
                                       type="button"
-                                      variant="ghost"
                                       size="icon"
-                                      className="h-5 w-5 flex-shrink-0"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        handleDeleteWorkout(dateKey, workout.id);
-                                      }}
-                                      aria-label={t('athletes.trainingCalendar.deleteWorkoutAria')}
+                                      className={cn(
+                                        'h-4 w-4 -mr-1 rounded-full transition-opacity',
+                                        isDragOver && isFutureDay
+                                          ? 'opacity-100'
+                                          : 'opacity-0 group-hover/day:opacity-100 data-[state=open]:opacity-100 group-has-[.workout-card:hover]/day:opacity-0'
+                                      )}
+                                      aria-label={t('athletes.trainingCalendar.addWorkoutOrProgram')}
+                                      onClick={(e) => e.stopPropagation()}
                                     >
-                                      <Trash2 className="size-3 text-muted-foreground hover:text-destructive" />
+                                      <Plus className="size-3" />
                                     </Button>
-                                  </div>
-                                );
-                              })}
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleOpenAddWorkoutPanel(date)} className="gap-2">
+                                      <Dumbbell className="size-3.5 text-muted-foreground" />
+                                      <span>{t('athletes.trainingCalendar.addWorkout')}</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleOpenAddProgramPanel(date)} className="gap-2">
+                                      <FileText className="size-3.5 text-muted-foreground" />
+                                      <span>{t('athletes.trainingCalendar.addProgram')}</span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </div>
-                          ) : (
-                            !isDateInPast(date) && (
-                              <div className="flex items-center justify-center h-full">
-                                <div className={cn("flex gap-2", selectedWeek === '4' ? "flex-row" : "flex-col")}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size={selectedWeek === '4' ? "icon" : "sm"}
-                                        className={cn(
-                                          "gap-1.5 text-xs h-7 px-2 text-muted-foreground",
-                                          selectedWeek !== '4' && "justify-start"
-                                        )}
-                                        aria-label={t('athletes.trainingCalendar.addWorkout')}
-                                        onClick={() => handleOpenAddWorkoutPanel(date)}
-                                      >
-                                        <Dumbbell className="size-3" />
-                                        {selectedWeek !== '4' && <span>{t('athletes.trainingCalendar.addWorkout')}</span>}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {t('athletes.trainingCalendar.addWorkout')}
-                                    </TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size={selectedWeek === '4' ? "icon" : "sm"}
-                                        className={cn(
-                                          "gap-1.5 text-xs h-7 px-2 text-muted-foreground",
-                                          selectedWeek !== '4' && "justify-start"
-                                        )}
-                                        aria-label={t('athletes.trainingCalendar.addProgram')}
-                                        onClick={() => handleOpenAddProgramPanel(date)}
-                                      >
-                                        <FileText className="size-3" />
-                                        {selectedWeek !== '4' && <span>{t('athletes.trainingCalendar.addProgram')}</span>}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {t('athletes.trainingCalendar.addProgram')}
-                                    </TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size={selectedWeek === '4' ? "icon" : "sm"}
-                                        className={cn(
-                                          "gap-1.5 text-xs h-7 px-2 text-muted-foreground",
-                                          selectedWeek !== '4' && "justify-start"
-                                        )}
-                                        aria-label={t('athletes.trainingCalendar.addExercise')}
-                                        onClick={() => handleOpenAddExercisePanel(date)}
-                                      >
-                                        <Activity className="size-3" />
-                                        {selectedWeek !== '4' && <span>{t('athletes.trainingCalendar.addExercise')}</span>}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {t('athletes.trainingCalendar.addExercise')}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
+                            <div className="flex-1 min-h-0 relative overflow-hidden">
+                              <div className={cn(
+                                "absolute inset-0 p-3",
+                                (isCopySource || isHoveredForCopy) ? "overflow-hidden" : "overflow-y-auto"
+                              )}>
+                                {workoutsForDate.length > 0 ? (
+                                  <div className="flex flex-col gap-2">
+                                    {workoutsForDate.map((workout) => {
+                                      const status = getWorkoutStatus(workout.id);
+                                      const isWorkoutInLibrary = checkIsInLibrary(workout.id);
+                                      const isWorkoutCopySource = isCopyMode && copiedWorkout?.workout.id === workout.id;
+                                      return (
+                                        <DraggableWorkoutWrapper
+                                          key={workout.id}
+                                          workoutId={workout.id}
+                                          dateKey={dateKey}
+                                          workout={workout}
+                                          isCopyMode={isCopyMode}
+                                          isFutureDay={isFutureDay}
+                                        >
+                                          <div
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.program })}
+                                            onClick={() => {
+                                              if (isCopyMode) return;
+                                              handleOpenWorkoutDetails(dateKey, workout);
+                                            }}
+                                            onKeyDown={(event) => {
+                                              if (isCopyMode) return;
+                                              if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                handleOpenWorkoutDetails(dateKey, workout);
+                                              }
+                                            }}
+                                            className={cn(
+                                              "workout-card rounded-lg border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-all duration-200",
+                                              !isCopyMode && !draggedWorkout && "cursor-pointer hover:border-primary/50",
+                                              isFutureDay && !isCopyMode && !draggedWorkout && "cursor-grab active:cursor-grabbing",
+                                              isWorkoutCopySource && "opacity-50",
+                                              "border-border"
+                                            )}
+                                          >
+                                            <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
+                                              <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                                                <div className="flex-shrink-0">
+                                                  {renderWorkoutStatusIcon(status)}
+                                                </div>
+                                                <span
+                                                  className="text-[11px] font-medium block truncate"
+                                                  title={workout.program}
+                                                >
+                                                  {workout.program}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-0.5">
+                                                {/* Checkbox for multi-select - visible on hover or when in multi-select mode */}
+                                                <div
+                                                  className={cn(
+                                                    "flex-shrink-0 transition-opacity",
+                                                    isMultiSelectMode || isWorkoutSelected(dateKey, workout.id)
+                                                      ? "opacity-100"
+                                                      : "opacity-0 group-hover/card-header:opacity-100",
+                                                    (isCopyMode || isMultiSelectCopyMode) && "invisible"
+                                                  )}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  onPointerDown={(e) => e.stopPropagation()}
+                                                  onMouseDown={(e) => e.stopPropagation()}
+                                                >
+                                                  <Checkbox
+                                                    checked={isWorkoutSelected(dateKey, workout.id)}
+                                                    onCheckedChange={() => handleToggleWorkoutSelection(dateKey, workout)}
+                                                    aria-label={t('athletes.trainingCalendar.multiSelect.selectWorkoutAria', { name: workout.program })}
+                                                    className="size-3.5"
+                                                  />
+                                                </div>
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                      variant="ghost"
+                                                      size="icon"
+                                                      className={cn(
+                                                        "h-5 w-5 flex-shrink-0 -mr-1 text-muted-foreground hover:text-foreground",
+                                                        isCopyMode && "invisible"
+                                                      )}
+                                                      onClick={(e) => e.stopPropagation()}
+                                                      onPointerDown={(e) => e.stopPropagation()}
+                                                      onMouseDown={(e) => e.stopPropagation()}
+                                                      disabled={isCopyMode}
+                                                    >
+                                                      <MoreHorizontal className="size-3" />
+                                                    </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent align="end" className="w-40" onClick={(e) => e.stopPropagation()}>
+                                                    <DropdownMenuItem onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      handleCopyWorkout(dateKey, workout);
+                                                    }}>
+                                                      <Copy className="mr-2 size-3.5" />
+                                                      <span>{t('general.copy')}</span>
+                                                    </DropdownMenuItem>
+                                                    <TooltipProvider>
+                                                      <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                          <div>
+                                                            <DropdownMenuItem
+                                                              disabled={isWorkoutInLibrary}
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (!isWorkoutInLibrary) {
+                                                                  handleSaveToLibrary(workout);
+                                                                }
+                                                              }}
+                                                              className={isWorkoutInLibrary ? 'opacity-50 cursor-not-allowed' : ''}
+                                                            >
+                                                              <Save className="mr-2 size-3.5" />
+                                                              <span>{t('athletes.trainingCalendar.saveToLibrary')}</span>
+                                                            </DropdownMenuItem>
+                                                          </div>
+                                                        </TooltipTrigger>
+                                                        {isWorkoutInLibrary && (
+                                                          <TooltipContent side="left">
+                                                            <p>{t('athletes.trainingCalendar.alreadySaved')}</p>
+                                                          </TooltipContent>
+                                                        )}
+                                                      </Tooltip>
+                                                    </TooltipProvider>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteWorkout(dateKey, workout.id);
+                                                      }}
+                                                    >
+                                                      <Trash2 className="mr-2 size-3.5" />
+                                                      <span>{t('general.delete')}</span>
+                                                    </DropdownMenuItem>
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                              </div>
+                                            </div>
+                                            <div className="px-2 py-1 flex items-center justify-between">
+                                              <span className="text-[10px] text-muted-foreground block">
+                                                {workout.totalExercises}{' '}
+                                                {workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
+                                              </span>
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <div
+                                                      className={cn(
+                                                        "h-5 w-5 -mr-1 rounded-full text-primary flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
+                                                        isCopyMode && "invisible"
+                                                      )}
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!isCopyMode) {
+                                                          handleOpenWorkoutDetails(dateKey, workout);
+                                                        }
+                                                      }}
+                                                    >
+                                                      <Plus className="size-3" />
+                                                    </div>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>
+                                                    <p>{t('athletes.trainingCalendar.addExercise')}</p>
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            </div>
+                                          </div>
+                                        </DraggableWorkoutWrapper>
+                                      );
+                                    })}
+                                  </div>
+                                ) : null}
                               </div>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+
+                              {/* Source day overlay - shown below header */}
+                              {isCopySource && !isHoveredForCopy && !isPastedDay && (
+                                <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+                                  <span className="text-xs text-center text-muted-foreground">
+                                    {t('athletes.trainingCalendar.holdShiftToPaste')}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-xs gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCancelCopy();
+                                    }}
+                                  >
+                                    <X className="size-3" />
+                                    {t('general.cancel')}
+                                  </Button>
+                                </div>
+                              )}
+                              {/* Destination day overlay - shown below header */}
+                              {isHoveredForCopy && (
+                                <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handlePasteWorkout(dateKey);
+                                    }}
+                                  >
+                                    <Copy className="size-3" />
+                                    {isShiftPressed ? t('general.paste') : t('general.copy')}
+                                  </Button>
+                                </div>
+                              )}
+                              {/* Multi-select copy destination overlay */}
+                              {isMultiSelectCopyMode && multiSelectHoveredDay === dateKey && !isDateInPast(date) && (
+                                <div className="absolute inset-0 bg-muted z-30 flex flex-col items-center justify-center gap-2 p-2 rounded-b-lg">
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="gap-1"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleMultiSelectPaste(dateKey);
+                                    }}
+                                  >
+                                    <Copy className="size-3" />
+                                    {t('general.copy')}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </DroppableDayWrapper>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+            <DragOverlay>
+              {draggedWorkout && (
+                <div className="rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden shadow-lg rotate-3">
+                  <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
+                    <span className="text-[11px] font-medium block truncate">
+                      {draggedWorkout.workout.program}
+                    </span>
+                  </div>
+                  <div className="px-2 py-1">
+                    <span className="text-[10px] text-muted-foreground block">
+                      {draggedWorkout.workout.totalExercises}{' '}
+                      {draggedWorkout.workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
+                    </span>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </DragOverlay>
+          </DndContext>
         </div>
 
 
@@ -1916,10 +2540,25 @@ const ClientTrainingCalendarPage = () => {
         open={isAddWorkoutPanelOpen}
         onOpenChange={setIsAddWorkoutPanelOpen}
         onSave={handleSaveWorkout}
+        onCreateNewWorkout={() => {
+          setIsAddWorkoutPanelOpen(false);
+          setIsCreateWorkoutPanelOpen(true);
+        }}
         selectedDate={selectedDateForWorkout ?? undefined}
-        mode="calendar"
+        mode="program"
         availableWorkouts={availableWorkouts}
       />
+      <TrainingDataProvider>
+        <CreateWorkoutSidePanel
+          open={isCreateWorkoutPanelOpen}
+          onOpenChange={setIsCreateWorkoutPanelOpen}
+          onSuccess={() => {
+            setIsCreateWorkoutPanelOpen(false);
+            // Refresh workouts to include the newly created one
+            getWorkouts().then((workouts) => setAvailableWorkouts(workouts));
+          }}
+        />
+      </TrainingDataProvider>
       <AddProgramSidePanel
         open={isAddProgramPanelOpen}
         onOpenChange={setIsAddProgramPanelOpen}
@@ -1930,6 +2569,39 @@ const ClientTrainingCalendarPage = () => {
         open={isAddExercisePanelOpen}
         onOpenChange={setIsAddExercisePanelOpen}
         onSave={handleSaveExercise}
+      />
+      <StandardBuilder
+        open={isWorkoutBuilderOpen}
+        onOpenChange={(open) => {
+          setIsWorkoutBuilderOpen(open);
+          if (!open) {
+            setEditingWorkout(null);
+          }
+        }}
+        meta={editingWorkout ? {
+          title: editingWorkout.workout.program,
+          type: editingWorkout.workout.type,
+          difficulty: editingWorkout.workout.difficulty || 'Intermediate',
+          description: editingWorkout.workout.description || '',
+        } : {
+          title: '',
+          type: '',
+          difficulty: 'Intermediate',
+          description: '',
+        }}
+        initialData={editingWorkout?.workout.workout_data}
+        saveSignal={0}
+        onSaveSuccess={handleSaveEditedWorkout}
+        onSaveError={() => { }}
+        onDirtyChange={() => { }}
+      />
+      <MultiSelectActionBar
+        selectedCount={selectedWorkouts.length}
+        isVisible={isMultiSelectMode || isMultiSelectCopyMode}
+        isCopyMode={isMultiSelectCopyMode}
+        onDelete={handleDeleteSelectedWorkouts}
+        onCopy={handleStartMultiSelectCopy}
+        onCancel={handleCancelMultiSelect}
       />
     </div>
   );

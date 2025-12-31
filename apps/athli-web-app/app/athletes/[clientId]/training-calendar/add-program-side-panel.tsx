@@ -105,8 +105,8 @@ export const AddProgramSidePanel = ({
             width: { class: 'w-1/2', pixel: '50%' },
             renderHeader: ({ isAllSelected, onToggleAll }) => {
                 const handleToggleAll = () => {
-                    // Only toggle non-empty programs
-                    const selectablePrograms = programs.filter(p => p.length && p.length !== '0 weeks' && p.totalExercises && p.totalExercises > 0);
+                    // Only toggle non-empty programs (programs with workouts)
+                    const selectablePrograms = programs.filter(p => p.length && p.length !== '0 weeks');
                     if (isAllSelected) {
                         setSelectedProgramId(null);
                     } else if (selectablePrograms.length > 0) {
@@ -124,11 +124,9 @@ export const AddProgramSidePanel = ({
                 );
             },
             renderCell: (row, isSelected) => {
-                // Program is empty if it has no length (no weeks/workouts) or totalExercises is 0
-                const isEmpty = !row.length || row.length === '0 weeks' || !row.totalExercises || row.totalExercises === 0;
-                const tooltipMessage = !row.length || row.length === '0 weeks'
-                    ? 'No workouts in this program'
-                    : 'No exercises in this program';
+                // Program is empty only if it has no workouts (no length or 0 weeks)
+                const isEmpty = !row.length || row.length === '0 weeks';
+                const tooltipMessage = 'No workouts in this program';
                 return (
                     <div className="flex items-center gap-3 h-full w-full">
                         <TooltipProvider>
@@ -170,7 +168,7 @@ export const AddProgramSidePanel = ({
             width: { class: 'w-1/2', pixel: '50%' },
             getSortValue: (row) => row.length || '',
             renderCell: (row) => {
-                const isEmpty = !row.length || row.length === '0 weeks' || !row.totalExercises || row.totalExercises === 0;
+                const isEmpty = !row.length || row.length === '0 weeks';
                 if (isEmpty) {
                     return (
                         <Link
@@ -247,7 +245,7 @@ export const AddProgramSidePanel = ({
                                 enableRowSelection={true}
                                 selectOnRowClick={false}
                                 onRowClick={(row) => {
-                                    const isEmpty = !row.length || row.length === '0 weeks' || !row.totalExercises || row.totalExercises === 0;
+                                    const isEmpty = !row.length || row.length === '0 weeks';
                                     if (!isEmpty) {
                                         setSelectedProgramId(row.id);
                                     }
