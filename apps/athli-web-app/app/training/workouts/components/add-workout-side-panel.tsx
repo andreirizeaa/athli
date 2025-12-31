@@ -189,11 +189,12 @@ export const AddWorkoutSidePanel = ({
                         <div className="pt-1 pb-2">
                             <Button
                                 type="button"
+                                variant="outline"
                                 onClick={() => {
                                     handleClose();
                                     onCreateNewWorkout();
                                 }}
-                                className="w-full gap-2"
+                                className="w-full gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                             >
                                 <Plus className="size-4" />
                                 {t('athletes.trainingCalendar.createNewWorkout')}

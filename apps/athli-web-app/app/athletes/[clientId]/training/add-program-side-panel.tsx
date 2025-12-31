@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { Pencil, Loader2, Dumbbell, FileText } from 'lucide-react';
+import { Pencil, Loader2, Dumbbell, FileText, Check } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
@@ -66,6 +66,7 @@ export const AddProgramSidePanel = ({
     // Step 2 state
     const [detailedProgram, setDetailedProgram] = useState<(Program & { program_data: ProgramData }) | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [startDay, setStartDay] = useState<string>("1");
     const [endDay, setEndDay] = useState<string>("1");
 
@@ -121,13 +122,20 @@ export const AddProgramSidePanel = ({
 
     const handleSave = async () => {
         if (!selectedProgram || !startDate) return;
-        await onSave(
-            selectedProgram,
-            startDate,
-            detailedProgram || undefined,
-            { start: parseInt(startDay), end: parseInt(endDay) }
-        );
-        handleClose();
+        setIsSaving(true);
+        try {
+            await onSave(
+                selectedProgram,
+                startDate,
+                detailedProgram || undefined,
+                { start: parseInt(startDay), end: parseInt(endDay) }
+            );
+            handleClose();
+        } catch (error) {
+            console.error('Failed to save program', error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const columns: ColumnDefinition<Program>[] = useMemo(() => [
@@ -263,10 +271,15 @@ export const AddProgramSidePanel = ({
                         <Button
                             type="button"
                             onClick={handleSave}
-                            disabled={!startDate}
-                            className="gap-2"
+                            disabled={!startDate || isSaving}
+                            className="gap-2 relative"
                         >
-                            {t('general.save')}
+                            {isSaving ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Check className="size-4" />
+                            )}
+                            <span>{t('general.save')}</span>
                         </Button>
                     )}
                 </div>

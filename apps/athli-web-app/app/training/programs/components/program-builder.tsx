@@ -825,7 +825,13 @@ export const ProgramBuilder = ({
         const workouts = workoutsByDay[week]?.[day] || [];
 
         const workoutSchemas: any[] = workouts.map((workout) => {
+          // Extract original workout ID from library workouts (format: {workoutId}-{timestamp}-{random})
+          // For inline-created workouts, the ID starts with "inline-" so we don't include it
+          const workoutIdParts = workout.id.split('-');
+          const originalId = workoutIdParts[0] !== 'inline' ? workoutIdParts[0] : undefined;
+
           return {
+            ...(originalId && { id: originalId }),
             title: workout.name,
             description: workout.description || '',
             type: workout.type,
