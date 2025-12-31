@@ -189,16 +189,12 @@ const ExercisesPage = () => {
     });
   };
 
-  const handleNavigateToExercise = async (exerciseId: string) => {
-    try {
-      const fetchedExercises = await getExercises();
-      const exercise = fetchedExercises.find((ex) => ex.id === exerciseId);
-      if (exercise) {
-        setEditingExercise(exercise);
-        setIsEditExerciseOpen(true);
-      }
-    } catch (error) {
-      console.error('Failed to load exercise:', error);
+  const handleNavigateToExercise = (exerciseId: string) => {
+    // Use contextExercises directly instead of re-fetching all exercises
+    const exercise = contextExercises.find((ex) => ex.id === exerciseId);
+    if (exercise) {
+      setEditingExercise(exercise);
+      setIsEditExerciseOpen(true);
     }
   };
 

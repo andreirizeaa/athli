@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { Dumbbell, Check, Loader2, Plus } from 'lucide-react';
+import { Dumbbell, Check, Loader2, Plus, Hash } from 'lucide-react';
 import Link from 'next/link';
 import {
     Tooltip,
@@ -124,6 +124,16 @@ export const AddWorkoutSidePanel = ({
             id: 'totalExercises',
             label: t('library.totalExercises'),
             width: { class: 'w-1/2', pixel: '50%' },
+            renderHeader: () => {
+                return (
+                    <div className="flex items-center gap-3 h-full w-full">
+                        <div className="flex items-center gap-2">
+                            <Hash className="size-3 text-muted-foreground" />
+                            <span className="text-xs uppercase text-muted-foreground">{t('library.totalExercises')}</span>
+                        </div>
+                    </div>
+                );
+            },
             getSortValue: (row) => row.totalExercises || 0,
             renderCell: (row) => {
                 const isEmpty = !row.totalExercises || row.totalExercises === 0;
@@ -150,6 +160,7 @@ export const AddWorkoutSidePanel = ({
             open={open}
             onOpenChange={handleClose}
             title={title}
+            onOpenAutoFocus={(e) => e.preventDefault()}
             footer={
                 <div className="flex w-full justify-end gap-2">
                     <Button type="button" variant="outline" onClick={handleClose}>

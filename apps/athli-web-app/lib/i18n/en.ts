@@ -730,6 +730,7 @@ export const enMessages = {
         action: 'Create Section',
       },
       actions: {
+        save: 'Save',
         newSection: 'New Section',
         duplicate: 'Duplicate',
         duplicateAria: 'Duplicate section',
