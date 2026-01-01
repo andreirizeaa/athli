@@ -629,6 +629,7 @@ export const enMessages = {
   },
   messages: {
     title: 'Messages',
+    search: 'Search',
     conversation: 'conversation',
     conversations: 'conversations',
     broadcast: 'Broadcast',
@@ -688,6 +689,7 @@ export const enMessages = {
     video: 'Video',
     pdf: 'PDF',
     mp4: 'MP4',
+    voiceNote: 'Voice note',
     download: 'Download {name}',
     remove: 'Remove {name}',
     viewNoteAria: 'View note: {title}',
