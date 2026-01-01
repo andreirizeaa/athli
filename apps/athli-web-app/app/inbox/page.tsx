@@ -1621,19 +1621,20 @@ const InboxPage = () => {
               filteredContacts={filteredContacts}
               selectedContactId={selectedContactId}
               hasDraft={hasDraft}
+              onOpenBroadcast={() => setIsBroadcastOpen(true)}
             />
           </div>
           {/* Scrollable content area for Chat + Client Profile */}
           <div className="flex-1 h-full overflow-x-auto">
             <div className={cn(
               "h-full flex",
-              selectedContactId ? "min-w-[80vw]" : "w-full"
+              selectedContactId ? "w-full min-w-0" : "w-full"
             )}>
-              {/* Chat Area (35% when power view open, 100% otherwise) */}
+              {/* Chat Area (32.5% when power view open, 100% otherwise) */}
               <div
                 className={cn(
                   "relative h-full transition-[width] duration-300 ease-in-out",
-                  selectedContactId && isPowerViewOpen ? "w-[35%]" : "w-full"
+                  selectedContactId && isPowerViewOpen ? "w-[32.5%]" : "w-full"
                 )}
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
@@ -1667,7 +1668,11 @@ const InboxPage = () => {
                       <ChatHeader
                         selectedContact={selectedContact}
                         isPowerViewOpen={isPowerViewOpen}
-                        onTogglePowerView={() => setIsPowerViewOpen(!isPowerViewOpen)}
+                        onTogglePowerView={() => {
+                          const newState = !isPowerViewOpen;
+                          setIsPowerViewOpen(newState);
+                          setIsSidebarCollapsed(newState);
+                        }}
                       />
 
                       <MessageList
@@ -1760,13 +1765,13 @@ const InboxPage = () => {
                 </div>
               </div>
 
-              {/* Client Profile Area (65% width, animates in/out based on power view state) */}
+              {/* Client Profile Area (67.5% width, animates in/out based on power view state) */}
               {selectedContactId && (
                 <div
                   className={cn(
                     "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
                     isPowerViewOpen
-                      ? "w-[65%] opacity-100"
+                      ? "w-[67.5%] opacity-100"
                       : "w-0 opacity-0 overflow-hidden"
                   )}
                 >
@@ -1775,6 +1780,7 @@ const InboxPage = () => {
                       hideBreadcrumb={true}
                       activeTab={activeClientTab}
                       onTabChange={setActiveClientTab}
+                      hideMessageButton={true}
                     >
                       <ClientProfileContent tab={activeClientTab} />
                     </ClientProfileLayoutContent>

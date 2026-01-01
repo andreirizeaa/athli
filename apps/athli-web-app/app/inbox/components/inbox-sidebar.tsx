@@ -8,6 +8,7 @@ import {
     X,
     PanelLeftClose,
     PanelLeftOpen,
+    Megaphone,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ interface InboxSidebarProps {
     filteredContacts: Contact[];
     selectedContactId: string | undefined;
     hasDraft: (contactId: string) => boolean;
+    onOpenBroadcast: () => void;
 }
 
 export function InboxSidebar({
@@ -34,6 +36,7 @@ export function InboxSidebar({
     filteredContacts,
     selectedContactId,
     hasDraft,
+    onOpenBroadcast,
 }: InboxSidebarProps) {
     const t = useTranslations();
     const router = useRouter();
@@ -46,7 +49,7 @@ export function InboxSidebar({
             )}
         >
             <div className="flex flex-col h-full grow min-w-0">
-                <div className="px-4 pt-2 flex flex-col gap-4">
+                <div className="px-4 pt-2 flex flex-col gap-2">
                     {/* Header Row: Title + Toggle Button (Fixed Height) */}
                     <div className="h-8 relative">
                         {/* Expanded: Title + Close Button */}
@@ -105,23 +108,69 @@ export function InboxSidebar({
                         </div>
                     </div>
 
+                    {/* Broadcast Button Row (Fixed Height) */}
+                    <div className="h-9 relative">
+                        {/* Expanded: Full Button */}
+                        <div
+                            className={cn(
+                                'absolute inset-0 flex items-center transition-all duration-300',
+                                isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
+                            )}
+                        >
+                            <Button
+                                variant="outline"
+                                className="w-full justify-start gap-2 pl-[7px] text-muted-foreground hover:text-foreground"
+                                onClick={onOpenBroadcast}
+                            >
+                                <Megaphone className="size-4 -ml-[5px]" />
+                                <span className="ml-[0.3]">{t('messages.broadcast')}</span>
+                            </Button>
+                        </div>
+
+                        {/* Collapsed: Icon Button */}
+                        <div
+                            className={cn(
+                                'absolute inset-0 flex items-center transition-all duration-300',
+                                isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
+                            )}
+                        >
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                                            onClick={onOpenBroadcast}
+                                        >
+                                            <Megaphone className="size-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">
+                                        <p>{t('messages.broadcast')}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                    </div>
+
                     {/* Search Row: Input or Icon (Fixed Height) */}
-                    <div className="h-12 pb-2 relative">
+                    <div className="h-12 relative -mt-[4px]">
                         {/* Expanded: Search Input */}
                         <div
                             className={cn(
-                                'absolute inset-0 transition-all duration-300',
+                                'absolute inset-0 transition-all duration-300 flex items-center',
                                 isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
                             )}
                         >
                             <div className="relative w-full">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                                 <Input
                                     type="text"
                                     placeholder={t('messages.searchPlaceholder')}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-9 pr-8 h-9"
+                                    className="w-full pl-8 pr-8 h-9"
                                     aria-label={t('messages.searchPlaceholder')}
                                 />
                                 {searchQuery && (

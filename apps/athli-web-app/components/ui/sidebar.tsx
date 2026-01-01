@@ -74,7 +74,7 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   // Always start with defaultOpen to avoid hydration mismatch
   const [_open, _setOpen] = React.useState(defaultOpen);
-  
+
   // Read from localStorage after hydration to avoid SSR mismatch
   React.useEffect(() => {
     if (typeof window !== 'undefined' && openProp === undefined) {
@@ -85,7 +85,7 @@ function SidebarProvider({
       }
     }
   }, [openProp]); // Only run when openProp changes (or on mount if undefined)
-  
+
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
@@ -205,7 +205,7 @@ function Sidebar({
     return (
       <div
         data-slot="sidebar"
-          className={cn(
+        className={cn(
           'bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col',
           className
         )}
@@ -281,9 +281,9 @@ function Sidebar({
           'fixed inset-y-0 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex z-50',
           side === 'left'
             ? // Show when pinned, hovered, or in icon mode. Hide off-screen only when offcanvas and not hovered
-              isPinned || isHovered || collapsible === 'icon'
-                ? 'left-0'
-                : 'left-[calc(var(--sidebar-width)*-1)]'
+            isPinned || isHovered || collapsible === 'icon'
+              ? 'left-0'
+              : 'left-[calc(var(--sidebar-width)*-1)]'
             : isPinned || isHovered || collapsible === 'icon'
               ? 'right-0'
               : 'right-[calc(var(--sidebar-width)*-1)]',
@@ -610,7 +610,7 @@ function SidebarMenuAction({
         'peer-data-[size=lg]/menu-button:top-2.5',
         'group-data-[collapsible=icon]:hidden',
         showOnHover &&
-          'peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0',
+        'peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0',
         className
       )}
       {...props}

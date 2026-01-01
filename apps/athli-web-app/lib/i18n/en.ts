@@ -626,6 +626,8 @@ export const enMessages = {
     created: 'Created',
     editDetails: 'Edit details',
     comments: 'Comments',
+    active: 'Active',
+    archived: 'Archived',
   },
   messages: {
     title: 'Inbox',
@@ -695,6 +697,8 @@ export const enMessages = {
     viewNoteAria: 'View note: {title}',
     closePowerView: 'Close power view',
     enablePowerMode: 'Enable power mode',
+    showAthlete: 'Show athlete',
+    hideAthlete: 'Hide athlete',
     broadcastPanel: {
       title: 'Broadcast Message',
       message: 'Message',
