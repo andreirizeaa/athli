@@ -185,12 +185,6 @@ export type WorkoutItem =
   | { itemType: 'exercise'; data: RegularExercisePayload }
   | { itemType: 'section'; data: WorkoutSectionPayload };
 
-export type SessionComment = {
-  from: 'coach' | 'client';
-  message: string;
-  timestamp: string;
-};
-
 /**
  * Workout data structure stored in the workout_data JSONB field.
  * Includes complete workout information (metadata + execution).
@@ -214,7 +208,6 @@ export type WorkoutData = {
   totalDurationMin: number | null; // Total workout duration in minutes, null when not tracked
 
   // Session-level metrics (set to defaults when coach creates)
-  sessionComments: SessionComment[]; // History of comments for the entire session, empty array when none
   totalWeightLifted: number | null; // Total weight lifted in the session (in kg or lbs), null when not tracked
   intensity: number | null; // Perceived intensity (0-10 scale), null when not rated
   readiness: number | null; // Pre-workout readiness (0-10 scale), null when not rated
@@ -241,7 +234,6 @@ export const DEFAULT_EXECUTION_FIELDS = {
   startedAt: null,
   completedAt: null,
   totalDurationMin: null,
-  sessionComments: [],
   totalWeightLifted: null,
   intensity: null,
   readiness: null,

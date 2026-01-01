@@ -1645,6 +1645,7 @@ export const esMessages = {
       athleteTraining: 'Entrenamiento del atleta',
       trainingComingSoon: 'Información de entrenamiento próximamente',
       editDetails: 'Editar detalles',
+      comments: 'Comentarios',
       firstName: 'Nombre',
       firstNamePlaceholder: 'Ingrese el nombre',
       lastName: 'Apellido',

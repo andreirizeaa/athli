@@ -625,6 +625,7 @@ export const enMessages = {
     equipment: 'Equipment',
     created: 'Created',
     editDetails: 'Edit details',
+    comments: 'Comments',
   },
   messages: {
     title: 'Messages',
@@ -678,7 +679,7 @@ export const enMessages = {
     uploadVideo: 'Upload video',
     attachFile: 'Attach file',
     attachFiles: 'Attach files',
-    typeMessagePlaceholder: 'Type or upload a file',
+    typeMessagePlaceholder: 'Leave a comment!',
     typeMessage: 'Type a message',
     sendMessage: 'Send message',
     images: 'Images',
