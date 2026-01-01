@@ -168,9 +168,42 @@ export const WorkoutBuilder = ({
   const getInitialSchema = (): WorkoutSchema => {
     // Priority 1: Use initialData prop if provided
     if (initialData) {
-      // Convert from backend payload format to builder format
-      const converted = convertPayloadToBuilderFormat(initialData);
-      return converted;
+      // Check both top-level items and nested workout_data.items
+      const data = initialData as any;
+      const items = data.items?.length > 0
+        ? data.items
+        : data.workout_data?.items;
+
+      if (items?.length > 0) {
+        const payloadToConvert = {
+          items,
+          // Add dummy required fields to satisfy type check (converter only uses items)
+          name: '',
+          description: '',
+          type: '',
+          difficulty: '',
+          equipment: [],
+          totalExercises: 0,
+          id: null,
+          pre: { readiness: null },
+          post: {
+            rating: null,
+            intensity: null,
+            overallNotes: '',
+            sessionComments: null
+          },
+          completedSummary: {
+            status: 'not_started',
+            startedAt: null,
+            completedAt: null,
+            totalDurationMin: null,
+            totalWeightLifted: null
+          }
+        } as WorkoutProgramPayload;
+
+        const converted = convertPayloadToBuilderFormat(payloadToConvert);
+        return converted;
+      }
     }
 
     // Default: empty workout
@@ -220,16 +253,60 @@ export const WorkoutBuilder = ({
   }, [workoutSchema.items.length]);
 
   // Reset save loading status and reset schema when dialog opens
+  const prevOpenRef = useRef(open);
+  const prevIsLoadingRef = useRef(isLoadingInitialData);
+
+  // Reset save loading status and reset schema when dialog opens
+  // ONLY run this when the dialog transitions from closed to open, OR if we strictly need to re-initialize (e.g. data loaded)
+  // We avoid adding 'meta' or 'initialData' to the dependency array directly to prevent resets on prop updates during save (optimistic updates)
   useEffect(() => {
-    if (open) {
+    const justOpened = open && !prevOpenRef.current;
+    const dataLoaded = !isLoadingInitialData && prevIsLoadingRef.current && open;
+
+    // Initialize if strictly just opened, OR if data just finished loading while open
+    // We safeguard with !isDirty checks implicitly for dataLoaded case to avoid wiping work, 
+    // although typically data load happens before user can edit much if loading spinner is shown.
+
+    if (justOpened || dataLoaded) {
       setIsSaving(false);
 
       let initialSchema: WorkoutSchema;
 
       // Reset schema based on initialData when dialog opens
-      if (initialData && (initialData.items?.length > 0)) {
-        // Convert from backend payload format to builder format
-        const converted = convertPayloadToBuilderFormat(initialData);
+      const data = initialData as any;
+      const initialItems = data?.items?.length > 0
+        ? data.items
+        : data?.workout_data?.items;
+
+      if (initialItems?.length > 0) {
+        // Ensure we pass the structure expected by converter (it expects { items: [] })
+        const payloadToConvert = {
+          items: initialItems,
+          // Add dummy required fields to satisfy type check (converter only uses items)
+          name: '',
+          description: '',
+          type: '',
+          difficulty: '',
+          equipment: [],
+          totalExercises: 0,
+          id: null,
+          pre: { readiness: null },
+          post: {
+            rating: null,
+            intensity: null,
+            overallNotes: '',
+            sessionComments: null
+          },
+          completedSummary: {
+            status: 'not_started',
+            startedAt: null,
+            completedAt: null,
+            totalDurationMin: null,
+            totalWeightLifted: null
+          }
+        } as WorkoutProgramPayload;
+
+        const converted = convertPayloadToBuilderFormat(payloadToConvert);
         initialSchema = converted;
         setWorkoutSchema(converted);
       } else {
@@ -250,7 +327,10 @@ export const WorkoutBuilder = ({
       setIsDirty(false);
       if (onDirtyChange) onDirtyChange();
     }
-  }, [open, initialData, meta]);
+
+    prevOpenRef.current = open;
+    prevIsLoadingRef.current = isLoadingInitialData;
+  }, [open, isLoadingInitialData, initialData, meta, onDirtyChange]);
 
   // Deep compare current state with initial state to determine isDirty
   useEffect(() => {
@@ -932,12 +1012,14 @@ Focus on proper form and progressive overload.`;
             }
 
             coreData.exercises = exercisesToProcess.map((ex: any) => {
-              const fullExercise = searchExercises('').find(e => e.exerciseId === ex.id);
+              // Use prescribedExerciseId for looking up exercise details (fallback to id for legacy data)
+              const exerciseId = ex.prescribedExerciseId || ex.id || ex.exerciseId;
+              const fullExercise = searchExercises('').find(e => e.exerciseId === exerciseId);
               const exerciseData = fullExercise ? {
                 ...ex,
-                // IMPORTANT: Explicitly set exerciseId from the original payload id
-                // The payload uses 'id' but the builder expects 'exerciseId'
-                exerciseId: ex.id,
+                // IMPORTANT: Set exerciseId from prescribedExerciseId (or legacy id field)
+                // The builder expects 'exerciseId' as the exercise library ID
+                exerciseId: exerciseId,
                 name: fullExercise.name,
                 imageUrl: fullExercise.imageUrl,
                 videoUrl: fullExercise.videoUrl,
@@ -953,8 +1035,8 @@ Focus on proper form and progressive overload.`;
                 relatedExerciseIds: fullExercise.relatedExerciseIds,
               } : {
                 ...ex,
-                exerciseId: ex.id || ex.exerciseId,
-                name: ex.name || ex.id || 'Unknown Exercise',
+                exerciseId: exerciseId,
+                name: ex.name || exerciseId || 'Unknown Exercise',
                 imageUrl: ex.imageUrl || '',
                 videoUrl: ex.videoUrl || '',
                 equipments: ex.equipments || [],
@@ -971,15 +1053,24 @@ Focus on proper form and progressive overload.`;
               };
 
               // Ensure set type is preserved (referencing previous fix)
+              // Helper to extract prescribed value from MetricNumber pattern
+              const getMetricValue = (metric: any): string => {
+                if (metric === null || metric === undefined) return '';
+                if (typeof metric === 'object' && 'prescribed' in metric) {
+                  return metric.prescribed?.toString() || '';
+                }
+                return metric.toString();
+              };
+
               if (exerciseData.sets && Array.isArray(exerciseData.sets)) {
                 exerciseData.sets = exerciseData.sets.map((s: any) => ({
                   ...s,
                   type: s.type || 'normal',
-                  reps: s.reps !== null && s.reps !== undefined ? s.reps.toString() : '',
-                  weight: s.weight !== null && s.weight !== undefined ? s.weight.toString() : '',
+                  reps: getMetricValue(s.reps),
+                  weight: getMetricValue(s.weight),
                   rest: s.rest !== null && s.rest !== undefined ? s.rest.toString() : (s.restSec !== null && s.restSec !== undefined ? s.restSec.toString() : ''), // Handle both rest and restSec if present
-                  distance: s.distance !== null && s.distance !== undefined ? s.distance.toString() : '',
-                  duration: s.duration !== null && s.duration !== undefined ? s.duration.toString() : (s.durationSec !== null && s.durationSec !== undefined ? s.durationSec.toString() : ''),
+                  distance: getMetricValue(s.distance),
+                  duration: s.duration !== null && s.duration !== undefined ? getMetricValue(s.duration) : getMetricValue(s.durationSec),
                 }))
               }
 
@@ -993,14 +1084,22 @@ Focus on proper form and progressive overload.`;
               coreData.exercises = coreData.exercises.map((ex: any) => {
                 if (ex.sets && ex.sets.length > 0) return ex;
 
+                const getMetricVal = (metric: any): string => {
+                  if (metric === null || metric === undefined) return '';
+                  if (typeof metric === 'object' && 'prescribed' in metric) {
+                    return metric.prescribed?.toString() || '';
+                  }
+                  return metric.toString();
+                };
+
                 const set = {
                   setNumber: 1,
                   type: 'normal',
-                  reps: ex.reps !== null && ex.reps !== undefined ? ex.reps.toString() : '',
-                  weight: ex.weight !== null && ex.weight !== undefined ? ex.weight.toString() : '',
+                  reps: getMetricVal(ex.reps),
+                  weight: getMetricVal(ex.weight),
                   rest: ex.restSec !== null && ex.restSec !== undefined ? ex.restSec.toString() : '',
-                  distance: ex.distance !== null && ex.distance !== undefined ? ex.distance.toString() : '',
-                  duration: ex.durationSec !== null && ex.durationSec !== undefined ? ex.durationSec.toString() : '',
+                  distance: getMetricVal(ex.distance),
+                  duration: getMetricVal(ex.durationSec),
                 };
 
                 return {

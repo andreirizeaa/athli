@@ -985,9 +985,13 @@ Focus on proper form and progressive overload.`;
             }
 
             coreData.exercises = exercisesToProcess.map((ex: any) => {
-              const fullExercise = searchExercises('').find(e => e.exerciseId === ex.id);
+              // Use prescribedExerciseId for looking up exercise details (fallback to id for legacy data)
+              const exerciseId = ex.prescribedExerciseId || ex.id || ex.exerciseId;
+              const fullExercise = searchExercises('').find(e => e.exerciseId === exerciseId);
               const exerciseData = fullExercise ? {
                 ...ex,
+                // Set exerciseId from prescribedExerciseId (or legacy id field)
+                exerciseId: exerciseId,
                 name: fullExercise.name,
                 imageUrl: fullExercise.imageUrl,
                 videoUrl: fullExercise.videoUrl,
@@ -1003,8 +1007,8 @@ Focus on proper form and progressive overload.`;
                 relatedExerciseIds: fullExercise.relatedExerciseIds,
               } : {
                 ...ex,
-                exerciseId: ex.id || ex.exerciseId,
-                name: ex.name || ex.id || 'Unknown Exercise',
+                exerciseId: exerciseId,
+                name: ex.name || exerciseId || 'Unknown Exercise',
                 imageUrl: ex.imageUrl || '',
                 videoUrl: ex.videoUrl || '',
                 equipments: ex.equipments || [],
@@ -1021,15 +1025,24 @@ Focus on proper form and progressive overload.`;
               };
 
               // Ensure set type is preserved (referencing previous fix)
+              // Helper to extract prescribed value from MetricNumber pattern
+              const getMetricValue = (metric: any): string => {
+                if (metric === null || metric === undefined) return '';
+                if (typeof metric === 'object' && 'prescribed' in metric) {
+                  return metric.prescribed?.toString() || '';
+                }
+                return metric.toString();
+              };
+
               if (exerciseData.sets && Array.isArray(exerciseData.sets)) {
                 exerciseData.sets = exerciseData.sets.map((s: any) => ({
                   ...s,
                   type: s.type || 'normal',
-                  reps: s.reps !== null && s.reps !== undefined ? s.reps.toString() : '',
-                  weight: s.weight !== null && s.weight !== undefined ? s.weight.toString() : '',
+                  reps: getMetricValue(s.reps),
+                  weight: getMetricValue(s.weight),
                   rest: s.rest !== null && s.rest !== undefined ? s.rest.toString() : (s.restSec !== null && s.restSec !== undefined ? s.restSec.toString() : ''), // Handle both rest and restSec if present
-                  distance: s.distance !== null && s.distance !== undefined ? s.distance.toString() : '',
-                  duration: s.duration !== null && s.duration !== undefined ? s.duration.toString() : (s.durationSec !== null && s.durationSec !== undefined ? s.durationSec.toString() : ''),
+                  distance: getMetricValue(s.distance),
+                  duration: s.duration !== null && s.duration !== undefined ? getMetricValue(s.duration) : getMetricValue(s.durationSec),
                 }))
               }
 
@@ -1043,14 +1056,22 @@ Focus on proper form and progressive overload.`;
               coreData.exercises = coreData.exercises.map((ex: any) => {
                 if (ex.sets && ex.sets.length > 0) return ex;
 
+                const getMetricVal = (metric: any): string => {
+                  if (metric === null || metric === undefined) return '';
+                  if (typeof metric === 'object' && 'prescribed' in metric) {
+                    return metric.prescribed?.toString() || '';
+                  }
+                  return metric.toString();
+                };
+
                 const set = {
                   setNumber: 1,
                   type: 'normal',
-                  reps: ex.reps !== null && ex.reps !== undefined ? ex.reps.toString() : '',
-                  weight: ex.weight !== null && ex.weight !== undefined ? ex.weight.toString() : '',
+                  reps: getMetricVal(ex.reps),
+                  weight: getMetricVal(ex.weight),
                   rest: ex.restSec !== null && ex.restSec !== undefined ? ex.restSec.toString() : '',
-                  distance: ex.distance !== null && ex.distance !== undefined ? ex.distance.toString() : '',
-                  duration: ex.durationSec !== null && ex.durationSec !== undefined ? ex.durationSec.toString() : '',
+                  distance: getMetricVal(ex.distance),
+                  duration: getMetricVal(ex.durationSec),
                 };
 
                 return {
@@ -1891,10 +1912,11 @@ Focus on proper form and progressive overload.`;
                   Unlink
                 </Button>
               </div>
-            ) : (draggedExercise || draggedSection) && dragOverTopLevelSlot === itemIndex + 1 ? (
-              // Dragging and this is the drop slot - show drop zone (replaces superset button)
+            ) : draggedSection && !draggedExercise && dragOverTopLevelSlot === itemIndex + 1 ? (
+              // Dragging a section and this is the drop slot - show drop zone
+              // NOTE: In section-builder, exercises can ONLY be dropped inside sections (not at top level)
               <div className="h-14 my-2 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
+                <span>Drop section here</span>
               </div>
             ) : (
               // Show superset button (visible while dragging, only hidden when drop zone shows at this slot)
@@ -2322,11 +2344,13 @@ Focus on proper form and progressive overload.`;
 
                               // ONLY ONE drop zone appears at a time - the one matching dragOverTopLevelSlot
                               // Priority: "after" drop zones take precedence over "before" drop zones to avoid duplicates
-                              const isDraggingSomething = draggedExercise || draggedSection;
-                              const isPrevItemShowingDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex && prevItem;
-                              // Sections can drop anywhere at top level but not between exercises in superset or inside sections
-                              const showDropZoneBefore = isDraggingSomething && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
-                              const showDropZoneAfter = isDraggingSomething && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
+                              // NOTE: In section-builder, exercises can ONLY be dropped into sections (not at top level)
+                              // Only sections can be dropped at the top level between items
+                              const isDraggingSectionOnly = draggedSection && !draggedExercise;
+                              const isPrevItemShowingDropZoneAfter = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex && prevItem;
+                              // Sections can drop anywhere at top level but exercises can NOT drop at top level in section-builder
+                              const showDropZoneBefore = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex && canShowDropZoneBefore && !isPrevItemShowingDropZoneAfter;
+                              const showDropZoneAfter = isDraggingSectionOnly && dragOverTopLevelSlot === itemIndex + 1 && canShowDropZoneAfter;
 
                               // Add extra spacing around sections
                               const extraTopMargin = isSection && isPrevSection ? 'mt-2' : isSection && prevItem ? 'mt-4' : '';
@@ -2337,7 +2361,7 @@ Focus on proper form and progressive overload.`;
                                   {/* Drop zone before this item - ONLY if this is the nearest slot and NOT inside a section */}
                                   {showDropZoneBefore && (
                                     <div className="h-14 mb-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                      <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
+                                      <span>Drop section here</span>
                                     </div>
                                   )}
 
@@ -2352,7 +2376,7 @@ Focus on proper form and progressive overload.`;
                                   {/* Drop zone after this item - ONLY if this is the nearest slot and NOT in superset area */}
                                   {showDropZoneAfter && (
                                     <div className="h-14 mt-1 border-2 border-dashed border-primary bg-primary/5 rounded-lg flex items-center justify-center text-primary text-sm transition-all duration-200">
-                                      <span>{draggedSection ? 'Drop section here' : 'Drop exercise here'}</span>
+                                      <span>Drop section here</span>
                                     </div>
                                   )}
                                 </React.Fragment>

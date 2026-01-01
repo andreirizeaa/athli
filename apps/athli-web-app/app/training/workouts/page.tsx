@@ -170,9 +170,10 @@ const WorkoutsPage = () => {
       setIsWorkoutBuilderOpen(true);
 
       try {
-        // Fetch full workout data including workout_data in background
+        // Fetch full workout data
         const fullWorkout = await getWorkoutById(workoutId);
-        setSelectedWorkoutData(fullWorkout.workout_data);
+        // Support both new flattened structure and legacy workout_data wrapper
+        setSelectedWorkoutData((fullWorkout as any).workout_data || fullWorkout);
       } catch (error) {
         console.error('Failed to fetch workout data:', error);
         toast.error(t('general.error'));
@@ -247,7 +248,7 @@ const WorkoutsPage = () => {
   };
 
 
-  const uniqueTypes = Array.from(new Set(workouts.map((w) => w.type))).sort();
+  const uniqueTypes = Array.from(new Set(workouts.map((w) => w.type).filter(Boolean))).sort();
 
   // Create column definitions for DataGrid
   // Add "program" column for sorting (not in filteredColumnOrder so it won't render)
@@ -271,9 +272,9 @@ const WorkoutsPage = () => {
               pixel: getColumnWidth('description', 'pixel'),
             },
             tooltip: t('library.briefOverviewWorkout'),
-            getSortValue: (row) => row.description.toLowerCase(),
+            getSortValue: (row) => (row.description || '').toLowerCase(),
             getSearchValue: (row) =>
-              `${row.name} ${row.description} ${row.type} ${row.equipment}`,
+              `${row.name} ${row.description || ''} ${row.type || ''} ${Array.isArray(row.equipment) ? row.equipment.join(' ') : (row.equipment || '')}`,
             renderCell: (row) =>
               isEmpty(row.description) ? (
                 <div className="flex items-center h-full min-w-0 w-full">
@@ -306,7 +307,7 @@ const WorkoutsPage = () => {
               pixel: getColumnWidth('type', 'pixel'),
             },
             tooltip: t('library.categoryStyleWorkout'),
-            getSortValue: (row) => row.type.toLowerCase(),
+            getSortValue: (row) => (row.type || '').toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
                 <span className="text-sm">{isEmpty(row.type) ? '--' : formatWorkoutType(row.type)}</span>
@@ -323,7 +324,7 @@ const WorkoutsPage = () => {
               pixel: getColumnWidth('difficulty', 'pixel'),
             },
             tooltip: t('workouts.columnTooltips.difficultyLevel'),
-            getSortValue: (row) => row.difficulty.toLowerCase(),
+            getSortValue: (row) => (row.difficulty || '').toLowerCase(),
             renderCell: (row) => (
               <div className="flex items-center h-full">
                 <span className="text-sm">{isEmpty(row.difficulty) ? '--' : formatDifficulty(row.difficulty)}</span>
@@ -340,7 +341,7 @@ const WorkoutsPage = () => {
               pixel: getColumnWidth('totalExercises', 'pixel'),
             },
             tooltip: t('library.numberOfExercisesWorkout'),
-            getSortValue: (row) => row.totalExercises,
+            getSortValue: (row) => row.totalExercises || 0,
             renderCell: (row) => (
               <div className="flex items-center w-full">
                 <span className="text-sm">{isEmpty(row.totalExercises) ? '--' : row.totalExercises}</span>
@@ -357,7 +358,7 @@ const WorkoutsPage = () => {
               pixel: getColumnWidth('equipment', 'pixel'),
             },
             tooltip: t('library.equipmentRequiredWorkout'),
-            getSortValue: (row) => (Array.isArray(row.equipment) ? row.equipment.join(', ') : row.equipment).toLowerCase(),
+            getSortValue: (row) => (Array.isArray(row.equipment) ? row.equipment.join(', ') : (row.equipment || '')).toLowerCase(),
             renderCell: (row) =>
               isEmpty(row.equipment) ? (
                 <div className="flex items-center h-full min-w-0 w-full">
@@ -426,7 +427,7 @@ const WorkoutsPage = () => {
       label: t('general.type'),
       icon: <Tag className="size-4" />,
       options: uniqueTypes.map((type) => ({ value: type, label: formatWorkoutType(type) })),
-      getFilterValue: (row) => row.type,
+      getFilterValue: (row) => row.type || '',
     },
     {
       id: 'show',

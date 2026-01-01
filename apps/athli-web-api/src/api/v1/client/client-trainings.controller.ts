@@ -69,7 +69,7 @@ export const clientTrainingsController = {
         // This will benefit from partition pruning for optimal performance
         const { data: trainingData, error } = await supabase
             .from('client_training')
-            .select('date, training_data, day_status, started_at, completed_at')
+            .select('date, training_data')
             .eq('client_id', targetClientId)
             .gte('date', startDate)
             .lte('date', endDate)
@@ -104,8 +104,9 @@ export const clientTrainingsController = {
                     difficulty: workout.difficulty,
                     equipment: workout.equipment,
                     isFavourite: workout.isFavourite || workout.is_favourite, // Handle snake_case is_favourite
-                    day_status: entry.day_status || 'not_started', // Include day status from the entry
                     // Strip heavy fields: items, sections, workout_data
+                    // Include completedSummary for status tracking
+                    completedSummary: workout.completedSummary || workout.meta || null,
                 }));
             });
         }

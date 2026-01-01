@@ -91,7 +91,7 @@ import { AddProgramSidePanel } from './add-program-side-panel';
 import { ClientInProgressTrainingDaySummary } from './client-in-progress-training-day-summary';
 import { ClientCompletedTrainingDaySummary } from './client-completed-training-day-summary';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
-import { type WorkoutProgramPayload, DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
+import { type WorkoutProgramPayload, DEFAULT_EXECUTION_FIELDS, type WorkoutData } from '@/components/training/workout-schema';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
@@ -214,7 +214,7 @@ const ClientTrainingCalendarPage = () => {
   const [isSaveAsProgramOpen, setIsSaveAsProgramOpen] = useState<boolean>(false);
   const [selectedDateForWorkout, setSelectedDateForWorkout] = useState<Date | null>(null);
   const [workoutsByDate, setWorkoutsByDate] = useState<{
-    [dateKey: string]: Array<Workout & { id: string; day_status?: 'not_started' | 'in_progress' | 'completed' }>;
+    [dateKey: string]: Array<Workout & { id: string }>;
   }>({});
   // React Query Hooks
   const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
@@ -736,7 +736,7 @@ const ClientTrainingCalendarPage = () => {
   // Helper to convert calendar data to local format
   const convertCalendarData = (data: typeof calendarData) => {
     if (!data) return {};
-    const converted: { [dateKey: string]: Array<Workout & { id: string; day_status?: 'not_started' | 'in_progress' | 'completed' }> } = {};
+    const converted: { [dateKey: string]: Array<Workout & { id: string }> } = {};
 
     Object.keys(data).forEach((dateKey) => {
       // dateKey is in dd-mm-yyyy format
@@ -748,7 +748,7 @@ const ClientTrainingCalendarPage = () => {
         id: workout.id,
         name: (workout as any).name || (workout as any).workout,
         isFavourite: (workout as any).isFavourite || false,
-        day_status: (workout as any).day_status || 'not_started',
+
       }));
     });
 
@@ -1765,15 +1765,53 @@ const ClientTrainingCalendarPage = () => {
     }
 
     try {
+      // 1. Calculate and apply optimistic updates
+      const optimisticWorkouts: { [dateKey: string]: Array<Workout & { id: string }> } = {};
+
+      datesToAdd.forEach((date) => {
+        const dateKey = getDateKey(date);
+        const optimisticId = `${selectedWorkout.id}__${dateKey}__${Date.now()}`;
+
+        const optimisticWorkout: Workout & { id: string } = {
+          ...workoutToAdd,
+          id: optimisticId,
+          items: workoutToAdd.items || [],
+          ...DEFAULT_EXECUTION_FIELDS,
+          // Map flattened fields if needed, mostly ready from fullWorkout
+          totalExercises: fullWorkout.totalExercises || 0,
+        };
+
+        if (!optimisticWorkouts[dateKey]) {
+          optimisticWorkouts[dateKey] = [];
+        }
+        optimisticWorkouts[dateKey].push(optimisticWorkout);
+      });
+
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        Object.keys(optimisticWorkouts).forEach((dateKey) => {
+          updated[dateKey] = [
+            ...(updated[dateKey] || []),
+            ...optimisticWorkouts[dateKey]
+          ];
+        });
+        return updated;
+      });
+
+      // 2. Perform API calls
       const promises = datesToAdd.map(date =>
         apiAssignWorkout({
           clientId,
           date: getDateKey(date),
-          workoutId: selectedWorkout.id
+          workoutId: selectedWorkout.id,
+          skipInvalidation: true // We manually invalidate or rely on optimistic
         })
       );
 
       await Promise.all(promises);
+
+      // 3. Invalidate to fetch real data (eventually replaces optimistic)
+      queryClient.invalidateQueries({ queryKey: ['client-training-calendar'] });
 
       if (datesToAdd.length === 1) {
         const dateStr = datesToAdd[0].toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
@@ -1781,16 +1819,6 @@ const ClientTrainingCalendarPage = () => {
       } else {
         toast.success(`Successfully assigned ${datesToAdd.length} days of training`);
       }
-
-      // Update local state optimistically
-      setWorkoutsByDate((prev) => {
-        const updated = { ...prev };
-        datesToAdd.forEach(date => {
-          const key = getDateKey(date);
-          updated[key] = [...(updated[key] ?? []), workoutToAdd];
-        });
-        return updated;
-      });
 
     } catch (error) {
       console.error('Failed to assign workouts:', error);
@@ -1881,15 +1909,12 @@ const ClientTrainingCalendarPage = () => {
           description: assignment.workout.description || '',
           type: assignment.workout.type || 'strength',
           difficulty: assignment.workout.difficulty || 'intermediate',
-          length: '',
           totalExercises: assignment.workout.totalExercises || 0,
           equipment: assignment.workout.equipment || [],
           created: formatDate(new Date()),
           isFavourite: false,
-          workout_data: {
-            items: assignment.workout.items || [],
-            ...DEFAULT_EXECUTION_FIELDS,
-          },
+          items: assignment.workout.items || [],
+          ...DEFAULT_EXECUTION_FIELDS,
         };
 
         if (!optimisticWorkouts[dateKey]) {
@@ -1959,16 +1984,16 @@ const ClientTrainingCalendarPage = () => {
       description: selectedExercise.description || '',
       type: selectedExercise.category || '',
       difficulty: 'Intermediate',
-      length: '1 sess',
       totalExercises: 1,
       equipment: selectedExercise.equipment || [],
       created: formatDate(new Date()),
       isFavourite: false,
-      workout_data: {
-        sections: [
-          {
+      items: [
+        {
+          itemType: 'section',
+          data: {
             id: `section-${Date.now()}`,
-            title: selectedExercise.name,
+            name: selectedExercise.name,
             type: 'timed',
             exercises: [
               {
@@ -1989,8 +2014,8 @@ const ClientTrainingCalendarPage = () => {
               }
             ]
           }
-        ]
-      }
+        }
+      ] as any[],
     };
 
     setWorkoutsByDate((previousWorkouts) => {
@@ -2012,14 +2037,17 @@ const ClientTrainingCalendarPage = () => {
     setIsLoadingWorkoutData(true);
     setIsWorkoutBuilderOpen(true);
 
-    // Extract the real workout ID (format: "workoutId-timestamp-random")
-    const realWorkoutId = workout.id.split('-')[0];
+    // Extract the real workout ID (format: "workoutId__dateKey__timestamp")
+    // Use '__' separator to be safe with UUIDs containing dashes
+    const parts = workout.id.split('__');
+    const realWorkoutId = parts[0];
+    const isOptimistic = parts.length > 1;
 
     // Check if it's an inline-created or temp workout (no need to fetch - use existing data)
     // OR if we already have the full data (e.g. newly created, though backend strip might affect this on reload)
     // Since backend now strips data, we should prefer fetching unless we find it blank.
     if (realWorkoutId === 'inline' || realWorkoutId === 'temp') {
-      setFetchedWorkoutData(workout.workout_data || { items: [] });
+      setFetchedWorkoutData((workout as any) || { items: [] });
       setIsLoadingWorkoutData(false);
       return;
     }
@@ -2027,8 +2055,8 @@ const ClientTrainingCalendarPage = () => {
     try {
       // Use new endpoint to get specific instance data
       const fullWorkout = await queryClient.fetchQuery({
-        queryKey: ['client-workout-instance', clientId, dateKey, workout.id],
-        queryFn: () => getClientWorkoutInstance(clientId, dateKey, workout.id),
+        queryKey: ['client-workout-instance', clientId, dateKey, realWorkoutId], // Use real ID (UUID)
+        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
         staleTime: 0, // Always fetch fresh to get latest instance state
       });
 
@@ -2041,7 +2069,7 @@ const ClientTrainingCalendarPage = () => {
     } catch (error) {
       console.error('Failed to fetch workout instance:', error);
       // Fall back to lightweight data if fetch fails (better than nothing)
-      setFetchedWorkoutData(workout.workout_data || { items: [] });
+      setFetchedWorkoutData((workout as any) || { items: [] });
       toast.error('Failed to load full workout details');
     } finally {
       setIsLoadingWorkoutData(false);
@@ -2054,32 +2082,57 @@ const ClientTrainingCalendarPage = () => {
       const { dateKey, workout } = editingWorkout;
 
       try {
-        // Optimistic update for UI (optional, but good for perceived speed)
-        // However, since we invalidate queries, let's just show a saving state or standard loading
-        // For now, keeping the optimistic update to be safe if queries take time, 
-        // BUT relying on invalidation for source of truth.
+        // 1. Optimistic Update: Update UI immediately before API call
+        setWorkoutsByDate((prev) => {
+          const workoutsForDay = prev[dateKey] || [];
+          const updatedWorkouts = workoutsForDay.map((w) => {
+            if (w.id === workout.id) {
+              return {
+                ...w,
+                name: payload.name,
+                description: payload.description,
+                type: payload.type,
+                difficulty: payload.difficulty,
+                totalExercises: payload.totalExercises,
+                items: payload.items,
+                // Ensure legacy fields are updated if present
+                title: payload.name,
+              };
+            }
+            return w;
+          });
+          return {
+            ...prev,
+            [dateKey]: updatedWorkouts,
+          };
+        });
 
-        // 1. Await the API call to ensure data is saved
+        // 2. Extract real ID for API call if it's an optimistic/composite ID
+        const realId = workout.id.includes('__') ? workout.id.split('__')[0] : workout.id;
+
+        // 3. Await the API call to ensure data is saved
         await apiAssignWorkout({
           clientId,
           date: dateKey,
-          workoutId: workout.id,
-          workoutPayload: payload,
+          workoutId: realId, // Use real UUID
+          workoutPayload: { ...payload, id: realId }, // Ensure payload ID matches
           isNew: false,
           skipInvalidation: true
         });
 
-        // 2. Close dialog immediately after success
+        // 4. Close dialog immediately after success
         setIsWorkoutBuilderOpen(false);
         setEditingWorkout(null);
-        toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }));
+        toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.name }));
 
-        // 3. Invalidate queries in background (do not await) to prevent UI lag
+        // 5. Invalidate queries in background (do not await) to prevent UI lag
         // Defer invalidation slightly to allow dialog to close nicely
         setTimeout(() => {
+          // Invalidate specific instance first
           queryClient.invalidateQueries({
-            queryKey: ['client-workout-instance', clientId, dateKey, workout.id]
+            queryKey: ['client-workout-instance', clientId, dateKey, realId]
           });
+          // Then calendar
           queryClient.invalidateQueries({
             queryKey: ['client-training-calendar', clientId]
           });
@@ -2087,6 +2140,11 @@ const ClientTrainingCalendarPage = () => {
 
       } catch (error) {
         console.error('Failed to update workout:', error);
+        toast.error('Failed to update workout');
+        // Revert on error by invalidating
+        queryClient.invalidateQueries({
+          queryKey: ['client-training-calendar', clientId]
+        });
       }
     } else if (selectedDateForWorkout) {
       // Creating a NEW workout
@@ -2511,7 +2569,7 @@ const ClientTrainingCalendarPage = () => {
                                 {workoutsForDate.length > 0 ? (
                                   <div className="flex flex-col gap-2">
                                     {workoutsForDate.map((workout) => {
-                                      const status = getWorkoutStatus(workout.id, undefined, workout.day_status);
+                                      const status = getWorkoutStatus(workout.id, undefined, workout.completedSummary?.status);
                                       const isWorkoutInLibrary = checkIsInLibrary(workout.id);
                                       const isWorkoutCopySource = isCopyMode && copiedWorkout?.workout.id === workout.id;
                                       return (
@@ -3155,6 +3213,15 @@ const ClientTrainingCalendarPage = () => {
           if (!open) setCompletedSummaryWorkout(null);
         }}
         workoutName={completedSummaryWorkout?.workout.name || ''}
+        stats={{
+          exercisesCompleted: completedSummaryWorkout?.workout.totalExercises || 0,
+          exercisesTotal: completedSummaryWorkout?.workout.totalExercises || 0,
+          duration: completedSummaryWorkout?.workout.completedSummary?.totalDurationMin || 0,
+          intensity: completedSummaryWorkout?.workout.post?.intensity || 0,
+          volume: completedSummaryWorkout?.workout.completedSummary?.totalWeightLifted || 0,
+          readiness: completedSummaryWorkout?.workout.pre?.readiness || 0,
+          rating: completedSummaryWorkout?.workout.post?.rating || 0
+        }}
       />
       <MultiSelectActionBar
         selectedCount={selectedWorkouts.length}
