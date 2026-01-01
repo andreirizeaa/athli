@@ -450,7 +450,7 @@ export const esMessages = {
     links: {
       dashboard: 'Panel de control',
       marketing: 'Marketing',
-      messaging: 'Mensajes',
+      inbox: 'Inbox',
       workouts: 'Entrenamientos',
       athletes: 'Atletas',
       calendar: 'Calendario',
@@ -593,7 +593,7 @@ export const esMessages = {
     continue: 'Continuar',
   },
   messages: {
-    title: 'Mensajes',
+    title: 'Inbox',
     search: 'Buscar',
     conversation: 'conversación',
     conversations: 'conversaciones',

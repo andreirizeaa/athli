@@ -48,9 +48,9 @@ import { ContactListItem } from './components/contact-list-item';
 import { format } from 'date-fns';
 import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
-import { BroadcastSidePanel } from '@/app/messaging/components/broadcast-side-panel';
+import { BroadcastSidePanel } from '@/app/inbox/components/broadcast-side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { MessagingSidebar } from './components/messaging-sidebar';
+import { InboxSidebar } from './components/inbox-sidebar';
 import { ChatHeader } from './components/chat-header';
 import { MessageList } from './components/message-list';
 import { MessageInput } from './components/message-input';
@@ -114,17 +114,17 @@ const formatNoteDate = (timestamp: number): string => {
   return parts.join(' ');
 };
 
-const MessagingPage = () => {
+const InboxPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams();
   const contactIdFromPath = params?.contactId as string | undefined;
 
-  // TODO: Replace with real messaging data when backend is connected
+  // TODO: Replace with real inbox data when backend is connected
   // Currently using coach_client view for contacts, but messages are still mock data
   const { clients: athletes, isLoading: isLoadingClients } = useCoachClients();
 
-  const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
+  const [selectedContactId, setSelectedContactId] = React.useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(!!contactIdFromPath);
   const [messageInput, setMessageInput] = React.useState('');
@@ -375,17 +375,17 @@ const MessagingPage = () => {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   // Map athletes to contacts format
-  // TODO: Replace temporary fields (lastMessage, timestamp, unreadCount, isOnline) with real data when messaging backend is connected
+  // TODO: Replace temporary fields (lastMessage, timestamp, unreadCount, isOnline) with real data when inbox backend is connected
   const contacts = React.useMemo<Contact[]>(() => {
     return athletes.map((athlete: Athlete) => ({
       id: athlete.id,
       publicId: athlete.publicId,
       name: athlete.name,
       avatar: athlete.avatarUrl,
-      lastMessage: '', // TODO: Get from messaging backend
-      timestamp: '', // TODO: Get from messaging backend
-      unreadCount: 0, // TODO: Get from messaging backend
-      isOnline: false, // TODO: Get from messaging backend
+      lastMessage: '', // TODO: Get from inbox backend
+      timestamp: '', // TODO: Get from inbox backend
+      unreadCount: 0, // TODO: Get from inbox backend
+      isOnline: false, // TODO: Get from inbox backend
     }));
   }, [athletes]);
 
@@ -436,11 +436,12 @@ const MessagingPage = () => {
       if (contact) {
         setSelectedContactId(contactIdFromPath);
         setIsSidebarCollapsed(true);
-      } else { // Invalid contact ID, redirect to base messaging page
-        router.replace('/messaging');
+      } else { // Invalid contact ID, redirect to base inbox page
+        router.replace('/inbox');
+        setSelectedContactId(undefined);
       }
     } else {
-      setSelectedContactId(null);
+      setSelectedContactId(undefined);
     }
   }, [contactIdFromPath, contacts, isLoadingClients, router]);
 
@@ -1600,8 +1601,8 @@ const MessagingPage = () => {
     <div className="h-full w-full flex flex-col">
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
-          {/* Left Column - Contacts Sidebar */}
-          <MessagingSidebar
+          {/* Left Column - Inbox Sidebar */}
+          <InboxSidebar
             isSidebarCollapsed={isSidebarCollapsed}
             setIsSidebarCollapsed={setIsSidebarCollapsed}
             searchQuery={searchQuery}
@@ -1766,7 +1767,7 @@ const MessagingPage = () => {
               }
             }
             if (contact) {
-              router.push(`/messaging/${contact.id}`);
+              router.push(`/inbox/${contact.id}`);
               setIsNewMessageOpen(false);
             }
           }}
@@ -1913,4 +1914,4 @@ const MessagingPage = () => {
   );
 };
 
-export default MessagingPage;
+export default InboxPage;

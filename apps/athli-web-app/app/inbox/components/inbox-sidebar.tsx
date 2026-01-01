@@ -16,17 +16,17 @@ import { type Contact } from '@/components/app/app-shell';
 import { ContactListItem } from './contact-list-item';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface MessagingSidebarProps {
+interface InboxSidebarProps {
     isSidebarCollapsed: boolean;
-    setIsSidebarCollapsed: (collapsed: boolean) => void;
+    setIsSidebarCollapsed: (value: boolean) => void;
     searchQuery: string;
-    setSearchQuery: (query: string) => void;
+    setSearchQuery: (value: string) => void;
     filteredContacts: Contact[];
-    selectedContactId: string | null;
+    selectedContactId: string | undefined;
     hasDraft: (contactId: string) => boolean;
 }
 
-export function MessagingSidebar({
+export function InboxSidebar({
     isSidebarCollapsed,
     setIsSidebarCollapsed,
     searchQuery,
@@ -34,7 +34,7 @@ export function MessagingSidebar({
     filteredContacts,
     selectedContactId,
     hasDraft,
-}: MessagingSidebarProps) {
+}: InboxSidebarProps) {
     const t = useTranslations();
     const router = useRouter();
 
@@ -167,7 +167,7 @@ export function MessagingSidebar({
                                     hasDraft={hasDraft(contact.id)}
                                     onClick={() => {
                                         setIsSidebarCollapsed(true);
-                                        router.push(`/messaging/${contact.id}`);
+                                        router.push(`/inbox/${contact.id}`);
                                     }}
                                     onViewProfile={() => router.push(`/athletes/${contact.id}/overview`)}
                                 />

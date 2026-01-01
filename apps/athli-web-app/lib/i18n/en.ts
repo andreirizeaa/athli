@@ -461,7 +461,7 @@ export const enMessages = {
     links: {
       dashboard: 'Dashboard',
       marketing: 'Marketing',
-      messaging: 'Messages',
+      inbox: 'Inbox',
       workouts: 'Workouts',
       athletes: 'Athletes',
       calendar: 'Calendar',
@@ -628,7 +628,7 @@ export const enMessages = {
     comments: 'Comments',
   },
   messages: {
-    title: 'Messages',
+    title: 'Inbox',
     search: 'Search',
     conversation: 'conversation',
     conversations: 'conversations',

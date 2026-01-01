@@ -1,6 +1,6 @@
 'use client';
 
-// TODO: Complete messaging backend integration
+// TODO: Complete inbox backend integration
 // ✅ DONE: Contacts are now fetched from the coach_client view using useCoachClients hook
 // ⏳ REMAINING: The following fields still need backend implementation:
 //    - lastMessage: Currently empty string, needs real message data
