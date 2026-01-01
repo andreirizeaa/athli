@@ -6,9 +6,7 @@ import { useTranslations } from 'next-intl';
 import {
   Search,
   Send,
-  MoreHorizontal,
   Paperclip,
-  RadioTower,
   X,
   Filter,
   User,
@@ -17,7 +15,6 @@ import {
   ArrowDownWideNarrow,
   CalendarDays,
   Dumbbell,
-  Archive,
   Plus,
   Image as ImageIcon,
   FileText,
@@ -26,6 +23,9 @@ import {
   Trash2,
   Video,
   NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Mic,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -137,6 +137,7 @@ const MessagingPage = () => {
   const contactIdFromPath = params?.contactId as string | undefined;
   const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(!!contactIdFromPath);
   const [messageInput, setMessageInput] = React.useState('');
   const [messages, setMessages] = React.useState<Record<string, Message[]>>(mockMessages);
   const [isNewMessageOpen, setIsNewMessageOpen] = React.useState(false);
@@ -1627,78 +1628,139 @@ const MessagingPage = () => {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="w-full relative">
-        <div className="px-4 flex flex-col gap-2 mb-2 mt-2 relative">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col">
-              <h1 className="text-[22px] font-semibold">{t('messages.title')}</h1>
-              <p className="text-sm mt-1">
-                {filteredContacts.length}{' '}
-                {filteredContacts.length === 1
-                  ? t('messages.conversation')
-                  : t('messages.conversations')}
-              </p>
-            </div>
-            <Button
-              className="h-9 gap-2"
-              aria-label={t('messages.broadcast')}
-              onClick={() => setIsBroadcastOpen(true)}
-            >
-              <RadioTower className="h-4 w-4" />
-              {t('messages.broadcast')}
-            </Button>
-          </div>
-        </div>
-        <Separator className="mb-4" />
-      </div>
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
           {/* Left Column - Contacts Sidebar */}
-          <div className="flex-[1] bg-background h-full overflow-hidden flex flex-col pl-4 pb-4">
-            <Card className="w-full h-full pb-0 flex flex-col">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                    <Input
-                      type="text"
-                      placeholder={t('messages.searchPlaceholder')}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className={cn('pl-9 w-full h-9', searchQuery && 'pr-9')}
-                      aria-label={t('messages.searchPlaceholder')}
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label="Clear search"
-                      >
-                        <X className="size-4" />
-                      </button>
+          <div
+            className={cn(
+              'bg-muted/30 h-full overflow-hidden flex flex-col border-r transition-all duration-300 ease-in-out',
+              isSidebarCollapsed ? 'w-[64px]' : 'w-[320px]'
+            )}
+          >
+            <div className="flex flex-col h-full grow min-w-0">
+              <div className="px-4 pt-2 flex flex-col gap-4">
+                {/* Header Row: Title + Toggle Button (Fixed Height) */}
+                <div className="h-8 relative">
+                  {/* Expanded: Title + Close Button */}
+                  <div
+                    className={cn(
+                      'absolute inset-0 flex items-center justify-between transition-all duration-300',
+                      isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
                     )}
-                  </div>
-                  <Button
-                    onClick={() => setIsNewMessageOpen(true)}
-                    variant="outline"
-                    className="h-9 w-9 rounded-full p-0 flex-shrink-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                    aria-label={t('messages.newMessage')}
                   >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                    <h2 className="text-xl font-semibold whitespace-nowrap">
+                      {t('messages.title')}
+                    </h2>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                            onClick={() => setIsSidebarCollapsed(true)}
+                          >
+                            <PanelLeftClose className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>{t('sidebar.actions.closeSidebar')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+
+                  {/* Collapsed: Open Button (Same Position) */}
+                  <div
+                    className={cn(
+                      'absolute inset-0 flex items-center transition-all duration-300',
+                      isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
+                    )}
+                  >
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                            onClick={() => setIsSidebarCollapsed(false)}
+                          >
+                            <PanelLeftOpen className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          <p>{t('sidebar.actions.openSidebar')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-auto p-0">
-                <div className="block min-w-0 divide-y">
+
+                {/* Search Row: Input or Icon (Fixed Height) */}
+                <div className="h-12 pb-2 relative">
+                  {/* Expanded: Search Input */}
+                  <div
+                    className={cn(
+                      'absolute inset-0 transition-all duration-300',
+                      isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
+                    )}
+                  >
+                    <div className="relative w-full">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                      <Input
+                        type="text"
+                        placeholder={t('messages.searchPlaceholder')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-8 h-9"
+                        aria-label={t('messages.searchPlaceholder')}
+                      />
+                      {searchQuery && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-1/2 -translate-y-1/2 size-7 text-muted-foreground hover:text-foreground"
+                          onClick={() => setSearchQuery('')}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Collapsed: Search Icon (Same Position) */}
+                  <div
+                    className={cn(
+                      'absolute inset-0 flex items-center transition-all duration-300',
+                      isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
+                    )}
+                  >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                      onClick={() => setIsSidebarCollapsed(false)}
+                    >
+                      <Search className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto">
+                <div className="block min-w-0 border-t border-border pt-2">
                   {filteredContacts.length ? (
                     filteredContacts.map((contact) => (
                       <ContactListItem
                         contact={contact}
                         key={contact.id}
                         active={selectedContactId === contact.id}
+                        isCollapsed={isSidebarCollapsed}
                         hasDraft={hasDraft(contact.id)}
-                        onClick={() => router.push(`/messaging/${contact.id}`)}
+                        onClick={() => {
+                          setIsSidebarCollapsed(true);
+                          router.push(`/messaging/${contact.id}`);
+                        }}
                         onViewProfile={() => router.push(`/athletes/${contact.id}/overview`)}
                       />
                     ))
@@ -1708,12 +1770,12 @@ const MessagingPage = () => {
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
-          {/* Middle Column - Chat */}
+          {/* Middle Column - Chat (80%) */}
           <div
-            className="relative flex-[3] h-full"
+            className="relative flex-1 h-full"
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -1744,7 +1806,7 @@ const MessagingPage = () => {
               {selectedContact ? (
                 <>
                   {/* Message Header */}
-                  <div className="flex items-center justify-between px-4 h-[40px] flex-shrink-0">
+                  <div className="flex items-center justify-between px-4 h-[48px] flex-shrink-0 border-b border-border">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <Avatar className="h-8 w-8 flex-shrink-0 rounded-full">
                         <AvatarImage src={selectedContact.avatar} alt={selectedContact.name} className="rounded-full" />
@@ -1803,7 +1865,7 @@ const MessagingPage = () => {
 
                   {/* Messages List */}
                   <ScrollArea className="flex-1 min-h-0">
-                    <div className="flex flex-col px-4 pt-4">
+                    <div className="flex flex-col px-4 pt-2">
                       {currentMessages.map((message, index) => {
                         const isLastInSequence =
                           index === currentMessages.length - 1 ||
@@ -2157,7 +2219,7 @@ const MessagingPage = () => {
                                 className={cn(
                                   'max-w-[80%] rounded-xl px-2 py-2 relative group',
                                   message.isSent
-                                    ? 'bg-primary/20 text-foreground'
+                                    ? 'bg-primary text-primary-foreground'
                                     : 'bg-sidebar text-foreground',
                                   isLastInSequence && message.isSent && 'rounded-br-sm',
                                   isLastInSequence && !message.isSent && 'rounded-bl-sm'
@@ -2338,7 +2400,7 @@ const MessagingPage = () => {
                                       <div
                                         className="absolute -bottom-1 right-0 w-0 h-0 border-l-[8px] border-l-transparent border-r-0"
                                         style={{
-                                          borderTop: '8px solid hsl(var(--primary) / 0.2)',
+                                          borderTop: '8px solid hsl(var(--primary))',
                                         }}
                                       />
                                     ) : (
@@ -2373,19 +2435,18 @@ const MessagingPage = () => {
                   </ScrollArea>
 
                   {/* Message Input */}
-                  <div className="px-4 pb-4 pt-4 flex-shrink-0">
+                  <div className="px-4 py-2 flex-shrink-0 border-t border-border">
                     <div
                       className={cn(
-                        'relative flex bg-sidebar px-3 py-2 transition-all duration-700 ease-in-out',
+                        'relative flex bg-sidebar px-3 py-1 transition-all duration-700 ease-in-out rounded-lg',
                         textareaHeight > 36 ||
                           replyingToMessage ||
                           attachedPdf ||
                           attachedVideo ||
                           attachedImages.length > 0
                           ? 'flex-col'
-                          : 'items-center'
+                          : 'items-center min-h-[40px]'
                       )}
-                      style={{ borderRadius: '28px' }}
                     >
                       {/* Images Preview */}
                       {attachedImages.length > 0 && (
@@ -2622,42 +2683,53 @@ const MessagingPage = () => {
                         !attachedPdf &&
                         !attachedVideo &&
                         attachedImages.length === 0 ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <DropdownMenu>
-                              <TooltipTrigger asChild>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                    aria-label={t('messages.attachFile')}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                              </TooltipTrigger>
-                              <DropdownMenuContent align="start">
-                                <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                                  <ImageIcon className="mr-2 size-4" />
-                                  {t('messages.images')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
-                                  <FileText className="mr-2 size-4" />
-                                  {t('messages.pdfs')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
-                                  <Video className="mr-2 size-4" />
-                                  {t('messages.videos')}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <TooltipContent>
-                              <p>{t('messages.attachFiles')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <div className="flex items-center gap-0.5 mr-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <DropdownMenu>
+                                <TooltipTrigger asChild>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                                      aria-label={t('messages.attachFile')}
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <DropdownMenuContent align="start">
+                                  <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
+                                    <ImageIcon className="mr-2 size-4" />
+                                    {t('messages.images')}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
+                                    <FileText className="mr-2 size-4" />
+                                    {t('messages.pdfs')}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
+                                    <Video className="mr-2 size-4" />
+                                    {t('messages.videos')}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <TooltipContent>
+                                <p>{t('messages.attachFiles')}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
+                          >
+                            <Mic className="h-4 w-4" />
+                          </Button>
+                        </div>
                       ) : null}
                       <Textarea
                         ref={textareaRef}
@@ -2666,14 +2738,17 @@ const MessagingPage = () => {
                         onChange={(e) => setMessageInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         className={cn(
-                          'flex-1 min-w-0 resize-none min-h-[36px] max-h-[120px] py-2 bg-sidebar dark:bg-sidebar border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-sidebar dark:focus-visible:bg-sidebar',
+                          'flex-1 min-w-0 resize-none min-h-[36px] max-h-[120px] py-1.5 bg-sidebar dark:bg-sidebar border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-sidebar dark:focus-visible:bg-sidebar',
                           textareaHeight > 36 && 'pr-10'
                         )}
                         aria-label={t('messages.typeMessage')}
                         rows={1}
                       />
-                      {textareaHeight > 36 || replyingToMessage || attachedPdf || attachedVideo ? (
-                        <>
+                      {(textareaHeight > 36 ||
+                        replyingToMessage ||
+                        attachedPdf ||
+                        attachedVideo ||
+                        attachedImages.length > 0) && (
                           <div className="flex items-center justify-between gap-2 mt-1">
                             <TooltipProvider>
                               <Tooltip>
@@ -2692,9 +2767,7 @@ const MessagingPage = () => {
                                     </DropdownMenuTrigger>
                                   </TooltipTrigger>
                                   <DropdownMenuContent align="start">
-                                    <DropdownMenuItem
-                                      onClick={() => imageInputRef.current?.click()}
-                                    >
+                                    <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
                                       <ImageIcon className="mr-2 size-4" />
                                       {t('messages.images')}
                                     </DropdownMenuItem>
@@ -2702,9 +2775,7 @@ const MessagingPage = () => {
                                       <FileText className="mr-2 size-4" />
                                       {t('messages.pdfs')}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => videoInputRef.current?.click()}
-                                    >
+                                    <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
                                       <Video className="mr-2 size-4" />
                                       {t('messages.videos')}
                                     </DropdownMenuItem>
@@ -2715,81 +2786,81 @@ const MessagingPage = () => {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                            {messageInput.trim() ||
-                              attachedPdf ||
-                              attachedVideo ||
-                              attachedImages.length > 0 ? (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      onClick={handleSendMessage}
-                                      className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                      aria-label={t('messages.sendMessage')}
-                                    >
-                                      <ArrowUp className="size-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t('messages.sendMessage')}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            ) : (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      onClick={handleSendMessage}
-                                      className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                      aria-label={t('messages.sendMessage')}
-                                    >
-                                      <ArrowUp className="size-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{t('messages.sendMessage')}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
+
+                            {(() => {
+                              const isInputEmpty =
+                                !messageInput.trim() &&
+                                !attachedPdf &&
+                                !attachedVideo &&
+                                attachedImages.length === 0;
+
+                              return (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        onClick={handleSendMessage}
+                                        disabled={isInputEmpty}
+                                        className={cn(
+                                          'gap-2 !text-background [&_svg]:!text-background h-8 w-8 p-0 rounded-full transition-all duration-200',
+                                          isInputEmpty
+                                            ? '!bg-muted-foreground/30'
+                                            : '!bg-[#3f3c39] dark:!bg-foreground hover:!bg-[#4a4642] dark:hover:!bg-foreground/90'
+                                        )}
+                                        aria-label={t('messages.sendMessage')}
+                                      >
+                                        <ArrowUp className="size-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{t('messages.sendMessage')}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })()}
                           </div>
-                        </>
-                      ) : messageInput.trim() || attachedPdf ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                onClick={handleSendMessage}
-                                className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                aria-label={t('messages.sendMessage')}
-                              >
-                                <ArrowUp className="size-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t('messages.sendMessage')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                onClick={handleSendMessage}
-                                className="gap-2 !bg-[#3f3c39] dark:!bg-foreground !text-background [&_svg]:!text-background hover:!bg-[#4a4642] dark:hover:!bg-foreground/90 h-8 w-8 p-0 rounded-full"
-                                aria-label={t('messages.sendMessage')}
-                              >
-                                <ArrowUp className="size-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{t('messages.sendMessage')}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
+                        )}
+
+                      {!(
+                        textareaHeight > 36 ||
+                        replyingToMessage ||
+                        attachedPdf ||
+                        attachedVideo ||
+                        attachedImages.length > 0
+                      ) &&
+                        (() => {
+                          const isInputEmpty =
+                            !messageInput.trim() &&
+                            !attachedPdf &&
+                            !attachedVideo &&
+                            attachedImages.length === 0;
+
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    onClick={handleSendMessage}
+                                    disabled={isInputEmpty}
+                                    className={cn(
+                                      'gap-2 !text-background [&_svg]:!text-background h-8 w-8 p-0 rounded-full transition-all duration-200',
+                                      isInputEmpty
+                                        ? '!bg-muted-foreground/30'
+                                        : '!bg-[#3f3c39] dark:!bg-foreground hover:!bg-[#4a4642] dark:hover:!bg-foreground/90'
+                                    )}
+                                    aria-label={t('messages.sendMessage')}
+                                  >
+                                    <ArrowUp className="size-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t('messages.sendMessage')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()}
                     </div>
                   </div>
                 </>
@@ -2803,94 +2874,6 @@ const MessagingPage = () => {
                 </div>
               )}
             </div>
-          </div>
-          {/* Right Column - Notes */}
-          <div className="flex-[1] h-full overflow-hidden pr-4 pb-4">
-            <Card className="h-full border rounded-lg flex flex-col overflow-hidden">
-              {selectedContact ? (
-                <div className="px-4 flex-1 flex flex-col min-h-0">
-                  <div className="flex items-center justify-between mb-4 flex-shrink-0">
-                    <h2 className="text-lg font-semibold">{t('messages.notes')}</h2>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setIsNoteSearchOpen(!isNoteSearchOpen);
-                          if (isNoteSearchOpen) {
-                            setNoteSearchQuery('');
-                          }
-                        }}
-                        className="h-8 w-8"
-                        aria-label={t('messages.searchNotes')}
-                      >
-                        <Search className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsCreateNoteOpen(true)}
-                        className="gap-2 h-8 text-xs border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                        aria-label={t('messages.createNote')}
-                      >
-                        <NotebookPen className="h-3 w-3" />
-                        {t('messages.createNote')}
-                      </Button>
-                    </div>
-                  </div>
-                  {isNoteSearchOpen && (
-                    <div className="mb-4 flex-shrink-0">
-                      <Input
-                        type="search"
-                        placeholder={t('messages.searchNotesPlaceholder')}
-                        value={noteSearchQuery}
-                        onChange={(e) => setNoteSearchQuery(e.target.value)}
-                        className="h-8 text-xs"
-                        autoFocus
-                        aria-label={t('messages.searchNotes')}
-                      />
-                    </div>
-                  )}
-                  <div className="space-y-3 flex-1 overflow-y-auto">
-                    {filteredNotes.map((note) => (
-                      <Card
-                        key={note.id}
-                        className={cn(
-                          'cursor-pointer transition-colors hover:bg-accent py-0',
-                          note.body ? 'h-[140px]' : 'h-auto'
-                        )}
-                        onClick={() => handleNoteClick(note)}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={t('messages.viewNoteAria', { title: note.title })}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleNoteClick(note);
-                          }
-                        }}
-                      >
-                        <CardContent
-                          className={cn('px-4 py-3 h-full flex flex-col', !note.body && 'h-auto')}
-                        >
-                          <div className="space-y-2 flex-1 flex flex-col">
-                            <div className="font-semibold text-sm">{note.title}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {formatNoteDate(note.updatedAt || note.createdAt)}
-                            </div>
-                            {note.body && (
-                              <div className="text-sm text-muted-foreground line-clamp-3 overflow-hidden flex-1">
-                                {note.body}
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </Card>
           </div>
         </div>
       </div>

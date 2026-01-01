@@ -594,6 +594,7 @@ export const esMessages = {
   },
   messages: {
     title: 'Mensajes',
+    search: 'Buscar',
     conversation: 'conversación',
     conversations: 'conversaciones',
     broadcast: 'Difusión',
