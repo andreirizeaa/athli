@@ -11,7 +11,7 @@ import { useTrainingData } from '../../training-data-context';
 import { BasicInformation } from '@/components/training/basic-information';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { Check } from 'lucide-react';
-import type { WorkoutPayload } from '@/components/training/workout-schema';
+import { type WorkoutPayload, DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 
 interface CreateWorkoutSidePanelProps {
     open: boolean;
@@ -35,7 +35,7 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange, initialData, onSucc
 
     React.useEffect(() => {
         if (open && initialData) {
-            setNewWorkoutName(initialData.title ? `${initialData.title} Copy` : '');
+            setNewWorkoutName(initialData.name ? `${initialData.name} Copy` : '');
             setNewWorkoutType(initialData.type || '');
             setNewDifficulty(initialData.difficulty || 'all_levels');
             setNewDescription(initialData.description || '');
@@ -62,28 +62,22 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange, initialData, onSucc
         // Difficulty is optional, no validation needed
 
         // Create workout directly
-        const meta: any = {
-            title: newWorkoutName.trim(),
+        const payload: WorkoutPayload = {
+            id: null,
+            name: newWorkoutName.trim(),
             description: newDescription.trim(),
             type: newWorkoutType.toLowerCase().replace(/\s+/g, '_'),
             difficulty: newDifficulty.toLowerCase().replace(/\s+/g, '_'),
             equipment: initialData?.equipment || [],
             totalExercises: initialData?.totalExercises || 0,
-            ...(initialData?.items ? { items: initialData.items } : {
-                items: []
-            })
+            items: initialData?.items || [],
+            ...DEFAULT_EXECUTION_FIELDS,
         };
 
         setIsSaving(true);
         try {
-            await createWorkout(meta);
-            toast.success(t('workouts.new.toast.savedSuccessfully'), {
-                style: {
-                    background: 'rgb(220 252 231)',
-                    color: 'rgb(20 83 45)',
-                    border: '1px solid rgb(187 247 208)',
-                },
-            });
+            await createWorkout(payload);
+            toast.success(t('workouts.new.toast.savedSuccessfully'));
             await refreshWorkouts();
             if (onSuccess) {
                 onSuccess();

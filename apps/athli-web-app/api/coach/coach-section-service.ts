@@ -1,5 +1,5 @@
 import { apiFetch, type ApiResponse } from '@/api/api-client';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 
 export type Section = {
   id: string;
@@ -83,17 +83,20 @@ export const deleteSections = async (sectionIds: string | string[]): Promise<voi
  */
 export const createSection = async (sectionData: WorkoutProgramPayload & { sectionType: string }): Promise<Section> => {
   // Calculate total exercises from items
-  const totalExercises = sectionData.items.reduce((total, item) => {
+  const totalExercises = (sectionData.items || []).reduce((total, item) => {
     if (item.itemType === 'exercise') {
-      return total + item.data.exercises.length;
+      // Top-level exercises count as 1
+      return total + 1;
     } else if (item.itemType === 'section') {
       const section = item.data;
       if (section.type === 'regular' || section.type === 'auxiliary') {
-        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        const exercises = section.exercises || [];
+        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'circuits') {
-        return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+        const exercises = section.exercises || [];
+        return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
       } else if (section.type === 'amrap' || section.type === 'timed') {
-        return total + section.exercises.length;
+        return total + (section.exercises?.length || 0);
       }
     }
     return total;
@@ -107,7 +110,7 @@ export const createSection = async (sectionData: WorkoutProgramPayload & { secti
   const response = await apiFetch<ApiResponse<{ section: any }>>('/coach/training/sections', {
     method: 'POST',
     body: JSON.stringify({
-      title: sectionData.title,
+      name: sectionData.name,
       description: sectionData.description,
       section_type: sectionData.sectionType,
       section_data: cleanSectionData,
@@ -139,15 +142,18 @@ export const updateSection = async (
   const totalExercises = sectionData.items
     ? sectionData.items.reduce((total, item) => {
       if (item.itemType === 'exercise') {
-        return total + item.data.exercises.length;
+        // Top-level exercises count as 1
+        return total + 1;
       } else if (item.itemType === 'section') {
         const section = item.data;
         if (section.type === 'regular' || section.type === 'auxiliary') {
-          return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+          const exercises = section.exercises || [];
+          return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
         } else if (section.type === 'circuits') {
-          return total + section.exercises.reduce((sum, group) => sum + group.exercises.length, 0);
+          const exercises = section.exercises || [];
+          return total + exercises.reduce((sum, group) => sum + (group.exercises?.length || 0), 0);
         } else if (section.type === 'amrap' || section.type === 'timed') {
-          return total + section.exercises.length;
+          return total + (section.exercises?.length || 0);
         }
       }
       return total;
@@ -162,7 +168,7 @@ export const updateSection = async (
 
   const updatePayload: any = {
     id: sectionId,
-    ...(sectionData.title && { title: sectionData.title }),
+    ...(sectionData.name && { name: sectionData.name }),
     ...(sectionData.description !== undefined && { description: sectionData.description }),
     ...(cleanSectionData && { section_data: cleanSectionData }),
     ...(totalExercises !== undefined && { total_exercises: totalExercises }),

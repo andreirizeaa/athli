@@ -1763,7 +1763,7 @@ const MessagingPage = () => {
                             <Button
                               variant="outline"
                               onClick={() =>
-                                router.push(`/athletes/${selectedContact.id}/training-calendar`)
+                                router.push(`/athletes/${selectedContact.id}/training`)
                               }
                               className="h-9 w-9 rounded-full p-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                               aria-label={t('messages.viewTrainingCalendar')}

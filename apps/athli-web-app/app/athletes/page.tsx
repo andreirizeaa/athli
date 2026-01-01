@@ -316,7 +316,7 @@ const AthletesPage = () => {
   };
 
   const handleNavigateToTrainingCalendar = (athleteId: string) => {
-    router.push(`/athletes/${athleteId}/training-calendar`);
+    router.push(`/athletes/${athleteId}/training`);
   };
 
   const handleTrainingCalendarIconKeyDown = (

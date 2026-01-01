@@ -10,6 +10,7 @@ import type {
   WorkoutSectionPayload,
   WorkoutItem,
 } from '@/components/training/workout-schema';
+import { DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 import type { SetData } from '@/components/training/builder/exercise-card';
 import type {
   ExerciseWithSuperset,
@@ -95,11 +96,18 @@ export const mapSetDataToPayload = (
   set: SetData,
   parserType: ParserType = 'null'
 ): SetPayload => {
+  // Parse values once for reuse in prescribed/completed pairs
+  const weightValue = parseNumber(set.weight, 'null') ?? 0;
+  const repsValue = parseNumber(set.reps, 'null') ?? 0;
+  const distanceValue = parseNumber(set.distance, 'null');
+  const durationValue = parseNumber(set.duration, 'null');
+
   const base = {
     setNumber: set.setNumber,
     type: set.type || 'normal',
     restSec: set.rest ? (parseNumber(set.rest, 'null') ?? null) : null,
     completed: false,
+    skipped: false,
   };
 
   // distance_duration is always non-dropset, with either distance or durationSec
@@ -107,9 +115,16 @@ export const mapSetDataToPayload = (
     return {
       ...base,
       exerciseType: 'distance_duration',
-      distance: set.distance ? parseNumber(set.distance, parserType) ?? undefined : undefined,
-      durationSec: set.duration ? parseNumber(set.duration, parserType) ?? undefined : undefined,
-    };
+      distance: {
+        prescribed: distanceValue,
+        completed: distanceValue,  // Pre-filled with prescribed
+      },
+      durationSec: {
+        prescribed: durationValue,
+        completed: durationValue,  // Pre-filled with prescribed
+      },
+      dropset: null,  // Always present, null for non-dropset
+    } as SetPayload;
   }
 
   // Dropset handling – presence of dropset implies dropset semantics
@@ -120,32 +135,41 @@ export const mapSetDataToPayload = (
     const stages = Array.from(
       { length: Math.max(repStages.length, weightStages.length) },
       (_v, index) => {
-        const stage: { weight?: number; reps?: number; completed: boolean } = { completed: false };
-        if (repStages[index] != null) stage.reps = repStages[index];
-        if (weightStages[index] != null) stage.weight = weightStages[index];
-        return stage;
+        const repPrescribed = repStages[index] ?? null;
+        const weightPrescribed = weightStages[index] ?? null;
+        return {
+          weight: { prescribed: weightPrescribed, completed: weightPrescribed },
+          reps: { prescribed: repPrescribed, completed: repPrescribed },
+          completed: false,
+        };
       }
-    ).filter((s) => s.reps != null || s.weight != null);
+    ).filter((s) => s.reps.prescribed != null || s.weight.prescribed != null);
 
     if (exerciseType === 'weight_reps') {
       return {
         ...base,
+        type: 'dropset' as const,
         exerciseType: 'weight_reps',
-        weight: parseNumber(set.weight, 'null') ?? 0,
-        reps: parseNumber(set.reps, 'null') ?? 0,
+        weight: { prescribed: weightValue, completed: weightValue },
+        reps: { prescribed: repsValue, completed: repsValue },
         dropset: { stages },
-      };
+      } as SetPayload;
     }
 
     // reps-only dropset
     return {
       ...base,
+      type: 'dropset' as const,
       exerciseType: 'reps',
-      reps: parseNumber(set.reps, 'null') ?? 0,
+      reps: { prescribed: repsValue, completed: repsValue },
       dropset: {
-        stages: stages.map((s) => ({ reps: s.reps, completed: false })),
+        stages: stages.map((s) => ({
+          reps: s.reps,
+          weight: s.weight,
+          completed: false,
+        })),
       },
-    };
+    } as SetPayload;
   }
 
   // Non-dropset sets
@@ -153,17 +177,19 @@ export const mapSetDataToPayload = (
     return {
       ...base,
       exerciseType: 'weight_reps',
-      weight: parseNumber(set.weight, 'null') ?? 0,
-      reps: parseNumber(set.reps, 'null') ?? 0,
-    };
+      weight: { prescribed: weightValue, completed: weightValue },
+      reps: { prescribed: repsValue, completed: repsValue },
+      dropset: null,  // Always present, null for non-dropset
+    } as SetPayload;
   }
 
   // reps-only non-dropset
   return {
     ...base,
     exerciseType: 'reps',
-    reps: parseNumber(set.reps, 'null') ?? 0,
-  };
+    reps: { prescribed: repsValue, completed: repsValue },
+    dropset: null,  // Always present, null for non-dropset
+  } as SetPayload;
 };
 
 /**
@@ -180,22 +206,24 @@ const buildSectionPayload = (
       const mapped = group.map<RegularExercisePayload>((exercise) => {
         // Use exerciseId if available, otherwise fall back to instanceId
         // This ensures we never have an undefined id in the payload
-        const exerciseId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
+        const prescribedId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
           ? exercise.exerciseId
           : (exercise as any).instanceId || `unknown_${Date.now()}`;
 
         if (!exercise.exerciseId || exercise.exerciseId.startsWith('empty_')) {
-          console.warn('Exercise missing exerciseId, using fallback:', exerciseId);
+          console.warn('Exercise missing exerciseId, using fallback:', prescribedId);
         }
 
         return {
-          id: exerciseId,
+          prescribedExerciseId: prescribedId,
+          performedExerciseId: null,  // null => same as prescribed
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) =>
             mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
           ),
           alternatives: exercise.alternatives || [],
-          supersetId: exercise.supersetGroupId || undefined,
+          supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
+          notes: exercise.notes || null,  // Use null, not empty string
         };
       });
 
@@ -209,41 +237,53 @@ const buildSectionPayload = (
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'regular',
       exercises,
+      notes: section.notes || null,
     };
   }
 
   if (section.type === 'amrap') {
     const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => {
       const firstSet = exercise.sets?.[0];
-      // Builder uses 'rest' (string) in sets, payload uses 'restSec' (number)
-      // Builder uses 'duration' (string) in sets, payload uses 'durationSec' (number)
 
       // Use exerciseId if available and not empty_, otherwise fall back to instanceId
-      const exerciseId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
+      const prescribedId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
         ? exercise.exerciseId
         : (exercise.instanceId || exercise.id || `unknown_${Date.now()}`);
 
+      // Parse values for MetricNumber pattern with pre-fill
+      const weightValue = parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null;
+      const repsValue = parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null;
+      const distanceValue = parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null;
+      const durationValue = parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null;
+
       return {
-        id: exerciseId,
+        prescribedExerciseId: prescribedId,
+        performedExerciseId: null,  // null => same as prescribed
         exerciseType: exercise.exerciseType,
-        type: firstSet?.type || 'normal',
-        weight: parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null,
-        reps: parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null,
-        distance: parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null,
-        durationSec: parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null,
+        type: firstSet?.type || null,
+        weight: { prescribed: weightValue ?? 0, completed: weightValue ?? 0 },
+        reps: { prescribed: repsValue ?? 0, completed: repsValue ?? 0 },
+        distance: { prescribed: distanceValue, completed: distanceValue },
+        durationSec: { prescribed: durationValue, completed: durationValue },
         restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
         completed: false,
-      };
+        notes: exercise.notes || null,
+      } as RoundExercisePayload;
     });
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'amrap',
       durationSec: section.roundDurationSec || 0,
+      actualDurationSec: null,  // Client fills this when completing
+      roundsCompleted: null,    // Client fills this when completing
       exercises,
-    };
+      notes: section.notes || null,
+    } as WorkoutSectionPayload;
   }
 
   if (section.type === 'circuits') {
@@ -261,16 +301,18 @@ const buildSectionPayload = (
           };
 
         // Use exerciseId if available, otherwise fall back to instanceId
-        const exerciseId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
+        const prescribedId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
           ? exercise.exerciseId
           : (exercise as any).instanceId || `unknown_${Date.now()}`;
 
         return {
-          id: exerciseId,
+          prescribedExerciseId: prescribedId,
+          performedExerciseId: null,  // null => same as prescribed
           exerciseType: exercise.exerciseType as ExerciseType,
           set: mapSetDataToPayload(exercise.exerciseType as ExerciseType, firstSet, parserType),
           alternatives: exercise.alternatives || [],
-          supersetId: exercise.supersetGroupId || undefined,
+          supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
+          notes: exercise.notes || null,
         };
       });
 
@@ -284,10 +326,14 @@ const buildSectionPayload = (
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'circuits',
       targetRounds: section.targetRounds || 0,
+      actualRounds: null,       // Client fills this when completing
+      totalDurationSec: null,   // Client fills this when completing
       exercises,
-    };
+      notes: section.notes || null,
+    } as WorkoutSectionPayload;
   }
 
   if (section.type === 'auxiliary') {
@@ -296,18 +342,20 @@ const buildSectionPayload = (
     const exercises: ExerciseGroupPayload[] = groups.map((group) => {
       const mapped = group.map<RegularExercisePayload>((exercise) => {
         // Use exerciseId if available, otherwise fall back to instanceId
-        const exerciseId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
+        const prescribedId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
           ? exercise.exerciseId
           : (exercise as any).instanceId || `unknown_${Date.now()}`;
 
         return {
-          id: exerciseId,
+          prescribedExerciseId: prescribedId,
+          performedExerciseId: null,  // null => same as prescribed
           exerciseType: exercise.exerciseType as ExerciseType,
           sets: (exercise.sets || []).map((set) =>
             mapSetDataToPayload(exercise.exerciseType as ExerciseType, set, parserType)
           ),
           alternatives: exercise.alternatives || [],
-          supersetId: exercise.supersetGroupId || undefined,
+          supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
+          notes: exercise.notes || null,
         };
       });
 
@@ -321,40 +369,54 @@ const buildSectionPayload = (
 
     return {
       id: section.id,
+      name: section.name || '',
       type: 'auxiliary',
       category: section.category || 'warmup',
       exercises,
+      notes: section.notes || null,
     };
   }
 
   // Timed section
-  const exercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => {
+  const timedExercises: RoundExercisePayload[] = (section.exercises || []).map((exercise: any) => {
     const firstSet = exercise.sets?.[0];
 
     // Use exerciseId if available and not empty_, otherwise fall back to instanceId
-    const exerciseId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
+    const prescribedId = exercise.exerciseId && !exercise.exerciseId.startsWith('empty_')
       ? exercise.exerciseId
       : (exercise.instanceId || exercise.id || `unknown_${Date.now()}`);
 
+    // Parse values for MetricNumber pattern with pre-fill
+    const weightValue = parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null;
+    const repsValue = parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null;
+    const distanceValue = parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null;
+    const durationValue = parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null;
+
     return {
-      id: exerciseId,
+      prescribedExerciseId: prescribedId,
+      performedExerciseId: null,  // null => same as prescribed
       exerciseType: exercise.exerciseType,
-      type: firstSet?.type || 'normal',
-      weight: parseNumber(firstSet?.weight, 'null') ?? exercise.weight ?? null,
-      reps: parseNumber(firstSet?.reps, 'null') ?? exercise.reps ?? null,
-      distance: parseNumber(firstSet?.distance, 'null') ?? exercise.distance ?? null,
-      durationSec: parseNumber(firstSet?.duration, 'null') ?? exercise.durationSec ?? null,
+      type: firstSet?.type || null,
+      weight: { prescribed: weightValue ?? 0, completed: weightValue ?? 0 },
+      reps: { prescribed: repsValue ?? 0, completed: repsValue ?? 0 },
+      distance: { prescribed: distanceValue, completed: distanceValue },
+      durationSec: { prescribed: durationValue, completed: durationValue },
       restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
       completed: false,
-    };
+      notes: exercise.notes || null,
+    } as RoundExercisePayload;
   });
 
   return {
     id: section.id,
+    name: section.name || '',
     type: 'timed',
     targetRounds: section.targetRounds || 0,
-    exercises,
-  };
+    actualRounds: null,       // Client fills this when completing
+    totalDurationSec: null,   // Client fills this when completing
+    exercises: timedExercises,
+    notes: section.notes || null,
+  } as WorkoutSectionPayload;
 };
 
 
@@ -390,21 +452,23 @@ export const buildWorkoutPayload = (
     } else {
       // Direct mapping for top-level exercises (no grouping)
       // Use exerciseId if available, otherwise fall back to instanceId
-      const exerciseId = item.exercise.exerciseId && !item.exercise.exerciseId.startsWith('empty_')
+      const prescribedId = item.exercise.exerciseId && !item.exercise.exerciseId.startsWith('empty_')
         ? item.exercise.exerciseId
         : item.exercise.instanceId || `unknown_${Date.now()}`;
 
       return {
         itemType: 'exercise' as const,
         data: {
-          id: exerciseId,
+          prescribedExerciseId: prescribedId,
+          performedExerciseId: null,  // null => same as prescribed
           exerciseType: item.exercise.exerciseType as ExerciseType,
           sets: (item.exercise.sets || []).map((set) =>
             mapSetDataToPayload(item.exercise.exerciseType as ExerciseType, set, parserType)
           ),
           alternatives: item.exercise.alternatives || [],
-          supersetId: item.exercise.supersetGroupId || undefined,
-        },
+          supersetId: item.exercise.supersetGroupId || null,  // Use null, not undefined
+          notes: item.exercise.notes || null,
+        } as RegularExercisePayload,
       };
     }
   });
@@ -451,13 +515,17 @@ export const buildWorkoutPayload = (
     }
   });
 
-  return {
-    title: meta.title,
-    description: meta.description,
-    type: meta.type,
-    difficulty: meta.difficulty,
+  const payload: WorkoutProgramPayload = {
+    id: (meta as any).id ?? null,
+    name: meta.title,
+    description: meta.description || '',
+    type: meta.type || '',
+    difficulty: meta.difficulty || '',
     equipment,
     totalExercises,
     items,
+    ...DEFAULT_EXECUTION_FIELDS,
   };
+
+  return payload;
 };

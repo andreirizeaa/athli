@@ -16,7 +16,7 @@ export const coachProgramsController = {
         const supabase = getSupabaseClient();
         const { data: programs, error } = await supabase
             .from('coach_programs')
-            .select('*')
+            .select('*, total_workouts')
             .eq('coach_id', userId)
             .order('created_at', { ascending: false });
 
@@ -87,6 +87,17 @@ export const coachProgramsController = {
             ...(program_data.days && { days: program_data.days }),
         } : {};
 
+        // Calculate total_workouts
+        let totalWorkouts = 0;
+        const days = cleanProgramData.days || cleanProgramData.schema || [];
+        if (Array.isArray(days)) {
+            days.forEach((day: any) => {
+                if (day.workouts && Array.isArray(day.workouts)) {
+                    totalWorkouts += day.workouts.length;
+                }
+            });
+        }
+
         const supabase = getSupabaseClient();
         const { data: program, error } = await supabase
             .from('coach_programs')
@@ -98,6 +109,7 @@ export const coachProgramsController = {
                 difficulty,
                 weeks,
                 program_data: cleanProgramData,
+                total_workouts: totalWorkouts,
             })
             .select()
             .single();
@@ -146,6 +158,7 @@ export const coachProgramsController = {
         const { program_data, ...rest } = updates;
 
         let cleanProgramData = undefined;
+        let totalWorkouts: number | undefined = undefined;
         let extractedMetadata: any = {};
 
         if (program_data) {
@@ -159,6 +172,18 @@ export const coachProgramsController = {
                 ...(program_data.schema && { schema: program_data.schema }),
                 ...(program_data.days && { days: program_data.days }),
             };
+
+            // Calculate total_workouts
+            let count = 0;
+            const days = cleanProgramData.days || cleanProgramData.schema || [];
+            if (Array.isArray(days)) {
+                days.forEach((day: any) => {
+                    if (day.workouts && Array.isArray(day.workouts)) {
+                        count += day.workouts.length;
+                    }
+                });
+            }
+            totalWorkouts = count;
         }
 
         const { data: program, error } = await supabase
@@ -167,6 +192,7 @@ export const coachProgramsController = {
                 ...rest,
                 ...extractedMetadata,
                 ...(cleanProgramData !== undefined && { program_data: cleanProgramData }),
+                ...(totalWorkouts !== undefined && { total_workouts: totalWorkouts }),
                 updated_at: new Date().toISOString(),
             })
             .eq('id', id)
@@ -249,6 +275,7 @@ export const coachProgramsController = {
                 difficulty: original.difficulty,
                 weeks: original.weeks,
                 program_data: original.program_data,
+                total_workouts: original.total_workouts || 0,
                 is_favourite: false, // Reset favourite on duplicate
             })
             .select()

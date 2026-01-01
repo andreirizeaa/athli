@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 import { useTrainingData } from '../training-data-context';
 import { SectionBuilder } from './section-builder';
 import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
+import { DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 
 type ColumnId = 'description' | 'sectionType' | 'totalExercises' | 'created' | 'actions';
 
@@ -214,7 +215,8 @@ const SectionsPage = () => {
   const handleCreateSection = async (data: { title: string; description: string; sectionType: SectionType }) => {
     try {
       await createSection({
-        title: data.title,
+        id: null,
+        name: data.title,
         description: data.description,
         sectionType: data.sectionType,
         type: data.sectionType,
@@ -222,6 +224,7 @@ const SectionsPage = () => {
         equipment: [],
         totalExercises: 0,
         items: [],
+        ...DEFAULT_EXECUTION_FIELDS,
       });
 
       await refreshSections();
@@ -700,7 +703,7 @@ const SectionsPage = () => {
           initialData={selectedSectionData}
           isLoadingInitialData={isLoadingSectionData}
           meta={{
-            title: selectedSectionForBuilder.program,
+            name: selectedSectionForBuilder.program,
             description: selectedSectionForBuilder.description,
             type: '',
             difficulty: '',

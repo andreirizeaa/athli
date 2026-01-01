@@ -31,7 +31,7 @@ export const SelectClientSidePanel = ({
 
     const handleClientClick = (client: Athlete) => {
         onOpenChange(false);
-        router.push(`/athletes/${client.id}/training-calendar`);
+        router.push(`/athletes/${client.id}/training`);
     };
 
     const handleRowKeyDown = (

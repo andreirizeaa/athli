@@ -22,7 +22,7 @@ import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { mockWorkouts } from '@/components/app/app-shell';
 
 type WorkoutMeta = {
-  title: string;
+  name: string;
   description: string;
   type: string;
   difficulty: string;
@@ -100,7 +100,7 @@ const EditTrainingCalendarWorkoutPage = () => {
     const workout = mockWorkouts.find((w) => w.id === workoutId);
     if (workout) {
       setWorkoutMeta({
-        title: workout.program || 'Workout',
+        name: workout.name || 'Workout',
         description: workout.description || '',
         type: workout.type || 'Push',
         difficulty: 'Intermediate',
@@ -108,7 +108,7 @@ const EditTrainingCalendarWorkoutPage = () => {
       });
     } else {
       // If workout not found, redirect back to training calendar
-      router.push(`/athletes/${clientId}/training-calendar`);
+      router.push(`/athletes/${clientId}/training`);
     }
   }, [router, workoutId, clientId]);
 
@@ -116,10 +116,10 @@ const EditTrainingCalendarWorkoutPage = () => {
     if (viewState) {
       // Navigate back with view state preserved via URL params
       router.push(
-        `/athletes/${clientId}/training-calendar?currentWeek=${viewState.currentWeek}&selectedWeek=${viewState.selectedWeek}`
+        `/athletes/${clientId}/training?currentWeek=${viewState.currentWeek}&selectedWeek=${viewState.selectedWeek}`
       );
     } else {
-      router.push(`/athletes/${clientId}/training-calendar`);
+      router.push(`/athletes/${clientId}/training`);
     }
   };
 
@@ -153,7 +153,7 @@ const EditTrainingCalendarWorkoutPage = () => {
     // eslint-disable-next-line no-console
     console.log(payload);
 
-    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }), {
+    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.name }), {
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -183,7 +183,7 @@ const EditTrainingCalendarWorkoutPage = () => {
       return;
     }
 
-    if (path === `/athletes/${clientId}/training-calendar`) {
+    if (path === `/athletes/${clientId}/training`) {
       navigateBackToTrainingCalendar();
     }
   };
@@ -197,7 +197,7 @@ const EditTrainingCalendarWorkoutPage = () => {
               <BreadcrumbList className="text-xs gap-1">
                 <BreadcrumbItem>
                   <BreadcrumbLink
-                    onClick={() => handleBreadcrumbClick(`/athletes/${clientId}/training-calendar`)}
+                    onClick={() => handleBreadcrumbClick(`/athletes/${clientId}/training`)}
                     className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
                   >
                     {t('athletes.profile.trainingCalendar')}
@@ -215,14 +215,14 @@ const EditTrainingCalendarWorkoutPage = () => {
                     </BreadcrumbItem>
                   </>
                 )}
-                {workoutMeta.title && (
+                {workoutMeta.name && (
                   <>
                     <BreadcrumbSeparator className="text-muted-foreground/60">
                       <ChevronRight className="h-2 w-2" />
                     </BreadcrumbSeparator>
                     <BreadcrumbItem>
                       <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                        {workoutMeta.title}
+                        {workoutMeta.name}
                       </BreadcrumbPage>
                     </BreadcrumbItem>
                   </>
