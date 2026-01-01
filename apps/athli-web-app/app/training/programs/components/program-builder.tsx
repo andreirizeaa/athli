@@ -840,13 +840,13 @@ export const ProgramBuilder = ({
 
           return {
             ...(originalId && { id: originalId }),
-            title: workout.name,
-            description: workout.description || '',
-            type: workout.type,
-            difficulty: workout.difficulty || 'intermediate',
-            equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
-            totalExercises: workout.totalExercises,
-            items: workout.workout_data?.items || [],
+            name: workout.name,
+            description: workout.details?.description || '',
+            type: workout.details?.type || '',
+            difficulty: workout.details?.difficulty || 'intermediate',
+            equipment: typeof workout.details?.equipment === 'string' ? (workout.details?.equipment as string).split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.details?.equipment) ? workout.details?.equipment : []),
+            totalExercises: workout.details?.totalExercises || 0,
+            items: workout.items || (workout as any).workout_data?.items || [],
             ...DEFAULT_EXECUTION_FIELDS,
           };
         });
@@ -1139,35 +1139,32 @@ export const ProgramBuilder = ({
     // Create a workout object from the payload
     const newWorkout: Workout & { id: string } = {
       id: `inline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      name: payload.title,
-      description: payload.description || '',
-      type: payload.type,
-      difficulty: payload.difficulty || 'intermediate',
-      length: '',
-      totalExercises: payload.totalExercises,
-      equipment: payload.equipment || [],
+      name: payload.name,
+
       created: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-'),
       isFavourite: false,
-      workout_data: {
-        // Metadata fields
-        title: payload.title,
-        description: payload.description || '',
-        type: payload.type,
-        difficulty: payload.difficulty || 'intermediate',
-        equipment: payload.equipment || [],
-        totalExercises: payload.totalExercises,
-        items: payload.items || [],
-        status: payload.status,
-        startedAt: payload.startedAt,
-        completedAt: payload.completedAt,
-        totalDurationMin: payload.totalDurationMin,
-        sessionComments: payload.sessionComments,
-        totalWeightLifted: payload.totalWeightLifted,
-        intensity: payload.intensity,
-        readiness: payload.readiness,
-        overallNotes: payload.overallNotes,
-        rating: payload.rating,
+      description: payload.description || '',
+      type: payload.type || '',
+      difficulty: payload.difficulty || 'intermediate',
+      totalExercises: payload.totalExercises || 0,
+      equipment: payload.equipment || [],
+      items: payload.items || [],
+      completedSummary: {
+        status: payload.completedSummary?.status || DEFAULT_EXECUTION_FIELDS.completedSummary.status,
+        startedAt: payload.completedSummary?.startedAt || null,
+        completedAt: payload.completedSummary?.completedAt || null,
+        totalDurationMin: payload.completedSummary?.totalDurationMin || null,
+        totalWeightLifted: payload.completedSummary?.totalWeightLifted || null,
       },
+      post: {
+        sessionComments: payload.post?.sessionComments || '',
+        intensity: payload.post?.intensity || null,
+        overallNotes: payload.post?.overallNotes || '',
+        rating: payload.post?.rating || null,
+      },
+      pre: {
+        readiness: payload.pre?.readiness || null,
+      }
     };
 
     setWorkoutsByDay((prev) => {
@@ -1184,7 +1181,7 @@ export const ProgramBuilder = ({
     setIsWorkoutBuilderOpen(false);
     setPendingWorkoutDay(null);
 
-    toast.success(`Workout "${payload.title}" added to program`);
+    toast.success(`Workout "${payload.name}" added to program`);
   };
 
   const handleSaveEditedWorkout = (payload: WorkoutProgramPayload) => {
@@ -1204,31 +1201,29 @@ export const ProgramBuilder = ({
         // Update existing workout
         const updatedWorkout = {
           ...currentWorkouts[workoutIndex],
-          name: payload.title,
+          name: payload.name,
+
           description: payload.description || '',
-          type: payload.type,
+          type: payload.type || '',
           difficulty: payload.difficulty || 'intermediate',
           equipment: payload.equipment || [],
-          totalExercises: payload.totalExercises,
-          workout_data: {
-            // Metadata fields
-            title: payload.title,
-            description: payload.description || '',
-            type: payload.type,
-            difficulty: payload.difficulty || 'intermediate',
-            equipment: payload.equipment || [],
-            totalExercises: payload.totalExercises,
-            items: payload.items || [],
-            status: payload.status,
-            startedAt: payload.startedAt,
-            completedAt: payload.completedAt,
-            totalDurationMin: payload.totalDurationMin,
-            sessionComments: payload.sessionComments,
-            totalWeightLifted: payload.totalWeightLifted,
-            intensity: payload.intensity,
-            readiness: payload.readiness,
-            overallNotes: payload.overallNotes,
-            rating: payload.rating,
+          totalExercises: payload.totalExercises || 0,
+          items: payload.items || [],
+          completedSummary: {
+            status: payload.completedSummary?.status || DEFAULT_EXECUTION_FIELDS.completedSummary.status,
+            startedAt: payload.completedSummary?.startedAt || null,
+            completedAt: payload.completedSummary?.completedAt || null,
+            totalDurationMin: payload.completedSummary?.totalDurationMin || null,
+            totalWeightLifted: payload.completedSummary?.totalWeightLifted || null,
+          },
+          post: {
+            sessionComments: payload.post?.sessionComments || '',
+            intensity: payload.post?.intensity || null,
+            overallNotes: payload.post?.overallNotes || '',
+            rating: payload.post?.rating || null,
+          },
+          pre: {
+            readiness: payload.pre?.readiness || null,
           }
         };
 
@@ -1251,8 +1246,8 @@ export const ProgramBuilder = ({
   const handleSaveWorkoutFromPanel = async (workout: Workout, scheduleOption: string, config: string) => {
     if (!workout || selectedDay === null) return;
 
-    // Fetch full workout data including workout_data
-    let fullWorkout: Workout & { workout_data?: any };
+    // Fetch full workout data
+    let fullWorkout: Workout;
     try {
       fullWorkout = await getWorkoutById(workout.id);
     } catch (error) {
@@ -1349,7 +1344,17 @@ export const ProgramBuilder = ({
   ) => {
     // Open the builder for editing - use workout data directly from state
     setEditingWorkout({ week, day, workout });
-    setFetchedWorkoutData(workout.workout_data || { items: [] });
+    setFetchedWorkoutData({
+      items: workout.items || (workout as any).workout_data?.items || [],
+      description: workout.description || '',
+      type: workout.type || '',
+      difficulty: workout.difficulty || 'intermediate',
+      equipment: Array.isArray(workout.equipment) ? workout.equipment : (workout.equipment ? [workout.equipment] : []),
+      totalExercises: workout.totalExercises || 0,
+      pre: workout.pre || (workout as any).workout_data?.pre || { readiness: null },
+      post: workout.post || (workout as any).workout_data?.post || { rating: null, intensity: null, overallNotes: '', sessionComments: '' },
+      completedSummary: workout.completedSummary || (workout as any).workout_data?.meta || (workout as any).workout_data?.completedSummary || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
+    });
     setIsLoadingWorkoutData(false);
     setIsWorkoutBuilderOpen(true);
   };
@@ -1361,13 +1366,14 @@ export const ProgramBuilder = ({
   const handleSaveToLibrary = (workout: Workout & { id: string }) => {
     // Convert Workout to WorkoutPayload for CreateWorkoutSidePanel
     const workoutPayload: WorkoutPayload = {
-      title: workout.name,
+      id: workout.id,
+      name: workout.name,
       description: workout.description || '',
-      type: workout.type,
+      type: workout.type || '',
       difficulty: workout.difficulty || 'intermediate',
-      equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
-      totalExercises: workout.totalExercises,
-      items: workout.workout_data?.items || [],
+      equipment: typeof workout.equipment === 'string' ? (workout.equipment as string).split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
+      totalExercises: workout.totalExercises || 0,
+      items: workout.items || (workout as any).workout_data?.items || [],
       ...DEFAULT_EXECUTION_FIELDS,
     };
     setWorkoutToSave(workoutPayload);
@@ -2172,8 +2178,8 @@ export const ProgramBuilder = ({
               </div>
               <div className="px-2 py-1">
                 <span className="text-[10px] text-muted-foreground block">
-                  {draggedWorkout.workout.totalExercises}{' '}
-                  {draggedWorkout.workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
+                  {draggedWorkout.workout.details?.totalExercises || 0}{' '}
+                  {(draggedWorkout.workout.details?.totalExercises || 0) === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
                 </span>
               </div>
             </div>
@@ -2235,15 +2241,16 @@ export const ProgramBuilder = ({
                             {t('general.type')}: {selectedWorkoutDetails.workout.type}
                           </Badge>
                           {selectedWorkoutDetails.workout.equipment &&
-                            (typeof selectedWorkoutDetails.workout.equipment === 'string' ? selectedWorkoutDetails.workout.equipment
+                            (typeof selectedWorkoutDetails.workout.equipment === 'string' ? (selectedWorkoutDetails.workout.equipment as string)
                               .split(',')
-                              .filter((item: string) => item.trim() !== '').length > 0 : false) && (
+                              .filter((e: string) => e.trim().length > 0)
+                              .length > 0 : (Array.isArray(selectedWorkoutDetails.workout.equipment) ? selectedWorkoutDetails.workout.equipment.length > 0 : false)) && (
                               <Badge variant="secondary" className="text-xs">
-                                {typeof selectedWorkoutDetails.workout.equipment === 'string' ? selectedWorkoutDetails.workout.equipment
+                                {typeof selectedWorkoutDetails.workout.equipment === 'string' ? (selectedWorkoutDetails.workout.equipment as string)
                                   .split(',')
-                                  .map((item: string) => item.trim())
-                                  .filter((item: string) => item !== '')
-                                  .join(', ') : ''}
+                                  .map((e: string) => e.trim())
+                                  .filter((e: string) => e)
+                                  .join(', ') : (Array.isArray(selectedWorkoutDetails.workout.equipment) ? selectedWorkoutDetails.workout.equipment.join(', ') : '')}
                               </Badge>
                             )}
                         </div>
@@ -2364,9 +2371,9 @@ export const ProgramBuilder = ({
         }}
         meta={editingWorkout ? {
           title: editingWorkout.workout.name,
-          type: editingWorkout.workout.type,
-          difficulty: editingWorkout.workout.difficulty || 'intermediate',
-          description: editingWorkout.workout.description || '',
+          type: editingWorkout.workout.details?.type || '',
+          difficulty: editingWorkout.workout.details?.difficulty || 'intermediate',
+          description: editingWorkout.workout.details?.description || '',
         } : {
           title: '',
           type: '',

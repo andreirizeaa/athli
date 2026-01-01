@@ -95,12 +95,11 @@ const EditProgramPage = () => {
                   description: workoutData.description || '',
                   type: workoutData.type || 'strength',
                   difficulty: workoutData.difficulty || 'intermediate',
-                  length: '0 min',
                   totalExercises: totalExercises,
                   equipment: workoutData.equipment || [],
                   created: '',
                   isFavourite: false,
-                  workout_data: { items: workoutData.items || [] }
+                  items: workoutData.items || [],
                 };
                 preFilledWorkouts[week][dayInWeek].push(workout);
               }

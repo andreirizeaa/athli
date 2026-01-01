@@ -25,8 +25,9 @@ const createFallbackExercise = (exerciseId: string, exerciseType?: string) => ({
     relatedExerciseIds: [],
 });
 
-const cleanExerciseId = (id: string | undefined | null): string => {
-    if (!id) return '';
+const cleanExerciseId = (payload: any): string => {
+    // Use prescribedExerciseId (new schema) with fallback to id (legacy) and exerciseId
+    const id = payload?.prescribedExerciseId || payload?.id || payload?.exerciseId || '';
     return id;
 };
 
@@ -40,6 +41,15 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
     if (!payload || !payload.items) {
         return { items: [] };
     }
+
+    // Helper to extract prescribed value from MetricNumber pattern or handle legacy plain numbers
+    const getMetricValue = (metric: any): string => {
+        if (metric === null || metric === undefined) return '';
+        if (typeof metric === 'object' && 'prescribed' in metric) {
+            return metric.prescribed?.toString() || '';
+        }
+        return metric.toString();
+    };
 
     payload.items.forEach((item: WorkoutItem) => {
         if (item.itemType === 'exercise') {
@@ -61,19 +71,19 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
             exerciseGroup.exercises.forEach((exercisePayload) => {
                 // Find exercise details from the exercise database, or use fallback
-                const cleanedId = cleanExerciseId(exercisePayload.id);
+                const cleanedId = cleanExerciseId(exercisePayload);
                 const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
                     || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
 
-                // Convert sets from payload format to builder format
+                // Convert sets from payload format to builder format (uses getMetricValue for MetricNumber pattern)
                 const sets: SetData[] = exercisePayload.sets.map((set) => ({
                     setNumber: set.setNumber,
-                    type: ('dropset' in set && set.dropset) ? 'dropset' : 'normal',
-                    reps: set.exerciseType === 'distance_duration' ? '' : set.reps?.toString() || '',
-                    weight: set.exerciseType === 'weight_reps' ? set.weight?.toString() || '' : '',
+                    type: ('dropset' in set && set.dropset) ? 'dropset' : (set.type || 'normal'),
+                    reps: set.exerciseType === 'distance_duration' ? '' : getMetricValue(set.reps),
+                    weight: set.exerciseType === 'weight_reps' ? getMetricValue(set.weight) : '',
                     rest: set.restSec?.toString() || '',
-                    distance: set.exerciseType === 'distance_duration' && 'distance' in set ? (set as any).distance?.toString() || '' : '',
-                    duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? (set as any).durationSec?.toString() || '' : '',
+                    distance: set.exerciseType === 'distance_duration' && 'distance' in set ? getMetricValue((set as any).distance) : '',
+                    duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? getMetricValue((set as any).durationSec) : '',
                 }));
 
                 const exercise: ExerciseWithSuperset = {
@@ -112,18 +122,18 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
                     group.exercises.forEach((exercisePayload) => {
                         // Find exercise details from the exercise database, or use fallback
-                        const cleanedId = cleanExerciseId(exercisePayload.id);
+                        const cleanedId = cleanExerciseId(exercisePayload);
                         const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
                             || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
 
                         const sets: SetData[] = exercisePayload.sets.map((set) => ({
                             setNumber: set.setNumber,
-                            type: ('dropset' in set && set.dropset) ? 'dropset' : 'normal',
-                            reps: set.exerciseType === 'distance_duration' ? '' : set.reps?.toString() || '',
-                            weight: set.exerciseType === 'weight_reps' ? set.weight?.toString() || '' : '',
+                            type: ('dropset' in set && set.dropset) ? 'dropset' : (set.type || 'normal'),
+                            reps: set.exerciseType === 'distance_duration' ? '' : getMetricValue(set.reps),
+                            weight: set.exerciseType === 'weight_reps' ? getMetricValue(set.weight) : '',
                             rest: set.restSec?.toString() || '',
-                            distance: set.exerciseType === 'distance_duration' && 'distance' in set ? (set as any).distance?.toString() || '' : '',
-                            duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? (set as any).durationSec?.toString() || '' : '',
+                            distance: set.exerciseType === 'distance_duration' && 'distance' in set ? getMetricValue((set as any).distance) : '',
+                            duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? getMetricValue((set as any).durationSec) : '',
                         }));
 
                         section.exercises!.push({
@@ -141,19 +151,19 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
 
                     group.exercises.forEach((exercisePayload) => {
                         // Find exercise details from the exercise database, or use fallback
-                        const cleanedId = cleanExerciseId(exercisePayload.id);
+                        const cleanedId = cleanExerciseId(exercisePayload);
                         const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
                             || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
 
                         // For circuits, convert the single set to an array
                         const sets: SetData[] = [{
                             setNumber: exercisePayload.set.setNumber,
-                            type: ('dropset' in exercisePayload.set && exercisePayload.set.dropset) ? 'dropset' : 'normal',
-                            reps: exercisePayload.set.exerciseType === 'distance_duration' ? '' : exercisePayload.set.reps?.toString() || '',
-                            weight: exercisePayload.set.exerciseType === 'weight_reps' ? exercisePayload.set.weight?.toString() || '' : '',
+                            type: ('dropset' in exercisePayload.set && exercisePayload.set.dropset) ? 'dropset' : (exercisePayload.set.type || 'normal'),
+                            reps: exercisePayload.set.exerciseType === 'distance_duration' ? '' : getMetricValue(exercisePayload.set.reps),
+                            weight: exercisePayload.set.exerciseType === 'weight_reps' ? getMetricValue(exercisePayload.set.weight) : '',
                             rest: exercisePayload.set.restSec?.toString() || '',
-                            distance: exercisePayload.set.exerciseType === 'distance_duration' && 'distance' in exercisePayload.set ? (exercisePayload.set as any).distance?.toString() || '' : '',
-                            duration: exercisePayload.set.exerciseType === 'distance_duration' && 'durationSec' in exercisePayload.set ? (exercisePayload.set as any).durationSec?.toString() || '' : '',
+                            distance: exercisePayload.set.exerciseType === 'distance_duration' && 'distance' in exercisePayload.set ? getMetricValue((exercisePayload.set as any).distance) : '',
+                            duration: exercisePayload.set.exerciseType === 'distance_duration' && 'durationSec' in exercisePayload.set ? getMetricValue((exercisePayload.set as any).durationSec) : '',
                         }];
 
                         section.exercises!.push({
@@ -169,7 +179,7 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                 // For AMRAP and Timed sections, exercises don't have sets in the builder
                 sectionPayload.exercises.forEach((exercisePayload) => {
                     // Find exercise details from the exercise database, or use fallback
-                    const cleanedId = cleanExerciseId(exercisePayload.id);
+                    const cleanedId = cleanExerciseId(exercisePayload);
                     const exerciseDetails = searchExercises('').find((e) => e.exerciseId === cleanedId)
                         || createFallbackExercise(cleanedId, exercisePayload.exerciseType);
 

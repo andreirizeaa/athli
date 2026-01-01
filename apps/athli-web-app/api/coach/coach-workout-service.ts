@@ -14,8 +14,8 @@ export const getWorkouts = async (): Promise<Workout[]> => {
     description: w.description || '',
     type: w.type || '',
     difficulty: w.difficulty || '',
-    length: w.workout_data?.totalDurationMin ? `${w.workout_data.totalDurationMin} min` : '0 min',
-    totalExercises: w.total_exercises || 0,
+
+    totalExercises: w.totalExercises ?? w.total_exercises ?? 0,
     equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
     created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: w.is_favourite || false,
@@ -100,31 +100,18 @@ export const createWorkout = async (workoutData: WorkoutProgramPayload): Promise
   }, 0);
 
   // Separate metadata from workout data
+  // Separate metadata from workout data
   const cleanWorkoutData = {
-    // Metadata fields
-    title: workoutData.title || '',
-    description: workoutData.description || '',
-    type: workoutData.type || '',
-    difficulty: workoutData.difficulty || 'intermediate',
-    equipment: workoutData.equipment || [],
-    totalExercises: totalExercises,
     items: workoutData.items,
-    status: workoutData.status ?? 'not_started',
-    startedAt: workoutData.startedAt ?? null,
-    completedAt: workoutData.completedAt ?? null,
-    totalDurationMin: workoutData.totalDurationMin ?? null,
-    sessionComments: workoutData.sessionComments ?? [],
-    totalWeightLifted: workoutData.totalWeightLifted ?? null,
-    intensity: workoutData.intensity ?? null,
-    readiness: workoutData.readiness ?? null,
-    overallNotes: workoutData.overallNotes ?? '',
-    rating: workoutData.rating ?? null,
+    pre: workoutData.pre,
+    post: workoutData.post,
+    meta: workoutData.completedSummary,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts', {
     method: 'POST',
     body: JSON.stringify({
-      title: workoutData.title,
+      title: workoutData.name,
       description: workoutData.description,
       type: workoutData.type,
       equipment: workoutData.equipment,
@@ -166,32 +153,19 @@ export const editWorkout = async (
   }, 0);
 
   // Separate metadata from workout data
+  // Separate metadata from workout data
   const cleanWorkoutData = {
-    // Metadata fields
-    title: workoutData.title || '',
-    description: workoutData.description || '',
-    type: workoutData.type || '',
-    difficulty: workoutData.difficulty || 'intermediate',
-    equipment: workoutData.equipment || [],
-    totalExercises: totalExercises,
     items: workoutData.items,
-    status: workoutData.status ?? 'not_started',
-    startedAt: workoutData.startedAt ?? null,
-    completedAt: workoutData.completedAt ?? null,
-    totalDurationMin: workoutData.totalDurationMin ?? null,
-    sessionComments: workoutData.sessionComments ?? [],
-    totalWeightLifted: workoutData.totalWeightLifted ?? null,
-    intensity: workoutData.intensity ?? null,
-    readiness: workoutData.readiness ?? null,
-    overallNotes: workoutData.overallNotes ?? '',
-    rating: workoutData.rating ?? null,
+    pre: workoutData.pre,
+    post: workoutData.post,
+    meta: workoutData.completedSummary,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {
     method: 'POST',
     body: JSON.stringify({
       id: workoutId,
-      title: workoutData.title,
+      title: workoutData.name,
       description: workoutData.description,
       type: workoutData.type,
       equipment: workoutData.equipment,
@@ -246,8 +220,8 @@ export const getWorkoutById = async (workoutId: string): Promise<Workout & { wor
     description: w.description || '',
     type: w.type || '',
     difficulty: w.difficulty || '',
-    length: w.workout_data?.totalDurationMin ? `${w.workout_data.totalDurationMin} min` : '0 min',
-    totalExercises: w.total_exercises || 0, // API returns 'total_exercises'
+
+    totalExercises: w.totalExercises ?? w.total_exercises ?? 0,
     equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
     created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: w.is_favourite || false,
