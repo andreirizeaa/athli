@@ -14,6 +14,7 @@ export interface AddClientsData {
 
 export interface Athlete {
   id: string;
+  publicId?: string;
   name: string;
   firstName: string;
   lastName: string;

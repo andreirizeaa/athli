@@ -1,5 +1,13 @@
 'use client';
 
+// TODO: Complete messaging backend integration
+// ✅ DONE: Contacts are now fetched from the coach_client view using useCoachClients hook
+// ⏳ REMAINING: The following fields still need backend implementation:
+//    - lastMessage: Currently empty string, needs real message data
+//    - timestamp: Currently empty string, needs real message timestamp
+//    - unreadCount: Currently 0, needs real unread message count
+//    - isOnline: Currently false, needs real online status tracking
+
 import { cn } from '@/lib/general/utils';
 import { type Contact } from '@/components/app/app-shell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

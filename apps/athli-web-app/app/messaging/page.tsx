@@ -56,8 +56,9 @@ import { cn } from '@/lib/general/utils';
 import { messageDraftStorage } from '@/lib/general/message-draft-storage';
 import { sendMessage } from '@/api/coach/coach-message-service';
 import { searchNotes } from '@/api/coach/coach-client-service';
+import { useCoachClients } from '@/hooks/use-coach-clients';
+import type { Athlete } from '@/api/coach/coach-client-service';
 import {
-  mockContacts,
   mockMessages,
   mockAthletes,
   type Contact,
@@ -135,6 +136,11 @@ const MessagingPage = () => {
   const router = useRouter();
   const params = useParams();
   const contactIdFromPath = params?.contactId as string | undefined;
+
+  // TODO: Replace with real messaging data when backend is connected
+  // Currently using coach_client view for contacts, but messages are still mock data
+  const { clients: athletes, isLoading: isLoadingClients } = useCoachClients();
+
   const [selectedContactId, setSelectedContactId] = React.useState<string | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(!!contactIdFromPath);
@@ -385,30 +391,46 @@ const MessagingPage = () => {
   const videoInputRef = React.useRef<HTMLInputElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
+  // Map athletes to contacts format
+  // TODO: Replace temporary fields (lastMessage, timestamp, unreadCount, isOnline) with real data when messaging backend is connected
+  const contacts = React.useMemo<Contact[]>(() => {
+    return athletes.map((athlete: Athlete) => ({
+      id: athlete.id,
+      publicId: athlete.publicId,
+      name: athlete.name,
+      avatar: athlete.avatarUrl,
+      lastMessage: '', // TODO: Get from messaging backend
+      timestamp: '', // TODO: Get from messaging backend
+      unreadCount: 0, // TODO: Get from messaging backend
+      isOnline: false, // TODO: Get from messaging backend
+    }));
+  }, [athletes]);
+
+  // Derived state
   const selectedContact = selectedContactId
-    ? mockContacts.find((contact) => contact.id === selectedContactId)
+    ? contacts.find((contact) => contact.id === selectedContactId)
     : null;
 
   const currentMessages = selectedContactId ? messages[selectedContactId] || [] : [];
 
   const filteredContacts = React.useMemo(() => {
-    if (!searchQuery.trim()) return mockContacts;
-    const query = searchQuery.toLowerCase();
-    return mockContacts.filter(
+    if (!searchQuery.trim()) return contacts;
+
+    return contacts.filter(
       (contact) =>
-        contact.name.toLowerCase().includes(query) ||
-        contact.lastMessage.toLowerCase().includes(query)
+        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        contact.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, contacts]);
 
   const filteredAthletes = React.useMemo(() => {
-    if (!searchQuery.trim()) return mockAthletes;
+    if (!searchQuery.trim()) return athletes;
     const query = searchQuery.toLowerCase();
-    return mockAthletes.filter(
+    return athletes.filter(
       (athlete) =>
         athlete.name.toLowerCase().includes(query) || athlete.email.toLowerCase().includes(query)
     );
-  }, [searchQuery]);
+  }, [searchQuery, athletes]);
 
   const allSentMessages = React.useMemo(() => {
     const sentMessages: Message[] = [];
@@ -426,18 +448,18 @@ const MessagingPage = () => {
 
   // Read contact ID from URL path params on mount and when path changes
   React.useEffect(() => {
-    if (contactIdFromPath) {
-      const contact = mockContacts.find(c => c.id === contactIdFromPath);
+    if (contactIdFromPath && !isLoadingClients) {
+      const contact = contacts.find(c => c.id === contactIdFromPath);
       if (contact) {
-        setSelectedContactId(contact.id);
-      } else {
-        // Invalid contact ID, redirect to base messaging page
+        setSelectedContactId(contactIdFromPath);
+        setIsSidebarCollapsed(true);
+      } else { // Invalid contact ID, redirect to base messaging page
         router.replace('/messaging');
       }
     } else {
       setSelectedContactId(null);
     }
-  }, [contactIdFromPath, router]);
+  }, [contactIdFromPath, contacts, isLoadingClients, router]);
 
   // Load drafts on mount
   React.useEffect(() => {
@@ -1748,7 +1770,7 @@ const MessagingPage = () => {
                 </div>
               </div>
               <div className="flex-1 overflow-auto">
-                <div className="block min-w-0 border-t border-border pt-2">
+                <div className="block min-w-0 border-t border-border">
                   {filteredContacts.length ? (
                     filteredContacts.map((contact) => (
                       <ContactListItem
@@ -2887,14 +2909,15 @@ const MessagingPage = () => {
           onAthleteSelected={(athleteId) => {
             if (!athleteId) return;
             // Find or create contact for this athlete
-            let contact = mockContacts.find((c) => c.id === athleteId);
+            let contact = contacts.find((c) => c.id === athleteId);
             if (!contact) {
-              const athlete = mockAthletes.find((a) => a.id === athleteId);
+              const athlete = athletes.find((a) => a.id === athleteId);
               if (athlete) {
                 contact = {
                   id: athlete.id,
+                  publicId: athlete.publicId,
                   name: athlete.name,
-                  avatar: athlete.avatar,
+                  avatar: athlete.avatarUrl,
                   lastMessage: '',
                   timestamp: '',
                   unreadCount: 0,
