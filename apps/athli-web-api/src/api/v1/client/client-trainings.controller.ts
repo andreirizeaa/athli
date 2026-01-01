@@ -31,6 +31,27 @@ const normalizeWorkoutData = (workout: any): any => {
     return normalized;
 };
 
+const ensureObjectData = (data: any): Record<string, any> => {
+    if (!data) return {};
+    if (Array.isArray(data)) {
+        const obj: Record<string, any> = {};
+        data.forEach((w, i) => {
+            obj[`workout_${i + 1}`] = w;
+        });
+        return obj;
+    }
+    return data;
+};
+
+const getNextWorkoutKey = (data: Record<string, any>): string => {
+    const keys = Object.keys(data).filter(k => /^workout_\d+$/.test(k));
+    if (keys.length === 0) return 'workout_1';
+    const indices = keys.map(k => parseInt(k.replace('workout_', ''), 10)).filter(n => !isNaN(n));
+    if (indices.length === 0) return 'workout_1';
+    const max = Math.max(...indices);
+    return `workout_${max + 1}`;
+};
+
 export const clientTrainingsController = {
     /**
      * Get all trainings assigned to a client
@@ -111,7 +132,7 @@ export const clientTrainingsController = {
         // Transform data to match frontend format
         // Frontend expects: { [date: string]: Array<Workout> }
         // Backend returns: Array<{ date: string, training_data: Workout[] }>
-        const calendar: { [date: string]: any[] } = {};
+        const calendar: { [date: string]: any } = {};
 
         if (trainingData) {
             trainingData.forEach((entry) => {
@@ -119,24 +140,29 @@ export const clientTrainingsController = {
                 const [year, month, day] = entry.date.split('-');
                 const formattedDate = `${day}-${month}-${year}`;
 
-                // training_data is a JSONB array of workouts
-                const workouts = Array.isArray(entry.training_data) ? entry.training_data : [];
+                // Ensure data is Object
+                const workoutsMap = ensureObjectData(entry.training_data);
 
-                // OPTIMIZATION: Return only metadata
-                // Include day_status from the entry (applies to all workouts on this date)
-                calendar[formattedDate] = workouts.map((workout: any) => ({
-                    id: workout.id,
-                    workout: workout.program || workout.title || workout.name || workout.workoutName || 'Untitled Workout', // Map title/name to workout
-                    description: workout.description,
-                    totalExercises: workout.totalExercises || workout.total_exercises || workout.exercises?.length || 0, // Handle snake_case total_exercises
-                    type: workout.type,
-                    difficulty: workout.difficulty,
-                    equipment: workout.equipment,
-                    isFavourite: workout.isFavourite || workout.is_favourite, // Handle snake_case is_favourite
-                    // Strip heavy fields: items, sections, workout_data
-                    // Include completedSummary for status tracking - check both top-level and nested in workout_data
-                    completedSummary: workout.completedSummary || workout.workout_data?.completedSummary || workout.meta || workout.workout_data?.meta || null,
-                }));
+                // OPTIMIZATION: Return only metadata, mapped object
+                const metadataMap: Record<string, any> = {};
+
+                Object.entries(workoutsMap).forEach(([key, workoutVal]) => {
+                    const workout = workoutVal as any;
+                    metadataMap[key] = {
+                        id: key, // Use Key as ID for frontend list
+                        templateId: workout.id, // Preserve original ID
+                        workout: workout.program || workout.title || workout.name || workout.workoutName || 'Untitled Workout',
+                        description: workout.description,
+                        totalExercises: workout.totalExercises || workout.total_exercises || workout.exercises?.length || 0,
+                        type: workout.type,
+                        difficulty: workout.difficulty,
+                        equipment: workout.equipment,
+                        isFavourite: workout.isFavourite || workout.is_favourite,
+                        completedSummary: workout.completedSummary || workout.workout_data?.completedSummary || workout.meta || workout.workout_data?.meta || null,
+                    };
+                });
+
+                calendar[formattedDate] = metadataMap;
             });
         }
 
@@ -180,7 +206,15 @@ export const clientTrainingsController = {
             return res.status(404).json({ success: false, message: 'Training entry not found' });
         }
 
-        const workout = (entry.training_data as any[]).find((w: any) => w.id === workoutId);
+        const trainingData = ensureObjectData(entry.training_data);
+
+        // Lookup by Key or ID
+        let workout = trainingData[workoutId];
+
+        if (!workout) {
+            // Fallback: scan values for template ID
+            workout = Object.values(trainingData).find((w: any) => w.id === workoutId);
+        }
 
         if (!workout) {
             return res.status(404).json({ success: false, message: 'Workout instance not found' });
@@ -225,25 +259,38 @@ export const clientTrainingsController = {
             return res.status(500).json({ success: false, message: fetchError.message });
         }
 
-        let trainingData: any[] = existingEntry?.training_data || [];
+        let trainingData: Record<string, any> = ensureObjectData(existingEntry?.training_data);
 
         // Prepare workout object
         let workoutToSave: any;
 
+        // Determine Key
+        let instanceKey: string;
+        // If workoutId passed and looks like Key, use it. Else generate.
+        if (workoutId && /^workout_\d+$/.test(workoutId)) {
+            instanceKey = workoutId;
+        } else {
+            // Try to find if UUID exists in values?
+            // If we are strictly creating NEW, generate key.
+            // If assigning EXISTING by UUID (drag drop from library), we create NEW instance -> Generate Key.
+            instanceKey = getNextWorkoutKey(trainingData);
+        }
+
+        const existingInstance = trainingData[instanceKey];
+
         if (isNew && workoutPayload) {
-            // New workout created in-place - normalize to ensure completedSummary is used
+            // New workout created in-place
             workoutToSave = normalizeWorkoutData({
                 ...workoutPayload,
-                id: workoutPayload.id || `workout-${Date.now()}`,
+                id: workoutPayload.id || `workout-${Date.now()}`, // Template ID
                 assigned_by: userId,
                 assigned_at: new Date().toISOString()
             });
         } else if (workoutId) {
-            // Assigning existing workout (fetch from coach_workouts if needed, or just partial data)
-            // Ideally we should fetch full workout content if not provided.
-            // For now assuming the frontend sends enough or we fetch.
-            // If just ID is sent, we need to fetch it.
             if (!workoutPayload) {
+                // Fetching from coach DB using workoutId (which might be Key or UUID)
+                // If Key, we can't fetch from coach DB.
+                // Assumes if no Payload, workoutId IS UUID.
                 const { data: coachWorkout, error: workoutError } = await supabase
                     .from('coach_workouts')
                     .select('*')
@@ -251,23 +298,31 @@ export const clientTrainingsController = {
                     .single();
 
                 if (workoutError || !coachWorkout) {
+                    // It might be we passed a Key but no payload? Error.
                     return res.status(404).json({ success: false, message: 'Workout not found' });
                 }
-                // Normalize fetched workout to ensure completedSummary is used
                 workoutToSave = normalizeWorkoutData(coachWorkout);
             } else {
-                // Normalize provided payload to ensure completedSummary is used
                 workoutToSave = normalizeWorkoutData(workoutPayload);
             }
 
-            // Ensure ID is preserved or made unique for this instance?
-            // Usually valid to have same workout ID multiple times, 
-            // but for tracking completion, unique instance IDs are better.
-            // The frontend logic seems to generate unique IDs with timestamp suffix.
-            // We'll trust the payload's ID or fallback.
+            // ID Logic:
+            // If updating existing instance (Key matched): preserve its Template ID.
+            // If payload has ID, use it?
+            const originalTemplateId = existingInstance?.id;
+            // If payload has an ID that is NOT the Key, use it.
+            // If payload ID is the Key (bad frontend behavior), fallback to original or workoutId (if UUID).
+            let finalTemplateId = workoutToSave.id;
+            if (finalTemplateId === instanceKey && originalTemplateId) {
+                finalTemplateId = originalTemplateId;
+            }
+            if (!finalTemplateId && !/^workout_\d+$/.test(workoutId)) {
+                finalTemplateId = workoutId; // Use workoutId if it's UUID
+            }
+
             workoutToSave = {
                 ...workoutToSave,
-                id: workoutToSave.id || workoutId,
+                id: finalTemplateId,
                 assigned_by: userId,
                 assigned_at: new Date().toISOString()
             };
@@ -275,14 +330,8 @@ export const clientTrainingsController = {
             return res.status(400).json({ success: false, message: 'workoutId or workoutPayload required' });
         }
 
-        // Add or Update in array
-        // If ID exists, update. Else push.
-        const existingIndex = trainingData.findIndex((w: any) => w.id === workoutToSave.id);
-        if (existingIndex >= 0) {
-            trainingData[existingIndex] = workoutToSave;
-        } else {
-            trainingData.push(workoutToSave);
-        }
+        // Save to Map
+        trainingData[instanceKey] = workoutToSave;
 
         // 2. Upsert
         const { error: upsertError } = await supabase
@@ -328,18 +377,23 @@ export const clientTrainingsController = {
             return res.status(404).json({ success: false, message: 'Calendar entry not found' });
         }
 
-        let trainingData: any[] = existingEntry.training_data || [];
-        const initialLength = trainingData.length;
+        let trainingData: Record<string, any> = ensureObjectData(existingEntry.training_data);
+        const initialCount = Object.keys(trainingData).length;
 
-        // Filter out
-        trainingData = trainingData.filter((w: any) => w.id !== workoutId);
+        // Delete by Key
+        if (trainingData[workoutId]) {
+            delete trainingData[workoutId];
+        }
 
-        if (trainingData.length === initialLength) {
+        if (Object.keys(trainingData).length === initialCount) {
+            // If not found by key, try scan? No, deletion should be precise.
             return res.status(404).json({ success: false, message: 'Workout instance not found in this date' });
         }
 
+        const remainingCount = Object.keys(trainingData).length;
+
         // 2. Update or Delete Row
-        if (trainingData.length === 0) {
+        if (remainingCount === 0) {
             // Delete row if empty
             const { error: deleteError } = await supabase
                 .from('client_training')
@@ -437,18 +491,18 @@ export const clientTrainingsController = {
             return res.status(404).json({ success: false, message: 'Source training entry not found' });
         }
 
-        const sourceWorkouts = Array.isArray(sourceEntry.training_data) ? sourceEntry.training_data : [];
-        const workoutToDuplicate = sourceWorkouts.find((w: any) => w.id === sourceWorkoutId);
+        const sourceWorkouts = ensureObjectData(sourceEntry.training_data);
+        const workoutToDuplicate = sourceWorkouts[sourceWorkoutId];
 
         if (!workoutToDuplicate) {
             return res.status(404).json({ success: false, message: 'Workout not found in source date' });
         }
 
-        // 2. Create new workout with unique ID and normalize to ensure completedSummary is used
-        const newWorkoutId = `${sourceWorkoutId.split('-')[0]}-${targetDate}-${Date.now()}`;
+        // 2. Create new workout 
+        // We use the same Template ID (workoutToDuplicate.id), but generate new Key in target list.
         const duplicatedWorkout = normalizeWorkoutData({
             ...workoutToDuplicate,
-            id: newWorkoutId,
+            // id: ... preserve? Yes.
             duplicated_from: sourceWorkoutId,
             duplicated_at: new Date().toISOString(),
             assigned_by: userId,
@@ -467,8 +521,9 @@ export const clientTrainingsController = {
             return res.status(500).json({ success: false, message: targetFetchError.message });
         }
 
-        let targetTrainingData: any[] = targetEntry?.training_data || [];
-        targetTrainingData.push(duplicatedWorkout);
+        let targetTrainingData: Record<string, any> = ensureObjectData(targetEntry?.training_data);
+        const newKey = getNextWorkoutKey(targetTrainingData);
+        targetTrainingData[newKey] = duplicatedWorkout;
 
         // 4. Upsert target date
         const { error: upsertError } = await supabase
@@ -487,7 +542,7 @@ export const clientTrainingsController = {
 
         success(res, {
             message: 'Workout duplicated successfully',
-            data: { newWorkoutId, workout: duplicatedWorkout }
+            data: { newWorkoutId: newKey, workout: duplicatedWorkout }
         });
     },
 
@@ -525,18 +580,22 @@ export const clientTrainingsController = {
             return res.status(404).json({ success: false, message: 'Calendar entry not found' });
         }
 
-        let trainingData: any[] = existingEntry.training_data || [];
-        const initialLength = trainingData.length;
+        let trainingData: Record<string, any> = ensureObjectData(existingEntry.training_data);
+        const initialCount = Object.keys(trainingData).length;
 
-        // Filter out the workout
-        trainingData = trainingData.filter((w: any) => w.id !== workoutId);
+        // Delete by Key
+        if (trainingData[workoutId]) {
+            delete trainingData[workoutId];
+        }
 
-        if (trainingData.length === initialLength) {
+        if (Object.keys(trainingData).length === initialCount) {
             return res.status(404).json({ success: false, message: 'Workout not found in this date' });
         }
 
+        const remainingCount = Object.keys(trainingData).length;
+
         // 2. Update or delete row
-        if (trainingData.length === 0) {
+        if (remainingCount === 0) {
             const { error: deleteError } = await supabase
                 .from('client_training')
                 .delete()
