@@ -109,3 +109,139 @@ clientTrainingRouter.get('/', supabaseAuthenticate, clientTrainingsController.ge
  *         description: Client training updated successfully
  */
 clientTrainingRouter.patch('/:id', supabaseAuthenticate, clientTrainingsController.updateTrainingStatus);
+
+/**
+ * @swagger
+ * /api/v1/client/trainings/assign-workout:
+ *   post:
+ *     summary: Assign a workout to client calendar
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ */
+clientTrainingRouter.post('/assign-workout', supabaseAuthenticate, clientTrainingsController.assignWorkout);
+
+/**
+ * @swagger
+ * /api/v1/client/trainings/workout-instance:
+ *   post:
+ *     summary: Get a specific workout instance for a client
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - workoutId
+ *               - date
+ *             properties:
+ *               workoutId:
+ *                 type: string
+ *                 description: The ID of the workout
+ *                 example: "some-workout-id"
+ *               date:
+ *                 type: string
+ *                 format: date
+ *                 description: The date of the workout instance (YYYY-MM-DD)
+ *                 example: "2024-07-20"
+ *     responses:
+ *       200:
+ *         description: Workout instance retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         workoutInstance:
+ *                           $ref: '#/components/schemas/ClientWorkoutInstance'
+ */
+clientTrainingRouter.post('/workout-instance', supabaseAuthenticate, clientTrainingsController.getWorkoutInstance);
+
+/**
+ * @swagger
+ * /api/v1/client/trainings/{clientId}/workout/{workoutId}:
+ *   delete:
+ *     summary: Delete a workout from calendar
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ */
+clientTrainingRouter.delete('/:clientId/workout/:workoutId', supabaseAuthenticate, clientTrainingsController.deleteWorkout);
+
+/**
+ * @swagger
+ * /api/v1/client/trainings/calendar/duplicate:
+ *   post:
+ *     summary: Duplicate a workout from one date to another
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - clientId
+ *               - sourceDate
+ *               - sourceWorkoutId
+ *               - targetDate
+ *             properties:
+ *               clientId:
+ *                 type: string
+ *               sourceDate:
+ *                 type: string
+ *                 format: date
+ *               sourceWorkoutId:
+ *                 type: string
+ *               targetDate:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Workout duplicated successfully
+ */
+clientTrainingRouter.post('/calendar/duplicate', supabaseAuthenticate, clientTrainingsController.duplicateWorkout);
+
+/**
+ * @swagger
+ * /api/v1/client/trainings/calendar/delete:
+ *   post:
+ *     summary: Delete a workout using sourceDate and workoutId
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - clientId
+ *               - sourceDate
+ *               - workoutId
+ *             properties:
+ *               clientId:
+ *                 type: string
+ *               sourceDate:
+ *                 type: string
+ *                 format: date
+ *               workoutId:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Workout deleted successfully
+ */
+clientTrainingRouter.post('/calendar/delete', supabaseAuthenticate, clientTrainingsController.deleteWorkoutByKey);
+

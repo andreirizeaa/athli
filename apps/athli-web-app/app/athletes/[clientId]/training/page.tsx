@@ -34,6 +34,7 @@ import {
   Copy,
   Dumbbell,
   FileText,
+  Loader2,
   MoreHorizontal,
   Plus,
   Save,
@@ -45,6 +46,7 @@ import {
   Info,
   Activity,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import {
   DndContext,
@@ -77,18 +79,28 @@ import {
   getTrainingCalendarCompletionLogs,
   type TrainingCalendarCompletionLogs,
 } from '@/api/client/client-service';
-import { getWorkouts, getWorkoutById } from '@/api/coach/coach-workout-service';
+// import { getWorkouts } from '@/api/coach/coach-workout-service'; // Removed direct import of getWorkouts
+import { getWorkoutById } from '@/api/coach/coach-workout-service';
+import { useCoachWorkouts } from '@/hooks/use-coach-workouts';
+import { useClientTraining } from '@/hooks/use-client-training';
+import { useQueryClient } from '@tanstack/react-query';
 import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-workout-side-panel';
 import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
 import { TrainingDataProvider, useTrainingData } from '@/app/training/training-data-context';
 import { AddProgramSidePanel } from './add-program-side-panel';
+import { ClientInProgressTrainingDaySummary } from './client-in-progress-training-day-summary';
+import { ClientCompletedTrainingDaySummary } from './client-completed-training-day-summary';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
-import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
+import { type WorkoutProgramPayload, DEFAULT_EXECUTION_FIELDS, type WorkoutData } from '@/components/training/workout-schema';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
+import { CardLoaderOverlay } from '@/components/ui/card-loader-overlay';
+import { assignWorkout, deleteClientWorkout, getClientWorkoutInstance } from '@/api/client/client-training-service';
+import { useClientProfileContext } from '../client-profile-context';
+import { useGlobalData } from '@/providers/global-data-provider';
 
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -129,6 +141,7 @@ const DraggableWorkoutWrapper = ({
   children,
   isCopyMode,
   isFutureDay,
+  isMultiSelectMode,
 }: {
   workoutId: string;
   dateKey: string;
@@ -136,7 +149,9 @@ const DraggableWorkoutWrapper = ({
   children: React.ReactNode;
   isCopyMode: boolean;
   isFutureDay: boolean;
+  isMultiSelectMode?: boolean;
 }) => {
+  const isDragDisabled = isCopyMode || !isFutureDay || isMultiSelectMode;
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: `workout-${workoutId}`,
     data: {
@@ -144,7 +159,7 @@ const DraggableWorkoutWrapper = ({
       workout,
       dateKey,
     },
-    disabled: isCopyMode || !isFutureDay,
+    disabled: isDragDisabled,
   });
 
   const style: React.CSSProperties = {
@@ -162,7 +177,7 @@ const DraggableWorkoutWrapper = ({
     <div
       ref={setNodeRef}
       style={style}
-      {...(isCopyMode || !isFutureDay ? {} : { ...attributes, ...listeners })}
+      {...(isDragDisabled ? {} : { ...attributes, ...listeners })}
       className={cn(isDragging && 'opacity-0')}
     >
       {children}
@@ -170,9 +185,11 @@ const DraggableWorkoutWrapper = ({
   );
 };
 
+
 const ClientTrainingCalendarPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useParams();
   const searchParams = useSearchParams();
   const clientId = useMemo(() => (params.clientId as string) || '', [params.clientId]);
@@ -182,6 +199,16 @@ const ClientTrainingCalendarPage = () => {
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | undefined>(undefined);
 
+  // Navigation loading state - when navigating to a week that requires data fetch
+  const [pendingNavigationWeek, setPendingNavigationWeek] = useState<number | null>(null);
+  const [isNavigationLoading, setIsNavigationLoading] = useState<boolean>(false);
+  // Sync loading state - when manually syncing calendar
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  // Calendar data fetching configuration
+  const FETCH_CHUNK_WEEKS = 8; // Fetch data in 8-week chunks
+  const PREFETCH_THRESHOLD_WEEKS = 2; // Prefetch when within 2 weeks of chunk edge
+
   const [isAddWorkoutPanelOpen, setIsAddWorkoutPanelOpen] = useState<boolean>(false);
   const [isSaveAsWorkoutOpen, setIsSaveAsWorkoutOpen] = useState<boolean>(false);
   const [isSaveAsProgramOpen, setIsSaveAsProgramOpen] = useState<boolean>(false);
@@ -189,19 +216,14 @@ const ClientTrainingCalendarPage = () => {
   const [workoutsByDate, setWorkoutsByDate] = useState<{
     [dateKey: string]: Array<Workout & { id: string }>;
   }>({});
-  const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
+  // React Query Hooks
+  const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
+  const { useCalendarRange, useCompletionLogs, assignWorkout: apiAssignWorkout, deleteWorkout: apiDeleteWorkout, duplicateWorkout: apiDuplicateWorkout, deleteWorkoutByKey: apiDeleteWorkoutByKey, updateCalendar } = useClientTraining(clientId);
+  const { athlete } = useClientProfileContext();
+  const { user: coachUser } = useGlobalData();
 
-  useEffect(() => {
-    const fetchWorkouts = async () => {
-      try {
-        const workouts = await getWorkouts();
-        setAvailableWorkouts(workouts);
-      } catch (error) {
-        console.error('Failed to fetch workouts:', error);
-      }
-    };
-    fetchWorkouts();
-  }, []);
+  // Loading state for workout cards during API operations (duplicate, delete)
+  const [loadingWorkoutIds, setLoadingWorkoutIds] = useState<Set<string>>(new Set());
 
   const [startDate] = useState<Date>(() => {
     // Start from the beginning of the current week (Monday)
@@ -255,6 +277,18 @@ const ClientTrainingCalendarPage = () => {
   // Loading state for fetching workout data when opening builder
   const [isLoadingWorkoutData, setIsLoadingWorkoutData] = useState(false);
   const [fetchedWorkoutData, setFetchedWorkoutData] = useState<any>(null);
+
+  // Training day summary dialog states (for in-progress and completed workouts)
+  const [inProgressSummaryWorkout, setInProgressSummaryWorkout] = useState<{
+    workout: Workout & { id: string };
+    dateKey: string;
+  } | null>(null);
+  const [completedSummaryWorkout, setCompletedSummaryWorkout] = useState<{
+    workout: Workout & { id: string };
+    dateKey: string;
+  } | null>(null);
+  const [isLoadingCompletedSummary, setIsLoadingCompletedSummary] = useState(false);
+  const [fetchedCompletedWorkoutData, setFetchedCompletedWorkoutData] = useState<any>(null);
 
   // Drag and drop state
   const [draggedWorkout, setDraggedWorkout] = useState<{
@@ -342,7 +376,7 @@ const ClientTrainingCalendarPage = () => {
           {
             exerciseId: 'ex-1',
             instanceId: 'ex-1-inst',
-            name: `${workout.program} - Main lift`,
+            name: `${workout.name} - Main lift`,
             imageUrl: '/demo-img.png',
             equipments: equipmentList,
             bodyParts: workout.type ? [workout.type] : [],
@@ -474,11 +508,32 @@ const ClientTrainingCalendarPage = () => {
     return groups;
   };
 
+  // Helper to check if a week is in a different chunk than current
+  const isWeekInDifferentChunk = (targetWeek: number): boolean => {
+    const currentChunkIndex = Math.floor((currentWeek - 1) / FETCH_CHUNK_WEEKS);
+    const targetChunkIndex = Math.floor((targetWeek - 1) / FETCH_CHUNK_WEEKS);
+    return currentChunkIndex !== targetChunkIndex;
+  };
+
+  // Navigate to week, triggering loading state if chunk not loaded
+  const navigateToWeek = (targetWeek: number) => {
+    if (isWeekInDifferentChunk(targetWeek)) {
+      // Set pending navigation and show loading
+      setPendingNavigationWeek(targetWeek);
+      setIsNavigationLoading(true);
+      // Update currentWeek to trigger the data fetch for the new chunk
+      setCurrentWeek(targetWeek);
+    } else {
+      // Same chunk, navigate immediately
+      setCurrentWeek(targetWeek);
+    }
+  };
+
   const handlePreviousWeek = () => {
     const weeksView = parseInt(selectedWeek, 10);
     const newWeek = currentWeek - weeksView;
     // Allow going to past weeks without limit
-    setCurrentWeek(newWeek);
+    navigateToWeek(newWeek);
   };
 
   const handleNextWeek = () => {
@@ -486,7 +541,7 @@ const ClientTrainingCalendarPage = () => {
     const maxStartWeek = totalWeeks - weeksView + 1;
     const newWeek = currentWeek + weeksView;
     if (newWeek <= maxStartWeek) {
-      setCurrentWeek(newWeek);
+      navigateToWeek(newWeek);
     }
   };
 
@@ -507,9 +562,9 @@ const ClientTrainingCalendarPage = () => {
     const maxWeek = totalWeeks;
 
     if (weekNumber <= maxWeek) {
-      setCurrentWeek(weekNumber);
+      navigateToWeek(weekNumber);
     } else {
-      setCurrentWeek(maxWeek);
+      navigateToWeek(maxWeek);
     }
   };
 
@@ -586,159 +641,200 @@ const ClientTrainingCalendarPage = () => {
     return schema;
   };
 
-  // Track the currently loaded date range to avoid redundant fetches
-  const [loadedDateRange, setLoadedDateRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({ start: null, end: null });
-  const [isLoadingTraining, setIsLoadingTraining] = useState<boolean>(false);
-
   // Calculate the required date range based on current view
-  const requiredDateRange = useMemo(() => {
-    const weeksView = parseInt(selectedWeek, 10);
+  // Uses 8-week chunks with smart prefetching when approaching edges
 
-    // Calculate the start of the visible range
+  // Calculate which 8-week chunk the current view falls into
+  const getCurrentChunk = useMemo(() => {
     const weekOffset = currentWeek - 1;
-    const visibleStart = new Date(startDate);
-    visibleStart.setDate(startDate.getDate() + weekOffset * 7);
+    // Calculate chunk index (0-indexed, chunks are 8 weeks each)
+    const chunkIndex = Math.floor(weekOffset / FETCH_CHUNK_WEEKS);
+    return chunkIndex;
+  }, [currentWeek]);
 
-    // Calculate the end of the visible range
-    const visibleEnd = new Date(visibleStart);
-    visibleEnd.setDate(visibleStart.getDate() + weeksView * 7 - 1);
+  // Calculate the date range for a given chunk index
+  const getChunkDateRange = (chunkIndex: number) => {
+    const chunkStartWeekOffset = chunkIndex * FETCH_CHUNK_WEEKS;
+    const chunkStart = new Date(startDate);
+    chunkStart.setDate(startDate.getDate() + chunkStartWeekOffset * 7);
 
-    // Add buffer: ±1 week for smooth navigation
-    const bufferStart = new Date(visibleStart);
-    bufferStart.setDate(visibleStart.getDate() - 7);
+    const chunkEnd = new Date(chunkStart);
+    chunkEnd.setDate(chunkStart.getDate() + FETCH_CHUNK_WEEKS * 7 - 1);
 
-    const bufferEnd = new Date(visibleEnd);
-    bufferEnd.setDate(visibleEnd.getDate() + 7);
+    return { start: chunkStart, end: chunkEnd };
+  };
 
-    return { start: bufferStart, end: bufferEnd };
-  }, [selectedWeek, currentWeek, startDate]);
+  // Required date range is the current chunk
+  const requiredDateRange = useMemo(() => {
+    return getChunkDateRange(getCurrentChunk);
+  }, [getCurrentChunk, startDate]);
 
-  // Load training calendar and completion logs when date range changes
+  // Check if we need to prefetch adjacent chunks
+  const shouldPrefetchPrev = useMemo(() => {
+    const weekOffset = currentWeek - 1;
+    const weeksIntoChunk = weekOffset % FETCH_CHUNK_WEEKS;
+    // Prefetch previous chunk if we're within threshold of chunk start
+    return weeksIntoChunk < PREFETCH_THRESHOLD_WEEKS && getCurrentChunk > 0;
+  }, [currentWeek, getCurrentChunk]);
+
+  const shouldPrefetchNext = useMemo(() => {
+    const weekOffset = currentWeek - 1;
+    const weeksView = parseInt(selectedWeek, 10);
+    const weeksIntoChunk = weekOffset % FETCH_CHUNK_WEEKS;
+    const weeksUntilChunkEnd = FETCH_CHUNK_WEEKS - weeksIntoChunk - weeksView;
+    // Prefetch next chunk if we're within threshold of chunk end
+    return weeksUntilChunkEnd < PREFETCH_THRESHOLD_WEEKS;
+  }, [currentWeek, selectedWeek, getCurrentChunk]);
+
+  // Calculate prefetch ranges
+  const prevChunkRange = useMemo(() => {
+    if (!shouldPrefetchPrev) return null;
+    return getChunkDateRange(getCurrentChunk - 1);
+  }, [shouldPrefetchPrev, getCurrentChunk, startDate]);
+
+  const nextChunkRange = useMemo(() => {
+    if (!shouldPrefetchNext) return null;
+    return getChunkDateRange(getCurrentChunk + 1);
+  }, [shouldPrefetchNext, getCurrentChunk, startDate]);
+
+
+  // Format dates for API
+  const formatDateForAPI = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const startDateStr = requiredDateRange.start ? formatDateForAPI(requiredDateRange.start) : '';
+  const endDateStr = requiredDateRange.end ? formatDateForAPI(requiredDateRange.end) : '';
+
+  // Prefetch date strings
+  const prevStartStr = prevChunkRange?.start ? formatDateForAPI(prevChunkRange.start) : '';
+  const prevEndStr = prevChunkRange?.end ? formatDateForAPI(prevChunkRange.end) : '';
+  const nextStartStr = nextChunkRange?.start ? formatDateForAPI(nextChunkRange.start) : '';
+  const nextEndStr = nextChunkRange?.end ? formatDateForAPI(nextChunkRange.end) : '';
+
+  // Main query for current chunk
+  const { data: calendarData, isLoading: isLoadingTraining } = useCalendarRange(
+    startDateStr,
+    endDateStr,
+    { enabled: !!clientId && !!startDateStr && !!endDateStr }
+  );
+
+  // Prefetch queries for adjacent chunks (run in background)
+  const { data: prevChunkData } = useCalendarRange(
+    prevStartStr,
+    prevEndStr,
+    { enabled: !!clientId && !!prevStartStr && !!prevEndStr && shouldPrefetchPrev }
+  );
+
+  const { data: nextChunkData } = useCalendarRange(
+    nextStartStr,
+    nextEndStr,
+    { enabled: !!clientId && !!nextStartStr && !!nextEndStr && shouldPrefetchNext }
+  );
+
+  // Helper to convert calendar data to local format
+  const convertCalendarData = (data: typeof calendarData) => {
+    if (!data) return {};
+    const converted: { [dateKey: string]: Array<Workout & { id: string }> } = {};
+
+    Object.keys(data).forEach((dateKey) => {
+      // dateKey is in dd-mm-yyyy format
+      const [day, month, year] = dateKey.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      const isoKey = getDateKey(date);
+      converted[isoKey] = data[dateKey].map((workout) => ({
+        ...workout,
+        id: workout.id,
+        name: (workout as any).name || (workout as any).workout,
+        isFavourite: (workout as any).isFavourite || false,
+
+      }));
+    });
+
+    return converted;
+  };
+
+  // Sync React Query data to local state
+  // We keep the local state 'workoutsByDate' to support the extensive optimistic updates in this file
+  // but we hydrate it from the server data when it arrives.
   useEffect(() => {
-    const loadTrainingData = async () => {
-      if (!clientId) return;
-
-      // Check if we need to fetch new data
-      const needsFetch =
-        !loadedDateRange.start ||
-        !loadedDateRange.end ||
-        requiredDateRange.start < loadedDateRange.start ||
-        requiredDateRange.end > loadedDateRange.end;
-
-      if (!needsFetch) {
-        // Data already loaded for this range
-        return;
-      }
-
-      setIsLoadingTraining(true);
-
-      try {
-        // Format dates as YYYY-MM-DD for API
-        const formatDateForAPI = (date: Date): string => {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        };
-
-        const startDateStr = formatDateForAPI(requiredDateRange.start);
-        const endDateStr = formatDateForAPI(requiredDateRange.end);
-
-        // Load training calendar with date range
-        const calendar = await getTrainingCalendarRange(clientId, startDateStr, endDateStr);
-
-        // Convert calendar format from dd-mm-yyyy to YYYY-MM-DD
-        const convertedCalendar: {
-          [dateKey: string]: Array<Workout & { id: string }>;
-        } = {};
-
-        Object.keys(calendar).forEach((dateKey) => {
-          // dateKey is in dd-mm-yyyy format
-          const [day, month, year] = dateKey.split('-').map(Number);
-          const date = new Date(year, month - 1, day);
-          const isoKey = getDateKey(date);
-          convertedCalendar[isoKey] = calendar[dateKey].map((workout) => ({
-            ...workout,
-            id: workout.id,
-            isFavourite: (workout as any).isFavourite || false,
-          }));
-        });
-
-        // Merge with existing data (don't replace, extend)
-        setWorkoutsByDate((prev) => ({
-          ...prev,
-          ...convertedCalendar,
-        }));
-
-        // Update loaded range
-        setLoadedDateRange({
-          start: requiredDateRange.start,
-          end: requiredDateRange.end,
-        });
-
-        // Load completion logs (only once on mount, not on every range change)
-        if (!loadedDateRange.start) {
-          const completionLogs = await getTrainingCalendarCompletionLogs(clientId);
-
-          // Convert completion logs to state format
-          const workoutStatusMap: {
-            [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
-          } = {};
-
-          completionLogs.workouts.forEach((workout) => {
-            workoutStatusMap[workout.workoutId] = workout.status;
-          });
-
-          setWorkoutStatus(workoutStatusMap);
-
-          const setStatusMap: {
-            [workoutId: string]: {
-              [exerciseInstanceId: string]: {
-                [setNumber: number]: 'not_started' | 'completed';
-              };
-            };
-          } = {};
-
-          completionLogs.sets.forEach((set) => {
-            if (!setStatusMap[set.workoutId]) {
-              setStatusMap[set.workoutId] = {};
-            }
-            if (!setStatusMap[set.workoutId][set.exerciseInstanceId]) {
-              setStatusMap[set.workoutId][set.exerciseInstanceId] = {};
-            }
-            setStatusMap[set.workoutId][set.exerciseInstanceId][set.setNumber] = set.status;
-          });
-
-          setSetStatus(setStatusMap);
-
-          // Load section completion status (for AMRAP and timed sections)
-          const sectionStatusMap: {
-            [workoutId: string]: {
-              [sectionId: string]: 'not_started' | 'in_progress' | 'completed';
-            };
-          } = {};
-
-          completionLogs.sections?.forEach((section) => {
-            if (!sectionStatusMap[section.workoutId]) {
-              sectionStatusMap[section.workoutId] = {};
-            }
-            sectionStatusMap[section.workoutId][section.sectionId] = section.status;
-          });
-
-          setSectionStatus(sectionStatusMap);
-        }
-      } catch (error) {
-        console.error('Failed to load training data:', error);
-      } finally {
-        setIsLoadingTraining(false);
-      }
+    const allData = {
+      ...convertCalendarData(calendarData),
+      ...convertCalendarData(prevChunkData),
+      ...convertCalendarData(nextChunkData),
     };
 
-    loadTrainingData();
-  }, [clientId, requiredDateRange, loadedDateRange]);
+    if (Object.keys(allData).length > 0) {
+      // Merge with existing data (existing data takes precedence for optimistic updates)
+      setWorkoutsByDate((prev) => ({
+        ...allData,
+        ...prev,
+      }));
+    }
+
+    // Clear navigation loading state when data arrives
+    if (isNavigationLoading && calendarData !== undefined) {
+      setIsNavigationLoading(false);
+      setPendingNavigationWeek(null);
+    }
+  }, [calendarData, prevChunkData, nextChunkData, isNavigationLoading]);
+
+  // Use hook for completion logs
+  const { data: completionLogs } = useCompletionLogs({ enabled: !!clientId });
+
+  useEffect(() => {
+    if (completionLogs) {
+      // Convert completion logs to state format
+      const workoutStatusMap: {
+        [workoutId: string]: 'not_started' | 'in_progress' | 'completed';
+      } = {};
+
+      completionLogs.workouts.forEach((workout) => {
+        workoutStatusMap[workout.workoutId] = workout.status;
+      });
+
+      setWorkoutStatus(workoutStatusMap);
+
+      const setStatusMap: {
+        [workoutId: string]: {
+          [exerciseInstanceId: string]: {
+            [setNumber: number]: 'not_started' | 'completed';
+          };
+        };
+      } = {};
+
+      completionLogs.sets.forEach((set) => {
+        if (!setStatusMap[set.workoutId]) {
+          setStatusMap[set.workoutId] = {};
+        }
+        if (!setStatusMap[set.workoutId][set.exerciseInstanceId]) {
+          setStatusMap[set.workoutId][set.exerciseInstanceId] = {};
+        }
+        setStatusMap[set.workoutId][set.exerciseInstanceId][set.setNumber] = set.status;
+      });
+
+      setSetStatus(setStatusMap);
+
+      const sectionStatusMap: {
+        [workoutId: string]: {
+          [sectionId: string]: 'not_started' | 'in_progress' | 'completed';
+        };
+      } = {};
+
+      completionLogs.sections?.forEach((section) => {
+        if (!sectionStatusMap[section.workoutId]) {
+          sectionStatusMap[section.workoutId] = {};
+        }
+        sectionStatusMap[section.workoutId][section.sectionId] = section.status;
+      });
+
+      setSectionStatus(sectionStatusMap);
+    }
+  }, [completionLogs]);
+
 
   // Restore view state from URL params (when navigating back from edit page)
   useEffect(() => {
@@ -808,34 +904,17 @@ const ClientTrainingCalendarPage = () => {
     const schema = buildTrainingCalendarSchema(workoutsByDate);
     console.log('Training Calendar Schema:', schema);
 
-    // Call the service to update the training calendar
-    if (clientId) {
-      updateTrainingCalendar(clientId, schema).catch((error) => {
-        console.error('Failed to update training calendar:', error);
-      });
-    }
-  }, [workoutsByDate, clientId]);
+    // Use RQ mutation instead of direct update
+    // Only call if schema has changed significantly or rely on explicit save actions.
+    // The previous code logged and updated on EVERY workoutsByDate change, which might be too frequent.
+    // However, workoutsByDate is local. 
+    // Since we now use apiAssignWorkout for explicit updates, maybe we don't need this catch-all?
+    // The catch-all was "Log schema and update service whenever workoutsByDate changes".
+    // This implies auto-saving ANY local change. 
+    // I will use updateCalendar from hook.
 
-  // Format workout created date from dd-mm-yy format (used in mockWorkouts)
-  const formatWorkoutCreatedDate = (dateStr: string): string => {
-    const [day, month, year] = dateStr.split('-');
-    const date = new Date(2000 + parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return `${date.getDate()} ${months[date.getMonth()]}, 20${year}`;
-  };
+    // Auto-save removed in favor of explicit save interactions
+  }, [workoutsByDate, clientId]);
 
   const getWeekRange = () => {
     const weeksView = parseInt(selectedWeek, 10);
@@ -944,8 +1023,14 @@ const ClientTrainingCalendarPage = () => {
   // - Otherwise (some completed, some not, or workout was started) → 'in_progress'
   const getWorkoutStatus = (
     workoutId: string,
-    workoutSchema?: WorkoutSection[]
+    workoutSchema?: WorkoutSection[],
+    dayStatus?: 'not_started' | 'in_progress' | 'completed'
   ): 'not_started' | 'in_progress' | 'completed' => {
+    // If day_status is provided from the API, use it as the primary source
+    if (dayStatus) {
+      return dayStatus;
+    }
+
     // Get explicit workout status from API (handles case where user clicked start but hasn't completed sets)
     const explicitStatus = workoutStatus[workoutId];
 
@@ -1193,30 +1278,72 @@ const ClientTrainingCalendarPage = () => {
     setHoveredCopyDay(null);
   };
 
-  // Paste workout handler
-  const handlePasteWorkout = (targetDateKey: string) => {
+  // Paste workout handler - calls API to duplicate workout
+  const handlePasteWorkout = async (targetDateKey: string) => {
     if (!copiedWorkout || targetDateKey === copiedWorkout.dateKey || pastedDays.includes(targetDateKey)) {
       return;
     }
 
-    const newWorkout = {
+    // Generate temporary ID for optimistic UI
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const tempWorkout = {
       ...copiedWorkout.workout,
-      id: `${copiedWorkout.workout.id.split('-')[0]}-${targetDateKey}-${Date.now()}`,
+      id: tempId,
     };
 
+    // Optimistic update with loading state
+    setLoadingWorkoutIds((prev) => new Set(prev).add(tempId));
     setWorkoutsByDate((prev) => ({
       ...prev,
-      [targetDateKey]: [...(prev[targetDateKey] ?? []), newWorkout],
+      [targetDateKey]: [...(prev[targetDateKey] ?? []), tempWorkout],
     }));
-
     setPastedDays((prev) => [...prev, targetDateKey]);
 
     // If not holding shift, exit copy mode after paste
-    if (!isShiftPressed) {
+    const shouldExitCopyMode = !isShiftPressed;
+    if (shouldExitCopyMode) {
       setIsCopyMode(false);
       setCopiedWorkout(null);
       setPastedDays([]);
       setHoveredCopyDay(null);
+    }
+
+    try {
+      // Call API to duplicate workout
+      const result = await apiDuplicateWorkout({
+        clientId,
+        sourceDate: copiedWorkout.dateKey,
+        sourceWorkoutId: copiedWorkout.workout.id,
+        targetDate: targetDateKey,
+      });
+
+      // Update with actual server ID
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        if (updated[targetDateKey]) {
+          updated[targetDateKey] = updated[targetDateKey].map((w) =>
+            w.id === tempId ? { ...w, id: result.newWorkoutId } : w
+          );
+        }
+        return updated;
+      });
+    } catch (error) {
+      // Rollback on error
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        if (updated[targetDateKey]) {
+          updated[targetDateKey] = updated[targetDateKey].filter((w) => w.id !== tempId);
+        }
+        return updated;
+      });
+      toast.error('Failed to duplicate workout');
+    } finally {
+      // Remove loading state
+      setLoadingWorkoutIds((prev) => {
+        const next = new Set(prev);
+        next.delete(tempId);
+        return next;
+      });
     }
   };
 
@@ -1261,17 +1388,61 @@ const ClientTrainingCalendarPage = () => {
     setMultiSelectHoveredDay(null);
   };
 
-  const handleDeleteSelectedWorkouts = () => {
-    setWorkoutsByDate((prev) => {
-      const updated = { ...prev };
-      selectedWorkouts.forEach(({ dateKey, workout }) => {
-        if (updated[dateKey]) {
-          updated[dateKey] = updated[dateKey].filter((w) => w.id !== workout.id);
-        }
-      });
-      return updated;
+  const handleDeleteSelectedWorkouts = async () => {
+    if (selectedWorkouts.length === 0) return;
+
+    // Add loading state to all selected workout cards
+    const workoutIds = selectedWorkouts.map((sw) => sw.workout.id);
+    setLoadingWorkoutIds((prev) => {
+      const next = new Set(prev);
+      workoutIds.forEach((id) => next.add(id));
+      return next;
     });
+
+    // Exit multi-select mode immediately
+    const workoutsToDelete = [...selectedWorkouts];
     handleCancelMultiSelect();
+
+    // Call API for each workout in parallel
+    const results = await Promise.allSettled(
+      workoutsToDelete.map(async ({ dateKey, workout }) => {
+        try {
+          await apiDeleteWorkoutByKey({
+            clientId,
+            sourceDate: dateKey,
+            workoutId: workout.id,
+          });
+
+          // Remove from local state
+          setWorkoutsByDate((prev) => {
+            const updated = { ...prev };
+            if (updated[dateKey]) {
+              updated[dateKey] = updated[dateKey].filter((w) => w.id !== workout.id);
+            }
+            return updated;
+          });
+
+          return { success: true, workoutId: workout.id };
+        } catch (error) {
+          return { success: false, workoutId: workout.id };
+        } finally {
+          // Remove loading state for this workout
+          setLoadingWorkoutIds((prev) => {
+            const next = new Set(prev);
+            next.delete(workout.id);
+            return next;
+          });
+        }
+      })
+    );
+
+    // Show summary toast
+    const successes = results.filter((r) => r.status === 'fulfilled' && (r.value as any).success);
+    const failures = results.filter((r) => r.status === 'fulfilled' && !(r.value as any).success);
+
+    if (failures.length > 0) {
+      toast.error(`Failed to delete ${failures.length} workout(s)`);
+    }
   };
 
   const handleStartMultiSelectCopy = () => {
@@ -1280,7 +1451,7 @@ const ClientTrainingCalendarPage = () => {
     setMultiSelectHoveredDay(null);
   };
 
-  const handleMultiSelectPaste = (targetDateKey: string) => {
+  const handleMultiSelectPaste = async (targetDateKey: string) => {
     if (selectedWorkouts.length === 0) return;
 
     // Sort selected workouts by dateKey to maintain relative positions
@@ -1293,39 +1464,109 @@ const ClientTrainingCalendarPage = () => {
     const earliestDate = new Date(earliestDateKey);
     const targetDate = new Date(targetDateKey);
 
+    // Build list of workouts to duplicate with their temp IDs and target dates
+    const duplicateTasks: Array<{
+      workout: Workout & { id: string };
+      sourceDate: string;
+      targetDateKey: string;
+      tempId: string;
+    }> = [];
+
+    sortedWorkouts.forEach(({ workout, dateKey }) => {
+      // Calculate the offset from the earliest date
+      const workoutDate = new Date(dateKey);
+      const dayOffset = Math.floor(
+        (workoutDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      // Calculate the target date for this workout
+      const newTargetDate = new Date(targetDate);
+      newTargetDate.setDate(newTargetDate.getDate() + dayOffset);
+      const newTargetDateKey = newTargetDate.toISOString().split('T')[0];
+
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      duplicateTasks.push({
+        workout,
+        sourceDate: dateKey,
+        targetDateKey: newTargetDateKey,
+        tempId,
+      });
+    });
+
+    // Optimistic update: add all temp workouts with loading state
+    const tempIds = duplicateTasks.map((t) => t.tempId);
+    setLoadingWorkoutIds((prev) => {
+      const next = new Set(prev);
+      tempIds.forEach((id) => next.add(id));
+      return next;
+    });
+
     setWorkoutsByDate((prev) => {
       const updated = { ...prev };
-
-      sortedWorkouts.forEach(({ workout, dateKey }) => {
-        // Calculate the offset from the earliest date
-        const workoutDate = new Date(dateKey);
-        const dayOffset = Math.floor(
-          (workoutDate.getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        // Calculate the target date for this workout
-        const newTargetDate = new Date(targetDate);
-        newTargetDate.setDate(newTargetDate.getDate() + dayOffset);
-        const newTargetDateKey = newTargetDate.toISOString().split('T')[0];
-
-        // Create a new workout with a unique ID
-        const newWorkout = {
-          ...workout,
-          id: `${workout.id.split('-')[0]}-${newTargetDateKey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        };
-
-        // Add to the target date
-        updated[newTargetDateKey] = [...(updated[newTargetDateKey] ?? []), newWorkout];
+      duplicateTasks.forEach(({ workout, targetDateKey: tdk, tempId }) => {
+        const tempWorkout = { ...workout, id: tempId };
+        updated[tdk] = [...(updated[tdk] ?? []), tempWorkout];
       });
-
       return updated;
     });
 
     setMultiSelectPastedDays((prev) => [...prev, targetDateKey]);
 
-    // Exit multi-select copy mode after paste
+    // Exit multi-select copy mode immediately
     handleCancelMultiSelect();
+
+    // Call API for each workout in parallel
+    const results = await Promise.allSettled(
+      duplicateTasks.map(async ({ workout, sourceDate, targetDateKey: tdk, tempId }) => {
+        try {
+          const result = await apiDuplicateWorkout({
+            clientId,
+            sourceDate,
+            sourceWorkoutId: workout.id,
+            targetDate: tdk,
+          });
+
+          // Update with actual server ID
+          setWorkoutsByDate((prev) => {
+            const updated = { ...prev };
+            if (updated[tdk]) {
+              updated[tdk] = updated[tdk].map((w) =>
+                w.id === tempId ? { ...w, id: result.newWorkoutId } : w
+              );
+            }
+            return updated;
+          });
+
+          return { success: true, tempId };
+        } catch (error) {
+          // Rollback this specific workout
+          setWorkoutsByDate((prev) => {
+            const updated = { ...prev };
+            if (updated[tdk]) {
+              updated[tdk] = updated[tdk].filter((w) => w.id !== tempId);
+            }
+            return updated;
+          });
+          return { success: false, tempId };
+        } finally {
+          // Remove loading state for this workout
+          setLoadingWorkoutIds((prev) => {
+            const next = new Set(prev);
+            next.delete(tempId);
+            return next;
+          });
+        }
+      })
+    );
+
+    // Show error if any failed
+    const failures = results.filter((r) => r.status === 'fulfilled' && !(r.value as any).success);
+    if (failures.length > 0) {
+      toast.error(`Failed to duplicate ${failures.length} workout(s)`);
+    }
   };
+
 
   const handleMultiSelectDayHover = (dateKey: string) => {
     if (isMultiSelectCopyMode && !multiSelectPastedDays.includes(dateKey)) {
@@ -1451,7 +1692,11 @@ const ClientTrainingCalendarPage = () => {
     // Fetch full workout data including workout_data
     let fullWorkout: Workout & { workout_data?: any };
     try {
-      fullWorkout = await getWorkoutById(selectedWorkout.id);
+      fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['coach-workout', selectedWorkout.id],
+        queryFn: () => getWorkoutById(selectedWorkout.id),
+        staleTime: 5 * 60 * 1000,
+      });
     } catch (error) {
       console.error('Failed to fetch full workout data:', error);
       // Fall back to using the workout without workout_data
@@ -1463,71 +1708,133 @@ const ClientTrainingCalendarPage = () => {
       id: `${selectedWorkout.id}-${Date.now()}`,
     };
 
-    setWorkoutsByDate((prev) => {
-      const updated: {
-        [dateKey: string]: Array<Workout & { id: string }>;
-      } = { ...prev };
 
-      const addToDate = (date: Date) => {
-        const key = getDateKey(date);
-        updated[key] = [...(updated[key] ?? []), workoutToAdd];
-      };
+    setIsAddWorkoutPanelOpen(false); // Close immediately or wait?
 
-      // Calculate upper bound based on configured total weeks
-      const calendarEndDate = new Date(startDate);
-      calendarEndDate.setDate(startDate.getDate() + totalWeeks * 7 - 1);
+    // Calculate dates to add
+    const datesToAdd: Date[] = [];
 
-      if (scheduleOption === 'every' && config) {
-        const daysInterval = parseInt(config, 10);
-        if (Number.isFinite(daysInterval) && daysInterval > 0) {
-          const current = new Date(selectedDateForWorkout);
-          current.setHours(0, 0, 0, 0);
+    // Calculate upper bound based on configured total weeks
+    const calendarEndDate = new Date(startDate);
+    calendarEndDate.setDate(startDate.getDate() + totalWeeks * 7 - 1);
 
-          while (current <= calendarEndDate) {
-            addToDate(current);
-            current.setDate(current.getDate() + daysInterval);
-          }
-        } else {
-          addToDate(selectedDateForWorkout);
-        }
-      } else if (scheduleOption === 'weekly' && config) {
-        // config is day name (Monday, Tuesday etc)
-        const daysMap: { [key: string]: number } = {
-          'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7
-        };
-        const dayOfWeek = daysMap[config];
+    const addDate = (date: Date) => {
+      // Clone date to avoid reference issues
+      datesToAdd.push(new Date(date));
+    };
 
-        if (dayOfWeek) {
-          for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
-            const monday = new Date(startDate);
-            monday.setDate(startDate.getDate() + weekIndex * 7);
-            monday.setHours(0, 0, 0, 0);
+    if (scheduleOption === 'every' && config) {
+      const daysInterval = parseInt(config, 10);
+      if (Number.isFinite(daysInterval) && daysInterval > 0) {
+        const current = new Date(selectedDateForWorkout);
+        current.setHours(0, 0, 0, 0);
 
-            const target = new Date(monday);
-            target.setDate(monday.getDate() + (dayOfWeek - 1));
-            target.setHours(0, 0, 0, 0);
-
-            // Only add if target date is same or after selected date (which initiated the add)
-            if (target >= selectedDateForWorkout && target <= calendarEndDate) {
-              addToDate(target);
-            }
-          }
-        } else {
-          addToDate(selectedDateForWorkout);
+        while (current <= calendarEndDate) {
+          addDate(current);
+          current.setDate(current.getDate() + daysInterval);
         }
       } else {
-        // Default: add only for the selected day
-        addToDate(selectedDateForWorkout);
+        addDate(selectedDateForWorkout);
+      }
+    } else if (scheduleOption === 'weekly' && config) {
+      // config is day name (Monday, Tuesday etc)
+      const daysMap: { [key: string]: number } = {
+        'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7
+      };
+      const dayOfWeek = daysMap[config];
+
+      if (dayOfWeek) {
+        for (let weekIndex = 0; weekIndex < totalWeeks; weekIndex++) {
+          const monday = new Date(startDate);
+          monday.setDate(startDate.getDate() + weekIndex * 7);
+          monday.setHours(0, 0, 0, 0);
+
+          const target = new Date(monday);
+          target.setDate(monday.getDate() + (dayOfWeek - 1));
+          target.setHours(0, 0, 0, 0);
+
+          // Only add if target date is same or after selected date (which initiated the add)
+          if (target >= selectedDateForWorkout && target <= calendarEndDate) {
+            addDate(target);
+          }
+        }
+      } else {
+        addDate(selectedDateForWorkout);
+      }
+    } else {
+      // Default: add only for the selected day
+      addDate(selectedDateForWorkout);
+    }
+
+    try {
+      // 1. Calculate and apply optimistic updates
+      const optimisticWorkouts: { [dateKey: string]: Array<Workout & { id: string }> } = {};
+
+      datesToAdd.forEach((date) => {
+        const dateKey = getDateKey(date);
+        const optimisticId = `${selectedWorkout.id}__${dateKey}__${Date.now()}`;
+
+        const optimisticWorkout: Workout & { id: string } = {
+          ...workoutToAdd,
+          id: optimisticId,
+          items: workoutToAdd.items || [],
+          ...DEFAULT_EXECUTION_FIELDS,
+          // Map flattened fields if needed, mostly ready from fullWorkout
+          totalExercises: fullWorkout.totalExercises || 0,
+        };
+
+        if (!optimisticWorkouts[dateKey]) {
+          optimisticWorkouts[dateKey] = [];
+        }
+        optimisticWorkouts[dateKey].push(optimisticWorkout);
+      });
+
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        Object.keys(optimisticWorkouts).forEach((dateKey) => {
+          updated[dateKey] = [
+            ...(updated[dateKey] || []),
+            ...optimisticWorkouts[dateKey]
+          ];
+        });
+        return updated;
+      });
+
+      // 2. Perform API calls
+      const promises = datesToAdd.map(date =>
+        apiAssignWorkout({
+          clientId,
+          date: getDateKey(date),
+          workoutId: selectedWorkout.id,
+          skipInvalidation: true // We manually invalidate or rely on optimistic
+        })
+      );
+
+      await Promise.all(promises);
+
+      // 3. Invalidate to fetch real data (eventually replaces optimistic)
+      queryClient.invalidateQueries({ queryKey: ['client-training-calendar'] });
+
+      if (datesToAdd.length === 1) {
+        const dateStr = datesToAdd[0].toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        toast.success(`Workout assigned to ${dateStr}`);
+      } else {
+        toast.success(`Successfully assigned ${datesToAdd.length} days of training`);
       }
 
-      return updated;
-    });
-
-    setIsAddWorkoutPanelOpen(false);
+    } catch (error) {
+      console.error('Failed to assign workouts:', error);
+      toast.error('Failed to save workouts');
+    }
   };
 
-  const handleSaveProgram = async (selectedProgram: Program, startDateInput: Date) => {
-    if (!selectedProgram || !startDateInput) {
+  const handleSaveProgram = async (
+    selectedProgram: Program,
+    startDateInput: Date,
+    detailedProgram?: Program & { program_data: any },
+    range?: { start: number; end: number }
+  ) => {
+    if (!selectedProgram || !startDateInput || !detailedProgram) {
       setIsAddProgramPanelOpen(false);
       return;
     }
@@ -1535,56 +1842,132 @@ const ClientTrainingCalendarPage = () => {
     const start = new Date(startDateInput);
     start.setHours(0, 0, 0, 0);
 
-    const weeksText = selectedProgram.length.split(' ')[0];
-    const weeksNumber = parseInt(weeksText, 10);
-    const totalProgramWeeks = Number.isFinite(weeksNumber) && weeksNumber > 0 ? weeksNumber : 1;
+    // Filter days based on range
+    const startDay = range?.start ?? 1;
+    const endDay = range?.end ?? 1000;
 
-    const baseWorkout: Workout = {
-      id: selectedProgram.id,
-      program: selectedProgram.program,
-      description: selectedProgram.description,
-      type: selectedProgram.type,
-      difficulty: 'Intermediate',
-      length: selectedProgram.length,
-      totalExercises: selectedProgram.totalExercises,
-      equipment: selectedProgram.equipment,
-      created: selectedProgram.created,
-      isFavourite: false,
-    };
+    const schema = detailedProgram.program_data.schema || detailedProgram.program_data.days || [];
 
-    setWorkoutsByDate((previousWorkouts) => {
-      const updated: {
-        [dateKey: string]: Array<Workout & { id: string }>;
-      } = { ...previousWorkouts };
-
-      const addToDate = (date: Date) => {
-        const key = getDateKey(date);
-        const workoutToAdd: Workout & { id: string } = {
-          ...baseWorkout,
-          id: `${baseWorkout.id}-${key}-${Date.now()}`,
-        };
-        updated[key] = [...(updated[key] ?? []), workoutToAdd];
-      };
-
-      for (let weekIndex = 0; weekIndex < totalProgramWeeks; weekIndex += 1) {
-        const weekStart = new Date(start);
-        weekStart.setDate(start.getDate() + weekIndex * 7);
-        weekStart.setHours(0, 0, 0, 0);
-
-        const offsets = [0, 2, 4]; // three sessions per week
-        offsets.forEach((offset) => {
-          const sessionDate = new Date(weekStart);
-          sessionDate.setDate(weekStart.getDate() + offset);
-          sessionDate.setHours(0, 0, 0, 0);
-
-          if (sessionDate >= start) {
-            addToDate(sessionDate);
-          }
-        });
-      }
-
-      return updated;
+    const daysToAssign = schema.filter((day: any, idx: number) => {
+      // Use logic matching SidePanel
+      const dayNumber = day.day || (schema.indexOf(day) ?? 0) + 1;
+      return dayNumber >= startDay && dayNumber <= endDay;
     });
+
+    // Collect all workouts to assign - program workouts contain embedded data, not library references
+    const workoutsToAssign: Array<{ workout: any, date: Date }> = [];
+
+    // Sort days by day number to ensure correct sequence order
+    daysToAssign.sort((a: any, b: any) => {
+      const dayNumA = a.day || 0;
+      const dayNumB = b.day || 0;
+      return dayNumA - dayNumB;
+    });
+
+    daysToAssign.forEach((day: any) => {
+      const workouts = day.workouts || [];
+      // Calculate target date
+      // Logic: Day [startDay] maps to [start] date.
+      // Day [X] maps to [start] + (X - startDay) days.
+
+      // Get the day number of this day item
+      const dayNumber = day.day || (schema.indexOf(day) ?? 0) + 1;
+
+      const dayOffset = dayNumber - startDay;
+      const targetDate = new Date(start);
+      targetDate.setDate(start.getDate() + dayOffset);
+
+      workouts.forEach((workout: any) => {
+        // All workouts from program schema are embedded data, not references to coach_workouts
+        // The workout.id here is an internal program identifier, not a coach_workouts table ID
+        if (workout.title || workout.items) {
+          workoutsToAssign.push({
+            workout,
+            date: new Date(targetDate)
+          });
+        }
+      });
+    });
+
+    const totalWorkouts = workoutsToAssign.length;
+
+    // Execute assignments
+    if (totalWorkouts === 0) {
+      toast.info("No workouts found in the selected range.");
+      setIsAddProgramPanelOpen(false);
+      return;
+    }
+
+    try {
+      // Optimistically update local state first
+      const optimisticWorkouts: { [dateKey: string]: Array<Workout & { id: string }> } = {};
+
+      workoutsToAssign.forEach(assignment => {
+        const dateKey = getDateKey(assignment.date);
+        const workoutId = `${assignment.workout.id || 'prog'}-${dateKey}-${Date.now()}`;
+        const optimisticWorkout: Workout & { id: string } = {
+          id: workoutId,
+          name: assignment.workout.title,
+          description: assignment.workout.description || '',
+          type: assignment.workout.type || 'strength',
+          difficulty: assignment.workout.difficulty || 'intermediate',
+          totalExercises: assignment.workout.totalExercises || 0,
+          equipment: assignment.workout.equipment || [],
+          created: formatDate(new Date()),
+          isFavourite: false,
+          items: assignment.workout.items || [],
+          ...DEFAULT_EXECUTION_FIELDS,
+        };
+
+        if (!optimisticWorkouts[dateKey]) {
+          optimisticWorkouts[dateKey] = [];
+        }
+        optimisticWorkouts[dateKey].push(optimisticWorkout);
+      });
+
+      // Update local state immediately (optimistic)
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        Object.keys(optimisticWorkouts).forEach((dateKey) => {
+          updated[dateKey] = [...(updated[dateKey] || []), ...optimisticWorkouts[dateKey]];
+        });
+        return updated;
+      });
+
+      // Assign all workouts with full payload - program workouts have embedded data
+      // Skip invalidation since we're using optimistic updates
+      const promises = workoutsToAssign.map((assignment, index) => {
+        const dateKey = getDateKey(assignment.date);
+        const workoutId = optimisticWorkouts[dateKey][index % optimisticWorkouts[dateKey].length].id;
+        return apiAssignWorkout({
+          clientId,
+          date: dateKey,
+          workoutPayload: {
+            id: workoutId,
+            title: assignment.workout.title,
+            name: assignment.workout.title,
+            description: assignment.workout.description || '',
+            type: assignment.workout.type || 'strength',
+            difficulty: assignment.workout.difficulty || 'intermediate',
+            equipment: assignment.workout.equipment || [],
+            totalExercises: assignment.workout.totalExercises || 0,
+            items: assignment.workout.items || [],
+            ...DEFAULT_EXECUTION_FIELDS,
+          },
+          isNew: true,
+          skipInvalidation: true,
+        });
+      });
+
+      await Promise.all(promises);
+      toast.success('Successfully assigned program');
+
+    } catch (error) {
+      console.error("Failed to assign program workouts", error);
+      toast.error("Failed to assign program");
+      // Revert optimistic update by re-fetching
+      queryClient.invalidateQueries({ queryKey: ['client-training-calendar'] });
+    }
 
     setIsAddProgramPanelOpen(false);
   };
@@ -1599,26 +1982,26 @@ const ClientTrainingCalendarPage = () => {
 
     const workoutFromExercise: Workout & { id: string } = {
       id: `${selectedExercise.id}-${dateKey}-${Date.now()}`,
-      program: selectedExercise.name,
+      name: selectedExercise.name,
       description: selectedExercise.description || '',
       type: selectedExercise.category || '',
       difficulty: 'Intermediate',
-      length: '1 sess',
       totalExercises: 1,
       equipment: selectedExercise.equipment || [],
       created: formatDate(new Date()),
       isFavourite: false,
-      workout_data: {
-        sections: [
-          {
+      items: [
+        {
+          itemType: 'section',
+          data: {
             id: `section-${Date.now()}`,
-            title: selectedExercise.name,
+            name: selectedExercise.name,
             type: 'timed',
             exercises: [
               {
                 id: `ex-${Date.now()}`,
                 exercise_id: selectedExercise.id,
-                program: selectedExercise.name,
+                workout: selectedExercise.name,
                 description: selectedExercise.description || '',
                 equipment: selectedExercise.equipment ? [selectedExercise.equipment] : [],
                 videoLink: selectedExercise.video_link,
@@ -1633,8 +2016,8 @@ const ClientTrainingCalendarPage = () => {
               }
             ]
           }
-        ]
-      }
+        }
+      ] as any[],
     };
 
     setWorkoutsByDate((previousWorkouts) => {
@@ -1656,122 +2039,211 @@ const ClientTrainingCalendarPage = () => {
     setIsLoadingWorkoutData(true);
     setIsWorkoutBuilderOpen(true);
 
-    // If workout_data is already present, use it directly
-    if (workout.workout_data?.items?.length > 0) {
-      setFetchedWorkoutData(workout.workout_data);
-      setIsLoadingWorkoutData(false);
-      return;
-    }
-
-    // Extract the real workout ID (format: "workoutId-timestamp-random")
-    const realWorkoutId = workout.id.split('-')[0];
+    // Extract the real workout ID (format: "workoutId__dateKey__timestamp")
+    // Use '__' separator to be safe with UUIDs containing dashes
+    const parts = workout.id.split('__');
+    const realWorkoutId = parts[0];
+    const isOptimistic = parts.length > 1;
 
     // Check if it's an inline-created or temp workout (no need to fetch - use existing data)
+    // OR if we already have the full data (e.g. newly created, though backend strip might affect this on reload)
+    // Since backend now strips data, we should prefer fetching unless we find it blank.
     if (realWorkoutId === 'inline' || realWorkoutId === 'temp') {
-      setFetchedWorkoutData(workout.workout_data || { items: [] });
+      setFetchedWorkoutData((workout as any) || { items: [] });
       setIsLoadingWorkoutData(false);
       return;
     }
 
     try {
-      const fullWorkout = await getWorkoutById(realWorkoutId);
-      setFetchedWorkoutData(fullWorkout.workout_data || { items: [] });
-
-      // Also update the workout in state with the fetched data
-      setWorkoutsByDate((prev) => {
-        const workoutsForDate = prev[dateKey];
-        if (!workoutsForDate) return prev;
-
-        const updatedWorkouts = workoutsForDate.map((w) => {
-          if (w.id === workout.id) {
-            return { ...w, workout_data: fullWorkout.workout_data };
-          }
-          return w;
-        });
-
-        return {
-          ...prev,
-          [dateKey]: updatedWorkouts,
-        };
+      // Use new endpoint to get specific instance data
+      const fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['client-workout-instance', clientId, dateKey, realWorkoutId], // Use real ID (UUID)
+        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        staleTime: 0, // Always fetch fresh to get latest instance state
       });
+
+      const workoutData = fullWorkout || { items: [] };
+      setFetchedWorkoutData(workoutData);
+
+      // We explicitly DON'T update the calendar state with the full data anymore
+      // to keep the main list lightweight. We only use it for the builder.
+
     } catch (error) {
-      console.error('Failed to fetch workout data:', error);
-      // Fall back to whatever data is available
-      setFetchedWorkoutData(workout.workout_data || { items: [] });
+      console.error('Failed to fetch workout instance:', error);
+      // Fall back to lightweight data if fetch fails (better than nothing)
+      setFetchedWorkoutData((workout as any) || { items: [] });
+      toast.error('Failed to load full workout details');
     } finally {
       setIsLoadingWorkoutData(false);
     }
   };
 
-  const handleSaveEditedWorkout = (payload: WorkoutProgramPayload) => {
-    if (!editingWorkout) return;
+  const handleOpenCompletedSummary = async (dateKey: string, workout: Workout & { id: string }) => {
+    // Open the dialog immediately with loading state
+    setIsLoadingCompletedSummary(true);
+    setFetchedCompletedWorkoutData(null);
+    setCompletedSummaryWorkout({ workout, dateKey });
 
-    const { dateKey, workout } = editingWorkout;
+    // Extract the real workout ID (format: "workoutId__dateKey__timestamp")
+    const parts = workout.id.split('__');
+    const realWorkoutId = parts[0];
 
-    setWorkoutsByDate((prev) => {
-      const workoutsForDate = prev[dateKey];
-      if (!workoutsForDate) return prev;
+    try {
+      // Fetch the full workout data from training_clients
+      const fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['client-workout-instance-summary', clientId, dateKey, realWorkoutId],
+        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        staleTime: 0, // Always fetch fresh
+      });
 
-      const workoutIndex = workoutsForDate.findIndex((w) => w.id === workout.id);
-      if (workoutIndex === -1) return prev;
+      setFetchedCompletedWorkoutData(fullWorkout);
+    } catch (error) {
+      console.error('Failed to fetch completed workout details:', error);
+      toast.error('Failed to load workout details');
+    } finally {
+      setIsLoadingCompletedSummary(false);
+    }
+  };
 
-      const updatedWorkout: Workout & { id: string } = {
-        ...workoutsForDate[workoutIndex],
-        program: payload.title,
-        description: payload.description || '',
-        type: payload.type,
-        difficulty: payload.difficulty || 'Intermediate',
-        equipment: payload.equipment || [],
-        totalExercises: payload.totalExercises,
-        workout_data: {
-          items: payload.items || [],
-        },
-      };
+  const handleSaveEditedWorkout = async (payload: WorkoutProgramPayload) => {
+    // If we are editing an existing workout
+    if (editingWorkout) {
+      const { dateKey, workout } = editingWorkout;
 
-      const updatedWorkouts = [...workoutsForDate];
-      updatedWorkouts[workoutIndex] = updatedWorkout;
+      try {
+        // 1. Optimistic Update: Update UI immediately before API call
+        setWorkoutsByDate((prev) => {
+          const workoutsForDay = prev[dateKey] || [];
+          const updatedWorkouts = workoutsForDay.map((w) => {
+            if (w.id === workout.id) {
+              return {
+                ...w,
+                name: payload.name,
+                description: payload.description,
+                type: payload.type,
+                difficulty: payload.difficulty,
+                totalExercises: payload.totalExercises,
+                items: payload.items,
+                // Ensure legacy fields are updated if present
+                title: payload.name,
+              };
+            }
+            return w;
+          });
+          return {
+            ...prev,
+            [dateKey]: updatedWorkouts,
+          };
+        });
 
-      return {
-        ...prev,
-        [dateKey]: updatedWorkouts,
-      };
-    });
+        // 2. Extract real ID for API call if it's an optimistic/composite ID
+        const realId = workout.id.includes('__') ? workout.id.split('__')[0] : workout.id;
 
-    setIsWorkoutBuilderOpen(false);
-    setEditingWorkout(null);
-    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }));
+        // 3. Await the API call to ensure data is saved
+        await apiAssignWorkout({
+          clientId,
+          date: dateKey,
+          workoutId: realId, // Use real UUID
+          workoutPayload: { ...payload, id: realId }, // Ensure payload ID matches
+          isNew: false,
+          skipInvalidation: true
+        });
+
+        // 4. Close dialog immediately after success
+        setIsWorkoutBuilderOpen(false);
+        setEditingWorkout(null);
+        toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.name }));
+
+        // 5. Invalidate queries in background (do not await) to prevent UI lag
+        // Defer invalidation slightly to allow dialog to close nicely
+        setTimeout(() => {
+          // Invalidate specific instance first
+          queryClient.invalidateQueries({
+            queryKey: ['client-workout-instance', clientId, dateKey, realId]
+          });
+          // Then calendar
+          queryClient.invalidateQueries({
+            queryKey: ['client-training-calendar', clientId]
+          });
+        }, 50);
+
+      } catch (error) {
+        console.error('Failed to update workout:', error);
+        toast.error('Failed to update workout');
+        // Revert on error by invalidating
+        queryClient.invalidateQueries({
+          queryKey: ['client-training-calendar', clientId]
+        });
+      }
+    } else if (selectedDateForWorkout) {
+      // Creating a NEW workout
+      try {
+        const dateKey = getDateKey(selectedDateForWorkout);
+
+        // 1. Await API
+        await apiAssignWorkout({
+          clientId,
+          date: dateKey,
+          workoutPayload: payload,
+          isNew: true,
+          skipInvalidation: true
+        });
+
+        // 2. Close dialog immediately
+        setIsWorkoutBuilderOpen(false);
+        toast.success('Workout created successfully');
+
+        // No need to manually reset loadedDateRange, hook handles invalidation
+        // Actually we skipped it, so we need to valid manually with delay
+        setTimeout(() => {
+          queryClient.invalidateQueries({
+            queryKey: ['client-training-calendar', clientId]
+          });
+        }, 50);
+
+      } catch (error) {
+        console.error(error);
+        // Hook handles toast error if using mutation, otherwise handled here
+      }
+    }
   };
 
   const handleCloseWorkoutDetails = () => {
     setSelectedWorkoutDetails(null);
   };
 
-  const handleDeleteWorkout = (dateKey: string, workoutId: string) => {
-    setWorkoutsByDate((previousWorkouts) => {
-      const workoutsForDate = previousWorkouts[dateKey];
+  const handleDeleteWorkout = async (dateKey: string, workoutId: string) => {
+    // Add loading state to the workout card
+    setLoadingWorkoutIds((prev) => new Set(prev).add(workoutId));
 
-      if (!workoutsForDate) {
-        return previousWorkouts;
-      }
+    try {
+      // Call API using the new deleteWorkoutByKey
+      await apiDeleteWorkoutByKey({
+        clientId,
+        sourceDate: dateKey,
+        workoutId,
+      });
 
-      const updatedWorkoutsForDate = workoutsForDate.filter((workout) => workout.id !== workoutId);
+      // Optimistically remove from local state after successful delete
+      setWorkoutsByDate((prev) => {
+        const updated = { ...prev };
+        if (updated[dateKey]) {
+          updated[dateKey] = updated[dateKey].filter((w) => w.id !== workoutId);
+        }
+        return updated;
+      });
 
-      let updatedState: {
-        [dateKey: string]: Array<Workout & { id: string }>;
-      };
-
-      if (updatedWorkoutsForDate.length === 0) {
-        const { [dateKey]: _, ...rest } = previousWorkouts;
-        updatedState = rest;
-      } else {
-        updatedState = {
-          ...previousWorkouts,
-          [dateKey]: updatedWorkoutsForDate,
-        };
-      }
-
-      return updatedState;
-    });
+      // Success - no toast needed
+    } catch (error) {
+      // Hook handles toast error - just remove loading state
+    } finally {
+      // Remove loading state
+      setLoadingWorkoutIds((prev) => {
+        const next = new Set(prev);
+        next.delete(workoutId);
+        return next;
+      });
+    }
   };
 
   // Handle date selection from calendar popup
@@ -1815,7 +2287,7 @@ const ClientTrainingCalendarPage = () => {
     const maxWeek = totalWeeks;
 
     const finalWeekNumber = weekNumber <= maxWeek ? weekNumber : maxWeek;
-    setCurrentWeek(finalWeekNumber);
+    navigateToWeek(finalWeekNumber);
     setIsCalendarOpen(false);
   };
 
@@ -1832,6 +2304,7 @@ const ClientTrainingCalendarPage = () => {
                 onClick={handleToday}
                 className="h-8 border-primary"
                 aria-label={t('athletes.trainingCalendar.goToToday')}
+                disabled={isNavigationLoading}
               >
                 {t('athletes.trainingCalendar.today')}
               </Button>
@@ -1842,14 +2315,25 @@ const ClientTrainingCalendarPage = () => {
                 onClick={handlePreviousWeek}
                 className="h-8 w-8"
                 aria-label={t('athletes.trainingCalendar.previousWeek')}
+                disabled={isNavigationLoading}
               >
-                <ChevronLeft className="size-4" />
+                {isNavigationLoading && pendingNavigationWeek !== null && pendingNavigationWeek < currentWeek ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ChevronLeft className="size-4" />
+                )}
               </Button>
               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <PopoverTrigger asChild>
-                  <div className="flex items-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors">
-                    <Calendar className="size-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{getWeekRange()}</span>
+                  <div className="flex items-center justify-center gap-2 cursor-pointer hover:bg-accent rounded-md px-2 py-1 transition-colors w-[240px]">
+                    {isNavigationLoading ? (
+                      <Loader2 className="size-4 text-primary animate-spin" />
+                    ) : (
+                      <>
+                        <Calendar className="size-4 text-muted-foreground" />
+                        <span className="font-medium text-sm truncate">{getWeekRange()}</span>
+                      </>
+                    )}
                   </div>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -1872,6 +2356,7 @@ const ClientTrainingCalendarPage = () => {
                 size="icon"
                 onClick={handleNextWeek}
                 disabled={
+                  isNavigationLoading ||
                   (() => {
                     const weeksView = parseInt(selectedWeek, 10);
                     const maxStartWeek = totalWeeks - weeksView + 1;
@@ -1881,7 +2366,11 @@ const ClientTrainingCalendarPage = () => {
                 className="h-8 w-8"
                 aria-label={t('athletes.trainingCalendar.nextWeek')}
               >
-                <ChevronRight className="size-4" />
+                {isNavigationLoading && pendingNavigationWeek !== null && pendingNavigationWeek > currentWeek ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ChevronRight className="size-4" />
+                )}
               </Button>
             </div>
             <div className="flex items-center gap-2">
@@ -1941,11 +2430,55 @@ const ClientTrainingCalendarPage = () => {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={async () => {
+                  setIsSyncing(true);
+                  try {
+                    // Invalidate cache
+                    await queryClient.invalidateQueries({ queryKey: ['client-training-calendar', clientId] });
+
+                    // Explicitly fetch the current view's data
+                    const freshServerData = await queryClient.fetchQuery({
+                      queryKey: ['client-training-calendar', clientId, startDateStr, endDateStr],
+                      queryFn: () => getTrainingCalendarRange(clientId, startDateStr, endDateStr),
+                      staleTime: 0
+                    });
+
+                    // Replace local state with fresh server data (Hard Reset)
+                    // This handles empty data correctly (e.g. all workouts deleted)
+                    const convertedData = convertCalendarData(freshServerData);
+                    setWorkoutsByDate(convertedData);
+
+                    toast.success(t('general.success'));
+                  } catch (error) {
+                    console.error('Sync failed', error);
+                    toast.error(t('general.error'));
+                  } finally {
+                    setIsSyncing(false);
+                  }
+                }}
+                disabled={isLoadingTraining || isSyncing}
+                className="gap-2"
+              >
+                {isSyncing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Sync
+              </Button>
             </div>
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col">
+        <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col relative">
+          {isLoadingTraining && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          )}
           {/* Day names header - only at the top */}
           <div className="flex gap-4 flex-shrink-0 mb-1">
             {calendarDates[0]?.map((date, dayIndex) => (
@@ -2021,7 +2554,7 @@ const ClientTrainingCalendarPage = () => {
                             }}
                             className={cn(
                               'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
-                              !isCopyMode && !isMultiSelectCopyMode && !isDateInPast(date) && !draggedWorkout && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
+                              !isCopyMode && !isMultiSelectCopyMode && !draggedWorkout && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
                               isCopyMode && !isPastedDay && 'cursor-pointer hover:border-primary/50',
                               isMultiSelectCopyMode && isFutureDay && 'cursor-pointer hover:border-primary/50',
                               isDragOver && isFutureDay && 'border-primary',
@@ -2031,7 +2564,7 @@ const ClientTrainingCalendarPage = () => {
                               <span className={cn(
                                 "text-xs uppercase flex items-center justify-center",
                                 isToday(date)
-                                  ? "bg-primary text-primary-foreground rounded-full size-5 font-medium"
+                                  ? "text-primary font-bold"
                                   : "text-muted-foreground"
                               )}>{date.getDate()}</span>
                               {!isDateInPast(date) && !isCopyMode && (
@@ -2054,11 +2587,11 @@ const ClientTrainingCalendarPage = () => {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleOpenAddWorkoutPanel(date)} className="gap-2">
-                                      <Dumbbell className="size-3.5 text-muted-foreground" />
+                                      <Dumbbell className="mr-2 size-3.5" />
                                       <span>{t('athletes.trainingCalendar.addWorkout')}</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleOpenAddProgramPanel(date)} className="gap-2">
-                                      <FileText className="size-3.5 text-muted-foreground" />
+                                      <FileText className="mr-2 size-3.5" />
                                       <span>{t('athletes.trainingCalendar.addProgram')}</span>
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
@@ -2073,7 +2606,7 @@ const ClientTrainingCalendarPage = () => {
                                 {workoutsForDate.length > 0 ? (
                                   <div className="flex flex-col gap-2">
                                     {workoutsForDate.map((workout) => {
-                                      const status = getWorkoutStatus(workout.id);
+                                      const status = getWorkoutStatus(workout.id, undefined, workout.completedSummary?.status);
                                       const isWorkoutInLibrary = checkIsInLibrary(workout.id);
                                       const isWorkoutCopySource = isCopyMode && copiedWorkout?.workout.id === workout.id;
                                       return (
@@ -2084,30 +2617,68 @@ const ClientTrainingCalendarPage = () => {
                                           workout={workout}
                                           isCopyMode={isCopyMode}
                                           isFutureDay={isFutureDay}
+                                          isMultiSelectMode={isMultiSelectMode}
                                         >
                                           <div
                                             role="button"
                                             tabIndex={0}
-                                            aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.program })}
+                                            aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.name })}
                                             onClick={() => {
-                                              if (isCopyMode) return;
+                                              if (isCopyMode || isMultiSelectCopyMode) return;
+                                              // In multi-select mode, clicking the card toggles selection instead of opening details
+                                              if (isMultiSelectMode) {
+                                                handleToggleWorkoutSelection(dateKey, workout);
+                                                return;
+                                              }
+                                              // For in-progress or completed workouts, open the summary dialog
+                                              if (status === 'in_progress') {
+                                                setInProgressSummaryWorkout({ workout, dateKey });
+                                                return;
+                                              }
+                                              if (status === 'completed') {
+                                                handleOpenCompletedSummary(dateKey, workout);
+                                                return;
+                                              }
+                                              // For not_started workouts, open the workout builder
                                               handleOpenWorkoutDetails(dateKey, workout);
                                             }}
                                             onKeyDown={(event) => {
-                                              if (isCopyMode) return;
+                                              if (isCopyMode || isMultiSelectCopyMode) return;
                                               if (event.key === 'Enter' || event.key === ' ') {
                                                 event.preventDefault();
+                                                // In multi-select mode, toggle selection with keyboard
+                                                if (isMultiSelectMode) {
+                                                  handleToggleWorkoutSelection(dateKey, workout);
+                                                  return;
+                                                }
+                                                // For in-progress or completed workouts, open the summary dialog
+                                                if (status === 'in_progress') {
+                                                  setInProgressSummaryWorkout({ workout, dateKey });
+                                                  return;
+                                                }
+                                                if (status === 'completed') {
+                                                  handleOpenCompletedSummary(dateKey, workout);
+                                                  return;
+                                                }
+                                                // For not_started workouts, open the workout builder
                                                 handleOpenWorkoutDetails(dateKey, workout);
                                               }
                                             }}
                                             className={cn(
-                                              "workout-card rounded-lg border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-all duration-200",
-                                              !isCopyMode && !draggedWorkout && "cursor-pointer hover:border-primary/50",
-                                              isFutureDay && !isCopyMode && !draggedWorkout && "cursor-grab active:cursor-grabbing",
+                                              "workout-card rounded-lg border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-all duration-200 relative",
+                                              !isCopyMode && !isMultiSelectMode && !draggedWorkout && "cursor-pointer hover:border-primary/50",
+                                              isMultiSelectMode && "cursor-pointer hover:border-primary/50",
+                                              isFutureDay && !isCopyMode && !isMultiSelectMode && !draggedWorkout && "cursor-grab active:cursor-grabbing",
                                               isWorkoutCopySource && "opacity-50",
-                                              "border-border"
+                                              isWorkoutSelected(dateKey, workout.id) && "border-primary",
+                                              // Status-based border colors
+                                              status === 'in_progress' && "border-amber-500",
+                                              status === 'completed' && "border-green-500",
+                                              status === 'not_started' && "border-border"
                                             )}
                                           >
+                                            {/* Loading overlay for duplicate/delete operations */}
+                                            {loadingWorkoutIds.has(workout.id) && <CardLoaderOverlay />}
                                             <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
                                               <div className="flex-1 min-w-0 flex items-center gap-1.5">
                                                 <div className="flex-shrink-0">
@@ -2115,9 +2686,9 @@ const ClientTrainingCalendarPage = () => {
                                                 </div>
                                                 <span
                                                   className="text-[11px] font-medium block truncate"
-                                                  title={workout.program}
+                                                  title={workout.name}
                                                 >
-                                                  {workout.program}
+                                                  {workout.name}
                                                 </span>
                                               </div>
                                               <div className="flex items-center gap-0.5">
@@ -2137,7 +2708,7 @@ const ClientTrainingCalendarPage = () => {
                                                   <Checkbox
                                                     checked={isWorkoutSelected(dateKey, workout.id)}
                                                     onCheckedChange={() => handleToggleWorkoutSelection(dateKey, workout)}
-                                                    aria-label={t('athletes.trainingCalendar.multiSelect.selectWorkoutAria', { name: workout.program })}
+                                                    aria-label={t('athletes.trainingCalendar.multiSelect.selectWorkoutAria', { name: workout.name })}
                                                     className="size-3.5"
                                                   />
                                                 </div>
@@ -2196,6 +2767,8 @@ const ClientTrainingCalendarPage = () => {
                                                     <DropdownMenuItem
                                                       onClick={(e) => {
                                                         e.stopPropagation();
+                                                        // Blur the focused element to prevent focus ring on loading overlay
+                                                        (document.activeElement as HTMLElement)?.blur();
                                                         handleDeleteWorkout(dateKey, workout.id);
                                                       }}
                                                     >
@@ -2216,7 +2789,7 @@ const ClientTrainingCalendarPage = () => {
                                                   <TooltipTrigger asChild>
                                                     <div
                                                       className={cn(
-                                                        "h-5 w-5 -mr-1 rounded-full text-primary flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
+                                                        "h-5 w-5 -mr-1 rounded-full text-foreground flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
                                                         isCopyMode && "invisible"
                                                       )}
                                                       onClick={(e) => {
@@ -2311,7 +2884,7 @@ const ClientTrainingCalendarPage = () => {
                 <div className="rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden shadow-lg rotate-3">
                   <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
                     <span className="text-[11px] font-medium block truncate">
-                      {draggedWorkout.workout.program}
+                      {draggedWorkout.workout.name}
                     </span>
                   </div>
                   <div className="px-2 py-1">
@@ -2334,7 +2907,7 @@ const ClientTrainingCalendarPage = () => {
               handleCloseWorkoutDetails();
             }
           }}
-          title={selectedWorkoutDetails?.workout.program || ''}
+          title={selectedWorkoutDetails?.workout.name || ''}
           contentClassName="w-full sm:w-[800px] sm:max-w-[800px]"
         >
           {selectedWorkoutDetails && (() => {
@@ -2603,7 +3176,11 @@ const ClientTrainingCalendarPage = () => {
         onSave={handleSaveWorkout}
         onCreateNewWorkout={() => {
           setIsAddWorkoutPanelOpen(false);
-          setIsCreateWorkoutPanelOpen(true);
+          // Open Workout Builder instead of CreateWorkoutSidePanel
+          setIsWorkoutBuilderOpen(true);
+          // Ensure editingWorkout is null so we know it's a new one
+          setEditingWorkout(null);
+          // selectedDateForWorkout is already set by the dropdown that opened this panel
         }}
         selectedDate={selectedDateForWorkout ?? undefined}
         mode="program"
@@ -2616,7 +3193,7 @@ const ClientTrainingCalendarPage = () => {
           onSuccess={() => {
             setIsCreateWorkoutPanelOpen(false);
             // Refresh workouts to include the newly created one
-            getWorkouts().then((workouts) => setAvailableWorkouts(workouts));
+            queryClient.invalidateQueries({ queryKey: ['coach-workouts'] });
           }}
         />
       </TrainingDataProvider>
@@ -2642,12 +3219,12 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
         meta={editingWorkout ? {
-          title: editingWorkout.workout.program,
+          name: editingWorkout.workout.name,
           type: editingWorkout.workout.type,
           difficulty: editingWorkout.workout.difficulty || 'Intermediate',
           description: editingWorkout.workout.description || '',
         } : {
-          title: '',
+          name: '',
           type: '',
           difficulty: 'Intermediate',
           description: '',
@@ -2658,6 +3235,38 @@ const ClientTrainingCalendarPage = () => {
         onSaveSuccess={handleSaveEditedWorkout}
         onSaveError={() => { }}
         onDirtyChange={() => { }}
+      />
+      <ClientInProgressTrainingDaySummary
+        open={!!inProgressSummaryWorkout}
+        onOpenChange={(open) => {
+          if (!open) setInProgressSummaryWorkout(null);
+        }}
+        workout={inProgressSummaryWorkout?.workout || null}
+        dateKey={inProgressSummaryWorkout?.dateKey || ''}
+      />
+      <ClientCompletedTrainingDaySummary
+        open={!!completedSummaryWorkout}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCompletedSummaryWorkout(null);
+            setIsLoadingCompletedSummary(false);
+            setFetchedCompletedWorkoutData(null);
+          }
+        }}
+        workoutName={completedSummaryWorkout?.workout.name || ''}
+        isLoading={isLoadingCompletedSummary}
+        athlete={athlete}
+        completedSummary={fetchedCompletedWorkoutData?.workout_data?.completedSummary || fetchedCompletedWorkoutData?.completedSummary || completedSummaryWorkout?.workout.completedSummary}
+        workoutData={fetchedCompletedWorkoutData}
+        stats={{
+          exercisesCompleted: fetchedCompletedWorkoutData?.total_exercises || fetchedCompletedWorkoutData?.totalExercises || completedSummaryWorkout?.workout.totalExercises || 0,
+          exercisesTotal: fetchedCompletedWorkoutData?.total_exercises || fetchedCompletedWorkoutData?.totalExercises || completedSummaryWorkout?.workout.totalExercises || 0,
+          duration: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalDurationMin || fetchedCompletedWorkoutData?.completedSummary?.totalDurationMin || completedSummaryWorkout?.workout.completedSummary?.totalDurationMin || 0,
+          intensity: fetchedCompletedWorkoutData?.workout_data?.post?.intensity || fetchedCompletedWorkoutData?.post?.intensity || completedSummaryWorkout?.workout.post?.intensity || 0,
+          volume: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalWeightLifted || fetchedCompletedWorkoutData?.completedSummary?.totalWeightLifted || completedSummaryWorkout?.workout.completedSummary?.totalWeightLifted || 0,
+          readiness: fetchedCompletedWorkoutData?.workout_data?.pre?.readiness || fetchedCompletedWorkoutData?.pre?.readiness || completedSummaryWorkout?.workout.pre?.readiness || 0,
+          rating: fetchedCompletedWorkoutData?.workout_data?.post?.rating || fetchedCompletedWorkoutData?.post?.rating || completedSummaryWorkout?.workout.post?.rating || 0
+        }}
       />
       <MultiSelectActionBar
         selectedCount={selectedWorkouts.length}

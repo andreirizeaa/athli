@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { useTrainingData } from '../../training-data-context';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
 import type { WorkoutPayload, WorkoutSectionPayload, WorkoutProgramPayload } from '@/components/training/workout-schema';
+import { DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
 
@@ -147,10 +149,15 @@ const DraggableWorkoutCard = ({
       {...((isCopyMode || isMultiSelectMode || isMultiSelectCopyMode) ? {} : { ...attributes, ...listeners })}
       role="button"
       tabIndex={0}
-      aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.program })}
+      aria-label={t('programs.builder.viewDetailsForWorkout', { name: workout.name })}
       onClick={(e) => {
         e.stopPropagation();
         if (isDragging || isCopyMode || isMultiSelectCopyMode) return;
+        // In multi-select mode, clicking the card toggles selection instead of opening details
+        if (isMultiSelectMode) {
+          onToggleSelect(week, day, workout);
+          return;
+        }
         onClick(week, day, workout);
       }}
       onKeyDown={(event) => {
@@ -171,9 +178,9 @@ const DraggableWorkoutCard = ({
       <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
         <span
           className="text-[11px] font-medium block truncate"
-          title={workout.program}
+          title={workout.name}
         >
-          {workout.program}
+          {workout.name}
         </span>
         <div className="flex items-center gap-0.5">
           {/* Checkbox for multi-select - visible on hover or when in multi-select mode */}
@@ -194,7 +201,7 @@ const DraggableWorkoutCard = ({
             <Checkbox
               checked={isSelected}
               onCheckedChange={() => onToggleSelect(week, day, workout)}
-              aria-label={t('programs.builder.multiSelect.selectWorkoutAria', { name: workout.program })}
+              aria-label={t('programs.builder.multiSelect.selectWorkoutAria', { name: workout.name })}
               className="size-3.5"
               disabled={isMultiSelectCopyMode}
             />
@@ -274,7 +281,7 @@ const DraggableWorkoutCard = ({
             <TooltipTrigger asChild>
               <div
                 className={cn(
-                  "h-5 w-5 -mr-1 rounded-full text-primary flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
+                  "h-5 w-5 -mr-1 rounded-full text-foreground flex items-center justify-center cursor-pointer hover:bg-primary/10 transition-colors",
                   (isCopyMode || isMultiSelectMode || isMultiSelectCopyMode) && "invisible"
                 )}
                 onClick={(e) => {
@@ -546,6 +553,7 @@ export const ProgramBuilder = ({
 }: ProgramBuilderProps) => {
   const t = useTranslations();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { workouts: availableWorkouts, refreshPrograms, refreshWorkouts } = useTrainingData();
   const [programMeta, setProgramMeta] = useState<ProgramMeta | null>(initialProgramMeta || null);
   const [selectedWeek, setSelectedWeek] = useState<string>('1');
@@ -693,7 +701,7 @@ export const ProgramBuilder = ({
         exercises: [
           {
             id: 'ex-1',
-            name: `${workout.program} - Main lift`,
+            name: `${workout.name} - Main lift`,
             sets: '3 x 8–10',
           },
           {
@@ -825,14 +833,21 @@ export const ProgramBuilder = ({
         const workouts = workoutsByDay[week]?.[day] || [];
 
         const workoutSchemas: any[] = workouts.map((workout) => {
+          // Extract original workout ID from library workouts (format: {workoutId}-{timestamp}-{random})
+          // For inline-created workouts, the ID starts with "inline-" so we don't include it
+          const workoutIdParts = workout.id.split('-');
+          const originalId = workoutIdParts[0] !== 'inline' ? workoutIdParts[0] : undefined;
+
           return {
-            title: workout.program,
-            description: workout.description || '',
-            type: workout.type,
-            difficulty: workout.difficulty || 'intermediate',
-            equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
-            totalExercises: workout.totalExercises,
-            items: workout.workout_data?.items || [],
+            ...(originalId && { id: originalId }),
+            name: workout.name,
+            description: workout.details?.description || '',
+            type: workout.details?.type || '',
+            difficulty: workout.details?.difficulty || 'intermediate',
+            equipment: typeof workout.details?.equipment === 'string' ? (workout.details?.equipment as string).split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.details?.equipment) ? workout.details?.equipment : []),
+            totalExercises: workout.details?.totalExercises || 0,
+            items: workout.items || (workout as any).workout_data?.items || [],
+            ...DEFAULT_EXECUTION_FIELDS,
           };
         });
 
@@ -863,6 +878,9 @@ export const ProgramBuilder = ({
 
       // Update initial state to reflect saved state
       setInitialState({ workoutsByDay, totalWeeks });
+
+      // Invalidate programs cache to update the table
+      await queryClient.invalidateQueries({ queryKey: ['coach-programs'] });
 
       // Navigate back to programs page
       router.push('/training/programs');
@@ -1121,16 +1139,31 @@ export const ProgramBuilder = ({
     // Create a workout object from the payload
     const newWorkout: Workout & { id: string } = {
       id: `inline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      program: payload.title,
-      description: payload.description || '',
-      type: payload.type,
-      difficulty: payload.difficulty || 'intermediate',
-      length: '',
-      totalExercises: payload.totalExercises,
-      equipment: payload.equipment || [],
+      name: payload.name,
+
       created: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-'),
       isFavourite: false,
-      workout_data: { items: payload.items || [] },
+      description: payload.description || '',
+      type: payload.type || '',
+      difficulty: payload.difficulty || 'intermediate',
+      totalExercises: payload.totalExercises || 0,
+      equipment: payload.equipment || [],
+      items: payload.items || [],
+      completedSummary: {
+        status: payload.completedSummary?.status || DEFAULT_EXECUTION_FIELDS.completedSummary.status,
+        startedAt: payload.completedSummary?.startedAt || null,
+        completedAt: payload.completedSummary?.completedAt || null,
+        totalDurationMin: payload.completedSummary?.totalDurationMin || null,
+        totalWeightLifted: payload.completedSummary?.totalWeightLifted || null,
+      },
+      post: {
+        sessionComments: payload.post?.sessionComments || '',
+        intensity: payload.post?.intensity || null,
+        rating: payload.post?.rating || null,
+      },
+      pre: {
+        readiness: payload.pre?.readiness || null,
+      }
     };
 
     setWorkoutsByDay((prev) => {
@@ -1147,7 +1180,7 @@ export const ProgramBuilder = ({
     setIsWorkoutBuilderOpen(false);
     setPendingWorkoutDay(null);
 
-    toast.success(`Workout "${payload.title}" added to program`);
+    toast.success(`Workout "${payload.name}" added to program`);
   };
 
   const handleSaveEditedWorkout = (payload: WorkoutProgramPayload) => {
@@ -1167,14 +1200,28 @@ export const ProgramBuilder = ({
         // Update existing workout
         const updatedWorkout = {
           ...currentWorkouts[workoutIndex],
-          program: payload.title,
+          name: payload.name,
+
           description: payload.description || '',
-          type: payload.type,
+          type: payload.type || '',
           difficulty: payload.difficulty || 'intermediate',
           equipment: payload.equipment || [],
-          totalExercises: payload.totalExercises,
-          workout_data: {
-            items: payload.items || []
+          totalExercises: payload.totalExercises || 0,
+          items: payload.items || [],
+          completedSummary: {
+            status: payload.completedSummary?.status || DEFAULT_EXECUTION_FIELDS.completedSummary.status,
+            startedAt: payload.completedSummary?.startedAt || null,
+            completedAt: payload.completedSummary?.completedAt || null,
+            totalDurationMin: payload.completedSummary?.totalDurationMin || null,
+            totalWeightLifted: payload.completedSummary?.totalWeightLifted || null,
+          },
+          post: {
+            sessionComments: payload.post?.sessionComments || '',
+            intensity: payload.post?.intensity || null,
+            rating: payload.post?.rating || null,
+          },
+          pre: {
+            readiness: payload.pre?.readiness || null,
           }
         };
 
@@ -1197,8 +1244,8 @@ export const ProgramBuilder = ({
   const handleSaveWorkoutFromPanel = async (workout: Workout, scheduleOption: string, config: string) => {
     if (!workout || selectedDay === null) return;
 
-    // Fetch full workout data including workout_data
-    let fullWorkout: Workout & { workout_data?: any };
+    // Fetch full workout data
+    let fullWorkout: Workout;
     try {
       fullWorkout = await getWorkoutById(workout.id);
     } catch (error) {
@@ -1295,7 +1342,17 @@ export const ProgramBuilder = ({
   ) => {
     // Open the builder for editing - use workout data directly from state
     setEditingWorkout({ week, day, workout });
-    setFetchedWorkoutData(workout.workout_data || { items: [] });
+    setFetchedWorkoutData({
+      items: workout.items || (workout as any).workout_data?.items || [],
+      description: workout.description || '',
+      type: workout.type || '',
+      difficulty: workout.difficulty || 'intermediate',
+      equipment: Array.isArray(workout.equipment) ? workout.equipment : (workout.equipment ? [workout.equipment] : []),
+      totalExercises: workout.totalExercises || 0,
+      pre: workout.pre || (workout as any).workout_data?.pre || { readiness: null },
+      post: workout.post || (workout as any).workout_data?.post || { rating: null, intensity: null, sessionComments: '' },
+      completedSummary: workout.completedSummary || (workout as any).workout_data?.completedSummary || (workout as any).workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
+    });
     setIsLoadingWorkoutData(false);
     setIsWorkoutBuilderOpen(true);
   };
@@ -1307,13 +1364,15 @@ export const ProgramBuilder = ({
   const handleSaveToLibrary = (workout: Workout & { id: string }) => {
     // Convert Workout to WorkoutPayload for CreateWorkoutSidePanel
     const workoutPayload: WorkoutPayload = {
-      title: workout.program,
+      id: workout.id,
+      name: workout.name,
       description: workout.description || '',
-      type: workout.type,
+      type: workout.type || '',
       difficulty: workout.difficulty || 'intermediate',
-      equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
-      totalExercises: workout.totalExercises,
-      items: workout.workout_data?.items || [],
+      equipment: typeof workout.equipment === 'string' ? (workout.equipment as string).split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
+      totalExercises: workout.totalExercises || 0,
+      items: workout.items || (workout as any).workout_data?.items || [],
+      ...DEFAULT_EXECUTION_FIELDS,
     };
     setWorkoutToSave(workoutPayload);
     setIsSaveToLibraryOpen(true);
@@ -2112,13 +2171,13 @@ export const ProgramBuilder = ({
             <div className="rounded-lg border border-border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden shadow-lg rotate-3">
               <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30">
                 <span className="text-[11px] font-medium block truncate">
-                  {draggedWorkout.workout.program}
+                  {draggedWorkout.workout.name}
                 </span>
               </div>
               <div className="px-2 py-1">
                 <span className="text-[10px] text-muted-foreground block">
-                  {draggedWorkout.workout.totalExercises}{' '}
-                  {draggedWorkout.workout.totalExercises === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
+                  {draggedWorkout.workout.details?.totalExercises || 0}{' '}
+                  {(draggedWorkout.workout.details?.totalExercises || 0) === 1 ? t('athletes.trainingCalendar.exercise') : t('athletes.trainingCalendar.exercises')}
                 </span>
               </div>
             </div>
@@ -2145,9 +2204,9 @@ export const ProgramBuilder = ({
             <DialogTitle className="flex-1 min-w-0">
               <span
                 className="block truncate text-left"
-                title={selectedWorkoutDetails?.workout.program}
+                title={selectedWorkoutDetails?.workout.name || ''}
               >
-                {selectedWorkoutDetails?.workout.program}
+                {selectedWorkoutDetails?.workout.name}
               </span>
             </DialogTitle>
           </DialogHeader>
@@ -2162,9 +2221,9 @@ export const ProgramBuilder = ({
                         <div className="flex items-center justify-between gap-2">
                           <span
                             className="text-sm font-medium truncate"
-                            title={selectedWorkoutDetails.workout.program}
+                            title={selectedWorkoutDetails.workout.name}
                           >
-                            {selectedWorkoutDetails.workout.program}
+                            {selectedWorkoutDetails.workout.name}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {formatDate(selectedWorkoutDetails.workout.created)}
@@ -2180,15 +2239,16 @@ export const ProgramBuilder = ({
                             {t('general.type')}: {selectedWorkoutDetails.workout.type}
                           </Badge>
                           {selectedWorkoutDetails.workout.equipment &&
-                            (typeof selectedWorkoutDetails.workout.equipment === 'string' ? selectedWorkoutDetails.workout.equipment
+                            (typeof selectedWorkoutDetails.workout.equipment === 'string' ? (selectedWorkoutDetails.workout.equipment as string)
                               .split(',')
-                              .filter((item: string) => item.trim() !== '').length > 0 : false) && (
+                              .filter((e: string) => e.trim().length > 0)
+                              .length > 0 : (Array.isArray(selectedWorkoutDetails.workout.equipment) ? selectedWorkoutDetails.workout.equipment.length > 0 : false)) && (
                               <Badge variant="secondary" className="text-xs">
-                                {typeof selectedWorkoutDetails.workout.equipment === 'string' ? selectedWorkoutDetails.workout.equipment
+                                {typeof selectedWorkoutDetails.workout.equipment === 'string' ? (selectedWorkoutDetails.workout.equipment as string)
                                   .split(',')
-                                  .map((item: string) => item.trim())
-                                  .filter((item: string) => item !== '')
-                                  .join(', ') : ''}
+                                  .map((e: string) => e.trim())
+                                  .filter((e: string) => e)
+                                  .join(', ') : (Array.isArray(selectedWorkoutDetails.workout.equipment) ? selectedWorkoutDetails.workout.equipment.join(', ') : '')}
                               </Badge>
                             )}
                         </div>
@@ -2308,12 +2368,12 @@ export const ProgramBuilder = ({
           }
         }}
         meta={editingWorkout ? {
-          title: editingWorkout.workout.program,
-          type: editingWorkout.workout.type,
-          difficulty: editingWorkout.workout.difficulty || 'intermediate',
-          description: editingWorkout.workout.description || '',
+          name: editingWorkout.workout.name,
+          type: editingWorkout.workout.details?.type || '',
+          difficulty: editingWorkout.workout.details?.difficulty || 'intermediate',
+          description: editingWorkout.workout.details?.description || '',
         } : {
-          title: '',
+          name: '',
           type: '',
           difficulty: 'Intermediate',
           description: '',

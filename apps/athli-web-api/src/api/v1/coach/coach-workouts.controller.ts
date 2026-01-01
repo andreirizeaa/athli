@@ -2,6 +2,37 @@ import { Request, Response } from 'express';
 import { success, unauthorized, created, forbidden, internalError, notFound } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 
+const mapWorkoutResponse = (workout: any) => {
+    if (!workout) return null;
+    const {
+        workout_data,
+        // We want these in the response, but might need mapping/defaults
+        // So we destruct them to control the output
+        description,
+        type,
+        difficulty,
+        equipment,
+        total_exercises,
+        ...rest
+    } = workout;
+
+    return {
+        ...rest,
+        // Top level fields (prefer DB columns, fallback to legacy workout_data)
+        description: description || workout_data?.description || '',
+        type: type || workout_data?.type || '',
+        difficulty: difficulty || workout_data?.difficulty || 'intermediate',
+        equipment: equipment || workout_data?.equipment || [],
+        totalExercises: total_exercises ?? workout_data?.totalExercises ?? 0,
+
+        // Extracted complex objects from workout_data
+        items: workout_data?.items || [],
+        pre: workout_data?.pre || { readiness: null },
+        post: workout_data?.post || { rating: null, intensity: null, sessionComments: '' },
+        completedSummary: workout_data?.completedSummary || workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
+    };
+};
+
 export const coachWorkoutsController = {
     /**
      * Get all workouts for a coach
@@ -26,7 +57,7 @@ export const coachWorkoutsController = {
 
         success(res, {
             message: 'Coach workouts retrieved successfully',
-            data: { workouts },
+            data: { workouts: workouts?.map(mapWorkoutResponse) || [] },
         });
     },
 
@@ -35,39 +66,54 @@ export const coachWorkoutsController = {
      */
     createWorkout: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { title, description, type, equipment, difficulty, workout_data, total_exercises } = req.body;
+        const { title, name, description, type, equipment, difficulty, workout_data, total_exercises } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
         }
 
-        if (!title) {
-            return res.status(400).json({ success: false, message: 'Workout title is required' });
+        const workoutName = name || title;
+
+        if (!workoutName) {
+            return res.status(400).json({ success: false, message: 'Workout name is required' });
         }
 
         // Extract only the workout structure (items and execution tracking) for workout_data
-        // Remove metadata fields that should be stored in table columns
+        // Includes complete workout information (metadata + execution)
         const cleanWorkoutData = workout_data ? {
             items: workout_data.items || [],
-            ...(workout_data.status && { status: workout_data.status }),
-            ...(workout_data.startedAt && { startedAt: workout_data.startedAt }),
-            ...(workout_data.completedAt && { completedAt: workout_data.completedAt }),
-            ...(workout_data.totalDurationMin && { totalDurationMin: workout_data.totalDurationMin }),
-            ...(workout_data.sessionComments && { sessionComments: workout_data.sessionComments }),
-            ...(workout_data.totalWeightLifted && { totalWeightLifted: workout_data.totalWeightLifted }),
-            ...(workout_data.intensity && { intensity: workout_data.intensity }),
-            ...(workout_data.readiness && { readiness: workout_data.readiness }),
-            ...(workout_data.overallNotes && { overallNotes: workout_data.overallNotes }),
-            ...(workout_data.rating && { rating: workout_data.rating }),
-        } : { items: [] };
+
+
+            // Execution tracking (grouped)
+            pre: workout_data.pre || {
+                readiness: workout_data.readiness ?? null,
+            },
+            post: workout_data.post || {
+                rating: workout_data.rating ?? null,
+                intensity: workout_data.intensity ?? null,
+                sessionComments: (Array.isArray(workout_data.sessionComments) ? workout_data.sessionComments.join('\n') : workout_data.sessionComments) ?? '',
+            },
+            completedSummary: workout_data.completedSummary || workout_data.meta || {
+                status: workout_data.status ?? 'not_started',
+                startedAt: workout_data.startedAt ?? null,
+                completedAt: workout_data.completedAt ?? null,
+                totalDurationMin: workout_data.totalDurationMin ?? null,
+                totalWeightLifted: workout_data.totalWeightLifted ?? null,
+            },
+        } : {
+            items: [],
+            pre: { readiness: null },
+            post: { rating: null, intensity: null, sessionComments: '' },
+            completedSummary: { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null }
+        };
 
         const supabase = getSupabaseClient();
         const { data: workout, error } = await supabase
             .from('coach_workouts')
             .insert({
                 coach_id: userId,
-                name: title,
+                name: workoutName,
                 description,
                 type,
                 equipment,
@@ -84,7 +130,7 @@ export const coachWorkoutsController = {
 
         created(res, {
             message: 'Coach workout created successfully',
-            data: { workout },
+            data: { workout: mapWorkoutResponse(workout) },
         });
     },
 
@@ -122,26 +168,34 @@ export const coachWorkoutsController = {
         }
 
         // Map frontend fields to backend fields if necessary
-        const { title, workout_data, ...rest } = updates;
+        const { title, name, workout_data, ...rest } = updates;
+        const workoutName = name || title;
 
         // Clean workout_data if provided
         const cleanWorkoutData = workout_data ? {
             items: workout_data.items || [],
-            ...(workout_data.status && { status: workout_data.status }),
-            ...(workout_data.startedAt && { startedAt: workout_data.startedAt }),
-            ...(workout_data.completedAt && { completedAt: workout_data.completedAt }),
-            ...(workout_data.totalDurationMin && { totalDurationMin: workout_data.totalDurationMin }),
-            ...(workout_data.sessionComments && { sessionComments: workout_data.sessionComments }),
-            ...(workout_data.totalWeightLifted && { totalWeightLifted: workout_data.totalWeightLifted }),
-            ...(workout_data.intensity && { intensity: workout_data.intensity }),
-            ...(workout_data.readiness && { readiness: workout_data.readiness }),
-            ...(workout_data.overallNotes && { overallNotes: workout_data.overallNotes }),
-            ...(workout_data.rating && { rating: workout_data.rating }),
+
+            // Nested execution fields
+            pre: workout_data.pre || {
+                readiness: workout_data.readiness ?? null,
+            },
+            post: workout_data.post || {
+                rating: workout_data.rating ?? null,
+                intensity: workout_data.intensity ?? null,
+                sessionComments: (Array.isArray(workout_data.sessionComments) ? workout_data.sessionComments.join('\n') : workout_data.sessionComments) ?? '',
+            },
+            completedSummary: workout_data.completedSummary || workout_data.meta || {
+                status: workout_data.status ?? 'not_started',
+                startedAt: workout_data.startedAt ?? null,
+                completedAt: workout_data.completedAt ?? null,
+                totalDurationMin: workout_data.totalDurationMin ?? null,
+                totalWeightLifted: workout_data.totalWeightLifted ?? null,
+            },
         } : undefined;
 
         const mappedUpdates = {
             ...rest,
-            ...(title ? { name: title } : {}),
+            ...(workoutName ? { name: workoutName } : {}),
             ...(cleanWorkoutData ? { workout_data: cleanWorkoutData } : {}),
             updated_at: new Date().toISOString(),
         };
@@ -159,7 +213,7 @@ export const coachWorkoutsController = {
 
         success(res, {
             message: 'Coach workout updated successfully',
-            data: { workout },
+            data: { workout: mapWorkoutResponse(workout) },
         });
     },
 
@@ -249,7 +303,7 @@ export const coachWorkoutsController = {
 
         created(res, {
             message: 'Coach workout duplicated successfully',
-            data: { workout },
+            data: { workout: mapWorkoutResponse(workout) },
         });
     },
 
@@ -283,7 +337,7 @@ export const coachWorkoutsController = {
 
         success(res, {
             message: 'Workout retrieved successfully',
-            data: { workout },
+            data: { workout: mapWorkoutResponse(workout) },
         });
     },
 
@@ -324,7 +378,7 @@ export const coachWorkoutsController = {
 
         success(res, {
             message: 'Workouts retrieved successfully',
-            data: { workouts },
+            data: { workouts: workouts?.map(mapWorkoutResponse) || [] },
         });
     },
 
@@ -371,7 +425,7 @@ export const coachWorkoutsController = {
 
         success(res, {
             message: `Workout ${isFavourite ? 'starred' : 'unstarred'} successfully`,
-            data: { workout },
+            data: { workout: mapWorkoutResponse(workout) },
         });
     },
 };

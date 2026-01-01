@@ -76,16 +76,25 @@ export type Athlete = {
 
 export type Workout = {
   id: string;
-  program: string;
+  name: string;
   description: string;
   type: string;
   difficulty: string;
-  length: string;
   totalExercises: number;
   equipment: string | string[];
   created: string; // dd-mm-yy format
   isFavourite: boolean;
-  workout_data?: any;
+  details?: {
+    description: string;
+    type: string;
+    difficulty: string;
+    equipment: string[];
+    totalExercises: number;
+  };
+  items?: any[];
+  pre?: any;
+  post?: any;
+  completedSummary?: any;
 };
 
 export type Program = {
@@ -93,7 +102,9 @@ export type Program = {
   program: string;
   description: string;
   type: string;
+  difficulty: string;
   length: string;
+  totalWorkouts: number;
   totalExercises: number;
   equipment: string;
   created: string; // dd-mm-yy format

@@ -1,5 +1,5 @@
 import { apiFetch, type ApiResponse } from '@/api/api-client';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import type { Workout } from '@/components/app/app-shell';
 
 /**
@@ -10,12 +10,12 @@ export const getWorkouts = async (): Promise<Workout[]> => {
   const response = await apiFetch<ApiResponse<{ workouts: any[] }>>('/coach/training/workouts');
   return (response.data?.workouts || []).map((w) => ({
     id: w.id,
-    program: w.name,
+    name: w.name,
     description: w.description || '',
     type: w.type || '',
     difficulty: w.difficulty || '',
-    length: w.workout_data?.totalDurationMin ? `${w.workout_data.totalDurationMin} min` : '0 min',
-    totalExercises: w.total_exercises || 0,
+
+    totalExercises: w.totalExercises ?? w.total_exercises ?? 0,
     equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
     created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: w.is_favourite || false,
@@ -100,24 +100,18 @@ export const createWorkout = async (workoutData: WorkoutProgramPayload): Promise
   }, 0);
 
   // Separate metadata from workout data
+  // Separate metadata from workout data
   const cleanWorkoutData = {
     items: workoutData.items,
-    ...(workoutData.status && { status: workoutData.status }),
-    ...(workoutData.startedAt && { startedAt: workoutData.startedAt }),
-    ...(workoutData.completedAt && { completedAt: workoutData.completedAt }),
-    ...(workoutData.totalDurationMin && { totalDurationMin: workoutData.totalDurationMin }),
-    ...(workoutData.sessionComments && { sessionComments: workoutData.sessionComments }),
-    ...(workoutData.totalWeightLifted && { totalWeightLifted: workoutData.totalWeightLifted }),
-    ...(workoutData.intensity && { intensity: workoutData.intensity }),
-    ...(workoutData.readiness && { readiness: workoutData.readiness }),
-    ...(workoutData.overallNotes && { overallNotes: workoutData.overallNotes }),
-    ...(workoutData.rating && { rating: workoutData.rating }),
+    pre: workoutData.pre,
+    post: workoutData.post,
+    completedSummary: workoutData.completedSummary,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts', {
     method: 'POST',
     body: JSON.stringify({
-      title: workoutData.title,
+      name: workoutData.name,
       description: workoutData.description,
       type: workoutData.type,
       equipment: workoutData.equipment,
@@ -159,25 +153,19 @@ export const editWorkout = async (
   }, 0);
 
   // Separate metadata from workout data
+  // Separate metadata from workout data
   const cleanWorkoutData = {
     items: workoutData.items,
-    ...(workoutData.status && { status: workoutData.status }),
-    ...(workoutData.startedAt && { startedAt: workoutData.startedAt }),
-    ...(workoutData.completedAt && { completedAt: workoutData.completedAt }),
-    ...(workoutData.totalDurationMin && { totalDurationMin: workoutData.totalDurationMin }),
-    ...(workoutData.sessionComments && { sessionComments: workoutData.sessionComments }),
-    ...(workoutData.totalWeightLifted && { totalWeightLifted: workoutData.totalWeightLifted }),
-    ...(workoutData.intensity && { intensity: workoutData.intensity }),
-    ...(workoutData.readiness && { readiness: workoutData.readiness }),
-    ...(workoutData.overallNotes && { overallNotes: workoutData.overallNotes }),
-    ...(workoutData.rating && { rating: workoutData.rating }),
+    pre: workoutData.pre,
+    post: workoutData.post,
+    completedSummary: workoutData.completedSummary,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {
     method: 'POST',
     body: JSON.stringify({
       id: workoutId,
-      title: workoutData.title,
+      name: workoutData.name,
       description: workoutData.description,
       type: workoutData.type,
       equipment: workoutData.equipment,
@@ -195,7 +183,7 @@ export const editWorkout = async (
  */
 export const updateWorkoutDetails = async (
   workoutId: string,
-  details: { title: string; type: string; difficulty: string; description: string }
+  details: { name: string; type: string; difficulty: string; description: string }
 ): Promise<Workout> => {
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {
     method: 'POST',
@@ -228,12 +216,12 @@ export const getWorkoutById = async (workoutId: string): Promise<Workout & { wor
   // Map API response fields to Workout type
   return {
     id: w.id,
-    program: w.name, // API returns 'name', app uses 'program'
+    name: w.name,
     description: w.description || '',
     type: w.type || '',
     difficulty: w.difficulty || '',
-    length: w.workout_data?.totalDurationMin ? `${w.workout_data.totalDurationMin} min` : '0 min',
-    totalExercises: w.total_exercises || 0, // API returns 'total_exercises'
+
+    totalExercises: w.totalExercises ?? w.total_exercises ?? 0,
     equipment: Array.isArray(w.equipment) ? w.equipment.join(', ') : w.equipment || '',
     created: w.created_at ? new Date(w.created_at).toLocaleDateString('en-GB').replace(/\//g, '-') : '',
     isFavourite: w.is_favourite || false,

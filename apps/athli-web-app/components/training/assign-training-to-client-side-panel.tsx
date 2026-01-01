@@ -42,7 +42,7 @@ export const AssignTrainingToClientSidePanel = ({
         const params = new URLSearchParams();
         params.set('openModal', 'true');
 
-        let url = `/athletes/${client.id}/training-calendar`;
+        let url = `/athletes/${client.id}/training`;
 
         switch (selectedItem.type) {
             case 'workout':
