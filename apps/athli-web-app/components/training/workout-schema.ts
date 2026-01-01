@@ -185,63 +185,67 @@ export type WorkoutItem =
   | { itemType: 'exercise'; data: RegularExercisePayload }
   | { itemType: 'section'; data: WorkoutSectionPayload };
 
-/**
- * Workout data structure stored in the workout_data JSONB field.
- * Contains only the actual workout structure and execution tracking.
- * Metadata (title, description, type, difficulty, equipment) is stored in table columns.
- */
-export type WorkoutData = {
-  items: WorkoutItem[]; // Mixed array of top-level exercises and sections
-
-  // Execution tracking (empty when coach creates)
-  status?: WorkoutStatus;
-  startedAt?: string; // ISO 8601 timestamp
-  completedAt?: string; // ISO 8601 timestamp
-  totalDurationMin?: number; // Total workout duration in minutes
-
-  // Session-level metrics (empty when coach creates)
-  sessionComments?: string; // User comments for the entire session
-  totalWeightLifted?: number; // Total weight lifted in the session (in kg or lbs)
-  intensity?: number; // Perceived intensity (0-10 scale)
-  readiness?: number; // Pre-workout readiness (0-10 scale)
-
-  // Additional fields
-  overallNotes?: string; // User notes for the entire workout
-  rating?: number; // User rating (1-5)
+export type SessionComment = {
+  from: 'coach' | 'client';
+  message: string;
+  timestamp: string;
 };
 
 /**
- * Complete workout payload including metadata.
- * Used for creating/editing workouts in the UI.
- * When sending to backend, metadata fields are sent separately from workout_data.
+ * Workout data structure stored in the workout_data JSONB field.
+ * Includes complete workout information (metadata + execution).
+ * All fields are required.
  */
-export type WorkoutPayload = {
-  id?: string; // Workout ID (assigned after creation)
+export type WorkoutData = {
+  // Metadata
   title: string;
   description: string;
   type: string;
   difficulty: string;
   equipment: string[];
-  totalExercises: number; // Total number of exercises across all items
+  totalExercises: number;
+
   items: WorkoutItem[]; // Mixed array of top-level exercises and sections
 
-  // Execution tracking (empty when coach creates)
-  status?: WorkoutStatus;
-  startedAt?: string; // ISO 8601 timestamp
-  completedAt?: string; // ISO 8601 timestamp
-  totalDurationMin?: number; // Total workout duration in minutes
+  // Execution tracking (set to defaults when coach creates)
+  status: WorkoutStatus;
+  startedAt: string | null; // ISO 8601 timestamp, null when not started
+  completedAt: string | null; // ISO 8601 timestamp, null when not completed
+  totalDurationMin: number | null; // Total workout duration in minutes, null when not tracked
 
-  // Session-level metrics (empty when coach creates)
-  sessionComments?: string; // User comments for the entire session
-  totalWeightLifted?: number; // Total weight lifted in the session (in kg or lbs)
-  intensity?: number; // Perceived intensity (0-10 scale)
-  readiness?: number; // Pre-workout readiness (0-10 scale)
+  // Session-level metrics (set to defaults when coach creates)
+  sessionComments: SessionComment[]; // History of comments for the entire session, empty array when none
+  totalWeightLifted: number | null; // Total weight lifted in the session (in kg or lbs), null when not tracked
+  intensity: number | null; // Perceived intensity (0-10 scale), null when not rated
+  readiness: number | null; // Pre-workout readiness (0-10 scale), null when not rated
 
   // Additional fields
-  overallNotes?: string; // User notes for the entire workout
-  rating?: number; // User rating (1-5)
+  overallNotes: string; // User notes for the entire workout, empty string when none
+  rating: number | null; // User rating (1-5), null when not rated
+};
+
+/**
+ * Complete workout payload including metadata.
+ * Used for creating/editing workouts in the UI.
+ * Inherits directly from WorkoutData and adds optional ID.
+ */
+export type WorkoutPayload = WorkoutData & {
+  id?: string; // Workout ID (assigned after creation)
 };
 
 // Legacy aliases for backwards compatibility
 export type WorkoutProgramPayload = WorkoutPayload;
+
+export const DEFAULT_EXECUTION_FIELDS = {
+  status: 'not_started' as const,
+  startedAt: null,
+  completedAt: null,
+  totalDurationMin: null,
+  sessionComments: [],
+  totalWeightLifted: null,
+  intensity: null,
+  readiness: null,
+  overallNotes: '',
+  rating: null,
+};
 

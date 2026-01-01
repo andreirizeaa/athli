@@ -2161,7 +2161,7 @@ Focus on proper form and progressive overload.`;
                   <div className="flex-1 flex min-h-0">
                     <div className="flex-1 h-full flex flex-col min-h-0 relative">
                       {isLoadingAiWorkout && (
-                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
                           <div className="flex flex-col items-center gap-3">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                             <p className="text-sm text-muted-foreground">Generating workout...</p>
@@ -2169,7 +2169,7 @@ Focus on proper form and progressive overload.`;
                         </div>
                       )}
                       {isLoadingInitialData && (
-                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
                           <div className="flex flex-col items-center gap-3">
                             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                             <p className="text-sm text-muted-foreground">Loading workout...</p>

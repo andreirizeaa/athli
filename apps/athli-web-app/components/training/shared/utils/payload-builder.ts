@@ -10,6 +10,7 @@ import type {
   WorkoutSectionPayload,
   WorkoutItem,
 } from '@/components/training/workout-schema';
+import { DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 import type { SetData } from '@/components/training/builder/exercise-card';
 import type {
   ExerciseWithSuperset,
@@ -466,7 +467,7 @@ export const buildWorkoutPayload = (
     }
   });
 
-  return {
+  const payload: WorkoutProgramPayload = {
     title: meta.title,
     description: meta.description,
     type: meta.type,
@@ -474,5 +475,8 @@ export const buildWorkoutPayload = (
     equipment,
     totalExercises,
     items,
+    ...DEFAULT_EXECUTION_FIELDS,
   };
+
+  return payload;
 };

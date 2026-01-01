@@ -77,13 +77,7 @@ export const CreateWorkoutSidePanel = ({ open, onOpenChange, initialData, onSucc
         setIsSaving(true);
         try {
             await createWorkout(meta);
-            toast.success(t('workouts.new.toast.savedSuccessfully'), {
-                style: {
-                    background: 'rgb(220 252 231)',
-                    color: 'rgb(20 83 45)',
-                    border: '1px solid rgb(187 247 208)',
-                },
-            });
+            toast.success(t('workouts.new.toast.savedSuccessfully'));
             await refreshWorkouts();
             if (onSuccess) {
                 onSuccess();

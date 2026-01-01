@@ -1,5 +1,5 @@
 import { apiFetch, type ApiResponse } from '@/api/api-client';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import type { Workout } from '@/components/app/app-shell';
 
 /**
@@ -101,17 +101,24 @@ export const createWorkout = async (workoutData: WorkoutProgramPayload): Promise
 
   // Separate metadata from workout data
   const cleanWorkoutData = {
+    // Metadata fields
+    title: workoutData.title || '',
+    description: workoutData.description || '',
+    type: workoutData.type || '',
+    difficulty: workoutData.difficulty || 'intermediate',
+    equipment: workoutData.equipment || [],
+    totalExercises: totalExercises,
     items: workoutData.items,
-    ...(workoutData.status && { status: workoutData.status }),
-    ...(workoutData.startedAt && { startedAt: workoutData.startedAt }),
-    ...(workoutData.completedAt && { completedAt: workoutData.completedAt }),
-    ...(workoutData.totalDurationMin && { totalDurationMin: workoutData.totalDurationMin }),
-    ...(workoutData.sessionComments && { sessionComments: workoutData.sessionComments }),
-    ...(workoutData.totalWeightLifted && { totalWeightLifted: workoutData.totalWeightLifted }),
-    ...(workoutData.intensity && { intensity: workoutData.intensity }),
-    ...(workoutData.readiness && { readiness: workoutData.readiness }),
-    ...(workoutData.overallNotes && { overallNotes: workoutData.overallNotes }),
-    ...(workoutData.rating && { rating: workoutData.rating }),
+    status: workoutData.status ?? 'not_started',
+    startedAt: workoutData.startedAt ?? null,
+    completedAt: workoutData.completedAt ?? null,
+    totalDurationMin: workoutData.totalDurationMin ?? null,
+    sessionComments: workoutData.sessionComments ?? [],
+    totalWeightLifted: workoutData.totalWeightLifted ?? null,
+    intensity: workoutData.intensity ?? null,
+    readiness: workoutData.readiness ?? null,
+    overallNotes: workoutData.overallNotes ?? '',
+    rating: workoutData.rating ?? null,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts', {
@@ -160,17 +167,24 @@ export const editWorkout = async (
 
   // Separate metadata from workout data
   const cleanWorkoutData = {
+    // Metadata fields
+    title: workoutData.title || '',
+    description: workoutData.description || '',
+    type: workoutData.type || '',
+    difficulty: workoutData.difficulty || 'intermediate',
+    equipment: workoutData.equipment || [],
+    totalExercises: totalExercises,
     items: workoutData.items,
-    ...(workoutData.status && { status: workoutData.status }),
-    ...(workoutData.startedAt && { startedAt: workoutData.startedAt }),
-    ...(workoutData.completedAt && { completedAt: workoutData.completedAt }),
-    ...(workoutData.totalDurationMin && { totalDurationMin: workoutData.totalDurationMin }),
-    ...(workoutData.sessionComments && { sessionComments: workoutData.sessionComments }),
-    ...(workoutData.totalWeightLifted && { totalWeightLifted: workoutData.totalWeightLifted }),
-    ...(workoutData.intensity && { intensity: workoutData.intensity }),
-    ...(workoutData.readiness && { readiness: workoutData.readiness }),
-    ...(workoutData.overallNotes && { overallNotes: workoutData.overallNotes }),
-    ...(workoutData.rating && { rating: workoutData.rating }),
+    status: workoutData.status ?? 'not_started',
+    startedAt: workoutData.startedAt ?? null,
+    completedAt: workoutData.completedAt ?? null,
+    totalDurationMin: workoutData.totalDurationMin ?? null,
+    sessionComments: workoutData.sessionComments ?? [],
+    totalWeightLifted: workoutData.totalWeightLifted ?? null,
+    intensity: workoutData.intensity ?? null,
+    readiness: workoutData.readiness ?? null,
+    overallNotes: workoutData.overallNotes ?? '',
+    rating: workoutData.rating ?? null,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {

@@ -178,6 +178,7 @@ export interface TrainingCalendarSchema {
     equipment: string | string[];
     created: string;
     workout_data?: any;
+    day_status?: 'not_started' | 'in_progress' | 'completed';
   }>;
 }
 
