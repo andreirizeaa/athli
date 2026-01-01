@@ -289,7 +289,6 @@ export type WorkoutPre = {
 export type WorkoutPost = {
   rating: number | null; // 1-5
   intensity: number | null; // 0-10
-  overallNotes: string; // empty string allowed
   sessionComments: string | null;
 };
 
@@ -337,7 +336,6 @@ export const DEFAULT_EXECUTION_FIELDS: Pick<WorkoutData, 'pre' | 'post' | 'compl
   post: {
     rating: null,
     intensity: null,
-    overallNotes: '',
     sessionComments: null,
   },
   completedSummary: {

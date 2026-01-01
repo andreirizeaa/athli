@@ -287,6 +287,8 @@ const ClientTrainingCalendarPage = () => {
     workout: Workout & { id: string };
     dateKey: string;
   } | null>(null);
+  const [isLoadingCompletedSummary, setIsLoadingCompletedSummary] = useState(false);
+  const [fetchedCompletedWorkoutData, setFetchedCompletedWorkoutData] = useState<any>(null);
 
   // Drag and drop state
   const [draggedWorkout, setDraggedWorkout] = useState<{
@@ -2076,6 +2078,33 @@ const ClientTrainingCalendarPage = () => {
     }
   };
 
+  const handleOpenCompletedSummary = async (dateKey: string, workout: Workout & { id: string }) => {
+    // Open the dialog immediately with loading state
+    setIsLoadingCompletedSummary(true);
+    setFetchedCompletedWorkoutData(null);
+    setCompletedSummaryWorkout({ workout, dateKey });
+
+    // Extract the real workout ID (format: "workoutId__dateKey__timestamp")
+    const parts = workout.id.split('__');
+    const realWorkoutId = parts[0];
+
+    try {
+      // Fetch the full workout data from training_clients
+      const fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['client-workout-instance-summary', clientId, dateKey, realWorkoutId],
+        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        staleTime: 0, // Always fetch fresh
+      });
+
+      setFetchedCompletedWorkoutData(fullWorkout);
+    } catch (error) {
+      console.error('Failed to fetch completed workout details:', error);
+      toast.error('Failed to load workout details');
+    } finally {
+      setIsLoadingCompletedSummary(false);
+    }
+  };
+
   const handleSaveEditedWorkout = async (payload: WorkoutProgramPayload) => {
     // If we are editing an existing workout
     if (editingWorkout) {
@@ -2607,7 +2636,7 @@ const ClientTrainingCalendarPage = () => {
                                                 return;
                                               }
                                               if (status === 'completed') {
-                                                setCompletedSummaryWorkout({ workout, dateKey });
+                                                handleOpenCompletedSummary(dateKey, workout);
                                                 return;
                                               }
                                               // For not_started workouts, open the workout builder
@@ -2628,7 +2657,7 @@ const ClientTrainingCalendarPage = () => {
                                                   return;
                                                 }
                                                 if (status === 'completed') {
-                                                  setCompletedSummaryWorkout({ workout, dateKey });
+                                                  handleOpenCompletedSummary(dateKey, workout);
                                                   return;
                                                 }
                                                 // For not_started workouts, open the workout builder
@@ -3218,17 +3247,25 @@ const ClientTrainingCalendarPage = () => {
       <ClientCompletedTrainingDaySummary
         open={!!completedSummaryWorkout}
         onOpenChange={(open) => {
-          if (!open) setCompletedSummaryWorkout(null);
+          if (!open) {
+            setCompletedSummaryWorkout(null);
+            setIsLoadingCompletedSummary(false);
+            setFetchedCompletedWorkoutData(null);
+          }
         }}
         workoutName={completedSummaryWorkout?.workout.name || ''}
+        isLoading={isLoadingCompletedSummary}
+        athlete={athlete}
+        completedSummary={fetchedCompletedWorkoutData?.workout_data?.completedSummary || fetchedCompletedWorkoutData?.completedSummary || completedSummaryWorkout?.workout.completedSummary}
+        workoutData={fetchedCompletedWorkoutData}
         stats={{
-          exercisesCompleted: completedSummaryWorkout?.workout.totalExercises || 0,
-          exercisesTotal: completedSummaryWorkout?.workout.totalExercises || 0,
-          duration: completedSummaryWorkout?.workout.completedSummary?.totalDurationMin || 0,
-          intensity: completedSummaryWorkout?.workout.post?.intensity || 0,
-          volume: completedSummaryWorkout?.workout.completedSummary?.totalWeightLifted || 0,
-          readiness: completedSummaryWorkout?.workout.pre?.readiness || 0,
-          rating: completedSummaryWorkout?.workout.post?.rating || 0
+          exercisesCompleted: fetchedCompletedWorkoutData?.total_exercises || fetchedCompletedWorkoutData?.totalExercises || completedSummaryWorkout?.workout.totalExercises || 0,
+          exercisesTotal: fetchedCompletedWorkoutData?.total_exercises || fetchedCompletedWorkoutData?.totalExercises || completedSummaryWorkout?.workout.totalExercises || 0,
+          duration: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalDurationMin || fetchedCompletedWorkoutData?.completedSummary?.totalDurationMin || completedSummaryWorkout?.workout.completedSummary?.totalDurationMin || 0,
+          intensity: fetchedCompletedWorkoutData?.workout_data?.post?.intensity || fetchedCompletedWorkoutData?.post?.intensity || completedSummaryWorkout?.workout.post?.intensity || 0,
+          volume: fetchedCompletedWorkoutData?.workout_data?.completedSummary?.totalWeightLifted || fetchedCompletedWorkoutData?.completedSummary?.totalWeightLifted || completedSummaryWorkout?.workout.completedSummary?.totalWeightLifted || 0,
+          readiness: fetchedCompletedWorkoutData?.workout_data?.pre?.readiness || fetchedCompletedWorkoutData?.pre?.readiness || completedSummaryWorkout?.workout.pre?.readiness || 0,
+          rating: fetchedCompletedWorkoutData?.workout_data?.post?.rating || fetchedCompletedWorkoutData?.post?.rating || completedSummaryWorkout?.workout.post?.rating || 0
         }}
       />
       <MultiSelectActionBar

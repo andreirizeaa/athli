@@ -189,7 +189,6 @@ export const WorkoutBuilder = ({
           post: {
             rating: null,
             intensity: null,
-            overallNotes: '',
             sessionComments: null
           },
           completedSummary: {
@@ -294,7 +293,6 @@ export const WorkoutBuilder = ({
           post: {
             rating: null,
             intensity: null,
-            overallNotes: '',
             sessionComments: null
           },
           completedSummary: {
