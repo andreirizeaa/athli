@@ -88,8 +88,7 @@ import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-work
 import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
 import { TrainingDataProvider, useTrainingData } from '@/app/training/training-data-context';
 import { AddProgramSidePanel } from './add-program-side-panel';
-import { ClientInProgressTrainingDaySummary } from './client-in-progress-training-day-summary';
-import { ClientCompletedTrainingDaySummary } from './client-completed-training-day-summary';
+import { ClientTrainingDaySummary } from './client-training-day-summary';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
 import { type WorkoutProgramPayload, DEFAULT_EXECUTION_FIELDS, type WorkoutData } from '@/components/training/workout-schema';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
@@ -214,7 +213,7 @@ const ClientTrainingCalendarPage = () => {
   const [isSaveAsProgramOpen, setIsSaveAsProgramOpen] = useState<boolean>(false);
   const [selectedDateForWorkout, setSelectedDateForWorkout] = useState<Date | null>(null);
   const [workoutsByDate, setWorkoutsByDate] = useState<{
-    [dateKey: string]: Array<Workout & { id: string }>;
+    [dateKey: string]: Array<Workout & { id: string; templateId?: string }>;
   }>({});
   // React Query Hooks
   const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
@@ -283,6 +282,8 @@ const ClientTrainingCalendarPage = () => {
     workout: Workout & { id: string };
     dateKey: string;
   } | null>(null);
+  const [isLoadingInProgressSummary, setIsLoadingInProgressSummary] = useState(false);
+  const [fetchedInProgressWorkoutData, setFetchedInProgressWorkoutData] = useState<any>(null);
   const [completedSummaryWorkout, setCompletedSummaryWorkout] = useState<{
     workout: Workout & { id: string };
     dateKey: string;
@@ -745,13 +746,27 @@ const ClientTrainingCalendarPage = () => {
       const [day, month, year] = dateKey.split('-').map(Number);
       const date = new Date(year, month - 1, day);
       const isoKey = getDateKey(date);
-      converted[isoKey] = data[dateKey].map((workout) => ({
-        ...workout,
-        id: workout.id,
-        name: (workout as any).name || (workout as any).workout,
-        isFavourite: (workout as any).isFavourite || false,
 
-      }));
+      // Handle new object structure (keyed by workout_ID) vs old array structure
+      const dailyData = data[dateKey];
+      if (Array.isArray(dailyData)) {
+        converted[isoKey] = dailyData.map((workout) => ({
+          ...workout,
+          id: workout.id,
+          templateId: workout.id, // Legacy compatibility
+          name: (workout as any).name || (workout as any).workout,
+          isFavourite: (workout as any).isFavourite || false,
+        }));
+      } else {
+        // Object structure { "workout_1": { ... } }
+        converted[isoKey] = Object.entries(dailyData).map(([key, workout]: [string, any]) => ({
+          ...workout,
+          id: key, // Use key as distinct instance ID
+          templateId: workout.id, // Preserve original template ID
+          name: workout.name || workout.workout,
+          isFavourite: workout.isFavourite || false,
+        }));
+      }
     });
 
     return converted;
@@ -2105,6 +2120,33 @@ const ClientTrainingCalendarPage = () => {
     }
   };
 
+  const handleOpenInProgressSummary = async (dateKey: string, workout: Workout & { id: string }) => {
+    // Open the dialog immediately with loading state
+    setIsLoadingInProgressSummary(true);
+    setFetchedInProgressWorkoutData(null);
+    setInProgressSummaryWorkout({ workout, dateKey });
+
+    // Extract the real workout ID (format: "workoutId__dateKey__timestamp")
+    const parts = workout.id.split('__');
+    const realWorkoutId = parts[0];
+
+    try {
+      // Fetch the full workout data from training_clients
+      const fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['client-workout-instance-progress', clientId, dateKey, realWorkoutId],
+        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        staleTime: 0, // Always fetch fresh
+      });
+
+      setFetchedInProgressWorkoutData(fullWorkout);
+    } catch (error) {
+      console.error('Failed to fetch in-progress workout details:', error);
+      toast.error('Failed to load workout details');
+    } finally {
+      setIsLoadingInProgressSummary(false);
+    }
+  };
+
   const handleSaveEditedWorkout = async (payload: WorkoutProgramPayload) => {
     // If we are editing an existing workout
     if (editingWorkout) {
@@ -2607,7 +2649,7 @@ const ClientTrainingCalendarPage = () => {
                                   <div className="flex flex-col gap-2">
                                     {workoutsForDate.map((workout) => {
                                       const status = getWorkoutStatus(workout.id, undefined, workout.completedSummary?.status);
-                                      const isWorkoutInLibrary = checkIsInLibrary(workout.id);
+                                      const isWorkoutInLibrary = checkIsInLibrary(workout.templateId || workout.id);
                                       const isWorkoutCopySource = isCopyMode && copiedWorkout?.workout.id === workout.id;
                                       return (
                                         <DraggableWorkoutWrapper
@@ -2632,7 +2674,7 @@ const ClientTrainingCalendarPage = () => {
                                               }
                                               // For in-progress or completed workouts, open the summary dialog
                                               if (status === 'in_progress') {
-                                                setInProgressSummaryWorkout({ workout, dateKey });
+                                                handleOpenInProgressSummary(dateKey, workout);
                                                 return;
                                               }
                                               if (status === 'completed') {
@@ -2653,7 +2695,7 @@ const ClientTrainingCalendarPage = () => {
                                                 }
                                                 // For in-progress or completed workouts, open the summary dialog
                                                 if (status === 'in_progress') {
-                                                  setInProgressSummaryWorkout({ workout, dateKey });
+                                                  handleOpenInProgressSummary(dateKey, workout);
                                                   return;
                                                 }
                                                 if (status === 'completed') {
@@ -3236,15 +3278,36 @@ const ClientTrainingCalendarPage = () => {
         onSaveError={() => { }}
         onDirtyChange={() => { }}
       />
-      <ClientInProgressTrainingDaySummary
+      <ClientTrainingDaySummary
         open={!!inProgressSummaryWorkout}
         onOpenChange={(open) => {
-          if (!open) setInProgressSummaryWorkout(null);
+          if (!open) {
+            setInProgressSummaryWorkout(null);
+            setIsLoadingInProgressSummary(false);
+            setFetchedInProgressWorkoutData(null);
+          }
         }}
-        workout={inProgressSummaryWorkout?.workout || null}
-        dateKey={inProgressSummaryWorkout?.dateKey || ''}
+        workoutName={inProgressSummaryWorkout?.workout.name || 'Workout'}
+        workoutData={fetchedInProgressWorkoutData}
+        athlete={athlete}
+        isLoading={isLoadingInProgressSummary}
+        completedSummary={{
+          status: 'in_progress',
+          totalDurationMin: 0,
+          totalWeightLifted: 0,
+          startedAt: fetchedInProgressWorkoutData?.workout_data?.startedAt || fetchedInProgressWorkoutData?.startedAt
+        }}
+        stats={{
+          exercisesCompleted: fetchedInProgressWorkoutData?.total_exercises || fetchedInProgressWorkoutData?.totalExercises || inProgressSummaryWorkout?.workout.totalExercises || 0,
+          exercisesTotal: fetchedInProgressWorkoutData?.total_exercises || fetchedInProgressWorkoutData?.totalExercises || inProgressSummaryWorkout?.workout.totalExercises || 0,
+          duration: 0,
+          intensity: 0,
+          volume: 0,
+          readiness: fetchedInProgressWorkoutData?.workout_data?.pre?.readiness || fetchedInProgressWorkoutData?.pre?.readiness || inProgressSummaryWorkout?.workout.pre?.readiness || 0,
+          rating: 0
+        }}
       />
-      <ClientCompletedTrainingDaySummary
+      <ClientTrainingDaySummary
         open={!!completedSummaryWorkout}
         onOpenChange={(open) => {
           if (!open) {
