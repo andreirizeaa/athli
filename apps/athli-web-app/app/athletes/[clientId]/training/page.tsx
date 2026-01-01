@@ -99,6 +99,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
 import { CardLoaderOverlay } from '@/components/ui/card-loader-overlay';
 import { assignWorkout, deleteClientWorkout, getClientWorkoutInstance } from '@/api/client/client-training-service';
+import { useClientProfileContext } from '../client-profile-context';
+import { useGlobalData } from '@/providers/global-data-provider';
 
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -217,6 +219,8 @@ const ClientTrainingCalendarPage = () => {
   // React Query Hooks
   const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
   const { useCalendarRange, useCompletionLogs, assignWorkout: apiAssignWorkout, deleteWorkout: apiDeleteWorkout, duplicateWorkout: apiDuplicateWorkout, deleteWorkoutByKey: apiDeleteWorkoutByKey, updateCalendar } = useClientTraining(clientId);
+  const { athlete } = useClientProfileContext();
+  const { user: coachUser } = useGlobalData();
 
   // Loading state for workout cards during API operations (duplicate, delete)
   const [loadingWorkoutIds, setLoadingWorkoutIds] = useState<Set<string>>(new Set());
@@ -3150,8 +3154,7 @@ const ClientTrainingCalendarPage = () => {
         onOpenChange={(open) => {
           if (!open) setCompletedSummaryWorkout(null);
         }}
-        workout={completedSummaryWorkout?.workout || null}
-        dateKey={completedSummaryWorkout?.dateKey || ''}
+        workoutName={completedSummaryWorkout?.workout.name || ''}
       />
       <MultiSelectActionBar
         selectedCount={selectedWorkouts.length}
