@@ -659,6 +659,8 @@ export const esMessages = {
     viewNoteAria: 'Ver nota: {title}',
     closePowerView: 'Cerrar vista rápida',
     enablePowerMode: 'Activar modo rápido',
+    showAthlete: 'Mostrar atleta',
+    hideAthlete: 'Ocultar atleta',
   },
   library: {
     title: 'Biblioteca',
@@ -1649,6 +1651,8 @@ export const esMessages = {
       trainingComingSoon: 'Información de entrenamiento próximamente',
       editDetails: 'Editar detalles',
       comments: 'Comentarios',
+      active: 'Activo',
+      archived: 'Archivado',
       firstName: 'Nombre',
       firstNamePlaceholder: 'Ingrese el nombre',
       lastName: 'Apellido',

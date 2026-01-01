@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { PageTabs } from '@/components/page-tabs';
 import {
   Breadcrumb,
@@ -16,7 +17,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
-import { ChevronRight, MessageCircle, Users, Send, Copy, Check } from 'lucide-react';
+import { ChevronRight, MessageCircle, Users, Send, Copy, Check, Dna, Cake, Ruler } from 'lucide-react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
@@ -24,6 +25,7 @@ import { useGlobalData } from '@/providers/global-data-provider';
 import { ClientProfileProvider, useClientProfileContext } from './client-profile-context';
 import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
+import { EditClientDetailsSidePanel } from './components/edit-client-details-side-panel';
 
 export type ClientProfileLayoutProps = {
   children: React.ReactNode;
@@ -31,9 +33,10 @@ export type ClientProfileLayoutProps = {
   basePath?: string; // e.g., '/inbox' for inbox context (not used with onTabChange)
   activeTab?: string; // Override tab from URL segments (for inbox context)
   onTabChange?: (tab: string) => void; // Callback for state-based tab management
+  hideMessageButton?: boolean;
 };
 
-export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange }: ClientProfileLayoutProps) => {
+export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange, hideMessageButton = false }: ClientProfileLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
@@ -44,9 +47,10 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
   const clientIdFromParams = params.clientId || params.contactId;
   const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
   const [isInviteCopied, setIsInviteCopied] = useState<boolean>(false);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
   const inviteCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { athlete, isLoading, error } = useClientProfileContext();
+  const { athlete, details, isLoading, error } = useClientProfileContext();
 
   useEffect(() => {
     return () => {
@@ -130,6 +134,15 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
               : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
   const activeTab = activeTabProp || activeTabFromSegments;
+
+  const getFlagEmoji = (countryCode: string) => {
+    if (!countryCode) return null;
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
 
   const handleTabChange = (value: string) => {
     if (!clientId) {
@@ -305,13 +318,65 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
               </BreadcrumbList>
             </Breadcrumb>
           )}
-          <div className="flex items-center">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <h1 className="text-[22px] font-semibold">{athlete.name}</h1>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-14 w-14 shrink-0">
+              <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
+              <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+            </Avatar>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-semibold leading-none">{athlete.name}</h1>
+                <Badge
+                  variant="outline"
+                  className={
+                    athlete.status === 'archived'
+                      ? 'bg-red-100 text-red-900 border-red-200 hover:bg-red-100 rounded-sm px-2.5 py-0.5 font-medium text-sm'
+                      : 'bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] hover:bg-[#dcfce7] rounded-sm px-2.5 py-0.5 font-medium text-sm'
+                  }
+                >
+                  {athlete.status === 'archived' ? t('general.archived') : t('general.active')}
+                </Badge>
+              </div>
+
+              <div
+                className="flex items-center gap-4 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => setIsEditDetailsOpen(true)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Dna className="size-3" />
+                  <span>{details?.gender ? t(`athletes.profile.${details.gender}`) : '--'}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Cake className="size-3" />
+                  <span>{athlete.age ? `${athlete.age} years old` : '--'}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Ruler className="size-3" />
+                  <span>{details?.height ? `${details.height} cm` : '--'}</span>
+                </div>
+
+                {details?.country && (
+                  <div className="flex items-center text-xl leading-none">
+                    {getFlagEmoji(details.country)}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 font-medium px-2 py-0 h-6 text-xs rounded-sm">
+                    {athlete.coachingType === 'online'
+                      ? t('athletes.profile.online')
+                      : athlete.coachingType === 'in-person'
+                        ? t('athletes.profile.inPerson')
+                        : t('athletes.profile.hybrid')}
+                  </Badge>
+                  <Badge variant="outline" className="h-6 px-1.5 text-xs rounded-sm border-muted-foreground/30 font-medium">
+                    +3
+                  </Badge>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -350,21 +415,23 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
                 <p>{t('athletes.profile.copyInviteAria')}</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => handleNavigateToMessages(clientId)}
-                  className="gap-2"
-                  aria-label={t('athletes.profile.messageAria')}
-                >
-                  <MessageCircle className="size-4" />
-                  <span>{t('athletes.profile.message')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('athletes.profile.messageAria')}</p>
-              </TooltipContent>
-            </Tooltip>
+            {!hideMessageButton && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => handleNavigateToMessages(clientId)}
+                    className="gap-2"
+                    aria-label={t('athletes.profile.messageAria')}
+                  >
+                    <MessageCircle className="size-4" />
+                    <span>{t('athletes.profile.message')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('athletes.profile.messageAria')}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </ButtonGroup>
         </div>
         <div className="px-4">
@@ -378,6 +445,10 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
       <div className="w-full flex-1 min-h-0 bg-background bg-card/50">{children}</div>
+      <EditClientDetailsSidePanel
+        open={isEditDetailsOpen}
+        onOpenChange={setIsEditDetailsOpen}
+      />
     </div>
   );
 };

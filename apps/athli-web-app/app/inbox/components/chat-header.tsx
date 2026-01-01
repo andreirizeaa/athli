@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { Zap, ZapOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { type Contact } from '@/components/app/app-shell';
@@ -37,21 +37,21 @@ export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView
                     </h3>
                 </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ">
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     onClick={onTogglePowerView}
-                    className="h-9 gap-2 w-[180px] border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    className="gap-2 w-auto font-normal text-foreground px-0 -mr-[4px]"
                 >
                     {isPowerViewOpen ? (
                         <>
-                            <ZapOff className="h-4 w-4" />
-                            <span>{t('messages.closePowerView')}</span>
+                            <ArrowRight className="h-4 w-4" />
+                            <span>{t('messages.hideAthlete')}</span>
                         </>
                     ) : (
                         <>
-                            <Zap className="h-4 w-4" />
-                            <span>{t('messages.enablePowerMode')}</span>
+                            <ArrowLeft className="h-4 w-4" />
+                            <span>{t('messages.showAthlete')}</span>
                         </>
                     )}
                 </Button>

@@ -104,6 +104,8 @@ export const clientProfileController = {
             // db has date_of_birth. frontend might send birth_date?
             if (updates.birth_date) clientUpdates.date_of_birth = updates.birth_date;
             if (updates.unit_system) clientUpdates.unit_system = updates.unit_system;
+            if (updates.height_cm) clientUpdates.height_cm = updates.height_cm;
+            if (updates.height) clientUpdates.height_cm = updates.height; // Alias support
 
 
             // Update user_profiles

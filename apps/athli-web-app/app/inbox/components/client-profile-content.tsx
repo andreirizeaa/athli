@@ -21,30 +21,27 @@ interface ClientProfileContentProps {
 }
 
 export function ClientProfileContent({ tab }: ClientProfileContentProps) {
-    switch (tab) {
-        case 'overview':
-            return <ClientOverviewPage />;
-        case 'notes':
-            return <ClientNotesPage />;
-        case 'metrics':
-            return <ClientMetricsPage />;
-        case 'habits':
-            return <ClientHabitsPage />;
-        case 'photos':
-            return <ClientPhotosPage />;
-        case 'files':
-            return <ClientFilesPage />;
-        case 'check-in':
-            return <ClientCheckInPage />;
-        case 'questionnaires':
-            return <ClientQuestionnairesPage />;
-        case 'updates':
-            return <ClientUpdatesPage />;
-        case 'settings':
-            return <ClientSettingsPage />;
-        case 'training':
-            return <TrainingCalendarPage />;
-        default:
-            return <ClientOverviewPage />;
-    }
+    const renderTab = (tabName: string, Component: React.ComponentType<any>) => {
+        return (
+            <div className={tab === tabName ? "block h-full" : "hidden"}>
+                <Component />
+            </div>
+        );
+    };
+
+    return (
+        <div className="h-full w-full">
+            {renderTab('overview', ClientOverviewPage)}
+            {renderTab('notes', ClientNotesPage)}
+            {renderTab('metrics', ClientMetricsPage)}
+            {renderTab('habits', ClientHabitsPage)}
+            {renderTab('photos', ClientPhotosPage)}
+            {renderTab('files', ClientFilesPage)}
+            {renderTab('check-in', ClientCheckInPage)}
+            {renderTab('questionnaires', ClientQuestionnairesPage)}
+            {renderTab('updates', ClientUpdatesPage)}
+            {renderTab('settings', ClientSettingsPage)}
+            {renderTab('training', TrainingCalendarPage)}
+        </div>
+    );
 }
