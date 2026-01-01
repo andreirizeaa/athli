@@ -54,7 +54,22 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
   }, []);
 
   return (
-    <SidebarProvider defaultOpen={false} className="h-svh bg-sidebar">
+    <SidebarProvider
+      defaultOpen={false}
+      className="h-svh bg-sidebar"
+      style={
+        {
+          '--sidebar': 'color-mix(in srgb, var(--primary), var(--base-500) 35%)',
+          '--sidebar-foreground': 'var(--primary-foreground)',
+          '--sidebar-primary': 'var(--primary-foreground)',
+          '--sidebar-primary-foreground': 'var(--primary)',
+          '--sidebar-accent': 'color-mix(in srgb, var(--primary-foreground) 10%, transparent)',
+          '--sidebar-accent-foreground': 'var(--primary-foreground)',
+          '--sidebar-border': 'transparent',
+          '--sidebar-ring': 'var(--primary-foreground)',
+        } as React.CSSProperties
+      }
+    >
       <AppSidebar />
       <SidebarInsetWithBorder>
         <AppHeader
@@ -86,7 +101,7 @@ const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
   return (
     <SidebarInset
       className={cn(
-        'flex-1 flex flex-col overflow-hidden bg-background',
+        'flex-1 flex flex-col overflow-hidden bg-background reset-sidebar-vars',
         showBorder && 'border-l border-sidebar-border'
       )}
       style={{
