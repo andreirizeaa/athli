@@ -27,7 +27,7 @@ import { cn } from '@/lib/general/utils';
 import { createWorkout } from '@/api/coach/coach-workout-service';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import { type WorkoutProgramPayload, DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 
 const WORKOUT_TYPES = [
   'Weightlifting',
@@ -174,14 +174,15 @@ export const SaveAsWorkout: React.FC<SaveAsWorkoutProps> = ({ isOpen, onClose, c
 
       // Create workout payload from client's workout data
       const workoutData: WorkoutProgramPayload = {
-        title: workoutName,
+        id: null,
+        name: workoutName,
         description: description,
         type: workoutType,
         difficulty: difficulty,
         equipment: clientWorkout.equipment || [],
         items: sections.map((section: any) => ({ itemType: 'section' as const, data: section })),
         totalExercises: totalExercises,
-        totalDurationMin: clientWorkout.workout_data?.totalDurationMin || 0,
+        ...DEFAULT_EXECUTION_FIELDS,
       };
 
       await createWorkout(workoutData);

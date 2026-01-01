@@ -436,7 +436,7 @@ export const AddProgramSidePanel = ({
                                                 <div className="flex flex-col gap-1 min-w-0 flex-1">
                                                     {workouts.map((workout: any, wIdx: number) => (
                                                         <div key={wIdx} className="text-xs font-medium text-foreground truncate">
-                                                            {workout.title}
+                                                            {workout.name || workout.title}
                                                         </div>
                                                     ))}
                                                 </div>

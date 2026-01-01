@@ -29,7 +29,7 @@ const mapWorkoutResponse = (workout: any) => {
         items: workout_data?.items || [],
         pre: workout_data?.pre || { readiness: null },
         post: workout_data?.post || { rating: null, intensity: null, overallNotes: '', sessionComments: '' },
-        completedSummary: workout_data?.meta || workout_data?.completedSummary || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
+        completedSummary: workout_data?.completedSummary || workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
     };
 };
 
@@ -66,19 +66,19 @@ export const coachWorkoutsController = {
      */
     createWorkout: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
-        const { title, description, type, equipment, difficulty, workout_data, total_exercises } = req.body;
+        const { title, name, description, type, equipment, difficulty, workout_data, total_exercises } = req.body;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
             return;
         }
 
-        if (!title) {
-            return res.status(400).json({ success: false, message: 'Workout title is required' });
+        const workoutName = name || title;
+
+        if (!workoutName) {
+            return res.status(400).json({ success: false, message: 'Workout name is required' });
         }
 
-        // Extract only the workout structure (items and execution tracking) for workout_data
-        // Includes complete workout information (metadata + execution)
         // Extract only the workout structure (items and execution tracking) for workout_data
         // Includes complete workout information (metadata + execution)
         const cleanWorkoutData = workout_data ? {
@@ -95,7 +95,7 @@ export const coachWorkoutsController = {
                 overallNotes: workout_data.overallNotes ?? '',
                 sessionComments: (Array.isArray(workout_data.sessionComments) ? workout_data.sessionComments.join('\n') : workout_data.sessionComments) ?? '',
             },
-            meta: workout_data.meta || {
+            completedSummary: workout_data.completedSummary || workout_data.meta || {
                 status: workout_data.status ?? 'not_started',
                 startedAt: workout_data.startedAt ?? null,
                 completedAt: workout_data.completedAt ?? null,
@@ -106,7 +106,7 @@ export const coachWorkoutsController = {
             items: [],
             pre: { readiness: null },
             post: { rating: null, intensity: null, overallNotes: '', sessionComments: '' },
-            meta: { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null }
+            completedSummary: { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null }
         };
 
         const supabase = getSupabaseClient();
@@ -114,7 +114,7 @@ export const coachWorkoutsController = {
             .from('coach_workouts')
             .insert({
                 coach_id: userId,
-                name: title,
+                name: workoutName,
                 description,
                 type,
                 equipment,
@@ -169,7 +169,8 @@ export const coachWorkoutsController = {
         }
 
         // Map frontend fields to backend fields if necessary
-        const { title, workout_data, ...rest } = updates;
+        const { title, name, workout_data, ...rest } = updates;
+        const workoutName = name || title;
 
         // Clean workout_data if provided
         const cleanWorkoutData = workout_data ? {
@@ -185,7 +186,7 @@ export const coachWorkoutsController = {
                 overallNotes: workout_data.overallNotes ?? '',
                 sessionComments: (Array.isArray(workout_data.sessionComments) ? workout_data.sessionComments.join('\n') : workout_data.sessionComments) ?? '',
             },
-            meta: workout_data.meta || {
+            completedSummary: workout_data.completedSummary || workout_data.meta || {
                 status: workout_data.status ?? 'not_started',
                 startedAt: workout_data.startedAt ?? null,
                 completedAt: workout_data.completedAt ?? null,
@@ -196,7 +197,7 @@ export const coachWorkoutsController = {
 
         const mappedUpdates = {
             ...rest,
-            ...(title ? { name: title } : {}),
+            ...(workoutName ? { name: workoutName } : {}),
             ...(cleanWorkoutData ? { workout_data: cleanWorkoutData } : {}),
             updated_at: new Date().toISOString(),
         };

@@ -143,7 +143,7 @@ export const SectionBuilder = ({
   // Store initial state for deep comparison
   const initialState = useRef<{
     schema: WorkoutSchema;
-    title: string;
+    name: string;
     type: string;
     difficulty: string;
     description: string;
@@ -159,7 +159,7 @@ export const SectionBuilder = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isOverviewOpen, setIsOverviewOpen] = useState(true);
   const [isTitleExpanded, setIsTitleExpanded] = useState(false);
-  const [workoutTitle, setWorkoutTitle] = useState(meta?.title || '');
+  const [workoutTitle, setWorkoutTitle] = useState(meta?.name || '');
   const [workoutType, setWorkoutType] = useState(meta?.type || '');
   const [difficulty, setDifficulty] = useState(meta?.difficulty || 'all_levels');
   const [description, setDescription] = useState(meta?.description || '');
@@ -270,7 +270,7 @@ export const SectionBuilder = ({
       // Capture initial state
       initialState.current = {
         schema: initialSchema,
-        title: meta?.title || '',
+        name: meta?.name || '',
         type: meta?.type || '',
         difficulty: meta?.difficulty || 'all_levels',
         description: meta?.description || '',
@@ -287,7 +287,7 @@ export const SectionBuilder = ({
 
     const currentState = {
       schema: workoutSchema,
-      title: workoutTitle,
+      name: workoutTitle,
       type: workoutType,
       difficulty: difficulty,
       description: description,
@@ -316,8 +316,8 @@ export const SectionBuilder = ({
   // Sync workout fields with meta
   useEffect(() => {
     if (meta) {
-      if (meta.title) {
-        setWorkoutTitle(meta.title);
+      if (meta.name) {
+        setWorkoutTitle(meta.name);
       }
       if (meta.type) {
         setWorkoutType(meta.type);
@@ -780,7 +780,7 @@ Focus on proper form and progressive overload.`;
     // Use updated values from state
     const updatedMeta = meta ? {
       ...meta,
-      title: workoutTitle,
+      name: workoutTitle,
       type: workoutType,
       difficulty: difficulty,
       description: description,
@@ -805,7 +805,7 @@ Focus on proper form and progressive overload.`;
           // Update initial state to match the saved state
           initialState.current = {
             schema: workoutSchema,
-            title: workoutTitle,
+            name: workoutTitle,
             type: workoutType,
             difficulty: difficulty,
             description: description,
@@ -817,7 +817,7 @@ Focus on proper form and progressive overload.`;
           setIsDirty(false);
           initialState.current = {
             schema: workoutSchema,
-            title: workoutTitle,
+            name: workoutTitle,
             type: workoutType,
             difficulty: difficulty,
             description: description,

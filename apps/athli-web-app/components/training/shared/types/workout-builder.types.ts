@@ -47,7 +47,7 @@ export type WorkoutSchema = {
  * Workout metadata
  */
 export type WorkoutMeta = {
-  title: string;
+  name: string;
   description: string;
   type: string;
   difficulty: string;

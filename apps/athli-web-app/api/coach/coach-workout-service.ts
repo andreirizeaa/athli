@@ -105,13 +105,13 @@ export const createWorkout = async (workoutData: WorkoutProgramPayload): Promise
     items: workoutData.items,
     pre: workoutData.pre,
     post: workoutData.post,
-    meta: workoutData.completedSummary,
+    completedSummary: workoutData.completedSummary,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts', {
     method: 'POST',
     body: JSON.stringify({
-      title: workoutData.name,
+      name: workoutData.name,
       description: workoutData.description,
       type: workoutData.type,
       equipment: workoutData.equipment,
@@ -158,14 +158,14 @@ export const editWorkout = async (
     items: workoutData.items,
     pre: workoutData.pre,
     post: workoutData.post,
-    meta: workoutData.completedSummary,
+    completedSummary: workoutData.completedSummary,
   };
 
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {
     method: 'POST',
     body: JSON.stringify({
       id: workoutId,
-      title: workoutData.name,
+      name: workoutData.name,
       description: workoutData.description,
       type: workoutData.type,
       equipment: workoutData.equipment,
@@ -183,7 +183,7 @@ export const editWorkout = async (
  */
 export const updateWorkoutDetails = async (
   workoutId: string,
-  details: { title: string; type: string; difficulty: string; description: string }
+  details: { name: string; type: string; difficulty: string; description: string }
 ): Promise<Workout> => {
   const response = await apiFetch<ApiResponse<{ workout: Workout }>>('/coach/training/workouts/update', {
     method: 'POST',
