@@ -1159,7 +1159,6 @@ export const ProgramBuilder = ({
       post: {
         sessionComments: payload.post?.sessionComments || '',
         intensity: payload.post?.intensity || null,
-        overallNotes: payload.post?.overallNotes || '',
         rating: payload.post?.rating || null,
       },
       pre: {
@@ -1219,7 +1218,6 @@ export const ProgramBuilder = ({
           post: {
             sessionComments: payload.post?.sessionComments || '',
             intensity: payload.post?.intensity || null,
-            overallNotes: payload.post?.overallNotes || '',
             rating: payload.post?.rating || null,
           },
           pre: {
@@ -1352,7 +1350,7 @@ export const ProgramBuilder = ({
       equipment: Array.isArray(workout.equipment) ? workout.equipment : (workout.equipment ? [workout.equipment] : []),
       totalExercises: workout.totalExercises || 0,
       pre: workout.pre || (workout as any).workout_data?.pre || { readiness: null },
-      post: workout.post || (workout as any).workout_data?.post || { rating: null, intensity: null, overallNotes: '', sessionComments: '' },
+      post: workout.post || (workout as any).workout_data?.post || { rating: null, intensity: null, sessionComments: '' },
       completedSummary: workout.completedSummary || (workout as any).workout_data?.completedSummary || (workout as any).workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
     });
     setIsLoadingWorkoutData(false);

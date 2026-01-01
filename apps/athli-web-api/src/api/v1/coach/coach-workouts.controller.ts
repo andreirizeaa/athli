@@ -28,7 +28,7 @@ const mapWorkoutResponse = (workout: any) => {
         // Extracted complex objects from workout_data
         items: workout_data?.items || [],
         pre: workout_data?.pre || { readiness: null },
-        post: workout_data?.post || { rating: null, intensity: null, overallNotes: '', sessionComments: '' },
+        post: workout_data?.post || { rating: null, intensity: null, sessionComments: '' },
         completedSummary: workout_data?.completedSummary || workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
     };
 };
@@ -92,7 +92,6 @@ export const coachWorkoutsController = {
             post: workout_data.post || {
                 rating: workout_data.rating ?? null,
                 intensity: workout_data.intensity ?? null,
-                overallNotes: workout_data.overallNotes ?? '',
                 sessionComments: (Array.isArray(workout_data.sessionComments) ? workout_data.sessionComments.join('\n') : workout_data.sessionComments) ?? '',
             },
             completedSummary: workout_data.completedSummary || workout_data.meta || {
@@ -105,7 +104,7 @@ export const coachWorkoutsController = {
         } : {
             items: [],
             pre: { readiness: null },
-            post: { rating: null, intensity: null, overallNotes: '', sessionComments: '' },
+            post: { rating: null, intensity: null, sessionComments: '' },
             completedSummary: { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null }
         };
 
@@ -183,7 +182,6 @@ export const coachWorkoutsController = {
             post: workout_data.post || {
                 rating: workout_data.rating ?? null,
                 intensity: workout_data.intensity ?? null,
-                overallNotes: workout_data.overallNotes ?? '',
                 sessionComments: (Array.isArray(workout_data.sessionComments) ? workout_data.sessionComments.join('\n') : workout_data.sessionComments) ?? '',
             },
             completedSummary: workout_data.completedSummary || workout_data.meta || {
