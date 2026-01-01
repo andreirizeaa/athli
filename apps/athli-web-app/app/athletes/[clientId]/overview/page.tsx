@@ -8,8 +8,10 @@ import { ClientDetailsCard } from './client-details-card';
 import { AthleteWorkoutsCard } from './athlete-workouts-card';
 
 const ClientOverviewPage = () => {
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
 
   return (
     <div className="h-full w-full flex flex-col flex-1 min-h-0 p-4 gap-4 overflow-hidden">

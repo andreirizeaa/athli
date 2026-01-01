@@ -54,6 +54,10 @@ import { InboxSidebar } from './components/inbox-sidebar';
 import { ChatHeader } from './components/chat-header';
 import { MessageList } from './components/message-list';
 import { MessageInput } from './components/message-input';
+import { ClientProfileProvider } from '@/app/athletes/[clientId]/client-profile-context';
+import { ClientProfileLayoutContent } from '@/app/athletes/[clientId]/layout';
+import { ClientProfileContent } from './components/client-profile-content';
+
 
 type Note = {
   id: string;
@@ -120,6 +124,9 @@ const InboxPage = () => {
   const params = useParams();
   const contactIdFromPath = params?.contactId as string | undefined;
 
+  // State-based tab management (no URL routing for tabs to avoid flicker)
+  const [activeClientTab, setActiveClientTab] = React.useState('overview');
+
   // TODO: Replace with real inbox data when backend is connected
   // Currently using coach_client view for contacts, but messages are still mock data
   const { clients: athletes, isLoading: isLoadingClients } = useCoachClients();
@@ -132,6 +139,7 @@ const InboxPage = () => {
   const [isNewMessageOpen, setIsNewMessageOpen] = React.useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = React.useState(false);
   const [isBroadcastOpen, setIsBroadcastOpen] = React.useState(false);
+  const [isPowerViewOpen, setIsPowerViewOpen] = React.useState(true); // Power view (client profile panel) open by default
   const [noteTitle, setNoteTitle] = React.useState('');
   const [noteContent, setNoteContent] = React.useState('');
   const [isNoteEmpty, setIsNoteEmpty] = React.useState(true);
@@ -436,6 +444,8 @@ const InboxPage = () => {
       if (contact) {
         setSelectedContactId(contactIdFromPath);
         setIsSidebarCollapsed(true);
+        // Reset to overview tab when selecting a new contact
+        setActiveClientTab('overview');
       } else { // Invalid contact ID, redirect to base inbox page
         router.replace('/inbox');
         setSelectedContactId(undefined);
@@ -1601,139 +1611,174 @@ const InboxPage = () => {
     <div className="h-full w-full flex flex-col">
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
-          {/* Left Column - Inbox Sidebar */}
-          <InboxSidebar
-            isSidebarCollapsed={isSidebarCollapsed}
-            setIsSidebarCollapsed={setIsSidebarCollapsed}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            filteredContacts={filteredContacts}
-            selectedContactId={selectedContactId}
-            hasDraft={hasDraft}
-          />
-          {/* Middle Column - Chat (80%) */}
-          <div
-            className="relative flex-1 h-full"
-            onDragEnter={handleDragEnter}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {/* Drag and Drop Overlay */}
-            {isDraggingOver && selectedContactId && (
-              <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
-                <div className="text-center px-8">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="flex items-center gap-2 text-primary">
-                      <FileText className="h-8 w-8" />
-                      <ImageIcon className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-foreground">
-                        {t('messages.dropFilesHere')}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {t('messages.filesWillBeAdded')}
-                      </p>
+          {/* Left Column - Inbox Sidebar (20% width, sticky) */}
+          <div className="flex-shrink-0 h-full z-10">
+            <InboxSidebar
+              isSidebarCollapsed={isSidebarCollapsed}
+              setIsSidebarCollapsed={setIsSidebarCollapsed}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              filteredContacts={filteredContacts}
+              selectedContactId={selectedContactId}
+              hasDraft={hasDraft}
+            />
+          </div>
+          {/* Scrollable content area for Chat + Client Profile */}
+          <div className="flex-1 h-full overflow-x-auto">
+            <div className={cn(
+              "h-full flex",
+              selectedContactId ? "min-w-[80vw]" : "w-full"
+            )}>
+              {/* Chat Area (35% when power view open, 100% otherwise) */}
+              <div
+                className={cn(
+                  "relative h-full transition-[width] duration-300 ease-in-out",
+                  selectedContactId && isPowerViewOpen ? "w-[35%]" : "w-full"
+                )}
+                onDragEnter={handleDragEnter}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                {/* Drag and Drop Overlay */}
+                {isDraggingOver && selectedContactId && (
+                  <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
+                    <div className="text-center px-8">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="flex items-center gap-2 text-primary">
+                          <FileText className="h-8 w-8" />
+                          <ImageIcon className="h-8 w-8" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-foreground">
+                            {t('messages.dropFilesHere')}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {t('messages.filesWillBeAdded')}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )}
+                <div className="h-full overflow-y-auto flex flex-col">
+                  {selectedContact ? (
+                    <>
+                      <ChatHeader
+                        selectedContact={selectedContact}
+                        isPowerViewOpen={isPowerViewOpen}
+                        onTogglePowerView={() => setIsPowerViewOpen(!isPowerViewOpen)}
+                      />
+
+                      <MessageList
+                        messages={currentMessages}
+                        selectedContact={selectedContact}
+                        onReply={(message) => {
+                          setReplyingToMessage(message);
+                          setTextareaHeight(60);
+                          setTimeout(() => {
+                            textareaRef.current?.focus();
+                          }, 100);
+                        }}
+                        onDeleteMessage={handleDeleteMessage}
+                        onDeleteMessageImage={handleDeleteMessageImage}
+                        onDeleteMessagePdf={handleDeleteMessagePdf}
+                        onDeleteMessageVideo={handleDeleteMessageVideo}
+                        onDeleteAllImages={handleDeleteAllImages}
+                        messagesEndRef={messagesEndRef}
+                      />
+
+                      <MessageInput
+                        messageInput={messageInput}
+                        setMessageInput={setMessageInput}
+                        handleSendMessage={handleSendMessage}
+                        handleKeyDown={handleKeyDown}
+                        textareaRef={textareaRef}
+                        textareaHeight={textareaHeight}
+                        setTextareaHeight={setTextareaHeight}
+                        attachedImages={attachedImages}
+                        attachedPdf={attachedPdf}
+                        attachedVideo={attachedVideo}
+                        replyingToMessage={replyingToMessage}
+                        selectedContact={selectedContact}
+                        onFileButtonClick={() => { }} // Not used in component but in props
+                        onImageInputClick={() => imageInputRef.current?.click()}
+                        onPdfInputClick={() => pdfInputRef.current?.click()}
+                        onVideoInputClick={() => videoInputRef.current?.click()}
+                        onRemoveImage={(index) => setAttachedImages((prev) => prev.filter((_, i) => i !== index))}
+                        onRemovePdf={() => setAttachedPdf(null)}
+                        onRemoveVideo={() => setAttachedVideo(null)}
+                        onCancelReply={() => {
+                          setReplyingToMessage(null);
+                          if (!messageInput.trim()) {
+                            setTextareaHeight(36);
+                          }
+                        }}
+                        onDownloadImage={(image) => {
+                          const url = URL.createObjectURL(image);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = image.name;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                        }}
+                        onDownloadPdf={() => {
+                          if (!attachedPdf) return;
+                          const url = URL.createObjectURL(attachedPdf);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = attachedPdf.name;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                        }}
+                        onDownloadVideo={() => {
+                          if (!attachedVideo) return;
+                          const url = URL.createObjectURL(attachedVideo);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = attachedVideo.name;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-muted-foreground text-sm">
+                          {t('messages.selectAthleteToContinue')}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-            <div className="h-full overflow-y-auto flex flex-col">
-              {selectedContact ? (
-                <>
-                  <ChatHeader
-                    selectedContact={selectedContact}
-                    onViewTraining={() => router.push(`/athletes/${selectedContact.id}/training`)}
-                    onViewProfile={() => router.push(`/athletes/${selectedContact.id}/overview`)}
-                  />
 
-                  <MessageList
-                    messages={currentMessages}
-                    selectedContact={selectedContact}
-                    onReply={(message) => {
-                      setReplyingToMessage(message);
-                      setTextareaHeight(60);
-                      setTimeout(() => {
-                        textareaRef.current?.focus();
-                      }, 100);
-                    }}
-                    onDeleteMessage={handleDeleteMessage}
-                    onDeleteMessageImage={handleDeleteMessageImage}
-                    onDeleteMessagePdf={handleDeleteMessagePdf}
-                    onDeleteMessageVideo={handleDeleteMessageVideo}
-                    onDeleteAllImages={handleDeleteAllImages}
-                    messagesEndRef={messagesEndRef}
-                  />
-
-                  <MessageInput
-                    messageInput={messageInput}
-                    setMessageInput={setMessageInput}
-                    handleSendMessage={handleSendMessage}
-                    handleKeyDown={handleKeyDown}
-                    textareaRef={textareaRef}
-                    textareaHeight={textareaHeight}
-                    setTextareaHeight={setTextareaHeight}
-                    attachedImages={attachedImages}
-                    attachedPdf={attachedPdf}
-                    attachedVideo={attachedVideo}
-                    replyingToMessage={replyingToMessage}
-                    selectedContact={selectedContact}
-                    onFileButtonClick={() => { }} // Not used in component but in props
-                    onImageInputClick={() => imageInputRef.current?.click()}
-                    onPdfInputClick={() => pdfInputRef.current?.click()}
-                    onVideoInputClick={() => videoInputRef.current?.click()}
-                    onRemoveImage={(index) => setAttachedImages((prev) => prev.filter((_, i) => i !== index))}
-                    onRemovePdf={() => setAttachedPdf(null)}
-                    onRemoveVideo={() => setAttachedVideo(null)}
-                    onCancelReply={() => {
-                      setReplyingToMessage(null);
-                      if (!messageInput.trim()) {
-                        setTextareaHeight(36);
-                      }
-                    }}
-                    onDownloadImage={(image) => {
-                      const url = URL.createObjectURL(image);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = image.name;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                    }}
-                    onDownloadPdf={() => {
-                      if (!attachedPdf) return;
-                      const url = URL.createObjectURL(attachedPdf);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = attachedPdf.name;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                    }}
-                    onDownloadVideo={() => {
-                      if (!attachedVideo) return;
-                      const url = URL.createObjectURL(attachedVideo);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = attachedVideo.name;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                    }}
-                  />
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-muted-foreground text-sm">
-                      {t('messages.selectAthleteToContinue')}
-                    </p>
-                  </div>
+              {/* Client Profile Area (65% width, animates in/out based on power view state) */}
+              {selectedContactId && (
+                <div
+                  className={cn(
+                    "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
+                    isPowerViewOpen
+                      ? "w-[65%] opacity-100"
+                      : "w-0 opacity-0 overflow-hidden"
+                  )}
+                >
+                  <ClientProfileProvider clientId={selectedContactId}>
+                    <ClientProfileLayoutContent
+                      hideBreadcrumb={true}
+                      activeTab={activeClientTab}
+                      onTabChange={setActiveClientTab}
+                    >
+                      <ClientProfileContent tab={activeClientTab} />
+                    </ClientProfileLayoutContent>
+                  </ClientProfileProvider>
                 </div>
               )}
             </div>
@@ -1767,7 +1812,7 @@ const InboxPage = () => {
               }
             }
             if (contact) {
-              router.push(`/inbox/${contact.id}`);
+              router.push(`/inbox/${contact.id}/overview`);
               setIsNewMessageOpen(false);
             }
           }}

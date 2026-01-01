@@ -25,18 +25,24 @@ import { ClientProfileProvider, useClientProfileContext } from './client-profile
 import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
 
-type ClientProfileLayoutProps = {
+export type ClientProfileLayoutProps = {
   children: React.ReactNode;
+  hideBreadcrumb?: boolean;
+  basePath?: string; // e.g., '/inbox' for inbox context (not used with onTabChange)
+  activeTab?: string; // Override tab from URL segments (for inbox context)
+  onTabChange?: (tab: string) => void; // Callback for state-based tab management
 };
 
-const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
+export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange }: ClientProfileLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
-  const params = useParams<{ clientId: string }>();
+  const params = useParams<{ clientId: string; contactId: string }>();
   const { user } = useSupabaseAuth();
   const { uniqueCode } = useGlobalData();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
   const [isInviteCopied, setIsInviteCopied] = useState<boolean>(false);
   const inviteCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,8 +114,8 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   const isUpdatesRoute = segments.includes('updates');
   const isTrainingCalendarRoute = segments.includes('training');
 
-  // Determine active tab
-  const activeTab = isCheckInRoute
+  // Determine active tab (use prop if provided, otherwise use segments)
+  const activeTabFromSegments = isCheckInRoute
     ? 'check-in'
     : isQuestionnairesRoute
       ? 'questionnaires'
@@ -123,6 +129,8 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
               ? 'training'
               : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
+  const activeTab = activeTabProp || activeTabFromSegments;
+
   const handleTabChange = (value: string) => {
     if (!clientId) {
       return;
@@ -132,7 +140,17 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       return;
     }
 
-    router.push(`/athletes/${clientId}/${value}`);
+    // Use callback if provided (for state-based tab management in inbox context)
+    if (onTabChange) {
+      onTabChange(value);
+      return;
+    }
+
+    // Otherwise use URL-based navigation
+    const navigationPath = basePath
+      ? `${basePath}/${clientId}/${value}`
+      : `/athletes/${clientId}/${value}`;
+    router.push(navigationPath);
   };
 
   const handleNavigateToAthletes = () => {
@@ -265,26 +283,28 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
     <div className="h-full w-full flex flex-col overflow-auto">
       <div className="w-full relative flex-shrink-0">
         <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
-          <Breadcrumb>
-            <BreadcrumbList className="text-xs gap-1">
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  onClick={handleNavigateToAthletes}
-                  className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
-                >
-                  {t('athletes.profile.athletes')}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-muted-foreground/60">
-                <ChevronRight className="h-2 w-2" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                  {athlete.name}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          {!hideBreadcrumb && (
+            <Breadcrumb>
+              <BreadcrumbList className="text-xs gap-1">
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    onClick={handleNavigateToAthletes}
+                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                  >
+                    {t('athletes.profile.athletes')}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
+                    {athlete.name}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          )}
           <div className="flex items-center">
             <div className="flex items-center gap-3">
               <Avatar className="h-9 w-9">

@@ -52,9 +52,16 @@ interface ClientProfileContextType {
 
 const ClientProfileContext = createContext<ClientProfileContextType | undefined>(undefined);
 
-export const ClientProfileProvider = ({ children }: { children: React.ReactNode }) => {
-    const params = useParams<{ clientId: string }>();
-    const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+interface ClientProfileProviderProps {
+    children: React.ReactNode;
+    clientId?: string; // Optional - if not provided, will use URL params
+}
+
+export const ClientProfileProvider = ({ children, clientId: clientIdProp }: ClientProfileProviderProps) => {
+    const params = useParams<{ clientId: string; contactId: string }>();
+    // Use provided clientId prop, or fall back to clientId/contactId from URL params
+    const clientIdFromParams = params.clientId || params.contactId;
+    const rawClientId = clientIdProp || (Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams);
     const queryClient = useQueryClient();
     const { user } = useUserProfile();
 
@@ -65,7 +72,7 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
     const minimumLoadTime = 1200; // Minimum time to show loader (1.2s) - increased to ensure smooth loading
 
     // Use all the React Query hooks - they will only fetch when clientId is provided
-    const { client: athlete, isLoading: isLoadingProfile, error: profileError, isFetching: isFetchingProfile } = useClientProfile(clientId);
+    const { client: athlete, isLoading: isLoadingProfile, error: profileError, isFetching: isFetchingProfile } = useClientProfile(rawClientId);
     // Use the resolved athlete ID (UUID) for other queries
     const resolvedClientId = athlete?.id;
 
@@ -98,12 +105,12 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
 
     // Reset initial load state when clientId changes
     useEffect(() => {
-        if (previousClientId.current !== clientId) {
+        if (previousClientId.current !== rawClientId) {
             setIsInitialLoad(true);
             loadStartTime.current = Date.now();
-            previousClientId.current = clientId;
+            previousClientId.current = rawClientId;
         }
-    }, [clientId]);
+    }, [rawClientId]);
 
     // Mark as loaded once ALL queries complete AND minimum time has passed AND user is loaded
     useEffect(() => {
@@ -138,7 +145,7 @@ export const ClientProfileProvider = ({ children }: { children: React.ReactNode 
         const targetId = athlete.id;
 
         await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['client-profile', clientId] }), // Profile uses publicId/param
+            queryClient.invalidateQueries({ queryKey: ['client-profile', rawClientId] }), // Profile uses publicId/param
             queryClient.invalidateQueries({ queryKey: ['client-metrics', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-habits', targetId] }),
             queryClient.invalidateQueries({ queryKey: ['client-photos', targetId] }),
