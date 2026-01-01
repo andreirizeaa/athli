@@ -2,19 +2,18 @@
 
 import React from 'react';
 import { useTranslations } from 'next-intl';
-import { Dumbbell, User } from 'lucide-react';
+import { Zap, ZapOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { type Contact } from '@/components/app/app-shell';
 
 interface ChatHeaderProps {
     selectedContact: Contact;
-    onViewTraining: () => void;
-    onViewProfile: () => void;
+    isPowerViewOpen: boolean;
+    onTogglePowerView: () => void;
 }
 
-export function ChatHeader({ selectedContact, onViewTraining, onViewProfile }: ChatHeaderProps) {
+export function ChatHeader({ selectedContact, isPowerViewOpen, onTogglePowerView }: ChatHeaderProps) {
     const t = useTranslations();
 
     const getInitials = (name: string) => {
@@ -39,45 +38,23 @@ export function ChatHeader({ selectedContact, onViewTraining, onViewProfile }: C
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="outline"
-                                onClick={onViewTraining}
-                                className="h-9 w-9 rounded-full p-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                                aria-label={t('messages.viewTrainingCalendar')}
-                            >
-                                <Dumbbell className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{t('messages.viewTrainingCalendar')}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="outline"
-                                onClick={onViewProfile}
-                                className="h-9 w-9 rounded-full p-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                                aria-label={t('general.profile')}
-                            >
-                                <User className="h-4 w-4" />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>
-                                {t('messages.viewProfile', {
-                                    name:
-                                        selectedContact.name.split(' ')[0] || selectedContact.name,
-                                })}
-                            </p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
+                <Button
+                    variant="outline"
+                    onClick={onTogglePowerView}
+                    className="h-9 gap-2 w-[180px] border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                    {isPowerViewOpen ? (
+                        <>
+                            <ZapOff className="h-4 w-4" />
+                            <span>{t('messages.closePowerView')}</span>
+                        </>
+                    ) : (
+                        <>
+                            <Zap className="h-4 w-4" />
+                            <span>{t('messages.enablePowerMode')}</span>
+                        </>
+                    )}
+                </Button>
             </div>
         </div>
     );

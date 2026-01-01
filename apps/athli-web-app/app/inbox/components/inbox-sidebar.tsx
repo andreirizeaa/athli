@@ -167,7 +167,7 @@ export function InboxSidebar({
                                     hasDraft={hasDraft(contact.id)}
                                     onClick={() => {
                                         setIsSidebarCollapsed(true);
-                                        router.push(`/inbox/${contact.id}`);
+                                        router.push(`/inbox/${contact.id}/overview`);
                                     }}
                                     onViewProfile={() => router.push(`/athletes/${contact.id}/overview`)}
                                 />

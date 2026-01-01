@@ -693,6 +693,8 @@ export const enMessages = {
     download: 'Download {name}',
     remove: 'Remove {name}',
     viewNoteAria: 'View note: {title}',
+    closePowerView: 'Close power view',
+    enablePowerMode: 'Enable power mode',
     broadcastPanel: {
       title: 'Broadcast Message',
       message: 'Message',

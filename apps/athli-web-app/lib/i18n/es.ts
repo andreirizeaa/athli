@@ -657,6 +657,8 @@ export const esMessages = {
     download: 'Descargar {name}',
     remove: 'Eliminar {name}',
     viewNoteAria: 'Ver nota: {title}',
+    closePowerView: 'Cerrar vista rápida',
+    enablePowerMode: 'Activar modo rápido',
   },
   library: {
     title: 'Biblioteca',
