@@ -112,11 +112,13 @@
   }
 
   @keyframes pulse-dot {
+
     0%,
     100% {
       transform: scale(1);
       opacity: 0.8;
     }
+
     50% {
       transform: scale(1.5);
       opacity: 1;
@@ -173,6 +175,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -189,11 +192,37 @@
   [data-slot="dropdown-menu-trigger"],
   [data-slot="popover-trigger"],
   [data-slot="tooltip-trigger"],
-  [data-slot="collapsible-trigger"]{
-    @apply cursor-pointer!
+  [data-slot="collapsible-trigger"] {
+    @apply !cursor-pointer;
   }
 
-  [data-slot="dialog-overlay"], [data-slot="sheet-overlay"], [data-slot="drawer-overlay"] {
-    @apply bg-black/20! backdrop-blur-sm;
+  [data-slot="dialog-overlay"],
+  [data-slot="sheet-overlay"],
+  [data-slot="drawer-overlay"] {
+    @apply !bg-black/20 backdrop-blur-sm;
+  }
+}
+
+@layer utilities {
+  .reset-sidebar-vars {
+    --sidebar: var(--base-100);
+    --sidebar-foreground: var(--base-800);
+    --sidebar-primary: var(--base-950);
+    --sidebar-primary-foreground: var(--color-white);
+    --sidebar-accent: var(--base-200);
+    --sidebar-accent-foreground: var(--base-800);
+    --sidebar-border: var(--base-200);
+    --sidebar-ring: var(--base-800);
+  }
+
+  .dark .reset-sidebar-vars {
+    --sidebar: var(--base-900);
+    --sidebar-foreground: var(--base-200);
+    --sidebar-primary: var(--base-50);
+    --sidebar-primary-foreground: var(--base-900);
+    --sidebar-accent: var(--base-800);
+    --sidebar-accent-foreground: var(--base-200);
+    --sidebar-border: var(--base-800);
+    --sidebar-ring: var(--base-200);
   }
 }

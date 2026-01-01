@@ -134,7 +134,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/get-started'}
-                  className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                  className="text-sm"
                 >
                   <Link href="/get-started">
                     <Rocket className="shrink-0" />
@@ -146,7 +146,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/home'}
-                  className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                  className="text-sm"
                 >
                   <Link href="/home">
                     <Home className="shrink-0" />
@@ -190,7 +190,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                      className="text-sm"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -240,7 +240,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                      className="text-sm"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -279,7 +279,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                      className="text-sm"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -299,7 +299,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               asChild
               isActive={activePath === '/settings' || activePath.startsWith('/settings/')}
-              className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+              className="text-sm"
             >
               <Link href="/settings">
                 <Settings className="shrink-0" />
@@ -311,7 +311,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               asChild
               isActive={activePath === '/refer-and-earn'}
-              className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+              className="text-sm"
             >
               <Link href="/refer-and-earn">
                 <Gift className="shrink-0" />
