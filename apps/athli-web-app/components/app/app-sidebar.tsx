@@ -61,8 +61,8 @@ export function AppSidebar() {
       icon: Users,
     },
     {
-      href: '/messaging',
-      labelKey: 'sidebar.links.messaging',
+      href: '/inbox',
+      labelKey: 'sidebar.links.inbox',
       icon: MessageCircle,
     },
     {
@@ -178,7 +178,7 @@ export function AppSidebar() {
                   isActive = activePath.startsWith('/todo');
                 } else if (
                   href === '/athletes' ||
-                  href === '/messaging' ||
+                  href === '/inbox' ||
                   href === '/check-ins'
                 ) {
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
