@@ -88,8 +88,10 @@ import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-work
 import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
 import { TrainingDataProvider, useTrainingData } from '@/app/training/training-data-context';
 import { AddProgramSidePanel } from './add-program-side-panel';
+import { ClientInProgressTrainingDaySummary } from './client-in-progress-training-day-summary';
+import { ClientCompletedTrainingDaySummary } from './client-completed-training-day-summary';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
-import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
+import { type WorkoutProgramPayload, DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
 import type { Exercise as CoachExercise } from '@/api/coach/coach-exercise-service';
 import { toast } from 'sonner';
@@ -137,6 +139,7 @@ const DraggableWorkoutWrapper = ({
   children,
   isCopyMode,
   isFutureDay,
+  isMultiSelectMode,
 }: {
   workoutId: string;
   dateKey: string;
@@ -144,7 +147,9 @@ const DraggableWorkoutWrapper = ({
   children: React.ReactNode;
   isCopyMode: boolean;
   isFutureDay: boolean;
+  isMultiSelectMode?: boolean;
 }) => {
+  const isDragDisabled = isCopyMode || !isFutureDay || isMultiSelectMode;
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: `workout-${workoutId}`,
     data: {
@@ -152,7 +157,7 @@ const DraggableWorkoutWrapper = ({
       workout,
       dateKey,
     },
-    disabled: isCopyMode || !isFutureDay,
+    disabled: isDragDisabled,
   });
 
   const style: React.CSSProperties = {
@@ -170,13 +175,14 @@ const DraggableWorkoutWrapper = ({
     <div
       ref={setNodeRef}
       style={style}
-      {...(isCopyMode || !isFutureDay ? {} : { ...attributes, ...listeners })}
+      {...(isDragDisabled ? {} : { ...attributes, ...listeners })}
       className={cn(isDragging && 'opacity-0')}
     >
       {children}
     </div>
   );
 };
+
 
 const ClientTrainingCalendarPage = () => {
   const t = useTranslations();
@@ -206,7 +212,7 @@ const ClientTrainingCalendarPage = () => {
   const [isSaveAsProgramOpen, setIsSaveAsProgramOpen] = useState<boolean>(false);
   const [selectedDateForWorkout, setSelectedDateForWorkout] = useState<Date | null>(null);
   const [workoutsByDate, setWorkoutsByDate] = useState<{
-    [dateKey: string]: Array<Workout & { id: string }>;
+    [dateKey: string]: Array<Workout & { id: string; day_status?: 'not_started' | 'in_progress' | 'completed' }>;
   }>({});
   // React Query Hooks
   const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
@@ -267,6 +273,16 @@ const ClientTrainingCalendarPage = () => {
   // Loading state for fetching workout data when opening builder
   const [isLoadingWorkoutData, setIsLoadingWorkoutData] = useState(false);
   const [fetchedWorkoutData, setFetchedWorkoutData] = useState<any>(null);
+
+  // Training day summary dialog states (for in-progress and completed workouts)
+  const [inProgressSummaryWorkout, setInProgressSummaryWorkout] = useState<{
+    workout: Workout & { id: string };
+    dateKey: string;
+  } | null>(null);
+  const [completedSummaryWorkout, setCompletedSummaryWorkout] = useState<{
+    workout: Workout & { id: string };
+    dateKey: string;
+  } | null>(null);
 
   // Drag and drop state
   const [draggedWorkout, setDraggedWorkout] = useState<{
@@ -716,7 +732,7 @@ const ClientTrainingCalendarPage = () => {
   // Helper to convert calendar data to local format
   const convertCalendarData = (data: typeof calendarData) => {
     if (!data) return {};
-    const converted: { [dateKey: string]: Array<Workout & { id: string }> } = {};
+    const converted: { [dateKey: string]: Array<Workout & { id: string; day_status?: 'not_started' | 'in_progress' | 'completed' }> } = {};
 
     Object.keys(data).forEach((dateKey) => {
       // dateKey is in dd-mm-yyyy format
@@ -728,6 +744,7 @@ const ClientTrainingCalendarPage = () => {
         id: workout.id,
         name: (workout as any).name || (workout as any).workout,
         isFavourite: (workout as any).isFavourite || false,
+        day_status: (workout as any).day_status || 'not_started',
       }));
     });
 
@@ -1000,8 +1017,14 @@ const ClientTrainingCalendarPage = () => {
   // - Otherwise (some completed, some not, or workout was started) → 'in_progress'
   const getWorkoutStatus = (
     workoutId: string,
-    workoutSchema?: WorkoutSection[]
+    workoutSchema?: WorkoutSection[],
+    dayStatus?: 'not_started' | 'in_progress' | 'completed'
   ): 'not_started' | 'in_progress' | 'completed' => {
+    // If day_status is provided from the API, use it as the primary source
+    if (dayStatus) {
+      return dayStatus;
+    }
+
     // Get explicit workout status from API (handles case where user clicked start but hasn't completed sets)
     const explicitStatus = workoutStatus[workoutId];
 
@@ -1859,6 +1882,10 @@ const ClientTrainingCalendarPage = () => {
           equipment: assignment.workout.equipment || [],
           created: formatDate(new Date()),
           isFavourite: false,
+          workout_data: {
+            items: assignment.workout.items || [],
+            ...DEFAULT_EXECUTION_FIELDS,
+          },
         };
 
         if (!optimisticWorkouts[dateKey]) {
@@ -1894,6 +1921,7 @@ const ClientTrainingCalendarPage = () => {
             equipment: assignment.workout.equipment || [],
             totalExercises: assignment.workout.totalExercises || 0,
             items: assignment.workout.items || [],
+            ...DEFAULT_EXECUTION_FIELDS,
           },
           isNew: true,
           skipInvalidation: true,
@@ -2317,7 +2345,10 @@ const ClientTrainingCalendarPage = () => {
                 onClick={async () => {
                   setIsSyncing(true);
                   try {
-                    const results = await queryClient.refetchQueries({ queryKey: ['client-training-calendar', clientId] });
+                    // Invalidate cache to ensure we fetch fresh data from the database
+                    await queryClient.invalidateQueries({ queryKey: ['client-training-calendar', clientId] });
+                    // Now refetch the data
+                    await queryClient.refetchQueries({ queryKey: ['client-training-calendar', clientId] });
                     // After refetch, replace local state with fresh server data
                     const freshData = {
                       ...convertCalendarData(calendarData),
@@ -2476,7 +2507,7 @@ const ClientTrainingCalendarPage = () => {
                                 {workoutsForDate.length > 0 ? (
                                   <div className="flex flex-col gap-2">
                                     {workoutsForDate.map((workout) => {
-                                      const status = getWorkoutStatus(workout.id);
+                                      const status = getWorkoutStatus(workout.id, undefined, workout.day_status);
                                       const isWorkoutInLibrary = checkIsInLibrary(workout.id);
                                       const isWorkoutCopySource = isCopyMode && copiedWorkout?.workout.id === workout.id;
                                       return (
@@ -2487,28 +2518,64 @@ const ClientTrainingCalendarPage = () => {
                                           workout={workout}
                                           isCopyMode={isCopyMode}
                                           isFutureDay={isFutureDay}
+                                          isMultiSelectMode={isMultiSelectMode}
                                         >
                                           <div
                                             role="button"
                                             tabIndex={0}
                                             aria-label={t('athletes.trainingCalendar.viewDetailsAria', { name: workout.name })}
                                             onClick={() => {
-                                              if (isCopyMode) return;
+                                              if (isCopyMode || isMultiSelectCopyMode) return;
+                                              // In multi-select mode, clicking the card toggles selection instead of opening details
+                                              if (isMultiSelectMode) {
+                                                handleToggleWorkoutSelection(dateKey, workout);
+                                                return;
+                                              }
+                                              // For in-progress or completed workouts, open the summary dialog
+                                              if (status === 'in_progress') {
+                                                setInProgressSummaryWorkout({ workout, dateKey });
+                                                return;
+                                              }
+                                              if (status === 'completed') {
+                                                setCompletedSummaryWorkout({ workout, dateKey });
+                                                return;
+                                              }
+                                              // For not_started workouts, open the workout builder
                                               handleOpenWorkoutDetails(dateKey, workout);
                                             }}
                                             onKeyDown={(event) => {
-                                              if (isCopyMode) return;
+                                              if (isCopyMode || isMultiSelectCopyMode) return;
                                               if (event.key === 'Enter' || event.key === ' ') {
                                                 event.preventDefault();
+                                                // In multi-select mode, toggle selection with keyboard
+                                                if (isMultiSelectMode) {
+                                                  handleToggleWorkoutSelection(dateKey, workout);
+                                                  return;
+                                                }
+                                                // For in-progress or completed workouts, open the summary dialog
+                                                if (status === 'in_progress') {
+                                                  setInProgressSummaryWorkout({ workout, dateKey });
+                                                  return;
+                                                }
+                                                if (status === 'completed') {
+                                                  setCompletedSummaryWorkout({ workout, dateKey });
+                                                  return;
+                                                }
+                                                // For not_started workouts, open the workout builder
                                                 handleOpenWorkoutDetails(dateKey, workout);
                                               }
                                             }}
                                             className={cn(
                                               "workout-card rounded-lg border bg-background flex flex-col items-stretch justify-start p-0 overflow-hidden transition-all duration-200 relative",
-                                              !isCopyMode && !draggedWorkout && "cursor-pointer hover:border-primary/50",
-                                              isFutureDay && !isCopyMode && !draggedWorkout && "cursor-grab active:cursor-grabbing",
+                                              !isCopyMode && !isMultiSelectMode && !draggedWorkout && "cursor-pointer hover:border-primary/50",
+                                              isMultiSelectMode && "cursor-pointer hover:border-primary/50",
+                                              isFutureDay && !isCopyMode && !isMultiSelectMode && !draggedWorkout && "cursor-grab active:cursor-grabbing",
                                               isWorkoutCopySource && "opacity-50",
-                                              "border-border"
+                                              isWorkoutSelected(dateKey, workout.id) && "border-primary",
+                                              // Status-based border colors
+                                              status === 'in_progress' && "border-amber-500",
+                                              status === 'completed' && "border-green-500",
+                                              status === 'not_started' && "border-border"
                                             )}
                                           >
                                             {/* Loading overlay for duplicate/delete operations */}
@@ -3069,6 +3136,22 @@ const ClientTrainingCalendarPage = () => {
         onSaveSuccess={handleSaveEditedWorkout}
         onSaveError={() => { }}
         onDirtyChange={() => { }}
+      />
+      <ClientInProgressTrainingDaySummary
+        open={!!inProgressSummaryWorkout}
+        onOpenChange={(open) => {
+          if (!open) setInProgressSummaryWorkout(null);
+        }}
+        workout={inProgressSummaryWorkout?.workout || null}
+        dateKey={inProgressSummaryWorkout?.dateKey || ''}
+      />
+      <ClientCompletedTrainingDaySummary
+        open={!!completedSummaryWorkout}
+        onOpenChange={(open) => {
+          if (!open) setCompletedSummaryWorkout(null);
+        }}
+        workout={completedSummaryWorkout?.workout || null}
+        dateKey={completedSummaryWorkout?.dateKey || ''}
       />
       <MultiSelectActionBar
         selectedCount={selectedWorkouts.length}

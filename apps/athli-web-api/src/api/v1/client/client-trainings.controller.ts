@@ -94,6 +94,7 @@ export const clientTrainingsController = {
                 const workouts = Array.isArray(entry.training_data) ? entry.training_data : [];
 
                 // OPTIMIZATION: Return only metadata
+                // Include day_status from the entry (applies to all workouts on this date)
                 calendar[formattedDate] = workouts.map((workout: any) => ({
                     id: workout.id,
                     workout: workout.program || workout.title || workout.name || workout.workoutName || 'Untitled Workout', // Map title/name to workout
@@ -103,6 +104,7 @@ export const clientTrainingsController = {
                     difficulty: workout.difficulty,
                     equipment: workout.equipment,
                     isFavourite: workout.isFavourite || workout.is_favourite, // Handle snake_case is_favourite
+                    day_status: entry.day_status || 'not_started', // Include day status from the entry
                     // Strip heavy fields: items, sections, workout_data
                 }));
             });

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,7 @@ import { PROGRAM_TYPES, DIFFICULTY_LEVELS } from '@/lib/constants/training';
 import { useTrainingData } from '../../training-data-context';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
 import type { WorkoutPayload, WorkoutSectionPayload, WorkoutProgramPayload } from '@/components/training/workout-schema';
+import { DEFAULT_EXECUTION_FIELDS } from '@/components/training/workout-schema';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelectActionBar } from '@/components/app/multi-select-action-bar';
 
@@ -151,6 +153,11 @@ const DraggableWorkoutCard = ({
       onClick={(e) => {
         e.stopPropagation();
         if (isDragging || isCopyMode || isMultiSelectCopyMode) return;
+        // In multi-select mode, clicking the card toggles selection instead of opening details
+        if (isMultiSelectMode) {
+          onToggleSelect(week, day, workout);
+          return;
+        }
         onClick(week, day, workout);
       }}
       onKeyDown={(event) => {
@@ -546,6 +553,7 @@ export const ProgramBuilder = ({
 }: ProgramBuilderProps) => {
   const t = useTranslations();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { workouts: availableWorkouts, refreshPrograms, refreshWorkouts } = useTrainingData();
   const [programMeta, setProgramMeta] = useState<ProgramMeta | null>(initialProgramMeta || null);
   const [selectedWeek, setSelectedWeek] = useState<string>('1');
@@ -839,6 +847,7 @@ export const ProgramBuilder = ({
             equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
             totalExercises: workout.totalExercises,
             items: workout.workout_data?.items || [],
+            ...DEFAULT_EXECUTION_FIELDS,
           };
         });
 
@@ -869,6 +878,9 @@ export const ProgramBuilder = ({
 
       // Update initial state to reflect saved state
       setInitialState({ workoutsByDay, totalWeeks });
+
+      // Invalidate programs cache to update the table
+      await queryClient.invalidateQueries({ queryKey: ['coach-programs'] });
 
       // Navigate back to programs page
       router.push('/training/programs');
@@ -1136,7 +1148,26 @@ export const ProgramBuilder = ({
       equipment: payload.equipment || [],
       created: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-'),
       isFavourite: false,
-      workout_data: { items: payload.items || [] },
+      workout_data: {
+        // Metadata fields
+        title: payload.title,
+        description: payload.description || '',
+        type: payload.type,
+        difficulty: payload.difficulty || 'intermediate',
+        equipment: payload.equipment || [],
+        totalExercises: payload.totalExercises,
+        items: payload.items || [],
+        status: payload.status,
+        startedAt: payload.startedAt,
+        completedAt: payload.completedAt,
+        totalDurationMin: payload.totalDurationMin,
+        sessionComments: payload.sessionComments,
+        totalWeightLifted: payload.totalWeightLifted,
+        intensity: payload.intensity,
+        readiness: payload.readiness,
+        overallNotes: payload.overallNotes,
+        rating: payload.rating,
+      },
     };
 
     setWorkoutsByDay((prev) => {
@@ -1180,7 +1211,24 @@ export const ProgramBuilder = ({
           equipment: payload.equipment || [],
           totalExercises: payload.totalExercises,
           workout_data: {
-            items: payload.items || []
+            // Metadata fields
+            title: payload.title,
+            description: payload.description || '',
+            type: payload.type,
+            difficulty: payload.difficulty || 'intermediate',
+            equipment: payload.equipment || [],
+            totalExercises: payload.totalExercises,
+            items: payload.items || [],
+            status: payload.status,
+            startedAt: payload.startedAt,
+            completedAt: payload.completedAt,
+            totalDurationMin: payload.totalDurationMin,
+            sessionComments: payload.sessionComments,
+            totalWeightLifted: payload.totalWeightLifted,
+            intensity: payload.intensity,
+            readiness: payload.readiness,
+            overallNotes: payload.overallNotes,
+            rating: payload.rating,
           }
         };
 
@@ -1320,6 +1368,7 @@ export const ProgramBuilder = ({
       equipment: typeof workout.equipment === 'string' ? workout.equipment.split(',').map((e: string) => e.trim()).filter((e: string) => e) : (Array.isArray(workout.equipment) ? workout.equipment : []),
       totalExercises: workout.totalExercises,
       items: workout.workout_data?.items || [],
+      ...DEFAULT_EXECUTION_FIELDS,
     };
     setWorkoutToSave(workoutPayload);
     setIsSaveToLibraryOpen(true);

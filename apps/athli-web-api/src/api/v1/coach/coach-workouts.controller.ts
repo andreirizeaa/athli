@@ -47,20 +47,27 @@ export const coachWorkoutsController = {
         }
 
         // Extract only the workout structure (items and execution tracking) for workout_data
-        // Remove metadata fields that should be stored in table columns
+        // Includes complete workout information (metadata + execution)
         const cleanWorkoutData = workout_data ? {
+            // Metadata fields
+            title: title || '',
+            description: description || '',
+            type: type || '',
+            difficulty: difficulty || 'intermediate',
+            equipment: equipment || [],
+            totalExercises: total_exercises || 0,
             items: workout_data.items || [],
-            ...(workout_data.status && { status: workout_data.status }),
-            ...(workout_data.startedAt && { startedAt: workout_data.startedAt }),
-            ...(workout_data.completedAt && { completedAt: workout_data.completedAt }),
-            ...(workout_data.totalDurationMin && { totalDurationMin: workout_data.totalDurationMin }),
-            ...(workout_data.sessionComments && { sessionComments: workout_data.sessionComments }),
-            ...(workout_data.totalWeightLifted && { totalWeightLifted: workout_data.totalWeightLifted }),
-            ...(workout_data.intensity && { intensity: workout_data.intensity }),
-            ...(workout_data.readiness && { readiness: workout_data.readiness }),
-            ...(workout_data.overallNotes && { overallNotes: workout_data.overallNotes }),
-            ...(workout_data.rating && { rating: workout_data.rating }),
-        } : { items: [] };
+            status: workout_data.status ?? 'not_started',
+            startedAt: workout_data.startedAt ?? null,
+            completedAt: workout_data.completedAt ?? null,
+            totalDurationMin: workout_data.totalDurationMin ?? null,
+            sessionComments: workout_data.sessionComments ?? [],
+            totalWeightLifted: workout_data.totalWeightLifted ?? null,
+            intensity: workout_data.intensity ?? null,
+            readiness: workout_data.readiness ?? null,
+            overallNotes: workout_data.overallNotes ?? '',
+            rating: workout_data.rating ?? null,
+        } : { items: [], status: 'not_started' };
 
         const supabase = getSupabaseClient();
         const { data: workout, error } = await supabase
@@ -126,17 +133,24 @@ export const coachWorkoutsController = {
 
         // Clean workout_data if provided
         const cleanWorkoutData = workout_data ? {
+            // Metadata fields
+            title: title || updates.title || '',
+            description: updates.description || '',
+            type: updates.type || '',
+            difficulty: updates.difficulty || 'intermediate',
+            equipment: updates.equipment || [],
+            totalExercises: updates.total_exercises || 0, // Assuming total_exercises is passed in updates
             items: workout_data.items || [],
-            ...(workout_data.status && { status: workout_data.status }),
-            ...(workout_data.startedAt && { startedAt: workout_data.startedAt }),
-            ...(workout_data.completedAt && { completedAt: workout_data.completedAt }),
-            ...(workout_data.totalDurationMin && { totalDurationMin: workout_data.totalDurationMin }),
-            ...(workout_data.sessionComments && { sessionComments: workout_data.sessionComments }),
-            ...(workout_data.totalWeightLifted && { totalWeightLifted: workout_data.totalWeightLifted }),
-            ...(workout_data.intensity && { intensity: workout_data.intensity }),
-            ...(workout_data.readiness && { readiness: workout_data.readiness }),
-            ...(workout_data.overallNotes && { overallNotes: workout_data.overallNotes }),
-            ...(workout_data.rating && { rating: workout_data.rating }),
+            status: workout_data.status ?? 'not_started',
+            startedAt: workout_data.startedAt ?? null,
+            completedAt: workout_data.completedAt ?? null,
+            totalDurationMin: workout_data.totalDurationMin ?? null,
+            sessionComments: workout_data.sessionComments ?? [],
+            totalWeightLifted: workout_data.totalWeightLifted ?? null,
+            intensity: workout_data.intensity ?? null,
+            readiness: workout_data.readiness ?? null,
+            overallNotes: workout_data.overallNotes ?? '',
+            rating: workout_data.rating ?? null,
         } : undefined;
 
         const mappedUpdates = {

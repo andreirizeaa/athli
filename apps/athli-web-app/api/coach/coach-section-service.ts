@@ -1,5 +1,5 @@
 import { apiFetch, type ApiResponse } from '@/api/api-client';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 
 export type Section = {
   id: string;
