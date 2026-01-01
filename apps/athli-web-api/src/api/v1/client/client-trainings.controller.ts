@@ -2,6 +2,35 @@ import { Request, Response } from 'express';
 import { success, unauthorized, notFound } from '../../../utils/http-response';
 import { getSupabaseClient } from '../../../services/supabase.service';
 
+/**
+ * Helper to normalize workout data structure:
+ * - Converts legacy `meta` field to `completedSummary`
+ * - Ensures workout_data uses completedSummary instead of meta
+ */
+const normalizeWorkoutData = (workout: any): any => {
+    if (!workout) return workout;
+
+    const normalized = { ...workout };
+
+    // Handle top-level meta -> completedSummary conversion
+    if (normalized.meta && !normalized.completedSummary) {
+        normalized.completedSummary = normalized.meta;
+        delete normalized.meta;
+    }
+
+    // Handle workout_data.meta -> workout_data.completedSummary conversion
+    if (normalized.workout_data) {
+        const workoutData = { ...normalized.workout_data };
+        if (workoutData.meta && !workoutData.completedSummary) {
+            workoutData.completedSummary = workoutData.meta;
+            delete workoutData.meta;
+        }
+        normalized.workout_data = workoutData;
+    }
+
+    return normalized;
+};
+
 export const clientTrainingsController = {
     /**
      * Get all trainings assigned to a client
@@ -105,8 +134,8 @@ export const clientTrainingsController = {
                     equipment: workout.equipment,
                     isFavourite: workout.isFavourite || workout.is_favourite, // Handle snake_case is_favourite
                     // Strip heavy fields: items, sections, workout_data
-                    // Include completedSummary for status tracking
-                    completedSummary: workout.completedSummary || workout.meta || null,
+                    // Include completedSummary for status tracking - check both top-level and nested in workout_data
+                    completedSummary: workout.completedSummary || workout.workout_data?.completedSummary || workout.meta || workout.workout_data?.meta || null,
                 }));
             });
         }
@@ -202,13 +231,13 @@ export const clientTrainingsController = {
         let workoutToSave: any;
 
         if (isNew && workoutPayload) {
-            // New workout created in-place
-            workoutToSave = {
+            // New workout created in-place - normalize to ensure completedSummary is used
+            workoutToSave = normalizeWorkoutData({
                 ...workoutPayload,
                 id: workoutPayload.id || `workout-${Date.now()}`,
                 assigned_by: userId,
                 assigned_at: new Date().toISOString()
-            };
+            });
         } else if (workoutId) {
             // Assigning existing workout (fetch from coach_workouts if needed, or just partial data)
             // Ideally we should fetch full workout content if not provided.
@@ -224,9 +253,11 @@ export const clientTrainingsController = {
                 if (workoutError || !coachWorkout) {
                     return res.status(404).json({ success: false, message: 'Workout not found' });
                 }
-                workoutToSave = coachWorkout;
+                // Normalize fetched workout to ensure completedSummary is used
+                workoutToSave = normalizeWorkoutData(coachWorkout);
             } else {
-                workoutToSave = workoutPayload;
+                // Normalize provided payload to ensure completedSummary is used
+                workoutToSave = normalizeWorkoutData(workoutPayload);
             }
 
             // Ensure ID is preserved or made unique for this instance?
@@ -413,16 +444,16 @@ export const clientTrainingsController = {
             return res.status(404).json({ success: false, message: 'Workout not found in source date' });
         }
 
-        // 2. Create new workout with unique ID
+        // 2. Create new workout with unique ID and normalize to ensure completedSummary is used
         const newWorkoutId = `${sourceWorkoutId.split('-')[0]}-${targetDate}-${Date.now()}`;
-        const duplicatedWorkout = {
+        const duplicatedWorkout = normalizeWorkoutData({
             ...workoutToDuplicate,
             id: newWorkoutId,
             duplicated_from: sourceWorkoutId,
             duplicated_at: new Date().toISOString(),
             assigned_by: userId,
             assigned_at: new Date().toISOString()
-        };
+        });
 
         // 3. Fetch or create target date entry
         const { data: targetEntry, error: targetFetchError } = await supabase

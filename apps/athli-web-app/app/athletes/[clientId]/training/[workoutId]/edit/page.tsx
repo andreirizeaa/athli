@@ -22,7 +22,7 @@ import { DiscardChangesDialog } from '@/components/app/discard-changes-dialog';
 import { mockWorkouts } from '@/components/app/app-shell';
 
 type WorkoutMeta = {
-  title: string;
+  name: string;
   description: string;
   type: string;
   difficulty: string;
@@ -100,7 +100,7 @@ const EditTrainingCalendarWorkoutPage = () => {
     const workout = mockWorkouts.find((w) => w.id === workoutId);
     if (workout) {
       setWorkoutMeta({
-        title: workout.name || 'Workout',
+        name: workout.name || 'Workout',
         description: workout.description || '',
         type: workout.type || 'Push',
         difficulty: 'Intermediate',
@@ -153,7 +153,7 @@ const EditTrainingCalendarWorkoutPage = () => {
     // eslint-disable-next-line no-console
     console.log(payload);
 
-    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.title }), {
+    toast.success(t('workouts.edit.toast.updatedSuccessfully', { name: payload.name }), {
       style: {
         background: 'rgb(220 252 231)',
         color: 'rgb(20 83 45)',
@@ -215,14 +215,14 @@ const EditTrainingCalendarWorkoutPage = () => {
                     </BreadcrumbItem>
                   </>
                 )}
-                {workoutMeta.title && (
+                {workoutMeta.name && (
                   <>
                     <BreadcrumbSeparator className="text-muted-foreground/60">
                       <ChevronRight className="h-2 w-2" />
                     </BreadcrumbSeparator>
                     <BreadcrumbItem>
                       <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                        {workoutMeta.title}
+                        {workoutMeta.name}
                       </BreadcrumbPage>
                     </BreadcrumbItem>
                   </>

@@ -931,7 +931,7 @@ const WorkoutsPage = () => {
           initialData={selectedWorkoutData}
           isLoadingInitialData={isLoadingWorkoutData}
           meta={{
-            title: selectedWorkoutForBuilder.name,
+            name: selectedWorkoutForBuilder.name,
             description: selectedWorkoutForBuilder.description,
             type: selectedWorkoutForBuilder.type,
             difficulty: selectedWorkoutForBuilder.difficulty,

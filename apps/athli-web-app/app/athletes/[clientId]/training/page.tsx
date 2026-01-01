@@ -2407,17 +2407,25 @@ const ClientTrainingCalendarPage = () => {
                 onClick={async () => {
                   setIsSyncing(true);
                   try {
-                    // Invalidate cache to ensure we fetch fresh data from the database
+                    // Invalidate cache
                     await queryClient.invalidateQueries({ queryKey: ['client-training-calendar', clientId] });
-                    // Now refetch the data
-                    await queryClient.refetchQueries({ queryKey: ['client-training-calendar', clientId] });
-                    // After refetch, replace local state with fresh server data
-                    const freshData = {
-                      ...convertCalendarData(calendarData),
-                    };
-                    if (Object.keys(freshData).length > 0) {
-                      setWorkoutsByDate(freshData);
-                    }
+
+                    // Explicitly fetch the current view's data
+                    const freshServerData = await queryClient.fetchQuery({
+                      queryKey: ['client-training-calendar', clientId, startDateStr, endDateStr],
+                      queryFn: () => getTrainingCalendarRange(clientId, startDateStr, endDateStr),
+                      staleTime: 0
+                    });
+
+                    // Replace local state with fresh server data (Hard Reset)
+                    // This handles empty data correctly (e.g. all workouts deleted)
+                    const convertedData = convertCalendarData(freshServerData);
+                    setWorkoutsByDate(convertedData);
+
+                    toast.success(t('general.success'));
+                  } catch (error) {
+                    console.error('Sync failed', error);
+                    toast.error(t('general.error'));
                   } finally {
                     setIsSyncing(false);
                   }
@@ -3182,12 +3190,12 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
         meta={editingWorkout ? {
-          title: editingWorkout.workout.name,
+          name: editingWorkout.workout.name,
           type: editingWorkout.workout.type,
           difficulty: editingWorkout.workout.difficulty || 'Intermediate',
           description: editingWorkout.workout.description || '',
         } : {
-          title: '',
+          name: '',
           type: '',
           difficulty: 'Intermediate',
           description: '',

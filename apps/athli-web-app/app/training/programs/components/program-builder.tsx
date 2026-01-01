@@ -1353,7 +1353,7 @@ export const ProgramBuilder = ({
       totalExercises: workout.totalExercises || 0,
       pre: workout.pre || (workout as any).workout_data?.pre || { readiness: null },
       post: workout.post || (workout as any).workout_data?.post || { rating: null, intensity: null, overallNotes: '', sessionComments: '' },
-      completedSummary: workout.completedSummary || (workout as any).workout_data?.meta || (workout as any).workout_data?.completedSummary || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
+      completedSummary: workout.completedSummary || (workout as any).workout_data?.completedSummary || (workout as any).workout_data?.meta || { status: 'not_started', startedAt: null, completedAt: null, totalDurationMin: null, totalWeightLifted: null },
     });
     setIsLoadingWorkoutData(false);
     setIsWorkoutBuilderOpen(true);
@@ -2370,12 +2370,12 @@ export const ProgramBuilder = ({
           }
         }}
         meta={editingWorkout ? {
-          title: editingWorkout.workout.name,
+          name: editingWorkout.workout.name,
           type: editingWorkout.workout.details?.type || '',
           difficulty: editingWorkout.workout.details?.difficulty || 'intermediate',
           description: editingWorkout.workout.details?.description || '',
         } : {
-          title: '',
+          name: '',
           type: '',
           difficulty: 'Intermediate',
           description: '',
