@@ -4,28 +4,9 @@ import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  Search,
-  Send,
-  Paperclip,
-  X,
-  Filter,
-  User,
-  Check,
-  ArrowUpNarrowWide,
-  ArrowDownWideNarrow,
-  CalendarDays,
-  Dumbbell,
-  Plus,
   Image as ImageIcon,
   FileText,
-  ArrowUp,
-  Reply,
   Trash2,
-  Video,
-  NotebookPen,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Mic,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -33,9 +14,7 @@ import { Label } from '@/components/ui/label';
 import { RequiredAsterisk } from '@/components/ui/required-asterisk';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,6 +50,10 @@ import { SidePanel } from '@/components/app/side-panel';
 import { AssignAthletesList } from '@/components/app/assign-athletes-list';
 import { BroadcastSidePanel } from '@/app/messaging/components/broadcast-side-panel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { MessagingSidebar } from './components/messaging-sidebar';
+import { ChatHeader } from './components/chat-header';
+import { MessageList } from './components/message-list';
+import { MessageInput } from './components/message-input';
 
 type Note = {
   id: string;
@@ -1561,6 +1544,45 @@ const MessagingPage = () => {
     });
   };
 
+  const handleDeleteMessage = (messageId: string) => {
+    setMessages((prev) => {
+      const updated = { ...prev };
+      if (updated[selectedContactId!]) {
+        updated[selectedContactId!] = updated[selectedContactId!].filter(
+          (msg) => msg.id !== messageId
+        );
+      }
+      return updated;
+    });
+    // Clear draft if this was the last message or if we're deleting a draft
+    if (selectedContactId) {
+      const currentMessages = messages[selectedContactId] || [];
+      if (currentMessages.length === 1) {
+        // If this is the only message, clear the draft
+        messageDraftStorage.removeDraft(selectedContactId);
+        updateDraftsState();
+      }
+    }
+  };
+
+  const handleDeleteAllImages = (messageId: string) => {
+    setMessages((prev) => {
+      const updated = { ...prev };
+      if (updated[selectedContactId!]) {
+        updated[selectedContactId!] = updated[selectedContactId!].map((msg) => {
+          if (msg.id === messageId) {
+            return {
+              ...msg,
+              images: undefined,
+            };
+          }
+          return msg;
+        });
+      }
+      return updated;
+    });
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -1573,228 +1595,21 @@ const MessagingPage = () => {
     return timestamp;
   };
 
-  const parseTimeToMinutes = (timeString: string): number => {
-    // Parse time string like "2:30 PM" or "14:30"
-    const match = timeString.match(/(\d+):(\d+)\s*(AM|PM)?/i);
-    if (!match) return 0;
-
-    let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const period = match[3]?.toUpperCase();
-
-    if (period === 'PM' && hours !== 12) {
-      hours += 12;
-    } else if (period === 'AM' && hours === 12) {
-      hours = 0;
-    }
-
-    return hours * 60 + minutes;
-  };
-
-  const getTimeDifferenceInMinutes = (time1: string, time2: string): number => {
-    const minutes1 = parseTimeToMinutes(time1);
-    const minutes2 = parseTimeToMinutes(time2);
-    // Handle day rollover (e.g., 11:59 PM to 12:01 AM)
-    if (minutes2 < minutes1) {
-      return 24 * 60 - minutes1 + minutes2;
-    }
-    return minutes2 - minutes1;
-  };
-
-  const shouldShowTimestamp = (message: Message, index: number, messages: Message[]): boolean => {
-    // Always show timestamp on the last message
-    if (index === messages.length - 1) {
-      return true;
-    }
-
-    const nextMessage = messages[index + 1];
-    if (!nextMessage) {
-      return true;
-    }
-
-    // Show timestamp if next message is from different sender
-    if (nextMessage.isSent !== message.isSent) {
-      return true;
-    }
-
-    // Show timestamp if next message is more than 2 minutes away
-    const timeDiff = getTimeDifferenceInMinutes(message.timestamp, nextMessage.timestamp);
-    if (timeDiff > 2) {
-      return true;
-    }
-
-    // Don't show timestamp if next message is from same sender and within 2 minutes
-    // (The timestamp will show on the last message of the group)
-    return false;
-  };
-
-  const isInSameGroup = (message: Message, index: number, messages: Message[]): boolean => {
-    // Check if this message is part of the same group as the next message
-    if (index === messages.length - 1) {
-      return false;
-    }
-
-    const nextMessage = messages[index + 1];
-    if (!nextMessage) {
-      return false;
-    }
-
-    // Same group if same sender and within 2 minutes
-    if (nextMessage.isSent !== message.isSent) {
-      return false;
-    }
-
-    const timeDiff = getTimeDifferenceInMinutes(message.timestamp, nextMessage.timestamp);
-    return timeDiff <= 2;
-  };
 
   return (
     <div className="h-full w-full flex flex-col">
       <div className="w-full flex-1 overflow-hidden">
         <div className="h-full w-full flex">
           {/* Left Column - Contacts Sidebar */}
-          <div
-            className={cn(
-              'bg-muted/30 h-full overflow-hidden flex flex-col border-r transition-all duration-300 ease-in-out',
-              isSidebarCollapsed ? 'w-[64px]' : 'w-[320px]'
-            )}
-          >
-            <div className="flex flex-col h-full grow min-w-0">
-              <div className="px-4 pt-2 flex flex-col gap-4">
-                {/* Header Row: Title + Toggle Button (Fixed Height) */}
-                <div className="h-8 relative">
-                  {/* Expanded: Title + Close Button */}
-                  <div
-                    className={cn(
-                      'absolute inset-0 flex items-center justify-between transition-all duration-300',
-                      isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
-                    )}
-                  >
-                    <h2 className="text-xl font-semibold whitespace-nowrap">
-                      {t('messages.title')}
-                    </h2>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-                            onClick={() => setIsSidebarCollapsed(true)}
-                          >
-                            <PanelLeftClose className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          <p>{t('sidebar.actions.closeSidebar')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-
-                  {/* Collapsed: Open Button (Same Position) */}
-                  <div
-                    className={cn(
-                      'absolute inset-0 flex items-center transition-all duration-300',
-                      isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
-                    )}
-                  >
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-                            onClick={() => setIsSidebarCollapsed(false)}
-                          >
-                            <PanelLeftOpen className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          <p>{t('sidebar.actions.openSidebar')}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                </div>
-
-                {/* Search Row: Input or Icon (Fixed Height) */}
-                <div className="h-12 pb-2 relative">
-                  {/* Expanded: Search Input */}
-                  <div
-                    className={cn(
-                      'absolute inset-0 transition-all duration-300',
-                      isSidebarCollapsed ? 'opacity-0 invisible' : 'opacity-100 visible'
-                    )}
-                  >
-                    <div className="relative w-full">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
-                      <Input
-                        type="text"
-                        placeholder={t('messages.searchPlaceholder')}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-8 h-9"
-                        aria-label={t('messages.searchPlaceholder')}
-                      />
-                      {searchQuery && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 -translate-y-1/2 size-7 text-muted-foreground hover:text-foreground"
-                          onClick={() => setSearchQuery('')}
-                        >
-                          <X className="size-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Collapsed: Search Icon (Same Position) */}
-                  <div
-                    className={cn(
-                      'absolute inset-0 flex items-center transition-all duration-300',
-                      isSidebarCollapsed ? 'opacity-100 visible' : 'opacity-0 invisible'
-                    )}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-muted-foreground hover:text-foreground shrink-0"
-                      onClick={() => setIsSidebarCollapsed(false)}
-                    >
-                      <Search className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 overflow-auto">
-                <div className="block min-w-0 border-t border-border">
-                  {filteredContacts.length ? (
-                    filteredContacts.map((contact) => (
-                      <ContactListItem
-                        contact={contact}
-                        key={contact.id}
-                        active={selectedContactId === contact.id}
-                        isCollapsed={isSidebarCollapsed}
-                        hasDraft={hasDraft(contact.id)}
-                        onClick={() => {
-                          setIsSidebarCollapsed(true);
-                          router.push(`/messaging/${contact.id}`);
-                        }}
-                        onViewProfile={() => router.push(`/athletes/${contact.id}/overview`)}
-                      />
-                    ))
-                  ) : (
-                    <div className="text-muted-foreground mt-4 text-center text-sm">
-                      {t('messages.noContactsFound')}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          <MessagingSidebar
+            isSidebarCollapsed={isSidebarCollapsed}
+            setIsSidebarCollapsed={setIsSidebarCollapsed}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            filteredContacts={filteredContacts}
+            selectedContactId={selectedContactId}
+            hasDraft={hasDraft}
+          />
           {/* Middle Column - Chat (80%) */}
           <div
             className="relative flex-1 h-full"
@@ -1827,1064 +1642,89 @@ const MessagingPage = () => {
             <div className="h-full overflow-y-auto flex flex-col">
               {selectedContact ? (
                 <>
-                  {/* Message Header */}
-                  <div className="flex items-center justify-between px-4 h-[48px] flex-shrink-0 border-b border-border">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Avatar className="h-8 w-8 flex-shrink-0 rounded-full">
-                        <AvatarImage src={selectedContact.avatar} alt={selectedContact.name} className="rounded-full" />
-                        <AvatarFallback className="rounded-full">{getInitials(selectedContact.name)}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm truncate mb-[1px]">
-                          {selectedContact.name}
-                        </h3>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              onClick={() =>
-                                router.push(`/athletes/${selectedContact.id}/training`)
-                              }
-                              className="h-9 w-9 rounded-full p-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                              aria-label={t('messages.viewTrainingCalendar')}
-                            >
-                              <Dumbbell className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>{t('messages.viewTrainingCalendar')}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              onClick={() => router.push(`/athletes/${selectedContact.id}/overview`)}
-                              className="h-9 w-9 rounded-full p-0 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                              aria-label={t('general.profile')}
-                            >
-                              <User className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              {t('messages.viewProfile', {
-                                name:
-                                  selectedContact.name.split(' ')[0] || selectedContact.name,
-                              })}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </div>
+                  <ChatHeader
+                    selectedContact={selectedContact}
+                    onViewTraining={() => router.push(`/athletes/${selectedContact.id}/training`)}
+                    onViewProfile={() => router.push(`/athletes/${selectedContact.id}/overview`)}
+                  />
 
-                  {/* Messages List */}
-                  <ScrollArea className="flex-1 min-h-0">
-                    <div className="flex flex-col px-4 pt-2">
-                      {currentMessages.map((message, index) => {
-                        const isLastInSequence =
-                          index === currentMessages.length - 1 ||
-                          currentMessages[index + 1]?.isSent !== message.isSent;
+                  <MessageList
+                    messages={currentMessages}
+                    selectedContact={selectedContact}
+                    onReply={(message) => {
+                      setReplyingToMessage(message);
+                      setTextareaHeight(60);
+                      setTimeout(() => {
+                        textareaRef.current?.focus();
+                      }, 100);
+                    }}
+                    onDeleteMessage={handleDeleteMessage}
+                    onDeleteMessageImage={handleDeleteMessageImage}
+                    onDeleteMessagePdf={handleDeleteMessagePdf}
+                    onDeleteMessageVideo={handleDeleteMessageVideo}
+                    onDeleteAllImages={handleDeleteAllImages}
+                    messagesEndRef={messagesEndRef}
+                  />
 
-                        const showTimestamp = shouldShowTimestamp(message, index, currentMessages);
-                        const inSameGroup = isInSameGroup(message, index, currentMessages);
-
-                        return (
-                          <div
-                            key={message.id}
-                            className={cn(
-                              'flex flex-col relative',
-                              message.isSent ? 'items-end' : 'items-start',
-                              inSameGroup ? 'mb-1' : 'mb-4'
-                            )}
-                          >
-                            {/* Images Preview */}
-                            {message.images && message.images.length > 0 && (
-                              <div
-                                className={cn(
-                                  'mb-2 max-w-[80%] px-2 bg-background/50 rounded-lg relative group',
-                                  message.isSent ? 'items-end' : 'items-start'
-                                )}
-                                style={{ borderRadius: '18px' }}
-                              >
-                                <div className="flex gap-2 overflow-x-auto">
-                                  {message.images.map((image, imageIndex) => (
-                                    <div key={imageIndex} className="relative flex-shrink-0">
-                                      <div
-                                        className="cursor-pointer"
-                                        onClick={() => {
-                                          // Download image
-                                          const byteString = atob(image.data.split(',')[1]);
-                                          const ab = new ArrayBuffer(byteString.length);
-                                          const ia = new Uint8Array(ab);
-                                          for (let i = 0; i < byteString.length; i++) {
-                                            ia[i] = byteString.charCodeAt(i);
-                                          }
-                                          const blob = new Blob([ab], { type: image.type });
-                                          const url = URL.createObjectURL(blob);
-                                          const link = document.createElement('a');
-                                          link.href = url;
-                                          link.download = image.name;
-                                          document.body.appendChild(link);
-                                          link.click();
-                                          document.body.removeChild(link);
-                                          URL.revokeObjectURL(url);
-                                        }}
-                                        role="button"
-                                        tabIndex={0}
-                                        aria-label={t('messages.download', { name: image.name })}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter' || e.key === ' ') {
-                                            e.preventDefault();
-                                            // Download image
-                                            const byteString = atob(image.data.split(',')[1]);
-                                            const ab = new ArrayBuffer(byteString.length);
-                                            const ia = new Uint8Array(ab);
-                                            for (let i = 0; i < byteString.length; i++) {
-                                              ia[i] = byteString.charCodeAt(i);
-                                            }
-                                            const blob = new Blob([ab], { type: image.type });
-                                            const url = URL.createObjectURL(blob);
-                                            const link = document.createElement('a');
-                                            link.href = url;
-                                            link.download = image.name;
-                                            document.body.appendChild(link);
-                                            link.click();
-                                            document.body.removeChild(link);
-                                            URL.revokeObjectURL(url);
-                                          }
-                                        }}
-                                      >
-                                        <div className="bg-muted rounded-lg p-1.5 hover:bg-muted/80 transition-colors">
-                                          <div className="w-24 h-24 flex items-center justify-center overflow-hidden rounded-md">
-                                            <img
-                                              src={image.data}
-                                              alt={image.name}
-                                              className="w-full h-full object-cover"
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                                <div
-                                  className={cn(
-                                    'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                    message.isSent
-                                      ? 'right-full mr-2 flex-row-reverse'
-                                      : 'left-full ml-2'
-                                  )}
-                                >
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label={t('messages.reply')}
-                                          onClick={() => {
-                                            setReplyingToMessage(message);
-                                            setTextareaHeight(60);
-                                            setTimeout(() => {
-                                              textareaRef.current?.focus();
-                                            }, 100);
-                                          }}
-                                        >
-                                          <Reply className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{t('messages.reply')}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {message.isSent && (
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label={t('messages.deleteImages')}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
-                                        <DropdownMenuItem
-                                          onClick={() => {
-                                            setMessages((prev) => {
-                                              const updated = { ...prev };
-                                              if (updated[selectedContactId!]) {
-                                                updated[selectedContactId!] = updated[
-                                                  selectedContactId!
-                                                ].map((msg) => {
-                                                  if (msg.id === message.id) {
-                                                    return {
-                                                      ...msg,
-                                                      images: undefined,
-                                                    };
-                                                  }
-                                                  return msg;
-                                                });
-                                              }
-                                              return updated;
-                                            });
-                                          }}
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          {t('messages.deleteAllImages')}
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            {/* PDF Preview */}
-                            {message.pdf && (
-                              <div
-                                className={cn(
-                                  'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border relative group',
-                                  message.isSent ? 'items-end' : 'items-start'
-                                )}
-                                style={{ borderRadius: '18px' }}
-                              >
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label={t('messages.download', { name: message.pdf.name })}
-                                  onClick={() => handleDownloadMessagePdf(message.pdf)}
-                                  onKeyDown={(e) => handleMessagePdfPreviewKeyDown(e, message.pdf)}
-                                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                                >
-                                  <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                    <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-foreground truncate">
-                                      {message.pdf.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">{t('messages.pdf')}</p>
-                                  </div>
-                                </div>
-                                <div
-                                  className={cn(
-                                    'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                    message.isSent
-                                      ? 'right-full mr-2 flex-row-reverse'
-                                      : 'left-full ml-2'
-                                  )}
-                                >
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label={t('messages.reply')}
-                                          onClick={() => {
-                                            setReplyingToMessage(message);
-                                            setTextareaHeight(60);
-                                            setTimeout(() => {
-                                              textareaRef.current?.focus();
-                                            }, 100);
-                                          }}
-                                        >
-                                          <Reply className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{t('messages.reply')}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {message.isSent && (
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label={t('messages.deletePdf')}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
-                                        <DropdownMenuItem
-                                          onClick={() => {
-                                            handleDeleteMessagePdf(message.id);
-                                          }}
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          {t('general.delete')}
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            {/* Video Preview */}
-                            {message.video && (
-                              <div
-                                className={cn(
-                                  'mb-2 max-w-[80%] px-3 py-2 bg-background/50 rounded-lg border relative group',
-                                  message.isSent ? 'items-end' : 'items-start'
-                                )}
-                                style={{ borderRadius: '18px' }}
-                              >
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label={t('messages.download', {
-                                    name: message.video?.name || t('messages.video'),
-                                  })}
-                                  onClick={() =>
-                                    message.video && handleDownloadMessageVideo(message.video)
-                                  }
-                                  onKeyDown={(e) =>
-                                    message.video &&
-                                    handleMessageVideoPreviewKeyDown(e, message.video)
-                                  }
-                                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                                >
-                                  <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                    <Video className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-foreground truncate">
-                                      {message.video?.name || t('messages.video')}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">{t('messages.mp4')}</p>
-                                  </div>
-                                </div>
-                                <div
-                                  className={cn(
-                                    'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                    message.isSent
-                                      ? 'right-full mr-2 flex-row-reverse'
-                                      : 'left-full ml-2'
-                                  )}
-                                >
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label={t('messages.reply')}
-                                          onClick={() => {
-                                            setReplyingToMessage(message);
-                                            setTextareaHeight(60);
-                                            setTimeout(() => {
-                                              textareaRef.current?.focus();
-                                            }, 100);
-                                          }}
-                                        >
-                                          <Reply className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{t('messages.reply')}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {message.isSent && (
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label={t('messages.deleteVideo')}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
-                                        <DropdownMenuItem
-                                          onClick={() => {
-                                            handleDeleteMessageVideo(message.id);
-                                          }}
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          {t('general.delete')}
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            {/* Message Bubble - show if there's text */}
-                            {message.text.trim() && (
-                              <div
-                                className={cn(
-                                  'max-w-[80%] rounded-xl px-2 py-2 relative group',
-                                  message.isSent
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-sidebar text-foreground',
-                                  isLastInSequence && message.isSent && 'rounded-br-sm',
-                                  isLastInSequence && !message.isSent && 'rounded-bl-sm'
-                                )}
-                              >
-                                <div
-                                  className={cn(
-                                    'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-1',
-                                    message.isSent
-                                      ? 'right-full mr-2 flex-row-reverse'
-                                      : 'left-full ml-2',
-                                    openDeleteMenuId === message.id && 'opacity-100'
-                                  )}
-                                >
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                          aria-label={t('messages.reply')}
-                                          onClick={() => {
-                                            setReplyingToMessage(message);
-                                            // Force textarea to be multi-line
-                                            setTextareaHeight(60);
-                                            // Focus the textarea after a brief delay
-                                            setTimeout(() => {
-                                              textareaRef.current?.focus();
-                                            }, 100);
-                                          }}
-                                        >
-                                          <Reply className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{t('messages.reply')}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  {message.isSent && (
-                                    <DropdownMenu
-                                      open={openDeleteMenuId === message.id}
-                                      onOpenChange={(open) => {
-                                        setOpenDeleteMenuId(open ? message.id : null);
-                                      }}
-                                    >
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 data-[state=open]:bg-gray-200 dark:data-[state=open]:bg-white/10"
-                                          aria-label={t('messages.deleteMessage')}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align={message.isSent ? 'end' : 'start'}>
-                                        <DropdownMenuItem
-                                          onClick={() => {
-                                            // Delete message functionality
-                                            setMessages((prev) => {
-                                              const updated = { ...prev };
-                                              if (updated[selectedContactId!]) {
-                                                updated[selectedContactId!] = updated[
-                                                  selectedContactId!
-                                                ].filter((msg) => msg.id !== message.id);
-                                              }
-                                              return updated;
-                                            });
-                                            // Clear draft if this was the last message or if we're deleting a draft
-                                            if (selectedContactId) {
-                                              const currentMessages =
-                                                messages[selectedContactId] || [];
-                                              if (currentMessages.length === 1) {
-                                                // If this is the only message, clear the draft
-                                                messageDraftStorage.removeDraft(selectedContactId);
-                                                updateDraftsState();
-                                              }
-                                            }
-                                            setOpenDeleteMenuId(null);
-                                          }}
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          {t('general.delete')}
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  )}
-                                </div>
-                                {message.replyTo && (
-                                  <div
-                                    className={cn(
-                                      'mb-2 px-1.5 py-1.5 rounded-[10px] border-l-4',
-                                      message.isSent
-                                        ? message.replyTo.isSent
-                                          ? 'bg-primary/15 border-primary'
-                                          : 'bg-primary/15 border-muted'
-                                        : 'bg-background/50 border-muted'
-                                    )}
-                                  >
-                                    <div className="flex items-center gap-1.5 mb-1">
-                                      <Reply
-                                        className={cn(
-                                          'h-3 w-3 flex-shrink-0',
-                                          'text-muted-foreground'
-                                        )}
-                                      />
-                                      <span
-                                        className={cn('text-xs font-semibold', 'text-foreground')}
-                                      >
-                                        {message.replyTo.isSent
-                                          ? t('messages.yourself')
-                                          : selectedContact?.name || 'user'}
-                                      </span>
-                                    </div>
-                                    {message.replyTo.images &&
-                                      message.replyTo.images.length > 0 && (
-                                        <div className="flex gap-1 mb-1 overflow-x-auto">
-                                          {message.replyTo.images
-                                            .slice(0, 3)
-                                            .map((image, index) => (
-                                              <div key={index} className="flex-shrink-0">
-                                                <div className="w-10 h-10 flex items-center justify-center overflow-hidden rounded-md bg-muted">
-                                                  <img
-                                                    src={image.data}
-                                                    alt={image.name}
-                                                    className="w-full h-full object-cover"
-                                                  />
-                                                </div>
-                                              </div>
-                                            ))}
-                                          {message.replyTo.images.length > 3 && (
-                                            <div className="w-10 h-10 flex items-center justify-center rounded-md bg-muted text-[10px] text-muted-foreground">
-                                              +{message.replyTo.images.length - 3}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    {message.replyTo.pdf && (
-                                      <div className="flex items-center gap-1.5 mb-1">
-                                        <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                        <span className="text-xs text-foreground/80 truncate">
-                                          {message.replyTo.pdf.name}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {message.replyTo.video && (
-                                      <div className="flex items-center gap-1.5 mb-1">
-                                        <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                        <span className="text-xs text-foreground/80 truncate">
-                                          {message.replyTo.video.name}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {message.replyTo.text && (
-                                      <p
-                                        className={cn(
-                                          'text-xs line-clamp-2 truncate',
-                                          'text-foreground/80'
-                                        )}
-                                      >
-                                        {message.replyTo.text}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                                {message.text.trim() && (
-                                  <p className="text-sm whitespace-pre-wrap break-words">
-                                    {message.text}
-                                  </p>
-                                )}
-                                {isLastInSequence && (
-                                  <>
-                                    {message.isSent ? (
-                                      <div
-                                        className="absolute -bottom-1 right-0 w-0 h-0 border-l-[8px] border-l-transparent border-r-0"
-                                        style={{
-                                          borderTop: '8px solid hsl(var(--primary))',
-                                        }}
-                                      />
-                                    ) : (
-                                      <div
-                                        className="absolute -bottom-1 left-0 w-0 h-0"
-                                        style={{
-                                          borderRight: '8px solid transparent',
-                                          borderTop: '8px solid hsl(var(--sidebar))',
-                                          borderLeft: '0 solid transparent',
-                                        }}
-                                      />
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            )}
-                            {showTimestamp && (
-                              <p
-                                className={cn(
-                                  'text-xs mt-1 text-muted-foreground',
-                                  message.isSent ? 'text-right' : 'text-left'
-                                )}
-                              >
-                                {formatTime(message.timestamp)}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  </ScrollArea>
-
-                  {/* Message Input */}
-                  <div className="px-4 py-2 flex-shrink-0 border-t border-border">
-                    <div
-                      className={cn(
-                        'relative flex bg-sidebar px-3 py-1 transition-all duration-700 ease-in-out rounded-lg',
-                        textareaHeight > 36 ||
-                          replyingToMessage ||
-                          attachedPdf ||
-                          attachedVideo ||
-                          attachedImages.length > 0
-                          ? 'flex-col'
-                          : 'items-center min-h-[40px]'
-                      )}
-                    >
-                      {/* Images Preview */}
-                      {attachedImages.length > 0 && (
-                        <div
-                          className="mb-2 px-3 py-2 bg-background/50"
-                          style={{ borderRadius: '18px' }}
-                        >
-                          <div className="flex gap-2 overflow-x-auto">
-                            {attachedImages.map((image, index) => (
-                              <div key={index} className="relative group flex-shrink-0">
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label={t('messages.download', { name: image.name })}
-                                  onClick={() => handleDownloadImage(image)}
-                                  onKeyDown={(e) => handleImagePreviewKeyDown(e, image)}
-                                  className="bg-muted rounded-lg p-1.5 cursor-pointer hover:bg-muted/80 transition-colors"
-                                >
-                                  <div className="w-24 h-24 flex items-center justify-center overflow-hidden rounded-md">
-                                    <img
-                                      src={URL.createObjectURL(image)}
-                                      alt={image.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="absolute -top-1 -right-1 h-5 w-5 bg-background border border-border hover:bg-destructive hover:text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveImage(index);
-                                  }}
-                                  aria-label={t('messages.remove', { name: image.name })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      handleRemoveImage(index);
-                                    }
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {attachedPdf && (
-                        <div
-                          className="mb-2 px-3 py-2 bg-background/50"
-                          style={{ borderRadius: '18px' }}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              aria-label={t('messages.download', { name: attachedPdf.name })}
-                              onClick={handleDownloadPdf}
-                              onKeyDown={handlePdfPreviewKeyDown}
-                              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            >
-                              <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {attachedPdf.name}
-                                </p>
-                                <p className="text-xs text-muted-foreground">PDF</p>
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 flex-shrink-0"
-                              onClick={handleRemovePdf}
-                              aria-label={t('messages.removePdf')}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      {attachedVideo && (
-                        <div
-                          className="mb-2 px-3 py-2 bg-background/50"
-                          style={{ borderRadius: '18px' }}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              aria-label={t('messages.download', { name: attachedVideo.name })}
-                              onClick={handleDownloadVideo}
-                              onKeyDown={handleVideoPreviewKeyDown}
-                              className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-                            >
-                              <div className="flex items-center justify-center h-10 w-10 rounded-md bg-orange-100 dark:bg-orange-900/30 flex-shrink-0">
-                                <Video className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">
-                                  {attachedVideo.name}
-                                </p>
-                                <p className="text-xs text-muted-foreground">{t('messages.mp4')}</p>
-                              </div>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 flex-shrink-0"
-                              onClick={handleRemoveVideo}
-                              aria-label={t('messages.removeVideo')}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      {replyingToMessage && (
-                        <div
-                          className="mb-2 px-3 py-2 bg-background/50"
-                          style={{ borderRadius: '18px' }}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Reply className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                <span className="text-xs font-semibold text-foreground">
-                                  {replyingToMessage.isSent
-                                    ? t('messages.yourself')
-                                    : selectedContact?.name || 'user'}
-                                </span>
-                              </div>
-                              {replyingToMessage.images && replyingToMessage.images.length > 0 && (
-                                <div className="flex gap-1.5 mb-1.5 overflow-x-auto">
-                                  {replyingToMessage.images.slice(0, 3).map((image, index) => (
-                                    <div key={index} className="flex-shrink-0">
-                                      <div className="w-12 h-12 flex items-center justify-center overflow-hidden rounded-md bg-muted">
-                                        <img
-                                          src={image.data}
-                                          alt={image.name}
-                                          className="w-full h-full object-cover"
-                                        />
-                                      </div>
-                                    </div>
-                                  ))}
-                                  {replyingToMessage.images.length > 3 && (
-                                    <div className="w-12 h-12 flex items-center justify-center rounded-md bg-muted text-xs text-muted-foreground">
-                                      +{replyingToMessage.images.length - 3}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              {replyingToMessage.pdf && (
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  <FileText className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                  <span className="text-xs text-foreground truncate">
-                                    {replyingToMessage.pdf.name}
-                                  </span>
-                                </div>
-                              )}
-                              {replyingToMessage.video && (
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  <Video className="h-3 w-3 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                  <span className="text-xs text-foreground truncate">
-                                    {replyingToMessage.video.name}
-                                  </span>
-                                </div>
-                              )}
-                              {replyingToMessage.text && (
-                                <p className="text-sm text-foreground line-clamp-2 truncate">
-                                  {replyingToMessage.text}
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 flex-shrink-0"
-                              onClick={() => {
-                                setReplyingToMessage(null);
-                                setTextareaHeight(36);
-                              }}
-                              aria-label={t('messages.cancelReply')}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileChange}
-                        aria-label={t('messages.uploadFile')}
-                        accept="*/*"
-                      />
-                      <input
-                        ref={imageInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handleImageChange}
-                        aria-label={t('messages.uploadImage')}
-                        accept="image/*"
-                        multiple
-                      />
-                      <input
-                        ref={pdfInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handlePdfChange}
-                        aria-label={t('messages.uploadPdf')}
-                        accept=".pdf"
-                      />
-                      <input
-                        ref={videoInputRef}
-                        type="file"
-                        className="hidden"
-                        onChange={handleVideoChange}
-                        aria-label={t('messages.uploadVideo')}
-                        accept="video/mp4,.mp4"
-                      />
-                      {(!textareaHeight || textareaHeight <= 36) &&
-                        !replyingToMessage &&
-                        !attachedPdf &&
-                        !attachedVideo &&
-                        attachedImages.length === 0 ? (
-                        <div className="flex items-center gap-0.5 mr-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <DropdownMenu>
-                                <TooltipTrigger asChild>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                      aria-label={t('messages.attachFile')}
-                                    >
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                </TooltipTrigger>
-                                <DropdownMenuContent align="start">
-                                  <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                                    <ImageIcon className="mr-2 size-4" />
-                                    {t('messages.images')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
-                                    <FileText className="mr-2 size-4" />
-                                    {t('messages.pdfs')}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
-                                    <Video className="mr-2 size-4" />
-                                    {t('messages.videos')}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              <TooltipContent>
-                                <p>{t('messages.attachFiles')}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                          >
-                            <Mic className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : null}
-                      <Textarea
-                        ref={textareaRef}
-                        placeholder={t('messages.typeMessagePlaceholder')}
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        className={cn(
-                          'flex-1 min-w-0 resize-none min-h-[36px] max-h-[120px] py-1.5 bg-sidebar dark:bg-sidebar border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none focus-visible:bg-sidebar dark:focus-visible:bg-sidebar',
-                          textareaHeight > 36 && 'pr-10'
-                        )}
-                        aria-label={t('messages.typeMessage')}
-                        rows={1}
-                      />
-                      {(textareaHeight > 36 ||
-                        replyingToMessage ||
-                        attachedPdf ||
-                        attachedVideo ||
-                        attachedImages.length > 0) && (
-                          <div className="flex items-center justify-between gap-2 mt-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <DropdownMenu>
-                                  <TooltipTrigger asChild>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 flex-shrink-0 rounded-full hover:bg-gray-200 dark:hover:bg-white/10"
-                                        aria-label={t('messages.attachFile')}
-                                      >
-                                        <Plus className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                  </TooltipTrigger>
-                                  <DropdownMenuContent align="start">
-                                    <DropdownMenuItem onClick={() => imageInputRef.current?.click()}>
-                                      <ImageIcon className="mr-2 size-4" />
-                                      {t('messages.images')}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => pdfInputRef.current?.click()}>
-                                      <FileText className="mr-2 size-4" />
-                                      {t('messages.pdfs')}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => videoInputRef.current?.click()}>
-                                      <Video className="mr-2 size-4" />
-                                      {t('messages.videos')}
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                                <TooltipContent>
-                                  <p>{t('messages.attachFiles')}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-
-                            {(() => {
-                              const isInputEmpty =
-                                !messageInput.trim() &&
-                                !attachedPdf &&
-                                !attachedVideo &&
-                                attachedImages.length === 0;
-
-                              return (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        onClick={handleSendMessage}
-                                        disabled={isInputEmpty}
-                                        className={cn(
-                                          'gap-2 !text-background [&_svg]:!text-background h-8 w-8 p-0 rounded-full transition-all duration-200',
-                                          isInputEmpty
-                                            ? '!bg-muted-foreground/30'
-                                            : '!bg-[#3f3c39] dark:!bg-foreground hover:!bg-[#4a4642] dark:hover:!bg-foreground/90'
-                                        )}
-                                        aria-label={t('messages.sendMessage')}
-                                      >
-                                        <ArrowUp className="size-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{t('messages.sendMessage')}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              );
-                            })()}
-                          </div>
-                        )}
-
-                      {!(
-                        textareaHeight > 36 ||
-                        replyingToMessage ||
-                        attachedPdf ||
-                        attachedVideo ||
-                        attachedImages.length > 0
-                      ) &&
-                        (() => {
-                          const isInputEmpty =
-                            !messageInput.trim() &&
-                            !attachedPdf &&
-                            !attachedVideo &&
-                            attachedImages.length === 0;
-
-                          return (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    onClick={handleSendMessage}
-                                    disabled={isInputEmpty}
-                                    className={cn(
-                                      'gap-2 !text-background [&_svg]:!text-background h-8 w-8 p-0 rounded-full transition-all duration-200',
-                                      isInputEmpty
-                                        ? '!bg-muted-foreground/30'
-                                        : '!bg-[#3f3c39] dark:!bg-foreground hover:!bg-[#4a4642] dark:hover:!bg-foreground/90'
-                                    )}
-                                    aria-label={t('messages.sendMessage')}
-                                  >
-                                    <ArrowUp className="size-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{t('messages.sendMessage')}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          );
-                        })()}
-                    </div>
-                  </div>
+                  <MessageInput
+                    messageInput={messageInput}
+                    setMessageInput={setMessageInput}
+                    handleSendMessage={handleSendMessage}
+                    handleKeyDown={handleKeyDown}
+                    textareaRef={textareaRef}
+                    textareaHeight={textareaHeight}
+                    setTextareaHeight={setTextareaHeight}
+                    attachedImages={attachedImages}
+                    attachedPdf={attachedPdf}
+                    attachedVideo={attachedVideo}
+                    replyingToMessage={replyingToMessage}
+                    selectedContact={selectedContact}
+                    onFileButtonClick={() => { }} // Not used in component but in props
+                    onImageInputClick={() => imageInputRef.current?.click()}
+                    onPdfInputClick={() => pdfInputRef.current?.click()}
+                    onVideoInputClick={() => videoInputRef.current?.click()}
+                    onRemoveImage={(index) => setAttachedImages((prev) => prev.filter((_, i) => i !== index))}
+                    onRemovePdf={() => setAttachedPdf(null)}
+                    onRemoveVideo={() => setAttachedVideo(null)}
+                    onCancelReply={() => {
+                      setReplyingToMessage(null);
+                      if (!messageInput.trim()) {
+                        setTextareaHeight(36);
+                      }
+                    }}
+                    onDownloadImage={(image) => {
+                      const url = URL.createObjectURL(image);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = image.name;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}
+                    onDownloadPdf={() => {
+                      if (!attachedPdf) return;
+                      const url = URL.createObjectURL(attachedPdf);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = attachedPdf.name;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}
+                    onDownloadVideo={() => {
+                      if (!attachedVideo) return;
+                      const url = URL.createObjectURL(attachedVideo);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = attachedVideo.name;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}
+                  />
                 </>
               ) : (
                 <div className="flex-1 flex items-center justify-center">
