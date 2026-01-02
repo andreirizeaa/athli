@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, ChevronDownIcon, Loader2 } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/general/utils';
 import { WorkoutCard } from './workout-card';
 import { useCoachHomeData, EnrichedWorkout } from '@/hooks/use-coach-home-data';
+import { getClientWorkoutInstance } from '@/api/client/client-training-service';
 import { ClientTrainingDaySummary } from '@/app/athletes/[clientId]/training/client-training-day-summary';
 import { WorkoutPreviewDialog } from '@/app/athletes/[clientId]/training/workout-preview-dialog';
 import { toast } from 'sonner';
@@ -32,6 +33,8 @@ export const CompletedWorkoutsCard = () => {
 
   // State for dialogs
   const [selectedWorkout, setSelectedWorkout] = useState<EnrichedWorkout | null>(null);
+  const [workoutData, setWorkoutData] = useState<any>(null);
+  const [isLoadingWorkout, setIsLoadingWorkout] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
 
@@ -51,17 +54,12 @@ export const CompletedWorkoutsCard = () => {
     setIsCalendarOpen(false);
   };
 
-  const handleTodayOrYesterdayClick = () => {
+  const handleYesterdayClick = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    if (workoutType === 'missed') {
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      setSelectedDate(yesterday);
-    } else {
-      setSelectedDate(today);
-    }
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    setSelectedDate(yesterday);
   };
 
   const dateText = useMemo(() => {
@@ -73,26 +71,94 @@ export const CompletedWorkoutsCard = () => {
     return `${day} ${month}, 20${year}`;
   }, [selectedDate]);
 
-  const isTodayOrYesterdaySelected = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (workoutType === 'missed') {
-      return selectedDate.getTime() === yesterday.getTime();
-    } else {
-      return selectedDate.getTime() === today.getTime();
-    }
-  }, [selectedDate, workoutType]);
-
-  const handleCardClick = (workout: EnrichedWorkout) => {
+  const handleCardClick = async (workout: EnrichedWorkout) => {
     setSelectedWorkout(workout);
-    if (workoutType === 'missed') {
-      setIsPreviewDialogOpen(true);
-    } else {
-      setIsSummaryDialogOpen(true);
+
+    // Check if workout_data is already embedded in the history item
+    if (workout.workout_data) {
+      setWorkoutData(workout.workout_data);
+      if (workoutType === 'missed') {
+        setIsPreviewDialogOpen(true);
+      } else {
+        setIsSummaryDialogOpen(true);
+      }
+      return;
     }
+
+    // Fallback: fetch workout instance if not embedded
+    setIsLoadingWorkout(true);
+    try {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const instance = await getClientWorkoutInstance(workout.client_id, dateStr, workout.workout_id);
+      setWorkoutData(instance);
+
+      if (workoutType === 'missed') {
+        setIsPreviewDialogOpen(true);
+      } else {
+        setIsSummaryDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to fetch workout instance:', err);
+      toast.error('Failed to load workout details');
+    } finally {
+      setIsLoadingWorkout(false);
+    }
+  };
+
+  // Calculate stats from workout data
+  // Structure: data.workout_data.{pre, post, items, completedSummary}
+  const calculateStats = (data: any) => {
+    const wd = data?.workout_data || {};
+    const items = wd.items || [];
+    const pre = wd.pre || {};
+    const post = wd.post || {};
+    const completedSummary = wd.completedSummary || {};
+
+    let totalExercises = 0;
+    let completedExercises = 0;
+
+    const processItems = (itemsList: any[]) => {
+      for (const i of itemsList) {
+        if (i.itemType === 'exercise') {
+          totalExercises++;
+          const sets = i.data?.sets || [];
+          if (sets.length > 0 && sets.every((s: any) => s.completed)) {
+            completedExercises++;
+          }
+        } else if (i.itemType === 'section') {
+          const sectionExercises = i.data?.exercises || [];
+          sectionExercises.forEach((group: any) => {
+            if (group.exercises) {
+              // Superset with nested exercises
+              group.exercises.forEach((ex: any) => {
+                totalExercises++;
+                const sets = ex.sets || [];
+                if (sets.length > 0 && sets.every((s: any) => s.completed)) {
+                  completedExercises++;
+                }
+              });
+            } else if (group.prescribedExerciseId || group.performedExerciseId) {
+              // AMRAP-style section with direct exercise objects
+              totalExercises++;
+              if (group.completed) {
+                completedExercises++;
+              }
+            }
+          });
+        }
+      }
+    };
+    processItems(items);
+
+    return {
+      exercisesCompleted: completedExercises,
+      exercisesTotal: totalExercises || data?.total_exercises || 0,
+      duration: completedSummary.totalDurationMin || 0,
+      intensity: post.intensity || 0,
+      volume: completedSummary.totalWeightLifted || 0,
+      readiness: pre.readiness || 0,
+      rating: post.rating || 0,
+    };
   };
 
   return (
@@ -134,13 +200,7 @@ export const CompletedWorkoutsCard = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const yesterday = new Date(today);
-                  yesterday.setDate(yesterday.getDate() - 1);
-                  setSelectedDate(yesterday);
-                }}
+                onClick={handleYesterdayClick}
                 className="h-8 text-xs font-medium px-3 border-primary text-primary hover:bg-primary/5"
               >
                 {t('home.yesterday')}
@@ -194,6 +254,7 @@ export const CompletedWorkoutsCard = () => {
                 workout={workout}
                 workoutType={workoutType}
                 onClick={() => handleCardClick(workout)}
+                isLoading={isLoadingWorkout && selectedWorkout?.workout_id === workout.workout_id}
                 className="cursor-pointer hover:border-primary/50 transition-all font-sans"
               />
             ))}
@@ -202,35 +263,26 @@ export const CompletedWorkoutsCard = () => {
       </div>
 
       {/* Dialogs */}
-      {selectedWorkout && (
+      {selectedWorkout && workoutData && (
         <>
           <ClientTrainingDaySummary
             open={isSummaryDialogOpen}
             onOpenChange={setIsSummaryDialogOpen}
-            workoutName={selectedWorkout.workoutName}
+            workoutName={workoutData?.name || 'Untitled Workout'}
             athlete={{
               name: selectedWorkout.clientName,
               avatarUrl: selectedWorkout.clientAvatar
             }}
-            workoutData={selectedWorkout.workoutData}
-            stats={{
-              exercisesCompleted: selectedWorkout.exercisesCompleted,
-              exercisesTotal: selectedWorkout.exercisesTotal,
-              duration: selectedWorkout.minutes,
-              intensity: selectedWorkout.intensity,
-              volume: selectedWorkout.volume,
-              readiness: selectedWorkout.readiness,
-              rating: selectedWorkout.rating
-            }}
+            workoutData={workoutData}
+            stats={calculateStats(workoutData)}
             completedSummary={
               selectedWorkout.status === 'completed' || selectedWorkout.status === 'in_progress' ?
                 {
                   status: selectedWorkout.status,
-                  totalDurationMin: selectedWorkout.minutes,
-                  totalWeightLifted: selectedWorkout.volume,
-                  // Add start/end times if available in data
-                  startedAt: selectedWorkout.workoutData?.startedAt,
-                  completedAt: selectedWorkout.workoutData?.completedAt
+                  totalDurationMin: workoutData?.workout_data?.completedSummary?.totalDurationMin || calculateStats(workoutData).duration,
+                  totalWeightLifted: workoutData?.workout_data?.completedSummary?.totalWeightLifted || calculateStats(workoutData).volume,
+                  startedAt: workoutData?.workout_data?.completedSummary?.startedAt,
+                  completedAt: workoutData?.workout_data?.completedSummary?.completedAt
                 } : undefined
             }
           />
@@ -238,7 +290,7 @@ export const CompletedWorkoutsCard = () => {
           <WorkoutPreviewDialog
             open={isPreviewDialogOpen}
             onOpenChange={setIsPreviewDialogOpen}
-            workoutData={selectedWorkout.workoutData}
+            workoutData={workoutData}
           />
         </>
       )}

@@ -123,6 +123,7 @@ export interface CoachClientHistoryItem {
   date: string;
   workout_id: string;
   status: 'not_started' | 'in_progress' | 'completed' | 'missed';
+  workout_data?: any; // JSONB snapshot of workout data at assignment time
   created_at: string;
   updated_at: string;
 }
