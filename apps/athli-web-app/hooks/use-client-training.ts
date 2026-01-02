@@ -1,5 +1,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUserProfile } from '@/hooks/use-user-profile';
 import {
     getTrainingCalendarRange,
     getTrainingCalendarCompletionLogs,
@@ -21,13 +22,15 @@ import { toast } from 'sonner';
 
 export function useClientTraining(clientId: string) {
     const queryClient = useQueryClient();
+    const { user } = useUserProfile();
+    const coachId = user?.id;
 
     // Hook for fetching training calendar range
     const useCalendarRange = (startDate: string, endDate: string, options?: { enabled?: boolean }) => {
         return useQuery({
-            queryKey: ['client-training-calendar', clientId, startDate, endDate],
-            queryFn: () => getTrainingCalendarRange(clientId, startDate, endDate),
-            enabled: !!clientId && !!startDate && !!endDate && options?.enabled !== false,
+            queryKey: ['client-training-calendar', clientId, coachId, startDate, endDate],
+            queryFn: () => getTrainingCalendarRange(clientId, coachId!, startDate, endDate),
+            enabled: !!clientId && !!coachId && !!startDate && !!endDate && options?.enabled !== false,
             staleTime: 5 * 60 * 1000, // 5 minutes
         });
     };
@@ -44,7 +47,7 @@ export function useClientTraining(clientId: string) {
 
     // Mutation for assigning/updating workout
     const assignWorkoutMutation = useMutation({
-        mutationFn: (data: AssignWorkoutData) => assignWorkout(data),
+        mutationFn: (data: AssignWorkoutData) => assignWorkout({ ...data, coachId: coachId! }),
         onSuccess: (_, variables) => {
             // Invalidate calendar queries to refetch updated data
             // We invalidate specific range queries or all calendar queries for this client
@@ -60,7 +63,7 @@ export function useClientTraining(clientId: string) {
     // Mutation for deleting workout (legacy, uses URL params)
     const deleteWorkoutMutation = useMutation({
         mutationFn: ({ workoutId, date }: { workoutId: string; date: string }) =>
-            deleteClientWorkout(clientId, workoutId, date),
+            deleteClientWorkout(clientId, coachId!, workoutId, date),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['client-training-calendar', clientId] });
         },
@@ -72,7 +75,7 @@ export function useClientTraining(clientId: string) {
     // Mutation for duplicating a workout to another date
     // No cache invalidation - page uses optimistic local state updates
     const duplicateWorkoutMutation = useMutation({
-        mutationFn: (data: DuplicateWorkoutData) => duplicateWorkout(data),
+        mutationFn: (data: DuplicateWorkoutData) => duplicateWorkout({ ...data, coachId: coachId! }),
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to duplicate workout');
         }
@@ -81,7 +84,7 @@ export function useClientTraining(clientId: string) {
     // Mutation for deleting workout by key (sourceDate + workoutId)
     // No cache invalidation - page uses optimistic local state updates
     const deleteWorkoutByKeyMutation = useMutation({
-        mutationFn: (data: DeleteWorkoutByKeyData) => deleteWorkoutByKey(data),
+        mutationFn: (data: DeleteWorkoutByKeyData) => deleteWorkoutByKey({ ...data, coachId: coachId! }),
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to delete workout');
         }
@@ -115,3 +118,4 @@ export function useClientTraining(clientId: string) {
         isUpdatingCalendar: updateCalendarMutation.isPending,
     };
 }
+

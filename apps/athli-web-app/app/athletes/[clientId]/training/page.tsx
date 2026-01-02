@@ -1336,6 +1336,7 @@ const ClientTrainingCalendarPage = () => {
       // Call API to duplicate workout
       const result = await apiDuplicateWorkout({
         clientId,
+        coachId: coachUser?.id || '',
         sourceDate: copiedWorkout.dateKey,
         sourceWorkoutId: copiedWorkout.workout.id,
         targetDate: targetDateKey,
@@ -1433,6 +1434,7 @@ const ClientTrainingCalendarPage = () => {
         try {
           await apiDeleteWorkoutByKey({
             clientId,
+            coachId: coachUser?.id || '',
             sourceDate: dateKey,
             workoutId: workout.id,
           });
@@ -1546,6 +1548,7 @@ const ClientTrainingCalendarPage = () => {
         try {
           const result = await apiDuplicateWorkout({
             clientId,
+            coachId: coachUser?.id || '',
             sourceDate,
             sourceWorkoutId: workout.id,
             targetDate: tdk,
@@ -2082,7 +2085,7 @@ const ClientTrainingCalendarPage = () => {
       // Use new endpoint to get specific instance data
       const fullWorkout = await queryClient.fetchQuery({
         queryKey: ['client-workout-instance', clientId, dateKey, realWorkoutId], // Use real ID (UUID)
-        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        queryFn: () => getClientWorkoutInstance(clientId, coachUser?.id || '', dateKey, realWorkoutId),
         staleTime: 0, // Always fetch fresh to get latest instance state
       });
 
@@ -2116,7 +2119,7 @@ const ClientTrainingCalendarPage = () => {
       // Fetch the full workout data from training_clients
       const fullWorkout = await queryClient.fetchQuery({
         queryKey: ['client-workout-instance-summary', clientId, dateKey, realWorkoutId],
-        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        queryFn: () => getClientWorkoutInstance(clientId, coachUser?.id || '', dateKey, realWorkoutId),
         staleTime: 0, // Always fetch fresh
       });
 
@@ -2143,7 +2146,7 @@ const ClientTrainingCalendarPage = () => {
       // Fetch the full workout data from training_clients
       const fullWorkout = await queryClient.fetchQuery({
         queryKey: ['client-workout-instance-progress', clientId, dateKey, realWorkoutId],
-        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        queryFn: () => getClientWorkoutInstance(clientId, coachUser?.id || '', dateKey, realWorkoutId),
         staleTime: 0, // Always fetch fresh
       });
 
@@ -2271,6 +2274,7 @@ const ClientTrainingCalendarPage = () => {
       // Call API using the new deleteWorkoutByKey
       await apiDeleteWorkoutByKey({
         clientId,
+        coachId: coachUser?.id || '',
         sourceDate: dateKey,
         workoutId,
       });
@@ -2493,7 +2497,7 @@ const ClientTrainingCalendarPage = () => {
                     // Explicitly fetch the current view's data
                     const freshServerData = await queryClient.fetchQuery({
                       queryKey: ['client-training-calendar', clientId, startDateStr, endDateStr],
-                      queryFn: () => getTrainingCalendarRange(clientId, startDateStr, endDateStr),
+                      queryFn: () => getTrainingCalendarRange(clientId, coachUser?.id || '', startDateStr, endDateStr),
                       staleTime: 0
                     });
 
@@ -3297,6 +3301,7 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
         workoutName={inProgressSummaryWorkout?.workout.name || 'Workout'}
+        clientId={clientId}
         workoutData={fetchedInProgressWorkoutData}
         athlete={athlete}
         isLoading={isLoadingInProgressSummary}
@@ -3326,6 +3331,7 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
         workoutName={completedSummaryWorkout?.workout.name || ''}
+        clientId={clientId}
         isLoading={isLoadingCompletedSummary}
         athlete={athlete}
         completedSummary={fetchedCompletedWorkoutData?.workout_data?.completedSummary || fetchedCompletedWorkoutData?.completedSummary || completedSummaryWorkout?.workout.completedSummary}

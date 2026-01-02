@@ -13,9 +13,12 @@ export interface ClientUpdate {
 /**
  * Service method to get all updates for a client
  */
-export const getClientUpdates = async (clientId: string): Promise<ClientUpdate[]> => {
+export const getClientUpdates = async (clientId: string, coachId: string): Promise<ClientUpdate[]> => {
     const response = await apiFetch('/client/updates', {
-        headers: { 'x-client-id': clientId },
+        headers: {
+            'x-client-id': clientId,
+            'x-coach-id': coachId
+        },
     });
     return response.data.updates || [];
 };
@@ -25,12 +28,16 @@ export const getClientUpdates = async (clientId: string): Promise<ClientUpdate[]
  */
 export const createClientUpdate = async (
     clientId: string,
+    coachId: string,
     update: string,
     updateTimestamp?: string
 ): Promise<ClientUpdate> => {
     const response = await apiFetch('/client/updates', {
         method: 'POST',
-        headers: { 'x-client-id': clientId },
+        headers: {
+            'x-client-id': clientId,
+            'x-coach-id': coachId
+        },
         body: JSON.stringify({
             update,
             update_timestamp: updateTimestamp || new Date().toISOString(),
@@ -44,13 +51,17 @@ export const createClientUpdate = async (
  */
 export const updateClientUpdate = async (
     clientId: string,
+    coachId: string,
     updateId: string,
     update: string,
     updateTimestamp?: string
 ): Promise<ClientUpdate> => {
     const response = await apiFetch(`/client/updates/${updateId}`, {
         method: 'PATCH',
-        headers: { 'x-client-id': clientId },
+        headers: {
+            'x-client-id': clientId,
+            'x-coach-id': coachId
+        },
         body: JSON.stringify({
             update,
             update_timestamp: updateTimestamp,
@@ -62,10 +73,13 @@ export const updateClientUpdate = async (
 /**
  * Service method to delete an update
  */
-export const deleteClientUpdate = async (clientId: string, updateId: string): Promise<void> => {
+export const deleteClientUpdate = async (clientId: string, coachId: string, updateId: string): Promise<void> => {
     await apiFetch(`/client/updates/${updateId}`, {
         method: 'DELETE',
-        headers: { 'x-client-id': clientId },
+        headers: {
+            'x-client-id': clientId,
+            'x-coach-id': coachId
+        },
     });
 };
 
@@ -74,11 +88,16 @@ export const deleteClientUpdate = async (clientId: string, updateId: string): Pr
  */
 export const bulkDeleteClientUpdates = async (
     clientId: string,
+    coachId: string,
     updateIds: string[]
 ): Promise<void> => {
     await apiFetch('/client/updates', {
         method: 'DELETE',
-        headers: { 'x-client-id': clientId },
+        headers: {
+            'x-client-id': clientId,
+            'x-coach-id': coachId
+        },
         body: JSON.stringify({ updateIds }),
     });
 };
+

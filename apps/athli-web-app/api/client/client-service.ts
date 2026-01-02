@@ -29,9 +29,12 @@ export interface AthleteInjury {
 /**
  * Service method to get athlete bio
  */
-export const getAthleteBio = async (athleteId: string): Promise<string> => {
+export const getAthleteBio = async (athleteId: string, coachId: string): Promise<string> => {
   const response = await apiFetch('/clients/bio', {
-    headers: { 'x-client-id': athleteId },
+    headers: {
+      'x-client-id': athleteId,
+      'x-coach-id': coachId
+    },
   });
   return response.data.bio || '';
 };
@@ -39,10 +42,13 @@ export const getAthleteBio = async (athleteId: string): Promise<string> => {
 /**
  * Service method to save athlete bio
  */
-export const saveAthleteBio = async (athleteId: string, bio: string): Promise<void> => {
+export const saveAthleteBio = async (athleteId: string, coachId: string, bio: string): Promise<void> => {
   await apiFetch('/clients/bio', {
     method: 'PATCH',
-    headers: { 'x-client-id': athleteId },
+    headers: {
+      'x-client-id': athleteId,
+      'x-coach-id': coachId
+    },
     body: JSON.stringify({ bio }),
   });
 };
@@ -50,9 +56,12 @@ export const saveAthleteBio = async (athleteId: string, bio: string): Promise<vo
 /**
  * Service method to get athlete goals
  */
-export const getAthleteGoals = async (athleteId: string): Promise<AthleteGoal[]> => {
+export const getAthleteGoals = async (athleteId: string, coachId: string): Promise<AthleteGoal[]> => {
   const response = await apiFetch('/clients/goals', {
-    headers: { 'x-client-id': athleteId },
+    headers: {
+      'x-client-id': athleteId,
+      'x-coach-id': coachId
+    },
   });
   return response.data.goals || [];
 };
@@ -60,10 +69,13 @@ export const getAthleteGoals = async (athleteId: string): Promise<AthleteGoal[]>
 /**
  * Service method to save athlete goals
  */
-export const saveAthleteGoals = async (athleteId: string, goals: Partial<AthleteGoal>[]): Promise<void> => {
+export const saveAthleteGoals = async (athleteId: string, coachId: string, goals: Partial<AthleteGoal>[]): Promise<void> => {
   await apiFetch('/clients/goals', {
     method: 'PATCH',
-    headers: { 'x-client-id': athleteId },
+    headers: {
+      'x-client-id': athleteId,
+      'x-coach-id': coachId
+    },
     body: JSON.stringify({ goals }),
   });
 };
@@ -71,9 +83,12 @@ export const saveAthleteGoals = async (athleteId: string, goals: Partial<Athlete
 /**
  * Service method to get athlete injuries
  */
-export const getAthleteInjuries = async (athleteId: string): Promise<AthleteInjury[]> => {
+export const getAthleteInjuries = async (athleteId: string, coachId: string): Promise<AthleteInjury[]> => {
   const response = await apiFetch('/clients/injuries', {
-    headers: { 'x-client-id': athleteId },
+    headers: {
+      'x-client-id': athleteId,
+      'x-coach-id': coachId
+    },
   });
   return response.data.injuries || [];
 };
@@ -81,10 +96,13 @@ export const getAthleteInjuries = async (athleteId: string): Promise<AthleteInju
 /**
  * Service method to save athlete injuries
  */
-export const saveAthleteInjuries = async (athleteId: string, injuries: Partial<AthleteInjury>[]): Promise<void> => {
+export const saveAthleteInjuries = async (athleteId: string, coachId: string, injuries: Partial<AthleteInjury>[]): Promise<void> => {
   await apiFetch('/clients/injuries', {
     method: 'PATCH',
-    headers: { 'x-client-id': athleteId },
+    headers: {
+      'x-client-id': athleteId,
+      'x-coach-id': coachId
+    },
     body: JSON.stringify({ injuries }),
   });
 };
@@ -221,6 +239,7 @@ export interface TrainingCalendarCompletionLogs {
  */
 export const getTrainingCalendarRange = async (
   clientId: string,
+  coachId: string,
   startDate: string, // YYYY-MM-DD format
   endDate: string    // YYYY-MM-DD format
 ): Promise<TrainingCalendarSchema> => {
@@ -228,7 +247,10 @@ export const getTrainingCalendarRange = async (
     `/client/trainings/calendar`,
     {
       method: 'POST',
-      headers: { 'x-client-id': clientId },
+      headers: {
+        'x-client-id': clientId,
+        'x-coach-id': coachId
+      },
       body: JSON.stringify({ startDate, endDate }),
     }
   );
