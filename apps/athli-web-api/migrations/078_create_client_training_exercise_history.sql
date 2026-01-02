@@ -8,6 +8,7 @@ CREATE TABLE public.client_training_exercise_history (
   coach_id UUID NOT NULL,
   date DATE NOT NULL,
   workout_id TEXT NOT NULL,  -- Context: Which workout this exercise belonged to
+  workout_name TEXT NOT NULL,
   exercise_id TEXT NOT NULL, -- The specific exercise definition ID (e.g., 'bench_press_uuid')
   
   exercise_data JSONB NOT NULL DEFAULT '{}'::jsonb, -- The payload (sets, weights, reps performed)
@@ -74,3 +75,13 @@ WITH CHECK (
 GRANT ALL ON public.client_training_exercise_history TO postgres;
 GRANT ALL ON public.client_training_exercise_history TO authenticated;
 GRANT ALL ON public.client_training_exercise_history TO service_role;
+
+
+ALTER TABLE public.client_training_exercise_history
+  ADD COLUMN row_id BIGINT GENERATED ALWAYS AS IDENTITY;
+
+ALTER TABLE public.client_training_exercise_history
+  DROP CONSTRAINT IF EXISTS client_training_exercise_history_pkey;
+
+ALTER TABLE public.client_training_exercise_history
+  ADD PRIMARY KEY (client_id, coach_id, date, workout_id, exercise_id, row_id);
