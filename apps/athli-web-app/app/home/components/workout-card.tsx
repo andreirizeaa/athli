@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { WorkoutMetricsRow } from './workout-metrics-row';
 import { useRouter } from 'next/navigation';
 import { EnrichedWorkout } from '@/hooks/use-coach-home-data';
 import { cn } from '@/lib/general/utils';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Loader2 } from 'lucide-react';
 
 interface WorkoutCardProps {
     workout: EnrichedWorkout;
@@ -17,6 +17,7 @@ interface WorkoutCardProps {
     onHover?: () => void;
     onClick?: () => void;
     onAvatarClick?: (e: React.MouseEvent) => void;
+    isLoading?: boolean;
     className?: string;
 }
 
@@ -26,6 +27,7 @@ export const WorkoutCard = ({
     onHover,
     onClick,
     onAvatarClick,
+    isLoading = false,
     className
 }: WorkoutCardProps) => {
     const router = useRouter();
@@ -46,6 +48,65 @@ export const WorkoutCard = ({
     };
 
     const isMissed = workoutType === 'missed';
+
+    // Parse metrics from workout_data (structure: workout_data.workout_data.*)
+    const metrics = useMemo(() => {
+        const wd = workout.workout_data?.workout_data || {};
+        const items = wd.items || [];
+        const pre = wd.pre || {};
+        const post = wd.post || {};
+        const completedSummary = wd.completedSummary || {};
+
+        // Count exercises
+        let totalExercises = 0;
+        let completedExercises = 0;
+
+        const processItems = (itemsList: any[]) => {
+            for (const item of itemsList) {
+                if (item.itemType === 'exercise') {
+                    totalExercises++;
+                    const sets = item.data?.sets || [];
+                    if (sets.length > 0 && sets.every((s: any) => s.completed)) {
+                        completedExercises++;
+                    }
+                } else if (item.itemType === 'section') {
+                    const sectionExercises = item.data?.exercises || [];
+                    sectionExercises.forEach((group: any) => {
+                        if (group.exercises) {
+                            // Superset with nested exercises
+                            group.exercises.forEach((ex: any) => {
+                                totalExercises++;
+                                const sets = ex.sets || [];
+                                if (sets.length > 0 && sets.every((s: any) => s.completed)) {
+                                    completedExercises++;
+                                }
+                            });
+                        } else if (group.prescribedExerciseId || group.performedExerciseId) {
+                            // AMRAP-style section with direct exercise objects
+                            totalExercises++;
+                            if (group.completed) {
+                                completedExercises++;
+                            }
+                        }
+                    });
+                }
+            }
+        };
+        processItems(items);
+
+        return {
+            exercisesCompleted: completedExercises,
+            exercisesTotal: totalExercises || workout.workout_data?.total_exercises || 0,
+            minutes: completedSummary.totalDurationMin || 0,
+            volume: completedSummary.totalWeightLifted || 0,
+            intensity: post.intensity || 0,
+            readiness: pre.readiness || 0,
+            rating: post.rating || 0,
+        };
+    }, [workout.workout_data]);
+
+    // Get workout name from data
+    const workoutName = workout.workout_data?.name || 'Workout assigned';
 
     return (
         <Card
@@ -80,40 +141,46 @@ export const WorkoutCard = ({
                                     <p>View profile</p>
                                 </TooltipContent>
                             </Tooltip>
-                            <div className="flex flex-col gap-1 overflow-hidden">
+                            <div className="flex flex-col gap-0.5 overflow-hidden">
                                 <span className="text-sm font-medium truncate">{workout.clientName}</span>
-                                <p className="text-xs text-muted-foreground truncate">{workout.workoutName}</p>
+                                <p className="text-xs text-muted-foreground truncate">{workoutName}</p>
                             </div>
                         </div>
-                        {isMissed && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 gap-2 text-primary border-primary hover:bg-primary/5"
-                                        onClick={handleMessageClick}
-                                    >
-                                        <MessageCircle className="h-4 w-4" />
-                                        <span>Message</span>
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Send a message to {workout.clientName}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        )}
+                        <div className="flex items-center gap-2">
+                            {isLoading && (
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            )}
+                            {isMissed && !isLoading && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 gap-2 text-primary border-primary hover:bg-primary/5"
+                                            onClick={handleMessageClick}
+                                        >
+                                            <MessageCircle className="h-4 w-4" />
+                                            <span>Message</span>
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Send a message to {workout.clientName}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                        </div>
                     </div>
 
-                    {!isMissed && (
+                    {/* Show metrics row for completed and in_progress */}
+                    {!isMissed && workout.workout_data && (
                         <WorkoutMetricsRow
-                            exercisesCompleted={workout.exercisesCompleted}
-                            exercisesTotal={workout.exercisesTotal}
-                            minutes={workout.minutes}
-                            volume={workout.volume}
-                            intensity={workout.intensity}
-                            readiness={workout.readiness}
-                            rating={workout.rating}
+                            exercisesCompleted={metrics.exercisesCompleted}
+                            exercisesTotal={metrics.exercisesTotal}
+                            minutes={metrics.minutes}
+                            volume={metrics.volume}
+                            intensity={metrics.intensity}
+                            readiness={metrics.readiness}
+                            rating={metrics.rating}
                         />
                     )}
                 </div>
