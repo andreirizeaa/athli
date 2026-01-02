@@ -18,6 +18,7 @@ type MultiSelectActionBarProps = {
   onCopy: () => void;
   onCancel: () => void;
   isInboxView?: boolean;
+  style?: React.CSSProperties;
 };
 
 export const MultiSelectActionBar = ({
@@ -28,6 +29,7 @@ export const MultiSelectActionBar = ({
   onCopy,
   onCancel,
   isInboxView = false,
+  style,
 }: MultiSelectActionBarProps) => {
   const t = useTranslations();
   const { state, isMobile } = useSidebar();
@@ -53,13 +55,15 @@ export const MultiSelectActionBar = ({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 right-0 z-50 bg-background border-t border-border shadow-lg"
+            className="fixed bottom-0 z-50 bg-background border-t border-border shadow-lg"
             style={{
-              left: leftPosition,
-              width: isInboxView ? '67.5%' : undefined
+              left: isInboxView ? 'auto' : (isMobile ? '0' : (state === 'expanded' ? '16rem' : '3rem')),
+              right: 0,
+              width: isInboxView ? '67.5%' : undefined,
+              ...style
             }}
           >
-            <div className="relative flex items-center justify-between px-4 py-3">
+            <div className="relative flex items-center justify-between px-4 pt-3 pb-[14px]">
               {/* Left Section */}
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center border border-primary text-primary rounded-full px-3 py-0.5 min-w-[2rem]">
