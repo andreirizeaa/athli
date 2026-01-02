@@ -772,7 +772,7 @@ const ClientHabitsPage = () => {
                         />
                         <Line
                           dataKey="value"
-                          type="natural"
+                          type="monotoneX"
                           stroke="var(--color-value)"
                           strokeWidth={2}
                           dot={false}

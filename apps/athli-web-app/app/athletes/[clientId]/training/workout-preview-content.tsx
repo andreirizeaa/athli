@@ -107,7 +107,12 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                 const isSubstituted = exercise.performedExerciseId && exercise.prescribedExerciseId && exercise.performedExerciseId !== exercise.prescribedExerciseId;
 
                 if (targetExerciseId) {
-                    const exerciseDetails = getExerciseById(targetExerciseId);
+                    let exerciseDetails = getExerciseById(targetExerciseId);
+
+                    // Fallback to prescribed ID if performed ID lookup fails (common if performed ID is an instance ID not in library)
+                    if (!exerciseDetails && exercise.prescribedExerciseId && exercise.prescribedExerciseId !== targetExerciseId) {
+                        exerciseDetails = getExerciseById(exercise.prescribedExerciseId);
+                    }
 
                     // If substituted, get prescribed details for the name
                     let prescribedName = null;

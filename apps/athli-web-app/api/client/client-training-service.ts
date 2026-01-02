@@ -191,15 +191,20 @@ export interface HistoryEntry {
   exercise_id: string;
   exercise_data: {
     sets?: Array<{
-      weight?: number;
-      reps?: number;
-      distance?: number;
-      duration?: number;
+      weight?: number | { completed?: number; prescribed?: number };
+      reps?: number | { completed?: number; prescribed?: number };
+      distance?: number | { completed?: number; prescribed?: number };
+      duration?: number | { completed?: number; prescribed?: number };
       completed?: boolean;
       type?: string;
     }>;
     name?: string;
     notes?: string;
+    exerciseType?: string;
+    performedExerciseId?: string;
+    prescribedExerciseId?: string;
+    supersetId?: string | null;
+    alternatives?: any[];
   };
 }
 
