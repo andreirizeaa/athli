@@ -27,7 +27,7 @@ interface MessageListProps {
     messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function MessageList({
+export const MessageList = React.memo(function MessageList({
     messages,
     selectedContact,
     onReply,
@@ -690,4 +690,4 @@ export function MessageList({
             </div>
         </ScrollArea>
     );
-}
+});

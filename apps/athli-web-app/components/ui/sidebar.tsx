@@ -256,10 +256,10 @@ function Sidebar({
         data-slot="sidebar-gap"
         className={cn(
           'relative bg-transparent transition-[width] duration-200 ease-linear',
-          // When pinned (expanded), always show full width to push content
+          // When pinned (expanded) OR hovered, always show full width to push content
           // When collapsed in icon mode, show icon width
           // When collapsed and not icon mode, show 0 (overlay)
-          state === 'expanded'
+          displayState === 'expanded'
             ? 'w-(--sidebar-width)'
             : collapsible === 'icon'
               ? variant === 'floating' || variant === 'inset'

@@ -25,6 +25,7 @@ import { useGlobalData } from '@/providers/global-data-provider';
 import { ClientProfileProvider, useClientProfileContext } from './client-profile-context';
 import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
+import { SectionLoader } from '@/components/ui/section-loader';
 import { EditClientDetailsSidePanel } from './components/edit-client-details-side-panel';
 
 export type ClientProfileLayoutProps = {
@@ -34,9 +35,10 @@ export type ClientProfileLayoutProps = {
   activeTab?: string; // Override tab from URL segments (for inbox context)
   onTabChange?: (tab: string) => void; // Callback for state-based tab management
   hideMessageButton?: boolean;
+  useSectionLoader?: boolean; // Use contained section loader instead of full-screen (for inbox context)
 };
 
-export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange, hideMessageButton = false }: ClientProfileLayoutProps) => {
+export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange, hideMessageButton = false, useSectionLoader = false }: ClientProfileLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
@@ -255,11 +257,15 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
     }
   };
 
-  if (isLoading) {
+  // For section loader mode, we render the loader overlay on top of the content structure
+  // to prevent layout shifts when switching clients
+  const showSectionLoading = isLoading && useSectionLoader;
+
+  if (isLoading && !useSectionLoader) {
     return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
   }
 
-  if (error || !athlete) {
+  if ((error || !athlete) && !showSectionLoading) {
     return (
       <div className="h-full w-full flex flex-col">
         <div className="w-full relative">
@@ -283,7 +289,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
     );
   }
 
-  const names = athlete.name.split(' ');
+  const names = (athlete?.name || '').split(' ');
   const firstName = names[0] || '';
   const lastName = names.slice(1).join(' ') || '';
   const initials = firstName && lastName
@@ -293,7 +299,8 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
       : 'U';
 
   return (
-    <div className="h-full w-full flex flex-col overflow-auto">
+    <div className="h-full w-full flex flex-col overflow-auto relative">
+      {showSectionLoading && <SectionLoader subtitle="Pulling up the good stuff..." />}
       <div className="w-full relative flex-shrink-0">
         <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
           {!hideBreadcrumb && (
@@ -312,7 +319,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                    {athlete.name}
+                    {athlete?.name || ''}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -320,22 +327,22 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
           )}
           <div className="flex items-center gap-4">
             <Avatar className="h-14 w-14 shrink-0">
-              <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
+              <AvatarImage src={athlete?.avatarUrl} alt={athlete?.name || ''} />
               <AvatarFallback className="text-xl">{initials}</AvatarFallback>
             </Avatar>
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold leading-none">{athlete.name}</h1>
+                <h1 className="text-xl font-semibold leading-none">{athlete?.name || ''}</h1>
                 <Badge
                   variant="outline"
                   className={
-                    athlete.status === 'archived'
+                    athlete?.status === 'archived'
                       ? 'bg-red-100 text-red-900 border-red-200 hover:bg-red-100 rounded-sm px-2.5 py-0.5 font-medium text-sm'
                       : 'bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] hover:bg-[#dcfce7] rounded-sm px-2.5 py-0.5 font-medium text-sm'
                   }
                 >
-                  {athlete.status === 'archived' ? t('general.archived') : t('general.active')}
+                  {athlete?.status === 'archived' ? t('general.archived') : t('general.active')}
                 </Badge>
               </div>
 
@@ -350,7 +357,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
 
                 <div className="flex items-center gap-1.5">
                   <Cake className="size-3" />
-                  <span>{athlete.age ? `${athlete.age} years old` : '--'}</span>
+                  <span>{athlete?.age ? `${athlete.age} years old` : '--'}</span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -366,9 +373,9 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
 
                 <div className="flex items-center gap-2">
                   <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 font-medium px-2 py-0 h-6 text-xs rounded-sm">
-                    {athlete.coachingType === 'online'
+                    {athlete?.coachingType === 'online'
                       ? t('athletes.profile.online')
-                      : athlete.coachingType === 'in-person'
+                      : athlete?.coachingType === 'in-person'
                         ? t('athletes.profile.inPerson')
                         : t('athletes.profile.hybrid')}
                   </Badge>
@@ -444,7 +451,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 min-h-0 bg-background bg-card/50">{children}</div>
+      <div className="w-full flex-1 min-h-0">{children}</div>
       <EditClientDetailsSidePanel
         open={isEditDetailsOpen}
         onOpenChange={setIsEditDetailsOpen}

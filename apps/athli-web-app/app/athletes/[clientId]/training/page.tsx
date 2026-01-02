@@ -191,7 +191,11 @@ const ClientTrainingCalendarPage = () => {
   const queryClient = useQueryClient();
   const params = useParams();
   const searchParams = useSearchParams();
-  const clientId = useMemo(() => (params.clientId as string) || '', [params.clientId]);
+  const clientId = useMemo(() => {
+    // Support both clientId (athletes context) and contactId (inbox context)
+    const clientIdFromParams = (params.clientId as string) || (params.contactId as string);
+    return clientIdFromParams || '';
+  }, [params.clientId, params.contactId]);
   const [selectedWeek, setSelectedWeek] = useState<string>('2');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
   const [totalWeeks] = useState<number>(52); // Default to 52 weeks (1 year)
@@ -2334,9 +2338,9 @@ const ClientTrainingCalendarPage = () => {
   };
 
   return (
-    <div className="w-full flex flex-col">
-      <Card className="w-full flex flex-col p-0 rounded-none border-0 shadow-none" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
-        <div className="w-full relative flex-shrink-0">
+    <div className="w-full h-full flex flex-col">
+      <Card className="w-full flex-1 flex flex-col p-0 rounded-none border-0 shadow-none bg-background">
+        <div className="w-full relative flex-shrink-0 bg-background border-t">
           <div className="w-full px-3 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3 px-1">
               <Button
@@ -2515,7 +2519,7 @@ const ClientTrainingCalendarPage = () => {
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col relative">
+        <div className="w-full flex-1 bg-background rounded-none px-4 pb-4 min-h-0 flex flex-col relative -mt-px">
           {isLoadingTraining && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80">
               <Loader2 className="size-8 animate-spin text-primary" />
@@ -3338,6 +3342,7 @@ const ClientTrainingCalendarPage = () => {
         onDelete={handleDeleteSelectedWorkouts}
         onCopy={handleStartMultiSelectCopy}
         onCancel={handleCancelMultiSelect}
+        isInboxView={!!params.contactId}
       />
     </div>
   );

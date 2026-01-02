@@ -20,7 +20,7 @@ interface ClientProfileContentProps {
     tab: string;
 }
 
-export function ClientProfileContent({ tab }: ClientProfileContentProps) {
+export const ClientProfileContent = React.memo(function ClientProfileContent({ tab }: ClientProfileContentProps) {
     const renderTab = (tabName: string, Component: React.ComponentType<any>) => {
         return (
             <div className={tab === tabName ? "block h-full" : "hidden"}>
@@ -44,4 +44,4 @@ export function ClientProfileContent({ tab }: ClientProfileContentProps) {
             {renderTab('training', TrainingCalendarPage)}
         </div>
     );
-}
+});

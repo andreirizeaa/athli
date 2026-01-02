@@ -17,6 +17,7 @@ type MultiSelectActionBarProps = {
   onDelete: () => void;
   onCopy: () => void;
   onCancel: () => void;
+  isInboxView?: boolean;
 };
 
 export const MultiSelectActionBar = ({
@@ -26,17 +27,21 @@ export const MultiSelectActionBar = ({
   onDelete,
   onCopy,
   onCancel,
+  isInboxView = false,
 }: MultiSelectActionBarProps) => {
   const t = useTranslations();
   const { state, isMobile } = useSidebar();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Use explicit values to match sidebar constants
-  const leftPosition = isMobile
-    ? '0'
-    : state === 'expanded'
-      ? '16rem'
-      : '3rem';
+  // In inbox view, the action bar should only span the right 67.5% section
+  const leftPosition = isInboxView
+    ? 'auto' // Use auto for left, width will constrain it
+    : isMobile
+      ? '0'
+      : state === 'expanded'
+        ? '16rem'
+        : '3rem';
 
   return (
     <>
@@ -49,7 +54,10 @@ export const MultiSelectActionBar = ({
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="fixed bottom-0 right-0 z-50 bg-background border-t border-border shadow-lg"
-            style={{ left: leftPosition }}
+            style={{
+              left: leftPosition,
+              width: isInboxView ? '67.5%' : undefined
+            }}
           >
             <div className="relative flex items-center justify-between px-4 py-3">
               {/* Left Section */}

@@ -22,6 +22,7 @@ import {
   Rocket,
   Gift,
   WandSparkles,
+  Headset,
 } from 'lucide-react';
 import { LogoIcon } from '@/components/logo';
 import {
@@ -114,7 +115,7 @@ export function AppSidebar() {
   ] as const;
 
   return (
-    <Sidebar collapsible="icon" className={isHoverExpanded ? 'border-r' : ''}>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         {isCollapsed ? (
           <div className="flex items-center justify-center px-2 py-1 h-10">
@@ -160,7 +161,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.main')}
@@ -206,7 +207,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.library')}
@@ -256,7 +257,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.automations')}
@@ -295,6 +296,14 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="mt-auto pb-3">
         <SidebarMenu className="gap-0.5">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className="text-sm text-sidebar-foreground cursor-default hover:bg-transparent active:bg-transparent"
+            >
+              <Headset className="shrink-0" />
+              {!isCollapsed && <span>{t('sidebar.helpAndSupport.label') || 'Help and support'}</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild

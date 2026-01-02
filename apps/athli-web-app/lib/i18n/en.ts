@@ -547,6 +547,9 @@ export const enMessages = {
     settings: {
       label: 'Settings',
     },
+    helpAndSupport: {
+      label: 'Help and support',
+    },
     support: {
       label: 'Support',
     },

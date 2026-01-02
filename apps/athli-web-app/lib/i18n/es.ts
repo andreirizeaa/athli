@@ -525,6 +525,9 @@ export const esMessages = {
     settings: {
       label: 'Configuración',
     },
+    helpAndSupport: {
+      label: 'Ayuda y soporte',
+    },
     support: {
       label: 'Soporte',
     },
@@ -648,6 +651,7 @@ export const esMessages = {
     typeMessagePlaceholder: 'Escribe o sube un archivo',
     typeMessage: 'Escribe un mensaje',
     sendMessage: 'Enviar mensaje',
+    voiceNote: 'Nota de voz',
     images: 'Imágenes',
     pdfs: 'PDFs',
     videos: 'Videos',

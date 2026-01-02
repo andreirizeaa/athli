@@ -17,8 +17,10 @@ import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 const ClientCheckInPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
 
   const { user } = useUserProfile();
   const { checkIns, refetch } = useClientCheckIns(clientId);

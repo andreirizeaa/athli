@@ -55,8 +55,11 @@ type HabitLog = {
 
 const ClientHabitsPage = () => {
   const t = useTranslations();
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
+  const isInbox = !!params.contactId;
 
   const { user } = useUserProfile();
   const { habits: habitsFromContext, isLoading: isLoadingContext, refreshData } = useClientProfileContext();
@@ -560,7 +563,7 @@ const ClientHabitsPage = () => {
     <div className="h-full w-full flex flex-col flex-1 min-h-0">
       <div className="flex h-full w-full flex-1 min-h-0">
         {/* Left sidebar navigation */}
-        <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
+        <div className={cn(isInbox ? "w-60" : "w-80", "border-r bg-background flex-shrink-0 flex flex-col")}>
           <div className="w-full relative flex-shrink-0">
             <div className="px-3 py-3 flex items-center">
               <div className="relative w-full px-1">
@@ -629,8 +632,8 @@ const ClientHabitsPage = () => {
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="w-full relative flex-shrink-0">
-            <div className="px-3 py-3 flex items-center justify-end">
+          <div className="w-full relative flex-shrink-0 bg-background border-t">
+            <div className="px-3 py-[11.5px] flex items-center justify-end">
               <ButtonGroup>
                 <Button
                   variant="outline"

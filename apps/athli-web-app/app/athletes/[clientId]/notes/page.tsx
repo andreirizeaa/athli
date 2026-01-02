@@ -14,7 +14,7 @@ import { DataGrid, type ColumnDefinition } from '@/components/app/data-grid';
 import { EmptyGridState } from '@/components/app/empty-grid-state';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 
-import { Trash2, Plus, FileText, X } from 'lucide-react';
+import { Trash2, Plus, FileText, X, Check, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useClientNotes } from '@/hooks/use-client-notes';
 import { type Note } from '@/api/coach/coach-client-service';
@@ -23,8 +23,10 @@ import { useClientProfileContext } from '../client-profile-context';
 
 const ClientNotesPage = () => {
   const t = useTranslations();
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
   const itemsPerPage = 25;
 
   const { notes: notesFromContext, isLoading: isLoadingContext } = useClientProfileContext();
@@ -407,8 +409,12 @@ const ClientNotesPage = () => {
               <Trash2 className="size-4" />
               {t('general.delete')}
             </Button>
-            <Button onClick={handleSaveNote} disabled={!hasNoteChanges}>
-              {t('general.save')}
+            <Button onClick={handleSaveNote} disabled={!hasNoteChanges || isUpdating} className="gap-2">
+              {isUpdating ? (
+                <><Loader2 className="size-4 animate-spin" />{t('general.saving')}</>
+              ) : (
+                <><Check className="size-4" />{t('general.save')}</>
+              )}
             </Button>
           </div>
         }
@@ -478,8 +484,12 @@ const ClientNotesPage = () => {
             >
               {t('general.cancel')}
             </Button>
-            <Button onClick={handleCreateNote} disabled={!noteTitle.trim()}>
-              {t('general.save')}
+            <Button onClick={handleCreateNote} disabled={!noteTitle.trim() || isCreating} className="gap-2">
+              {isCreating ? (
+                <><Loader2 className="size-4 animate-spin" />{t('general.saving')}</>
+              ) : (
+                <><Check className="size-4" />{t('general.save')}</>
+              )}
             </Button>
           </div>
         }

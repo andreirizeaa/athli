@@ -24,18 +24,18 @@ interface InboxSidebarProps {
     setSearchQuery: (value: string) => void;
     filteredContacts: Contact[];
     selectedContactId: string | undefined;
-    hasDraft: (contactId: string) => boolean;
+
     onOpenBroadcast: () => void;
 }
 
-export function InboxSidebar({
+export const InboxSidebar = React.memo(function InboxSidebar({
     isSidebarCollapsed,
     setIsSidebarCollapsed,
     searchQuery,
     setSearchQuery,
     filteredContacts,
     selectedContactId,
-    hasDraft,
+
     onOpenBroadcast,
 }: InboxSidebarProps) {
     const t = useTranslations();
@@ -44,7 +44,7 @@ export function InboxSidebar({
     return (
         <div
             className={cn(
-                'bg-muted/30 h-full overflow-hidden flex flex-col border-r transition-all duration-300 ease-in-out',
+                'bg-background h-full overflow-hidden flex flex-col border-r transition-all duration-300 ease-in-out',
                 isSidebarCollapsed ? 'w-[64px]' : 'w-[320px]'
             )}
         >
@@ -204,8 +204,8 @@ export function InboxSidebar({
                         </div>
                     </div>
                 </div>
-                <div className="flex-1 overflow-auto">
-                    <div className="block min-w-0 border-t border-border">
+                <div className="flex-1 overflow-auto pt-2">
+                    <div className="block min-w-0 border-border">
                         {filteredContacts.length ? (
                             filteredContacts.map((contact) => (
                                 <ContactListItem
@@ -213,7 +213,7 @@ export function InboxSidebar({
                                     key={contact.id}
                                     active={selectedContactId === contact.id}
                                     isCollapsed={isSidebarCollapsed}
-                                    hasDraft={hasDraft(contact.id)}
+
                                     onClick={() => {
                                         setIsSidebarCollapsed(true);
                                         router.push(`/inbox/${contact.id}/overview`);
@@ -231,4 +231,4 @@ export function InboxSidebar({
             </div>
         </div>
     );
-}
+});

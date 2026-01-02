@@ -40,7 +40,8 @@ const EditTrainingCalendarWorkoutPage = () => {
   const t = useTranslations();
   const router = useRouter();
   const params = useParams();
-  const clientId = params.clientId as string;
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientId = (params.clientId as string) || (params.contactId as string);
   const workoutId = params.workoutId as string;
   const [workoutMeta, setWorkoutMeta] = useState<WorkoutMeta | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

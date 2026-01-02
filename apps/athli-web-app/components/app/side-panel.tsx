@@ -40,8 +40,8 @@ export const SidePanel = ({
         )}
         onOpenAutoFocus={onOpenAutoFocus}
         style={{
-          borderTopLeftRadius: '16px',
-          borderBottomLeftRadius: '16px',
+          borderTopLeftRadius: '22px',
+          borderBottomLeftRadius: '22px',
         }}
       >
         <div className="px-4 pt-3">
