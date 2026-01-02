@@ -52,6 +52,154 @@ const getNextWorkoutKey = (data: Record<string, any>): string => {
     return `workout_${max + 1}`;
 };
 
+/**
+ * Extract exercise payloads from a workout.
+ * Handles all section types: regular, auxiliary, amrap, timed, circuits.
+ * Returns array of { exerciseId, exerciseData } objects.
+ */
+const extractExercisesFromWorkout = (workout: any): Array<{ exerciseId: string; exerciseData: any }> => {
+    const exercises: Array<{ exerciseId: string; exerciseData: any }> = [];
+
+    if (!workout?.items || !Array.isArray(workout.items)) {
+        return exercises;
+    }
+
+    for (const item of workout.items) {
+        if (item.itemType === 'section' && item.data) {
+            const section = item.data;
+
+            switch (section.type) {
+                case 'regular':
+                case 'auxiliary':
+                    // ExerciseGroupPayload[] -> each group has exercises: RegularExercisePayload[]
+                    if (Array.isArray(section.exercises)) {
+                        for (const group of section.exercises) {
+                            if (Array.isArray(group.exercises)) {
+                                for (const exercise of group.exercises) {
+                                    if (exercise.prescribedExerciseId) {
+                                        exercises.push({
+                                            exerciseId: exercise.performedExerciseId || exercise.prescribedExerciseId,
+                                            exerciseData: exercise,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+
+                case 'amrap':
+                case 'timed':
+                    // RoundExercisePayload[] directly
+                    if (Array.isArray(section.exercises)) {
+                        for (const exercise of section.exercises) {
+                            if (exercise.prescribedExerciseId) {
+                                exercises.push({
+                                    exerciseId: exercise.performedExerciseId || exercise.prescribedExerciseId,
+                                    exerciseData: exercise,
+                                });
+                            }
+                        }
+                    }
+                    break;
+
+                case 'circuits':
+                    // CircuitExerciseGroupPayload[] -> each group has exercises: CircuitExercisePayload[]
+                    if (Array.isArray(section.exercises)) {
+                        for (const group of section.exercises) {
+                            if (Array.isArray(group.exercises)) {
+                                for (const exercise of group.exercises) {
+                                    if (exercise.prescribedExerciseId) {
+                                        exercises.push({
+                                            exerciseId: exercise.performedExerciseId || exercise.prescribedExerciseId,
+                                            exerciseData: exercise,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+
+    return exercises;
+};
+
+/**
+ * Insert exercise history records for a completed workout.
+ * Also upserts the training history record first (required for FK constraint).
+ */
+const insertExerciseHistory = async (
+    supabase: any,
+    clientId: string,
+    coachId: string,
+    date: string,
+    workoutId: string,
+    workout: any,
+    status: 'not_started' | 'in_progress' | 'completed'
+): Promise<void> => {
+    // 1. Upsert training history record (required for FK constraint)
+    const { error: historyError } = await supabase
+        .from('client_training_history')
+        .upsert({
+            client_id: clientId,
+            coach_id: coachId,
+            date: date,
+            workout_id: workoutId,
+            status: status,
+            updated_at: new Date().toISOString(),
+        }, { onConflict: 'client_id, coach_id, date, workout_id' });
+
+    if (historyError) {
+        console.error('Error upserting training history:', historyError);
+        throw historyError;
+    }
+
+    // 2. Only insert exercise history if workout is completed
+    if (status !== 'completed') {
+        return;
+    }
+
+    const exercises = extractExercisesFromWorkout(workout);
+
+    if (exercises.length === 0) {
+        return;
+    }
+
+    const workoutName = workout.name || workout.title || workout.program || 'Untitled Workout';
+
+    // 3. Delete existing exercise history for this workout (to handle re-completion)
+    await supabase
+        .from('client_training_exercise_history')
+        .delete()
+        .eq('client_id', clientId)
+        .eq('coach_id', coachId)
+        .eq('date', date)
+        .eq('workout_id', workoutId);
+
+    // 4. Insert new exercise history records
+    const exerciseRecords = exercises.map(({ exerciseId, exerciseData }) => ({
+        client_id: clientId,
+        coach_id: coachId,
+        date: date,
+        workout_id: workoutId,
+        workout_name: workoutName,
+        exercise_id: exerciseId,
+        exercise_data: exerciseData,
+    }));
+
+    const { error: insertError } = await supabase
+        .from('client_training_exercise_history')
+        .insert(exerciseRecords);
+
+    if (insertError) {
+        console.error('Error inserting exercise history:', insertError);
+        throw insertError;
+    }
+};
+
 export const clientTrainingsController = {
     /**
      * Get all trainings assigned to a client
@@ -347,6 +495,25 @@ export const clientTrainingsController = {
         if (upsertError) {
             console.error('Upsert error:', upsertError);
             return res.status(500).json({ success: false, message: upsertError.message });
+        }
+
+        // 3. Track training history and exercise history for completed workouts
+        const workoutStatus = workoutToSave.completedSummary?.status;
+        if (workoutStatus && (workoutStatus === 'completed' || workoutStatus === 'in_progress')) {
+            try {
+                await insertExerciseHistory(
+                    supabase,
+                    clientId,
+                    coachId || userId,
+                    date,
+                    instanceKey,
+                    workoutToSave,
+                    workoutStatus
+                );
+            } catch (historyError) {
+                // Log but don't fail the request - history is secondary to the main save
+                console.error('Failed to insert exercise history:', historyError);
+            }
         }
 
         success(res, { message: 'Workout assigned successfully' });
