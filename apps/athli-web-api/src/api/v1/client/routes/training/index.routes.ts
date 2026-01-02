@@ -245,3 +245,30 @@ clientTrainingRouter.post('/calendar/duplicate', supabaseAuthenticate, clientTra
  */
 clientTrainingRouter.post('/calendar/delete', supabaseAuthenticate, clientTrainingsController.deleteWorkoutByKey);
 
+/**
+ * @swagger
+ * /api/v1/client/trainings/exercise-history:
+ *   post:
+ *     summary: Get exercise history for a specific exercise
+ *     tags: [Client Trainings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - clientId
+ *               - exerciseName
+ *             properties:
+ *               clientId:
+ *                 type: string
+ *               exerciseName:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Exercise history retrieved successfully
+ */
+clientTrainingRouter.post('/exercise-history', supabaseAuthenticate, clientTrainingsController.getExerciseHistory);

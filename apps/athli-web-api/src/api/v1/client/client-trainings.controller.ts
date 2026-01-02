@@ -331,7 +331,9 @@ export const clientTrainingsController = {
             return;
         }
 
-        const { clientId, date, workoutId } = req.body;
+        const { date, workoutId } = req.body;
+        // Accept clientId from header (preferred) or body (fallback)
+        const clientId = req.header('x-client-id') ? String(req.header('x-client-id')) : req.body.clientId;
 
         if (!clientId || !date || !workoutId) {
             return res.status(400).json({ success: false, message: 'clientId, date, and workoutId are required' });
@@ -387,7 +389,9 @@ export const clientTrainingsController = {
             return;
         }
 
-        const { clientId, date, workoutId, workoutPayload, isNew, coachId } = req.body;
+        const { date, workoutId, workoutPayload, isNew, coachId } = req.body;
+        // Accept clientId from header (preferred) or body (fallback)
+        const clientId = req.header('x-client-id') ? String(req.header('x-client-id')) : req.body.clientId;
 
         if (!clientId || !date) {
             return res.status(400).json({ success: false, message: 'clientId and date are required' });
@@ -635,7 +639,8 @@ export const clientTrainingsController = {
             return;
         }
 
-        const { clientId, sourceDate, sourceWorkoutId, targetDate } = req.body;
+        const { sourceDate, sourceWorkoutId, targetDate } = req.body;
+        const clientId = req.header('x-client-id') ? String(req.header('x-client-id')) : req.body.clientId;
 
         if (!clientId || !sourceDate || !sourceWorkoutId || !targetDate) {
             return res.status(400).json({
@@ -724,7 +729,8 @@ export const clientTrainingsController = {
             return;
         }
 
-        const { clientId, sourceDate, workoutId } = req.body;
+        const { sourceDate, workoutId } = req.body;
+        const clientId = req.header('x-client-id') ? String(req.header('x-client-id')) : req.body.clientId;
 
         if (!clientId || !sourceDate || !workoutId) {
             return res.status(400).json({
@@ -784,5 +790,61 @@ export const clientTrainingsController = {
         }
 
         success(res, { message: 'Workout deleted successfully' });
+    },
+
+    /**
+     * Get exercise history for a specific exercise.
+     * POST /api/v1/client/trainings/exercise-history
+     * Body: { clientId, exerciseName }
+     */
+    getExerciseHistory: async (req: Request, res: Response) => {
+        const userId = (req as any).userId;
+        const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const coachId = req.header('x-coach-id');
+
+        if (!userId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        const { clientId, exercise_id, exerciseName } = req.body;
+
+        // Use provided clientId or targetClientId (header preferred)
+        const finalClientId = clientId || targetClientId;
+
+        if (!finalClientId || (!exercise_id && !exerciseName)) {
+            return res.status(400).json({ success: false, message: 'clientId and exercise_id (or exerciseName) are required' });
+        }
+
+        const supabase = getSupabaseClient();
+        let query = supabase
+            .from('client_training_exercise_history')
+            .select('*')
+            .eq('client_id', finalClientId)
+            .order('date', { ascending: false });
+
+        if (exercise_id) {
+            query = query.eq('exercise_id', exercise_id);
+        } else if (exerciseName) {
+            query = query.eq('exercise_data->>name', exerciseName);
+        }
+
+        if (coachId) {
+            query = query.eq('coach_id', coachId);
+        } else if (req.header('x-client-id')) {
+            // Coach view
+            query = query.eq('coach_id', userId);
+        }
+
+        const { data: history, error } = await query;
+
+        if (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        success(res, {
+            message: 'Exercise history retrieved successfully',
+            data: { history },
+        });
     },
 };

@@ -383,6 +383,7 @@ export interface Note {
 
 export interface CreateNoteData {
   contactId: string;
+  coachId: string;
   title: string;
   body: string;
 }
@@ -390,6 +391,7 @@ export interface CreateNoteData {
 export interface EditNoteData {
   noteId: string;
   contactId: string;
+  coachId: string;
   title: string;
   body: string;
 }
@@ -397,13 +399,17 @@ export interface EditNoteData {
 export interface DeleteNoteData {
   noteId: string;
   contactId: string;
+  coachId: string;
 }
 
 export type ClientNote = Note;
 
-export const getNotes = async (contactId: string): Promise<Note[]> => {
+export const getNotes = async (contactId: string, coachId: string): Promise<Note[]> => {
   const response = await apiFetch<{ data: { notes: any[] } }>(`/client/notes`, {
-    headers: { 'x-client-id': contactId }
+    headers: {
+      'x-client-id': contactId,
+      'x-coach-id': coachId
+    }
   });
   return response.data.notes.map((n) => {
     return {
@@ -422,7 +428,10 @@ export const getClientNotes = getNotes;
 export const createNote = async (data: CreateNoteData): Promise<Note> => {
   const response = await apiFetch<{ data: { note: any } }>(`/client/notes`, {
     method: 'POST',
-    headers: { 'x-client-id': data.contactId },
+    headers: {
+      'x-client-id': data.contactId,
+      'x-coach-id': data.coachId
+    },
     body: JSON.stringify({
       title: data.title,
       body: data.body,
@@ -443,7 +452,10 @@ export const createNote = async (data: CreateNoteData): Promise<Note> => {
 export const editNote = async (data: EditNoteData): Promise<Note> => {
   const response = await apiFetch<{ data: { note: any } }>(`/client/notes/${data.noteId}`, {
     method: 'PATCH',
-    headers: { 'x-client-id': data.contactId },
+    headers: {
+      'x-client-id': data.contactId,
+      'x-coach-id': data.coachId
+    },
     body: JSON.stringify({
       title: data.title,
       body: data.body
@@ -463,22 +475,28 @@ export const editNote = async (data: EditNoteData): Promise<Note> => {
 export const deleteNote = async (data: DeleteNoteData): Promise<void> => {
   await apiFetch(`/client/notes/${data.noteId}`, {
     method: 'DELETE',
-    headers: { 'x-client-id': data.contactId }
+    headers: {
+      'x-client-id': data.contactId,
+      'x-coach-id': data.coachId
+    }
   });
 };
 
-export const deleteNotes = async (data: { noteIds: string[]; contactId: string }): Promise<void> => {
+export const deleteNotes = async (data: { noteIds: string[]; contactId: string; coachId: string }): Promise<void> => {
   await apiFetch(`/client/notes`, {
     method: 'DELETE',
-    headers: { 'x-client-id': data.contactId },
+    headers: {
+      'x-client-id': data.contactId,
+      'x-coach-id': data.coachId
+    },
     body: JSON.stringify({
       noteIds: data.noteIds,
     }) as any,
   });
 };
 
-export const searchNotes = async (contactId: string, query: string): Promise<Note[]> => {
+export const searchNotes = async (contactId: string, coachId: string, query: string): Promise<Note[]> => {
   // Client-side filtering for now as search endpoint isn't implemented
-  const allNotes = await getNotes(contactId);
+  const allNotes = await getNotes(contactId, coachId);
   return allNotes.filter(n => n.body.toLowerCase().includes(query.toLowerCase()));
 };

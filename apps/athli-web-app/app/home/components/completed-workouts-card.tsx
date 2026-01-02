@@ -89,7 +89,12 @@ export const CompletedWorkoutsCard = () => {
     setIsLoadingWorkout(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
-      const instance = await getClientWorkoutInstance(workout.client_id, dateStr, workout.workout_id);
+      const instance = await getClientWorkoutInstance(
+        workout.client_id,
+        workout.coach_id,
+        dateStr,
+        workout.workout_id
+      );
       setWorkoutData(instance);
 
       if (workoutType === 'missed') {
@@ -265,10 +270,12 @@ export const CompletedWorkoutsCard = () => {
       {/* Dialogs */}
       {selectedWorkout && workoutData && (
         <>
+          {console.log('Home - selectedWorkout:', selectedWorkout, 'client_id:', selectedWorkout.client_id)}
           <ClientTrainingDaySummary
             open={isSummaryDialogOpen}
             onOpenChange={setIsSummaryDialogOpen}
             workoutName={workoutData?.name || 'Untitled Workout'}
+            clientId={selectedWorkout.client_id}
             athlete={{
               name: selectedWorkout.clientName,
               avatarUrl: selectedWorkout.clientAvatar
