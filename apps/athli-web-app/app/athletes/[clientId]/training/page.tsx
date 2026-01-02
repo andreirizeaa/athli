@@ -88,8 +88,7 @@ import { AddWorkoutSidePanel } from '@/app/training/workouts/components/add-work
 import { CreateWorkoutSidePanel } from '@/app/training/workouts/components/create-workout-side-panel';
 import { TrainingDataProvider, useTrainingData } from '@/app/training/training-data-context';
 import { AddProgramSidePanel } from './add-program-side-panel';
-import { ClientInProgressTrainingDaySummary } from './client-in-progress-training-day-summary';
-import { ClientCompletedTrainingDaySummary } from './client-completed-training-day-summary';
+import { ClientTrainingDaySummary } from './client-training-day-summary';
 import { WorkoutBuilder } from '@/app/training/workouts/workout-builder';
 import { type WorkoutProgramPayload, DEFAULT_EXECUTION_FIELDS, type WorkoutData } from '@/components/training/workout-schema';
 import { AddExerciseSidePanel } from './add-exercise-side-panel';
@@ -101,6 +100,7 @@ import { CardLoaderOverlay } from '@/components/ui/card-loader-overlay';
 import { assignWorkout, deleteClientWorkout, getClientWorkoutInstance } from '@/api/client/client-training-service';
 import { useClientProfileContext } from '../client-profile-context';
 import { useGlobalData } from '@/providers/global-data-provider';
+import { useResizeObserver } from '@/hooks/use-resize-observer';
 
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -192,7 +192,11 @@ const ClientTrainingCalendarPage = () => {
   const queryClient = useQueryClient();
   const params = useParams();
   const searchParams = useSearchParams();
-  const clientId = useMemo(() => (params.clientId as string) || '', [params.clientId]);
+  const clientId = useMemo(() => {
+    // Support both clientId (athletes context) and contactId (inbox context)
+    const clientIdFromParams = (params.clientId as string) || (params.contactId as string);
+    return clientIdFromParams || '';
+  }, [params.clientId, params.contactId]);
   const [selectedWeek, setSelectedWeek] = useState<string>('2');
   const [currentWeek, setCurrentWeek] = useState<number>(1);
   const [totalWeeks] = useState<number>(52); // Default to 52 weeks (1 year)
@@ -214,7 +218,7 @@ const ClientTrainingCalendarPage = () => {
   const [isSaveAsProgramOpen, setIsSaveAsProgramOpen] = useState<boolean>(false);
   const [selectedDateForWorkout, setSelectedDateForWorkout] = useState<Date | null>(null);
   const [workoutsByDate, setWorkoutsByDate] = useState<{
-    [dateKey: string]: Array<Workout & { id: string }>;
+    [dateKey: string]: Array<Workout & { id: string; templateId?: string }>;
   }>({});
   // React Query Hooks
   const { workouts: availableWorkouts, isLoading: isLoadingWorkouts } = useCoachWorkouts();
@@ -283,6 +287,8 @@ const ClientTrainingCalendarPage = () => {
     workout: Workout & { id: string };
     dateKey: string;
   } | null>(null);
+  const [isLoadingInProgressSummary, setIsLoadingInProgressSummary] = useState(false);
+  const [fetchedInProgressWorkoutData, setFetchedInProgressWorkoutData] = useState<any>(null);
   const [completedSummaryWorkout, setCompletedSummaryWorkout] = useState<{
     workout: Workout & { id: string };
     dateKey: string;
@@ -296,6 +302,10 @@ const ClientTrainingCalendarPage = () => {
     sourceDateKey: string;
   } | null>(null);
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+
+  // Measure main container for constrained positioning of fixed elements (like action bar)
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const containerRect = useResizeObserver(containerRef);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -745,13 +755,27 @@ const ClientTrainingCalendarPage = () => {
       const [day, month, year] = dateKey.split('-').map(Number);
       const date = new Date(year, month - 1, day);
       const isoKey = getDateKey(date);
-      converted[isoKey] = data[dateKey].map((workout) => ({
-        ...workout,
-        id: workout.id,
-        name: (workout as any).name || (workout as any).workout,
-        isFavourite: (workout as any).isFavourite || false,
 
-      }));
+      // Handle new object structure (keyed by workout_ID) vs old array structure
+      const dailyData = data[dateKey];
+      if (Array.isArray(dailyData)) {
+        converted[isoKey] = dailyData.map((workout) => ({
+          ...workout,
+          id: workout.id,
+          templateId: workout.id, // Legacy compatibility
+          name: (workout as any).name || (workout as any).workout,
+          isFavourite: (workout as any).isFavourite || false,
+        }));
+      } else {
+        // Object structure { "workout_1": { ... } }
+        converted[isoKey] = Object.entries(dailyData).map(([key, workout]: [string, any]) => ({
+          ...workout,
+          id: key, // Use key as distinct instance ID
+          templateId: workout.id, // Preserve original template ID
+          name: workout.name || workout.workout,
+          isFavourite: workout.isFavourite || false,
+        }));
+      }
     });
 
     return converted;
@@ -2105,6 +2129,33 @@ const ClientTrainingCalendarPage = () => {
     }
   };
 
+  const handleOpenInProgressSummary = async (dateKey: string, workout: Workout & { id: string }) => {
+    // Open the dialog immediately with loading state
+    setIsLoadingInProgressSummary(true);
+    setFetchedInProgressWorkoutData(null);
+    setInProgressSummaryWorkout({ workout, dateKey });
+
+    // Extract the real workout ID (format: "workoutId__dateKey__timestamp")
+    const parts = workout.id.split('__');
+    const realWorkoutId = parts[0];
+
+    try {
+      // Fetch the full workout data from training_clients
+      const fullWorkout = await queryClient.fetchQuery({
+        queryKey: ['client-workout-instance-progress', clientId, dateKey, realWorkoutId],
+        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        staleTime: 0, // Always fetch fresh
+      });
+
+      setFetchedInProgressWorkoutData(fullWorkout);
+    } catch (error) {
+      console.error('Failed to fetch in-progress workout details:', error);
+      toast.error('Failed to load workout details');
+    } finally {
+      setIsLoadingInProgressSummary(false);
+    }
+  };
+
   const handleSaveEditedWorkout = async (payload: WorkoutProgramPayload) => {
     // If we are editing an existing workout
     if (editingWorkout) {
@@ -2292,9 +2343,9 @@ const ClientTrainingCalendarPage = () => {
   };
 
   return (
-    <div className="w-full flex flex-col">
-      <Card className="w-full flex flex-col p-0 rounded-none border-0 shadow-none" style={{ height: 'calc(100vh - 200px)', minHeight: '600px' }}>
-        <div className="w-full relative flex-shrink-0">
+    <div ref={containerRef} className="w-full h-full flex flex-col">
+      <Card className="w-full flex-1 flex flex-col p-0 rounded-none border-0 shadow-none bg-background">
+        <div className="w-full relative flex-shrink-0 bg-background border-t">
           <div className="w-full px-3 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3 px-1">
               <Button
@@ -2473,7 +2524,7 @@ const ClientTrainingCalendarPage = () => {
           </div>
           <Separator className="absolute bottom-[-1px] left-0 right-0" />
         </div>
-        <div className="w-full flex-1 bg-background rounded-none px-4 pb-0 pt-0 min-h-0 flex flex-col relative">
+        <div className="w-full flex-1 bg-background rounded-none px-4 pb-4 min-h-0 flex flex-col relative -mt-px">
           {isLoadingTraining && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80">
               <Loader2 className="size-8 animate-spin text-primary" />
@@ -2607,7 +2658,7 @@ const ClientTrainingCalendarPage = () => {
                                   <div className="flex flex-col gap-2">
                                     {workoutsForDate.map((workout) => {
                                       const status = getWorkoutStatus(workout.id, undefined, workout.completedSummary?.status);
-                                      const isWorkoutInLibrary = checkIsInLibrary(workout.id);
+                                      const isWorkoutInLibrary = checkIsInLibrary(workout.templateId || workout.id);
                                       const isWorkoutCopySource = isCopyMode && copiedWorkout?.workout.id === workout.id;
                                       return (
                                         <DraggableWorkoutWrapper
@@ -2632,7 +2683,7 @@ const ClientTrainingCalendarPage = () => {
                                               }
                                               // For in-progress or completed workouts, open the summary dialog
                                               if (status === 'in_progress') {
-                                                setInProgressSummaryWorkout({ workout, dateKey });
+                                                handleOpenInProgressSummary(dateKey, workout);
                                                 return;
                                               }
                                               if (status === 'completed') {
@@ -2653,7 +2704,7 @@ const ClientTrainingCalendarPage = () => {
                                                 }
                                                 // For in-progress or completed workouts, open the summary dialog
                                                 if (status === 'in_progress') {
-                                                  setInProgressSummaryWorkout({ workout, dateKey });
+                                                  handleOpenInProgressSummary(dateKey, workout);
                                                   return;
                                                 }
                                                 if (status === 'completed') {
@@ -3236,15 +3287,36 @@ const ClientTrainingCalendarPage = () => {
         onSaveError={() => { }}
         onDirtyChange={() => { }}
       />
-      <ClientInProgressTrainingDaySummary
+      <ClientTrainingDaySummary
         open={!!inProgressSummaryWorkout}
         onOpenChange={(open) => {
-          if (!open) setInProgressSummaryWorkout(null);
+          if (!open) {
+            setInProgressSummaryWorkout(null);
+            setIsLoadingInProgressSummary(false);
+            setFetchedInProgressWorkoutData(null);
+          }
         }}
-        workout={inProgressSummaryWorkout?.workout || null}
-        dateKey={inProgressSummaryWorkout?.dateKey || ''}
+        workoutName={inProgressSummaryWorkout?.workout.name || 'Workout'}
+        workoutData={fetchedInProgressWorkoutData}
+        athlete={athlete}
+        isLoading={isLoadingInProgressSummary}
+        completedSummary={{
+          status: 'in_progress',
+          totalDurationMin: 0,
+          totalWeightLifted: 0,
+          startedAt: fetchedInProgressWorkoutData?.workout_data?.startedAt || fetchedInProgressWorkoutData?.startedAt
+        }}
+        stats={{
+          exercisesCompleted: fetchedInProgressWorkoutData?.total_exercises || fetchedInProgressWorkoutData?.totalExercises || inProgressSummaryWorkout?.workout.totalExercises || 0,
+          exercisesTotal: fetchedInProgressWorkoutData?.total_exercises || fetchedInProgressWorkoutData?.totalExercises || inProgressSummaryWorkout?.workout.totalExercises || 0,
+          duration: 0,
+          intensity: 0,
+          volume: 0,
+          readiness: fetchedInProgressWorkoutData?.workout_data?.pre?.readiness || fetchedInProgressWorkoutData?.pre?.readiness || inProgressSummaryWorkout?.workout.pre?.readiness || 0,
+          rating: 0
+        }}
       />
-      <ClientCompletedTrainingDaySummary
+      <ClientTrainingDaySummary
         open={!!completedSummaryWorkout}
         onOpenChange={(open) => {
           if (!open) {
@@ -3275,6 +3347,12 @@ const ClientTrainingCalendarPage = () => {
         onDelete={handleDeleteSelectedWorkouts}
         onCopy={handleStartMultiSelectCopy}
         onCancel={handleCancelMultiSelect}
+        isInboxView={!!params.contactId}
+        style={containerRect ? {
+          left: containerRect.left,
+          width: containerRect.width,
+          right: 'auto'
+        } : undefined}
       />
     </div>
   );

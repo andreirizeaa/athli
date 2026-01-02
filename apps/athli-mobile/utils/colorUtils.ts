@@ -156,4 +156,32 @@ export function isLightColor(hex: string): boolean {
   return getLuminance(hex) > 0.5;
 }
 
+/**
+ * Mixes two hex colors by a given percentage.
+ * @param color1 - The first hex color.
+ * @param color2 - The second hex color.
+ * @param percentage - The percentage of the second color to mix in (0-1).
+ * @returns The mixed hex color.
+ */
+export function mixHex(color1: string, color2: string, percentage: number): string {
+  const c1 = color1.replace('#', '');
+  const c2 = color2.replace('#', '');
+
+  const r1 = parseInt(c1.substring(0, 2), 16);
+  const g1 = parseInt(c1.substring(2, 4), 16);
+  const b1 = parseInt(c1.substring(4, 6), 16);
+
+  const r2 = parseInt(c2.substring(0, 2), 16);
+  const g2 = parseInt(c2.substring(2, 4), 16);
+  const b2 = parseInt(c2.substring(4, 6), 16);
+
+  const r = Math.round(r1 * (1 - percentage) + r2 * percentage);
+  const g = Math.round(g1 * (1 - percentage) + g2 * percentage);
+  const b = Math.round(b1 * (1 - percentage) + b2 * percentage);
+
+  const toHex = (value: number) => value.toString(16).padStart(2, '0');
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 

@@ -461,7 +461,7 @@ export const enMessages = {
     links: {
       dashboard: 'Dashboard',
       marketing: 'Marketing',
-      messaging: 'Messages',
+      inbox: 'Inbox',
       workouts: 'Workouts',
       athletes: 'Athletes',
       calendar: 'Calendar',
@@ -547,6 +547,9 @@ export const enMessages = {
     settings: {
       label: 'Settings',
     },
+    helpAndSupport: {
+      label: 'Help and support',
+    },
     support: {
       label: 'Support',
     },
@@ -626,9 +629,12 @@ export const enMessages = {
     created: 'Created',
     editDetails: 'Edit details',
     comments: 'Comments',
+    active: 'Active',
+    archived: 'Archived',
   },
   messages: {
-    title: 'Messages',
+    title: 'Inbox',
+    search: 'Search',
     conversation: 'conversation',
     conversations: 'conversations',
     broadcast: 'Broadcast',
@@ -688,9 +694,14 @@ export const enMessages = {
     video: 'Video',
     pdf: 'PDF',
     mp4: 'MP4',
+    voiceNote: 'Voice note',
     download: 'Download {name}',
     remove: 'Remove {name}',
     viewNoteAria: 'View note: {title}',
+    closePowerView: 'Close power view',
+    enablePowerMode: 'Enable power mode',
+    showAthlete: 'Show athlete',
+    hideAthlete: 'Hide athlete',
     broadcastPanel: {
       title: 'Broadcast Message',
       message: 'Message',

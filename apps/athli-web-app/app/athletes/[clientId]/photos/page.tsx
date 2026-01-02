@@ -24,8 +24,11 @@ type PhotoView = 'all' | 'front' | 'back' | 'side';
 const ClientPhotosPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
+  const isInbox = !!params.contactId;
   const queryClient = useQueryClient();
 
   // Use React Query hook instead of local state to prevent flickering
@@ -187,20 +190,52 @@ const ClientPhotosPage = () => {
     <div className="h-full w-full flex flex-col flex-1 min-h-0">
       <div className="flex h-full w-full flex-1 min-h-0">
         {/* Left sidebar navigation */}
-        <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
+        <div className={cn(isInbox ? "w-60" : "w-80", "border-r bg-background flex-shrink-0 flex flex-col")}>
           <div className="w-full relative flex-shrink-0">
             <div className="px-3 py-3 flex items-center">
               <ButtonGroup className="w-full px-1">
-                <Button variant={activeView === 'all' ? 'default' : 'outline'} onClick={() => handleViewChange('all')} className={cn('flex-1', activeView === 'all' && 'bg-primary text-primary-foreground')}>
+                <Button
+                  variant={activeView === 'all' ? 'default' : 'outline'}
+                  onClick={() => handleViewChange('all')}
+                  className={cn(
+                    'flex-1',
+                    activeView === 'all' && 'bg-primary text-primary-foreground',
+                    isInbox && "px-1 text-xs h-9"
+                  )}
+                >
                   All
                 </Button>
-                <Button variant={activeView === 'front' ? 'default' : 'outline'} onClick={() => handleViewChange('front')} className={cn('flex-1', activeView === 'front' && 'bg-primary text-primary-foreground')}>
+                <Button
+                  variant={activeView === 'front' ? 'default' : 'outline'}
+                  onClick={() => handleViewChange('front')}
+                  className={cn(
+                    'flex-1',
+                    activeView === 'front' && 'bg-primary text-primary-foreground',
+                    isInbox && "px-1 text-xs h-9"
+                  )}
+                >
                   Front
                 </Button>
-                <Button variant={activeView === 'back' ? 'default' : 'outline'} onClick={() => handleViewChange('back')} className={cn('flex-1', activeView === 'back' && 'bg-primary text-primary-foreground')}>
+                <Button
+                  variant={activeView === 'back' ? 'default' : 'outline'}
+                  onClick={() => handleViewChange('back')}
+                  className={cn(
+                    'flex-1',
+                    activeView === 'back' && 'bg-primary text-primary-foreground',
+                    isInbox && "px-1 text-xs h-9"
+                  )}
+                >
                   Back
                 </Button>
-                <Button variant={activeView === 'side' ? 'default' : 'outline'} onClick={() => handleViewChange('side')} className={cn('flex-1', activeView === 'side' && 'bg-primary text-primary-foreground')}>
+                <Button
+                  variant={activeView === 'side' ? 'default' : 'outline'}
+                  onClick={() => handleViewChange('side')}
+                  className={cn(
+                    'flex-1',
+                    activeView === 'side' && 'bg-primary text-primary-foreground',
+                    isInbox && "px-1 text-xs h-9"
+                  )}
+                >
                   Side
                 </Button>
               </ButtonGroup>
@@ -285,8 +320,8 @@ const ClientPhotosPage = () => {
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="w-full relative flex-shrink-0">
-            <div className="px-3 py-3 flex items-center justify-end">
+          <div className="w-full relative flex-shrink-0 bg-background border-t">
+            <div className="px-3 py-[11.5px] flex items-center justify-end">
               <ButtonGroup>
                 <Button
                   variant="outline"

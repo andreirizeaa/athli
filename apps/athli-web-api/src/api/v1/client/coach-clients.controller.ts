@@ -274,7 +274,7 @@ export const coachClientController = {
 
             // 1. Separate assignment updates from profile updates
             const assignmentFields = ['category', 'status', 'is_archived'];
-            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system'];
+            const profileFields = ['name', 'phone', 'gender', 'country', 'birth_date', 'unit_system', 'height_cm'];
 
             const assignmentUpdates: any = {};
             const profileUpdates: any = {};

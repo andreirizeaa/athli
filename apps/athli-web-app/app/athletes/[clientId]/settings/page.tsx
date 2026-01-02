@@ -17,8 +17,10 @@ import { useClientProfileContext } from '../client-profile-context';
 const AthleteSettingsPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
 
   const { athlete } = useClientProfileContext();
   const clientName = athlete?.name || '';
@@ -85,8 +87,8 @@ const AthleteSettingsPage = () => {
   return (
     <div className="flex justify-center items-start px-4 pt-4 pb-2">
       <Card className="bg-background max-w-3xl w-full">
-        <CardHeader className="px-4">
-          <CardTitle>{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
+        <CardHeader className="px-4 bg-red-500/10 rounded-t-lg">
+          <CardTitle className="text-red-600 dark:text-red-400">{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
         </CardHeader>
         <Separator className="w-full mt-[-8px] mb-[-4px]" />
         <div className="w-full">

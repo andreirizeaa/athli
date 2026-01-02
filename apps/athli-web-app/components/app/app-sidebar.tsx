@@ -22,6 +22,7 @@ import {
   Rocket,
   Gift,
   WandSparkles,
+  Headset,
 } from 'lucide-react';
 import { LogoIcon } from '@/components/logo';
 import {
@@ -61,8 +62,8 @@ export function AppSidebar() {
       icon: Users,
     },
     {
-      href: '/messaging',
-      labelKey: 'sidebar.links.messaging',
+      href: '/inbox',
+      labelKey: 'sidebar.links.inbox',
       icon: MessageCircle,
     },
     {
@@ -114,7 +115,7 @@ export function AppSidebar() {
   ] as const;
 
   return (
-    <Sidebar collapsible="icon" className={isHoverExpanded ? 'border-r' : ''}>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         {isCollapsed ? (
           <div className="flex items-center justify-center px-2 py-1 h-10">
@@ -134,7 +135,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/get-started'}
-                  className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                  className="text-sm"
                 >
                   <Link href="/get-started">
                     <Rocket className="shrink-0" />
@@ -146,7 +147,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activePath === '/home'}
-                  className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                  className="text-sm"
                 >
                   <Link href="/home">
                     <Home className="shrink-0" />
@@ -160,7 +161,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.main')}
@@ -178,7 +179,7 @@ export function AppSidebar() {
                   isActive = activePath.startsWith('/todo');
                 } else if (
                   href === '/athletes' ||
-                  href === '/messaging' ||
+                  href === '/inbox' ||
                   href === '/check-ins'
                 ) {
                   isActive = activePath === href || activePath.startsWith(`${href}/`);
@@ -190,7 +191,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                      className="text-sm"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -206,7 +207,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.library')}
@@ -240,7 +241,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                      className="text-sm"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -256,7 +257,7 @@ export function AppSidebar() {
         <SidebarGroup className="pb-0">
           <div className="flex h-6 items-center px-2">
             {isCollapsed ? (
-              <div className="mx-auto h-px w-8 bg-sidebar-border" />
+              <div className="mx-auto h-px w-8 bg-sidebar-foreground/70" />
             ) : (
               <span className="text-[11px] font-semibold uppercase text-sidebar-foreground/70">
                 {t('sidebar.group.automations')}
@@ -279,7 +280,7 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+                      className="text-sm"
                     >
                       <Link href={item.href}>
                         <Icon className="shrink-0" />
@@ -297,9 +298,17 @@ export function AppSidebar() {
         <SidebarMenu className="gap-0.5">
           <SidebarMenuItem>
             <SidebarMenuButton
+              className="text-sm text-sidebar-foreground cursor-default hover:bg-transparent active:bg-transparent"
+            >
+              <Headset className="shrink-0" />
+              {!isCollapsed && <span>{t('sidebar.helpAndSupport.label') || 'Help and support'}</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
               asChild
               isActive={activePath === '/settings' || activePath.startsWith('/settings/')}
-              className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+              className="text-sm"
             >
               <Link href="/settings">
                 <Settings className="shrink-0" />
@@ -311,7 +320,7 @@ export function AppSidebar() {
             <SidebarMenuButton
               asChild
               isActive={activePath === '/refer-and-earn'}
-              className="text-sm hover:text-foreground active:text-foreground hover:bg-[var(--primary)]/10 active:bg-[var(--primary)]/10"
+              className="text-sm"
             >
               <Link href="/refer-and-earn">
                 <Gift className="shrink-0" />
