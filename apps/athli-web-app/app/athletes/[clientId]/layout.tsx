@@ -182,7 +182,7 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
   };
 
   const handleNavigateToMessages = (athleteId: string) => {
-    router.push(`/messaging/${athleteId}`);
+    router.push(`/inbox/${athleteId}/overview`);
   };
 
   const handleResendInvite = async () => {

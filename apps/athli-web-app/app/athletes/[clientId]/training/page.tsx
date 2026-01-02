@@ -100,6 +100,7 @@ import { CardLoaderOverlay } from '@/components/ui/card-loader-overlay';
 import { assignWorkout, deleteClientWorkout, getClientWorkoutInstance } from '@/api/client/client-training-service';
 import { useClientProfileContext } from '../client-profile-context';
 import { useGlobalData } from '@/providers/global-data-provider';
+import { useResizeObserver } from '@/hooks/use-resize-observer';
 
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -301,6 +302,10 @@ const ClientTrainingCalendarPage = () => {
     sourceDateKey: string;
   } | null>(null);
   const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+
+  // Measure main container for constrained positioning of fixed elements (like action bar)
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const containerRect = useResizeObserver(containerRef);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -2338,7 +2343,7 @@ const ClientTrainingCalendarPage = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div ref={containerRef} className="w-full h-full flex flex-col">
       <Card className="w-full flex-1 flex flex-col p-0 rounded-none border-0 shadow-none bg-background">
         <div className="w-full relative flex-shrink-0 bg-background border-t">
           <div className="w-full px-3 py-3 flex items-center justify-between">
@@ -3343,6 +3348,11 @@ const ClientTrainingCalendarPage = () => {
         onCopy={handleStartMultiSelectCopy}
         onCancel={handleCancelMultiSelect}
         isInboxView={!!params.contactId}
+        style={containerRect ? {
+          left: containerRect.left,
+          width: containerRect.width,
+          right: 'auto'
+        } : undefined}
       />
     </div>
   );

@@ -87,8 +87,8 @@ const AthleteSettingsPage = () => {
   return (
     <div className="flex justify-center items-start px-4 pt-4 pb-2">
       <Card className="bg-background max-w-3xl w-full">
-        <CardHeader className="px-4">
-          <CardTitle>{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
+        <CardHeader className="px-4 bg-red-500/10 rounded-t-lg">
+          <CardTitle className="text-red-600 dark:text-red-400">{t('athletes.profile.settings.danger.cardTitle')}</CardTitle>
         </CardHeader>
         <Separator className="w-full mt-[-8px] mb-[-4px]" />
         <div className="w-full">
