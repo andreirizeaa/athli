@@ -54,6 +54,7 @@ import { InboxSidebar } from './components/inbox-sidebar';
 import { ChatHeader } from './components/chat-header';
 import { MessageList } from './components/message-list';
 import { MessageInput } from './components/message-input';
+import { MessageInputProvider, useMessageInput } from './components/message-input-context';
 import { ClientProfileProvider } from '@/app/athletes/[clientId]/client-profile-context';
 import { ClientProfileLayoutContent } from '@/app/athletes/[clientId]/layout';
 import { ClientProfileContent } from './components/client-profile-content';
@@ -116,6 +117,24 @@ const formatNoteDate = (timestamp: number): string => {
     parts[1] = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
   }
   return parts.join(' ');
+};
+
+// Wrapper component to access context and expose it via ref
+const MessageInputWrapper: React.FC<{
+  contextRef: React.MutableRefObject<{
+    setReplyingToMessage: (message: Message | null) => void;
+    textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  } | null>;
+  selectedContact: Contact | null;
+}> = ({ contextRef, selectedContact }) => {
+  const { setReplyingToMessage, textareaRef } = useMessageInput();
+
+  // Expose context methods via ref
+  React.useEffect(() => {
+    contextRef.current = { setReplyingToMessage, textareaRef };
+  }, [contextRef, setReplyingToMessage, textareaRef]);
+
+  return <MessageInput selectedContact={selectedContact} />;
 };
 
 const InboxPage = () => {
@@ -381,6 +400,10 @@ const InboxPage = () => {
   const pdfInputRef = React.useRef<HTMLInputElement>(null);
   const videoInputRef = React.useRef<HTMLInputElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const messageInputContextRef = React.useRef<{
+    setReplyingToMessage: (message: Message | null) => void;
+    textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  } | null>(null);
 
   // Map athletes to contacts format
   // TODO: Replace temporary fields (lastMessage, timestamp, unreadCount, isOnline) with real data when inbox backend is connected
@@ -1099,6 +1122,135 @@ const InboxPage = () => {
     createMessages();
   };
 
+  // Handler for MessageInputProvider
+  const handleSendMessageFromContext = React.useCallback(async (params: {
+    text: string;
+    images?: Array<{ name: string; data: string; type: string; size: number }>;
+    pdf?: { name: string; data: string; type: string; size: number };
+    video?: { name: string; data: string; type: string; size: number };
+    replyTo?: Message['replyTo'];
+  }) => {
+    if (!selectedContactId) return;
+
+    const newMessages: Message[] = [];
+    let baseTimestamp = Date.now();
+
+    // Send text message
+    if (params.text.trim()) {
+      const textMessage: Message = {
+        id: `m${baseTimestamp}`,
+        text: params.text,
+        timestamp: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        }),
+        isSent: true,
+        replyTo: params.replyTo,
+      };
+      newMessages.push(textMessage);
+
+      // Call API
+      sendMessage({
+        contactId: selectedContactId,
+        text: params.text,
+        repliedTo: params.replyTo,
+      }).catch((error) => {
+        console.error('Failed to send text message:', error);
+      });
+
+      baseTimestamp += 1;
+    }
+
+    // Send each image as a separate message
+    if (params.images && params.images.length > 0) {
+      for (const image of params.images) {
+        const imageMessage: Message = {
+          id: `m${baseTimestamp}`,
+          text: '',
+          timestamp: new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
+          isSent: true,
+          replyTo: params.replyTo,
+          images: [image],
+        };
+        newMessages.push(imageMessage);
+
+        // Call API
+        sendMessage({
+          contactId: selectedContactId,
+          images: [image],
+          repliedTo: params.replyTo,
+        }).catch((error) => {
+          console.error('Failed to send image message:', error);
+        });
+
+        baseTimestamp += 1;
+      }
+    }
+
+    // Send PDF as a separate message
+    if (params.pdf) {
+      const pdfMessage: Message = {
+        id: `m${baseTimestamp}`,
+        text: '',
+        timestamp: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        }),
+        isSent: true,
+        replyTo: params.replyTo,
+        pdf: params.pdf,
+      };
+      newMessages.push(pdfMessage);
+
+      // Call API
+      sendMessage({
+        contactId: selectedContactId,
+        pdf: params.pdf,
+        repliedTo: params.replyTo,
+      }).catch((error) => {
+        console.error('Failed to send PDF message:', error);
+      });
+
+      baseTimestamp += 1;
+    }
+
+    // Send video as a separate message
+    if (params.video) {
+      const videoMessage: Message = {
+        id: `m${baseTimestamp}`,
+        text: '',
+        timestamp: new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        }),
+        isSent: true,
+        replyTo: params.replyTo,
+        video: params.video,
+      };
+      newMessages.push(videoMessage);
+
+      // Call API
+      sendMessage({
+        contactId: selectedContactId,
+        video: params.video,
+        repliedTo: params.replyTo,
+      }).catch((error) => {
+        console.error('Failed to send video message:', error);
+      });
+    }
+
+    // Add all messages to state at once
+    if (newMessages.length > 0) {
+      setMessages((prev) => ({
+        ...prev,
+        [selectedContactId]: [...(prev[selectedContactId] || []), ...newMessages],
+      }));
+    }
+  }, [selectedContactId]);
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -1620,7 +1772,6 @@ const InboxPage = () => {
               setSearchQuery={setSearchQuery}
               filteredContacts={filteredContacts}
               selectedContactId={selectedContactId}
-              hasDraft={hasDraft}
               onOpenBroadcast={() => setIsBroadcastOpen(true)}
             />
           </div>
@@ -1634,7 +1785,7 @@ const InboxPage = () => {
               <div
                 className={cn(
                   "relative h-full transition-[width] duration-300 ease-in-out",
-                  selectedContactId && isPowerViewOpen ? "w-[32.5%]" : "w-full"
+                  isPowerViewOpen ? "w-[32.5%]" : "w-full"
                 )}
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragOver}
@@ -1675,83 +1826,29 @@ const InboxPage = () => {
                         }}
                       />
 
-                      <MessageList
-                        messages={currentMessages}
-                        selectedContact={selectedContact}
-                        onReply={(message) => {
-                          setReplyingToMessage(message);
-                          setTextareaHeight(60);
-                          setTimeout(() => {
-                            textareaRef.current?.focus();
-                          }, 100);
-                        }}
-                        onDeleteMessage={handleDeleteMessage}
-                        onDeleteMessageImage={handleDeleteMessageImage}
-                        onDeleteMessagePdf={handleDeleteMessagePdf}
-                        onDeleteMessageVideo={handleDeleteMessageVideo}
-                        onDeleteAllImages={handleDeleteAllImages}
-                        messagesEndRef={messagesEndRef}
-                      />
+                      <MessageInputProvider
+                        selectedContactId={selectedContactId}
+                        onSendMessage={handleSendMessageFromContext}
+                      >
+                        <MessageList
+                          messages={currentMessages}
+                          selectedContact={selectedContact}
+                          onReply={(message) => {
+                            messageInputContextRef.current?.setReplyingToMessage(message);
+                            setTimeout(() => {
+                              messageInputContextRef.current?.textareaRef.current?.focus();
+                            }, 100);
+                          }}
+                          onDeleteMessage={handleDeleteMessage}
+                          onDeleteMessageImage={handleDeleteMessageImage}
+                          onDeleteMessagePdf={handleDeleteMessagePdf}
+                          onDeleteMessageVideo={handleDeleteMessageVideo}
+                          onDeleteAllImages={handleDeleteAllImages}
+                          messagesEndRef={messagesEndRef}
+                        />
 
-                      <MessageInput
-                        messageInput={messageInput}
-                        setMessageInput={setMessageInput}
-                        handleSendMessage={handleSendMessage}
-                        handleKeyDown={handleKeyDown}
-                        textareaRef={textareaRef}
-                        textareaHeight={textareaHeight}
-                        setTextareaHeight={setTextareaHeight}
-                        attachedImages={attachedImages}
-                        attachedPdf={attachedPdf}
-                        attachedVideo={attachedVideo}
-                        replyingToMessage={replyingToMessage}
-                        selectedContact={selectedContact}
-                        onFileButtonClick={() => { }} // Not used in component but in props
-                        onImageInputClick={() => imageInputRef.current?.click()}
-                        onPdfInputClick={() => pdfInputRef.current?.click()}
-                        onVideoInputClick={() => videoInputRef.current?.click()}
-                        onRemoveImage={(index) => setAttachedImages((prev) => prev.filter((_, i) => i !== index))}
-                        onRemovePdf={() => setAttachedPdf(null)}
-                        onRemoveVideo={() => setAttachedVideo(null)}
-                        onCancelReply={() => {
-                          setReplyingToMessage(null);
-                          if (!messageInput.trim()) {
-                            setTextareaHeight(36);
-                          }
-                        }}
-                        onDownloadImage={(image) => {
-                          const url = URL.createObjectURL(image);
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = image.name;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          URL.revokeObjectURL(url);
-                        }}
-                        onDownloadPdf={() => {
-                          if (!attachedPdf) return;
-                          const url = URL.createObjectURL(attachedPdf);
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = attachedPdf.name;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          URL.revokeObjectURL(url);
-                        }}
-                        onDownloadVideo={() => {
-                          if (!attachedVideo) return;
-                          const url = URL.createObjectURL(attachedVideo);
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = attachedVideo.name;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          URL.revokeObjectURL(url);
-                        }}
-                      />
+                        <MessageInputWrapper contextRef={messageInputContextRef} selectedContact={selectedContact} />
+                      </MessageInputProvider>
                     </>
                   ) : (
                     <div className="flex-1 flex items-center justify-center">
@@ -1766,27 +1863,35 @@ const InboxPage = () => {
               </div>
 
               {/* Client Profile Area (67.5% width, animates in/out based on power view state) */}
-              {selectedContactId && (
-                <div
-                  className={cn(
-                    "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
-                    isPowerViewOpen
-                      ? "w-[67.5%] opacity-100"
-                      : "w-0 opacity-0 overflow-hidden"
-                  )}
-                >
+              {/* Client Profile Area (67.5% width, animates in/out based on power view state) */}
+              <div
+                className={cn(
+                  "h-full border-l-2 overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
+                  isPowerViewOpen
+                    ? "w-[67.5%] opacity-100"
+                    : "w-0 opacity-0 overflow-hidden"
+                )}
+              >
+                {selectedContactId ? (
                   <ClientProfileProvider clientId={selectedContactId}>
                     <ClientProfileLayoutContent
                       hideBreadcrumb={true}
                       activeTab={activeClientTab}
                       onTabChange={setActiveClientTab}
                       hideMessageButton={true}
+                      useSectionLoader={true}
                     >
                       <ClientProfileContent tab={activeClientTab} />
                     </ClientProfileLayoutContent>
                   </ClientProfileProvider>
-                </div>
-              )}
+                ) : (
+                  <div className="flex-1 h-full flex items-center justify-center bg-muted/20">
+                    <div className="text-center text-muted-foreground p-8">
+                      <p className="text-sm">Select a conversation to view details</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -59,11 +59,12 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
       className="h-svh bg-sidebar"
       style={
         {
-          '--sidebar': 'color-mix(in srgb, var(--primary), var(--base-500) 35%)',
+          '--sidebar-width': '14rem',
+          '--sidebar': 'color-mix(in srgb, var(--primary), var(--sidebar-mix-base) 35%)',
           '--sidebar-foreground': 'var(--primary-foreground)',
           '--sidebar-primary': 'var(--primary-foreground)',
           '--sidebar-primary-foreground': 'var(--primary)',
-          '--sidebar-accent': 'color-mix(in srgb, var(--primary-foreground) 10%, transparent)',
+          '--sidebar-accent': 'color-mix(in srgb, var(--primary-foreground) 30%, transparent)',
           '--sidebar-accent-foreground': 'var(--primary-foreground)',
           '--sidebar-border': 'transparent',
           '--sidebar-ring': 'var(--primary-foreground)',
@@ -95,13 +96,13 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
 const SidebarInsetWithBorder = ({ children }: { children: ReactNode }) => {
   const { state, isHovered } = useSidebar();
   const isHoverExpanded = state === 'collapsed' && isHovered;
-  const shouldShowBorder = state === 'collapsed' || state === 'expanded';
+  const shouldShowBorder = state === 'collapsed';
   const showBorder = shouldShowBorder && !isHoverExpanded;
 
   return (
     <SidebarInset
       className={cn(
-        'flex-1 flex flex-col overflow-hidden bg-background reset-sidebar-vars',
+        'flex-1 flex flex-col overflow-hidden bg-background reset-sidebar-vars border-none shadow-none',
         showBorder && 'border-l border-sidebar-border'
       )}
       style={{

@@ -66,6 +66,7 @@
   --fc-border-color: var(--border);
   --fc-page-bg-color: var(--muted);
   --fc-today-bg-color: var(--muted);
+  --sidebar-mix-base: var(--base-500);
 }
 
 .dark {
@@ -100,6 +101,7 @@
   --sidebar-accent-foreground: var(--base-200);
   --sidebar-border: var(--base-800);
   --sidebar-ring: var(--base-200);
+  --sidebar-mix-base: var(--base-800);
 }
 
 @theme inline {

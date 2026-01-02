@@ -1446,7 +1446,6 @@ export function DataGrid<T extends Record<string, any>>({
                     className="absolute inset-0 z-10 flex items-center justify-center bg-background pointer-events-none"
                     style={{
                       top: showHeaders ? '40px' : '0',
-                      bottom: showPagination ? '40px' : '0',
                     }}
                   >
                     <div className="flex flex-col items-center justify-center text-center p-8 pointer-events-auto">

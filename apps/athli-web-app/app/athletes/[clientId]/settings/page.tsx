@@ -17,8 +17,10 @@ import { useClientProfileContext } from '../client-profile-context';
 const AthleteSettingsPage = () => {
   const t = useTranslations();
   const router = useRouter();
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
 
   const { athlete } = useClientProfileContext();
   const clientName = athlete?.name || '';
