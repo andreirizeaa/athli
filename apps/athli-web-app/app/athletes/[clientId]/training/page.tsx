@@ -3263,34 +3263,36 @@ const ClientTrainingCalendarPage = () => {
         onOpenChange={setIsAddExercisePanelOpen}
         onSave={handleSaveExercise}
       />
-      <WorkoutBuilder
-        open={isWorkoutBuilderOpen}
-        onOpenChange={(open) => {
-          setIsWorkoutBuilderOpen(open);
-          if (!open) {
-            setEditingWorkout(null);
-            setFetchedWorkoutData(null);
-            setIsLoadingWorkoutData(false);
-          }
-        }}
-        meta={editingWorkout ? {
-          name: editingWorkout.workout.name,
-          type: editingWorkout.workout.type,
-          difficulty: editingWorkout.workout.difficulty || 'Intermediate',
-          description: editingWorkout.workout.description || '',
-        } : {
-          name: '',
-          type: '',
-          difficulty: 'Intermediate',
-          description: '',
-        }}
-        initialData={editingWorkout ? fetchedWorkoutData : undefined}
-        isLoadingInitialData={isLoadingWorkoutData}
-        saveSignal={0}
-        onSaveSuccess={handleSaveEditedWorkout}
-        onSaveError={() => { }}
-        onDirtyChange={() => { }}
-      />
+      <TrainingDataProvider>
+        <WorkoutBuilder
+          open={isWorkoutBuilderOpen}
+          onOpenChange={(open) => {
+            setIsWorkoutBuilderOpen(open);
+            if (!open) {
+              setEditingWorkout(null);
+              setFetchedWorkoutData(null);
+              setIsLoadingWorkoutData(false);
+            }
+          }}
+          meta={editingWorkout ? {
+            name: editingWorkout.workout.name,
+            type: editingWorkout.workout.type,
+            difficulty: editingWorkout.workout.difficulty || 'Intermediate',
+            description: editingWorkout.workout.description || '',
+          } : {
+            name: '',
+            type: '',
+            difficulty: 'Intermediate',
+            description: '',
+          }}
+          initialData={editingWorkout ? fetchedWorkoutData : undefined}
+          isLoadingInitialData={isLoadingWorkoutData}
+          saveSignal={0}
+          onSaveSuccess={handleSaveEditedWorkout}
+          onSaveError={() => { }}
+          onDirtyChange={() => { }}
+        />
+      </TrainingDataProvider>
       <ClientTrainingDaySummary
         open={!!inProgressSummaryWorkout}
         onOpenChange={(open) => {
