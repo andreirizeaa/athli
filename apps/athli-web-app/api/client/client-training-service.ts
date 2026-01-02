@@ -54,8 +54,6 @@ export const getClientWorkouts = async (clientId: string, startDate: string, end
  * Service method to get client's programs from training calendar
  */
 export const getClientPrograms = async (clientId: string): Promise<any[]> => {
-  // This might be a different endpoint or part of getClientWorkouts depending on backend implementation
-  // For now keeping it similar to structure but potentially unused if calendar drives everything
   const response = await apiFetch<ApiResponse<{ programs: any[] }>>(`/client/trainings/${clientId}/programs`);
   return response.data?.programs || [];
 };
@@ -82,9 +80,9 @@ export const getClientWorkoutInstance = async (clientId: string, date: string, w
 
 export interface DuplicateWorkoutData {
   clientId: string;
-  sourceDate: string;      // YYYY-MM-DD format
-  sourceWorkoutId: string; // The specific workout ID to duplicate
-  targetDate: string;      // YYYY-MM-DD format
+  sourceDate: string;
+  sourceWorkoutId: string;
+  targetDate: string;
 }
 
 export interface DuplicateWorkoutResponse {
@@ -105,7 +103,7 @@ export const duplicateWorkout = async (data: DuplicateWorkoutData): Promise<Dupl
 
 export interface DeleteWorkoutByKeyData {
   clientId: string;
-  sourceDate: string;  // YYYY-MM-DD format
+  sourceDate: string;
   workoutId: string;
 }
 
@@ -118,3 +116,33 @@ export const deleteWorkoutByKey = async (data: DeleteWorkoutByKeyData): Promise<
     body: JSON.stringify(data),
   });
 };
+
+export interface CoachClientHistoryItem {
+  client_id: string;
+  coach_id: string;
+  date: string;
+  workout_id: string;
+  status: 'not_started' | 'in_progress' | 'completed' | 'missed';
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Service method to get coach's client history (completed, missed, in_progress)
+ * Uses backend API endpoint with POST request
+ */
+export const getCoachClientHistory = async (
+  date: string,
+  status?: 'completed' | 'in_progress' | 'missed'
+): Promise<CoachClientHistoryItem[]> => {
+  const response = await apiFetch<ApiResponse<{ history: CoachClientHistoryItem[] }>>(
+    '/clients/training-history',
+    {
+      method: 'POST',
+      body: JSON.stringify({ date, status }),
+    }
+  );
+
+  return response.data?.history || [];
+};
+

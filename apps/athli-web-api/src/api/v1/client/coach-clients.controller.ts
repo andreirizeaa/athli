@@ -575,4 +575,52 @@ export const coachClientController = {
             data: { email: client.email }
         });
     },
+
+    /**
+     * Get training history for all coach's clients
+     * Filters by date and optionally by status (completed, in_progress, missed)
+     */
+    getTrainingHistory: async (req: Request, res: Response) => {
+        const coachId = getActingCoachId(req);
+        const { date, status } = req.body;
+
+        if (!coachId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        if (!date) {
+            return res.status(400).json({ success: false, message: 'date is required' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // Build query
+        let query = supabase
+            .from('client_training_history')
+            .select('*')
+            .eq('coach_id', coachId)
+            .eq('date', date);
+
+        // Filter by status
+        // Note: 'missed' is a UI concept - workouts that are not completed on a past date
+        if (status && status !== 'missed') {
+            query = query.eq('status', status);
+        } else if (status === 'missed') {
+            // For missed, we want items where status is NOT completed
+            query = query.neq('status', 'completed');
+        }
+
+        const { data: history, error } = await query;
+
+        if (error) {
+            console.error('Error fetching training history:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+
+        success(res, {
+            message: 'Training history retrieved successfully',
+            data: { history: history || [] },
+        });
+    },
 };

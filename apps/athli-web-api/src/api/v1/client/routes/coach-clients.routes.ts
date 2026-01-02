@@ -95,3 +95,26 @@ coachClientRouter.get('/goals', supabaseAuthenticate, clientDetailsController.ge
 coachClientRouter.patch('/goals', supabaseAuthenticate, clientDetailsController.updateGoals);
 coachClientRouter.get('/injuries', supabaseAuthenticate, clientDetailsController.getInjuries);
 coachClientRouter.patch('/injuries', supabaseAuthenticate, clientDetailsController.updateInjuries);
+
+/**
+ * @swagger
+ * /api/v1/clients/training-history:
+ *   post:
+ *     summary: Get training history for all coach's clients
+ *     tags: [Coach Clients]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               status:
+ *                 type: string
+ *                 enum: [completed, in_progress, missed]
+ */
+coachClientRouter.post('/training-history', supabaseAuthenticate, coachClientController.getTrainingHistory);
+
