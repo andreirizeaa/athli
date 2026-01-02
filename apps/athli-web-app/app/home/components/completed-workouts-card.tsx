@@ -169,7 +169,7 @@ export const CompletedWorkoutsCard = () => {
   return (
     <div className="flex flex-col gap-4 h-full">
       {/* Top Nav Card with border */}
-      <Card className="flex-shrink-0 bg-sidebar">
+      <Card className="flex-shrink-0 bg-muted/40 backdrop-blur-sm border-border/50 shadow-sm">
         <CardContent className="px-4">
           <div className="flex items-center justify-between">
             {/* Tab Toggle - styled like add-metric-side-panel */}

@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { X, TrendingUp, Award, ArrowUpDown, Loader2 } from 'lucide-react';
+import { X, TrendingUp, Award, ArrowUpDown, Loader2, Repeat, MapPin, Clock, BarChart3 } from 'lucide-react';
 import { getExerciseHistory, type HistoryEntry } from '@/api/client/client-training-service';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ExerciseHistoryChartDialog } from './exercise-history-chart-dialog';
 
 interface ExerciseHistoryPanelProps {
     exerciseId: string;
@@ -22,11 +23,21 @@ interface GroupedHistory {
     exercises: HistoryEntry[];
 }
 
+// Helper to safely extract numeric value from potentially complex object
+const extractValue = (val: any): number => {
+    if (typeof val === 'number') return val;
+    if (typeof val === 'object' && val !== null) {
+        return Number(val.completed ?? val.prescribed ?? 0);
+    }
+    return Number(val ?? 0);
+};
+
 export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coachId, onClose }: ExerciseHistoryPanelProps) => {
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [sortAsc, setSortAsc] = useState(false); // false = newest first
     const hasFetched = React.useRef(false); // Ref to prevent double fetch in Strict Mode
+    const [isChartViewOpen, setIsChartViewOpen] = useState(false);
 
     useEffect(() => {
         const fetchHistory = async () => {
@@ -90,60 +101,134 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
         return sorted;
     }, [history, sortAsc]);
 
-    // Helper to safely extract numeric value from potentially complex object
-    const extractValue = (val: any): number => {
-        if (typeof val === 'number') return val;
-        if (typeof val === 'object' && val !== null) {
-            return Number(val.completed ?? val.prescribed ?? 0);
-        }
-        return Number(val ?? 0);
-    };
+    // Calculate stats dynamic to exercise type
+    const statsCards = React.useMemo(() => {
+        // Determine exercise type from first available entry with type, or default
+        const exerciseType = history.find(h => h.exercise_data?.exerciseType)?.exercise_data?.exerciseType || 'weight_reps';
 
-    // Calculate stats
-    const stats = React.useMemo(() => {
         let totalWeight = 0;
         let weightCount = 0;
-        let bestWeight = 0;
-        let bestWeightReps = 0; // Reps performed at best weight
-        let bestReps = 0; // Absolute max reps
-        let bestRepsWeight = 0; // Weight used for max reps
+        let totalReps = 0;
+        let repsCount = 0;
+        let totalDistance = 0;
+        let distanceCount = 0;
+        let totalDuration = 0;
+        let durationCount = 0;
+
+        // PBs
+        let pbWeight = 0;
+        let pbWeightReps = 0;
+        let pbReps = 0;
+        let pbDistance = 0;
 
         history.forEach((entry) => {
             const sets = entry.exercise_data?.sets || [];
-            sets.forEach((set: any) => {
+            sets.forEach((set) => {
                 const weight = extractValue(set.weight);
                 const reps = extractValue(set.reps);
+                const distance = extractValue(set.distance);
+                const duration = extractValue(set.duration);
 
+                // Accumulate totals
                 if (weight > 0) {
                     totalWeight += weight;
                     weightCount++;
-
-                    // Logic for Best Weight (PR)
-                    if (weight > bestWeight) {
-                        bestWeight = weight;
-                        bestWeightReps = reps;
-                    } else if (weight === bestWeight && reps > bestWeightReps) {
-                        bestWeightReps = reps;
-                    }
+                }
+                if (reps > 0) {
+                    totalReps += reps;
+                    repsCount++;
+                }
+                if (distance > 0) {
+                    totalDistance += distance;
+                    distanceCount++;
+                }
+                if (duration > 0) {
+                    totalDuration += duration;
+                    durationCount++;
                 }
 
-                // Logic for Best Reps
-                if (reps > bestReps) {
-                    bestReps = reps;
-                    bestRepsWeight = weight;
-                } else if (reps === bestReps && weight > bestRepsWeight) {
-                    bestRepsWeight = weight;
+                // PB Logic
+                // Weight x Reps PB
+                if (weight > pbWeight) {
+                    pbWeight = weight;
+                    pbWeightReps = reps;
+                } else if (weight === pbWeight && reps > pbWeightReps) {
+                    pbWeightReps = reps;
                 }
+
+                // Reps PB
+                if (reps > pbReps) pbReps = reps;
+
+                // Distance PB
+                if (distance > pbDistance) pbDistance = distance;
             });
         });
 
-        return {
-            average: weightCount > 0 ? (totalWeight / weightCount).toFixed(1) : '0',
-            bestWeight,
-            bestWeightReps,
-            bestReps,
-            bestRepsWeight
-        };
+        // Construct Cards based on Type
+        const cards: { label: string; value: string; icon: React.ElementType; color: string }[] = [];
+
+        if (exerciseType === 'weight_reps') {
+            cards.push({
+                label: 'Avg Weight',
+                value: weightCount > 0 ? `${(totalWeight / weightCount).toFixed(1)} kg` : '-',
+                icon: TrendingUp,
+                color: 'text-sidebar-foreground'
+            });
+            cards.push({
+                label: 'Avg Reps',
+                value: repsCount > 0 ? Math.round(totalReps / repsCount).toString() : '-',
+                icon: Repeat,
+                color: 'text-sidebar-foreground'
+            });
+            cards.push({
+                label: 'Best (PR)',
+                value: pbWeight > 0 ? `${pbWeight}kg × ${pbWeightReps}` : '-',
+                icon: Award,
+                color: 'text-sidebar-foreground'
+            });
+        } else if (exerciseType === 'reps') {
+            cards.push({
+                label: 'Avg Reps',
+                value: repsCount > 0 ? Math.round(totalReps / repsCount).toString() : '-',
+                icon: Repeat,
+                color: 'text-sidebar-foreground'
+            });
+            cards.push({
+                label: 'Best (PR)',
+                value: pbReps > 0 ? `${pbReps} reps` : '-',
+                icon: Award,
+                color: 'text-sidebar-foreground'
+            });
+        } else if (exerciseType === 'distance_duration') {
+            cards.push({
+                label: 'Avg Dist',
+                value: distanceCount > 0 ? `${Math.round(totalDistance / distanceCount)}m` : '-',
+                icon: MapPin,
+                color: 'text-sidebar-foreground'
+            });
+            cards.push({
+                label: 'Avg Time',
+                value: durationCount > 0 ? `${Math.round(totalDuration / durationCount)}s` : '-',
+                icon: Clock,
+                color: 'text-sidebar-foreground'
+            });
+            cards.push({
+                label: 'Best Dist',
+                value: pbDistance > 0 ? `${pbDistance}m` : '-',
+                icon: Award,
+                color: 'text-sidebar-foreground'
+            });
+        } else {
+            // Fallback generic 
+            cards.push({
+                label: 'Avg Reps',
+                value: repsCount > 0 ? Math.round(totalReps / repsCount).toString() : '-',
+                icon: Repeat,
+                color: 'text-sidebar-foreground'
+            });
+        }
+
+        return cards;
     }, [history]);
 
     const formatSetValue = (set: any): string => {
@@ -172,12 +257,12 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
             layout
             layoutId="history-panel"
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 400, opacity: 1 }} // Widened panel to 400px
+            animate={{ width: 400, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="shrink-0 overflow-hidden"
         >
-            <div className="w-[400px] h-full bg-background rounded-2xl shadow-2xl flex flex-col overflow-hidden relative border-l border-border/50">
+            <div className="w-[400px] h-full bg-background rounded-2xl shadow-2xl flex flex-col overflow-hidden relative">
                 {isLoading ? (
                     <div className="flex-1 flex items-center justify-center">
                         <Loader2 className="size-10 text-primary animate-spin" />
@@ -185,7 +270,7 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                 ) : (
                     <>
                         {/* Header */}
-                        <div className="h-[180px] px-5 border-b border-sidebar-foreground/10 flex flex-col justify-center gap-1 shrink-0 bg-sidebar">
+                        <div className="h-[180px] px-5 border-b border-sidebar-foreground/10 flex flex-col justify-center gap-1 shrink-0 bg-sidebar rounded-t-2xl">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-2xl font-bold text-sidebar-foreground tracking-tight truncate max-w-[280px]">
                                     {exerciseName}
@@ -204,28 +289,27 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
-                            <span className="text-xs text-sidebar-foreground/70 font-medium">History</span>
-                            {/* Stats Summary - Now 3 columns */}
-                            <div className="grid grid-cols-3 gap-2 mt-3">
-                                <div className="p-2.5 rounded-xl bg-sidebar-foreground/10 border border-sidebar-foreground/20 flex flex-col gap-1 items-center justify-center text-center">
-                                    <TrendingUp className="size-3.5 text-sidebar-foreground/60 mb-0.5" />
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/50">Avg Weight</span>
-                                    <span className="text-xs font-bold text-sidebar-foreground">{stats.average} kg</span>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-sidebar-foreground/10 border border-sidebar-foreground/20 flex flex-col gap-1 items-center justify-center text-center">
-                                    <Award className="size-3.5 text-sidebar-foreground/60 mb-0.5" />
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/50">Best (PR)</span>
-                                    <span className="text-xs font-bold text-sidebar-foreground text-amber-500">
-                                        {stats.bestWeight > 0 ? `${stats.bestWeight}kg × ${stats.bestWeightReps}` : '-'}
-                                    </span>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-sidebar-foreground/10 border border-sidebar-foreground/20 flex flex-col gap-1 items-center justify-center text-center">
-                                    <Award className="size-3.5 text-sidebar-foreground/60 mb-0.5" />
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/50">Best Reps</span>
-                                    <span className="text-xs font-bold text-sidebar-foreground text-emerald-500">
-                                        {stats.bestReps > 0 ? `${stats.bestReps} × ${stats.bestRepsWeight}kg` : '-'}
-                                    </span>
-                                </div>
+                            <div className="flex items-center justify-between w-full">
+                                <span className="text-xs text-sidebar-foreground/70 font-medium">History</span>
+                                <button
+                                    onClick={() => setIsChartViewOpen(true)}
+                                    className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-sidebar-foreground/10 transition-colors text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/70 hover:text-sidebar-foreground group/chart"
+                                >
+                                    <BarChart3 className="size-3.5" />
+                                    <span>Chart view</span>
+                                </button>
+                            </div>
+                            {/* Stats Summary - Dynamic Grid */}
+                            <div className={`grid gap-2 mt-3 ${statsCards.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                                {statsCards.map((card, idx) => (
+                                    <div key={idx} className="p-2.5 rounded-xl bg-sidebar-foreground/10 border border-sidebar-foreground/20 flex flex-col gap-1 items-center justify-center text-center">
+                                        <card.icon className="size-3.5 text-sidebar-foreground/60 mb-0.5" />
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-sidebar-foreground/50">{card.label}</span>
+                                        <span className={`text-xs font-bold ${card.color}`}>
+                                            {card.value}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
@@ -304,6 +388,14 @@ export const ExerciseHistoryPanel = ({ exerciseId, exerciseName, clientId, coach
                     </>
                 )}
             </div>
+
+            <ExerciseHistoryChartDialog
+                open={isChartViewOpen}
+                onClose={() => setIsChartViewOpen(false)}
+                exerciseName={exerciseName}
+                exerciseType={history.find(h => h.exercise_data?.exerciseType)?.exercise_data?.exerciseType || 'weight_reps'}
+                history={history}
+            />
         </motion.div>
     );
 };

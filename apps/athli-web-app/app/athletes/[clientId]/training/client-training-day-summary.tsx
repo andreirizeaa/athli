@@ -256,13 +256,13 @@ export const ClientTrainingDaySummary = ({
                         animate="visible"
                         variants={containerVariants}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="w-32 shrink-0 bg-sidebar rounded-2xl shadow-2xl flex flex-col justify-center py-4 gap-4 overflow-hidden relative group border border-sidebar-foreground/10"
+                        className="w-32 shrink-0 bg-sidebar rounded-2xl shadow-2xl flex flex-col relative group border border-sidebar-foreground/10 overflow-y-auto overflow-x-hidden custom-scrollbar no-scrollbar"
                     >
                         {/* Decorative Background Glow */}
                         <div className="absolute inset-0 bg-gradient-to-b from-sidebar-foreground/5 to-transparent opacity-50 pointer-events-none" />
 
                         {isLoading ? (
-                            <div className="flex-1 flex items-center justify-center relative z-10">
+                            <div className="flex-1 flex items-center justify-center relative z-10 min-h-full">
                                 <Loader2 className="size-10 text-sidebar-foreground animate-spin" />
                             </div>
                         ) : (
@@ -271,7 +271,7 @@ export const ClientTrainingDaySummary = ({
                                 variants={containerVariants}
                                 initial="hidden"
                                 animate="visible"
-                                className="flex flex-col gap-4 relative z-10"
+                                className="flex flex-col gap-4 relative z-10 my-auto py-6"
                             >
                                 {/* Exercises */}
                                 <motion.div
