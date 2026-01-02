@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
-import { CircleCheck, Clock, Gauge, Weight, Activity, Star, Loader2, MessageSquare } from 'lucide-react';
+import { CircleCheck, Clock, Gauge, Weight, Activity, Star, Loader2, MessageSquare, CircleX } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/general/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +13,7 @@ import { format } from 'date-fns';
 import { WorkoutPreviewDialog } from './workout-preview-dialog';
 import { searchExercises } from '@/api/exercise/exercise-search';
 
-interface ClientCompletedTrainingDaySummaryProps {
+interface ClientTrainingDaySummaryProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     workoutName: string;
@@ -54,7 +56,7 @@ const containerVariants = {
     },
 };
 
-export const ClientCompletedTrainingDaySummary = ({
+export const ClientTrainingDaySummary = ({
     open,
     onOpenChange,
     workoutName,
@@ -71,9 +73,130 @@ export const ClientCompletedTrainingDaySummary = ({
         readiness: 0,
         rating: 0,
     },
-}: ClientCompletedTrainingDaySummaryProps) => {
+}: ClientTrainingDaySummaryProps) => {
     const t = useTranslations();
     const [isPreviewDialogOpen, setIsPreviewDialogOpen] = React.useState(false);
+
+    // Determine if workout is in progress (started but not completed)
+    const completedAt = completedSummary?.completed_at || completedSummary?.completedAt;
+    const startedAt = completedSummary?.started_at || completedSummary?.startedAt;
+    const isInProgress = !completedAt && (!!startedAt || completedSummary?.status === 'started' || completedSummary?.status === 'in_progress');
+
+    // Process exercises for stats and rendering
+    const items = workoutData?.workout_data?.items || workoutData?.items || [];
+    const exercises: any[] = [];
+
+    // Helper to look up exercise by ID
+    const getExerciseById = (exerciseId: string) => {
+        const allExercises = searchExercises('');
+        return allExercises.find(ex => ex.exerciseId === exerciseId);
+    };
+
+    const processExercise = (exercise: any) => {
+        const exerciseId = exercise.prescribedExerciseId || exercise.exerciseId || exercise.performedExerciseId;
+
+        // Enhanced name resolution
+        let exerciseName = exercise.performedExerciseName || exercise.prescribedExerciseName || exercise.name || exercise.exerciseName;
+        if (!exerciseName && exerciseId) {
+            const details = getExerciseById(exerciseId);
+            if (details) exerciseName = details.name;
+        }
+        exerciseName = exerciseName || 'Unknown Exercise';
+
+        const exerciseType = exercise.exerciseType || 'weight_reps';
+        let sets = exercise.sets || [];
+
+        // Handle single-set exercises (AMRAP/Circuit)
+        if ((!exercise.sets || exercise.sets.length === 0) &&
+            (exercise.reps || exercise.weight || exercise.distance || exercise.durationSec || exercise.completed !== undefined)) {
+            sets = [{
+                ...exercise,
+                setNumber: 1,
+                type: exercise.type || 'normal'
+            }];
+        }
+
+        // Handle Dropsets: Transform stages into arrays for weight/reps
+        sets = sets.map((set: any) => {
+            if ((set.type === 'dropset' || set.dropset) && set.dropset?.stages) {
+                return {
+                    ...set,
+                    weight: set.dropset.stages.map((s: any) => s.weight),
+                    reps: set.dropset.stages.map((s: any) => s.reps)
+                };
+            }
+            return set;
+        });
+
+        if (exerciseId || exerciseName !== 'Unknown Exercise') {
+            exercises.push({ exerciseId, name: exerciseName, exerciseType, sets });
+        }
+    };
+
+    for (const item of items) {
+        if (item.itemType === 'section' && item.data?.exercises) {
+            for (const groupOrExercise of item.data.exercises) {
+                if (groupOrExercise.exercises && Array.isArray(groupOrExercise.exercises)) {
+                    for (const exercise of groupOrExercise.exercises) {
+                        processExercise(exercise);
+                    }
+                } else {
+                    processExercise(groupOrExercise);
+                }
+            }
+        } else if (item.itemType === 'exercise') {
+            const exerciseData = item.data || item.exercise;
+            if (exerciseData) processExercise(exerciseData);
+        }
+    }
+
+    const formatSetValue = (set: any, exerciseType: string, isCompleted: boolean) => {
+        const getValue = (key: string) => {
+            const val = set[key];
+            if (val === null || val === undefined) return null;
+
+            const extract = (v: any) => {
+                if (typeof v === 'object' && v !== null) {
+                    return isCompleted ? (v.completed ?? v.prescribed) : v.prescribed;
+                }
+                return v;
+            };
+
+            if (Array.isArray(val)) {
+                return val.map(extract).join('-');
+            }
+
+            if (typeof val === 'object') {
+                const extracted = extract(val);
+                if (Array.isArray(extracted)) return extracted.join('-');
+                return extracted;
+            }
+            return val;
+        };
+
+        const weight = getValue('weight');
+        const reps = getValue('reps');
+        const distance = getValue('distance');
+        const durationSec = getValue('durationSec');
+
+        switch (exerciseType) {
+            case 'distance_duration':
+                return `${distance ?? '-'}m / ${durationSec ?? '-'}s`;
+            case 'weight_reps':
+            default:
+                if (weight && reps) return `${weight} kg x ${reps}`;
+                if (reps) return `${reps} reps`;
+                if (weight) return `${weight} kg`;
+                if (distance) return `${distance}m`;
+                if (durationSec) return `${durationSec}s`;
+                return '-';
+        }
+    };
+
+    // Calculate internal stats
+    const exercisesTotal = exercises.length;
+    // An exercise is completed if all its sets are completed
+    const exercisesCompleted = exercises.filter(ex => ex.sets && ex.sets.length > 0 && ex.sets.every((s: any) => s.completed === true)).length;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,8 +210,15 @@ export const ClientCompletedTrainingDaySummary = ({
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex-1 bg-background rounded-2xl border shadow-2xl flex flex-col overflow-hidden"
+                    className="flex-1 bg-background rounded-2xl border shadow-2xl flex flex-col overflow-hidden relative"
                 >
+                    {isInProgress && (
+                        <div className="absolute top-6 left-6 z-20">
+                            <Badge variant="outline" className="border-amber-500 text-amber-500 bg-amber-500/10 hover:bg-amber-500/10">
+                                In Progress
+                            </Badge>
+                        </div>
+                    )}
                     {isLoading ? (
                         <div className="flex-1 flex items-center justify-center">
                             <Loader2 className="size-10 text-primary animate-spin" />
@@ -143,181 +273,78 @@ export const ClientCompletedTrainingDaySummary = ({
                                     </div>
 
                                     {/* Exercise Cards */}
-                                    {(() => {
-                                        const items = workoutData?.workout_data?.items || workoutData?.items || [];
-                                        const exercises: any[] = [];
-
-                                        // Helper to look up exercise by ID
-                                        const getExerciseById = (exerciseId: string) => {
-                                            const allExercises = searchExercises('');
-                                            return allExercises.find(ex => ex.exerciseId === exerciseId);
-                                        };
-
-                                        const processExercise = (exercise: any) => {
-                                            const exerciseId = exercise.prescribedExerciseId || exercise.exerciseId || exercise.performedExerciseId;
-
-                                            // Enhanced name resolution
-                                            let exerciseName = exercise.performedExerciseName || exercise.prescribedExerciseName || exercise.name || exercise.exerciseName;
-                                            if (!exerciseName && exerciseId) {
-                                                const details = getExerciseById(exerciseId);
-                                                if (details) exerciseName = details.name;
-                                            }
-                                            exerciseName = exerciseName || 'Unknown Exercise';
-
-                                            const exerciseType = exercise.exerciseType || 'weight_reps';
-                                            let sets = exercise.sets || [];
-
-                                            // Handle single-set exercises (AMRAP/Circuit)
-                                            if ((!exercise.sets || exercise.sets.length === 0) &&
-                                                (exercise.reps || exercise.weight || exercise.distance || exercise.durationSec || exercise.completed !== undefined)) {
-                                                sets = [{
-                                                    ...exercise,
-                                                    setNumber: 1,
-                                                    type: exercise.type || 'normal'
-                                                }];
-                                            }
-
-                                            // Handle Dropsets: Transform stages into arrays for weight/reps
-                                            sets = sets.map((set: any) => {
-                                                if ((set.type === 'dropset' || set.dropset) && set.dropset?.stages) {
-                                                    return {
-                                                        ...set,
-                                                        weight: set.dropset.stages.map((s: any) => s.weight),
-                                                        reps: set.dropset.stages.map((s: any) => s.reps)
-                                                    };
-                                                }
-                                                return set;
-                                            });
-
-                                            if (exerciseId || exerciseName !== 'Unknown Exercise') {
-                                                exercises.push({ exerciseId, name: exerciseName, exerciseType, sets });
-                                            }
-                                        };
-
-                                        for (const item of items) {
-                                            if (item.itemType === 'section' && item.data?.exercises) {
-                                                for (const groupOrExercise of item.data.exercises) {
-                                                    if (groupOrExercise.exercises && Array.isArray(groupOrExercise.exercises)) {
-                                                        for (const exercise of groupOrExercise.exercises) {
-                                                            processExercise(exercise);
-                                                        }
-                                                    } else {
-                                                        processExercise(groupOrExercise);
-                                                    }
-                                                }
-                                            } else if (item.itemType === 'exercise') {
-                                                const exerciseData = item.data || item.exercise;
-                                                if (exerciseData) processExercise(exerciseData);
-                                            }
-                                        }
-
-                                        const formatSetValue = (set: any, exerciseType: string, isCompleted: boolean) => {
-                                            const getValue = (key: string) => {
-                                                const val = set[key];
-                                                if (val === null || val === undefined) return null;
-
-                                                const extract = (v: any) => {
-                                                    if (typeof v === 'object' && v !== null) {
-                                                        return isCompleted ? (v.completed ?? v.prescribed) : v.prescribed;
-                                                    }
-                                                    return v;
-                                                };
-
-                                                if (Array.isArray(val)) {
-                                                    // Dropset: array of values joined with '-'
-                                                    return val.map(extract).join('-');
-                                                }
-
-                                                if (typeof val === 'object') {
-                                                    const extracted = extract(val);
-                                                    if (Array.isArray(extracted)) return extracted.join('-');
-                                                    return extracted;
-                                                }
-                                                return val;
-                                            };
-
-                                            const weight = getValue('weight');
-                                            const reps = getValue('reps');
-                                            const distance = getValue('distance');
-                                            const durationSec = getValue('durationSec');
-
-                                            switch (exerciseType) {
-                                                case 'distance_duration':
-                                                    return `${distance ?? '-'}m / ${durationSec ?? '-'}s`;
-                                                case 'weight_reps':
-                                                default:
-                                                    if (weight && reps) return `${weight} kg x ${reps}`;
-                                                    if (reps) return `${reps} reps`;
-                                                    if (weight) return `${weight} kg`;
-                                                    if (distance) return `${distance}m`;
-                                                    if (durationSec) return `${durationSec}s`;
-                                                    return '-';
-                                            }
-                                        };
-
-                                        return (
-                                            <div className="flex flex-col gap-3">
-                                                {exercises.map((exercise, exIndex) => (
-                                                    <motion.div
-                                                        key={exIndex}
-                                                        initial={{ opacity: 0, y: 20 }}
-                                                        animate={{ opacity: 1, y: 0 }}
-                                                        transition={{ delay: exIndex * 0.1 + 0.2, duration: 0.3 }}
-                                                        className="rounded-xl border border-border/50 bg-card overflow-hidden"
-                                                    >
-                                                        {/* Exercise Header */}
-                                                        <div className="flex items-center justify-between px-4 py-3">
-                                                            <span className="text-sm font-bold text-primary">{exercise.name}</span>
-                                                            <button className="text-xs font-medium text-primary hover:underline">
-                                                                History
-                                                            </button>
-                                                        </div>
-                                                        {/* Set Rows */}
-                                                        <div className="flex flex-col">
-                                                            {exercise.sets.map((set: any, setIndex: number) => {
-                                                                const isCompleted = set.completed === true;
-                                                                const displayValue = formatSetValue(set, exercise.exerciseType, isCompleted);
-                                                                return (
-                                                                    <div
-                                                                        key={setIndex}
-                                                                        className={cn(
-                                                                            "flex items-center justify-between px-4 py-2",
-                                                                            setIndex < exercise.sets.length - 1 && "border-b border-border/20"
-                                                                        )}
-                                                                    >
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className="text-xs text-muted-foreground font-medium w-6">
-                                                                                {String(setIndex + 1).padStart(2, '0')}.
-                                                                            </span>
-                                                                            {isCompleted ? (
-                                                                                <span
-                                                                                    className="text-sm font-semibold text-foreground cursor-default"
-                                                                                    title="Client tracked values"
-                                                                                >
-                                                                                    {displayValue}
-                                                                                </span>
-                                                                            ) : (
-                                                                                <span className="text-sm font-semibold text-red-500">
-                                                                                    {displayValue}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        {isCompleted ? (
-                                                                            <CircleCheck className="size-5 text-green-500" />
-                                                                        ) : (
-                                                                            <span className="text-xs font-bold text-red-500">
-                                                                                Missed
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </motion.div>
-                                                ))}
-                                            </div>
-                                        );
-                                    })()}
+                                    <div className="flex flex-col gap-3">
+                                        {exercises.map((exercise, exIndex) => (
+                                            <motion.div
+                                                key={exIndex}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: exIndex * 0.1 + 0.2, duration: 0.3 }}
+                                                className="rounded-xl border border-border/50 bg-card overflow-hidden"
+                                            >
+                                                {/* Exercise Header */}
+                                                <div className="flex items-center justify-between px-4 py-3">
+                                                    <span className="text-sm font-bold text-primary">{exercise.name}</span>
+                                                    <button className="text-xs font-medium text-primary hover:underline">
+                                                        History
+                                                    </button>
+                                                </div>
+                                                {/* Set Rows */}
+                                                <div className="flex flex-col">
+                                                    {exercise.sets.map((set: any, setIndex: number) => {
+                                                        const isCompleted = set.completed === true;
+                                                        const displayValue = formatSetValue(set, exercise.exerciseType, isCompleted);
+                                                        return (
+                                                            <div
+                                                                key={setIndex}
+                                                                className={cn(
+                                                                    "flex items-center justify-between px-4 py-2",
+                                                                    setIndex < exercise.sets.length - 1 && "border-b border-border/20"
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-muted-foreground font-medium w-6">
+                                                                        {String(setIndex + 1).padStart(2, '0')}.
+                                                                    </span>
+                                                                    {isCompleted ? (
+                                                                        <span
+                                                                            className="text-sm font-semibold text-foreground cursor-default"
+                                                                            title="Client tracked values"
+                                                                        >
+                                                                            {displayValue}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className={cn(
+                                                                            "text-sm font-semibold",
+                                                                            isInProgress ? "text-muted-foreground" : "text-red-500"
+                                                                        )}>
+                                                                            {displayValue}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {isCompleted ? (
+                                                                    <CircleCheck className="size-5 text-green-500" />
+                                                                ) : isInProgress ? (
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <CircleX className="size-5 text-muted-foreground" />
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <p>Not Started</p>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                ) : (
+                                                                    <span className="text-xs font-bold text-red-500">
+                                                                        Missed
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
                                 </div>
                             </motion.div>
                         </AnimatePresence>
@@ -355,12 +382,11 @@ export const ClientCompletedTrainingDaySummary = ({
                                     <CircleCheck className="size-7 text-green-500 shrink-0" />
                                 </div>
                                 <div className="flex flex-col items-center gap-0">
-                                    <span className="text-base font-bold leading-tight tabular-nums">{stats.exercisesCompleted}/{stats.exercisesTotal}</span>
+                                    <span className="text-base font-bold leading-tight tabular-nums">{exercisesCompleted}/{exercisesTotal}</span>
                                     <span className="text-[10px] text-muted-foreground/80 uppercase tracking-[0.1em] font-bold">{t('home.exercises')}</span>
                                 </div>
                             </motion.div>
 
-                            {/* Duration */}
                             <motion.div
                                 variants={itemVariants}
                                 whileHover={{ scale: 1.05, x: -2 }}
@@ -402,7 +428,6 @@ export const ClientCompletedTrainingDaySummary = ({
                                 </div>
                             </motion.div>
 
-                            {/* Intensity */}
                             <motion.div
                                 variants={itemVariants}
                                 whileHover={{ scale: 1.05, x: -2 }}
@@ -429,7 +454,6 @@ export const ClientCompletedTrainingDaySummary = ({
                                 </div>
                             </motion.div>
 
-                            {/* Volume */}
                             <motion.div
                                 variants={itemVariants}
                                 whileHover={{ scale: 1.05, x: -2 }}

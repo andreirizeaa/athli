@@ -450,7 +450,7 @@ export const esMessages = {
     links: {
       dashboard: 'Panel de control',
       marketing: 'Marketing',
-      messaging: 'Mensajes',
+      inbox: 'Inbox',
       workouts: 'Entrenamientos',
       athletes: 'Atletas',
       calendar: 'Calendario',
@@ -525,6 +525,9 @@ export const esMessages = {
     settings: {
       label: 'Configuración',
     },
+    helpAndSupport: {
+      label: 'Ayuda y soporte',
+    },
     support: {
       label: 'Soporte',
     },
@@ -593,7 +596,8 @@ export const esMessages = {
     continue: 'Continuar',
   },
   messages: {
-    title: 'Mensajes',
+    title: 'Inbox',
+    search: 'Buscar',
     conversation: 'conversación',
     conversations: 'conversaciones',
     broadcast: 'Difusión',
@@ -647,6 +651,7 @@ export const esMessages = {
     typeMessagePlaceholder: 'Escribe o sube un archivo',
     typeMessage: 'Escribe un mensaje',
     sendMessage: 'Enviar mensaje',
+    voiceNote: 'Nota de voz',
     images: 'Imágenes',
     pdfs: 'PDFs',
     videos: 'Videos',
@@ -656,6 +661,10 @@ export const esMessages = {
     download: 'Descargar {name}',
     remove: 'Eliminar {name}',
     viewNoteAria: 'Ver nota: {title}',
+    closePowerView: 'Cerrar vista rápida',
+    enablePowerMode: 'Activar modo rápido',
+    showAthlete: 'Mostrar atleta',
+    hideAthlete: 'Ocultar atleta',
   },
   library: {
     title: 'Biblioteca',
@@ -1646,6 +1655,8 @@ export const esMessages = {
       trainingComingSoon: 'Información de entrenamiento próximamente',
       editDetails: 'Editar detalles',
       comments: 'Comentarios',
+      active: 'Activo',
+      archived: 'Archivado',
       firstName: 'Nombre',
       firstNamePlaceholder: 'Ingrese el nombre',
       lastName: 'Apellido',

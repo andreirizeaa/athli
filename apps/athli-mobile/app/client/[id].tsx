@@ -363,8 +363,9 @@ export default function ClientDetailScreen() {
       </View>
 
       {/* Tab Content */}
-      {activeTab === 'assistant' ? (
-        <View style={{ flex: 1, backgroundColor: themeColors.pageBackground }}>
+      <View style={{ flex: 1 }}>
+        {/* Assistant Tab */}
+        <View style={{ flex: 1, display: activeTab === 'assistant' ? 'flex' : 'none', backgroundColor: themeColors.pageBackground }}>
           <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.contentContainer}
@@ -428,81 +429,85 @@ export default function ClientDetailScreen() {
             )}
           </KeyboardAwareToolbar>
         </View>
-      ) : (
+
+        {/* Overview Tab */}
         <ScrollView
-          style={styles.contentScrollView}
+          style={[styles.contentScrollView, { display: activeTab === 'overview' ? 'flex' : 'none' }]}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {activeTab === 'overview' && (
-            <View>
-              {/* Overview content will go here */}
-            </View>
-          )}
-
-          {activeTab === 'more' && (
-            <View style={styles.optionsContainer}>
-              <Card>
-                <SettingsOption
-                  icon={
-                    <PlatformIcon
-                      sf="figure.run"
-                      IconComponent={Activity}
-                      size={iconSizes.listIcons}
-                      color={iconColor}
-                    />
-                  }
-                  title="Activity"
-                  showChevron
-                  onPress={() => router.push(`/client/${id}/activity`)}
-                />
-                <Separator />
-                <SettingsOption
-                  icon={
-                    <PlatformIcon
-                      sf="chart.bar.fill"
-                      IconComponent={BarChart3}
-                      size={iconSizes.listIcons}
-                      color={iconColor}
-                    />
-                  }
-                  title="Metrics"
-                  showChevron
-                  onPress={() => router.push(`/client/${id}/metrics`)}
-                />
-                <Separator />
-                <SettingsOption
-                  icon={
-                    <PlatformIcon
-                      sf="calendar"
-                      IconComponent={Calendar}
-                      size={iconSizes.listIcons}
-                      color={iconColor}
-                    />
-                  }
-                  title="Training Calendar"
-                  showChevron
-                  onPress={() => router.push(`/client/${id}/training-calendar`)}
-                />
-                <Separator />
-                <SettingsOption
-                  icon={
-                    <PlatformIcon
-                      sf="target"
-                      IconComponent={Target}
-                      size={iconSizes.listIcons}
-                      color={iconColor}
-                    />
-                  }
-                  title="Goals & Injuries"
-                  showChevron
-                  onPress={() => router.push(`/client/${id}/goals-injuries`)}
-                />
-              </Card>
-            </View>
-          )}
+          <View>
+            {/* Overview content will go here */}
+          </View>
         </ScrollView>
-      )}
+
+        {/* More Tab */}
+        <ScrollView
+          style={[styles.contentScrollView, { display: activeTab === 'more' ? 'flex' : 'none' }]}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.optionsContainer}>
+            <Card>
+              <SettingsOption
+                icon={
+                  <PlatformIcon
+                    sf="figure.run"
+                    IconComponent={Activity}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title="Activity"
+                showChevron
+                onPress={() => router.push(`/client/${id}/activity`)}
+              />
+              <Separator />
+              <SettingsOption
+                icon={
+                  <PlatformIcon
+                    sf="chart.bar.fill"
+                    IconComponent={BarChart3}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title="Metrics"
+                showChevron
+                onPress={() => router.push(`/client/${id}/metrics`)}
+              />
+              <Separator />
+              <SettingsOption
+                icon={
+                  <PlatformIcon
+                    sf="calendar"
+                    IconComponent={Calendar}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title="Training Calendar"
+                showChevron
+                onPress={() => router.push(`/client/${id}/training-calendar`)}
+              />
+              <Separator />
+              <SettingsOption
+                icon={
+                  <PlatformIcon
+                    sf="target"
+                    IconComponent={Target}
+                    size={iconSizes.listIcons}
+                    color={iconColor}
+                  />
+                }
+                title="Goals & Injuries"
+                showChevron
+                onPress={() => router.push(`/client/${id}/goals-injuries`)}
+              />
+            </Card>
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }

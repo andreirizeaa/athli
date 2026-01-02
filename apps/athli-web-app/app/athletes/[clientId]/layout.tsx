@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { PageTabs } from '@/components/page-tabs';
 import {
   Breadcrumb,
@@ -16,7 +17,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
-import { ChevronRight, MessageCircle, Users, Send, Copy, Check } from 'lucide-react';
+import { ChevronRight, MessageCircle, Users, Send, Copy, Check, Dna, Cake, Ruler } from 'lucide-react';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
@@ -24,23 +25,34 @@ import { useGlobalData } from '@/providers/global-data-provider';
 import { ClientProfileProvider, useClientProfileContext } from './client-profile-context';
 import { resendClientInvite } from '@/api/coach/coach-client-invite-service';
 import { FullScreenLoader } from '@/components/ui/full-screen-loader';
+import { SectionLoader } from '@/components/ui/section-loader';
+import { EditClientDetailsSidePanel } from './components/edit-client-details-side-panel';
 
-type ClientProfileLayoutProps = {
+export type ClientProfileLayoutProps = {
   children: React.ReactNode;
+  hideBreadcrumb?: boolean;
+  basePath?: string; // e.g., '/inbox' for inbox context (not used with onTabChange)
+  activeTab?: string; // Override tab from URL segments (for inbox context)
+  onTabChange?: (tab: string) => void; // Callback for state-based tab management
+  hideMessageButton?: boolean;
+  useSectionLoader?: boolean; // Use contained section loader instead of full-screen (for inbox context)
 };
 
-const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
+export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange, hideMessageButton = false, useSectionLoader = false }: ClientProfileLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
-  const params = useParams<{ clientId: string }>();
+  const params = useParams<{ clientId: string; contactId: string }>();
   const { user } = useSupabaseAuth();
   const { uniqueCode } = useGlobalData();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
   const [isInviteCopied, setIsInviteCopied] = useState<boolean>(false);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
   const inviteCopyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { athlete, isLoading, error } = useClientProfileContext();
+  const { athlete, details, isLoading, error } = useClientProfileContext();
 
   useEffect(() => {
     return () => {
@@ -108,8 +120,8 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   const isUpdatesRoute = segments.includes('updates');
   const isTrainingCalendarRoute = segments.includes('training');
 
-  // Determine active tab
-  const activeTab = isCheckInRoute
+  // Determine active tab (use prop if provided, otherwise use segments)
+  const activeTabFromSegments = isCheckInRoute
     ? 'check-in'
     : isQuestionnairesRoute
       ? 'questionnaires'
@@ -123,6 +135,17 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
               ? 'training'
               : (lastSegment && validTabValues.includes(lastSegment) ? lastSegment : 'overview');
 
+  const activeTab = activeTabProp || activeTabFromSegments;
+
+  const getFlagEmoji = (countryCode: string) => {
+    if (!countryCode) return null;
+    const codePoints = countryCode
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
   const handleTabChange = (value: string) => {
     if (!clientId) {
       return;
@@ -132,7 +155,17 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       return;
     }
 
-    router.push(`/athletes/${clientId}/${value}`);
+    // Use callback if provided (for state-based tab management in inbox context)
+    if (onTabChange) {
+      onTabChange(value);
+      return;
+    }
+
+    // Otherwise use URL-based navigation
+    const navigationPath = basePath
+      ? `${basePath}/${clientId}/${value}`
+      : `/athletes/${clientId}/${value}`;
+    router.push(navigationPath);
   };
 
   const handleNavigateToAthletes = () => {
@@ -149,7 +182,7 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
   };
 
   const handleNavigateToMessages = (athleteId: string) => {
-    router.push(`/messaging/${athleteId}`);
+    router.push(`/inbox/${athleteId}/overview`);
   };
 
   const handleResendInvite = async () => {
@@ -224,11 +257,15 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
     }
   };
 
-  if (isLoading) {
+  // For section loader mode, we render the loader overlay on top of the content structure
+  // to prevent layout shifts when switching clients
+  const showSectionLoading = isLoading && useSectionLoader;
+
+  if (isLoading && !useSectionLoader) {
     return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
   }
 
-  if (error || !athlete) {
+  if ((error || !athlete) && !showSectionLoading) {
     return (
       <div className="h-full w-full flex flex-col">
         <div className="w-full relative">
@@ -252,7 +289,7 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
     );
   }
 
-  const names = athlete.name.split(' ');
+  const names = (athlete?.name || '').split(' ');
   const firstName = names[0] || '';
   const lastName = names.slice(1).join(' ') || '';
   const initials = firstName && lastName
@@ -262,36 +299,91 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
       : 'U';
 
   return (
-    <div className="h-full w-full flex flex-col overflow-auto">
+    <div className="h-full w-full flex flex-col overflow-auto relative">
+      {showSectionLoading && <SectionLoader subtitle="Pulling up the good stuff..." />}
       <div className="w-full relative flex-shrink-0">
         <div className="px-4 flex flex-col gap-1 mb-2 mt-2">
-          <Breadcrumb>
-            <BreadcrumbList className="text-xs gap-1">
-              <BreadcrumbItem>
-                <BreadcrumbLink
-                  onClick={handleNavigateToAthletes}
-                  className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+          {!hideBreadcrumb && (
+            <Breadcrumb>
+              <BreadcrumbList className="text-xs gap-1">
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    onClick={handleNavigateToAthletes}
+                    className="cursor-pointer hover:bg-accent hover:text-accent-foreground px-0.5 py-0.5 rounded transition-colors text-foreground"
+                  >
+                    {t('athletes.profile.athletes')}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-muted-foreground/60">
+                  <ChevronRight className="h-2 w-2" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-semibold text-foreground px-0.5">
+                    {athlete?.name || ''}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          )}
+          <div className="flex items-center gap-4">
+            <Avatar className="h-14 w-14 shrink-0">
+              <AvatarImage src={athlete?.avatarUrl} alt={athlete?.name || ''} />
+              <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+            </Avatar>
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-semibold leading-none">{athlete?.name || ''}</h1>
+                <Badge
+                  variant="outline"
+                  className={
+                    athlete?.status === 'archived'
+                      ? 'bg-red-100 text-red-900 border-red-200 hover:bg-red-100 rounded-sm px-2.5 py-0.5 font-medium text-sm'
+                      : 'bg-[#dcfce7] text-[#14532d] border-[#bbf7d0] hover:bg-[#dcfce7] rounded-sm px-2.5 py-0.5 font-medium text-sm'
+                  }
                 >
-                  {t('athletes.profile.athletes')}
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="text-muted-foreground/60">
-                <ChevronRight className="h-2 w-2" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-semibold text-foreground px-0.5">
-                  {athlete.name}
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="flex items-center">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              <h1 className="text-[22px] font-semibold">{athlete.name}</h1>
+                  {athlete?.status === 'archived' ? t('general.archived') : t('general.active')}
+                </Badge>
+              </div>
+
+              <div
+                className="flex items-center gap-4 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => setIsEditDetailsOpen(true)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Dna className="size-3" />
+                  <span>{details?.gender ? t(`athletes.profile.${details.gender}`) : '--'}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Cake className="size-3" />
+                  <span>{athlete?.age ? `${athlete.age} years old` : '--'}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Ruler className="size-3" />
+                  <span>{details?.height ? `${details.height} cm` : '--'}</span>
+                </div>
+
+                {details?.country && (
+                  <div className="flex items-center text-xl leading-none">
+                    {getFlagEmoji(details.country)}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 font-medium px-2 py-0 h-6 text-xs rounded-sm">
+                    {athlete?.coachingType === 'online'
+                      ? t('athletes.profile.online')
+                      : athlete?.coachingType === 'in-person'
+                        ? t('athletes.profile.inPerson')
+                        : t('athletes.profile.hybrid')}
+                  </Badge>
+                  <Badge variant="outline" className="h-6 px-1.5 text-xs rounded-sm border-muted-foreground/30 font-medium">
+                    +3
+                  </Badge>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -330,21 +422,23 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
                 <p>{t('athletes.profile.copyInviteAria')}</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => handleNavigateToMessages(clientId)}
-                  className="gap-2"
-                  aria-label={t('athletes.profile.messageAria')}
-                >
-                  <MessageCircle className="size-4" />
-                  <span>{t('athletes.profile.message')}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('athletes.profile.messageAria')}</p>
-              </TooltipContent>
-            </Tooltip>
+            {!hideMessageButton && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={() => handleNavigateToMessages(clientId)}
+                    className="gap-2"
+                    aria-label={t('athletes.profile.messageAria')}
+                  >
+                    <MessageCircle className="size-4" />
+                    <span>{t('athletes.profile.message')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('athletes.profile.messageAria')}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </ButtonGroup>
         </div>
         <div className="px-4">
@@ -357,7 +451,11 @@ const ClientProfileLayoutContent = ({ children }: ClientProfileLayoutProps) => {
         </div>
         <Separator className="absolute bottom-[-1px] left-0 right-0" />
       </div>
-      <div className="w-full flex-1 min-h-0 bg-background bg-card/50">{children}</div>
+      <div className="w-full flex-1 min-h-0">{children}</div>
+      <EditClientDetailsSidePanel
+        open={isEditDetailsOpen}
+        onOpenChange={setIsEditDetailsOpen}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import type { ColorSchemeName } from 'react-native';
 
-import { tintHex } from '@/utils/colorUtils';
+import { tintHex, mixHex } from '@/utils/colorUtils';
 
 export type PresetValue =
   | 'default'
@@ -31,47 +31,47 @@ export const THEMES: {
   value: PresetValue;
   colors: string[];
 }[] = [
-  {
-    name: 'Default',
-    value: 'default',
-    colors: ['#111827'],
-  },
-  {
-    name: 'Underground',
-    value: 'underground',
-    colors: ['#11826B'],
-  },
-  {
-    name: 'Rose Garden',
-    value: 'rose-garden',
-    colors: ['#DA2C38'],
-  },
-  {
-    name: 'Lake View',
-    value: 'lake-view',
-    colors: ['#0EA5E9'],
-  },
-  {
-    name: 'Sunset Glow',
-    value: 'sunset-glow',
-    colors: ['#F97316'],
-  },
-  {
-    name: 'Forest Whisper',
-    value: 'forest-whisper',
-    colors: ['#16A34A'],
-  },
-  {
-    name: 'Ocean Breeze',
-    value: 'ocean-breeze',
-    colors: ['#2563EB'],
-  },
-  {
-    name: 'Lavender Dream',
-    value: 'lavender-dream',
-    colors: ['#7C3AED'],
-  },
-];
+    {
+      name: 'Default',
+      value: 'default',
+      colors: ['#111827'],
+    },
+    {
+      name: 'Underground',
+      value: 'underground',
+      colors: ['#11826B'],
+    },
+    {
+      name: 'Rose Garden',
+      value: 'rose-garden',
+      colors: ['#DA2C38'],
+    },
+    {
+      name: 'Lake View',
+      value: 'lake-view',
+      colors: ['#0EA5E9'],
+    },
+    {
+      name: 'Sunset Glow',
+      value: 'sunset-glow',
+      colors: ['#F97316'],
+    },
+    {
+      name: 'Forest Whisper',
+      value: 'forest-whisper',
+      colors: ['#16A34A'],
+    },
+    {
+      name: 'Ocean Breeze',
+      value: 'ocean-breeze',
+      colors: ['#2563EB'],
+    },
+    {
+      name: 'Lavender Dream',
+      value: 'lavender-dream',
+      colors: ['#7C3AED'],
+    },
+  ];
 
 export type ThemeColors = {
   pageBackground: string;
@@ -127,7 +127,7 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#18181b',
+        searchBarBackground: mixHex('#0D9488', '#1F2937', 0.35),
         iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
@@ -147,7 +147,7 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: '#f5f5f4',
+      searchBarBackground: mixHex('#0D9488', '#6B7280', 0.35),
       iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
@@ -169,7 +169,7 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#18181b',
+        searchBarBackground: mixHex('#E11D48', '#1F2937', 0.35),
         iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
@@ -189,7 +189,7 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: '#f5f5f4',
+      searchBarBackground: mixHex('#E11D48', '#6B7280', 0.35),
       iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
@@ -211,7 +211,7 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#18181b',
+        searchBarBackground: mixHex('#0EA5E9', '#1F2937', 0.35),
         iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
@@ -231,7 +231,7 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#0F172A',
       shadowColor: '#000000',
-      searchBarBackground: '#f5f5f4',
+      searchBarBackground: mixHex('#0EA5E9', '#6B7280', 0.35),
       iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
@@ -253,7 +253,7 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#F9FAFB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#18181b',
+        searchBarBackground: mixHex('#F97316', '#1F2937', 0.35),
         iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
@@ -273,7 +273,7 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: '#f5f5f4',
+      searchBarBackground: mixHex('#F97316', '#6B7280', 0.35),
       iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
@@ -295,7 +295,7 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#18181b',
+        searchBarBackground: mixHex('#16A34A', '#1F2937', 0.35),
         iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
@@ -315,7 +315,7 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: '#f5f5f4',
+      searchBarBackground: mixHex('#16A34A', '#6B7280', 0.35),
       iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
@@ -337,7 +337,7 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#18181b',
+        searchBarBackground: mixHex('#2563EB', '#1F2937', 0.35),
         iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
@@ -357,7 +357,7 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#020617',
       shadowColor: '#000000',
-      searchBarBackground: '#f5f5f4',
+      searchBarBackground: mixHex('#2563EB', '#6B7280', 0.35),
       iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
@@ -379,7 +379,7 @@ export function createPresetPalette(
         sidebar: '#1A1A1A',
         sidebarForeground: '#E5E7EB',
         shadowColor: '#FFFFFF',
-        searchBarBackground: '#18181b',
+        searchBarBackground: mixHex('#7C3AED', '#1F2937', 0.35),
         iconButton: '#18181b',
         headerBackground: '#1E1E1E',
       };
@@ -399,7 +399,7 @@ export function createPresetPalette(
       sidebar: '#F9FAFB',
       sidebarForeground: '#111827',
       shadowColor: '#000000',
-      searchBarBackground: '#f5f5f4',
+      searchBarBackground: mixHex('#7C3AED', '#6B7280', 0.35),
       iconButton: '#f5f5f4',
       headerBackground: '#F9FAFB',
     };
@@ -420,7 +420,7 @@ export function createPresetPalette(
       sidebar: '#1A1A1A',
       sidebarForeground: '#E5E7EB',
       shadowColor: '#FFFFFF',
-      searchBarBackground: '#18181b',
+      searchBarBackground: mixHex('#FFFFFF', '#1F2937', 0.35),
       iconButton: '#18181b',
       headerBackground: '#1E1E1E',
     };
@@ -440,7 +440,7 @@ export function createPresetPalette(
     sidebar: '#FFFFFF',
     sidebarForeground: '#020617',
     shadowColor: '#000000',
-    searchBarBackground: '#f5f5f4',
+    searchBarBackground: mixHex('#000000', '#6B7280', 0.35),
     iconButton: '#f5f5f4',
     headerBackground: '#F9FAFB',
   };

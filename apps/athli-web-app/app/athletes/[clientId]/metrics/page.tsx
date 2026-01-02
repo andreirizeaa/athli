@@ -59,8 +59,11 @@ type MetricLog = {
 
 const ClientMetricsPage = () => {
   const t = useTranslations();
-  const params = useParams<{ clientId: string }>();
-  const clientId = Array.isArray(params.clientId) ? params.clientId[0] : params.clientId;
+  const params = useParams<{ clientId: string; contactId: string }>();
+  // Support both clientId (athletes context) and contactId (inbox context)
+  const clientIdFromParams = params.clientId || params.contactId;
+  const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
+  const isInbox = !!params.contactId;
 
   const { user } = useUserProfile();
   const { metrics: rawMetrics, isLoading: isLoadingContext, refreshData } = useClientProfileContext();
@@ -471,7 +474,7 @@ const ClientMetricsPage = () => {
     <div className="h-full w-full flex flex-col flex-1 min-h-0">
       <div className="flex h-full w-full flex-1 min-h-0">
         {/* Left sidebar navigation */}
-        <div className="w-80 border-r bg-background flex-shrink-0 flex flex-col">
+        <div className={cn(isInbox ? "w-60" : "w-80", "border-r bg-background flex-shrink-0 flex flex-col")}>
           <div className="w-full relative flex-shrink-0">
             <div className="px-3 py-3 flex items-center">
               <div className="relative w-full px-1">
@@ -540,8 +543,8 @@ const ClientMetricsPage = () => {
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="w-full relative flex-shrink-0">
-            <div className="px-3 py-3 flex items-center justify-end">
+          <div className="w-full relative flex-shrink-0 bg-background border-t">
+            <div className="px-3 py-[11.5px] flex items-center justify-end">
               <ButtonGroup>
                 <Button
                   variant="outline"
@@ -563,7 +566,7 @@ const ClientMetricsPage = () => {
           <div className="flex-1 overflow-auto p-4 relative flex flex-col gap-6">
             {selectedMetric ? (
               <>
-                {/* Top row with filter, average, movement, and edit button */}
+                {/* Top row with filter and action buttons */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Select value={timeFilter} onValueChange={setTimeFilter}>
@@ -582,23 +585,6 @@ const ClientMetricsPage = () => {
                         <SelectItem value="all-time">{t('metrics.timeFilter.allTime')}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
-                      Average: {averageValue !== null ? `${averageValue.toFixed(1)} ${selectedMetric.unit}` : `0 ${selectedMetric.unit}`}
-                    </div>
-                    <div
-                      className={cn(
-                        'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default',
-                        movement?.percentage === 0 || movement === null
-                          ? 'text-foreground'
-                          : movement.isUp
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                      )}
-                    >
-                      {movement?.isUp === true && movement.percentage !== 0 && <ArrowUp className="size-4" />}
-                      {movement?.isUp === false && movement.percentage !== 0 && <ArrowDown className="size-4" />}
-                      {movement !== null ? `${movement.percentage.toFixed(1)}%` : '0%'}
-                    </div>
                   </div>
                   <ButtonGroup>
                     <Button onClick={() => {
@@ -616,6 +602,27 @@ const ClientMetricsPage = () => {
                       <Trash className="size-4" />
                     </Button>
                   </ButtonGroup>
+                </div>
+
+                {/* Second row with stats: average, movement */}
+                <div className="flex items-center gap-4">
+                  <div className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default">
+                    Average: {averageValue !== null ? `${averageValue.toFixed(1)} ${selectedMetric.unit}` : `0 ${selectedMetric.unit}`}
+                  </div>
+                  <div
+                    className={cn(
+                      'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold h-9 px-4 py-2 border bg-background shadow-xs dark:bg-input/30 dark:border-input cursor-default',
+                      movement?.percentage === 0 || movement === null
+                        ? 'text-foreground'
+                        : movement.isUp
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                    )}
+                  >
+                    {movement?.isUp === true && movement.percentage !== 0 && <ArrowUp className="size-4" />}
+                    {movement?.isUp === false && movement.percentage !== 0 && <ArrowDown className="size-4" />}
+                    {movement !== null ? `${movement.percentage.toFixed(1)}%` : '0%'}
+                  </div>
                 </div>
 
                 {/* Line Chart */}

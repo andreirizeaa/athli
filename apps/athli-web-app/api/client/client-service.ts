@@ -8,6 +8,7 @@ export interface AthleteDetails {
   gender: 'male' | 'female' | 'prefer-not-to-say' | null;
   phone: string;
   country: string;
+  height: string | null;
   avatarUrl?: string | null;
   avatarFile?: File | null;
 }
@@ -108,6 +109,7 @@ export const getAthleteDetails = async (athleteId?: string): Promise<AthleteDeta
     gender: profile.gender || null,
     phone: profile.phone || '',
     country: profile.country || '',
+    height: profile.height_cm || null,
     avatarUrl: profile.profile_picture_url || null,
   };
 };
@@ -127,6 +129,8 @@ export const saveAthleteDetails = async (athleteId: string, details: AthleteDeta
     gender: details.gender,
     country: details.country,
     birth_date: details.birthDate,
+    height_cm: details.height ? parseInt(details.height, 10) : null,
+    height: details.height ? parseInt(details.height, 10) : null,
   };
 
   if (details.avatarUrl) {
@@ -375,7 +379,7 @@ const mockJohnSmithTrainingCalendar: TrainingCalendarSchema = (() => {
     calendar[wednesdayKey] = [
       {
         id: `2-${wednesdayKey}-hiit`,
-        program: 'HIIT Power',
+        workout: 'HIIT Power',
         description:
           'High-intensity interval training program that alternates between intense bursts of activity and fixed periods of rest.',
         type: 'HIIT',

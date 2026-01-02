@@ -14,6 +14,7 @@ export interface AddClientsData {
 
 export interface Athlete {
   id: string;
+  publicId?: string;
   name: string;
   firstName: string;
   lastName: string;
@@ -27,6 +28,7 @@ export interface Athlete {
   country: string;
   birthDate: string | null;
   age: number | null;
+  height: string | null;
   lastActivity: string;
   last7DaysTraining: string;
   last30DaysTraining: string;
@@ -76,6 +78,7 @@ export const getClients = async (): Promise<Athlete[]> => {
       last30DaysTraining: '0/0',
       birthDate: client.date_of_birth || null,
       age: calculateAge(client.date_of_birth),
+      height: client.height_cm || null,
       clientFor: clientForDays.toString(),
       connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
@@ -115,6 +118,7 @@ export const getClient = async (id: string): Promise<Athlete> => {
     last30DaysTraining: '0/0',
     birthDate: client.date_of_birth || null,
     age: calculateAge(client.date_of_birth),
+    height: client.height_cm || null,
     clientFor: clientForDays.toString(),
     connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
   };
@@ -244,6 +248,7 @@ export const addClient = async (data: AddClientData): Promise<Athlete> => {
     last30DaysTraining: '0/0',
     birthDate: client.date_of_birth || null,
     age: calculateAge(client.date_of_birth),
+    height: client.height_cm || null,
     clientFor: clientForDays.toString(),
     connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
     invitationToken: client.invitation_token,
@@ -290,6 +295,7 @@ export const addClients = async (data: AddClientsData): Promise<Athlete[]> => {
       last30DaysTraining: '0/0',
       birthDate: client.date_of_birth || null,
       age: calculateAge(client.date_of_birth),
+      height: client.height_cm || null,
       clientFor: clientForDays.toString(),
       connected: client.status === 'connected' ? true : client.status === 'invited' ? 'invitation-sent' : false,
     };
@@ -338,6 +344,7 @@ export const getArchivedClients = async (): Promise<Athlete[]> => {
       last30DaysTraining: '0/0',
       birthDate: client.date_of_birth || null,
       age: calculateAge(client.date_of_birth),
+      height: client.height_cm || null,
       clientFor: clientForDays.toString(),
       connected: false,
     };
