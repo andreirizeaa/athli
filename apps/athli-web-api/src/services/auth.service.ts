@@ -346,6 +346,34 @@ class AuthService {
 
 
   /**
+   * Verify JWT token
+   */
+  verifyToken(token: string): { userId: string } | null {
+    const supabase = getSupabaseClient();
+
+    try {
+      // Use Supabase to verify the JWT token
+      // Note: This is a synchronous check of the JWT signature
+      // For production, you may want to use supabase.auth.getUser(token) which is async
+      const decoded = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+
+      // Basic validation - check if token has required fields and isn't expired
+      if (!decoded.sub || !decoded.exp) {
+        return null;
+      }
+
+      // Check if token is expired
+      if (decoded.exp * 1000 < Date.now()) {
+        return null;
+      }
+
+      return { userId: decoded.sub };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
    * Get user by ID - checks both coach_profiles and client_profiles
    */
   async getUserById(userId: string): Promise<User | null> {

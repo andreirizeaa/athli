@@ -135,6 +135,7 @@ export const EditFileSidePanel = ({
               type="button"
               onClick={handleSave}
               disabled={!hasEditChanges || isSaving || isDeleting}
+              className="gap-2"
             >
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

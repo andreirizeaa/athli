@@ -170,7 +170,7 @@ export const LogMetricSidePanel = ({
           <Button variant="outline" onClick={handleClose} disabled={isSaving}>
             {t('general.cancel')}
           </Button>
-          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled || isSaving}>
+          <Button onClick={form.handleSubmit(handleSave)} disabled={isSaveDisabled || isSaving} className="gap-2">
             {isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

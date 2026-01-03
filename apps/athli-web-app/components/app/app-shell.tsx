@@ -9,6 +9,7 @@ import { UnsavedChangesProvider } from '@/app/settings/context/unsaved-changes-c
 import { useLanguage } from '@/lib/providers/intl-provider';
 import { AppSidebar } from './app-sidebar';
 import { AppHeader } from './app-header';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/general/utils';
 
 // Re-export types for backward compatibility
@@ -45,9 +46,12 @@ export const AppShell = ({ children }: AppShellProps) => {
 
 const AppShellWithProvider = ({ children }: AppShellProps) => {
   const t = useTranslations();
+  const pathname = usePathname();
   const { locale, setLocale } = useLanguage();
   const [isThemeMounted, setIsThemeMounted] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  const isGetStartedPage = pathname === '/get-started';
 
   React.useEffect(() => {
     setIsThemeMounted(true);
@@ -73,12 +77,14 @@ const AppShellWithProvider = ({ children }: AppShellProps) => {
     >
       <AppSidebar />
       <SidebarInsetWithBorder>
-        <AppHeader
-          isThemeMounted={isThemeMounted}
-          currentLanguage={locale}
-          setCurrentLanguage={setLocale}
-          setIsLoggingOut={setIsLoggingOut}
-        />
+        {!isGetStartedPage && (
+          <AppHeader
+            isThemeMounted={isThemeMounted}
+            currentLanguage={locale}
+            setCurrentLanguage={setLocale}
+            setIsLoggingOut={setIsLoggingOut}
+          />
+        )}
         <div className="flex-1 overflow-y-auto min-h-0">{children}</div>
       </SidebarInsetWithBorder>
       {isLoggingOut && (

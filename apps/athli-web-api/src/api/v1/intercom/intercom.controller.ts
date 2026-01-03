@@ -17,11 +17,9 @@ export async function intercomJWTController(
       return next(new AppError(404, 'User not found'));
     }
 
-    const emailAddress = user.emailAddresses?.[0]?.emailAddress;
-
     const token = intercomService.generateJWT({
       id: user.id,
-      email: emailAddress,
+      email: user.email,
     });
 
     res.status(200).json({ jwt: token });

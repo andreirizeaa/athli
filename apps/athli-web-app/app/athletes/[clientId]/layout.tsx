@@ -36,9 +36,10 @@ export type ClientProfileLayoutProps = {
   onTabChange?: (tab: string) => void; // Callback for state-based tab management
   hideMessageButton?: boolean;
   useSectionLoader?: boolean; // Use contained section loader instead of full-screen (for inbox context)
+  hideLoader?: boolean;
 };
 
-export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange, hideMessageButton = false, useSectionLoader = false }: ClientProfileLayoutProps) => {
+export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, basePath, activeTab: activeTabProp, onTabChange, hideMessageButton = false, useSectionLoader = false, hideLoader = false }: ClientProfileLayoutProps) => {
   const t = useTranslations();
   const router = useRouter();
   const segments = useSelectedLayoutSegments();
@@ -259,9 +260,9 @@ export const ClientProfileLayoutContent = ({ children, hideBreadcrumb = false, b
 
   // For section loader mode, we render the loader overlay on top of the content structure
   // to prevent layout shifts when switching clients
-  const showSectionLoading = isLoading && useSectionLoader;
+  const showSectionLoading = isLoading && useSectionLoader && !hideLoader;
 
-  if (isLoading && !useSectionLoader) {
+  if (isLoading && !useSectionLoader && !hideLoader) {
     return <FullScreenLoader subtitle="Pulling up the good stuff..." />;
   }
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 const MetricsPage = () => {
   const queryClient = useQueryClient();
   const t = useTranslations();
+  const searchParams = useSearchParams();
   const {
     metrics,
     isLoading,
@@ -50,6 +52,15 @@ const MetricsPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [metricToDelete, setMetricToDelete] = useState<string | null>(null);
+
+  // Auto-open add metric panel if ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleOpenAddMetric();
+      // Clear the query param
+      window.history.replaceState({}, '', '/metrics');
+    }
+  }, [searchParams]);
 
 
 

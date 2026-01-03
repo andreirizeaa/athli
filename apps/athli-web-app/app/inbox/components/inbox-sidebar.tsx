@@ -74,8 +74,8 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                                             <PanelLeftClose className="size-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                        <p>{t('sidebar.actions.closeSidebar')}</p>
+                                    <TooltipContent side="right">
+                                        <p>Close inbox panel</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -100,8 +100,8 @@ export const InboxSidebar = React.memo(function InboxSidebar({
                                             <PanelLeftOpen className="size-4" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top">
-                                        <p>{t('sidebar.actions.openSidebar')}</p>
+                                    <TooltipContent side="right">
+                                        <p>Open inbox panel</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>

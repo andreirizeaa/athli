@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -58,7 +58,7 @@ import {
 } from 'lucide-react';
 
 import type { Workout } from '@/components/app/app-shell';
-import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, editWorkout, getWorkoutById } from '@/api/coach/coach-workout-service';
+import { getWorkouts, starWorkouts, deleteWorkouts, duplicateWorkout, editWorkout, getWorkoutById, createWorkout } from '@/api/coach/coach-workout-service';
 import { WorkoutBuilder } from './workout-builder';
 import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import { toast } from 'sonner';
@@ -115,6 +115,7 @@ const formatDifficulty = (difficulty: string): string => {
 const WorkoutsPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { workouts, isLoadingWorkouts, setWorkouts, refreshWorkouts } = useTrainingData();
   const [selectedWorkouts, setSelectedWorkouts] = useState<Set<string>>(new Set());
   const [starredWorkouts, setStarredWorkouts] = useState<Set<string>>(new Set());
@@ -132,6 +133,7 @@ const WorkoutsPage = () => {
   const [selectedWorkoutForBuilder, setSelectedWorkoutForBuilder] = useState<Workout | null>(null);
   const [selectedWorkoutData, setSelectedWorkoutData] = useState<any>(null);
   const [isLoadingWorkoutData, setIsLoadingWorkoutData] = useState(false);
+  const [isAiBuilderOpen, setIsAiBuilderOpen] = useState(false);
 
   // Helper to check if value is empty (null, undefined, empty string, 0, or empty array)
   const isEmpty = (value: any): boolean => {
@@ -147,6 +149,24 @@ const WorkoutsPage = () => {
     const starred = new Set(workouts.filter(w => w.isFavourite).map(w => w.id));
     setStarredWorkouts(starred);
   }, [workouts]);
+
+  // Auto-open create workout panel if ?create=true or workout builder with AI if ?ai=true
+  useEffect(() => {
+    if (searchParams.get('ai') === 'true') {
+      // Open workout builder with AI mode
+      setIsAiBuilderOpen(true);
+      // Clear the query param
+      window.history.replaceState({}, '', '/training/workouts');
+    } else if (searchParams.get('create') === 'true') {
+      setIsCreateWorkoutOpen(true);
+      // Clear the query param
+      window.history.replaceState({}, '', '/training/workouts');
+    }
+  }, [searchParams]);
+
+  const handleOpenAiWorkout = () => {
+    setIsAiBuilderOpen(true);
+  };
 
   const handleToggleWorkout = (workoutId: string) => {
     setSelectedWorkouts((prev) => {
@@ -724,7 +744,15 @@ const WorkoutsPage = () => {
               {`${filteredCount} ${filteredCount === 1 ? t('library.workout') : t('library.workoutPlural')}`}
             </p>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleOpenAiWorkout}
+              className="gap-2 bg-gradient-to-r from-primary via-primary to-primary/80 hover:from-primary/90 hover:via-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg shadow-primary/30 border-0"
+              aria-label="Athli AI"
+            >
+              <Sparkles className="size-4" />
+              <span>Athli AI</span>
+            </Button>
             <ButtonGroup>
               <Button
                 variant="ghost"
@@ -951,6 +979,25 @@ const WorkoutsPage = () => {
           }}
         />
       )}
+
+      {/* AI Workout Builder for creating new workouts with AI */}
+      <WorkoutBuilder
+        open={isAiBuilderOpen}
+        onOpenChange={setIsAiBuilderOpen}
+        initialAiMode={true}
+        meta={null}
+        onSaveSuccess={async (payload: WorkoutProgramPayload) => {
+          try {
+            await createWorkout(payload);
+            await refreshWorkouts();
+            toast.success('Workout created successfully');
+            setIsAiBuilderOpen(false);
+          } catch (error) {
+            console.error('Failed to create workout:', error);
+            toast.error('Failed to create workout');
+          }
+        }}
+      />
     </div>
   );
 };

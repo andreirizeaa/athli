@@ -1,7 +1,7 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Plus, Loader2, Check, X } from 'lucide-react';
@@ -41,6 +41,7 @@ const FilesPage = () => {
   const { files, isLoading, uploadFile, updateFile, deleteFile: deleteFileMutation, isUploading } = useCoachFiles();
   const { clients } = useCoachClients();
   const { user } = useUserProfile();
+  const searchParams = useSearchParams();
   const [isAddFileOpen, setIsAddFileOpen] = useState<boolean>(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
@@ -64,6 +65,15 @@ const FilesPage = () => {
   // Single delete state
   const [fileToDelete, setFileToDelete] = useState<CoachFile | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+
+  // Auto-open add file panel if ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleOpenAddFile();
+      // Clear the query param
+      window.history.replaceState({}, '', '/files');
+    }
+  }, [searchParams]);
 
   const handleOpenAddFile = () => {
     setIsAddFileOpen(true);

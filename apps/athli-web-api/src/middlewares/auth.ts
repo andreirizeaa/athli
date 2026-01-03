@@ -11,8 +11,12 @@ export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     email: string;
-    firstName: string;
-    lastName: string;
+    name: string;
+    userType: 'coach' | 'client';
+    profilePictureUrl?: string | null;
+    signinMethod: 'email' | 'google';
+    isActive: boolean;
+    createdAt: string;
   };
 }
 

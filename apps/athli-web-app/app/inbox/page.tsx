@@ -55,9 +55,10 @@ import { ChatHeader } from './components/chat-header';
 import { MessageList } from './components/message-list';
 import { MessageInput } from './components/message-input';
 import { MessageInputProvider, useMessageInput } from './components/message-input-context';
-import { ClientProfileProvider } from '@/app/athletes/[clientId]/client-profile-context';
+import { ClientProfileProvider, useClientProfileContext } from '@/app/athletes/[clientId]/client-profile-context';
 import { ClientProfileLayoutContent } from '@/app/athletes/[clientId]/layout';
 import { ClientProfileContent } from './components/client-profile-content';
+import { SectionLoader } from '@/components/ui/section-loader';
 import { useUserProfile } from '@/hooks/use-user-profile';
 
 
@@ -136,6 +137,14 @@ const MessageInputWrapper: React.FC<{
   }, [contextRef, setReplyingToMessage, textareaRef]);
 
   return <MessageInput selectedContact={selectedContact} />;
+};
+
+// Helper component to show a unified loading overlay for the inbox areas
+const InboxUnifiedLoader = () => {
+  const t = useTranslations();
+  const { isLoading } = useClientProfileContext();
+  if (!isLoading) return null;
+  return <SectionLoader subtitle={t('messages.loadingConversation')} />;
 };
 
 const InboxPage = () => {
@@ -424,7 +433,7 @@ const InboxPage = () => {
 
   // Derived state
   const selectedContact = selectedContactId
-    ? contacts.find((contact) => contact.id === selectedContactId)
+    ? contacts.find((contact) => contact.id === selectedContactId) || null
     : null;
 
   const currentMessages = selectedContactId ? messages[selectedContactId] || [] : [];
@@ -1779,122 +1788,109 @@ const InboxPage = () => {
           </div>
           {/* Scrollable content area for Chat + Client Profile */}
           <div className="flex-1 h-full overflow-x-auto">
-            <div className={cn(
-              "h-full flex",
-              selectedContactId ? "w-full min-w-0" : "w-full"
-            )}>
-              {/* Chat Area (32.5% when power view open, 100% otherwise) */}
-              <div
-                className={cn(
-                  "relative h-full transition-[width] duration-300 ease-in-out",
-                  isPowerViewOpen ? "w-[32.5%]" : "w-full"
-                )}
-                onDragEnter={handleDragEnter}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                {/* Drag and Drop Overlay */}
-                {isDraggingOver && selectedContactId && (
-                  <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
-                    <div className="text-center px-8">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="flex items-center gap-2 text-primary">
-                          <FileText className="h-8 w-8" />
-                          <ImageIcon className="h-8 w-8" />
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold text-foreground">
-                            {t('messages.dropFilesHere')}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {t('messages.filesWillBeAdded')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="h-full overflow-y-auto flex flex-col">
-                  {selectedContact ? (
-                    <>
-                      <ChatHeader
-                        selectedContact={selectedContact}
-                        isPowerViewOpen={isPowerViewOpen}
-                        onTogglePowerView={() => {
-                          const newState = !isPowerViewOpen;
-                          setIsPowerViewOpen(newState);
-                          setIsSidebarCollapsed(newState);
-                        }}
-                      />
-
-                      <MessageInputProvider
-                        selectedContactId={selectedContactId}
-                        onSendMessage={handleSendMessageFromContext}
-                      >
-                        <MessageList
-                          messages={currentMessages}
-                          selectedContact={selectedContact}
-                          onReply={(message) => {
-                            messageInputContextRef.current?.setReplyingToMessage(message);
-                            setTimeout(() => {
-                              messageInputContextRef.current?.textareaRef.current?.focus();
-                            }, 100);
-                          }}
-                          onDeleteMessage={handleDeleteMessage}
-                          onDeleteMessageImage={handleDeleteMessageImage}
-                          onDeleteMessagePdf={handleDeleteMessagePdf}
-                          onDeleteMessageVideo={handleDeleteMessageVideo}
-                          onDeleteAllImages={handleDeleteAllImages}
-                          messagesEndRef={messagesEndRef}
-                        />
-
-                        <MessageInputWrapper contextRef={messageInputContextRef} selectedContact={selectedContact} />
-                      </MessageInputProvider>
-                    </>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-muted-foreground text-sm">
-                          {t('messages.selectAthleteToContinue')}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+            {!selectedContactId ? (
+              <div className="h-full w-full flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-muted-foreground text-sm">Select a client</p>
                 </div>
               </div>
-
-              {/* Client Profile Area (67.5% width, animates in/out based on power view state) */}
-              {/* Client Profile Area (67.5% width, animates in/out based on power view state) */}
-              <div
-                className={cn(
-                  "h-full border-l-2 overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
-                  isPowerViewOpen
-                    ? "w-[67.5%] opacity-100"
-                    : "w-0 opacity-0 overflow-hidden"
-                )}
-              >
-                {selectedContactId ? (
-                  <ClientProfileProvider clientId={selectedContactId}>
-                    <ClientProfileLayoutContent
-                      hideBreadcrumb={true}
-                      activeTab={activeClientTab}
-                      onTabChange={setActiveClientTab}
-                      hideMessageButton={true}
-                      useSectionLoader={true}
+            ) : (
+              <ClientProfileProvider clientId={selectedContactId}>
+                <div className="h-full w-full relative">
+                  <InboxUnifiedLoader />
+                  <div className="h-full flex w-full min-w-0">
+                    {/* Chat Area (32.5% when power view open, 100% otherwise) */}
+                    <div
+                      className={cn(
+                        "relative h-full transition-[width] duration-300 ease-in-out",
+                        isPowerViewOpen ? "w-[32.5%]" : "w-full"
+                      )}
+                      onDragEnter={handleDragEnter}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
                     >
-                      <ClientProfileContent tab={activeClientTab} />
-                    </ClientProfileLayoutContent>
-                  </ClientProfileProvider>
-                ) : (
-                  <div className="flex-1 h-full flex items-center justify-center bg-muted/20">
-                    <div className="text-center text-muted-foreground p-8">
-                      <p className="text-sm">Select a conversation to view details</p>
+                      {/* Drag and Drop Overlay */}
+                      {isDraggingOver && selectedContactId && (
+                        <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center">
+                          <div className="text-center px-8">
+                            <div className="flex flex-col items-center gap-4">
+                              <div className="flex items-center gap-2 text-primary">
+                                <FileText className="h-8 w-8" />
+                                <ImageIcon className="h-8 w-8" />
+                              </div>
+                              <div>
+                                <p className="text-lg font-semibold text-foreground">
+                                  {t('messages.dropFilesHere')}
+                                </p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {t('messages.filesWillBeAdded')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="h-full overflow-y-auto flex flex-col">
+                        <ChatHeader
+                          selectedContact={selectedContact!}
+                          isPowerViewOpen={isPowerViewOpen}
+                          onTogglePowerView={() => {
+                            const newState = !isPowerViewOpen;
+                            setIsPowerViewOpen(newState);
+                            setIsSidebarCollapsed(newState);
+                          }}
+                        />
+
+                        <MessageInputProvider
+                          selectedContactId={selectedContactId}
+                          onSendMessage={handleSendMessageFromContext}
+                        >
+                          <MessageList
+                            messages={currentMessages}
+                            selectedContact={selectedContact!}
+                            onReply={(message) => {
+                              messageInputContextRef.current?.setReplyingToMessage(message);
+                              setTimeout(() => {
+                                messageInputContextRef.current?.textareaRef.current?.focus();
+                              }, 100);
+                            }}
+                            onDeleteMessage={handleDeleteMessage}
+                            onDeleteMessageImage={handleDeleteMessageImage}
+                            onDeleteMessagePdf={handleDeleteMessagePdf}
+                            onDeleteMessageVideo={handleDeleteMessageVideo}
+                            onDeleteAllImages={handleDeleteAllImages}
+                            messagesEndRef={messagesEndRef}
+                          />
+
+                          <MessageInputWrapper contextRef={messageInputContextRef} selectedContact={selectedContact} />
+                        </MessageInputProvider>
+                      </div>
+                    </div>
+
+                    {/* Client Profile Area (67.5% width, animates in/out based on power view state) */}
+                    <div
+                      className={cn(
+                        "h-full border-l overflow-y-auto transition-[width,opacity] duration-300 ease-in-out",
+                        isPowerViewOpen
+                          ? "w-[67.5%] opacity-100"
+                          : "w-0 opacity-0 overflow-hidden"
+                      )}
+                    >
+                      <ClientProfileLayoutContent
+                        hideBreadcrumb={true}
+                        activeTab={activeClientTab}
+                        onTabChange={setActiveClientTab}
+                        hideMessageButton={true}
+                        hideLoader={true}
+                      >
+                        <ClientProfileContent tab={activeClientTab} />
+                      </ClientProfileLayoutContent>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+              </ClientProfileProvider>
+            )}
           </div>
         </div>
       </div>
