@@ -36,14 +36,18 @@ const mockForms: Form[] = [
     name: 'Initial Assessment',
     description: 'Comprehensive initial assessment form for new clients',
     questionCount: 0,
-    createdAt: Date.now() - 86400000 * 7,
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    updated_at: new Date().toISOString(),
+    questions: [],
   },
   {
     id: 'form-2',
     name: 'Weekly Check-in',
     description: 'Weekly progress check-in form',
     questionCount: 0,
-    createdAt: Date.now() - 86400000 * 3,
+    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    updated_at: new Date().toISOString(),
+    questions: [],
   },
 ];
 
@@ -209,7 +213,7 @@ const FormDetailPage = () => {
         const reorderFn = isCheckIn ? reorderCheckInQuestions : reorderQuestionnaireQuestions;
         await reorderFn({
           formId: formId,
-          questionIds: questionsToReorder.map((q) => q.id),
+          questions: questionsToReorder,
         });
         reorderedQuestionsRef.current = null;
       } catch (error) {
@@ -570,6 +574,7 @@ const FormDetailPage = () => {
         open={isAddQuestionOpen}
         onOpenChange={setIsAddQuestionOpen}
         onSave={handleAddQuestion}
+        questions={questions}
       />
 
       <EditQuestionSidePanel
@@ -577,6 +582,7 @@ const FormDetailPage = () => {
         onOpenChange={setIsEditQuestionOpen}
         question={editingQuestion}
         onSave={handleEditQuestion}
+        questions={questions}
       />
 
       <EditFormSidePanel

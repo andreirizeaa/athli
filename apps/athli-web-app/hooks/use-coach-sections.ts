@@ -10,7 +10,7 @@ import {
     archiveSections,
 } from '@/api/coach/coach-section-service';
 import type { Section } from '@/api/coach/coach-section-service';
-import type { WorkoutProgramPayload } from '@/app/training/workouts/new/workout-schema';
+import type { WorkoutProgramPayload } from '@/components/training/workout-schema';
 import { toast } from 'sonner';
 
 const EMPTY_ARRAY: any[] = [];

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { OTPInput } from '@/components/auth/otp-input';
 import { useSupabaseAuth } from '@/lib/providers/supabase-auth-provider';
 import { toast } from 'sonner';
+import { createClient } from '@/supabase/client';
 
 export default function VerifyEmailPage() {
   const { verifyOTP, resendOTP } = useSupabaseAuth();
@@ -39,11 +40,11 @@ export default function VerifyEmailPage() {
       const result = await verifyOTP(email, otp);
       if (result?.session?.user) {
         const coachId = searchParams.get('coach_id');
-        
+
         toast.success('Email verified successfully');
         // Wait for session to be fully established and cookies to be set
         await new Promise((resolve) => setTimeout(resolve, 500));
-        
+
         // If this is a client signup (has coach_id), redirect to new-client route
         if (coachId) {
           window.location.href = `/auth/new-client?coach_id=${coachId}`;

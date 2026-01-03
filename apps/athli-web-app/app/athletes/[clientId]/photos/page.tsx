@@ -17,7 +17,9 @@ import { useRouter } from 'next/navigation';
 import { AddPhotoSidePanel } from '@/components/photos/add-photo-side-panel';
 import { useClientPhotos } from '@/hooks/use-client-photos';
 import { addClientPhotos, deleteClientPhoto, deleteClientPhotoAngle, type AddClientPhotosData } from '@/api/client/client-photo-service';
+
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 type PhotoView = 'all' | 'front' | 'back' | 'side';
 
@@ -30,6 +32,8 @@ const ClientPhotosPage = () => {
   const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
   const isInbox = !!params.contactId;
   const queryClient = useQueryClient();
+  const { user } = useUserProfile();
+  const coachId = user?.id;
 
   // Use React Query hook instead of local state to prevent flickering
   const { photos, isLoading, refetch } = useClientPhotos(clientId);
@@ -105,7 +109,7 @@ const ClientPhotosPage = () => {
   };
 
   const handleAddPhoto = async (data: AddClientPhotosData) => {
-    if (!clientId) return;
+    if (!clientId || !coachId) return;
     try {
       await addClientPhotos(data);
       // Invalidate cache to refresh photos
@@ -123,11 +127,11 @@ const ClientPhotosPage = () => {
       // Otherwise, if on a specific view (front, back, side), delete only that angle
       // If on 'all' view and no deleteAngle, delete the entire photo log entry
       if (deleteAngle) {
-        await deleteClientPhotoAngle(clientId, selectedPhotoId, deleteAngle);
+        await deleteClientPhotoAngle(clientId, coachId || '', selectedPhotoId, deleteAngle);
       } else if (activeView === 'all') {
-        await deleteClientPhoto(clientId, selectedPhotoId);
+        await deleteClientPhoto(clientId, coachId || '', selectedPhotoId);
       } else {
-        await deleteClientPhotoAngle(clientId, selectedPhotoId, activeView);
+        await deleteClientPhotoAngle(clientId, coachId || '', selectedPhotoId, activeView);
       }
       await queryClient.invalidateQueries({ queryKey: ['client-photos', clientId] });
       setSelectedPhotoId(null);
@@ -149,6 +153,7 @@ const ClientPhotosPage = () => {
     try {
       const data: AddClientPhotosData = {
         clientId,
+        coachId: coachId || '',
         recordedAt: date,
         frontFile: angle === 'front' ? file : undefined,
         sideFile: angle === 'side' ? file : undefined,
@@ -180,7 +185,9 @@ const ClientPhotosPage = () => {
           open={isAddPhotoOpen}
           onOpenChange={setIsAddPhotoOpen}
           onSave={handleAddPhoto}
+
           clientId={clientId || ''}
+          coachId={coachId || ''}
         />
       </div>
     );
@@ -736,7 +743,9 @@ const ClientPhotosPage = () => {
         open={isAddPhotoOpen}
         onOpenChange={setIsAddPhotoOpen}
         onSave={handleAddPhoto}
+
         clientId={clientId || ''}
+        coachId={coachId || ''}
       />
 
       <ConfirmDeleteDialog
