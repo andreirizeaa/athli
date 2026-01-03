@@ -94,7 +94,6 @@ export const HEART_RATE_ZONE_OPTIONS = [
 ] as const;
 
 
-
 export const OPTIONAL_COLUMN_OPTIONS = [
     { label: 'Optional', value: 'Optional' },
     { label: 'Tempo', value: 'Tempo' },

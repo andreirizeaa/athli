@@ -14,6 +14,8 @@ export type ExerciseWithSuperset = Exercise & {
   rpe?: string;             // Rate of Perceived Exertion (1-10)
   heartRateZone?: string;   // Zone for distance_duration (1-5)
   eachSide?: boolean;       // Exercise-level each side toggle
+  optionalColumnType?: 'Tempo' | 'RPE' | 'RIR' | 'Heart Rate Zone' | 'Optional'; // First optional column type
+  optionalColumnType2?: 'Tempo' | 'RPE' | 'RIR' | 'Heart Rate Zone' | 'Optional'; // Second optional column type
 };
 
 /**

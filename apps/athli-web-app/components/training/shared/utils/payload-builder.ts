@@ -108,6 +108,8 @@ export const mapSetDataToPayload = (
     restSec: set.rest ? (parseNumber(set.rest, 'null') ?? null) : null,
     completed: false,
     skipped: false,
+    optional: set.optional || null,   // Optional column 1 value
+    optional2: set.optional2 || null, // Optional column 2 value
   };
 
   // distance_duration is always non-dropset, with either distance or durationSec
@@ -271,6 +273,8 @@ const buildSectionPayload = (
           rpe: exercise.rpe || null,
           heartRateZone: exercise.heartRateZone || null,
           eachSide: exercise.eachSide || false,
+          optionalColumnType: exercise.optionalColumnType || null,
+          optionalColumnType2: exercise.optionalColumnType2 || null,
         };
       });
 
@@ -368,6 +372,8 @@ const buildSectionPayload = (
           rpe: exercise.rpe || null,
           heartRateZone: exercise.heartRateZone || null,
           eachSide: exercise.eachSide || false,
+          optionalColumnType: exercise.optionalColumnType || null,
+          optionalColumnType2: exercise.optionalColumnType2 || null,
         };
       });
 
@@ -415,6 +421,8 @@ const buildSectionPayload = (
           rpe: exercise.rpe || null,
           heartRateZone: exercise.heartRateZone || null,
           eachSide: exercise.eachSide || false,
+          optionalColumnType: exercise.optionalColumnType || null,
+          optionalColumnType2: exercise.optionalColumnType2 || null,
         };
       });
 
@@ -535,6 +543,8 @@ export const buildWorkoutPayload = (
           rpe: item.exercise.rpe || null,
           heartRateZone: item.exercise.heartRateZone || null,
           eachSide: item.exercise.eachSide || false,
+          optionalColumnType: item.exercise.optionalColumnType || null,
+          optionalColumnType2: item.exercise.optionalColumnType2 || null,
         } as RegularExercisePayload,
       };
     }

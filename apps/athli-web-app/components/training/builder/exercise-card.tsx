@@ -231,7 +231,7 @@ const EditableCell = ({
         'w-full h-10 flex items-center justify-center text-sm px-2 transition-all',
         !disabled && 'cursor-text hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
         disabled && 'cursor-default opacity-50 text-muted-foreground',
-        hasError && 'text-destructive',
+        hasError && 'text-destructive ring-2 ring-inset ring-destructive',
         !value && !disabled && 'text-muted-foreground',
         className
       )}
@@ -249,6 +249,7 @@ const SelectCell = ({
   displayValue,
   placeholder = '-',
   disabled = false,
+  hasError = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -256,6 +257,7 @@ const SelectCell = ({
   displayValue: string;
   placeholder?: string;
   disabled?: boolean;
+  hasError?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -266,7 +268,8 @@ const SelectCell = ({
           "h-full w-full border-0 shadow-none text-sm focus:ring-0 px-2 bg-transparent text-center transition-all",
           !disabled && "hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent",
           isOpen && "ring-2 ring-inset ring-primary",
-          disabled && "opacity-50 cursor-default"
+          disabled && "opacity-50 cursor-default",
+          hasError && "ring-2 ring-inset ring-destructive"
         )}
         onClick={() => !disabled && setIsOpen(true)}
       >
@@ -284,7 +287,7 @@ const SelectCell = ({
 };
 
 // Tempo cell component that renders like a normal editable cell with 4-digit input
-const TempoCellInput = ({ value, onChange }: { value?: string; onChange: (val: string) => void; }) => {
+const TempoCellInput = ({ value, onChange, hasError = false }: { value?: string; onChange: (val: string) => void; hasError?: boolean; }) => {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -350,7 +353,8 @@ const TempoCellInput = ({ value, onChange }: { value?: string; onChange: (val: s
     <div
       className={cn(
         "flex items-center justify-center w-full h-10 cursor-text",
-        isFocused && "ring-2 ring-inset ring-primary"
+        isFocused && "ring-2 ring-inset ring-primary",
+        hasError && !isFocused && "ring-2 ring-inset ring-destructive"
       )}
       onClick={() => {
         const firstEmpty = parts.findIndex(p => p === '');
@@ -384,16 +388,19 @@ const OptionalCell = ({
   columnType,
   value,
   onChange,
+  hasError = false,
 }: {
   columnType: string;
   value: string;
   onChange: (value: string) => void;
+  hasError?: boolean;
 }) => {
   if (columnType === 'Tempo') {
     return (
       <TempoCellInput
         value={value}
         onChange={onChange}
+        hasError={hasError}
       />
     );
   }
@@ -416,6 +423,7 @@ const OptionalCell = ({
           { value: '10', label: '10' },
         ]}
         displayValue={value || '-'}
+        hasError={hasError}
       />
     );
   }
@@ -434,6 +442,7 @@ const OptionalCell = ({
           { value: '5', label: '5' },
         ]}
         displayValue={value || '-'}
+        hasError={hasError}
       />
     );
   }
@@ -446,6 +455,7 @@ const OptionalCell = ({
         options={HEART_RATE_ZONE_OPTIONS as unknown as { value: string; label: string }[]}
         displayValue={value}
         placeholder="Zone..."
+        hasError={hasError}
       />
     );
   }
@@ -459,6 +469,7 @@ const OptionalCell = ({
       onChange={onChange}
       placeholder={isDisabled ? '' : '-'}
       disabled={isDisabled}
+      hasError={hasError}
     />
   );
 };
@@ -497,6 +508,8 @@ type ExerciseWithSets = Exercise & {
   rpe?: string;             // Rate of Perceived Exertion (1-10)
   heartRateZone?: string;   // Zone for distance_duration (1-5)
   eachSide?: boolean;       // Exercise-level each side toggle
+  optionalColumnType?: 'Tempo' | 'RPE' | 'RIR' | 'Heart Rate Zone' | 'Optional'; // First optional column type
+  optionalColumnType2?: 'Tempo' | 'RPE' | 'RIR' | 'Heart Rate Zone' | 'Optional'; // Second optional column type
 };
 
 type ExerciseCardProps = {
@@ -610,8 +623,12 @@ export const ExerciseCard = ({
   } | null>(null);
   const [otherColumnLabel, setOtherColumnLabel] = useState('Optional');
   const [otherColumnLabel2, setOtherColumnLabel2] = useState('Optional');
-  const [optionalColumnLabel, setOptionalColumnLabel] = useState('Optional');
-  const [optionalColumnLabel2, setOptionalColumnLabel2] = useState('Optional');
+  const [optionalColumnLabel, setOptionalColumnLabel] = useState(
+    (exercise as any).optionalColumnType || 'Optional'
+  );
+  const [optionalColumnLabel2, setOptionalColumnLabel2] = useState(
+    (exercise as any).optionalColumnType2 || 'Optional'
+  );
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -1469,6 +1486,11 @@ export const ExerciseCard = ({
                             onValueChange={(value) => {
                               clearColumnValues('optional');
                               setOptionalColumnLabel(value);
+                              onExerciseChange({
+                                ...exercise,
+                                optionalColumnType: value as any,
+                                alternatives: exercise.alternatives || [],
+                              });
                             }}
                           >
                             <SelectTrigger
@@ -1489,6 +1511,11 @@ export const ExerciseCard = ({
                               onClick={() => {
                                 clearColumnValues('optional');
                                 setOptionalColumnLabel('Optional');
+                                onExerciseChange({
+                                  ...exercise,
+                                  optionalColumnType: 'Optional' as any,
+                                  alternatives: exercise.alternatives || [],
+                                });
                               }}
                               className="p-0.5 hover:bg-muted rounded"
                               aria-label="Clear column"
@@ -1505,6 +1532,11 @@ export const ExerciseCard = ({
                             onValueChange={(value) => {
                               clearColumnValues('optional2');
                               setOptionalColumnLabel2(value);
+                              onExerciseChange({
+                                ...exercise,
+                                optionalColumnType2: value as any,
+                                alternatives: exercise.alternatives || [],
+                              });
                             }}
                           >
                             <SelectTrigger
@@ -1525,6 +1557,11 @@ export const ExerciseCard = ({
                               onClick={() => {
                                 clearColumnValues('optional2');
                                 setOptionalColumnLabel2('Optional');
+                                onExerciseChange({
+                                  ...exercise,
+                                  optionalColumnType2: 'Optional' as any,
+                                  alternatives: exercise.alternatives || [],
+                                });
                               }}
                               className="p-0.5 hover:bg-muted rounded"
                               aria-label="Clear column"
@@ -1559,6 +1596,11 @@ export const ExerciseCard = ({
                             onValueChange={(value) => {
                               clearColumnValues('optional');
                               setOptionalColumnLabel(value);
+                              onExerciseChange({
+                                ...exercise,
+                                optionalColumnType: value as any,
+                                alternatives: exercise.alternatives || [],
+                              });
                             }}
                           >
                             {optionalColumnLabel === 'Heart Rate Zone' ? (
@@ -1601,6 +1643,11 @@ export const ExerciseCard = ({
                               onClick={() => {
                                 clearColumnValues('optional');
                                 setOptionalColumnLabel('Optional');
+                                onExerciseChange({
+                                  ...exercise,
+                                  optionalColumnType: 'Optional' as any,
+                                  alternatives: exercise.alternatives || [],
+                                });
                               }}
                               className="p-0.5 hover:bg-muted rounded"
                               aria-label="Clear column"
@@ -1617,6 +1664,11 @@ export const ExerciseCard = ({
                             onValueChange={(value) => {
                               clearColumnValues('optional2');
                               setOptionalColumnLabel2(value);
+                              onExerciseChange({
+                                ...exercise,
+                                optionalColumnType2: value as any,
+                                alternatives: exercise.alternatives || [],
+                              });
                             }}
                           >
                             {optionalColumnLabel2 === 'Heart Rate Zone' ? (
@@ -1659,6 +1711,11 @@ export const ExerciseCard = ({
                               onClick={() => {
                                 clearColumnValues('optional2');
                                 setOptionalColumnLabel2('Optional');
+                                onExerciseChange({
+                                  ...exercise,
+                                  optionalColumnType2: 'Optional' as any,
+                                  alternatives: exercise.alternatives || [],
+                                });
                               }}
                               className="p-0.5 hover:bg-muted rounded"
                               aria-label="Clear column"
@@ -1783,7 +1840,7 @@ export const ExerciseCard = ({
                                           'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
                                           'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
                                           dropsetPopoverOpen === `${index}-leftReps` && 'ring-2 ring-inset ring-primary',
-                                          validationErrors?.[index]?.reps && 'text-destructive',
+                                          validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
                                           !set.leftReps && 'text-muted-foreground'
                                         )}
                                       >
@@ -1872,7 +1929,7 @@ export const ExerciseCard = ({
                                           'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
                                           'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
                                           dropsetPopoverOpen === `${index}-rightReps` && 'ring-2 ring-inset ring-primary',
-                                          validationErrors?.[index]?.reps && 'text-destructive',
+                                          validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
                                           !set.rightReps && 'text-muted-foreground'
                                         )}
                                       >
@@ -1976,7 +2033,7 @@ export const ExerciseCard = ({
                                           'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
                                           'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
                                           dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
-                                          validationErrors?.[index]?.reps && 'text-destructive',
+                                          validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
                                           !set.reps && 'text-muted-foreground'
                                         )}
                                       >
@@ -2045,8 +2102,16 @@ export const ExerciseCard = ({
                               </TableCell>
                               <TableCell className="py-1 px-2">
                                 <div
+                                  onClick={() => {
+                                    // Open the same popover as reps - since it shows both reps and weight
+                                    handleDropsetInputClick(index, 'reps', `${index}-reps`);
+                                    setDropsetPopoverOpen(`${index}-reps`);
+                                  }}
                                   className={cn(
-                                    'w-full h-10 flex items-center justify-center text-sm cursor-default px-2',
+                                    'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                    'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                    dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
+                                    validationErrors?.[index]?.weight && 'text-destructive ring-2 ring-inset ring-destructive',
                                     !set.weight ? 'text-muted-foreground' : 'text-foreground'
                                   )}
                                 >

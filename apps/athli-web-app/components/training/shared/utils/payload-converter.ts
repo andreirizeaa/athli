@@ -139,7 +139,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                         leftReps,
                         rightReps,
                         leftWeight,
-                        rightWeight
+                        rightWeight,
+                        optional: (set as any).optional || '',
+                        optional2: (set as any).optional2 || '',
                     };
                 });
 
@@ -153,6 +155,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                     rpe: exercisePayload.rpe || '',
                     heartRateZone: exercisePayload.heartRateZone || '',
                     eachSide: !!exercisePayload.eachSide,
+                    optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
+                    optionalColumnType2: (exercisePayload as any).optionalColumnType2 || 'Optional',
                 };
 
                 items.push({
@@ -223,7 +227,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                                 distance: set.exerciseType === 'distance_duration' && 'distance' in set ? getMetricValue((set as any).distance) : '',
                                 duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? getMetricValue((set as any).durationSec) : '',
                                 leftReps,
-                                rightReps
+                                rightReps,
+                                optional: (set as any).optional || '',
+                                optional2: (set as any).optional2 || '',
                             };
                         });
 
@@ -237,6 +243,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             rpe: exercisePayload.rpe || '',
                             heartRateZone: exercisePayload.heartRateZone || '',
                             eachSide: !!exercisePayload.eachSide,
+                            optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
+                            optionalColumnType2: (exercisePayload as any).optionalColumnType2 || 'Optional',
                         });
                     });
                 });
@@ -299,7 +307,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             leftReps,
                             rightReps,
                             leftWeight,
-                            rightWeight
+                            rightWeight,
+                            optional: (setPayload as any).optional || '',
+                            optional2: (setPayload as any).optional2 || '',
                         }];
 
                         section.exercises!.push({
@@ -312,6 +322,8 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             rpe: exercisePayload.rpe || '',
                             heartRateZone: exercisePayload.heartRateZone || '',
                             eachSide: !!exercisePayload.eachSide,
+                            optionalColumnType: (exercisePayload as any).optionalColumnType || 'Optional',
+                            optionalColumnType2: (exercisePayload as any).optionalColumnType2 || 'Optional',
                         });
                     });
                 });

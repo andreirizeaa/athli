@@ -133,6 +133,8 @@ type BaseSet = {
   restSec: number | null;
   completed: boolean;
   skipped: boolean;
+  optional: string | null;   // Optional column 1 value (Tempo, RPE, RIR, etc.)
+  optional2: string | null;  // Optional column 2 value
 };
 
 type WeightRepsSetCommon = BaseSet & {
@@ -207,6 +209,8 @@ export type RegularExercisePayload = ExerciseIdPair & {
   rpe: string | null;
   heartRateZone: string | null;
   eachSide: boolean;
+  optionalColumnType: string | null;
+  optionalColumnType2: string | null;
 };
 
 export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';

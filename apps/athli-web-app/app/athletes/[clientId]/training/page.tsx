@@ -249,6 +249,34 @@ const ClientTrainingCalendarPage = () => {
   const [isAddExercisePanelOpen, setIsAddExercisePanelOpen] = useState<boolean>(false);
   const [preventAutoFocus, setPreventAutoFocus] = useState<boolean>(false);
 
+  // Pre-selected workout/program from library navigation via URL params
+  const [preSelectedWorkoutId, setPreSelectedWorkoutId] = useState<string | null>(null);
+  const [preSelectedProgramId, setPreSelectedProgramId] = useState<string | null>(null);
+
+  // Handle URL params for opening side panels with pre-selection
+  useEffect(() => {
+    const openModal = searchParams.get('openModal');
+    const workoutId = searchParams.get('workoutId');
+    const programId = searchParams.get('programId');
+
+    if (openModal === 'true') {
+      if (workoutId) {
+        // Pre-select workout and open panel
+        setPreSelectedWorkoutId(workoutId);
+        setSelectedDateForWorkout(new Date()); // Default to today
+        setIsAddWorkoutPanelOpen(true);
+      } else if (programId) {
+        // Pre-select program and open panel
+        setPreSelectedProgramId(programId);
+        setSelectedDateForWorkout(new Date()); // Default to today
+        setIsAddProgramPanelOpen(true);
+      }
+
+      // Clear URL params after reading to prevent re-triggering
+      router.replace(`/athletes/${clientId}/training`, { scroll: false });
+    }
+  }, [searchParams, router, clientId]);
+
   // Copy mode state
   const [isCopyMode, setIsCopyMode] = useState<boolean>(false);
   const [copiedWorkout, setCopiedWorkout] = useState<{
@@ -3227,7 +3255,10 @@ const ClientTrainingCalendarPage = () => {
       />
       <AddWorkoutSidePanel
         open={isAddWorkoutPanelOpen}
-        onOpenChange={setIsAddWorkoutPanelOpen}
+        onOpenChange={(open) => {
+          setIsAddWorkoutPanelOpen(open);
+          if (!open) setPreSelectedWorkoutId(null); // Clear pre-selection when closed
+        }}
         onSave={handleSaveWorkout}
         onCreateNewWorkout={() => {
           setIsAddWorkoutPanelOpen(false);
@@ -3240,6 +3271,7 @@ const ClientTrainingCalendarPage = () => {
         selectedDate={selectedDateForWorkout ?? undefined}
         mode="program"
         availableWorkouts={availableWorkouts}
+        preSelectedWorkoutId={preSelectedWorkoutId}
       />
       <TrainingDataProvider>
         <CreateWorkoutSidePanel
@@ -3254,9 +3286,13 @@ const ClientTrainingCalendarPage = () => {
       </TrainingDataProvider>
       <AddProgramSidePanel
         open={isAddProgramPanelOpen}
-        onOpenChange={setIsAddProgramPanelOpen}
+        onOpenChange={(open) => {
+          setIsAddProgramPanelOpen(open);
+          if (!open) setPreSelectedProgramId(null); // Clear pre-selection when closed
+        }}
         onSave={handleSaveProgram}
         selectedDate={selectedDateForWorkout ?? undefined}
+        preSelectedProgramId={preSelectedProgramId}
       />
       <AddExerciseSidePanel
         open={isAddExercisePanelOpen}
@@ -3291,13 +3327,21 @@ const ClientTrainingCalendarPage = () => {
           onSaveSuccess={handleSaveEditedWorkout}
           onSaveError={() => { }}
           onDirtyChange={() => { }}
-          onDelete={() => {
+          onDelete={async () => {
             if (editingWorkout) {
-              apiDeleteWorkoutByKey({
+              await apiDeleteWorkoutByKey({
                 clientId,
                 coachId: coachUser?.id || '',
                 sourceDate: editingWorkout.dateKey,
                 workoutId: editingWorkout.workout.id
+              });
+              // Optimistically remove from local state after successful delete
+              setWorkoutsByDate((prev) => {
+                const updated = { ...prev };
+                if (updated[editingWorkout.dateKey]) {
+                  updated[editingWorkout.dateKey] = updated[editingWorkout.dateKey].filter((w) => w.id !== editingWorkout.workout.id);
+                }
+                return updated;
               });
               setIsWorkoutBuilderOpen(false);
               setEditingWorkout(null);

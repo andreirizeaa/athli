@@ -64,14 +64,52 @@ export const recomputeExerciseValidation = (
         }
       } else {
         if (set.type === 'dropset') {
-          // For dropsets, at least one drop stage is required in reps or weight
-          const hasReps = !!set.reps && set.reps.trim() !== '';
-          const hasWeight =
-            exerciseType === 'weight_reps' && !!set.weight && set.weight.trim() !== '';
-          if (!hasReps && !hasWeight) {
-            setErrors.reps = true;
+          // For dropsets, check that all drop stages have values
+          // Dropset values are stored as hyphen-separated strings like "10-8-6"
+
+          if (eachSide) {
+            // Each-side dropsets use leftReps and rightReps
+            const leftRepsStages = (set.leftReps || '').split('-');
+            const rightRepsStages = (set.rightReps || '').split('-');
+            const allLeftRepsValid = leftRepsStages.length > 0 && leftRepsStages.every(stage => stage.trim() !== '') && !(leftRepsStages.length === 1 && leftRepsStages[0] === '');
+            const allRightRepsValid = rightRepsStages.length > 0 && rightRepsStages.every(stage => stage.trim() !== '') && !(rightRepsStages.length === 1 && rightRepsStages[0] === '');
+
+            if (!allLeftRepsValid || !allRightRepsValid) {
+              setErrors.reps = true;
+            }
+
             if (exerciseType === 'weight_reps') {
-              setErrors.weight = true;
+              // For each-side weight_reps dropsets, also validate left/right weight stages
+              const leftWeightStages = (set.leftWeight || '').split('-');
+              const rightWeightStages = (set.rightWeight || '').split('-');
+              const allLeftWeightValid = leftWeightStages.length > 0 && leftWeightStages.every(stage => stage.trim() !== '') && !(leftWeightStages.length === 1 && leftWeightStages[0] === '');
+              const allRightWeightValid = rightWeightStages.length > 0 && rightWeightStages.every(stage => stage.trim() !== '') && !(rightWeightStages.length === 1 && rightWeightStages[0] === '');
+
+              if (!allLeftWeightValid || !allRightWeightValid) {
+                setErrors.weight = true;
+              }
+            }
+          } else {
+            // Standard dropset (not each-side)
+            const repsStages = (set.reps || '').split('-');
+            const allRepsValid = repsStages.length > 0 && repsStages.every(stage => stage.trim() !== '');
+
+            if (exerciseType === 'weight_reps') {
+              const weightStages = (set.weight || '').split('-');
+              const allWeightValid = weightStages.length > 0 && weightStages.every(stage => stage.trim() !== '');
+
+              // Both reps and weight must have all stages filled
+              if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
+                setErrors.reps = true;
+              }
+              if (!allWeightValid || weightStages.length === 0 || (weightStages.length === 1 && weightStages[0] === '')) {
+                setErrors.weight = true;
+              }
+            } else {
+              // For reps-only exercises, just validate reps
+              if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
+                setErrors.reps = true;
+              }
             }
           }
         } else {
@@ -201,14 +239,52 @@ const validateExercise = (
       }
     } else {
       if (set.type === 'dropset') {
-        // For dropsets, at least one drop stage is required in reps or weight
-        const hasReps = !!set.reps && set.reps.trim() !== '';
-        const hasWeight =
-          exercise.exerciseType === 'weight_reps' && !!set.weight && set.weight.trim() !== '';
-        if (!hasReps && !hasWeight) {
-          setErrors.reps = true;
+        // For dropsets, check that all drop stages have values
+        // Dropset values are stored as hyphen-separated strings like "10-8-6"
+
+        if (exercise.eachSide) {
+          // Each-side dropsets use leftReps and rightReps
+          const leftRepsStages = (set.leftReps || '').split('-');
+          const rightRepsStages = (set.rightReps || '').split('-');
+          const allLeftRepsValid = leftRepsStages.length > 0 && leftRepsStages.every(stage => stage.trim() !== '') && !(leftRepsStages.length === 1 && leftRepsStages[0] === '');
+          const allRightRepsValid = rightRepsStages.length > 0 && rightRepsStages.every(stage => stage.trim() !== '') && !(rightRepsStages.length === 1 && rightRepsStages[0] === '');
+
+          if (!allLeftRepsValid || !allRightRepsValid) {
+            setErrors.reps = true;
+          }
+
           if (exercise.exerciseType === 'weight_reps') {
-            setErrors.weight = true;
+            // For each-side weight_reps dropsets, also validate left/right weight stages
+            const leftWeightStages = (set.leftWeight || '').split('-');
+            const rightWeightStages = (set.rightWeight || '').split('-');
+            const allLeftWeightValid = leftWeightStages.length > 0 && leftWeightStages.every(stage => stage.trim() !== '') && !(leftWeightStages.length === 1 && leftWeightStages[0] === '');
+            const allRightWeightValid = rightWeightStages.length > 0 && rightWeightStages.every(stage => stage.trim() !== '') && !(rightWeightStages.length === 1 && rightWeightStages[0] === '');
+
+            if (!allLeftWeightValid || !allRightWeightValid) {
+              setErrors.weight = true;
+            }
+          }
+        } else {
+          // Standard dropset (not each-side)
+          const repsStages = (set.reps || '').split('-');
+          const allRepsValid = repsStages.length > 0 && repsStages.every(stage => stage.trim() !== '');
+
+          if (exercise.exerciseType === 'weight_reps') {
+            const weightStages = (set.weight || '').split('-');
+            const allWeightValid = weightStages.length > 0 && weightStages.every(stage => stage.trim() !== '');
+
+            // Both reps and weight must have all stages filled
+            if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
+              setErrors.reps = true;
+            }
+            if (!allWeightValid || weightStages.length === 0 || (weightStages.length === 1 && weightStages[0] === '')) {
+              setErrors.weight = true;
+            }
+          } else {
+            // For reps-only exercises, just validate reps
+            if (!allRepsValid || repsStages.length === 0 || (repsStages.length === 1 && repsStages[0] === '')) {
+              setErrors.reps = true;
+            }
           }
         }
       } else {
