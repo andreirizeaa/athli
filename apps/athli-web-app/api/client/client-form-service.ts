@@ -136,6 +136,21 @@ export const getClientQuestionnaires = async (clientId: string, coachId: string)
   }));
 };
 
+/**
+ * Service method to get a single questionnaire for a client
+ */
+export const getClientQuestionnaire = async (clientId: string, questionnaireId: string): Promise<ClientQuestionnaireDetail> => {
+  const response = await apiFetch<{ data: ClientQuestionnaireDetail }>(`/client/forms/questionnaires/${questionnaireId}`, {
+    headers: { 'x-client-id': clientId }
+  });
+
+  return {
+    ...response.data,
+    sentAt: new Date(response.data.sentAt),
+    completedAt: response.data.completedAt ? new Date(response.data.completedAt) : undefined,
+  };
+};
+
 // ... (get single form methods are still mocked/placeholders, keeping as is for now)
 
 // ... (get single form methods are still mocked/placeholders, keeping as is for now)

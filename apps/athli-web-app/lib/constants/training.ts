@@ -84,3 +84,28 @@ export const EQUIPMENT_OPTIONS = [
     { label: 'Pull-up Bar', value: 'Pull-up Bar' },
     { label: 'Bands', value: 'Bands' },
 ] as const;
+
+export const HEART_RATE_ZONE_OPTIONS = [
+    { value: 'Z1: 50-60% of max HR', label: 'Z1: 50-60% of max HR' },
+    { value: 'Z2: 60-70% of max HR', label: 'Z2: 60-70% of max HR' },
+    { value: 'Z3: 70-80% of max HR', label: 'Z3: 70-80% of max HR' },
+    { value: 'Z4: 80-90% of max HR', label: 'Z4: 80-90% of max HR' },
+    { value: 'Z5: 90-100% of max HR', label: 'Z5: 90-100% of max HR' },
+] as const;
+
+
+export const OPTIONAL_COLUMN_OPTIONS = [
+    { label: 'Optional', value: 'Optional' },
+    { label: 'Tempo', value: 'Tempo' },
+    { label: 'RIR', value: 'RIR' },
+    { label: 'RPE', value: 'RPE' },
+    { label: 'HR Zone', value: 'Heart Rate Zone' },
+    { label: 'Calories', value: 'Calories' },
+    { label: 'Watts', value: 'Watts' },
+    { label: 'Pace', value: 'Pace' },
+    { label: 'Speed', value: 'Speed' },
+    { label: 'Incline', value: 'Incline' },
+    { label: 'Height', value: 'Height' },
+    { label: 'RPM', value: 'RPM' },
+] as const;
+

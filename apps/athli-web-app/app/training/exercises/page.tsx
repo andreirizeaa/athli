@@ -215,6 +215,8 @@ const ExercisesPage = () => {
       type: ex.category || '', // Map category to type for compatibility
       length: '', // Not used for exercises
       totalExercises: 0, // Not used for exercises
+      totalWorkouts: 0,
+      difficulty: '',
       equipment: ex.equipment || '',
       created: ex.created_at,
       category: ex.category || '',

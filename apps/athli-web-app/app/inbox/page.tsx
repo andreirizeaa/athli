@@ -58,6 +58,7 @@ import { MessageInputProvider, useMessageInput } from './components/message-inpu
 import { ClientProfileProvider } from '@/app/athletes/[clientId]/client-profile-context';
 import { ClientProfileLayoutContent } from '@/app/athletes/[clientId]/layout';
 import { ClientProfileContent } from './components/client-profile-content';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 
 type Note = {
@@ -142,6 +143,7 @@ const InboxPage = () => {
   const router = useRouter();
   const params = useParams();
   const contactIdFromPath = params?.contactId as string | undefined;
+  const { user } = useUserProfile();
 
   // State-based tab management (no URL routing for tabs to avoid flicker)
   const [activeClientTab, setActiveClientTab] = React.useState('overview');
@@ -200,8 +202,8 @@ const InboxPage = () => {
     }
 
     const performSearch = async () => {
-      if (selectedContactId) {
-        await searchNotes(selectedContactId, noteSearchQuery);
+      if (selectedContactId && user?.id) {
+        await searchNotes(selectedContactId, user.id, noteSearchQuery);
       }
 
       // Client-side filtering

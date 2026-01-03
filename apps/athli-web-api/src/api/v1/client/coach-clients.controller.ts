@@ -575,4 +575,90 @@ export const coachClientController = {
             data: { email: client.email }
         });
     },
+
+    /**
+     * Get training history for all coach's clients
+     * Filters by date and optionally by status (completed, in_progress, missed)
+     * Also fetches workout data from client_training to include in response
+     */
+    getTrainingHistory: async (req: Request, res: Response) => {
+        const coachId = getActingCoachId(req);
+        const { date, status } = req.body;
+
+        if (!coachId) {
+            unauthorized(res, { message: 'User not authenticated' });
+            return;
+        }
+
+        if (!date) {
+            return res.status(400).json({ success: false, message: 'date is required' });
+        }
+
+        const supabase = getSupabaseClient();
+
+        // 1. Fetch training history items
+        let historyQuery = supabase
+            .from('client_training_history')
+            .select('*')
+            .eq('coach_id', coachId)
+            .eq('date', date);
+
+        if (status && status !== 'missed') {
+            historyQuery = historyQuery.eq('status', status);
+        } else if (status === 'missed') {
+            historyQuery = historyQuery.neq('status', 'completed');
+        }
+
+        const { data: historyItems, error: historyError } = await historyQuery;
+
+        if (historyError) {
+            console.error('Error fetching training history:', historyError);
+            return res.status(500).json({ success: false, message: historyError.message });
+        }
+
+        if (!historyItems || historyItems.length === 0) {
+            return success(res, {
+                message: 'Training history retrieved successfully',
+                data: { history: [] },
+            });
+        }
+
+        // 2. Get unique client IDs from history items
+        const clientIds = [...new Set(historyItems.map(item => item.client_id))];
+
+        // 3. Fetch training data for those clients on this date
+        const { data: trainingData, error: trainingError } = await supabase
+            .from('client_training')
+            .select('client_id, training_data')
+            .eq('coach_id', coachId)
+            .eq('date', date)
+            .in('client_id', clientIds);
+
+        if (trainingError) {
+            console.error('Error fetching training data:', trainingError);
+            // Continue without workout data rather than failing
+        }
+
+        // 4. Create lookup map for training data by client_id
+        const trainingDataMap = new Map<string, any>();
+        (trainingData || []).forEach((item: any) => {
+            trainingDataMap.set(item.client_id, item.training_data || {});
+        });
+
+        // 5. Merge workout_data into history items
+        const history = historyItems.map((item: any) => {
+            const clientTrainingData = trainingDataMap.get(item.client_id) || {};
+            const workoutData = clientTrainingData[item.workout_id] || null;
+
+            return {
+                ...item,
+                workout_data: workoutData
+            };
+        });
+
+        success(res, {
+            message: 'Training history retrieved successfully',
+            data: { history },
+        });
+    },
 };

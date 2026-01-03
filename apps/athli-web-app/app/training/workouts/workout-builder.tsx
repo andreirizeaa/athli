@@ -119,6 +119,7 @@ type WorkoutBuilderProps = {
   onSaveError?: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete?: () => Promise<void> | void;
 };
 
 export const WorkoutBuilder = ({
@@ -131,11 +132,13 @@ export const WorkoutBuilder = ({
   onSaveError,
   open,
   onOpenChange,
+  onDelete,
 }: WorkoutBuilderProps) => {
   const t = useTranslations();
   const isSectionMode = false;
   const router = useRouter();
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [pendingNavigationPath, setPendingNavigationPath] = useState<string | null>(null);
 
@@ -323,6 +326,9 @@ export const WorkoutBuilder = ({
       };
 
       setIsDirty(false);
+      setHasAttemptedSave(false);
+      setValidationErrors({});
+      setSectionValidationErrors({});
       if (onDirtyChange) onDirtyChange();
     }
 
@@ -738,10 +744,11 @@ Focus on proper form and progressive overload.`;
   const handleRecomputeExerciseValidation = (
     exerciseInstanceId: string,
     exerciseType: 'weight_reps' | 'reps' | 'distance_duration',
-    sets: SetData[] | undefined
+    sets: SetData[] | undefined,
+    eachSide?: boolean
   ) => {
     setValidationErrors((prev) =>
-      recomputeValidation(exerciseInstanceId, exerciseType, sets, hasAttemptedSave, prev)
+      recomputeValidation(exerciseInstanceId, exerciseType, sets, hasAttemptedSave, prev, eachSide)
     );
   };
 
@@ -1672,7 +1679,8 @@ Focus on proper form and progressive overload.`;
                                   handleRecomputeExerciseValidation(
                                     exercise.instanceId,
                                     castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
-                                    castExercise.sets || []
+                                    castExercise.sets || [],
+                                    castExercise.eachSide
                                   );
 
                                   setWorkoutSchema((prev) => ({
@@ -1888,7 +1896,8 @@ Focus on proper form and progressive overload.`;
               handleRecomputeExerciseValidation(
                 exercise.instanceId,
                 castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
-                castExercise.sets || []
+                castExercise.sets || [],
+                castExercise.eachSide
               );
 
               setWorkoutSchema((prev) => ({
@@ -1972,6 +1981,10 @@ Focus on proper form and progressive overload.`;
           className="!max-w-[95vw] sm:!max-w-[95vw] !w-[95vw] !h-[90vh] flex flex-col p-0 overflow-hidden ring-0 border-none outline-none bg-transparent shadow-none"
           onInteractOutside={(e) => {
             e.preventDefault();
+            // Don't trigger discard dialog if we're showing delete confirmation
+            if (showDeleteConfirm || sectionToDelete) {
+              return;
+            }
             if (isDirty) {
               setShowCloseConfirm(true);
             } else {
@@ -1980,6 +1993,10 @@ Focus on proper form and progressive overload.`;
           }}
           onEscapeKeyDown={(e) => {
             e.preventDefault();
+            // Don't trigger discard dialog if we're showing delete confirmation
+            if (showDeleteConfirm || sectionToDelete) {
+              return;
+            }
             if (isDirty) {
               setShowCloseConfirm(true);
             } else {
@@ -2404,6 +2421,27 @@ Focus on proper form and progressive overload.`;
                               </div>
                             </PopoverContent>
                           </Popover>
+                          {onDelete && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-9 w-9 shrink-0 border-input bg-background shadow-none"
+                                  onClick={() => {
+                                    console.log('WorkoutBuilder - Top Delete Button Clicked');
+                                    setShowDeleteConfirm(true);
+                                  }}
+                                >
+                                  <Trash2 className="size-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {t('general.delete')}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
                       </div>
                       <div
@@ -2752,6 +2790,20 @@ Focus on proper form and progressive overload.`;
             setPendingNavigationPath(null);
           }
         }}
+      />
+      <ConfirmDeleteDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={async () => {
+          if (onDelete) {
+            await onDelete();
+            // The parent should handle closing/navigating after delete
+          }
+        }}
+        title={t('workouts.deleteWorkout.title')}
+        description={t('workouts.deleteWorkout.description')}
+        confirmText={t('general.delete')}
+        variant="default"
       />
     </>
   );

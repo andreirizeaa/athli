@@ -26,9 +26,20 @@ export interface AssignProgramData {
  * Service method to assign a workout to a client's training calendar
  */
 export const assignWorkout = async (data: AssignWorkoutData): Promise<void> => {
+  const headers: Record<string, string> = {
+    'x-client-id': data.clientId,
+  };
+  if (data.coachId) {
+    headers['x-coach-id'] = data.coachId;
+  }
+
+  // Create payload without clientId and coachId (they're in headers)
+  const { clientId, coachId, ...payload } = data;
+
   await apiFetch('/client/trainings/assign-workout', {
     method: 'POST',
-    body: JSON.stringify(data),
+    headers,
+    body: JSON.stringify(payload),
   });
 };
 
@@ -36,8 +47,14 @@ export const assignWorkout = async (data: AssignWorkoutData): Promise<void> => {
  * Service method to assign a program to a client's training calendar
  */
 export const assignProgram = async (data: AssignProgramData): Promise<void> => {
+  const headers: Record<string, string> = {};
+  if (data.coachId) {
+    headers['x-coach-id'] = data.coachId;
+  }
+
   await apiFetch('/client/trainings/assign-program', {
     method: 'POST',
+    headers,
     body: JSON.stringify(data),
   });
 };
@@ -54,8 +71,6 @@ export const getClientWorkouts = async (clientId: string, startDate: string, end
  * Service method to get client's programs from training calendar
  */
 export const getClientPrograms = async (clientId: string): Promise<any[]> => {
-  // This might be a different endpoint or part of getClientWorkouts depending on backend implementation
-  // For now keeping it similar to structure but potentially unused if calendar drives everything
   const response = await apiFetch<ApiResponse<{ programs: any[] }>>(`/client/trainings/${clientId}/programs`);
   return response.data?.programs || [];
 };
@@ -63,28 +78,37 @@ export const getClientPrograms = async (clientId: string): Promise<any[]> => {
 /**
  * Service method to delete a workout from client's training calendar
  */
-export const deleteClientWorkout = async (clientId: string, workoutId: string, date: string): Promise<void> => {
+export const deleteClientWorkout = async (clientId: string, coachId: string, workoutId: string, date: string): Promise<void> => {
   await apiFetch(`/client/trainings/${clientId}/workout/${workoutId}?date=${date}`, {
     method: 'DELETE',
+    headers: {
+      'x-client-id': clientId, // Redundant if in URL, but good for consistency
+      'x-coach-id': coachId
+    },
   });
 };
 
 /**
  * Service method to get a specific workout instance for a client
  */
-export const getClientWorkoutInstance = async (clientId: string, date: string, workoutId: string): Promise<any> => {
+export const getClientWorkoutInstance = async (clientId: string, coachId: string, date: string, workoutId: string): Promise<any> => {
   const response = await apiFetch<ApiResponse<{ workout: any }>>('/client/trainings/workout-instance', {
     method: 'POST',
-    body: JSON.stringify({ clientId, date, workoutId }),
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId
+    },
+    body: JSON.stringify({ date, workoutId }),
   });
   return response.data?.workout;
 };
 
 export interface DuplicateWorkoutData {
   clientId: string;
-  sourceDate: string;      // YYYY-MM-DD format
-  sourceWorkoutId: string; // The specific workout ID to duplicate
-  targetDate: string;      // YYYY-MM-DD format
+  coachId: string;
+  sourceDate: string;
+  sourceWorkoutId: string;
+  targetDate: string;
 }
 
 export interface DuplicateWorkoutResponse {
@@ -98,6 +122,10 @@ export interface DuplicateWorkoutResponse {
 export const duplicateWorkout = async (data: DuplicateWorkoutData): Promise<DuplicateWorkoutResponse> => {
   const response = await apiFetch<ApiResponse<DuplicateWorkoutResponse>>('/client/trainings/calendar/duplicate', {
     method: 'POST',
+    headers: {
+      'x-client-id': data.clientId,
+      'x-coach-id': data.coachId
+    },
     body: JSON.stringify(data),
   });
   return response.data!;
@@ -105,7 +133,8 @@ export const duplicateWorkout = async (data: DuplicateWorkoutData): Promise<Dupl
 
 export interface DeleteWorkoutByKeyData {
   clientId: string;
-  sourceDate: string;  // YYYY-MM-DD format
+  coachId: string;
+  sourceDate: string;
   workoutId: string;
 }
 
@@ -115,6 +144,92 @@ export interface DeleteWorkoutByKeyData {
 export const deleteWorkoutByKey = async (data: DeleteWorkoutByKeyData): Promise<void> => {
   await apiFetch('/client/trainings/calendar/delete', {
     method: 'POST',
-    body: JSON.stringify(data),
+    headers: {
+      'x-client-id': data.clientId,
+      'x-coach-id': data.coachId
+    },
+    body: JSON.stringify({
+      sourceDate: data.sourceDate,
+      workoutId: data.workoutId,
+    }),
   });
+};
+
+export interface CoachClientHistoryItem {
+  client_id: string;
+  coach_id: string;
+  date: string;
+  workout_id: string;
+  status: 'not_started' | 'in_progress' | 'completed' | 'missed';
+  workout_data?: any; // JSONB snapshot of workout data at assignment time
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Service method to get coach's client history (completed, missed, in_progress)
+ * Uses backend API endpoint with POST request
+ */
+export const getCoachClientHistory = async (
+  date: string,
+  status?: 'completed' | 'in_progress' | 'missed'
+): Promise<CoachClientHistoryItem[]> => {
+  const response = await apiFetch<ApiResponse<{ history: CoachClientHistoryItem[] }>>(
+    '/clients/training-history',
+    {
+      method: 'POST',
+      body: JSON.stringify({ date, status }),
+    }
+  );
+
+  return response.data?.history || [];
+};
+
+export interface GetExerciseHistoryData {
+  clientId: string;
+  coachId: string;
+  exerciseId: string;
+  exerciseName?: string;
+}
+
+export interface HistoryEntry {
+  date: string;
+  workout_id: string;
+  workout_name: string;
+  exercise_id: string;
+  exercise_data: {
+    sets?: Array<{
+      weight?: number | { completed?: number; prescribed?: number };
+      reps?: number | { completed?: number; prescribed?: number };
+      distance?: number | { completed?: number; prescribed?: number };
+      duration?: number | { completed?: number; prescribed?: number };
+      completed?: boolean;
+      type?: string;
+    }>;
+    name?: string;
+    notes?: string;
+    exerciseType?: string;
+    performedExerciseId?: string;
+    prescribedExerciseId?: string;
+    supersetId?: string | null;
+    alternatives?: any[];
+  };
+}
+
+/**
+ * Service method to get exercise history for a client
+ */
+export const getExerciseHistory = async (data: GetExerciseHistoryData): Promise<HistoryEntry[]> => {
+  const response = await apiFetch<ApiResponse<{ history: HistoryEntry[] }>>('/client/trainings/exercise-history', {
+    method: 'POST',
+    headers: {
+      'x-client-id': data.clientId,
+      'x-coach-id': data.coachId
+    },
+    body: JSON.stringify({
+      exercise_id: data.exerciseId,
+      exerciseName: data.exerciseName
+    }),
+  });
+  return response.data?.history || [];
 };

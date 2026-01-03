@@ -10,6 +10,8 @@ export type ExerciseWithSuperset = Exercise & {
   sets?: SetData[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
   notes?: string;
+  eachSide?: boolean;       // Exercise-level each side toggle
+  optionalColumnType?: 'Optional' | 'Tempo' | 'RIR' | 'RPE' | 'Heart Rate Zone' | 'Calories' | 'Watts' | 'Pace' | 'Speed' | 'Incline' | 'Height' | 'RPM';
 };
 
 /**
