@@ -2384,6 +2384,13 @@ export const ProgramBuilder = ({
         onSaveSuccess={editingWorkout ? handleSaveEditedWorkout : handleSaveWorkoutFromBuilder}
         onSaveError={() => { }}
         onDirtyChange={() => { }}
+        onDelete={() => {
+          if (editingWorkout) {
+            handleDeleteWorkout(editingWorkout.week, editingWorkout.day, editingWorkout.workout.id);
+            setIsWorkoutBuilderOpen(false);
+            setEditingWorkout(null);
+          }
+        }}
       />
       <MultiSelectActionBar
         selectedCount={selectedWorkouts.length}

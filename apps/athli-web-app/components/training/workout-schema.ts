@@ -89,10 +89,18 @@ export type RoundExercisePayload =
   | (ExerciseIdPair & {
     notes: string | null;
     completed: false;
+    tempo: string | null;
+    rpe: string | null;
+    heartRateZone: string | null;
+    eachSide: boolean;
   } & (WeightRepsRoundIncomplete | RepsRoundIncomplete | DistanceDurationRound))
   | (ExerciseIdPair & {
     notes: string | null;
     completed: true;
+    tempo: string | null;
+    rpe: string | null;
+    heartRateZone: string | null;
+    eachSide: boolean;
   } & (WeightRepsRoundComplete | RepsRoundComplete | DistanceDurationRound));
 
 /**
@@ -131,6 +139,8 @@ type WeightRepsSetCommon = BaseSet & {
   exerciseType: 'weight_reps';
   weight: MetricNumber;
   reps: MetricNumber;
+  leftReps?: MetricNumber;
+  rightReps?: MetricNumber;
 };
 
 type WeightRepsSetNonDropset = WeightRepsSetCommon & {
@@ -141,11 +151,15 @@ type WeightRepsSetNonDropset = WeightRepsSetCommon & {
 type WeightRepsSetDropset = WeightRepsSetCommon & {
   type: 'dropset';
   dropset: DropsetPayload;
+  leftDropset?: DropsetPayload;
+  rightDropset?: DropsetPayload;
 };
 
 type RepsSetCommon = BaseSet & {
   exerciseType: 'reps';
   reps: MetricNumber;
+  leftReps?: MetricNumber;
+  rightReps?: MetricNumber;
 };
 
 type RepsSetNonDropset = RepsSetCommon & {
@@ -156,6 +170,8 @@ type RepsSetNonDropset = RepsSetCommon & {
 type RepsSetDropset = RepsSetCommon & {
   type: 'dropset';
   dropset: DropsetPayload;
+  leftDropset?: DropsetPayload;
+  rightDropset?: DropsetPayload;
 };
 
 type DistanceDurationSet = BaseSet & {
@@ -187,6 +203,10 @@ export type RegularExercisePayload = ExerciseIdPair & {
   alternatives: string[];
   notes: string | null;
   supersetId: string | null;
+  tempo: string | null;
+  rpe: string | null;
+  heartRateZone: string | null;
+  eachSide: boolean;
 };
 
 export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';

@@ -10,6 +10,10 @@ export type ExerciseWithSuperset = Exercise & {
   sets?: SetData[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
   notes?: string;
+  tempo?: string;           // Tempo notation (e.g., "3-1-2-0")
+  rpe?: string;             // Rate of Perceived Exertion (1-10)
+  heartRateZone?: string;   // Zone for distance_duration (1-5)
+  eachSide?: boolean;       // Exercise-level each side toggle
 };
 
 /**
@@ -70,6 +74,7 @@ export type SetFieldValidation = {
  */
 export type ExerciseValidationError = Record<number, SetFieldValidation> & {
   supersetMismatch?: boolean;
+  tempo?: boolean;
 };
 
 export type ValidationErrors = Record<string, ExerciseValidationError>;

@@ -1267,6 +1267,10 @@ export const enMessages = {
         removePdfFileAria: 'Remove PDF file',
       },
     },
+    deleteWorkout: {
+      title: 'Delete workout',
+      description: 'Are you sure you want to delete this workout? This action cannot be undone.',
+    },
     assigning: {
       title: 'Assigning {name}',
       titleGeneric: 'Assign workout',

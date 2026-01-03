@@ -6,6 +6,7 @@ import type {
   SectionValidation,
   WorkoutSchema,
   ExerciseWithSuperset,
+  ExerciseValidationError,
 } from '@/components/training/shared/types/workout-builder.types';
 
 /**
@@ -23,15 +24,26 @@ export const recomputeExerciseValidation = (
   exerciseType: 'weight_reps' | 'reps' | 'distance_duration',
   sets: SetData[] | undefined,
   hasAttemptedSave: boolean,
-  currentErrors: ValidationErrors
+  currentErrors: ValidationErrors,
+  eachSide?: boolean,
+  tempo?: string
 ): ValidationErrors => {
-  // Do not show validation until the user has clicked Save at least once
+  // Do not show validation until the user has attempted to save at least once
   if (!hasAttemptedSave) {
     return currentErrors;
   }
 
   const next: ValidationErrors = { ...currentErrors };
-  const exerciseErrors: Record<number, SetFieldValidation> = {};
+  const exerciseErrors: ExerciseValidationError = {};
+
+  // Tempo Validation
+  if (tempo && tempo.trim() !== '') {
+    const parts = tempo.split('-');
+    const isComplete = parts.length === 4 && parts.every(p => p.trim() !== '');
+    if (!isComplete) {
+      exerciseErrors.tempo = true;
+    }
+  }
 
   if (sets && sets.length > 0) {
     sets.forEach((set, index) => {
@@ -63,16 +75,27 @@ export const recomputeExerciseValidation = (
             }
           }
         } else {
-          // Reps are required only for normal/warmUp (not dropset or failure)
+          // Reps required only for non-dropset, non-failure sets
           if (set.type !== 'failure') {
-            const repsStr = set.reps?.toString() || '';
-            const hasReps = repsStr.trim() !== '';
-            if (!hasReps) {
-              setErrors.reps = true;
+            if (eachSide) {
+              const leftRepsStr = set.leftReps?.toString() || '';
+              const rightRepsStr = set.rightReps?.toString() || '';
+              const hasLeftReps = leftRepsStr.trim() !== '';
+              const hasRightReps = rightRepsStr.trim() !== '';
+
+              if (!hasLeftReps || !hasRightReps) {
+                setErrors.reps = true; // Use 'reps' key for the error signal
+              }
+            } else {
+              const repsStr = set.reps?.toString() || '';
+              const hasReps = repsStr.trim() !== '';
+              if (!hasReps) {
+                setErrors.reps = true;
+              }
             }
           }
 
-          // Weight is required for all weight_reps sets except dropsets
+          // Weight required for all weight_reps sets except dropsets
           if (exerciseType === 'weight_reps') {
             const weightStr = set.weight?.toString() || '';
             const hasWeight = weightStr.trim() !== '';
@@ -146,6 +169,18 @@ const validateExercise = (
   exercise: ExerciseWithSuperset,
   nextErrors: ValidationErrors
 ): void => {
+  // Tempo Validation
+  if (exercise.tempo && exercise.tempo.trim() !== '') {
+    const parts = exercise.tempo.split('-');
+    const isComplete = parts.length === 4 && parts.every(p => p.trim() !== '');
+    if (!isComplete) {
+      if (!nextErrors[exercise.instanceId]) {
+        nextErrors[exercise.instanceId] = {};
+      }
+      nextErrors[exercise.instanceId].tempo = true;
+    }
+  }
+
   const sets = exercise.sets || [];
 
   sets.forEach((set, index) => {
@@ -179,10 +214,21 @@ const validateExercise = (
       } else {
         // Reps required only for non-dropset, non-failure sets
         if (set.type !== 'failure') {
-          const repsStr = set.reps?.toString() || '';
-          const hasReps = repsStr.trim() !== '';
-          if (!hasReps) {
-            setErrors.reps = true;
+          if (exercise.eachSide) {
+            const leftRepsStr = set.leftReps?.toString() || '';
+            const rightRepsStr = set.rightReps?.toString() || '';
+            const hasLeftReps = leftRepsStr.trim() !== '';
+            const hasRightReps = rightRepsStr.trim() !== '';
+
+            if (!hasLeftReps || !hasRightReps) {
+              setErrors.reps = true;
+            }
+          } else {
+            const repsStr = set.reps?.toString() || '';
+            const hasReps = repsStr.trim() !== '';
+            if (!hasReps) {
+              setErrors.reps = true;
+            }
           }
         }
 

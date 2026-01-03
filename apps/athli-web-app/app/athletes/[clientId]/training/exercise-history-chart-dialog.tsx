@@ -145,6 +145,14 @@ export const ExerciseHistoryChartDialog = ({
         const reps = extractValue(set.reps);
         const distance = extractValue(set.distance);
         const duration = extractValue(set.duration);
+        const leftReps = extractValue(set.leftReps);
+        const rightReps = extractValue(set.rightReps);
+
+        if (leftReps > 0 || rightReps > 0) {
+            const repsStr = `L: ${leftReps} | R: ${rightReps}`;
+            if (weight > 0) return `${weight}kg × ${repsStr}`;
+            return repsStr;
+        }
 
         if (weight > 0 && reps > 0) return `${weight}kg × ${reps}`;
         if (reps > 0) return `${reps} reps`;
