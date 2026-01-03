@@ -161,7 +161,11 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                             exerciseType: exercise.exerciseType || exerciseDetails.exerciseType || 'weight_reps',
                             thumbnailUrl: exerciseDetails.imageUrl,
                             sets: sets,
-                            isSuperset: isSuperset
+                            isSuperset: isSuperset,
+                            tempo: exercise.tempo,
+                            rpe: exercise.rpe,
+                            heartRateZone: exercise.heartRateZone,
+                            eachSide: exercise.eachSide
                         });
                     }
                 }
@@ -345,6 +349,31 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                                             </button>
                                         </div>
 
+                                        {(exercise.tempo || exercise.rpe || exercise.heartRateZone || exercise.eachSide) && (
+                                            <div className="px-2.5 pb-2.5 flex flex-wrap gap-2 text-[10px]">
+                                                {exercise.tempo && (
+                                                    <div className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                                        <span className="font-bold">Tempo:</span> {exercise.tempo}
+                                                    </div>
+                                                )}
+                                                {exercise.rpe && (
+                                                    <div className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                                        <span className="font-bold">RPE:</span> {exercise.rpe}
+                                                    </div>
+                                                )}
+                                                {exercise.heartRateZone && (
+                                                    <div className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                                        <span className="font-bold">Zone:</span> {exercise.heartRateZone}
+                                                    </div>
+                                                )}
+                                                {exercise.eachSide && (
+                                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
+                                                        Each Side
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {exercise.sets && exercise.sets.length > 0 && (
                                             <div className="border-t border-border/50">
                                                 <Table>
@@ -393,7 +422,15 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                                                                         </span>
                                                                     </TableCell>
                                                                     <TableCell className="text-center py-1 px-2 text-xs font-medium text-foreground/80">
-                                                                        {renderValue(set[config.keys[0] as string])}
+                                                                        {exercise.eachSide && config.keys[0] === 'reps' ? (
+                                                                            <span className="flex items-center justify-center gap-1">
+                                                                                <span>L: {renderValue(set.leftReps || set.reps)}</span>
+                                                                                <span className="text-muted-foreground/50">|</span>
+                                                                                <span>R: {renderValue(set.rightReps || set.reps)}</span>
+                                                                            </span>
+                                                                        ) : (
+                                                                            renderValue(set[config.keys[0] as string])
+                                                                        )}
                                                                     </TableCell>
                                                                     {config.keys[1] && (
                                                                         <TableCell className="text-center py-1 px-2 text-xs font-medium text-foreground/80">
@@ -425,7 +462,7 @@ export const WorkoutPreviewContent = ({ workoutData, onHistoryClick }: WorkoutPr
                         })}
                     </div>
                 )}
-            </div>
+            </div >
 
             <VideoModal
                 open={isVideoModalOpen}

@@ -145,6 +145,35 @@ export const mapSetDataToPayload = (
       }
     ).filter((s) => s.reps.prescribed != null || s.weight.prescribed != null);
 
+    // Left/Right Dropset handling
+    let leftDropsetStages: any[] | undefined;
+    let rightDropsetStages: any[] | undefined;
+
+    if (set.leftReps || set.rightReps) {
+      const leftRepStages = parseStages(set.leftReps);
+      const rightRepStages = parseStages(set.rightReps);
+      // Weight is shared/disabled for eachSide dropsets usually, or assumed same?
+      // The UI disables weight input. So weightPrescribed might be 0 or global weight.
+      // Current UI logic: "Weight cell renders as a disabled input" -> so likely empty or single value.
+      // Let's assume weightValue applies to stages or is 0.
+      // Actually, for dropsets, we need stages.
+
+      if (leftRepStages.length > 0) {
+        leftDropsetStages = leftRepStages.map((r) => ({
+          reps: { prescribed: r, completed: r },
+          weight: { prescribed: weightValue, completed: weightValue },
+          completed: false
+        }));
+      }
+      if (rightRepStages.length > 0) {
+        rightDropsetStages = rightRepStages.map((r) => ({
+          reps: { prescribed: r, completed: r },
+          weight: { prescribed: weightValue, completed: weightValue },
+          completed: false
+        }));
+      }
+    }
+
     if (exerciseType === 'weight_reps') {
       return {
         ...base,
@@ -152,7 +181,11 @@ export const mapSetDataToPayload = (
         exerciseType: 'weight_reps',
         weight: { prescribed: weightValue, completed: weightValue },
         reps: { prescribed: repsValue, completed: repsValue },
+        leftReps: set.leftReps ? { prescribed: parseNumber(set.leftReps, 'null') ?? 0, completed: parseNumber(set.leftReps, 'null') ?? 0 } : undefined,
+        rightReps: set.rightReps ? { prescribed: parseNumber(set.rightReps, 'null') ?? 0, completed: parseNumber(set.rightReps, 'null') ?? 0 } : undefined,
         dropset: { stages },
+        leftDropset: leftDropsetStages ? { stages: leftDropsetStages } : undefined,
+        rightDropset: rightDropsetStages ? { stages: rightDropsetStages } : undefined,
       } as SetPayload;
     }
 
@@ -169,6 +202,8 @@ export const mapSetDataToPayload = (
           completed: false,
         })),
       },
+      leftDropset: leftDropsetStages ? { stages: leftDropsetStages } : undefined,
+      rightDropset: rightDropsetStages ? { stages: rightDropsetStages } : undefined,
     } as SetPayload;
   }
 
@@ -179,6 +214,8 @@ export const mapSetDataToPayload = (
       exerciseType: 'weight_reps',
       weight: { prescribed: weightValue, completed: weightValue },
       reps: { prescribed: repsValue, completed: repsValue },
+      leftReps: set.leftReps ? { prescribed: parseNumber(set.leftReps, 'null') ?? 0, completed: parseNumber(set.leftReps, 'null') ?? 0 } : undefined,
+      rightReps: set.rightReps ? { prescribed: parseNumber(set.rightReps, 'null') ?? 0, completed: parseNumber(set.rightReps, 'null') ?? 0 } : undefined,
       dropset: null,  // Always present, null for non-dropset
     } as SetPayload;
   }
@@ -188,6 +225,8 @@ export const mapSetDataToPayload = (
     ...base,
     exerciseType: 'reps',
     reps: { prescribed: repsValue, completed: repsValue },
+    leftReps: set.leftReps ? { prescribed: parseNumber(set.leftReps, 'null') ?? 0, completed: parseNumber(set.leftReps, 'null') ?? 0 } : undefined,
+    rightReps: set.rightReps ? { prescribed: parseNumber(set.rightReps, 'null') ?? 0, completed: parseNumber(set.rightReps, 'null') ?? 0 } : undefined,
     dropset: null,  // Always present, null for non-dropset
   } as SetPayload;
 };
@@ -224,6 +263,10 @@ const buildSectionPayload = (
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,  // Use null, not empty string
+          tempo: exercise.tempo || null,
+          rpe: exercise.rpe || null,
+          heartRateZone: exercise.heartRateZone || null,
+          eachSide: exercise.eachSide || false,
         };
       });
 
@@ -271,6 +314,10 @@ const buildSectionPayload = (
         restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
         completed: false,
         notes: exercise.notes || null,
+        tempo: exercise.tempo || null,
+        rpe: exercise.rpe || null,
+        heartRateZone: exercise.heartRateZone || null,
+        eachSide: exercise.eachSide || false,
       } as RoundExercisePayload;
     });
 
@@ -313,6 +360,10 @@ const buildSectionPayload = (
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,
+          tempo: exercise.tempo || null,
+          rpe: exercise.rpe || null,
+          heartRateZone: exercise.heartRateZone || null,
+          eachSide: exercise.eachSide || false,
         };
       });
 
@@ -356,6 +407,10 @@ const buildSectionPayload = (
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,
+          tempo: exercise.tempo || null,
+          rpe: exercise.rpe || null,
+          heartRateZone: exercise.heartRateZone || null,
+          eachSide: exercise.eachSide || false,
         };
       });
 
@@ -404,6 +459,10 @@ const buildSectionPayload = (
       restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
       completed: false,
       notes: exercise.notes || null,
+      tempo: exercise.tempo || null,
+      rpe: exercise.rpe || null,
+      heartRateZone: exercise.heartRateZone || null,
+      eachSide: exercise.eachSide || false,
     } as RoundExercisePayload;
   });
 
@@ -468,6 +527,10 @@ export const buildWorkoutPayload = (
           alternatives: item.exercise.alternatives || [],
           supersetId: item.exercise.supersetGroupId || null,  // Use null, not undefined
           notes: item.exercise.notes || null,
+          tempo: item.exercise.tempo || null,
+          rpe: item.exercise.rpe || null,
+          heartRateZone: item.exercise.heartRateZone || null,
+          eachSide: item.exercise.eachSide || false,
         } as RegularExercisePayload,
       };
     }
@@ -517,7 +580,7 @@ export const buildWorkoutPayload = (
 
   const payload: WorkoutProgramPayload = {
     id: (meta as any).id ?? null,
-    name: meta.title,
+    name: meta.name,
     description: meta.description || '',
     type: meta.type || '',
     difficulty: meta.difficulty || '',

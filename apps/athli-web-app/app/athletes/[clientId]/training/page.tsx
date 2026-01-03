@@ -3291,6 +3291,18 @@ const ClientTrainingCalendarPage = () => {
           onSaveSuccess={handleSaveEditedWorkout}
           onSaveError={() => { }}
           onDirtyChange={() => { }}
+          onDelete={() => {
+            if (editingWorkout) {
+              apiDeleteWorkoutByKey({
+                clientId,
+                coachId: coachUser?.id || '',
+                sourceDate: editingWorkout.dateKey,
+                workoutId: editingWorkout.workout.id
+              });
+              setIsWorkoutBuilderOpen(false);
+              setEditingWorkout(null);
+            }
+          }}
         />
       </TrainingDataProvider>
       <ClientTrainingDaySummary

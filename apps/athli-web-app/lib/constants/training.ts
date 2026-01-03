@@ -84,3 +84,18 @@ export const EQUIPMENT_OPTIONS = [
     { label: 'Pull-up Bar', value: 'Pull-up Bar' },
     { label: 'Bands', value: 'Bands' },
 ] as const;
+
+export const OPTIONAL_COLUMN_OPTIONS = [
+    { label: 'Optional', value: 'Optional' },
+    { label: 'Tempo', value: 'Tempo' },
+    { label: 'RIR', value: 'RIR' },
+    { label: 'RPE', value: 'RPE' },
+    { label: 'Heart Rate Zone', value: 'Heart Rate Zone' },
+    { label: 'Calories', value: 'Calories' },
+    { label: 'Watts', value: 'Watts' },
+    { label: 'Pace', value: 'Pace' },
+    { label: 'Speed', value: 'Speed' },
+    { label: 'Incline', value: 'Incline' },
+    { label: 'Height', value: 'Height' },
+    { label: 'RPM', value: 'RPM' },
+] as const;
