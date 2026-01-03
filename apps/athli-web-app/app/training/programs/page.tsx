@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -167,6 +167,7 @@ const formatDifficulty = (difficulty: string): string => {
 const ProgramsPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { programs, isLoadingPrograms, setPrograms, refreshPrograms } = useTrainingData();
   const [selectedPrograms, setSelectedPrograms] = useState<Set<string>>(new Set());
   const [starredPrograms, setStarredPrograms] = useState<Set<string>>(new Set());
@@ -188,6 +189,15 @@ const ProgramsPage = () => {
     const starred = new Set(programs.filter(p => p.isFavourite).map(p => p.id));
     setStarredPrograms(starred);
   }, [programs]);
+
+  // Auto-open create program panel if ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      setIsCreateProgramOpen(true);
+      // Clear the query param
+      window.history.replaceState({}, '', '/training/programs');
+    }
+  }, [searchParams]);
 
   const handleToggleProgram = React.useCallback((programId: string) => {
     setSelectedPrograms((prev) => {

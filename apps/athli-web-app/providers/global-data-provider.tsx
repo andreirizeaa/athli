@@ -20,6 +20,7 @@ import { useCoachPrograms } from '@/hooks/use-coach-programs';
 import { useCoachExercises } from '@/hooks/use-coach-exercises';
 import { useCoachTodo } from '@/hooks/use-coach-todo';
 import { useCoachClients } from '@/hooks/use-coach-clients';
+import { useCoachChecklist } from '@/hooks/use-coach-checklist';
 
 interface GlobalContextType {
     user: UserProfile | null;
@@ -74,6 +75,7 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
     const { isLoading: isExercisesLoading } = useCoachExercises({ enabled: shouldPrefetch });
     const { isLoadingOwn: isOwnTodoLoading, isLoadingAuto: isAutoTodoLoading } = useCoachTodo({ enabled: shouldPrefetch });
     const { isLoading: isClientsLoading } = useCoachClients({ enabled: shouldPrefetch });
+    const { isLoading: isChecklistLoading } = useCoachChecklist({ enabled: shouldPrefetch });
 
     const isLoading = isFilesLoading ||
         isHabitsLoading ||
@@ -85,7 +87,8 @@ const CoachDataPrefetcher = ({ children }: { children: ReactNode }) => {
         isExercisesLoading ||
         isOwnTodoLoading ||
         isAutoTodoLoading ||
-        isClientsLoading;
+        isClientsLoading ||
+        isChecklistLoading;
 
     // We only show the full screen loader for prefetching if we are NOT on a specific athlete's page
     // This allows the athlete profile to load its own data without being blocked by global coach data loading

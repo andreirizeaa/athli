@@ -31,6 +31,11 @@ BEGIN
     FROM public.available_notification_events
     ON CONFLICT (coach_id, event_id) DO NOTHING;
 
+    -- 3.5. Create Getting Started checklist row
+    INSERT INTO public.coach_getting_started_checklist (coach_id)
+    VALUES (NEW.id)
+    ON CONFLICT (coach_id) DO NOTHING;
+
     -- 4. Create default flows (The 4 fixed flows)
     -- We assume coach_flows table exists (created in migration 007)
 
