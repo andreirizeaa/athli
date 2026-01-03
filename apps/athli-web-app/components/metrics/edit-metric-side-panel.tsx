@@ -161,6 +161,7 @@ export const EditMetricSidePanel = ({
               type="button"
               onClick={form.handleSubmit(handleSave)}
               disabled={!form.formState.isValid || !hasChanges || isDeleting || isSaving}
+              className="gap-2"
             >
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

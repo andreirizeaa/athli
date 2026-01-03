@@ -271,7 +271,7 @@ export const AddFileSidePanel = ({
             <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
               {t('general.cancel')}
             </Button>
-            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedLibraryFiles.size === 0 || isSaving}>
+            <Button type="button" onClick={handleSaveFromYourLibrary} disabled={selectedLibraryFiles.size === 0 || isSaving} className="gap-2">
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -285,7 +285,7 @@ export const AddFileSidePanel = ({
             <Button type="button" variant="outline" onClick={handleClose} disabled={isUploading || isSaving}>
               {t('general.cancel')}
             </Button>
-            <Button type="button" onClick={handleSave} disabled={!isValid || isUploading || isSaving}>
+            <Button type="button" onClick={handleSave} disabled={!isValid || isUploading || isSaving} className="gap-2">
               {isUploading || isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

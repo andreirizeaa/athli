@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
@@ -8,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X, Copy, Loader2 } from 'lucide-react';
+import { Plus, Search, Info, Trash2, UserPlus, Target, Clock, Bell, X, Copy, Loader2, Check } from 'lucide-react';
 import { Button as UIButton } from '@/components/ui/button';
 import { SidePanel } from '@/components/app/side-panel';
 import { PageHeader } from '@/components/app/page-header';
@@ -85,6 +86,7 @@ const unitOptions = [
 
 const HabitsPage = () => {
   const t = useTranslations();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const {
     habits,
@@ -112,6 +114,7 @@ const HabitsPage = () => {
   // Edit habit side panel state
   const [isEditHabitOpen, setIsEditHabitOpen] = useState<boolean>(false);
   const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Assign to clients side panel state
   const [isAssignToClientsOpen, setIsAssignToClientsOpen] = useState<boolean>(false);
@@ -119,6 +122,15 @@ const HabitsPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [habitToDelete, setHabitToDelete] = useState<string | null>(null);
+
+  // Auto-open add habit panel if ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleOpenAddHabit();
+      // Clear the query param
+      window.history.replaceState({}, '', '/habits');
+    }
+  }, [searchParams]);
 
   const habitSchema = z
     .object({
@@ -228,6 +240,7 @@ const HabitsPage = () => {
   };
 
   const handleSaveHabit = async (values: HabitFormValues) => {
+    setIsSaving(true);
     try {
       if (editingHabitId) {
         await updateHabit({ id: editingHabitId, ...values });
@@ -238,6 +251,8 @@ const HabitsPage = () => {
       }
     } catch (error) {
       console.error('Failed to save habit:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1030,14 +1045,20 @@ const HabitsPage = () => {
         footer={
           activeTab === 'manual' ? (
             <div className="flex w-full justify-end gap-2">
-              <Button type="button" variant="outline" onClick={handleCloseAddHabit}>
+              <Button type="button" variant="outline" onClick={handleCloseAddHabit} disabled={isSaving}>
                 {t('general.cancel')}
               </Button>
               <Button
                 type="button"
                 onClick={form.handleSubmit(handleSaveHabit)}
-                disabled={!form.formState.isValid}
+                disabled={!form.formState.isValid || isSaving}
+                className="gap-2"
               >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
                 {t('general.save')}
               </Button>
             </div>
@@ -1128,7 +1149,7 @@ const HabitsPage = () => {
         contentClassName="w-full sm:w-[600px] sm:max-w-[600px]"
         footer={
           <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={handleCloseEditHabit}>
+            <Button type="button" variant="outline" onClick={handleCloseEditHabit} disabled={isSaving}>
               {t('general.cancel')}
             </Button>
             <Button
@@ -1136,6 +1157,7 @@ const HabitsPage = () => {
               variant="outline"
               onClick={handleDeleteHabit}
               className="gap-2"
+              disabled={isSaving}
             >
               <Trash2 className="size-4" />
               {t('general.delete')}
@@ -1143,8 +1165,14 @@ const HabitsPage = () => {
             <Button
               type="button"
               onClick={form.handleSubmit(handleSaveHabit)}
-              disabled={!form.formState.isValid}
+              disabled={!form.formState.isValid || isSaving}
+              className="gap-2"
             >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="h-4 w-4" />
+              )}
               {t('general.save')}
             </Button>
           </div>

@@ -120,6 +120,7 @@ type WorkoutBuilderProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete?: () => Promise<void> | void;
+  initialAiMode?: boolean; // If true, open with AI builder mode active
 };
 
 export const WorkoutBuilder = ({
@@ -133,6 +134,7 @@ export const WorkoutBuilder = ({
   open,
   onOpenChange,
   onDelete,
+  initialAiMode = false,
 }: WorkoutBuilderProps) => {
   const t = useTranslations();
   const isSectionMode = false;
@@ -233,7 +235,7 @@ export const WorkoutBuilder = ({
   const creatorRef = useRef<HTMLDivElement>(null);
 
   // AI Builder state
-  const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>('manual');
+  const [activeBuilder, setActiveBuilder] = useState<'ai' | 'manual'>(initialAiMode ? 'ai' : 'manual');
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDraggingAiFile, setIsDraggingAiFile] = useState<boolean>(false);
@@ -246,6 +248,13 @@ export const WorkoutBuilder = ({
       creatorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [isCreatingSection]);
+
+  // Sync activeBuilder with initialAiMode when dialog opens
+  useEffect(() => {
+    if (open) {
+      setActiveBuilder(initialAiMode ? 'ai' : 'manual');
+    }
+  }, [open, initialAiMode]);
 
   // Reset builder mode to 'exercise' when workout is empty
   useEffect(() => {
