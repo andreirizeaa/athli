@@ -728,11 +728,10 @@ Focus on proper form and progressive overload.`;
     exerciseInstanceId: string,
     exerciseType: 'weight_reps' | 'reps' | 'distance_duration',
     sets: SetData[] | undefined,
-    eachSide?: boolean,
-    tempo?: string
+    eachSide?: boolean
   ) => {
     setValidationErrors((prev) =>
-      recomputeValidation(exerciseInstanceId, exerciseType, sets, hasAttemptedSave, prev, eachSide, tempo)
+      recomputeValidation(exerciseInstanceId, exerciseType, sets, hasAttemptedSave, prev, eachSide)
     );
   };
 
@@ -1663,8 +1662,7 @@ Focus on proper form and progressive overload.`;
                                     exercise.instanceId,
                                     castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
                                     castExercise.sets || [],
-                                    castExercise.eachSide,
-                                    castExercise.tempo
+                                    castExercise.eachSide
                                   );
 
                                   setWorkoutSchema((prev) => ({
@@ -1881,8 +1879,7 @@ Focus on proper form and progressive overload.`;
                 exercise.instanceId,
                 castExercise.exerciseType as 'weight_reps' | 'reps' | 'distance_duration',
                 castExercise.sets || [],
-                castExercise.eachSide,
-                castExercise.tempo
+                castExercise.eachSide
               );
 
               setWorkoutSchema((prev) => ({

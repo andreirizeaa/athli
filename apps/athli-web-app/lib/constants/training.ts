@@ -99,7 +99,7 @@ export const OPTIONAL_COLUMN_OPTIONS = [
     { label: 'Tempo', value: 'Tempo' },
     { label: 'RIR', value: 'RIR' },
     { label: 'RPE', value: 'RPE' },
-    { label: 'Heart Rate Zone', value: 'Heart Rate Zone' },
+    { label: 'HR Zone', value: 'Heart Rate Zone' },
     { label: 'Calories', value: 'Calories' },
     { label: 'Watts', value: 'Watts' },
     { label: 'Pace', value: 'Pace' },

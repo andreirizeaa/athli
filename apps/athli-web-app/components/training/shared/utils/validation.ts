@@ -25,8 +25,7 @@ export const recomputeExerciseValidation = (
   sets: SetData[] | undefined,
   hasAttemptedSave: boolean,
   currentErrors: ValidationErrors,
-  eachSide?: boolean,
-  tempo?: string
+  eachSide?: boolean
 ): ValidationErrors => {
   // Do not show validation until the user has attempted to save at least once
   if (!hasAttemptedSave) {
@@ -36,14 +35,7 @@ export const recomputeExerciseValidation = (
   const next: ValidationErrors = { ...currentErrors };
   const exerciseErrors: ExerciseValidationError = {};
 
-  // Tempo Validation
-  if (tempo && tempo.trim() !== '') {
-    const parts = tempo.split('-');
-    const isComplete = parts.length === 4 && parts.every(p => p.trim() !== '');
-    if (!isComplete) {
-      exerciseErrors.tempo = true;
-    }
-  }
+
 
   if (sets && sets.length > 0) {
     sets.forEach((set, index) => {
@@ -207,17 +199,7 @@ const validateExercise = (
   exercise: ExerciseWithSuperset,
   nextErrors: ValidationErrors
 ): void => {
-  // Tempo Validation
-  if (exercise.tempo && exercise.tempo.trim() !== '') {
-    const parts = exercise.tempo.split('-');
-    const isComplete = parts.length === 4 && parts.every(p => p.trim() !== '');
-    if (!isComplete) {
-      if (!nextErrors[exercise.instanceId]) {
-        nextErrors[exercise.instanceId] = {};
-      }
-      nextErrors[exercise.instanceId].tempo = true;
-    }
-  }
+
 
   const sets = exercise.sets || [];
 

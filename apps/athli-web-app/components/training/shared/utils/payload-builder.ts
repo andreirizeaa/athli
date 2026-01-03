@@ -108,8 +108,10 @@ export const mapSetDataToPayload = (
     restSec: set.rest ? (parseNumber(set.rest, 'null') ?? null) : null,
     completed: false,
     skipped: false,
-    optional: set.optional || null,   // Optional column 1 value
-    optional2: set.optional2 || null, // Optional column 2 value
+    optional: {
+      prescribed: set.optional?.prescribed || null,
+      completed: set.optional?.completed || null
+    },
   };
 
   // distance_duration is always non-dropset, with either distance or durationSec
@@ -269,12 +271,8 @@ const buildSectionPayload = (
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,  // Use null, not empty string
-          tempo: exercise.tempo || null,
-          rpe: exercise.rpe || null,
-          heartRateZone: exercise.heartRateZone || null,
           eachSide: exercise.eachSide || false,
           optionalColumnType: exercise.optionalColumnType || null,
-          optionalColumnType2: exercise.optionalColumnType2 || null,
         };
       });
 
@@ -322,9 +320,6 @@ const buildSectionPayload = (
         restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
         completed: false,
         notes: exercise.notes || null,
-        tempo: exercise.tempo || null,
-        rpe: exercise.rpe || null,
-        heartRateZone: exercise.heartRateZone || null,
         eachSide: exercise.eachSide || false,
       } as RoundExercisePayload;
     });
@@ -368,12 +363,8 @@ const buildSectionPayload = (
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,
-          tempo: exercise.tempo || null,
-          rpe: exercise.rpe || null,
-          heartRateZone: exercise.heartRateZone || null,
           eachSide: exercise.eachSide || false,
           optionalColumnType: exercise.optionalColumnType || null,
-          optionalColumnType2: exercise.optionalColumnType2 || null,
         };
       });
 
@@ -417,12 +408,8 @@ const buildSectionPayload = (
           alternatives: exercise.alternatives || [],
           supersetId: exercise.supersetGroupId || null,  // Use null, not undefined
           notes: exercise.notes || null,
-          tempo: exercise.tempo || null,
-          rpe: exercise.rpe || null,
-          heartRateZone: exercise.heartRateZone || null,
           eachSide: exercise.eachSide || false,
           optionalColumnType: exercise.optionalColumnType || null,
-          optionalColumnType2: exercise.optionalColumnType2 || null,
         };
       });
 
@@ -471,9 +458,6 @@ const buildSectionPayload = (
       restSec: parseNumber(firstSet?.rest, 'null') ?? exercise.restSec ?? null,
       completed: false,
       notes: exercise.notes || null,
-      tempo: exercise.tempo || null,
-      rpe: exercise.rpe || null,
-      heartRateZone: exercise.heartRateZone || null,
       eachSide: exercise.eachSide || false,
     } as RoundExercisePayload;
   });
@@ -539,12 +523,8 @@ export const buildWorkoutPayload = (
           alternatives: item.exercise.alternatives || [],
           supersetId: item.exercise.supersetGroupId || null,  // Use null, not undefined
           notes: item.exercise.notes || null,
-          tempo: item.exercise.tempo || null,
-          rpe: item.exercise.rpe || null,
-          heartRateZone: item.exercise.heartRateZone || null,
           eachSide: item.exercise.eachSide || false,
           optionalColumnType: item.exercise.optionalColumnType || null,
-          optionalColumnType2: item.exercise.optionalColumnType2 || null,
         } as RegularExercisePayload,
       };
     }

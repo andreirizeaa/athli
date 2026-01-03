@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ArrowDown, ArrowUp, Ellipsis, Play, Plus, Trash2, X, Heart, Activity, Timer, Info } from 'lucide-react';
 import { Exercise, searchExercises } from '@/api/exercise/exercise-search';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -448,12 +449,19 @@ const OptionalCell = ({
   }
 
   if (columnType === 'Heart Rate Zone') {
+    // Create a shorter display value - "Zone 1" instead of "Z1: 50-60% of max HR"
+    const getZoneDisplayValue = (val: string) => {
+      if (!val) return '';
+      const match = val.match(/^Z(\d)/);
+      return match ? `Zone ${match[1]}` : val;
+    };
+
     return (
       <SelectCell
         value={value}
         onChange={onChange}
         options={HEART_RATE_ZONE_OPTIONS as unknown as { value: string; label: string }[]}
-        displayValue={value}
+        displayValue={getZoneDisplayValue(value)}
         placeholder="Zone..."
         hasError={hasError}
       />
@@ -488,8 +496,7 @@ export type SetData = {
   rightReps?: string;   // Right side reps for unilateral exercises
   leftWeight?: string;
   rightWeight?: string;
-  optional?: string;    // Optional field 1 for weight_reps/reps exercises (tempo, RIR, RPE, notes)
-  optional2?: string;   // Optional field 2 for weight_reps/reps exercises (tempo, RIR, RPE, notes)
+  optional?: { prescribed?: string; completed?: string };    // Optional field for weight_reps/reps exercises (tempo, RIR, RPE, notes)
 };
 
 export type SetFieldValidation = {
@@ -504,12 +511,8 @@ type ExerciseWithSets = Exercise & {
   sets?: SetData[];
   alternatives?: string[]; // Array of exercise IDs for alternative exercises
   notes?: string; // Exercise-specific notes
-  tempo?: string;           // Tempo notation (e.g., "3-1-2-0")
-  rpe?: string;             // Rate of Perceived Exertion (1-10)
-  heartRateZone?: string;   // Zone for distance_duration (1-5)
   eachSide?: boolean;       // Exercise-level each side toggle
-  optionalColumnType?: 'Tempo' | 'RPE' | 'RIR' | 'Heart Rate Zone' | 'Optional'; // First optional column type
-  optionalColumnType2?: 'Tempo' | 'RPE' | 'RIR' | 'Heart Rate Zone' | 'Optional'; // Second optional column type
+  optionalColumnType?: 'Optional' | 'Tempo' | 'RIR' | 'RPE' | 'Heart Rate Zone' | 'Calories' | 'Watts' | 'Pace' | 'Speed' | 'Incline' | 'Height' | 'RPM';
 };
 
 type ExerciseCardProps = {
@@ -524,7 +527,7 @@ type ExerciseCardProps = {
   isLinkedToPrev?: boolean;
   isLinkedToNext?: boolean;
   sectionType?: 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
-  validationErrors?: Record<number, SetFieldValidation> & { tempo?: boolean };
+  validationErrors?: Record<number, SetFieldValidation>;
   onClearValidationField?: (setIndex: number, field: keyof SetFieldValidation) => void;
   hasSupersetError?: boolean;
 };
@@ -622,13 +625,12 @@ export const ExerciseCard = ({
     weightDrops: DropsetData[];
   } | null>(null);
   const [otherColumnLabel, setOtherColumnLabel] = useState('Optional');
-  const [otherColumnLabel2, setOtherColumnLabel2] = useState('Optional');
+
   const [optionalColumnLabel, setOptionalColumnLabel] = useState(
     (exercise as any).optionalColumnType || 'Optional'
   );
-  const [optionalColumnLabel2, setOptionalColumnLabel2] = useState(
-    (exercise as any).optionalColumnType2 || 'Optional'
-  );
+  const [hoveredRowIndex, setHoveredRowIndex] = useState<number | null>(null);
+
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -859,6 +861,18 @@ export const ExerciseCard = ({
     // Build updated sets from current state (safe in event handler)
     const updated = [...sets];
     const currentSet = updated[index];
+
+    if (field === 'optional') {
+      updated[index] = {
+        ...currentSet,
+        optional: {
+          ...currentSet.optional,
+          prescribed: value
+        }
+      };
+      setSets(updated);
+      return;
+    }
 
     // If changing to dropset, clear reps and weight defaults
     // If switching from dropset to normal, keep the first drop value
@@ -1115,14 +1129,13 @@ export const ExerciseCard = ({
     }
   };
 
-  const handleAddSet = () => {
+  const handleAddSet = (insertAfterIndex?: number) => {
     if (isSingleSetOnly) return; // Don't allow adding sets for AMRAP/Timed sections
 
-    if (exercise.exerciseType === 'distance_duration') {
-      setSets((prev) => [
-        ...prev,
-        {
-          setNumber: prev.length + 1,
+    const createNewSet = (): SetData => {
+      if (exercise.exerciseType === 'distance_duration') {
+        return {
+          setNumber: 0, // Will be renumbered
           type: 'normal',
           reps: '',
           weight: '',
@@ -1130,14 +1143,31 @@ export const ExerciseCard = ({
           distance: '',
           duration: '',
           other: '',
-        },
-      ]);
-    } else {
-      setSets((prev) => [
-        ...prev,
-        { setNumber: prev.length + 1, type: 'normal', reps: '12', weight: '', rest: '90' },
-      ]);
-    }
+        };
+      } else {
+        return { setNumber: 0, type: 'normal', reps: '12', weight: '', rest: '90' };
+      }
+    };
+
+    setSets((prev) => {
+      const newSet = createNewSet();
+      let updatedSets: SetData[];
+
+      if (insertAfterIndex !== undefined && insertAfterIndex >= 0 && insertAfterIndex < prev.length) {
+        // Insert after the specified index
+        updatedSets = [
+          ...prev.slice(0, insertAfterIndex + 1),
+          newSet,
+          ...prev.slice(insertAfterIndex + 1)
+        ];
+      } else {
+        // Add at the end (default behavior)
+        updatedSets = [...prev, newSet];
+      }
+
+      // Renumber all sets
+      return updatedSets.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+    });
   };
 
   return (
@@ -1314,975 +1344,808 @@ export const ExerciseCard = ({
           </button>
         )}
       </div>
-      {/* Exercise Options Row */}
-      {(exercise.exerciseType === 'weight_reps' ||
-        exercise.exerciseType === 'reps' ||
-        exercise.exerciseType === 'distance_duration') && (
-          <div className="flex flex-wrap items-center gap-4 py-2 px-1 justify-between">
-            {/* Left side - Add Set Button and Each Side Toggle */}
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddSet}
-                disabled={isSingleSetOnly}
-                className="h-7 px-3 text-xs font-medium"
-                aria-label="Add set"
-              >
-                Add set
-              </Button>
-              {exercise.exerciseType !== 'distance_duration' && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={`each-side-${exercise.exerciseId}`}
-                        checked={exercise.eachSide || false}
-                        onCheckedChange={(checked) => {
-                          onExerciseChange({
-                            ...exercise,
-                            eachSide: checked,
-                          });
-                        }}
-                      />
-                      <Label
-                        htmlFor={`each-side-${exercise.exerciseId}`}
-                        className="text-xs font-medium cursor-pointer whitespace-nowrap"
-                      >
-                        Each Side
-                      </Label>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p>Enable to track left and right side reps separately for unilateral exercises</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-
-          </div>
-        )}
 
       {
         (exercise.exerciseType === 'weight_reps' ||
           exercise.exerciseType === 'reps' ||
           exercise.exerciseType === 'distance_duration') && (
-          <div className="w-full border rounded-md overflow-hidden">
-            <Table className="text-[11px] leading-tight">
-              <TableHeader className="bg-transparent">
-                <TableRow className="h-8">
-                  <TableHead className="text-center h-8 py-1 px-2 w-[60px] text-xs font-medium">Type</TableHead>
-                  {exercise.exerciseType === 'distance_duration' ? (
-                    <>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px] text-xs font-medium">Distance</TableHead>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px] text-xs font-medium">Duration</TableHead>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px]">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Select
-                            value={otherColumnLabel}
-                            onValueChange={(value) => {
-                              clearColumnValues('other');
-                              setOtherColumnLabel(value);
-                            }}
-                          >
-                            <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== otherColumnLabel2).map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {otherColumnLabel !== 'Optional' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                clearColumnValues('other');
-                                setOtherColumnLabel('Optional');
-                              }}
-                              className="p-0.5 hover:bg-muted rounded"
-                              aria-label="Clear column"
-                            >
-                              <X className="size-3 text-muted-foreground hover:text-foreground" />
-                            </button>
-                          )}
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px]">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Select
-                            value={otherColumnLabel2}
-                            onValueChange={(value) => {
-                              clearColumnValues('other2');
-                              setOtherColumnLabel2(value);
-                            }}
-                          >
-                            <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== otherColumnLabel).map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {otherColumnLabel2 !== 'Optional' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                clearColumnValues('other2');
-                                setOtherColumnLabel2('Optional');
-                              }}
-                              className="p-0.5 hover:bg-muted rounded"
-                              aria-label="Clear column"
-                            >
-                              <X className="size-3 text-muted-foreground hover:text-foreground" />
-                            </button>
-                          )}
-                        </div>
-                      </TableHead>
-                    </>
-                  ) : exercise.eachSide ? (
-                    <>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px] text-xs font-medium">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-center gap-1 cursor-help">
-                              L <Info className="size-3 text-muted-foreground" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Left side reps. Ranges allowed (e.g., 8-12)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableHead>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px] text-xs font-medium">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-center gap-1 cursor-help">
-                              R <Info className="size-3 text-muted-foreground" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Right side reps. Ranges allowed (e.g., 8-12)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableHead>
-                      {exercise.exerciseType === 'weight_reps' && (
-                        <TableHead className="text-center h-8 py-1 px-2 w-[100px] text-xs font-medium">Weight</TableHead>
-                      )}
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px]">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Select
-                            value={optionalColumnLabel}
-                            onValueChange={(value) => {
-                              clearColumnValues('optional');
-                              setOptionalColumnLabel(value);
-                              onExerciseChange({
-                                ...exercise,
-                                optionalColumnType: value as any,
-                                alternatives: exercise.alternatives || [],
-                              });
-                            }}
-                          >
-                            <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== optionalColumnLabel2).map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {optionalColumnLabel !== 'Optional' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                clearColumnValues('optional');
-                                setOptionalColumnLabel('Optional');
-                                onExerciseChange({
-                                  ...exercise,
-                                  optionalColumnType: 'Optional' as any,
-                                  alternatives: exercise.alternatives || [],
-                                });
-                              }}
-                              className="p-0.5 hover:bg-muted rounded"
-                              aria-label="Clear column"
-                            >
-                              <X className="size-3 text-muted-foreground hover:text-foreground" />
-                            </button>
-                          )}
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px]">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Select
-                            value={optionalColumnLabel2}
-                            onValueChange={(value) => {
-                              clearColumnValues('optional2');
-                              setOptionalColumnLabel2(value);
-                              onExerciseChange({
-                                ...exercise,
-                                optionalColumnType2: value as any,
-                                alternatives: exercise.alternatives || [],
-                              });
-                            }}
-                          >
-                            <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== optionalColumnLabel).map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {optionalColumnLabel2 !== 'Optional' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                clearColumnValues('optional2');
-                                setOptionalColumnLabel2('Optional');
-                                onExerciseChange({
-                                  ...exercise,
-                                  optionalColumnType2: 'Optional' as any,
-                                  alternatives: exercise.alternatives || [],
-                                });
-                              }}
-                              className="p-0.5 hover:bg-muted rounded"
-                              aria-label="Clear column"
-                            >
-                              <X className="size-3 text-muted-foreground hover:text-foreground" />
-                            </button>
-                          )}
-                        </div>
-                      </TableHead>
-                    </>
-                  ) : (
-                    <>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px] text-xs font-medium">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-center gap-1 cursor-help">
-                              Reps <Info className="size-3 text-muted-foreground" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Reps. Ranges allowed (e.g., 8-12)</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableHead>
-                      {exercise.exerciseType === 'weight_reps' && (
-                        <TableHead className="text-center h-8 py-1 px-2 w-[100px] text-xs font-medium">Weight</TableHead>
-                      )}
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px]">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Select
-                            value={optionalColumnLabel}
-                            onValueChange={(value) => {
-                              clearColumnValues('optional');
-                              setOptionalColumnLabel(value);
-                              onExerciseChange({
-                                ...exercise,
-                                optionalColumnType: value as any,
-                                alternatives: exercise.alternatives || [],
-                              });
-                            }}
-                          >
-                            {optionalColumnLabel === 'Heart Rate Zone' ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <SelectTrigger
-                                    className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                    style={{ minHeight: '24px', height: '24px' }}
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="flex flex-col gap-1 text-xs">
-                                    <p>Z1 - Recovery</p>
-                                    <p>Z2 - Endurance</p>
-                                    <p>Z3 - Tempo</p>
-                                    <p>Z4 - Threshold</p>
-                                    <p>Z5 - Max</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <SelectTrigger
-                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                style={{ minHeight: '24px', height: '24px' }}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                            )}
-                            <SelectContent>
-                              {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== optionalColumnLabel2).map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {optionalColumnLabel !== 'Optional' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                clearColumnValues('optional');
-                                setOptionalColumnLabel('Optional');
-                                onExerciseChange({
-                                  ...exercise,
-                                  optionalColumnType: 'Optional' as any,
-                                  alternatives: exercise.alternatives || [],
-                                });
-                              }}
-                              className="p-0.5 hover:bg-muted rounded"
-                              aria-label="Clear column"
-                            >
-                              <X className="size-3 text-muted-foreground hover:text-foreground" />
-                            </button>
-                          )}
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center h-8 py-1 px-2 w-[100px]">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Select
-                            value={optionalColumnLabel2}
-                            onValueChange={(value) => {
-                              clearColumnValues('optional2');
-                              setOptionalColumnLabel2(value);
-                              onExerciseChange({
-                                ...exercise,
-                                optionalColumnType2: value as any,
-                                alternatives: exercise.alternatives || [],
-                              });
-                            }}
-                          >
-                            {optionalColumnLabel2 === 'Heart Rate Zone' ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <SelectTrigger
-                                    className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                    style={{ minHeight: '24px', height: '24px' }}
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="flex flex-col gap-1 text-xs">
-                                    <p>Z1 - Recovery</p>
-                                    <p>Z2 - Endurance</p>
-                                    <p>Z3 - Tempo</p>
-                                    <p>Z4 - Threshold</p>
-                                    <p>Z5 - Max</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <SelectTrigger
-                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                                style={{ minHeight: '24px', height: '24px' }}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                            )}
-                            <SelectContent>
-                              {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== optionalColumnLabel).map(opt => (
-                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {optionalColumnLabel2 !== 'Optional' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                clearColumnValues('optional2');
-                                setOptionalColumnLabel2('Optional');
-                                onExerciseChange({
-                                  ...exercise,
-                                  optionalColumnType2: 'Optional' as any,
-                                  alternatives: exercise.alternatives || [],
-                                });
-                              }}
-                              className="p-0.5 hover:bg-muted rounded"
-                              aria-label="Clear column"
-                            >
-                              <X className="size-3 text-muted-foreground hover:text-foreground" />
-                            </button>
-                          )}
-                        </div>
-                      </TableHead>
-                    </>
-                  )}
-                  <TableHead className="text-center h-8 py-1 px-2 w-[80px] text-xs font-medium">Rest (s)</TableHead>
-                  <TableHead className="w-[40px] h-8 py-1 px-2"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sets.map((set, index) => (
-                  <TableRow key={index} className="h-10 bg-background">
-                    <TableCell className="py-0 px-0 w-[60px] pl-1">
-                      <SelectCell
-                        value={set.type}
-                        onChange={(value) => handleSetChange(index, 'type', value as SetData['type'])}
-                        options={[
-                          { value: 'warmUp', label: 'Warm up' },
-                          { value: 'normal', label: 'Normal' },
-                          { value: 'failure', label: 'Failure' },
-                          ...(exercise.exerciseType === 'weight_reps' ? [{ value: 'dropset', label: 'Dropset' }] : []),
-                        ]}
-                        displayValue={
-                          `${index + 1}${set.type === 'warmUp' ? 'W' :
-                            set.type === 'normal' ? 'N' :
-                              set.type === 'failure' ? 'F' :
-                                set.type === 'dropset' ? 'D' : ''
-                          }`
-                        }
-                      />
-                    </TableCell>
+          <div className="w-full relative group/table">
+            <div className="w-full border rounded-md overflow-hidden">
+              <Table className="text-[11px] leading-tight w-full" style={{ tableLayout: 'fixed' }}>
+                <TableHeader className="bg-transparent">
+                  <TableRow className="h-8">
+                    <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium pl-1">Type</TableHead>
                     {exercise.exerciseType === 'distance_duration' ? (
                       <>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <EditableCell
-                            value={set.distance || ''}
-                            onChange={(value) => handleSetChange(index, 'distance', value)}
-                            hasError={validationErrors?.[index]?.distance}
-                          />
-                        </TableCell>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <EditableCell
-                            value={set.duration || ''}
-                            onChange={(value) => handleSetChange(index, 'duration', value)}
-                            hasError={validationErrors?.[index]?.duration}
-                          />
-                        </TableCell>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          {otherColumnLabel === 'Heart Rate Zone' ? (
-                            <SelectCell
-                              value={set.other || ''}
-                              onChange={(value) => handleSetChange(index, 'other', value)}
-                              options={[
-                                { value: 'Z1 - Recovery', label: 'Z1 - Recovery' },
-                                { value: 'Z2 - Endurance', label: 'Z2 - Endurance' },
-                                { value: 'Z3 - Tempo', label: 'Z3 - Tempo' },
-                                { value: 'Z4 - Threshold', label: 'Z4 - Threshold' },
-                                { value: 'Z5 - Max', label: 'Z5 - Max' },
-                              ]}
-                              displayValue={set.other || ''}
-                              placeholder="Zone..."
-                            />
-                          ) : (
-                            <EditableCell
-                              value={set.other || ''}
-                              onChange={(value) => handleSetChange(index, 'other', value)}
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          {otherColumnLabel2 === 'Heart Rate Zone' ? (
-                            <SelectCell
-                              value={set.other2 || ''}
-                              onChange={(value) => handleSetChange(index, 'other2', value)}
-                              options={[
-                                { value: 'Z1 - Recovery', label: 'Z1 - Recovery' },
-                                { value: 'Z2 - Endurance', label: 'Z2 - Endurance' },
-                                { value: 'Z3 - Tempo', label: 'Z3 - Tempo' },
-                                { value: 'Z4 - Threshold', label: 'Z4 - Threshold' },
-                                { value: 'Z5 - Max', label: 'Z5 - Max' },
-                              ]}
-                              displayValue={set.other2 || ''}
-                              placeholder="Zone..."
-                            />
-                          ) : (
-                            <EditableCell
-                              value={set.other2 || ''}
-                              onChange={(value) => handleSetChange(index, 'other2', value)}
-                            />
-                          )}
-                        </TableCell>
-                      </>
-                    ) : set.type === 'dropset' && exercise.exerciseType === 'weight_reps' ? (
-                      <>
-                        <>
-                          {exercise.eachSide ? (
-                            <>
-                              {/* Left Dropset */}
-                              <TableCell className="py-1 px-2">
-                                <div className="flex justify-center">
-                                  <Popover
-                                    open={dropsetPopoverOpen === `${index}-leftReps`}
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        handleDropsetInputClick(index, 'leftReps', `${index}-leftReps`);
-                                      } else {
-                                        setDropsetPopoverOpen(null);
-                                        setDropsetData(null);
-                                      }
-                                    }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <div
-                                        onClick={() => handleDropsetInputClick(index, 'leftReps', `${index}-leftReps`)}
-                                        className={cn(
-                                          'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                          'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                          dropsetPopoverOpen === `${index}-leftReps` && 'ring-2 ring-inset ring-primary',
-                                          validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
-                                          !set.leftReps && 'text-muted-foreground'
-                                        )}
-                                      >
-                                        {set.leftReps || '-'}
-                                      </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-1" align="start">
-                                      {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'leftReps' && (
-                                        <div className="flex flex-col gap-3 p-1">
-                                          <div className="rounded-md overflow-hidden">
-                                            <Table>
-                                              <TableHeader>
-                                                <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
-                                                  <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">L Reps</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
-                                                </TableRow>
-                                              </TableHeader>
-                                              <TableBody>
-                                                {dropsetData.repsDrops.map((drop, dropIdx) => (
-                                                  <TableRow key={dropIdx} className="h-9 border-none">
-                                                    <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
-                                                      {drop.dropNumber}
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                      <Input
-                                                        value={drop.value}
-                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
-                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                        placeholder="-"
-                                                      />
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                      <Input
-                                                        value={dropsetData.weightDrops[dropIdx]?.value || ''}
-                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
-                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                        placeholder="-"
-                                                      />
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[30px]">
-                                                      <div className="flex items-center justify-center h-full">
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => handleRemoveDrop(dropIdx)}
-                                                          className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
-                                                        >
-                                                          <X className="size-3" />
-                                                        </button>
-                                                      </div>
-                                                    </TableCell>
-                                                  </TableRow>
-                                                ))}
-                                              </TableBody>
-                                            </Table>
-                                          </div>
-                                          <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
-                                            Add drop
-                                          </Button>
-                                        </div>
-                                      )}
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                              </TableCell>
-
-                              {/* Right Dropset */}
-                              <TableCell className="py-1 px-2">
-                                <div className="flex justify-center">
-                                  <Popover
-                                    open={dropsetPopoverOpen === `${index}-rightReps`}
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        handleDropsetInputClick(index, 'rightReps', `${index}-rightReps`);
-                                      } else {
-                                        setDropsetPopoverOpen(null);
-                                        setDropsetData(null);
-                                      }
-                                    }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <div
-                                        onClick={() => handleDropsetInputClick(index, 'rightReps', `${index}-rightReps`)}
-                                        className={cn(
-                                          'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                          'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                          dropsetPopoverOpen === `${index}-rightReps` && 'ring-2 ring-inset ring-primary',
-                                          validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
-                                          !set.rightReps && 'text-muted-foreground'
-                                        )}
-                                      >
-                                        {set.rightReps || '-'}
-                                      </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-1" align="start">
-                                      {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'rightReps' && (
-                                        <div className="flex flex-col gap-3 p-1">
-                                          <div className="rounded-md overflow-hidden">
-                                            <Table>
-                                              <TableHeader>
-                                                <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
-                                                  <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">R Reps</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
-                                                </TableRow>
-                                              </TableHeader>
-                                              <TableBody>
-                                                {dropsetData.repsDrops.map((drop, dropIdx) => (
-                                                  <TableRow key={dropIdx} className="h-9 border-none">
-                                                    <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
-                                                      {drop.dropNumber}
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                      <Input
-                                                        value={drop.value}
-                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
-                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                        placeholder="-"
-                                                      />
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                      <Input
-                                                        value={dropsetData.weightDrops[dropIdx]?.value || ''}
-                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
-                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                        placeholder="-"
-                                                      />
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[30px]">
-                                                      <div className="flex items-center justify-center h-full">
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => handleRemoveDrop(dropIdx)}
-                                                          className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
-                                                        >
-                                                          <X className="size-3" />
-                                                        </button>
-                                                      </div>
-                                                    </TableCell>
-                                                  </TableRow>
-                                                ))}
-                                              </TableBody>
-                                            </Table>
-                                          </div>
-                                          <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
-                                            Add drop
-                                          </Button>
-                                        </div>
-                                      )}
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                              </TableCell>
-
-                              {/* Weight (Disabled) */}
-                              <TableCell className="py-1 px-2">
-                                <div
-                                  className={cn(
-                                    'w-full flex flex-col items-center justify-center text-[11px] cursor-default px-1 gap-0.5 py-1',
-                                    (!set.leftWeight && !set.rightWeight) ? 'text-muted-foreground' : 'text-foreground'
-                                  )}
-                                >
-                                  <div className="whitespace-nowrap">L: {set.leftWeight || '-'}</div>
-                                  <div className="whitespace-nowrap">R: {set.rightWeight || '-'}</div>
-                                </div>
-                              </TableCell>
-                            </>
-                          ) : (
-                            // Standard Dropset
-                            <>
-                              <TableCell className="py-1 px-2">
-                                <div className="flex justify-center">
-                                  <Popover
-                                    open={dropsetPopoverOpen === `${index}-reps`}
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        handleDropsetInputClick(index, 'reps', `${index}-reps`);
-                                      } else {
-                                        setDropsetPopoverOpen(null);
-                                        setDropsetData(null);
-                                      }
-                                    }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <div
-                                        onClick={() => handleDropsetInputClick(index, 'reps', `${index}-reps`)}
-                                        className={cn(
-                                          'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                          'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                          dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
-                                          validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
-                                          !set.reps && 'text-muted-foreground'
-                                        )}
-                                      >
-                                        {set.reps || '-'}
-                                      </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-1" align="start">
-                                      {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'reps' && (
-                                        <div className="flex flex-col gap-3 p-1">
-                                          <div className="rounded-md overflow-hidden">
-                                            <Table>
-                                              <TableHeader>
-                                                <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
-                                                  <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Reps</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
-                                                  <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
-                                                </TableRow>
-                                              </TableHeader>
-                                              <TableBody>
-                                                {dropsetData.repsDrops.map((drop, dropIdx) => (
-                                                  <TableRow key={dropIdx} className="h-9 border-none">
-                                                    <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
-                                                      {drop.dropNumber}
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                      <Input
-                                                        value={drop.value}
-                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
-                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                        placeholder="-"
-                                                      />
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
-                                                      <Input
-                                                        value={dropsetData.weightDrops[dropIdx]?.value || ''}
-                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
-                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
-                                                        placeholder="-"
-                                                      />
-                                                    </TableCell>
-                                                    <TableCell className="py-0 px-0 h-9 w-[30px]">
-                                                      <div className="flex items-center justify-center h-full">
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => handleRemoveDrop(dropIdx)}
-                                                          className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
-                                                        >
-                                                          <X className="size-3" />
-                                                        </button>
-                                                      </div>
-                                                    </TableCell>
-                                                  </TableRow>
-                                                ))}
-                                              </TableBody>
-                                            </Table>
-                                          </div>
-                                          <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
-                                            Add drop
-                                          </Button>
-                                        </div>
-                                      )}
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-1 px-2">
-                                <div
-                                  onClick={() => {
-                                    // Open the same popover as reps - since it shows both reps and weight
-                                    handleDropsetInputClick(index, 'reps', `${index}-reps`);
-                                    setDropsetPopoverOpen(`${index}-reps`);
-                                  }}
-                                  className={cn(
-                                    'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
-                                    'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
-                                    dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
-                                    validationErrors?.[index]?.weight && 'text-destructive ring-2 ring-inset ring-destructive',
-                                    !set.weight ? 'text-muted-foreground' : 'text-foreground'
-                                  )}
-                                >
-                                  {set.weight || '-'}
-                                </div>
-                              </TableCell>
-                            </>
-                          )}
-                          <TableCell className="py-0 px-0 text-center w-[100px]">
-                            <OptionalCell
-                              columnType={optionalColumnLabel}
-                              value={set.optional || ''}
-                              onChange={(value) => handleSetChange(index, 'optional', value)}
-                            />
-                          </TableCell>
-                          <TableCell className="py-0 px-0 text-center w-[100px]">
-                            <OptionalCell
-                              columnType={optionalColumnLabel2}
-                              value={set.optional2 || ''}
-                              onChange={(value) => handleSetChange(index, 'optional2', value)}
-                            />
-                          </TableCell>
-                        </>
-                      </>
-                    ) : set.type === 'failure' &&
-                      (exercise.exerciseType === 'reps' ||
-                        exercise.exerciseType === 'weight_reps') ? (
-                      <>
-                        {exercise.eachSide ? (
-                          <>
-                            <TableCell className="py-1 px-2" colSpan={2}>
-                              <div className="flex justify-center">
-                                <span className="text-xs text-muted-foreground">To failure (each side)</span>
-                              </div>
-                            </TableCell>
-                          </>
-                        ) : (
-                          <TableCell className="py-1 px-2">
-                            <div className="flex justify-center">
-                              <span className="text-xs text-muted-foreground">To failure</span>
-                            </div>
-                          </TableCell>
-                        )}
-                        {exercise.exerciseType === 'weight_reps' && (
-                          <TableCell className="py-0 px-0 text-center w-[100px]">
-                            <EditableCell
-                              value={set.weight}
-                              onChange={(value) => handleSetChange(index, 'weight', value)}
-                              hasError={validationErrors?.[index]?.weight}
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <OptionalCell
-                            columnType={optionalColumnLabel}
-                            value={set.optional || ''}
-                            onChange={(value) => handleSetChange(index, 'optional', value)}
-                          />
-                        </TableCell>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <OptionalCell
-                            columnType={optionalColumnLabel2}
-                            value={set.optional2 || ''}
-                            onChange={(value) => handleSetChange(index, 'optional2', value)}
-                          />
-                        </TableCell>
+                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Distance</TableHead>
+                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Duration</TableHead>
+                        <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
+                          <div className="flex items-center justify-center gap-0.5">
+                            <Select
+                              value={otherColumnLabel}
+                              onValueChange={(value) => {
+                                clearColumnValues('other');
+                                setOtherColumnLabel(value);
+                              }}
+                            >
+                              <SelectTrigger
+                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                style={{ minHeight: '24px', height: '24px' }}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[200px] overflow-y-auto">
+                                {OPTIONAL_COLUMN_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {otherColumnLabel !== 'Optional' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  clearColumnValues('other');
+                                  setOtherColumnLabel('Optional');
+                                }}
+                                className="p-0.5 hover:bg-muted rounded"
+                                aria-label="Clear column"
+                              >
+                                <X className="size-3 text-muted-foreground hover:text-foreground" />
+                              </button>
+                            )}
+                          </div>
+                        </TableHead>
                       </>
                     ) : exercise.eachSide ? (
                       <>
-                        {/* Left Reps */}
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <EditableCell
-                            value={set.leftReps || ''}
-                            onChange={(value) => handleSetChange(index, 'leftReps' as keyof SetData, value)}
-                            hasError={validationErrors?.[index]?.reps}
-                          />
-                        </TableCell>
-                        {/* Right Reps */}
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <EditableCell
-                            value={set.rightReps || ''}
-                            onChange={(value) => handleSetChange(index, 'rightReps' as keyof SetData, value)}
-                            hasError={validationErrors?.[index]?.reps}
-                          />
-                        </TableCell>
+                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center gap-1 cursor-pointer">
+                                <Checkbox
+                                  checked={true}
+                                  onCheckedChange={() => {
+                                    onExerciseChange({
+                                      ...exercise,
+                                      eachSide: false,
+                                    });
+                                  }}
+                                  className="h-4 w-4"
+                                />
+                                <span>L</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Left side reps. Uncheck to disable each side tracking.<br />Ranges allowed (e.g., 8-12).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableHead>
+                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center gap-1 cursor-pointer">
+                                <Checkbox
+                                  checked={true}
+                                  onCheckedChange={() => {
+                                    onExerciseChange({
+                                      ...exercise,
+                                      eachSide: false,
+                                    });
+                                  }}
+                                  className="h-4 w-4"
+                                />
+                                <span>R</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Right side reps. Uncheck to disable each side tracking.<br />Ranges allowed (e.g., 8-12).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableHead>
                         {exercise.exerciseType === 'weight_reps' && (
-                          <TableCell className="py-0 px-0 text-center w-[100px]">
-                            <EditableCell
-                              value={set.weight}
-                              onChange={(value) => handleSetChange(index, 'weight', value)}
-                              hasError={validationErrors?.[index]?.weight}
-                            />
-                          </TableCell>
+                          <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Weight</TableHead>
                         )}
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <OptionalCell
-                            columnType={optionalColumnLabel}
-                            value={set.optional || ''}
-                            onChange={(value) => handleSetChange(index, 'optional', value)}
-                          />
-                        </TableCell>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <OptionalCell
-                            columnType={optionalColumnLabel2}
-                            value={set.optional2 || ''}
-                            onChange={(value) => handleSetChange(index, 'optional2', value)}
-                          />
-                        </TableCell>
+                        <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
+                          <div className="flex items-center justify-center gap-0.5">
+                            <Select
+                              value={optionalColumnLabel}
+                              onValueChange={(value) => {
+                                clearColumnValues('optional');
+                                setOptionalColumnLabel(value);
+                                onExerciseChange({
+                                  ...exercise,
+                                  optionalColumnType: value as any,
+                                  alternatives: exercise.alternatives || [],
+                                });
+                              }}
+                            >
+                              <SelectTrigger
+                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                style={{ minHeight: '24px', height: '24px' }}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[200px] overflow-y-auto">
+                                {OPTIONAL_COLUMN_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {optionalColumnLabel !== 'Optional' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  clearColumnValues('optional');
+                                  setOptionalColumnLabel('Optional');
+                                  onExerciseChange({
+                                    ...exercise,
+                                    optionalColumnType: 'Optional' as any,
+                                    alternatives: exercise.alternatives || [],
+                                  });
+                                }}
+                                className="p-0.5 hover:bg-muted rounded"
+                                aria-label="Clear column"
+                              >
+                                <X className="size-3 text-muted-foreground hover:text-foreground" />
+                              </button>
+                            )}
+                          </div>
+                        </TableHead>
                       </>
                     ) : (
                       <>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <EditableCell
-                            value={set.reps}
-                            onChange={(value) => handleSetChange(index, 'reps', value)}
-                            hasError={validationErrors?.[index]?.reps}
-                          />
-                        </TableCell>
+                        <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center gap-1.5 cursor-pointer">
+                                <span>Enable each side</span>
+                                <Checkbox
+                                  checked={false}
+                                  onCheckedChange={() => {
+                                    onExerciseChange({
+                                      ...exercise,
+                                      eachSide: true,
+                                    });
+                                  }}
+                                  className="h-4 w-4"
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Check to enable each side tracking for reps.<br />Ranges allowed (e.g., 8-12).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableHead>
                         {exercise.exerciseType === 'weight_reps' && (
-                          <TableCell className="py-0 px-0 text-center w-[100px]">
-                            <EditableCell
-                              value={set.weight}
-                              onChange={(value) => handleSetChange(index, 'weight', value)}
-                              hasError={validationErrors?.[index]?.weight}
-                            />
-                          </TableCell>
+                          <TableHead className="text-center h-8 py-1 px-2 text-xs font-medium">Weight</TableHead>
                         )}
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <OptionalCell
-                            columnType={optionalColumnLabel}
-                            value={set.optional || ''}
-                            onChange={(value) => handleSetChange(index, 'optional', value)}
-                          />
-                        </TableCell>
-                        <TableCell className="py-0 px-0 text-center w-[100px]">
-                          <OptionalCell
-                            columnType={optionalColumnLabel2}
-                            value={set.optional2 || ''}
-                            onChange={(value) => handleSetChange(index, 'optional2', value)}
-                          />
-                        </TableCell>
+                        <TableHead className="text-center h-8 py-1 px-2 w-[120px]">
+                          <div className="flex items-center justify-center gap-0.5">
+                            <Select
+                              value={optionalColumnLabel}
+                              onValueChange={(value) => {
+                                clearColumnValues('optional');
+                                setOptionalColumnLabel(value);
+                                onExerciseChange({
+                                  ...exercise,
+                                  optionalColumnType: value as any,
+                                  alternatives: exercise.alternatives || [],
+                                });
+                              }}
+                            >
+                              {optionalColumnLabel === 'Heart Rate Zone' ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <SelectTrigger
+                                      className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                      style={{ minHeight: '24px', height: '24px' }}
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div className="flex flex-col gap-1 text-xs">
+                                      <p>Z1 - Recovery</p>
+                                      <p>Z2 - Endurance</p>
+                                      <p>Z3 - Tempo</p>
+                                      <p>Z4 - Threshold</p>
+                                      <p>Z5 - Max</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <SelectTrigger
+                                  className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                  style={{ minHeight: '24px', height: '24px' }}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                              )}
+                              <SelectContent className="max-h-[200px] overflow-y-auto">
+                                {OPTIONAL_COLUMN_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {optionalColumnLabel !== 'Optional' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  clearColumnValues('optional');
+                                  setOptionalColumnLabel('Optional');
+                                  onExerciseChange({
+                                    ...exercise,
+                                    optionalColumnType: 'Optional' as any,
+                                    alternatives: exercise.alternatives || [],
+                                  });
+                                }}
+                                className="p-0.5 hover:bg-muted rounded"
+                                aria-label="Clear column"
+                              >
+                                <X className="size-3 text-muted-foreground hover:text-foreground" />
+                              </button>
+                            )}
+                          </div>
+                        </TableHead>
                       </>
                     )}
-                    <TableCell className="py-0 px-0 text-center w-[100px]">
-                      <EditableCell
-                        value={set.rest}
-                        onChange={(value) => handleSetChange(index, 'rest', value)}
-                        placeholder="90"
-                        hasError={validationErrors?.[index]?.rest}
-                      />
-                    </TableCell>
-                    <TableCell className="py-0 px-1 w-[40px]">
-                      <div className="flex items-center justify-end h-10">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
-                          onClick={() => {
-                            setSets((prev) => prev.filter((_, i) => i !== index));
-                          }}
-                          aria-label={`Remove set ${index + 1}`}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow >
+                    <TableHead className="text-center h-8 py-1 px-2 w-[70px] text-xs font-medium">Rest</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sets.map((set, index) => (
+                    <TableRow
+                      key={index}
+                      className="h-10 bg-background"
+                      onMouseEnter={() => setHoveredRowIndex(index)}
+                      onMouseLeave={() => setHoveredRowIndex(null)}
+                    >
+                      <TableCell className="py-0 px-0 w-[70px] pl-2">
+                        <SelectCell
+                          value={set.type}
+                          onChange={(value) => handleSetChange(index, 'type', value as SetData['type'])}
+                          options={[
+                            { value: 'warmUp', label: 'Warm up' },
+                            { value: 'normal', label: 'Normal' },
+                            { value: 'failure', label: 'Failure' },
+                            ...(exercise.exerciseType === 'weight_reps' ? [{ value: 'dropset', label: 'Dropset' }] : []),
+                          ]}
+                          displayValue={
+                            `${index + 1}${set.type === 'warmUp' ? 'W' :
+                              set.type === 'normal' ? 'N' :
+                                set.type === 'failure' ? 'F' :
+                                  set.type === 'dropset' ? 'D' : ''
+                            }`
+                          }
+                        />
+                      </TableCell>
+                      {exercise.exerciseType === 'distance_duration' ? (
+                        <>
+                          <TableCell className="py-0 px-0 text-center">
+                            <EditableCell
+                              value={set.distance || ''}
+                              onChange={(value) => handleSetChange(index, 'distance', value)}
+                              hasError={validationErrors?.[index]?.distance}
+                            />
+                          </TableCell>
+                          <TableCell className="py-0 px-0 text-center">
+                            <EditableCell
+                              value={set.duration || ''}
+                              onChange={(value) => handleSetChange(index, 'duration', value)}
+                              hasError={validationErrors?.[index]?.duration}
+                            />
+                          </TableCell>
+                          <TableCell className="py-0 px-0 text-center">
+                            {otherColumnLabel === 'Heart Rate Zone' ? (
+                              <SelectCell
+                                value={set.other || ''}
+                                onChange={(value) => handleSetChange(index, 'other', value)}
+                                options={[
+                                  { value: 'Z1 - Recovery', label: 'Z1 - Recovery' },
+                                  { value: 'Z2 - Endurance', label: 'Z2 - Endurance' },
+                                  { value: 'Z3 - Tempo', label: 'Z3 - Tempo' },
+                                  { value: 'Z4 - Threshold', label: 'Z4 - Threshold' },
+                                  { value: 'Z5 - Max', label: 'Z5 - Max' },
+                                ]}
+                                displayValue={set.other || ''}
+                                placeholder="Zone..."
+                              />
+                            ) : (
+                              <EditableCell
+                                value={set.other || ''}
+                                onChange={(value) => handleSetChange(index, 'other', value)}
+                              />
+                            )}
+                          </TableCell>
+                        </>
+                      ) : set.type === 'dropset' && exercise.exerciseType === 'weight_reps' ? (
+                        <>
+                          <>
+                            {exercise.eachSide ? (
+                              <>
+                                {/* Left Dropset */}
+                                <TableCell className="py-1 px-2">
+                                  <div className="flex justify-center">
+                                    <Popover
+                                      open={dropsetPopoverOpen === `${index}-leftReps`}
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          handleDropsetInputClick(index, 'leftReps', `${index}-leftReps`);
+                                        } else {
+                                          setDropsetPopoverOpen(null);
+                                          setDropsetData(null);
+                                        }
+                                      }}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <div
+                                          onClick={() => handleDropsetInputClick(index, 'leftReps', `${index}-leftReps`)}
+                                          className={cn(
+                                            'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                            'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                            dropsetPopoverOpen === `${index}-leftReps` && 'ring-2 ring-inset ring-primary',
+                                            validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
+                                            !set.leftReps && 'text-muted-foreground'
+                                          )}
+                                        >
+                                          {set.leftReps || '-'}
+                                        </div>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-1" align="start">
+                                        {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'leftReps' && (
+                                          <div className="flex flex-col gap-3 p-1">
+                                            <div className="rounded-md overflow-hidden">
+                                              <Table>
+                                                <TableHeader>
+                                                  <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
+                                                    <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">L Reps</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
+                                                  </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                  {dropsetData.repsDrops.map((drop, dropIdx) => (
+                                                    <TableRow key={dropIdx} className="h-9 border-none">
+                                                      <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
+                                                        {drop.dropNumber}
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                        <Input
+                                                          value={drop.value}
+                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
+                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                          placeholder="-"
+                                                        />
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                        <Input
+                                                          value={dropsetData.weightDrops[dropIdx]?.value || ''}
+                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
+                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                          placeholder="-"
+                                                        />
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[30px]">
+                                                        <div className="flex items-center justify-center h-full">
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveDrop(dropIdx)}
+                                                            className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
+                                                          >
+                                                            <X className="size-3" />
+                                                          </button>
+                                                        </div>
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  ))}
+                                                </TableBody>
+                                              </Table>
+                                            </div>
+                                            <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
+                                              Add drop
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                </TableCell>
+
+                                {/* Right Dropset */}
+                                <TableCell className="py-1 px-2">
+                                  <div className="flex justify-center">
+                                    <Popover
+                                      open={dropsetPopoverOpen === `${index}-rightReps`}
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          handleDropsetInputClick(index, 'rightReps', `${index}-rightReps`);
+                                        } else {
+                                          setDropsetPopoverOpen(null);
+                                          setDropsetData(null);
+                                        }
+                                      }}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <div
+                                          onClick={() => handleDropsetInputClick(index, 'rightReps', `${index}-rightReps`)}
+                                          className={cn(
+                                            'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                            'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                            dropsetPopoverOpen === `${index}-rightReps` && 'ring-2 ring-inset ring-primary',
+                                            validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
+                                            !set.rightReps && 'text-muted-foreground'
+                                          )}
+                                        >
+                                          {set.rightReps || '-'}
+                                        </div>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-1" align="start">
+                                        {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'rightReps' && (
+                                          <div className="flex flex-col gap-3 p-1">
+                                            <div className="rounded-md overflow-hidden">
+                                              <Table>
+                                                <TableHeader>
+                                                  <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
+                                                    <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">R Reps</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
+                                                  </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                  {dropsetData.repsDrops.map((drop, dropIdx) => (
+                                                    <TableRow key={dropIdx} className="h-9 border-none">
+                                                      <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
+                                                        {drop.dropNumber}
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                        <Input
+                                                          value={drop.value}
+                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
+                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                          placeholder="-"
+                                                        />
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                        <Input
+                                                          value={dropsetData.weightDrops[dropIdx]?.value || ''}
+                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
+                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                          placeholder="-"
+                                                        />
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[30px]">
+                                                        <div className="flex items-center justify-center h-full">
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveDrop(dropIdx)}
+                                                            className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
+                                                          >
+                                                            <X className="size-3" />
+                                                          </button>
+                                                        </div>
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  ))}
+                                                </TableBody>
+                                              </Table>
+                                            </div>
+                                            <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
+                                              Add drop
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                </TableCell>
+
+                                {/* Weight (Disabled) */}
+                                <TableCell className="py-1 px-2">
+                                  <div
+                                    className={cn(
+                                      'w-full flex flex-col items-center justify-center text-[11px] cursor-default px-1 gap-0.5 py-1',
+                                      (!set.leftWeight && !set.rightWeight) ? 'text-muted-foreground' : 'text-foreground'
+                                    )}
+                                  >
+                                    <div className="whitespace-nowrap">L: {set.leftWeight || '-'}</div>
+                                    <div className="whitespace-nowrap">R: {set.rightWeight || '-'}</div>
+                                  </div>
+                                </TableCell>
+                              </>
+                            ) : (
+                              // Standard Dropset
+                              <>
+                                <TableCell className="py-1 px-2">
+                                  <div className="flex justify-center">
+                                    <Popover
+                                      open={dropsetPopoverOpen === `${index}-reps`}
+                                      onOpenChange={(open) => {
+                                        if (open) {
+                                          handleDropsetInputClick(index, 'reps', `${index}-reps`);
+                                        } else {
+                                          setDropsetPopoverOpen(null);
+                                          setDropsetData(null);
+                                        }
+                                      }}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <div
+                                          onClick={() => handleDropsetInputClick(index, 'reps', `${index}-reps`)}
+                                          className={cn(
+                                            'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                            'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                            dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
+                                            validationErrors?.[index]?.reps && 'text-destructive ring-2 ring-inset ring-destructive',
+                                            !set.reps && 'text-muted-foreground'
+                                          )}
+                                        >
+                                          {set.reps || '-'}
+                                        </div>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-1" align="start">
+                                        {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'reps' && (
+                                          <div className="flex flex-col gap-3 p-1">
+                                            <div className="rounded-md overflow-hidden">
+                                              <Table>
+                                                <TableHeader>
+                                                  <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
+                                                    <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Reps</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
+                                                    <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
+                                                  </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                  {dropsetData.repsDrops.map((drop, dropIdx) => (
+                                                    <TableRow key={dropIdx} className="h-9 border-none">
+                                                      <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
+                                                        {drop.dropNumber}
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                        <Input
+                                                          value={drop.value}
+                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
+                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                          placeholder="-"
+                                                        />
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                        <Input
+                                                          value={dropsetData.weightDrops[dropIdx]?.value || ''}
+                                                          onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
+                                                          className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                          placeholder="-"
+                                                        />
+                                                      </TableCell>
+                                                      <TableCell className="py-0 px-0 h-9 w-[30px]">
+                                                        <div className="flex items-center justify-center h-full">
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveDrop(dropIdx)}
+                                                            className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
+                                                          >
+                                                            <X className="size-3" />
+                                                          </button>
+                                                        </div>
+                                                      </TableCell>
+                                                    </TableRow>
+                                                  ))}
+                                                </TableBody>
+                                              </Table>
+                                            </div>
+                                            <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
+                                              Add drop
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-1 px-2">
+                                  <div
+                                    onClick={() => {
+                                      // Open the same popover as reps - since it shows both reps and weight
+                                      handleDropsetInputClick(index, 'reps', `${index}-reps`);
+                                      setDropsetPopoverOpen(`${index}-reps`);
+                                    }}
+                                    className={cn(
+                                      'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                      'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                      dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
+                                      validationErrors?.[index]?.weight && 'text-destructive ring-2 ring-inset ring-destructive',
+                                      !set.weight ? 'text-muted-foreground' : 'text-foreground'
+                                    )}
+                                  >
+                                    {set.weight || '-'}
+                                  </div>
+                                </TableCell>
+                              </>
+                            )}
+                            <TableCell className="py-0 px-0 text-center">
+                              <OptionalCell
+                                columnType={optionalColumnLabel}
+                                value={set.optional?.prescribed || ''}
+                                onChange={(value) => handleSetChange(index, 'optional', value)}
+                              />
+                            </TableCell>
+
+                          </>
+                        </>
+                      ) : set.type === 'failure' &&
+                        (exercise.exerciseType === 'reps' ||
+                          exercise.exerciseType === 'weight_reps') ? (
+                        <>
+                          {exercise.eachSide ? (
+                            <>
+                              <TableCell className="py-1 px-2" colSpan={2}>
+                                <div className="flex justify-center">
+                                  <span className="text-xs text-muted-foreground">To failure (each side)</span>
+                                </div>
+                              </TableCell>
+                            </>
+                          ) : (
+                            <TableCell className="py-1 px-2">
+                              <div className="flex justify-center">
+                                <span className="text-xs text-muted-foreground">To failure</span>
+                              </div>
+                            </TableCell>
+                          )}
+                          {exercise.exerciseType === 'weight_reps' && (
+                            <TableCell className="py-0 px-0 text-center">
+                              <EditableCell
+                                value={set.weight}
+                                onChange={(value) => handleSetChange(index, 'weight', value)}
+                                hasError={validationErrors?.[index]?.weight}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="py-0 px-0 text-center">
+                            <OptionalCell
+                              columnType={optionalColumnLabel}
+                              value={set.optional?.prescribed || ''}
+                              onChange={(value) => handleSetChange(index, 'optional', value)}
+                            />
+                          </TableCell>
+
+                        </>
+                      ) : exercise.eachSide ? (
+                        <>
+                          {/* Left Reps */}
+                          <TableCell className="py-0 px-0 text-center">
+                            <EditableCell
+                              value={set.leftReps || ''}
+                              onChange={(value) => handleSetChange(index, 'leftReps' as keyof SetData, value)}
+                              hasError={validationErrors?.[index]?.reps}
+                            />
+                          </TableCell>
+                          {/* Right Reps */}
+                          <TableCell className="py-0 px-0 text-center">
+                            <EditableCell
+                              value={set.rightReps || ''}
+                              onChange={(value) => handleSetChange(index, 'rightReps' as keyof SetData, value)}
+                              hasError={validationErrors?.[index]?.reps}
+                            />
+                          </TableCell>
+                          {exercise.exerciseType === 'weight_reps' && (
+                            <TableCell className="py-0 px-0 text-center">
+                              <EditableCell
+                                value={set.weight}
+                                onChange={(value) => handleSetChange(index, 'weight', value)}
+                                hasError={validationErrors?.[index]?.weight}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="py-0 px-0 text-center">
+                            <OptionalCell
+                              columnType={optionalColumnLabel}
+                              value={set.optional?.prescribed || ''}
+                              onChange={(value) => handleSetChange(index, 'optional', value)}
+                            />
+                          </TableCell>
+
+                        </>
+                      ) : (
+                        <>
+                          <TableCell className="py-0 px-0 text-center">
+                            <EditableCell
+                              value={set.reps}
+                              onChange={(value) => handleSetChange(index, 'reps', value)}
+                              hasError={validationErrors?.[index]?.reps}
+                            />
+                          </TableCell>
+                          {exercise.exerciseType === 'weight_reps' && (
+                            <TableCell className="py-0 px-0 text-center">
+                              <EditableCell
+                                value={set.weight}
+                                onChange={(value) => handleSetChange(index, 'weight', value)}
+                                hasError={validationErrors?.[index]?.weight}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="py-0 px-0 text-center">
+                            <OptionalCell
+                              columnType={optionalColumnLabel}
+                              value={set.optional?.prescribed || ''}
+                              onChange={(value) => handleSetChange(index, 'optional', value)}
+                            />
+                          </TableCell>
+
+                        </>
+                      )}
+                      <TableCell className="py-0 px-2 text-center w-[70px]">
+                        <EditableCell
+                          value={set.rest}
+                          onChange={(value) => handleSetChange(index, 'rest', value)}
+                          placeholder="90"
+                          hasError={validationErrors?.[index]?.rest}
+                        />
+                      </TableCell>
+                    </TableRow >
+                  ))}
+                </TableBody >
+              </Table >
+            </div>
+            {/* Delete buttons overlay - only show when more than 1 set */}
+            {sets.length > 1 && (
+              <div className="absolute right-0 top-0 h-full flex flex-col pointer-events-none" style={{ transform: 'translateX(50%)' }}>
+                {/* Header spacer */}
+                <div className="h-8 flex-shrink-0" />
+                {/* Delete buttons for each row - visible only when row is hovered */}
+                {sets.map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-10 flex items-center justify-center flex-shrink-0"
+                    style={{ pointerEvents: hoveredRowIndex === index ? 'auto' : 'none' }}
+                  >
+                    <button
+                      type="button"
+                      onMouseEnter={() => setHoveredRowIndex(index)}
+                      onClick={() => {
+                        setSets((prev) => {
+                          const filtered = prev.filter((_, i) => i !== index);
+                          // Renumber all sets
+                          return filtered.map((set, idx) => ({ ...set, setNumber: idx + 1 }));
+                        });
+                      }}
+                      className={`h-4 w-4 rounded-full bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      aria-label={`Remove set ${index + 1}`}
+                    >
+                      <X className="h-2.5 w-2.5 text-primary-foreground" />
+                    </button>
+                  </div>
                 ))}
-              </TableBody >
-            </Table >
+              </div>
+            )}
+            {/* Add buttons overlay - positioned on left edge */}
+            {!isSingleSetOnly && (
+              <div className="absolute left-0 top-0 h-full flex flex-col pointer-events-none" style={{ transform: 'translateX(-50%)' }}>
+                {/* Header spacer */}
+                <div className="h-8 flex-shrink-0" />
+                {/* Add buttons for each row - visible only when row is hovered */}
+                {sets.map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-10 flex items-center justify-center flex-shrink-0"
+                    style={{ pointerEvents: hoveredRowIndex === index ? 'auto' : 'none' }}
+                  >
+                    <button
+                      type="button"
+                      onMouseEnter={() => setHoveredRowIndex(index)}
+                      onClick={() => handleAddSet(index)}
+                      className={`h-4 w-4 rounded-full bg-primary flex items-center justify-center shadow-sm hover:bg-primary/90 transition-opacity ${hoveredRowIndex === index ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      aria-label={`Add set after set ${index + 1}`}
+                    >
+                      <Plus className="h-2.5 w-2.5 text-primary-foreground" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div >
         )
       }
