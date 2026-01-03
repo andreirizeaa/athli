@@ -326,6 +326,9 @@ export const WorkoutBuilder = ({
       };
 
       setIsDirty(false);
+      setHasAttemptedSave(false);
+      setValidationErrors({});
+      setSectionValidationErrors({});
       if (onDirtyChange) onDirtyChange();
     }
 

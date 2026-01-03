@@ -238,9 +238,15 @@ export const SectionBuilder = ({
     }
   }, [workoutSchema.items.length]);
 
+  // Track previous open state to detect dialog transitions
+  const prevOpenRef = useRef(open);
+
   // Reset save loading status and reset schema when dialog opens
   useEffect(() => {
-    if (open) {
+    const justOpened = open && !prevOpenRef.current;
+
+    // Only initialize when the dialog first opens, not on every re-render while open
+    if (justOpened) {
       setIsSaving(false);
 
       let initialSchema: WorkoutSchema;
@@ -280,9 +286,14 @@ export const SectionBuilder = ({
       };
 
       setIsDirty(false);
+      setHasAttemptedSave(false);
+      setValidationErrors({});
+      setSectionValidationErrors({});
       if (onDirtyChange) onDirtyChange();
     }
-  }, [open, initialData, sectionType, meta]);
+
+    prevOpenRef.current = open;
+  }, [open, initialData, sectionType, meta, onDirtyChange]);
 
   // Deep compare current state with initial state to determine isDirty
   useEffect(() => {

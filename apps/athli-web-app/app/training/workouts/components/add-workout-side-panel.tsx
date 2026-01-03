@@ -25,6 +25,7 @@ type AddWorkoutSidePanelProps = {
     workoutTitle?: string;
     mode?: 'program' | 'calendar';
     availableWorkouts: Workout[];
+    preSelectedWorkoutId?: string | null; // Pre-select a workout when opening from library
 };
 
 export const AddWorkoutSidePanel = ({
@@ -35,7 +36,8 @@ export const AddWorkoutSidePanel = ({
     selectedDate,
     workoutTitle,
     mode = 'calendar',
-    availableWorkouts
+    availableWorkouts,
+    preSelectedWorkoutId = null
 }: AddWorkoutSidePanelProps) => {
     const t = useTranslations();
     const [isSaving, setIsSaving] = useState(false);
@@ -43,9 +45,10 @@ export const AddWorkoutSidePanel = ({
 
     useEffect(() => {
         if (open) {
-            setSelectedWorkoutId(null);
+            // Use pre-selected workout if provided, otherwise reset to null
+            setSelectedWorkoutId(preSelectedWorkoutId || null);
         }
-    }, [open]);
+    }, [open, preSelectedWorkoutId]);
 
     const selectedWorkout = useMemo(() =>
         availableWorkouts.find(w => w.id === selectedWorkoutId),

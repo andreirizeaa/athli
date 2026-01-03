@@ -26,15 +26,20 @@ export interface AssignProgramData {
  * Service method to assign a workout to a client's training calendar
  */
 export const assignWorkout = async (data: AssignWorkoutData): Promise<void> => {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    'x-client-id': data.clientId,
+  };
   if (data.coachId) {
     headers['x-coach-id'] = data.coachId;
   }
 
+  // Create payload without clientId and coachId (they're in headers)
+  const { clientId, coachId, ...payload } = data;
+
   await apiFetch('/client/trainings/assign-workout', {
     method: 'POST',
     headers,
-    body: JSON.stringify(data),
+    body: JSON.stringify(payload),
   });
 };
 
@@ -143,7 +148,10 @@ export const deleteWorkoutByKey = async (data: DeleteWorkoutByKeyData): Promise<
       'x-client-id': data.clientId,
       'x-coach-id': data.coachId
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      sourceDate: data.sourceDate,
+      workoutId: data.workoutId,
+    }),
   });
 };
 
