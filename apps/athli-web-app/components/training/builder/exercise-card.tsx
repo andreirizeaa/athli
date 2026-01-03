@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { OPTIONAL_COLUMN_OPTIONS } from '@/lib/constants/training';
+import { OPTIONAL_COLUMN_OPTIONS, HEART_RATE_ZONE_OPTIONS } from '@/lib/constants/training';
 import {
   Select,
   SelectContent,
@@ -156,12 +156,14 @@ const EditableCell = ({
   placeholder = '-',
   hasError = false,
   className = '',
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   hasError?: boolean;
   className?: string;
+  disabled?: boolean;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [localValue, setLocalValue] = useState(value);
@@ -200,7 +202,7 @@ const EditableCell = ({
     }
   };
 
-  if (isEditing) {
+  if (isEditing && !disabled) {
     return (
       <div className="w-full h-10 ring-2 ring-inset ring-primary flex items-center justify-center">
         <input
@@ -224,15 +226,17 @@ const EditableCell = ({
 
   return (
     <div
-      onClick={() => setIsEditing(true)}
+      onClick={() => !disabled && setIsEditing(true)}
       className={cn(
-        'w-full h-10 flex items-center justify-center text-sm cursor-text px-2',
+        'w-full h-10 flex items-center justify-center text-sm px-2 transition-all',
+        !disabled && 'cursor-text hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+        disabled && 'cursor-default opacity-50 text-muted-foreground',
         hasError && 'text-destructive',
-        !value && 'text-muted-foreground',
+        !value && !disabled && 'text-muted-foreground',
         className
       )}
     >
-      {value || placeholder}
+      {disabled ? '' : (value || placeholder)}
     </div>
   );
 };
@@ -243,24 +247,30 @@ const SelectCell = ({
   onChange,
   options,
   displayValue,
+  placeholder = '-',
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
   displayValue: string;
+  placeholder?: string;
+  disabled?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Select value={value} onValueChange={onChange} open={isOpen} onOpenChange={setIsOpen}>
+    <Select value={value} onValueChange={onChange} open={isOpen} onOpenChange={setIsOpen} disabled={disabled}>
       <SelectTrigger
         className={cn(
-          "h-full w-full border-0 shadow-none text-sm hover:bg-muted/50 focus:ring-0 px-2 bg-transparent text-center",
-          isOpen && "ring-2 ring-inset ring-primary"
+          "h-full w-full border-0 shadow-none text-sm focus:ring-0 px-2 bg-transparent text-center transition-all",
+          !disabled && "hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent",
+          isOpen && "ring-2 ring-inset ring-primary",
+          disabled && "opacity-50 cursor-default"
         )}
-        onClick={() => setIsOpen(true)}
+        onClick={() => !disabled && setIsOpen(true)}
       >
-        <SelectValue>{displayValue}</SelectValue>
+        <SelectValue placeholder={disabled ? '' : placeholder}>{value ? displayValue : null}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
@@ -428,11 +438,27 @@ const OptionalCell = ({
     );
   }
 
-  // Default to editable cell for 'Optional' and 'Notes'
+  if (columnType === 'Heart Rate Zone') {
+    return (
+      <SelectCell
+        value={value}
+        onChange={onChange}
+        options={HEART_RATE_ZONE_OPTIONS as unknown as { value: string; label: string }[]}
+        displayValue={value}
+        placeholder="Zone..."
+      />
+    );
+  }
+
+  // Default case: "Optional" or other text inputs
+  const isDisabled = columnType === 'Optional';
+
   return (
     <EditableCell
       value={value}
       onChange={onChange}
+      placeholder={isDisabled ? '' : '-'}
+      disabled={isDisabled}
     />
   );
 };
@@ -449,6 +475,8 @@ export type SetData = {
   other2?: string;      // Optional field 2 for distance_duration exercises
   leftReps?: string;    // Left side reps for unilateral exercises
   rightReps?: string;   // Right side reps for unilateral exercises
+  leftWeight?: string;
+  rightWeight?: string;
   optional?: string;    // Optional field 1 for weight_reps/reps exercises (tempo, RIR, RPE, notes)
   optional2?: string;   // Optional field 2 for weight_reps/reps exercises (tempo, RIR, RPE, notes)
 };
@@ -816,7 +844,26 @@ export const ExerciseCard = ({
     const currentSet = updated[index];
 
     // If changing to dropset, clear reps and weight defaults
-    if (field === 'type' && value === 'dropset') {
+    // If switching from dropset to normal, keep the first drop value
+    if (field === 'type' && value === 'normal' && currentSet.type === 'dropset') {
+      const getFirstValue = (val: string | undefined): string => {
+        if (!val) return '';
+        if (val.includes('-')) return val.split('-')[0].trim();
+        return val;
+      };
+
+      updated[index] = {
+        ...currentSet,
+        type: 'normal',
+        reps: getFirstValue(currentSet.reps),
+        weight: getFirstValue(currentSet.weight),
+        // Also handle eachSide properties if they exist
+        leftReps: getFirstValue(currentSet.leftReps),
+        rightReps: getFirstValue(currentSet.rightReps),
+        leftWeight: getFirstValue(currentSet.leftWeight),
+        rightWeight: getFirstValue(currentSet.rightWeight),
+      };
+    } else if (field === 'type' && value === 'dropset') {
       updated[index] = { ...currentSet, type: 'dropset', reps: '', weight: '' };
     } else {
       updated[index] = { ...currentSet, [field]: value };
@@ -877,9 +924,19 @@ export const ExerciseCard = ({
         ];
       };
 
-      const repsValue = field === 'reps' ? set.reps : set[field] || '';
+      const repsValue = set[field] || '';
+      // Determine which weight field to use based on the reps field
+      let weightValue = '';
+      if (field === 'leftReps') {
+        weightValue = set.leftWeight || '';
+      } else if (field === 'rightReps') {
+        weightValue = set.rightWeight || '';
+      } else {
+        weightValue = set.weight;
+      }
+
       const repsDrops = parseDrops(repsValue);
-      const weightDrops = parseDrops(set.weight);
+      const weightDrops = parseDrops(weightValue);
 
       // Ensure both have the same number of drops (use the max)
       const maxDrops = Math.max(repsDrops.length, weightDrops.length, 2);
@@ -935,10 +992,16 @@ export const ExerciseCard = ({
       .join('-');
 
     const updated = [...sets];
+
+    // Determine target weight field
+    let weightField = 'weight';
+    if (dropsetData.field === 'leftReps') weightField = 'leftWeight';
+    else if (dropsetData.field === 'rightReps') weightField = 'rightWeight';
+
     updated[nextDropsetData.setIndex] = {
       ...updated[nextDropsetData.setIndex],
       [dropsetData.field]: formattedReps, // Update specific field (reps, leftReps, or rightReps)
-      weight: formattedWeight,
+      [weightField]: formattedWeight,
     };
 
     setSets(updated);
@@ -985,6 +1048,38 @@ export const ExerciseCard = ({
         ...dropsetData,
         repsDrops: renumberedRepsDrops,
         weightDrops: renumberedWeightDrops,
+      });
+
+      // Recalculate and update parent set
+      const formattedReps = renumberedRepsDrops
+        .map((drop) => drop.value.trim())
+        .filter((val) => val !== '')
+        .join('-');
+
+      const formattedWeight = renumberedWeightDrops
+        .map((drop) => drop.value.trim())
+        .filter((val) => val !== '')
+        .join('-');
+
+      const updated = [...sets];
+
+      // Determine target weight field
+      let weightField = 'weight';
+      if (dropsetData.field === 'leftReps') weightField = 'leftWeight';
+      else if (dropsetData.field === 'rightReps') weightField = 'rightWeight';
+
+      updated[dropsetData.setIndex] = {
+        ...updated[dropsetData.setIndex],
+        [dropsetData.field]: formattedReps,
+        [weightField]: formattedWeight,
+      };
+
+      setSets(updated);
+
+      onExerciseChange({
+        ...exercise,
+        sets: updated,
+        alternatives: exercise.alternatives || [],
       });
     }
   };
@@ -1466,12 +1561,34 @@ export const ExerciseCard = ({
                               setOptionalColumnLabel(value);
                             }}
                           >
-                            <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
+                            {optionalColumnLabel === 'Heart Rate Zone' ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SelectTrigger
+                                    className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                    style={{ minHeight: '24px', height: '24px' }}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <p>Z1 - Recovery</p>
+                                    <p>Z2 - Endurance</p>
+                                    <p>Z3 - Tempo</p>
+                                    <p>Z4 - Threshold</p>
+                                    <p>Z5 - Max</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <SelectTrigger
+                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                style={{ minHeight: '24px', height: '24px' }}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                            )}
                             <SelectContent>
                               {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== optionalColumnLabel2).map(opt => (
                                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -1502,12 +1619,34 @@ export const ExerciseCard = ({
                               setOptionalColumnLabel2(value);
                             }}
                           >
-                            <SelectTrigger
-                              className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
-                              style={{ minHeight: '24px', height: '24px' }}
-                            >
-                              <SelectValue />
-                            </SelectTrigger>
+                            {optionalColumnLabel2 === 'Heart Rate Zone' ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <SelectTrigger
+                                    className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                    style={{ minHeight: '24px', height: '24px' }}
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <p>Z1 - Recovery</p>
+                                    <p>Z2 - Endurance</p>
+                                    <p>Z3 - Tempo</p>
+                                    <p>Z4 - Threshold</p>
+                                    <p>Z5 - Max</p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <SelectTrigger
+                                className="h-6 min-h-0 py-0 w-full text-xs font-medium border-0 shadow-none hover:bg-muted/50 bg-transparent"
+                                style={{ minHeight: '24px', height: '24px' }}
+                              >
+                                <SelectValue />
+                              </SelectTrigger>
+                            )}
                             <SelectContent>
                               {OPTIONAL_COLUMN_OPTIONS.filter(opt => opt.value === 'Optional' || opt.value !== optionalColumnLabel).map(opt => (
                                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -1538,7 +1677,7 @@ export const ExerciseCard = ({
               <TableBody>
                 {sets.map((set, index) => (
                   <TableRow key={index} className="h-10 bg-background">
-                    <TableCell className="py-0 px-0 w-[60px]">
+                    <TableCell className="py-0 px-0 w-[60px] pl-1">
                       <SelectCell
                         value={set.type}
                         onChange={(value) => handleSetChange(index, 'type', value as SetData['type'])}
@@ -1549,11 +1688,10 @@ export const ExerciseCard = ({
                           ...(exercise.exerciseType === 'weight_reps' ? [{ value: 'dropset', label: 'Dropset' }] : []),
                         ]}
                         displayValue={
-                          `${index + 1}${
-                            set.type === 'warmUp' ? 'W' :
+                          `${index + 1}${set.type === 'warmUp' ? 'W' :
                             set.type === 'normal' ? 'N' :
-                            set.type === 'failure' ? 'F' :
-                            set.type === 'dropset' ? 'D' : ''
+                              set.type === 'failure' ? 'F' :
+                                set.type === 'dropset' ? 'D' : ''
                           }`
                         }
                       />
@@ -1586,7 +1724,8 @@ export const ExerciseCard = ({
                                 { value: 'Z4 - Threshold', label: 'Z4 - Threshold' },
                                 { value: 'Z5 - Max', label: 'Z5 - Max' },
                               ]}
-                              displayValue={set.other || '-'}
+                              displayValue={set.other || ''}
+                              placeholder="Zone..."
                             />
                           ) : (
                             <EditableCell
@@ -1607,7 +1746,8 @@ export const ExerciseCard = ({
                                 { value: 'Z4 - Threshold', label: 'Z4 - Threshold' },
                                 { value: 'Z5 - Max', label: 'Z5 - Max' },
                               ]}
-                              displayValue={set.other2 || '-'}
+                              displayValue={set.other2 || ''}
+                              placeholder="Zone..."
                             />
                           ) : (
                             <EditableCell
@@ -1637,100 +1777,75 @@ export const ExerciseCard = ({
                                     }}
                                   >
                                     <PopoverTrigger asChild>
-                                      <button
-                                        type="button"
+                                      <div
+                                        onClick={() => handleDropsetInputClick(index, 'leftReps', `${index}-leftReps`)}
                                         className={cn(
-                                          'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
-                                          set.leftReps ? 'w-auto min-w-[65px]' : 'w-[65px]',
-                                          validationErrors?.[index]?.reps &&
-                                          'border-destructive focus-visible:ring-destructive'
+                                          'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                          'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                          dropsetPopoverOpen === `${index}-leftReps` && 'ring-2 ring-inset ring-primary',
+                                          validationErrors?.[index]?.reps && 'text-destructive',
+                                          !set.leftReps && 'text-muted-foreground'
                                         )}
                                       >
                                         {set.leftReps || '-'}
-                                      </button>
+                                      </div>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <div className="flex flex-col gap-3 p-4">
-                                        <div className="border rounded-lg overflow-hidden">
-                                          <Table className="text-[11px] leading-tight">
-                                            <TableHeader>
-                                              <TableRow className="h-8">
-                                                <TableHead className="text-center h-8 py-1 px-2">Drop</TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">L Reps</TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">Weight</TableHead>
-                                                <TableHead className="w-[50px] h-8 py-1 px-2 text-left"></TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                              {dropsetData?.setIndex === index &&
-                                                dropsetData.repsDrops.map((drop, dropIndex) => (
-                                                  <TableRow key={dropIndex} className="h-10 bg-background">
-                                                    <TableCell className="font-medium text-center py-1 px-2">
+                                    <PopoverContent className="w-auto p-1" align="start">
+                                      {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'leftReps' && (
+                                        <div className="flex flex-col gap-3 p-1">
+                                          <div className="rounded-md overflow-hidden">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
+                                                  <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">L Reps</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {dropsetData.repsDrops.map((drop, dropIdx) => (
+                                                  <TableRow key={dropIdx} className="h-9 border-none">
+                                                    <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
                                                       {drop.dropNumber}
                                                     </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={drop.value}
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(dropIndex, 'reps', value)
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
+                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                      <Input
+                                                        value={drop.value}
+                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
+                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                        placeholder="-"
+                                                      />
                                                     </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={dropsetData.weightDrops[dropIndex]?.value || ''}
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(dropIndex, 'weight', value)
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
+                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                      <Input
+                                                        value={dropsetData.weightDrops[dropIdx]?.value || ''}
+                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
+                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                        placeholder="-"
+                                                      />
                                                     </TableCell>
-                                                    <TableCell className="w-[50px] py-1 px-2">
-                                                      <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
-                                                        onClick={() => handleRemoveDrop(dropIndex)}
-                                                        aria-label={`Remove drop ${drop.dropNumber}`}
-                                                      >
-                                                        <X className="h-3.5 w-3.5" />
-                                                      </Button>
+                                                    <TableCell className="py-0 px-0 h-9 w-[30px]">
+                                                      <div className="flex items-center justify-center h-full">
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => handleRemoveDrop(dropIdx)}
+                                                          className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
+                                                        >
+                                                          <X className="size-3" />
+                                                        </button>
+                                                      </div>
                                                     </TableCell>
                                                   </TableRow>
                                                 ))}
-                                              <TableRow className="h-8 bg-background">
-                                                <TableCell colSpan={4} className="text-center py-1 px-2">
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={handleAddDrop}
-                                                    className="mx-auto text-[11px] h-6"
-                                                  >
-                                                    Add drop
-                                                  </Button>
-                                                </TableCell>
-                                              </TableRow>
-                                            </TableBody>
-                                          </Table>
+                                              </TableBody>
+                                            </Table>
+                                          </div>
+                                          <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
+                                            Add drop
+                                          </Button>
                                         </div>
-                                      </div>
+                                      )}
                                     </PopoverContent>
                                   </Popover>
                                 </div>
@@ -1751,100 +1866,75 @@ export const ExerciseCard = ({
                                     }}
                                   >
                                     <PopoverTrigger asChild>
-                                      <button
-                                        type="button"
+                                      <div
+                                        onClick={() => handleDropsetInputClick(index, 'rightReps', `${index}-rightReps`)}
                                         className={cn(
-                                          'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
-                                          set.rightReps ? 'w-auto min-w-[65px]' : 'w-[65px]',
-                                          validationErrors?.[index]?.reps &&
-                                          'border-destructive focus-visible:ring-destructive'
+                                          'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                          'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                          dropsetPopoverOpen === `${index}-rightReps` && 'ring-2 ring-inset ring-primary',
+                                          validationErrors?.[index]?.reps && 'text-destructive',
+                                          !set.rightReps && 'text-muted-foreground'
                                         )}
                                       >
                                         {set.rightReps || '-'}
-                                      </button>
+                                      </div>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <div className="flex flex-col gap-3 p-4">
-                                        <div className="border rounded-lg overflow-hidden">
-                                          <Table className="text-[11px] leading-tight">
-                                            <TableHeader>
-                                              <TableRow className="h-8">
-                                                <TableHead className="text-center h-8 py-1 px-2">Drop</TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">R Reps</TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">Weight</TableHead>
-                                                <TableHead className="w-[50px] h-8 py-1 px-2 text-left"></TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                              {dropsetData?.setIndex === index &&
-                                                dropsetData.repsDrops.map((drop, dropIndex) => (
-                                                  <TableRow key={dropIndex} className="h-10 bg-background">
-                                                    <TableCell className="font-medium text-center py-1 px-2">
+                                    <PopoverContent className="w-auto p-1" align="start">
+                                      {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'rightReps' && (
+                                        <div className="flex flex-col gap-3 p-1">
+                                          <div className="rounded-md overflow-hidden">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
+                                                  <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">R Reps</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {dropsetData.repsDrops.map((drop, dropIdx) => (
+                                                  <TableRow key={dropIdx} className="h-9 border-none">
+                                                    <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
                                                       {drop.dropNumber}
                                                     </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={drop.value}
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(dropIndex, 'reps', value)
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
+                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                      <Input
+                                                        value={drop.value}
+                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
+                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                        placeholder="-"
+                                                      />
                                                     </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={dropsetData.weightDrops[dropIndex]?.value || ''}
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(dropIndex, 'weight', value)
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
+                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                      <Input
+                                                        value={dropsetData.weightDrops[dropIdx]?.value || ''}
+                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
+                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                        placeholder="-"
+                                                      />
                                                     </TableCell>
-                                                    <TableCell className="w-[50px] py-1 px-2">
-                                                      <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
-                                                        onClick={() => handleRemoveDrop(dropIndex)}
-                                                        aria-label={`Remove drop ${drop.dropNumber}`}
-                                                      >
-                                                        <X className="h-3.5 w-3.5" />
-                                                      </Button>
+                                                    <TableCell className="py-0 px-0 h-9 w-[30px]">
+                                                      <div className="flex items-center justify-center h-full">
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => handleRemoveDrop(dropIdx)}
+                                                          className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
+                                                        >
+                                                          <X className="size-3" />
+                                                        </button>
+                                                      </div>
                                                     </TableCell>
                                                   </TableRow>
                                                 ))}
-                                              <TableRow className="h-8 bg-background">
-                                                <TableCell colSpan={4} className="text-center py-1 px-2">
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={handleAddDrop}
-                                                    className="mx-auto text-[11px] h-6"
-                                                  >
-                                                    Add drop
-                                                  </Button>
-                                                </TableCell>
-                                              </TableRow>
-                                            </TableBody>
-                                          </Table>
+                                              </TableBody>
+                                            </Table>
+                                          </div>
+                                          <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
+                                            Add drop
+                                          </Button>
                                         </div>
-                                      </div>
+                                      )}
                                     </PopoverContent>
                                   </Popover>
                                 </div>
@@ -1852,14 +1942,14 @@ export const ExerciseCard = ({
 
                               {/* Weight (Disabled) */}
                               <TableCell className="py-1 px-2">
-                                <div className="flex justify-center">
-                                  <Input
-                                    type="text"
-                                    value=""
-                                    disabled
-                                    className="h-6 w-[70px] text-center text-[11px] disabled:opacity-50 disabled:cursor-not-allowed"
-                                    placeholder=""
-                                  />
+                                <div
+                                  className={cn(
+                                    'w-full flex flex-col items-center justify-center text-[11px] cursor-default px-1 gap-0.5 py-1',
+                                    (!set.leftWeight && !set.rightWeight) ? 'text-muted-foreground' : 'text-foreground'
+                                  )}
+                                >
+                                  <div className="whitespace-nowrap">L: {set.leftWeight || '-'}</div>
+                                  <div className="whitespace-nowrap">R: {set.rightWeight || '-'}</div>
                                 </div>
                               </TableCell>
                             </>
@@ -1880,250 +1970,105 @@ export const ExerciseCard = ({
                                     }}
                                   >
                                     <PopoverTrigger asChild>
-                                      <button
-                                        type="button"
+                                      <div
+                                        onClick={() => handleDropsetInputClick(index, 'reps', `${index}-reps`)}
                                         className={cn(
-                                          'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
-                                          set.reps ? 'w-auto min-w-[70px]' : 'w-[70px]',
-                                          validationErrors?.[index]?.reps &&
-                                          'border-destructive focus-visible:ring-destructive'
+                                          'w-full h-10 flex items-center justify-center text-sm cursor-text px-2 transition-all',
+                                          'hover:ring-2 hover:ring-inset hover:ring-primary hover:bg-transparent',
+                                          dropsetPopoverOpen === `${index}-reps` && 'ring-2 ring-inset ring-primary',
+                                          validationErrors?.[index]?.reps && 'text-destructive',
+                                          !set.reps && 'text-muted-foreground'
                                         )}
                                       >
                                         {set.reps || '-'}
-                                      </button>
+                                      </div>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <div className="flex flex-col gap-3 p-4">
-                                        <div className="border rounded-lg overflow-hidden">
-                                          <Table className="text-[11px] leading-tight">
-                                            <TableHeader>
-                                              <TableRow className="h-8">
-                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                  Drop
-                                                </TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                  Reps
-                                                </TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                  Weight
-                                                </TableHead>
-                                                <TableHead className="w-[50px] h-8 py-1 px-2 text-left"></TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                              {dropsetData?.setIndex === index &&
-                                                dropsetData.repsDrops.map((drop, dropIndex) => (
-                                                  <TableRow key={dropIndex} className="h-10 bg-background">
-                                                    <TableCell className="font-medium text-center py-1 px-2">
+                                    <PopoverContent className="w-auto p-1" align="start">
+                                      {dropsetData && dropsetData.setIndex === index && dropsetData.field === 'reps' && (
+                                        <div className="flex flex-col gap-3 p-1">
+                                          <div className="rounded-md overflow-hidden">
+                                            <Table>
+                                              <TableHeader>
+                                                <TableRow className="bg-muted/50 h-8 hover:bg-muted/50 border-none">
+                                                  <TableHead className="h-8 py-1 px-2 w-[40px] text-center font-medium border-0">Drop</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Reps</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 text-center font-medium w-[70px] border-0">Weight</TableHead>
+                                                  <TableHead className="h-8 py-1 px-2 w-[30px] border-0"></TableHead>
+                                                </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                {dropsetData.repsDrops.map((drop, dropIdx) => (
+                                                  <TableRow key={dropIdx} className="h-9 border-none">
+                                                    <TableCell className="py-0 px-0 h-9 text-center text-muted-foreground font-medium w-[40px] border-0">
                                                       {drop.dropNumber}
                                                     </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={drop.value}
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(
-                                                                dropIndex,
-                                                                'reps',
-                                                                value
-                                                              )
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
+                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                      <Input
+                                                        value={drop.value}
+                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'reps', val))}
+                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                        placeholder="-"
+                                                      />
                                                     </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={
-                                                            dropsetData.weightDrops[dropIndex]?.value || ''
-                                                          }
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(
-                                                                dropIndex,
-                                                                'weight',
-                                                                value
-                                                              )
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
+                                                    <TableCell className="py-0 px-0 h-9 w-[70px]">
+                                                      <Input
+                                                        value={dropsetData.weightDrops[dropIdx]?.value || ''}
+                                                        onChange={(e) => handleNumericInput(e, (val) => handleDropsetValueChange(dropIdx, 'weight', val))}
+                                                        className="w-full h-full border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-inset rounded-none bg-transparent hover:bg-muted/50 text-center text-[11px] p-0"
+                                                        placeholder="-"
+                                                      />
                                                     </TableCell>
-                                                    <TableCell className="w-[50px] py-1 px-2">
-                                                      <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
-                                                        onClick={() => handleRemoveDrop(dropIndex)}
-                                                        aria-label={`Remove drop ${drop.dropNumber}`}
-                                                      >
-                                                        <X className="h-3.5 w-3.5" />
-                                                      </Button>
+                                                    <TableCell className="py-0 px-0 h-9 w-[30px]">
+                                                      <div className="flex items-center justify-center h-full">
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => handleRemoveDrop(dropIdx)}
+                                                          className="text-muted-foreground hover:text-destructive flex items-center justify-center h-6 w-6 rounded-md hover:bg-muted/50"
+                                                        >
+                                                          <X className="size-3" />
+                                                        </button>
+                                                      </div>
                                                     </TableCell>
                                                   </TableRow>
                                                 ))}
-                                              <TableRow className="h-8 bg-background">
-                                                <TableCell colSpan={4} className="text-center py-1 px-2">
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={handleAddDrop}
-                                                    className="mx-auto text-[11px] h-6"
-                                                  >
-                                                    Add drop
-                                                  </Button>
-                                                </TableCell>
-                                              </TableRow>
-                                            </TableBody>
-                                          </Table>
+                                              </TableBody>
+                                            </Table>
+                                          </div>
+                                          <Button variant="outline" size="sm" onClick={handleAddDrop} className="w-full h-7 text-xs">
+                                            Add drop
+                                          </Button>
                                         </div>
-                                      </div>
+                                      )}
                                     </PopoverContent>
                                   </Popover>
                                 </div>
                               </TableCell>
                               <TableCell className="py-1 px-2">
-                                <div className="flex justify-center">
-                                  <Popover
-                                    open={dropsetPopoverOpen === `${index}-weight`}
-                                    onOpenChange={(open) => {
-                                      if (open) {
-                                        handleDropsetInputClick(index, 'reps', `${index}-weight`);
-                                      } else {
-                                        setDropsetPopoverOpen(null);
-                                        setDropsetData(null);
-                                      }
-                                    }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <button
-                                        type="button"
-                                        className={cn(
-                                          'h-6 text-center cursor-pointer border border-input bg-background rounded-md px-3 text-[11px] flex items-center justify-center',
-                                          set.weight ? 'w-auto min-w-[70px]' : 'w-[70px]',
-                                          validationErrors?.[index]?.weight &&
-                                          'border-destructive focus-visible:ring-destructive'
-                                        )}
-                                      >
-                                        {set.weight || '-'}
-                                      </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                      <div className="flex flex-col gap-3 p-4">
-                                        <div className="border rounded-lg overflow-hidden">
-                                          <Table className="text-[11px] leading-tight">
-                                            <TableHeader>
-                                              <TableRow className="h-8">
-                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                  Drop
-                                                </TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                  Reps
-                                                </TableHead>
-                                                <TableHead className="text-center h-8 py-1 px-2">
-                                                  Weight
-                                                </TableHead>
-                                                <TableHead className="w-[50px] h-8 py-1 px-2 text-left"></TableHead>
-                                              </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                              {dropsetData?.setIndex === index &&
-                                                dropsetData.repsDrops.map((drop, dropIndex) => (
-                                                  <TableRow key={dropIndex} className="h-10 bg-background">
-                                                    <TableCell className="font-medium text-center py-1 px-2">
-                                                      {drop.dropNumber}
-                                                    </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={drop.value}
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(
-                                                                dropIndex,
-                                                                'reps',
-                                                                value
-                                                              )
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
-                                                    </TableCell>
-                                                    <TableCell className="py-1 px-2">
-                                                      <div className="flex justify-center">
-                                                        <Input
-                                                          type="text"
-                                                          inputMode="numeric"
-                                                          value={
-                                                            dropsetData.weightDrops[dropIndex]?.value || ''
-                                                          }
-                                                          onChange={(e) =>
-                                                            handleNumericInput(e, (value) =>
-                                                              handleDropsetValueChange(
-                                                                dropIndex,
-                                                                'weight',
-                                                                value
-                                                              )
-                                                            )
-                                                          }
-                                                          className="h-6 w-[70px] text-center text-[11px]"
-                                                          placeholder="-"
-                                                        />
-                                                      </div>
-                                                    </TableCell>
-                                                    <TableCell className="w-[50px] py-1 px-2">
-                                                      <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 text-[11px] text-muted-foreground hover:text-destructive"
-                                                        onClick={() => handleRemoveDrop(dropIndex)}
-                                                        aria-label={`Remove drop ${drop.dropNumber}`}
-                                                      >
-                                                        <X className="h-3.5 w-3.5" />
-                                                      </Button>
-                                                    </TableCell>
-                                                  </TableRow>
-                                                ))}
-                                              <TableRow className="h-8 bg-background">
-                                                <TableCell colSpan={4} className="text-center py-1 px-2">
-                                                  <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={handleAddDrop}
-                                                    className="mx-auto text-[11px] h-6"
-                                                  >
-                                                    Add drop
-                                                  </Button>
-                                                </TableCell>
-                                              </TableRow>
-                                            </TableBody>
-                                          </Table>
-                                        </div>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
+                                <div
+                                  className={cn(
+                                    'w-full h-10 flex items-center justify-center text-sm cursor-default px-2',
+                                    !set.weight ? 'text-muted-foreground' : 'text-foreground'
+                                  )}
+                                >
+                                  {set.weight || '-'}
                                 </div>
                               </TableCell>
                             </>
                           )}
+                          <TableCell className="py-0 px-0 text-center w-[100px]">
+                            <OptionalCell
+                              columnType={optionalColumnLabel}
+                              value={set.optional || ''}
+                              onChange={(value) => handleSetChange(index, 'optional', value)}
+                            />
+                          </TableCell>
+                          <TableCell className="py-0 px-0 text-center w-[100px]">
+                            <OptionalCell
+                              columnType={optionalColumnLabel2}
+                              value={set.optional2 || ''}
+                              onChange={(value) => handleSetChange(index, 'optional2', value)}
+                            />
+                          </TableCell>
                         </>
                       </>
                     ) : set.type === 'failure' &&
@@ -2269,10 +2214,10 @@ export const ExerciseCard = ({
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
+                  </TableRow >
                 ))}
-              </TableBody>
-            </Table>
+              </TableBody >
+            </Table >
           </div >
         )
       }

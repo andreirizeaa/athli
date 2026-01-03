@@ -152,25 +152,29 @@ export const mapSetDataToPayload = (
     if (set.leftReps || set.rightReps) {
       const leftRepStages = parseStages(set.leftReps);
       const rightRepStages = parseStages(set.rightReps);
-      // Weight is shared/disabled for eachSide dropsets usually, or assumed same?
-      // The UI disables weight input. So weightPrescribed might be 0 or global weight.
-      // Current UI logic: "Weight cell renders as a disabled input" -> so likely empty or single value.
-      // Let's assume weightValue applies to stages or is 0.
-      // Actually, for dropsets, we need stages.
+
+      const leftWeightStages = parseStages(set.leftWeight);
+      const rightWeightStages = parseStages(set.rightWeight);
 
       if (leftRepStages.length > 0) {
-        leftDropsetStages = leftRepStages.map((r) => ({
-          reps: { prescribed: r, completed: r },
-          weight: { prescribed: weightValue, completed: weightValue },
-          completed: false
-        }));
+        leftDropsetStages = leftRepStages.map((r, idx) => {
+          const w = leftWeightStages[idx] ?? weightValue;
+          return {
+            reps: { prescribed: r, completed: r },
+            weight: { prescribed: w, completed: w },
+            completed: false
+          };
+        });
       }
       if (rightRepStages.length > 0) {
-        rightDropsetStages = rightRepStages.map((r) => ({
-          reps: { prescribed: r, completed: r },
-          weight: { prescribed: weightValue, completed: weightValue },
-          completed: false
-        }));
+        rightDropsetStages = rightRepStages.map((r, idx) => {
+          const w = rightWeightStages[idx] ?? weightValue;
+          return {
+            reps: { prescribed: r, completed: r },
+            weight: { prescribed: w, completed: w },
+            completed: false
+          };
+        });
       }
     }
 

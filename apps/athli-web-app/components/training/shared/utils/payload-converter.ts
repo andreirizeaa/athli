@@ -116,6 +116,18 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                         rightReps = getDropsetString((set as any).rightDropset.stages, 'reps');
                     }
 
+                    let leftWeight = '';
+                    if (isDropset && 'leftDropset' in set && (set as any).leftDropset?.stages) {
+                        const w = getDropsetString((set as any).leftDropset.stages, 'weight');
+                        if (w.includes('-')) leftWeight = w;
+                    }
+
+                    let rightWeight = '';
+                    if (isDropset && 'rightDropset' in set && (set as any).rightDropset?.stages) {
+                        const w = getDropsetString((set as any).rightDropset.stages, 'weight');
+                        if (w.includes('-')) rightWeight = w;
+                    }
+
                     return {
                         setNumber: set.setNumber,
                         type: isDropset ? 'dropset' : (set.type || 'normal'),
@@ -125,7 +137,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                         distance: set.exerciseType === 'distance_duration' && 'distance' in set ? getMetricValue((set as any).distance) : '',
                         duration: set.exerciseType === 'distance_duration' && 'durationSec' in set ? getMetricValue((set as any).durationSec) : '',
                         leftReps,
-                        rightReps
+                        rightReps,
+                        leftWeight,
+                        rightWeight
                     };
                 });
 
@@ -262,6 +276,18 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             rightReps = getDropsetString((setPayload as any).rightDropset.stages, 'reps');
                         }
 
+                        let leftWeight = '';
+                        if (isDropset && 'leftDropset' in setPayload && (setPayload as any).leftDropset?.stages) {
+                            const w = getDropsetString((setPayload as any).leftDropset.stages, 'weight');
+                            if (w.includes('-')) leftWeight = w;
+                        }
+
+                        let rightWeight = '';
+                        if (isDropset && 'rightDropset' in setPayload && (setPayload as any).rightDropset?.stages) {
+                            const w = getDropsetString((setPayload as any).rightDropset.stages, 'weight');
+                            if (w.includes('-')) rightWeight = w;
+                        }
+
                         const sets: SetData[] = [{
                             setNumber: setPayload.setNumber,
                             type: isDropset ? 'dropset' : (setPayload.type || 'normal'),
@@ -271,7 +297,9 @@ export const convertPayloadToBuilderFormat = (payload: WorkoutProgramPayload): W
                             distance: setPayload.exerciseType === 'distance_duration' && 'distance' in setPayload ? getMetricValue((setPayload as any).distance) : '',
                             duration: setPayload.exerciseType === 'distance_duration' && 'durationSec' in setPayload ? getMetricValue((setPayload as any).durationSec) : '',
                             leftReps,
-                            rightReps
+                            rightReps,
+                            leftWeight,
+                            rightWeight
                         }];
 
                         section.exercises!.push({
