@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -35,6 +35,7 @@ import { useUserProfile } from '@/hooks/use-user-profile';
 const CheckInsPage = () => {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { checkIns: forms, isLoading } = useCoachCheckIns();
   const { clients } = useCoachClients();
   const { user } = useUserProfile();
@@ -47,6 +48,15 @@ const CheckInsPage = () => {
   const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState<boolean>(false);
   const [formToDelete, setFormToDelete] = useState<string | null>(null);
+
+  // Auto-open add check-in panel if ?create=true
+  useEffect(() => {
+    if (searchParams.get('create') === 'true') {
+      handleOpenAddCheckIn();
+      // Clear the query param
+      window.history.replaceState({}, '', '/forms/check-ins');
+    }
+  }, [searchParams]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['coach-check-ins'] });

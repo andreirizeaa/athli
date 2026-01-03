@@ -232,6 +232,15 @@ const ExercisesPage = () => {
   // Handle exerciseId from URL params (e.g., from search)
   useEffect(() => {
     const exerciseId = searchParams.get('exerciseId');
+    const shouldCreate = searchParams.get('create') === 'true';
+
+    if (shouldCreate) {
+      setIsCreateExerciseOpen(true);
+      // Clear the query param
+      window.history.replaceState({}, '', '/training/exercises');
+      return;
+    }
+
     if (exerciseId && exercises.length > 0) {
       // Check if exercise exists
       const exercise = exercises.find((ex) => ex.id === exerciseId);
