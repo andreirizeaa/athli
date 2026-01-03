@@ -35,13 +35,16 @@ type AssignFormSidePanelProps = {
   onOpenChange: (open: boolean) => void;
   onSave?: (formId: string, scheduleType: 'check-in' | 'one-time', scheduleData: any) => Promise<void>;
   clientId?: string;
+  coachId?: string;
 };
 
 export const AssignFormSidePanel = ({
   open,
   onOpenChange,
+
   onSave,
   clientId,
+  coachId,
 }: AssignFormSidePanelProps) => {
   const t = useTranslations();
   const [step, setStep] = useState<1 | 2>(1);
@@ -151,7 +154,7 @@ export const AssignFormSidePanel = ({
   };
 
   const handleSave = async () => {
-    if (!selectedForm || !clientId) return;
+    if (!selectedForm || !clientId || !coachId) return;
 
     setIsSaving(true);
     const scheduleData: AssignFormScheduleData = {
@@ -170,6 +173,8 @@ export const AssignFormSidePanel = ({
       await assignForm({
         formId: selectedForm.id,
         clientId: clientId,
+        coachId: coachId,
+        formType: 'check-in', // Assuming default or deriving from selectedForm
         cronExpression: cronExpression,
         scheduleData: scheduleData,
       });
@@ -347,7 +352,7 @@ export const AssignFormSidePanel = ({
                         <p className="text-xs text-muted-foreground">{form.description}</p>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        {form.questionCount} {form.questionCount === 1 ? t('athletes.profile.checkIns.questions', { count: form.questionCount }) : t('athletes.profile.checkIns.questionsPlural', { count: form.questionCount })}
+                        {form.questionCount} {form.questionCount === 1 ? t('athletes.profile.checkIns.questions', { count: form.questionCount || 0 }) : t('athletes.profile.checkIns.questionsPlural', { count: form.questionCount || 0 })}
                       </p>
                     </div>
                   </Card>
