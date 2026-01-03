@@ -1344,7 +1344,8 @@ const ClientTrainingCalendarPage = () => {
     };
 
     // Optimistic update with loading state
-    setLoadingWorkoutIds((prev) => new Set(prev).add(tempId));
+    const loadingKey = `${targetDateKey}::${tempId}`;
+    setLoadingWorkoutIds((prev) => new Set(prev).add(loadingKey));
     setWorkoutsByDate((prev) => ({
       ...prev,
       [targetDateKey]: [...(prev[targetDateKey] ?? []), tempWorkout],
@@ -1392,9 +1393,10 @@ const ClientTrainingCalendarPage = () => {
       toast.error('Failed to duplicate workout');
     } finally {
       // Remove loading state
+      const loadingKey = `${targetDateKey}::${tempId}`;
       setLoadingWorkoutIds((prev) => {
         const next = new Set(prev);
-        next.delete(tempId);
+        next.delete(loadingKey);
         return next;
       });
     }
@@ -1445,10 +1447,10 @@ const ClientTrainingCalendarPage = () => {
     if (selectedWorkouts.length === 0) return;
 
     // Add loading state to all selected workout cards
-    const workoutIds = selectedWorkouts.map((sw) => sw.workout.id);
+    const loadingKeys = selectedWorkouts.map((sw) => `${sw.dateKey}::${sw.workout.id}`);
     setLoadingWorkoutIds((prev) => {
       const next = new Set(prev);
-      workoutIds.forEach((id) => next.add(id));
+      loadingKeys.forEach((key) => next.add(key));
       return next;
     });
 
@@ -1549,10 +1551,10 @@ const ClientTrainingCalendarPage = () => {
     });
 
     // Optimistic update: add all temp workouts with loading state
-    const tempIds = duplicateTasks.map((t) => t.tempId);
+    const loadingKeys = duplicateTasks.map((t) => `${t.targetDateKey}::${t.tempId}`);
     setLoadingWorkoutIds((prev) => {
       const next = new Set(prev);
-      tempIds.forEach((id) => next.add(id));
+      loadingKeys.forEach((key) => next.add(key));
       return next;
     });
 
@@ -1606,9 +1608,10 @@ const ClientTrainingCalendarPage = () => {
           return { success: false, tempId };
         } finally {
           // Remove loading state for this workout
+          const loadingKey = `${tdk}::${tempId}`;
           setLoadingWorkoutIds((prev) => {
             const next = new Set(prev);
-            next.delete(tempId);
+            next.delete(loadingKey);
             return next;
           });
         }
@@ -2296,15 +2299,21 @@ const ClientTrainingCalendarPage = () => {
 
   const handleDeleteWorkout = async (dateKey: string, workoutId: string) => {
     // Add loading state to the workout card
-    setLoadingWorkoutIds((prev) => new Set(prev).add(workoutId));
+    const loadingKey = `${dateKey}::${workoutId}`;
+    setLoadingWorkoutIds((prev) => new Set(prev).add(loadingKey));
 
     try {
+      // Extract real workout ID if it's composite
+      const realWorkoutId = workoutId.split('__')[0];
+
+      console.log('handleDeleteWorkout - deleting:', { dateKey, workoutId, realWorkoutId });
+
       // Call API using the new deleteWorkoutByKey
       await apiDeleteWorkoutByKey({
         clientId,
         coachId: coachUser?.id || '',
         sourceDate: dateKey,
-        workoutId,
+        workoutId: realWorkoutId,
       });
 
       // Optimistically remove from local state after successful delete
@@ -2323,7 +2332,7 @@ const ClientTrainingCalendarPage = () => {
       // Remove loading state
       setLoadingWorkoutIds((prev) => {
         const next = new Set(prev);
-        next.delete(workoutId);
+        next.delete(loadingKey);
         return next;
       });
     }
@@ -2636,7 +2645,8 @@ const ClientTrainingCalendarPage = () => {
                               }
                             }}
                             className={cn(
-                              'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
+                              'group/day relative flex-1 bg-muted rounded-lg border flex flex-col min-h-0 h-full transition-colors',
+                              isToday(date) ? 'border-primary/50' : 'border-border',
                               !isCopyMode && !isMultiSelectCopyMode && !draggedWorkout && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
                               isCopyMode && !isPastedDay && 'cursor-pointer hover:border-primary/50',
                               isMultiSelectCopyMode && isFutureDay && 'cursor-pointer hover:border-primary/50',
@@ -2761,7 +2771,7 @@ const ClientTrainingCalendarPage = () => {
                                             )}
                                           >
                                             {/* Loading overlay for duplicate/delete operations */}
-                                            {loadingWorkoutIds.has(workout.id) && <CardLoaderOverlay />}
+                                            {loadingWorkoutIds.has(`${dateKey}::${workout.id}`) && <CardLoaderOverlay />}
                                             <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
                                               <div className="flex-1 min-w-0 flex items-center gap-1.5">
                                                 <div className="flex-shrink-0">
@@ -3329,11 +3339,20 @@ const ClientTrainingCalendarPage = () => {
           onDirtyChange={() => { }}
           onDelete={async () => {
             if (editingWorkout) {
+              // Extract real workout ID
+              const realWorkoutId = editingWorkout.workout.id.split('__')[0];
+
+              console.log('WorkoutBuilder.onDelete - deleting:', {
+                dateKey: editingWorkout.dateKey,
+                workoutId: editingWorkout.workout.id,
+                realWorkoutId
+              });
+
               await apiDeleteWorkoutByKey({
                 clientId,
                 coachId: coachUser?.id || '',
                 sourceDate: editingWorkout.dateKey,
-                workoutId: editingWorkout.workout.id
+                workoutId: realWorkoutId
               });
               // Optimistically remove from local state after successful delete
               setWorkoutsByDate((prev) => {

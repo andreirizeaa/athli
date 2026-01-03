@@ -89,17 +89,11 @@ export type RoundExercisePayload =
   | (ExerciseIdPair & {
     notes: string | null;
     completed: false;
-    tempo: string | null;
-    rpe: string | null;
-    heartRateZone: string | null;
     eachSide: boolean;
   } & (WeightRepsRoundIncomplete | RepsRoundIncomplete | DistanceDurationRound))
   | (ExerciseIdPair & {
     notes: string | null;
     completed: true;
-    tempo: string | null;
-    rpe: string | null;
-    heartRateZone: string | null;
     eachSide: boolean;
   } & (WeightRepsRoundComplete | RepsRoundComplete | DistanceDurationRound));
 
@@ -133,8 +127,7 @@ type BaseSet = {
   restSec: number | null;
   completed: boolean;
   skipped: boolean;
-  optional: string | null;   // Optional column 1 value (Tempo, RPE, RIR, etc.)
-  optional2: string | null;  // Optional column 2 value
+  optional: { prescribed: string | null; completed: string | null };
 };
 
 type WeightRepsSetCommon = BaseSet & {
@@ -205,12 +198,8 @@ export type RegularExercisePayload = ExerciseIdPair & {
   alternatives: string[];
   notes: string | null;
   supersetId: string | null;
-  tempo: string | null;
-  rpe: string | null;
-  heartRateZone: string | null;
   eachSide: boolean;
   optionalColumnType: string | null;
-  optionalColumnType2: string | null;
 };
 
 export type SectionType = 'regular' | 'amrap' | 'timed' | 'circuits' | 'auxiliary';
