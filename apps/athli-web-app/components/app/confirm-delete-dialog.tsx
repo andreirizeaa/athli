@@ -62,6 +62,7 @@ export const ConfirmDeleteDialog = ({
     }
 
     const handleConfirm = async () => {
+        console.log('ConfirmDeleteDialog - Deletion Confirmed');
         setIsDeleting(true);
         try {
             await onConfirm();

@@ -249,6 +249,34 @@ const ClientTrainingCalendarPage = () => {
   const [isAddExercisePanelOpen, setIsAddExercisePanelOpen] = useState<boolean>(false);
   const [preventAutoFocus, setPreventAutoFocus] = useState<boolean>(false);
 
+  // Pre-selected workout/program from library navigation via URL params
+  const [preSelectedWorkoutId, setPreSelectedWorkoutId] = useState<string | null>(null);
+  const [preSelectedProgramId, setPreSelectedProgramId] = useState<string | null>(null);
+
+  // Handle URL params for opening side panels with pre-selection
+  useEffect(() => {
+    const openModal = searchParams.get('openModal');
+    const workoutId = searchParams.get('workoutId');
+    const programId = searchParams.get('programId');
+
+    if (openModal === 'true') {
+      if (workoutId) {
+        // Pre-select workout and open panel
+        setPreSelectedWorkoutId(workoutId);
+        setSelectedDateForWorkout(new Date()); // Default to today
+        setIsAddWorkoutPanelOpen(true);
+      } else if (programId) {
+        // Pre-select program and open panel
+        setPreSelectedProgramId(programId);
+        setSelectedDateForWorkout(new Date()); // Default to today
+        setIsAddProgramPanelOpen(true);
+      }
+
+      // Clear URL params after reading to prevent re-triggering
+      router.replace(`/athletes/${clientId}/training`, { scroll: false });
+    }
+  }, [searchParams, router, clientId]);
+
   // Copy mode state
   const [isCopyMode, setIsCopyMode] = useState<boolean>(false);
   const [copiedWorkout, setCopiedWorkout] = useState<{
@@ -1316,7 +1344,8 @@ const ClientTrainingCalendarPage = () => {
     };
 
     // Optimistic update with loading state
-    setLoadingWorkoutIds((prev) => new Set(prev).add(tempId));
+    const loadingKey = `${targetDateKey}::${tempId}`;
+    setLoadingWorkoutIds((prev) => new Set(prev).add(loadingKey));
     setWorkoutsByDate((prev) => ({
       ...prev,
       [targetDateKey]: [...(prev[targetDateKey] ?? []), tempWorkout],
@@ -1336,6 +1365,7 @@ const ClientTrainingCalendarPage = () => {
       // Call API to duplicate workout
       const result = await apiDuplicateWorkout({
         clientId,
+        coachId: coachUser?.id || '',
         sourceDate: copiedWorkout.dateKey,
         sourceWorkoutId: copiedWorkout.workout.id,
         targetDate: targetDateKey,
@@ -1363,9 +1393,10 @@ const ClientTrainingCalendarPage = () => {
       toast.error('Failed to duplicate workout');
     } finally {
       // Remove loading state
+      const loadingKey = `${targetDateKey}::${tempId}`;
       setLoadingWorkoutIds((prev) => {
         const next = new Set(prev);
-        next.delete(tempId);
+        next.delete(loadingKey);
         return next;
       });
     }
@@ -1416,10 +1447,10 @@ const ClientTrainingCalendarPage = () => {
     if (selectedWorkouts.length === 0) return;
 
     // Add loading state to all selected workout cards
-    const workoutIds = selectedWorkouts.map((sw) => sw.workout.id);
+    const loadingKeys = selectedWorkouts.map((sw) => `${sw.dateKey}::${sw.workout.id}`);
     setLoadingWorkoutIds((prev) => {
       const next = new Set(prev);
-      workoutIds.forEach((id) => next.add(id));
+      loadingKeys.forEach((key) => next.add(key));
       return next;
     });
 
@@ -1433,6 +1464,7 @@ const ClientTrainingCalendarPage = () => {
         try {
           await apiDeleteWorkoutByKey({
             clientId,
+            coachId: coachUser?.id || '',
             sourceDate: dateKey,
             workoutId: workout.id,
           });
@@ -1519,10 +1551,10 @@ const ClientTrainingCalendarPage = () => {
     });
 
     // Optimistic update: add all temp workouts with loading state
-    const tempIds = duplicateTasks.map((t) => t.tempId);
+    const loadingKeys = duplicateTasks.map((t) => `${t.targetDateKey}::${t.tempId}`);
     setLoadingWorkoutIds((prev) => {
       const next = new Set(prev);
-      tempIds.forEach((id) => next.add(id));
+      loadingKeys.forEach((key) => next.add(key));
       return next;
     });
 
@@ -1546,6 +1578,7 @@ const ClientTrainingCalendarPage = () => {
         try {
           const result = await apiDuplicateWorkout({
             clientId,
+            coachId: coachUser?.id || '',
             sourceDate,
             sourceWorkoutId: workout.id,
             targetDate: tdk,
@@ -1575,9 +1608,10 @@ const ClientTrainingCalendarPage = () => {
           return { success: false, tempId };
         } finally {
           // Remove loading state for this workout
+          const loadingKey = `${tdk}::${tempId}`;
           setLoadingWorkoutIds((prev) => {
             const next = new Set(prev);
-            next.delete(tempId);
+            next.delete(loadingKey);
             return next;
           });
         }
@@ -2082,7 +2116,7 @@ const ClientTrainingCalendarPage = () => {
       // Use new endpoint to get specific instance data
       const fullWorkout = await queryClient.fetchQuery({
         queryKey: ['client-workout-instance', clientId, dateKey, realWorkoutId], // Use real ID (UUID)
-        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        queryFn: () => getClientWorkoutInstance(clientId, coachUser?.id || '', dateKey, realWorkoutId),
         staleTime: 0, // Always fetch fresh to get latest instance state
       });
 
@@ -2116,7 +2150,7 @@ const ClientTrainingCalendarPage = () => {
       // Fetch the full workout data from training_clients
       const fullWorkout = await queryClient.fetchQuery({
         queryKey: ['client-workout-instance-summary', clientId, dateKey, realWorkoutId],
-        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        queryFn: () => getClientWorkoutInstance(clientId, coachUser?.id || '', dateKey, realWorkoutId),
         staleTime: 0, // Always fetch fresh
       });
 
@@ -2143,7 +2177,7 @@ const ClientTrainingCalendarPage = () => {
       // Fetch the full workout data from training_clients
       const fullWorkout = await queryClient.fetchQuery({
         queryKey: ['client-workout-instance-progress', clientId, dateKey, realWorkoutId],
-        queryFn: () => getClientWorkoutInstance(clientId, dateKey, realWorkoutId),
+        queryFn: () => getClientWorkoutInstance(clientId, coachUser?.id || '', dateKey, realWorkoutId),
         staleTime: 0, // Always fetch fresh
       });
 
@@ -2265,14 +2299,21 @@ const ClientTrainingCalendarPage = () => {
 
   const handleDeleteWorkout = async (dateKey: string, workoutId: string) => {
     // Add loading state to the workout card
-    setLoadingWorkoutIds((prev) => new Set(prev).add(workoutId));
+    const loadingKey = `${dateKey}::${workoutId}`;
+    setLoadingWorkoutIds((prev) => new Set(prev).add(loadingKey));
 
     try {
+      // Extract real workout ID if it's composite
+      const realWorkoutId = workoutId.split('__')[0];
+
+      console.log('handleDeleteWorkout - deleting:', { dateKey, workoutId, realWorkoutId });
+
       // Call API using the new deleteWorkoutByKey
       await apiDeleteWorkoutByKey({
         clientId,
+        coachId: coachUser?.id || '',
         sourceDate: dateKey,
-        workoutId,
+        workoutId: realWorkoutId,
       });
 
       // Optimistically remove from local state after successful delete
@@ -2291,7 +2332,7 @@ const ClientTrainingCalendarPage = () => {
       // Remove loading state
       setLoadingWorkoutIds((prev) => {
         const next = new Set(prev);
-        next.delete(workoutId);
+        next.delete(loadingKey);
         return next;
       });
     }
@@ -2493,7 +2534,7 @@ const ClientTrainingCalendarPage = () => {
                     // Explicitly fetch the current view's data
                     const freshServerData = await queryClient.fetchQuery({
                       queryKey: ['client-training-calendar', clientId, startDateStr, endDateStr],
-                      queryFn: () => getTrainingCalendarRange(clientId, startDateStr, endDateStr),
+                      queryFn: () => getTrainingCalendarRange(clientId, coachUser?.id || '', startDateStr, endDateStr),
                       staleTime: 0
                     });
 
@@ -2604,7 +2645,8 @@ const ClientTrainingCalendarPage = () => {
                               }
                             }}
                             className={cn(
-                              'group/day relative flex-1 bg-muted rounded-lg border border-border flex flex-col min-h-0 h-full transition-colors',
+                              'group/day relative flex-1 bg-muted rounded-lg border flex flex-col min-h-0 h-full transition-colors',
+                              isToday(date) ? 'border-primary/50' : 'border-border',
                               !isCopyMode && !isMultiSelectCopyMode && !draggedWorkout && 'cursor-pointer hover:[&:not(:has(.workout-card:hover))]:border-primary/50',
                               isCopyMode && !isPastedDay && 'cursor-pointer hover:border-primary/50',
                               isMultiSelectCopyMode && isFutureDay && 'cursor-pointer hover:border-primary/50',
@@ -2729,7 +2771,7 @@ const ClientTrainingCalendarPage = () => {
                                             )}
                                           >
                                             {/* Loading overlay for duplicate/delete operations */}
-                                            {loadingWorkoutIds.has(workout.id) && <CardLoaderOverlay />}
+                                            {loadingWorkoutIds.has(`${dateKey}::${workout.id}`) && <CardLoaderOverlay />}
                                             <div className="px-2 py-1 border-b border-border flex items-center justify-between gap-2 bg-muted/30 group/card-header">
                                               <div className="flex-1 min-w-0 flex items-center gap-1.5">
                                                 <div className="flex-shrink-0">
@@ -3223,7 +3265,10 @@ const ClientTrainingCalendarPage = () => {
       />
       <AddWorkoutSidePanel
         open={isAddWorkoutPanelOpen}
-        onOpenChange={setIsAddWorkoutPanelOpen}
+        onOpenChange={(open) => {
+          setIsAddWorkoutPanelOpen(open);
+          if (!open) setPreSelectedWorkoutId(null); // Clear pre-selection when closed
+        }}
         onSave={handleSaveWorkout}
         onCreateNewWorkout={() => {
           setIsAddWorkoutPanelOpen(false);
@@ -3236,6 +3281,7 @@ const ClientTrainingCalendarPage = () => {
         selectedDate={selectedDateForWorkout ?? undefined}
         mode="program"
         availableWorkouts={availableWorkouts}
+        preSelectedWorkoutId={preSelectedWorkoutId}
       />
       <TrainingDataProvider>
         <CreateWorkoutSidePanel
@@ -3250,43 +3296,78 @@ const ClientTrainingCalendarPage = () => {
       </TrainingDataProvider>
       <AddProgramSidePanel
         open={isAddProgramPanelOpen}
-        onOpenChange={setIsAddProgramPanelOpen}
+        onOpenChange={(open) => {
+          setIsAddProgramPanelOpen(open);
+          if (!open) setPreSelectedProgramId(null); // Clear pre-selection when closed
+        }}
         onSave={handleSaveProgram}
         selectedDate={selectedDateForWorkout ?? undefined}
+        preSelectedProgramId={preSelectedProgramId}
       />
       <AddExerciseSidePanel
         open={isAddExercisePanelOpen}
         onOpenChange={setIsAddExercisePanelOpen}
         onSave={handleSaveExercise}
       />
-      <WorkoutBuilder
-        open={isWorkoutBuilderOpen}
-        onOpenChange={(open) => {
-          setIsWorkoutBuilderOpen(open);
-          if (!open) {
-            setEditingWorkout(null);
-            setFetchedWorkoutData(null);
-            setIsLoadingWorkoutData(false);
-          }
-        }}
-        meta={editingWorkout ? {
-          name: editingWorkout.workout.name,
-          type: editingWorkout.workout.type,
-          difficulty: editingWorkout.workout.difficulty || 'Intermediate',
-          description: editingWorkout.workout.description || '',
-        } : {
-          name: '',
-          type: '',
-          difficulty: 'Intermediate',
-          description: '',
-        }}
-        initialData={editingWorkout ? fetchedWorkoutData : undefined}
-        isLoadingInitialData={isLoadingWorkoutData}
-        saveSignal={0}
-        onSaveSuccess={handleSaveEditedWorkout}
-        onSaveError={() => { }}
-        onDirtyChange={() => { }}
-      />
+      <TrainingDataProvider>
+        <WorkoutBuilder
+          open={isWorkoutBuilderOpen}
+          onOpenChange={(open) => {
+            setIsWorkoutBuilderOpen(open);
+            if (!open) {
+              setEditingWorkout(null);
+              setFetchedWorkoutData(null);
+              setIsLoadingWorkoutData(false);
+            }
+          }}
+          meta={editingWorkout ? {
+            name: editingWorkout.workout.name,
+            type: editingWorkout.workout.type,
+            difficulty: editingWorkout.workout.difficulty || 'Intermediate',
+            description: editingWorkout.workout.description || '',
+          } : {
+            name: '',
+            type: '',
+            difficulty: 'Intermediate',
+            description: '',
+          }}
+          initialData={editingWorkout ? fetchedWorkoutData : undefined}
+          isLoadingInitialData={isLoadingWorkoutData}
+          saveSignal={0}
+          onSaveSuccess={handleSaveEditedWorkout}
+          onSaveError={() => { }}
+          onDirtyChange={() => { }}
+          onDelete={async () => {
+            if (editingWorkout) {
+              // Extract real workout ID
+              const realWorkoutId = editingWorkout.workout.id.split('__')[0];
+
+              console.log('WorkoutBuilder.onDelete - deleting:', {
+                dateKey: editingWorkout.dateKey,
+                workoutId: editingWorkout.workout.id,
+                realWorkoutId
+              });
+
+              await apiDeleteWorkoutByKey({
+                clientId,
+                coachId: coachUser?.id || '',
+                sourceDate: editingWorkout.dateKey,
+                workoutId: realWorkoutId
+              });
+              // Optimistically remove from local state after successful delete
+              setWorkoutsByDate((prev) => {
+                const updated = { ...prev };
+                if (updated[editingWorkout.dateKey]) {
+                  updated[editingWorkout.dateKey] = updated[editingWorkout.dateKey].filter((w) => w.id !== editingWorkout.workout.id);
+                }
+                return updated;
+              });
+              setIsWorkoutBuilderOpen(false);
+              setEditingWorkout(null);
+            }
+          }}
+        />
+      </TrainingDataProvider>
       <ClientTrainingDaySummary
         open={!!inProgressSummaryWorkout}
         onOpenChange={(open) => {
@@ -3297,6 +3378,7 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
         workoutName={inProgressSummaryWorkout?.workout.name || 'Workout'}
+        clientId={clientId}
         workoutData={fetchedInProgressWorkoutData}
         athlete={athlete}
         isLoading={isLoadingInProgressSummary}
@@ -3326,6 +3408,7 @@ const ClientTrainingCalendarPage = () => {
           }
         }}
         workoutName={completedSummaryWorkout?.workout.name || ''}
+        clientId={clientId}
         isLoading={isLoadingCompletedSummary}
         athlete={athlete}
         completedSummary={fetchedCompletedWorkoutData?.workout_data?.completedSummary || fetchedCompletedWorkoutData?.completedSummary || completedSummaryWorkout?.workout.completedSummary}

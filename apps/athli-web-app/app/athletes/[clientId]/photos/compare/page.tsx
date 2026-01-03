@@ -22,6 +22,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDeleteDialog } from '@/components/app/confirm-delete-dialog';
 import { useClientProfileContext } from '../../client-profile-context';
+import { useUserProfile } from '@/hooks/use-user-profile';
 
 const PhotoComparisonPage = () => {
   const t = useTranslations();
@@ -31,6 +32,8 @@ const PhotoComparisonPage = () => {
   const clientIdFromParams = params.clientId || params.contactId;
   const clientId = Array.isArray(clientIdFromParams) ? clientIdFromParams[0] : clientIdFromParams;
   const queryClient = useQueryClient();
+  const { user } = useUserProfile();
+  const coachId = user?.id;
 
   const { photos, isLoading } = useClientPhotos(clientId);
 
@@ -111,10 +114,11 @@ const PhotoComparisonPage = () => {
     angle: 'front' | 'side' | 'back',
     file: File
   ) => {
-    if (!clientId) return;
+    if (!clientId || !coachId) return;
     try {
       const data: AddClientPhotosData = {
         clientId,
+        coachId,
         recordedAt: date,
         frontFile: angle === 'front' ? file : undefined,
         sideFile: angle === 'side' ? file : undefined,
@@ -135,9 +139,9 @@ const PhotoComparisonPage = () => {
   };
 
   const confirmDelete = async () => {
-    if (!clientId || !deletePhotoId || !deleteAngle) return;
+    if (!clientId || !deletePhotoId || !deleteAngle || !coachId) return;
     try {
-      await deleteClientPhotoAngle(clientId, deletePhotoId, deleteAngle);
+      await deleteClientPhotoAngle(clientId, coachId, deletePhotoId, deleteAngle);
       await queryClient.invalidateQueries({ queryKey: ['client-photos', clientId] });
     } catch (error) {
       console.error('Failed to delete photo angle:', error);
@@ -253,7 +257,12 @@ const PhotoComparisonPage = () => {
             hasNext={!hasOnlyOneDate && leftIndex > 0}
             onDateChange={(dir) => handleDateChange('left', dir)}
             onDateSelect={(date) => handleDateSelect('left', date)}
-            onUpload={(angle, file) => leftGroup && handleUpload(leftGroup.date, angle, file)}
+            onUpload={(angle, file) => {
+              if (leftGroup) {
+                return handleUpload(leftGroup.date, angle, file);
+              }
+              return Promise.resolve();
+            }}
             onDelete={handleDelete}
             isEmpty={hasOnlyOneDate}
             angleFilter={angleFilter}
@@ -269,7 +278,12 @@ const PhotoComparisonPage = () => {
             hasNext={rightIndex > 0}
             onDateChange={(dir) => handleDateChange('right', dir)}
             onDateSelect={(date) => handleDateSelect('right', date)}
-            onUpload={(angle, file) => rightGroup && handleUpload(rightGroup.date, angle, file)}
+            onUpload={(angle, file) => {
+              if (rightGroup) {
+                return handleUpload(rightGroup.date, angle, file);
+              }
+              return Promise.resolve();
+            }}
             onDelete={handleDelete}
             angleFilter={angleFilter}
             className="h-full"

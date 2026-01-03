@@ -11,6 +11,7 @@ export const clientUpdatesController = {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
         const isCoachView = !!req.header('x-client-id');
+        const coachId = req.header('x-coach-id');
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -24,7 +25,9 @@ export const clientUpdatesController = {
             .eq('client_id', targetClientId)
             .order('update_timestamp', { ascending: false });
 
-        if (isCoachView) {
+        if (coachId) {
+            query = query.eq('coach_id', coachId);
+        } else if (isCoachView) {
             query = query.eq('coach_id', userId);
         }
 

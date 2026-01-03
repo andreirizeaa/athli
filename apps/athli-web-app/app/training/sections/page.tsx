@@ -721,6 +721,12 @@ const SectionsPage = () => {
               }
             }
           }}
+          onDelete={() => {
+            if (selectedSectionForBuilder?.id) {
+              handleDeleteSection(selectedSectionForBuilder.id);
+              setIsSectionBuilderOpen(false);
+            }
+          }}
         />
       )}
     </div>

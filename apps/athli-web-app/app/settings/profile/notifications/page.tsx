@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { type NotificationSettings } from '@/api/settings/settings-service'; // Keep for legacy types if needed, or remove? let's keep NotificationSettings or map it.
+
 // Actually, let's import NotificationEvent from service
 import { type NotificationEvent } from '@/api/settings/coach/coach-notifications-service';
 import { useGlobalData } from '@/providers/global-data-provider';

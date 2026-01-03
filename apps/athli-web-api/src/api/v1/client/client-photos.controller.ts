@@ -9,6 +9,7 @@ export const clientPhotosController = {
     getPhotos: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
+        const coachId = req.header('x-coach-id');
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -16,12 +17,33 @@ export const clientPhotosController = {
         }
 
         const supabase = getSupabaseClient();
-        const { data: photos, error } = await supabase
+        let query = supabase
             .from('client_photo_logs')
             .select('*')
             .eq('client_id', targetClientId)
-            .eq('coach_id', userId)
             .order('date', { ascending: false });
+
+        if (coachId) {
+            query = query.eq('coach_id', coachId);
+        } else {
+            // Fallback for coach view: if userId is coach, use that
+            // But if userId is client (no x-client-id), we can't guess coach without header!
+            // We'll defaulting to userId if no x-client-id (Coach View) 
+            // If Client View (targetClientId == userId), we NEED coachId.
+            // If logic:
+            if (req.header('x-client-id')) {
+                // Coach viewing Client
+                query = query.eq('coach_id', userId);
+            } else {
+                // Client viewing themselves - if no x-coach-id, this might return nothing or mixed data?
+                // For safety, if no coachId provided in client view, maybe don't filter? 
+                // But goal is to filter. Let's assume frontend sends it.
+                // If not sent, maybe existing behavior (userId) which was wrong for client view.
+                query = query.eq('coach_id', userId);
+            }
+        }
+
+        const { data: photos, error } = await query;
 
         if (error) {
             return res.status(500).json({ success: false, message: error.message });

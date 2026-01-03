@@ -10,7 +10,8 @@ export const clientNotesController = {
     getNotes: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachView = !!req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoachView = !!coachIdHeader;
 
         if (!userId) {
             unauthorized(res, { message: 'User not authenticated' });
@@ -26,7 +27,7 @@ export const clientNotesController = {
             .order('created_at', { ascending: false });
 
         if (isCoachView) {
-            query = query.eq('coach_id', userId);
+            query = query.eq('coach_id', coachIdHeader);
         }
 
         const { data: notes, error } = await query;
@@ -47,7 +48,8 @@ export const clientNotesController = {
     createNote: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachView = !!req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoachView = !!coachIdHeader;
         const { title, body, is_pinned } = req.body;
 
         if (!userId) {
@@ -73,7 +75,7 @@ export const clientNotesController = {
         };
 
         if (isCoachView) {
-            insertData.coach_id = userId;
+            insertData.coach_id = coachIdHeader;
         } else {
             // If client is creating a note, we need to find their coach_id
             // This table REQUIRE coach_id. Usually clients don't create notes for themselves in this specific table?
@@ -106,7 +108,8 @@ export const clientNotesController = {
     updateNote: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachView = !!req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoachView = !!coachIdHeader;
         const { id } = req.params;
         const updates = req.body;
         const { title, body, is_pinned } = updates;
@@ -133,7 +136,7 @@ export const clientNotesController = {
             .from('client_notes')
             .update(updateData)
             .eq('id', id)
-            .eq('coach_id', userId)
+            .eq('coach_id', coachIdHeader)
             .eq('client_id', targetClientId)
             .select()
             .single();
@@ -158,7 +161,8 @@ export const clientNotesController = {
     deleteNote: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachView = !!req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoachView = !!coachIdHeader;
         const { id } = req.params;
 
         if (!userId) {
@@ -175,7 +179,7 @@ export const clientNotesController = {
             .from('client_notes')
             .delete()
             .eq('id', id)
-            .eq('coach_id', userId)
+            .eq('coach_id', coachIdHeader)
             .eq('client_id', targetClientId);
 
         if (error) {
@@ -191,7 +195,8 @@ export const clientNotesController = {
     bulkDeleteNotes: async (req: Request, res: Response) => {
         const userId = (req as any).userId;
         const targetClientId = req.header('x-client-id') ? String(req.header('x-client-id')) : userId;
-        const isCoachView = !!req.header('x-client-id');
+        const coachIdHeader = req.header('x-coach-id');
+        const isCoachView = !!coachIdHeader;
         const { noteIds } = req.body;
 
         if (!userId) {
@@ -212,7 +217,7 @@ export const clientNotesController = {
             .from('client_notes')
             .delete()
             .in('id', noteIds)
-            .eq('coach_id', userId)
+            .eq('coach_id', coachIdHeader)
             .eq('client_id', targetClientId);
 
         if (error) {

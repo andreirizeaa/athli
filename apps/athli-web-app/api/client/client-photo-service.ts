@@ -10,6 +10,7 @@ export interface ClientPhoto {
 
 export interface AddClientPhotosData {
   clientId: string;
+  coachId: string;
   frontFile?: File | null;
   sideFile?: File | null;
   backFile?: File | null;
@@ -19,8 +20,13 @@ export interface AddClientPhotosData {
 /**
  * Service method to get all progress photos for a client
  */
-export const getClientPhotos = async (clientId: string): Promise<ClientPhoto[]> => {
-  const response = await apiFetch<{ data: { photos: any[] } }>(`/client/photos`, { headers: { 'x-client-id': clientId } });
+export const getClientPhotos = async (clientId: string, coachId: string): Promise<ClientPhoto[]> => {
+  const response = await apiFetch<{ data: { photos: any[] } }>(`/client/photos`, {
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId
+    }
+  });
 
   // Flatten the log entries into individual photo items
   const flattenedPhotos: ClientPhoto[] = [];
@@ -70,12 +76,15 @@ export const addClientPhotos = async (data: AddClientPhotosData): Promise<void> 
 
   await apiFetch(`/client/photos`, {
     method: 'POST',
-    headers: { 'x-client-id': data.clientId },
+    headers: {
+      'x-client-id': data.clientId,
+      'x-coach-id': data.coachId
+    },
     body: formData,
   });
 };
 
-export const deleteClientPhoto = async (clientId: string, photoId: string): Promise<void> => {
+export const deleteClientPhoto = async (clientId: string, coachId: string, photoId: string): Promise<void> => {
   // Extract the original log ID from the flattened ID (e.g. UUID-front -> UUID)
   // Split from the end to preserve UUID hyphens (UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
   const lastHyphenIndex = photoId.lastIndexOf('-');
@@ -83,12 +92,16 @@ export const deleteClientPhoto = async (clientId: string, photoId: string): Prom
 
   await apiFetch(`/client/photos/${logId}`, {
     method: 'DELETE',
-    headers: { 'x-client-id': clientId },
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId
+    },
   });
 };
 
 export const deleteClientPhotoAngle = async (
   clientId: string,
+  coachId: string,
   photoId: string,
   angle: 'front' | 'back' | 'side'
 ): Promise<void> => {
@@ -99,12 +112,16 @@ export const deleteClientPhotoAngle = async (
 
   await apiFetch(`/client/photos/${logId}/${angle}`, {
     method: 'DELETE',
-    headers: { 'x-client-id': clientId },
+    headers: {
+      'x-client-id': clientId,
+      'x-coach-id': coachId
+    },
   });
 };
 
 export interface CheckExistingPhotosParams {
   clientId: string;
+  coachId: string;
   date: Date;
 }
 
@@ -117,7 +134,10 @@ export interface CheckExistingPhotosResult {
 export const checkExistingPhotos = async (params: CheckExistingPhotosParams): Promise<CheckExistingPhotosResult> => {
   const response = await apiFetch<{ data: CheckExistingPhotosResult }>(`/client/photos/check`, {
     method: 'POST',
-    headers: { 'x-client-id': params.clientId },
+    headers: {
+      'x-client-id': params.clientId,
+      'x-coach-id': params.coachId
+    },
     body: JSON.stringify({
       date: params.date.toISOString().split('T')[0],
     }),
@@ -125,3 +145,4 @@ export const checkExistingPhotos = async (params: CheckExistingPhotosParams): Pr
 
   return response.data;
 };
+

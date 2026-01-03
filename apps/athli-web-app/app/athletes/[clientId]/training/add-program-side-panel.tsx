@@ -49,6 +49,7 @@ type AddProgramSidePanelProps = {
         range?: { start: number; end: number }
     ) => Promise<void>;
     selectedDate?: Date;
+    preSelectedProgramId?: string | null; // Pre-select a program when opening from library
 };
 
 export const AddProgramSidePanel = ({
@@ -56,6 +57,7 @@ export const AddProgramSidePanel = ({
     onOpenChange,
     onSave,
     selectedDate,
+    preSelectedProgramId = null
 }: AddProgramSidePanelProps) => {
     const t = useTranslations();
     const [step, setStep] = useState<number>(1);
@@ -77,8 +79,10 @@ export const AddProgramSidePanel = ({
             setDetailedProgram(null);
             setStartDay("1");
             setEndDay("1");
+            // Use pre-selected program if provided
+            setSelectedProgramId(preSelectedProgramId || null);
         }
-    }, [open, selectedDate]);
+    }, [open, selectedDate, preSelectedProgramId]);
 
     const selectedProgram = useMemo(() =>
         programs.find(p => p.id === selectedProgramId),

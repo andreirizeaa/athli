@@ -26,6 +26,7 @@ type AddPhotoSidePanelProps = {
   onOpenChange: (open: boolean) => void;
   onSave: (data: AddClientPhotosData) => Promise<void>;
   clientId: string;
+  coachId: string;
 };
 
 export const AddPhotoSidePanel = ({
@@ -33,6 +34,7 @@ export const AddPhotoSidePanel = ({
   onOpenChange,
   onSave,
   clientId,
+  coachId,
 }: AddPhotoSidePanelProps) => {
   const t = useTranslations();
   const [photos, setPhotos] = useState<{
@@ -96,7 +98,7 @@ export const AddPhotoSidePanel = ({
 
       // Only check if user has selected at least one photo
       const hasSelectedPhotos = photos.front.file || photos.side.file || photos.back.file;
-      if (!hasSelectedPhotos) {
+      if (!hasSelectedPhotos || !coachId) {
         setExistingAngles([]);
         return;
       }
@@ -105,6 +107,7 @@ export const AddPhotoSidePanel = ({
       try {
         const result = await checkExistingPhotos({
           clientId,
+          coachId,
           date: recordedAt,
         });
 
@@ -162,6 +165,7 @@ export const AddPhotoSidePanel = ({
     try {
       await onSave({
         clientId,
+        coachId,
         frontFile: photos.front.file,
         sideFile: photos.side.file,
         backFile: photos.back.file,
