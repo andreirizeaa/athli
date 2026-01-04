@@ -12,7 +12,7 @@ export const useCoachChecklist = (options?: CoachChecklistOptions) => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     enabled: options?.enabled !== false,
-    refetchOnMount: false,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 };
