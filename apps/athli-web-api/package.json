@@ -29,6 +29,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.1.1",
+    "express-basic-auth": "^1.2.1",
     "express-rate-limit": "^7.4.1",
     "google-auth-library": "^10.5.0",
     "googleapis": "^167.0.0",

@@ -18,6 +18,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_INTERCOM_SECRET_KEY: z.string().optional(),
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3001'),
+  // Swagger docs protection
+  SWAGGER_PASSWORD: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
