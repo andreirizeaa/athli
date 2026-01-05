@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import basicAuth from 'express-basic-auth';
 import compression from 'compression';
 import pinoHttp from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
@@ -142,8 +143,17 @@ export function createExpressApp() {
 
   app.use('/metrics', metricsRouter);
 
-  // Swagger documentation
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  // Swagger documentation (protected in production)
+  if (env.NODE_ENV === 'production' && env.SWAGGER_PASSWORD) {
+    const swaggerAuth = basicAuth({
+      users: { 'admin': env.SWAGGER_PASSWORD },
+      challenge: true,
+      realm: 'API Documentation',
+    });
+    app.use('/api-docs', swaggerAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  } else {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  }
 
   // API v1 base route info
   app.get('/api/v1', (_req, res) => {
