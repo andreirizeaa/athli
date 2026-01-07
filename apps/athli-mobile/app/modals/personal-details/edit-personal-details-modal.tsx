@@ -6,9 +6,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -165,22 +165,21 @@ export default function EditPersonalDetailsModal() {
             {(['Male', 'Female', 'Prefer not to say'] as const).map((gender, index) => (
               <React.Fragment key={gender}>
                 {index > 0 && <Separator />}
-                <TouchableOpacity
+                <PressableOpacity
                   style={styles.genderRow}
                   onPress={() => setClientGender(gender)}
-                  activeOpacity={0.7}
                 >
                   <Text style={[styles.genderText, { color: themeColors.text }]}>
                     {gender === 'Male'
                       ? t('personalDetails.gender.male')
                       : gender === 'Female'
-                      ? t('personalDetails.gender.female')
-                      : t('personalDetails.gender.preferNotToSay')}
+                        ? t('personalDetails.gender.female')
+                        : t('personalDetails.gender.preferNotToSay')}
                   </Text>
                   {clientGender === gender && (
                     <Check size={iconSizes.navigationChevrons} color={themeColors.primary} />
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               </React.Fragment>
             ))}
           </Card>
@@ -293,11 +292,10 @@ export default function EditPersonalDetailsModal() {
           color={themeColors.text}
         />
         <Text style={[styles.title, { color: themeColors.text }]}>{getTitle()}</Text>
-        <TouchableOpacity
+        <PressableOpacity
           onPress={handleSave}
-          disabled={isSaving}
+          enabled={!isSaving}
           style={styles.saveButton}
-          activeOpacity={0.7}
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={themeColors.primary} />
@@ -309,7 +307,7 @@ export default function EditPersonalDetailsModal() {
               color={themeColors.primary}
             />
           )}
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
 
       {field === 'age' || field === 'height' || field === 'weight' ? (

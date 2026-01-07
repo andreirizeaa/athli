@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams, usePathname } from 'expo-router';
-import { View, StyleSheet, Text, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { X, Check } from 'lucide-react-native';
@@ -48,8 +48,8 @@ export default function AddModalContent() {
   const currentRoute = getCurrentRoute();
   const title =
     currentRoute === 'clients'
-    ? t('clients.addClientModal.title')
-        : t('chats.newChat.title');
+      ? t('clients.addClientModal.title')
+      : t('chats.newChat.title');
 
   const handleClose = () => {
     // Simply go back once (used by fallback tab bar)
@@ -102,7 +102,6 @@ export default function AddModalContent() {
             size="md"
             color={canCompleteClient ? themeColors.primary : themeColors.mutedText}
             disabled={!canCompleteClient}
-            activeOpacity={canCompleteClient ? 0.7 : 1}
             style={!canCompleteClient ? { opacity: 0.5 } : undefined}
           />
         ) : (

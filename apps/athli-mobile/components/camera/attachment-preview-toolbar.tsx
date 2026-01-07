@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -30,7 +31,7 @@ export const AttachmentPreviewToolbar = ({
   const colorScheme = useColorScheme();
   const isDark = true; // Always dark mode
   const mutedSurfaceColor = themeColors.surfaceSecondary;
-  
+
   // Create translucent background color for frosted glass effect (60% opacity)
   const translucentHeaderBg = hexToRgba(themeColors.headerBackground, 0.6);
 
@@ -77,9 +78,8 @@ export const AttachmentPreviewToolbar = ({
                 </View>
               )}
 
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
-                activeOpacity={0.7}
                 onPress={onSend}
               >
                 <PlatformIcon
@@ -88,7 +88,7 @@ export const AttachmentPreviewToolbar = ({
                   size={iconSizes.navigationChevrons + 2}
                   color={themeColors.primaryForeground}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           </View>
         </KeyboardAwareToolbar>

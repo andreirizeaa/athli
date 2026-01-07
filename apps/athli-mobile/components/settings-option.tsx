@@ -1,7 +1,8 @@
 import React from 'react';
 import type { JSX } from 'react';
 import type { GestureResponderEvent } from 'react-native';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { SymbolView } from 'expo-symbols';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
@@ -44,10 +45,9 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
   };
 
   return (
-    <TouchableOpacity
+    <PressableOpacity
       style={styles.optionRow}
-      activeOpacity={0.7}
-      onPress={onPress ? handleOptionPress : undefined}
+      onPress={onPress ? () => handleOptionPress({} as GestureResponderEvent) : undefined}
     >
       <View style={styles.iconContainer}>{icon}</View>
       <View style={styles.textContainer}>
@@ -66,7 +66,7 @@ export function SettingsOption({ icon, title, subtitle, subtitleRight, onPress, 
           <PlatformIcon sf="chevron.right" IconComponent={ChevronRight} size={iconSizes.navigationChevrons} color={themeColors.mutedText} />
         </View>
       )}
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 }
 

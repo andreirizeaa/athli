@@ -1,5 +1,6 @@
 import React, { forwardRef } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { X } from 'lucide-react-native';
 
 import { typography } from '@/constants/typography';
@@ -18,55 +19,53 @@ type MessageInputBarProps = {
 
 export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
   ({ value, onChangeText, placeholder, rightIcon, onRightIconPress, style, textColor }, ref) => {
-  const { colors: themeColors } = useThemePreference();
+    const { colors: themeColors } = useThemePreference();
 
-  return (
-    <View
-      style={[
-        styles.inputContainer,
-        {
-          backgroundColor: themeColors.searchBarBackground,
-          borderColor: themeColors.border,
-        },
-        style,
-      ]}
-    >
-      <TextInput
+    return (
+      <View
+        style={[
+          styles.inputContainer,
+          {
+            backgroundColor: themeColors.searchBarBackground,
+            borderColor: themeColors.border,
+          },
+          style,
+        ]}
+      >
+        <TextInput
           ref={ref}
-        style={[styles.input, { color: textColor || themeColors.text }]}
-        placeholder={placeholder}
-        placeholderTextColor={themeColors.mutedText}
-        value={value}
-        onChangeText={onChangeText}
-        textAlignVertical="center"
-        multiline={false}
-        numberOfLines={1}
-      />
-      {value.length > 0 && (
-        <TouchableOpacity
-          style={styles.clearIcon}
-          activeOpacity={0.7}
-          onPress={() => onChangeText('')}
-        >
-          <PlatformIcon
-            sf="xmark.circle.fill"
-            IconComponent={X}
-            size={20}
-            color={themeColors.mutedText}
-          />
-        </TouchableOpacity>
-      )}
-      {rightIcon && (
-        <TouchableOpacity
-          style={styles.rightIcon}
-          activeOpacity={0.7}
-          onPress={onRightIconPress}
-        >
-          {rightIcon}
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+          style={[styles.input, { color: textColor || themeColors.text }]}
+          placeholder={placeholder}
+          placeholderTextColor={themeColors.mutedText}
+          value={value}
+          onChangeText={onChangeText}
+          textAlignVertical="center"
+          multiline={false}
+          numberOfLines={1}
+        />
+        {value.length > 0 && (
+          <PressableOpacity
+            style={styles.clearIcon}
+            onPress={() => onChangeText('')}
+          >
+            <PlatformIcon
+              sf="xmark.circle.fill"
+              IconComponent={X}
+              size={20}
+              color={themeColors.mutedText}
+            />
+          </PressableOpacity>
+        )}
+        {rightIcon && (
+          <PressableOpacity
+            style={styles.rightIcon}
+            onPress={onRightIconPress}
+          >
+            {rightIcon}
+          </PressableOpacity>
+        )}
+      </View>
+    );
   }
 );
 

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle } from 'react-native';
+import { StyleSheet, Text, ViewStyle, TextStyle } from 'react-native';
+import { PressableOpacity } from 'pressto';
 
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -16,7 +17,7 @@ export const FilledButton = ({ label, onPress, disabled = false, style, textStyl
   const { colors: themeColors } = useThemePreference();
 
   return (
-    <TouchableOpacity
+    <PressableOpacity
       style={[
         styles.button,
         {
@@ -25,9 +26,8 @@ export const FilledButton = ({ label, onPress, disabled = false, style, textStyl
         },
         style,
       ]}
-      activeOpacity={0.8}
       onPress={onPress}
-      disabled={disabled}
+      enabled={!disabled}
     >
       <Text
         style={[
@@ -40,7 +40,7 @@ export const FilledButton = ({ label, onPress, disabled = false, style, textStyl
       >
         {label}
       </Text>
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 };
 

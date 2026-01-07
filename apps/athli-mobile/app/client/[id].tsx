@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -385,9 +386,8 @@ export default function ClientDetailScreen() {
               ) : undefined
             }
           >
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.iconButton}
-              activeOpacity={0.7}
               onPress={handlePlusPress}
             >
               <PlatformIcon
@@ -396,7 +396,7 @@ export default function ClientDetailScreen() {
                 size={iconSizes.tabBarIcons - 2}
                 color={iconColor}
               />
-            </TouchableOpacity>
+            </PressableOpacity>
             <View style={styles.searchBarContainer}>
               <MessageInputBar
                 ref={inputRef}
@@ -406,9 +406,8 @@ export default function ClientDetailScreen() {
               />
             </View>
             {hasText ? (
-              <TouchableOpacity
+              <PressableOpacity
                 style={styles.sendButton}
-                activeOpacity={0.7}
               >
                 <PlatformIcon
                   sf="paperplane.circle.fill"
@@ -416,16 +415,16 @@ export default function ClientDetailScreen() {
                   size={iconSizes.tabBarIconsIOS + 2}
                   color={themeColors.primary}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
             ) : (
-              <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+              <PressableOpacity style={styles.iconButton}>
                 <PlatformIcon
                   sf="mic"
                   IconComponent={Mic}
                   size={iconSizes.tabBarIcons - 2}
                   color={iconColor}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
             )}
           </KeyboardAwareToolbar>
         </View>

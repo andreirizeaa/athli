@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
 import { RotateCcw, Square, Play, Send, Trash2 } from 'lucide-react-native';
 import { WaveformPlayer, type IWaveformRef, PlayerState } from '@/components/audio';
@@ -48,20 +49,20 @@ export const VoiceNoteRecordingContainer = ({
 
   const measureTrashButton = React.useCallback(() => {
     if (!trashButtonRef.current || !containerRef.current) return;
-    
+
     trashButtonRef.current.measureInWindow((x: number, y: number, width: number) => {
       containerRef.current?.measureInWindow((containerX: number) => {
         const trashCenterX = x - containerX + width / 2;
         const MIN_LEFT = 8; // Minimum padding from left edge
         let calculatedLeft: number;
-        
+
         if (pillWidth > 0) {
           calculatedLeft = trashCenterX - pillWidth / 2;
         } else {
           // If pill width not measured yet, use approximate position
           calculatedLeft = trashCenterX - 40; // Approximate pill width
         }
-        
+
         // Ensure timer doesn't overflow left edge
         setTimerPillLeft(Math.max(MIN_LEFT, calculatedLeft));
         setIsPositioned(true);
@@ -89,9 +90,8 @@ export const VoiceNoteRecordingContainer = ({
         {isStopped ? (
           // ✅ STOPPED PREVIEW TOP ROW
           <View style={[styles.previewPill, { backgroundColor: themeColors.surface, borderColor: themeColors.border || 'rgba(0, 0, 0, 0.1)' }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.playButton}
-              activeOpacity={0.7}
               onPress={onTogglePreviewPlay}
             >
               <PlatformIcon
@@ -100,7 +100,7 @@ export const VoiceNoteRecordingContainer = ({
                 size={20}
                 color={themeColors.text}
               />
-            </TouchableOpacity>
+            </PressableOpacity>
 
             <View style={styles.previewWaveformWrap}>
               {!!previewPath ? (
@@ -165,24 +165,22 @@ export const VoiceNoteRecordingContainer = ({
         )}
       </View>
       <View style={styles.bottomRow}>
-        <TouchableOpacity
-          ref={trashButtonRef}
-          style={styles.trashButton}
-          activeOpacity={0.7}
-          onPress={onTrashPress}
-          onLayout={handleTrashLayout}
-        >
-          <PlatformIcon
-            sf="trash"
-            IconComponent={Trash2}
-            size={iconSizes.tabBarIcons}
-            color={iconColor}
-          />
-        </TouchableOpacity>
+        <View ref={trashButtonRef} onLayout={handleTrashLayout}>
+          <PressableOpacity
+            style={styles.trashButton}
+            onPress={onTrashPress}
+          >
+            <PlatformIcon
+              sf="trash"
+              IconComponent={Trash2}
+              size={iconSizes.tabBarIcons}
+              color={iconColor}
+            />
+          </PressableOpacity>
+        </View>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.centerButton}
-          activeOpacity={0.7}
           onPress={onStopToggle}
         >
           <PlatformIcon
@@ -191,11 +189,10 @@ export const VoiceNoteRecordingContainer = ({
             size={iconSizes.tabBarIcons}
             color="#EF4444"
           />
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.sendButton, { backgroundColor: themeColors.primary }]}
-          activeOpacity={0.7}
           onPress={async () => {
             const pathFromStop = !isStopped ? await onStopToggle() : undefined;
             onSendPress(typeof pathFromStop === 'string' ? pathFromStop : undefined);
@@ -207,7 +204,7 @@ export const VoiceNoteRecordingContainer = ({
             size={iconSizes.tabBarIcons}
             color={themeColors.primaryForeground}
           />
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </View>
   );

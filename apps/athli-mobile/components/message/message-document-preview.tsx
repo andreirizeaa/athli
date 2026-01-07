@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { StyleSheet, Text, View, Image } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useColorScheme } from '@/contexts/useColorScheme';
 import { type ThemeColors } from '@/constants/theme';
 import { type DocumentAttachment } from '@/services/chats-service';
@@ -19,7 +20,7 @@ type MessageDocumentPreviewProps = {
 
 const formatFileSize = (bytes?: number): string => {
   if (!bytes) return '';
-  
+
   if (bytes < 1024) {
     return `${bytes} B`;
   } else if (bytes < 1024 * 1024) {
@@ -54,15 +55,10 @@ export const MessageDocumentPreview = ({
   const fileSize = formatFileSize(document.size);
 
   return (
-    <TouchableOpacity
+    <PressableOpacity
       style={[styles.container, { backgroundColor: adjustedBackground }]}
-      activeOpacity={0.7}
       onPress={onPress}
       onLongPress={onLongPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      accessibilityLabel={`Open document ${document.name}`}
-      accessibilityRole="button"
     >
       <View style={styles.contentRow}>
         <Image
@@ -81,7 +77,7 @@ export const MessageDocumentPreview = ({
           ) : null}
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 };
 

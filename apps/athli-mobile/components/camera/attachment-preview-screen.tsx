@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, Keyboard, TouchableWithoutFeedback, Image as RNImage, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, Pressable, View, Keyboard, TouchableWithoutFeedback, Image as RNImage, ScrollView, Dimensions } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { X, Plus, Trash2 } from 'lucide-react-native';
@@ -87,12 +88,11 @@ export const AttachmentPreviewScreen = ({
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <StatusBar hidden />
         <RNImage source={{ uri: selectedImage.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-        
+
         {/* Keyboard overlay - blocks image interaction when keyboard is open */}
         {isKeyboardVisible && (
-          <TouchableOpacity
+          <Pressable
             style={styles.keyboardOverlay}
-            activeOpacity={1}
             onPress={Keyboard.dismiss}
           />
         )}
@@ -130,7 +130,7 @@ export const AttachmentPreviewScreen = ({
             {images.map((image: ImageData) => {
               const isSelected = selectedImageId === image.id;
               return (
-                <TouchableOpacity
+                <PressableOpacity
                   key={image.id}
                   style={[
                     styles.thumbnailContainer,
@@ -139,33 +139,31 @@ export const AttachmentPreviewScreen = ({
                       borderWidth: 2,
                     },
                   ]}
-                  activeOpacity={0.7}
                   onPress={() => handleImagePress(image.id)}
                 >
-                <RNImage source={{ uri: image.uri }} style={styles.thumbnail} resizeMode="cover" />
-                {isSelected && (
-                  <View style={styles.trashOverlay}>
-                    <TouchableOpacity
-                      style={styles.trashButton}
-                      activeOpacity={0.7}
-                      onPress={(e) => handleDeletePress(image.id, e)}
-                    >
-                      <PlatformIcon
-                        sf="trash"
-                        IconComponent={Trash2}
-                        size={18}
-                        color="#FFFFFF"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
+                  <RNImage source={{ uri: image.uri }} style={styles.thumbnail} resizeMode="cover" />
+                  {isSelected && (
+                    <View style={styles.trashOverlay}>
+                      <PressableOpacity
+                        style={styles.trashButton}
+                        onPress={(e) => handleDeletePress(image.id, e)}
+                      >
+                        <PlatformIcon
+                          sf="trash"
+                          IconComponent={Trash2}
+                          size={18}
+                          color="#FFFFFF"
+                        />
+                      </PressableOpacity>
+                    </View>
+                  )}
+                </PressableOpacity>
+              );
             })}
           </ScrollView>
           {onAddMore && (
             <View style={styles.addButtonWrapper}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[
                   styles.addButtonContainer,
                   {
@@ -173,11 +171,10 @@ export const AttachmentPreviewScreen = ({
                     borderWidth: 2,
                   },
                 ]}
-                activeOpacity={0.7}
                 onPress={onAddMore}
               >
                 <PlatformIcon sf="photo.badge.plus" IconComponent={Plus} size={24} color={inactiveBorderColor} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           )}
         </View>

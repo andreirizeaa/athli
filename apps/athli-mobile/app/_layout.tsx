@@ -7,6 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-reanimated';
+import { PressablesConfig } from 'pressto';
+import * as Haptics from 'expo-haptics';
 
 import {
   ThemePreferenceProvider,
@@ -20,6 +22,7 @@ import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
 import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -56,21 +59,32 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <KeyboardProvider>
-        <ThemePreferenceProvider>
-          <TranslationProvider>
-            <AppViewProvider>
-                <ModalCallbacksProvider>
-                  <TrainingOverlayProvider>
-                    <RootLayoutNav />
-                  </TrainingOverlayProvider>
-                </ModalCallbacksProvider>
-            </AppViewProvider>
-          </TranslationProvider>
-        </ThemePreferenceProvider>
-      </KeyboardProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <PressablesConfig
+          animationType="spring"
+          animationConfig={{ damping: 30, stiffness: 200 }}
+          config={{ minScale: 0.96, activeOpacity: 0.7 }}
+          globalHandlers={{
+            onPress: () => Haptics.selectionAsync(),
+          }}
+        >
+          <KeyboardProvider>
+            <ThemePreferenceProvider>
+              <TranslationProvider>
+                <AppViewProvider>
+                  <ModalCallbacksProvider>
+                    <TrainingOverlayProvider>
+                      <RootLayoutNav />
+                    </TrainingOverlayProvider>
+                  </ModalCallbacksProvider>
+                </AppViewProvider>
+              </TranslationProvider>
+            </ThemePreferenceProvider>
+          </KeyboardProvider>
+        </PressablesConfig>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -93,21 +107,21 @@ function RootLayoutNav() {
   const navigationTheme =
     colorScheme === 'dark'
       ? {
-          ...DarkTheme,
-          colors: {
-            ...DarkTheme.colors,
-            primary: primaryColor,
-            background: 'transparent',
-          },
-        }
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          primary: primaryColor,
+          background: 'transparent',
+        },
+      }
       : {
-          ...DefaultTheme,
-          colors: {
-            ...DefaultTheme.colors,
-            primary: primaryColor,
-            background: 'transparent',
-          },
-        };
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          primary: primaryColor,
+          background: 'transparent',
+        },
+      };
 
   return (
     <ThemeProvider value={navigationTheme}>

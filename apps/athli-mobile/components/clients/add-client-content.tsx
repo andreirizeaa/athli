@@ -1,5 +1,6 @@
 import React, { useState, useImperativeHandle, forwardRef } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import { PressableOpacity } from 'pressto';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -134,7 +135,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
           {(['online', 'in-person', 'hybrid'] as const).map((type) => {
             const isSelected = category === type;
             return (
-              <TouchableOpacity
+              <PressableOpacity
                 key={type}
                 style={[
                   styles.buttonGroupButton,
@@ -144,7 +145,6 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
                   ],
                 ]}
                 onPress={() => setCategory(type)}
-                activeOpacity={0.7}
               >
                 <Text
                   style={[
@@ -155,7 +155,7 @@ export const AddClientContent = forwardRef<AddClientContentRef, AddClientContent
                 >
                   {getCategoryLabel(type)}
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             );
           })}
         </View>
