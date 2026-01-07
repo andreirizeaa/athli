@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { X, Camera, Video, FileText } from 'lucide-react-native';
 import { useColorScheme } from '@/contexts/useColorScheme';
 
@@ -41,14 +42,14 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
   const { colors: themeColors } = useThemePreference();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  
+
   // Create translucent background color - more transparent since parent already has BlurView
   const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
 
   const senderName = message.isSent ? 'You' : clientName;
   // Use primary color for sender, and a distinct purple/violet for recipient
-  const stripColor = message.isSent 
-    ? themeColors.primary 
+  const stripColor = message.isSent
+    ? themeColors.primary
     : isDark ? '#A78BFA' : '#8B5CF6'; // Purple/violet that contrasts well with blue
 
   // Determine preview content based on message type
@@ -139,12 +140,9 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
           </Text>
           {renderPreviewContent()}
         </View>
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.closeButton}
-          activeOpacity={0.7}
           onPress={onClose}
-          accessibilityLabel="Close reply"
-          accessibilityRole="button"
         >
           <PlatformIcon
             sf="xmark.circle"
@@ -152,7 +150,7 @@ export const ReplyPreviewRow = ({ message, clientName, onClose, backgroundColor 
             size={iconSizes.tabBarIcons - 2}
             color={themeColors.text}
           />
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </View>
   );

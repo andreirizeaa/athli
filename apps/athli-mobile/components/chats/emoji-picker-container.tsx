@@ -1,5 +1,6 @@
 import React from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type EmojiType } from 'rn-emoji-keyboard';
 
@@ -103,13 +104,13 @@ export const EmojiPickerContainer = ({
   // Client messages (!isSent): align to left edge
   const emojiPickerLeft = alignRight
     ? Math.min(
-        anchorPosition.x + anchorPosition.width - emojiPickerWidth,
-        screenWidth - emojiPickerWidth - edgeGap
-      )
+      anchorPosition.x + anchorPosition.width - emojiPickerWidth,
+      screenWidth - emojiPickerWidth - edgeGap
+    )
     : Math.max(
-        anchorPosition.x,
-        edgeGap
-      );
+      anchorPosition.x,
+      edgeGap
+    );
 
   const handleOverlayPress = () => {
     onClose();
@@ -145,7 +146,7 @@ export const EmojiPickerContainer = ({
         {emojiShortcuts.map((emoji, index) => {
           const isCurrentReaction = emoji === currentReaction;
           return (
-            <TouchableOpacity
+            <PressableOpacity
               key={index}
               style={[
                 styles.emojiShortcut,
@@ -154,18 +155,17 @@ export const EmojiPickerContainer = ({
                   borderRadius: 18,
                 },
               ]}
-              activeOpacity={0.7}
               onPress={() => {
                 handleEmojiShortcutPress(emoji);
               }}
             >
               <Text style={styles.emojiShortcutText}>{emoji}</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           );
         })}
       </ScrollView>
       {/* Plus button inside container, aligned to right */}
-      <TouchableOpacity
+      <PressableOpacity
         style={[
           styles.plusButton,
           {
@@ -174,7 +174,6 @@ export const EmojiPickerContainer = ({
             backgroundColor: fullThemeColors.surface,
           },
         ]}
-        activeOpacity={0.7}
         onPress={handlePlusPress}
       >
         {/* Blur/fade effect on the left edge of plus button */}
@@ -190,7 +189,7 @@ export const EmojiPickerContainer = ({
           size={18}
           color={fullThemeColors.text}
         />
-      </TouchableOpacity>
+      </PressableOpacity>
     </View>
   );
 

@@ -1,5 +1,6 @@
 import React, { RefObject } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { BlurView } from 'expo-blur';
 import { Camera, Mic, Plus, Send, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -91,21 +92,21 @@ export const ChatToolbar = ({
   // Determine participant info from either chat or coach
   const participantInfo: ParticipantInfo = chat
     ? {
-        chatId: chat.id,
-        participantId: chat.clientId,
-        participantName: chat.clientName,
-      }
+      chatId: chat.id,
+      participantId: chat.clientId,
+      participantName: chat.clientName,
+    }
     : coach
       ? {
-          chatId: 'inbox',
-          participantId: coach.id,
-          participantName: coach.name,
-        }
+        chatId: 'inbox',
+        participantId: coach.id,
+        participantName: coach.name,
+      }
       : {
-          chatId: '',
-          participantId: '',
-          participantName: '',
-        };
+        chatId: '',
+        participantId: '',
+        participantName: '',
+      };
 
   return (
     <View style={styles.toolbarContainer} pointerEvents="box-none">
@@ -157,33 +158,32 @@ export const ChatToolbar = ({
             />
           ) : (
             <>
-              <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={onPlusPress}>
+              <PressableOpacity style={styles.iconButton} onPress={onPlusPress}>
                 <PlatformIcon
                   sf={showAttachmentPicker ? "xmark.circle" : "plus"}
                   IconComponent={showAttachmentPicker ? X : Plus}
                   size={iconSizes.tabBarIcons - 2}
                   color={iconColor}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
 
               <View style={styles.searchBarContainer}>
                 <MessageInputBar ref={inputRef as React.RefObject<TextInput>} value={searchQuery} onChangeText={setSearchQuery} placeholder="" />
               </View>
 
               {hasText ? (
-                <TouchableOpacity style={styles.sendButton} activeOpacity={0.7} onPress={onSendMessage}>
+                <PressableOpacity style={styles.sendButton} onPress={onSendMessage}>
                   <PlatformIcon
                     sf="paperplane.circle.fill"
                     IconComponent={Send}
                     size={iconSizes.tabBarIconsIOS + 2}
                     color={themeColors.primary}
                   />
-                </TouchableOpacity>
+                </PressableOpacity>
               ) : (
                 <>
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={styles.iconButton}
-                    activeOpacity={0.7}
                     onPress={() =>
                       router.push({
                         pathname: '/camera/camera',
@@ -202,16 +202,16 @@ export const ChatToolbar = ({
                       size={iconSizes.tabBarIcons - 2}
                       color={iconColor}
                     />
-                  </TouchableOpacity>
+                  </PressableOpacity>
 
-                  <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} onPress={onMicrophonePress}>
+                  <PressableOpacity style={styles.iconButton} onPress={onMicrophonePress}>
                     <PlatformIcon
                       sf="mic"
                       IconComponent={Mic}
                       size={iconSizes.tabBarIcons - 2}
                       color={iconColor}
                     />
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 </>
               )}
             </>

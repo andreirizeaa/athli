@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Platform } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
@@ -62,13 +63,12 @@ export default function NumberSelectModal() {
 
             return (
               <View key={num}>
-                <TouchableOpacity
+                <PressableOpacity
                   style={styles.optionRow}
-                  activeOpacity={0.7}
                   onPress={() => handleSelect(num)}
                 >
                   <Text style={[styles.optionText, { color: themeColors.text }]}>{label}</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
                 {!isLast && <Separator />}
               </View>
             );

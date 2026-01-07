@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Check } from 'lucide-react-native';
@@ -122,9 +123,8 @@ export default function ArchivedChatsScreen() {
       ]}
     >
       <View style={[styles.header, { backgroundColor: themeColors.pageBackground }]}>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.backButton, { backgroundColor: themeColors.iconButton }]}
-          activeOpacity={0.7}
           onPress={handleBackPress}
         >
           <PlatformIcon
@@ -143,13 +143,12 @@ export default function ArchivedChatsScreen() {
               {unreadCountNum > 99 ? '99+' : unreadCountNum}
             </Text>
           )}
-        </TouchableOpacity>
+        </PressableOpacity>
         <Text style={[styles.headerTitle, { color: themeColors.text }]} pointerEvents="none">
           {t('chats.archived.title')}
         </Text>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.editButton, { backgroundColor: themeColors.iconButton }]}
-          activeOpacity={0.7}
           onPress={handleEditPress}
         >
           {isEditMode ? (
@@ -164,7 +163,7 @@ export default function ArchivedChatsScreen() {
               {t('chats.archived.edit')}
             </Text>
           )}
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
 
       <View style={styles.dividerContainer}>
@@ -223,24 +222,22 @@ export default function ArchivedChatsScreen() {
             },
           ]}
         >
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-            activeOpacity={0.7}
             onPress={handleUnarchivePress}
           >
             <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
               {t('chats.archived.unarchive')}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableOpacity>
+          <PressableOpacity
             style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-            activeOpacity={0.7}
             onPress={handleDeletePress}
           >
             <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
               {t('chats.archived.delete')}
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       )}
     </View>

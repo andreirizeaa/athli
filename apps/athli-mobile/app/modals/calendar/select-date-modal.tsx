@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View, ScrollView, Platform } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -149,7 +150,7 @@ type CalendarMonthItemProps = {
 const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, themeColors }: CalendarMonthItemProps) => {
   const { width } = useWindowDimensions();
   const grid = useMemo(() => generateCalendarGrid(monthData.year, monthData.month), [monthData.year, monthData.month]);
-  
+
   // Calculate cell width: (container width - horizontal padding - gaps) / 7
   // Container padding: 20 * 2 = 40, gaps between 7 cells: 4 * 6 = 24
   const containerPadding = 40;
@@ -186,35 +187,34 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
               {row.map((cell, cellIndex) => {
                 const index = rowIndex * 7 + cellIndex;
                 const isLastInRow = cellIndex === 6;
-                
+
                 if (cell.day === null) {
                   return (
-                    <View 
-                      key={index} 
+                    <View
+                      key={index}
                       style={[
-                        styles.dayCell, 
+                        styles.dayCell,
                         { width: cellWidth, height: cellWidth },
                         isLastInRow && styles.dayCellLastInRow,
-                      ]} 
+                      ]}
                     />
                   );
                 }
 
                 const isSelected = isDateSelected(cell.date);
                 const isTodayDate = isToday(cell.date);
-                
+
                 // Calculate smaller circle size (70% of cell width)
                 const circleSize = Math.floor(cellWidth * 0.7);
-                
+
                 return (
-                  <TouchableOpacity
+                  <PressableOpacity
                     key={index}
                     style={[
                       styles.dayCell,
                       { width: cellWidth, height: cellWidth },
                       isLastInRow && styles.dayCellLastInRow,
                     ]}
-                    activeOpacity={0.7}
                     onPress={() => {
                       if (cell.date) {
                         const normalizedDate = normalizeDate(cell.date);
@@ -225,8 +225,8 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
                     <View
                       style={[
                         styles.circleIndicator,
-                        { 
-                          width: circleSize, 
+                        {
+                          width: circleSize,
                           height: circleSize,
                           borderRadius: circleSize / 2,
                         },
@@ -246,7 +246,7 @@ const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, t
                         {cell.day}
                       </Text>
                     </View>
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 );
               })}
             </View>
@@ -284,7 +284,7 @@ export default function SelectDateModal() {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    
+
     const index = months.findIndex(
       (month) => month.year === currentYear && month.month === currentMonth
     );
@@ -295,9 +295,9 @@ export default function SelectDateModal() {
     if (listRef.current && currentMonthIndex >= 0) {
       // Scroll to current month after modal opens
       setTimeout(() => {
-        listRef.current?.scrollToIndex({ 
-          index: currentMonthIndex, 
-          animated: true 
+        listRef.current?.scrollToIndex({
+          index: currentMonthIndex,
+          animated: true
         });
       }, 300);
     }
@@ -341,13 +341,12 @@ export default function SelectDateModal() {
           size="md"
         />
         <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">{t('calendar.selectDate')}</Text>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
-          activeOpacity={0.7}
           onPress={handleSelectToday}
         >
           <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
 
       {/* Content */}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
+import { PressableScale } from 'pressto';
 import type { LucideIcon } from 'lucide-react-native';
 import { PlatformIcon } from './platform-icon';
 import { iconSizes } from '@/constants/typography';
@@ -17,7 +18,7 @@ type IconConfig = {
   IconComponent: LucideIcon;
 };
 
-type IconButtonProps = {
+export type IconButtonProps = {
   icon: IconConfig;
   onPress: () => void;
   size?: IconButtonSize;
@@ -26,7 +27,6 @@ type IconButtonProps = {
   variant?: IconButtonVariant;
   disabled?: boolean;
   style?: ViewStyle;
-  activeOpacity?: number;
 };
 
 type DoubleIconButtonProps = {
@@ -40,7 +40,6 @@ type DoubleIconButtonProps = {
   variant?: IconButtonVariant;
   disabled?: boolean;
   style?: ViewStyle;
-  activeOpacity?: number;
 };
 
 const SIZE_CONFIG: Record<IconButtonSize, { buttonSize: number; iconSize: number }> = {
@@ -67,7 +66,6 @@ export const IconButton = ({
   variant = 'default',
   disabled = false,
   style,
-  activeOpacity = 0.7,
 }: IconButtonProps) => {
   const { preset, colors: themeColors } = useThemePreference();
   const { buttonSize, iconSize } = SIZE_CONFIG[size];
@@ -81,7 +79,7 @@ export const IconButton = ({
     color ?? (variant === 'primary' ? resolvedColors.primaryForeground : resolvedColors.text);
 
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[
         styles.button,
         {
@@ -89,15 +87,15 @@ export const IconButton = ({
           height: buttonSize,
           borderRadius,
           backgroundColor: background,
+          opacity: disabled ? 0.5 : 1,
         },
         style,
       ]}
-      activeOpacity={activeOpacity}
       onPress={onPress}
-      disabled={disabled}
+      enabled={!disabled}
     >
       <PlatformIcon sf={icon.sf} IconComponent={icon.IconComponent} size={iconSize} color={iconColor} />
-    </TouchableOpacity>
+    </PressableScale>
   );
 };
 
@@ -114,7 +112,6 @@ export const DoubleIconButton = React.forwardRef<View, DoubleIconButtonProps>(
       variant = 'default',
       disabled = false,
       style,
-      activeOpacity = 0.7,
     },
     ref
   ) => {
@@ -143,34 +140,34 @@ export const DoubleIconButton = React.forwardRef<View, DoubleIconButtonProps>(
           style,
         ]}
       >
-        <TouchableOpacity
+        <PressableScale
           style={[
             styles.nestedButton,
             {
               width: buttonSize,
               height: buttonSize,
+              opacity: disabled ? 0.5 : 1,
             },
           ]}
-          activeOpacity={activeOpacity}
           onPress={onLeftPress}
-          disabled={disabled}
+          enabled={!disabled}
         >
           <PlatformIcon sf={leftIcon.sf} IconComponent={leftIcon.IconComponent} size={iconSize} color={iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity
+        </PressableScale>
+        <PressableScale
           style={[
             styles.nestedButton,
             {
               width: buttonSize,
               height: buttonSize,
+              opacity: disabled ? 0.5 : 1,
             },
           ]}
-          activeOpacity={activeOpacity}
           onPress={onRightPress}
-          disabled={disabled}
+          enabled={!disabled}
         >
           <PlatformIcon sf={rightIcon.sf} IconComponent={rightIcon.IconComponent} size={iconSize} color={iconColor} />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     );
   }

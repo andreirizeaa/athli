@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -139,8 +140,7 @@ export default function ClientsScreen() {
               const isLastItem = index === filteredClients.length - 1;
               return (
                 <View key={client.id}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
+                  <PressableOpacity
                     onPress={() => handleClientPress(client.id)}
                     style={styles.rowWrapper}
                   >
@@ -183,7 +183,7 @@ export default function ClientsScreen() {
                         </Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
+                  </PressableOpacity>
                   <View style={styles.separatorContainer}>
                     <View
                       style={[

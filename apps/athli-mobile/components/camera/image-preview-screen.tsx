@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { StyleSheet, Pressable, View, Text, ScrollView, Image as RNImage, Alert, Keyboard, TouchableWithoutFeedback, Dimensions } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Download, Plus, Trash2, MoreHorizontal, CheckCircle2, Check } from 'lucide-react-native';
@@ -123,12 +124,12 @@ const ImagePreviewScreen = () => {
           const errorMessage = shareError?.message || shareError?.toString() || '';
           const errorCode = shareError?.code || '';
           console.log('Share error:', errorMessage, errorCode);
-          
-          if (errorMessage.includes('User did not share') || 
-              errorMessage.includes('User cancelled') || 
-              errorMessage.includes('cancelled') ||
-              errorCode === 'E_USER_CANCELLED' ||
-              errorCode === 'User did not share') {
+
+          if (errorMessage.includes('User did not share') ||
+            errorMessage.includes('User cancelled') ||
+            errorMessage.includes('cancelled') ||
+            errorCode === 'E_USER_CANCELLED' ||
+            errorCode === 'User did not share') {
             // User cancelled - silently ignore
             return;
           }
@@ -214,11 +215,11 @@ const ImagePreviewScreen = () => {
           // Check if user cancelled
           const errorMessage = shareError?.message || shareError?.toString() || '';
           const errorCode = shareError?.code || '';
-          if (errorMessage.includes('User did not share') || 
-              errorMessage.includes('User cancelled') || 
-              errorMessage.includes('cancelled') ||
-              errorCode === 'E_USER_CANCELLED' ||
-              errorCode === 'User did not share') {
+          if (errorMessage.includes('User did not share') ||
+            errorMessage.includes('User cancelled') ||
+            errorMessage.includes('cancelled') ||
+            errorCode === 'E_USER_CANCELLED' ||
+            errorCode === 'User did not share') {
             // User cancelled - silently ignore
             return;
           }
@@ -408,15 +409,14 @@ const ImagePreviewScreen = () => {
           <View style={styles.topHeader}>
             <View style={styles.leftHeaderContainer}>
               {isSelectionMode ? (
-                <TouchableOpacity
+                <PressableOpacity
                   style={[styles.selectAllButton, { backgroundColor: mutedSurfaceColor }]}
-                  activeOpacity={0.7}
                   onPress={handleSelectAll}
                 >
                   <Text style={[styles.selectAllText, { color: iconColor }]} numberOfLines={1}>
                     {selectedImageIds.size === images.length ? 'Deselect all' : 'Select all'}
                   </Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               ) : (
                 <IconButton
                   icon={{ sf: 'xmark', IconComponent: X }}
@@ -449,9 +449,8 @@ const ImagePreviewScreen = () => {
                 <>
                   {/* Download button - only show when there's a single image */}
                   {images.length === 1 && (
-                    <TouchableOpacity
+                    <PressableOpacity
                       style={[styles.downloadButton, { backgroundColor: themeColors.iconButton }]}
-                      activeOpacity={0.7}
                       onPress={handleDownload}
                     >
                       <PlatformIcon
@@ -460,14 +459,13 @@ const ImagePreviewScreen = () => {
                         size={iconSizes.navigationChevrons}
                         color={iconColor}
                       />
-                    </TouchableOpacity>
+                    </PressableOpacity>
                   )}
                   {/* Ellipsis button - show when there are multiple images */}
                   {images.length > 1 && (
                     <View ref={ellipsisButtonRef}>
-                      <TouchableOpacity
+                      <PressableOpacity
                         style={[styles.downloadButton, { backgroundColor: themeColors.iconButton }]}
-                        activeOpacity={0.7}
                         onPress={handleEllipsisPress}
                       >
                         <PlatformIcon
@@ -476,7 +474,7 @@ const ImagePreviewScreen = () => {
                           size={iconSizes.navigationChevrons}
                           color={iconColor}
                         />
-                      </TouchableOpacity>
+                      </PressableOpacity>
                     </View>
                   )}
                 </>
@@ -498,13 +496,12 @@ const ImagePreviewScreen = () => {
           {images.map((image, index) => {
             const isSelected = selectedImageIds.has(image.id);
             return (
-              <TouchableOpacity
+              <Pressable
                 key={image.id || index}
                 style={[
                   styles.imageContainer,
                   isSelected && styles.imageContainerSelected,
                 ]}
-                activeOpacity={0.9}
                 onPress={() => isSelectionMode && handleImageSelect(image.id)}
               >
                 {isSelectionMode && (
@@ -539,7 +536,7 @@ const ImagePreviewScreen = () => {
                   ]}
                   resizeMode="contain"
                 />
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </ScrollView>
@@ -571,9 +568,8 @@ const ImagePreviewScreen = () => {
 
             {/* Trash button (only for sent messages within 1 hour) */}
             {canShowDelete && (
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.closeButton, { backgroundColor: themeColors.iconButton }]}
-                activeOpacity={0.7}
                 onPress={handleDeleteSelected}
               >
                 <PlatformIcon
@@ -582,7 +578,7 @@ const ImagePreviewScreen = () => {
                   size={iconSizes.navigationChevrons}
                   color={iconColor}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
             )}
           </View>
         )}
@@ -645,7 +641,7 @@ const ImagePreviewScreen = () => {
             {images.map((image) => {
               const isSelected = selectedImageId === image.id;
               return (
-                <TouchableOpacity
+                <PressableOpacity
                   key={image.id}
                   style={[
                     styles.thumbnailContainer,
@@ -654,15 +650,13 @@ const ImagePreviewScreen = () => {
                       borderWidth: 2,
                     },
                   ]}
-                  activeOpacity={0.7}
                   onPress={() => handleImagePress(image.id)}
                 >
                   <RNImage source={{ uri: image.uri }} style={styles.thumbnail} resizeMode="cover" />
                   {isSelected && (
                     <View style={styles.trashOverlay}>
-                      <TouchableOpacity
+                      <PressableOpacity
                         style={styles.trashButton}
-                        activeOpacity={0.7}
                         onPress={(e) => handleDeletePress(image.id, e)}
                       >
                         <PlatformIcon
@@ -671,15 +665,15 @@ const ImagePreviewScreen = () => {
                           size={18}
                           color="#FFFFFF"
                         />
-                      </TouchableOpacity>
+                      </PressableOpacity>
                     </View>
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               );
             })}
           </ScrollView>
           <View style={styles.addButtonWrapper}>
-            <TouchableOpacity
+            <PressableOpacity
               style={[
                 styles.addButtonContainer,
                 {
@@ -687,11 +681,10 @@ const ImagePreviewScreen = () => {
                   borderWidth: 2,
                 },
               ]}
-              activeOpacity={0.7}
               onPress={handleAddMore}
             >
               <PlatformIcon sf="photo.badge.plus" IconComponent={Plus} size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </View>
 

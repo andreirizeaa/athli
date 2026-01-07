@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert, ScrollView } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View, Alert, ScrollView } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Check, Image, Video, FileText } from 'lucide-react-native';
@@ -58,7 +59,7 @@ export default function AddFileModal() {
       };
 
       await addFile(fileData);
-      
+
       if (router.canGoBack()) {
         router.back();
       }
@@ -184,7 +185,6 @@ export default function AddFileModal() {
           size="md"
           color={canSave ? themeColors.primary : themeColors.mutedText}
           disabled={!canSave}
-          activeOpacity={canSave ? 0.7 : 1}
           style={!canSave ? { opacity: 0.5 } : undefined}
         />
       </View>
@@ -213,7 +213,7 @@ export default function AddFileModal() {
               {t('files.addFile.attachFile')}
             </Text>
             <View style={styles.attachmentButtons}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[
                   styles.attachmentButton,
                   selectedFile?.type === 'photo' && [
@@ -221,7 +221,6 @@ export default function AddFileModal() {
                     { borderColor: themeColors.primary },
                   ],
                 ]}
-                activeOpacity={0.7}
                 onPress={handlePhotoPress}
               >
                 <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
@@ -235,9 +234,9 @@ export default function AddFileModal() {
                 <Text style={[styles.attachmentLabel, { color: themeColors.text }]}>
                   {t('files.addFile.photos')}
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
 
-              <TouchableOpacity
+              <PressableOpacity
                 style={[
                   styles.attachmentButton,
                   selectedFile?.type === 'video' && [
@@ -245,7 +244,6 @@ export default function AddFileModal() {
                     { borderColor: themeColors.primary },
                   ],
                 ]}
-                activeOpacity={0.7}
                 onPress={handleVideoPress}
               >
                 <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
@@ -259,9 +257,9 @@ export default function AddFileModal() {
                 <Text style={[styles.attachmentLabel, { color: themeColors.text }]}>
                   {t('files.addFile.videos')}
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
 
-              <TouchableOpacity
+              <PressableOpacity
                 style={[
                   styles.attachmentButton,
                   selectedFile?.type === 'pdf' && [
@@ -269,7 +267,6 @@ export default function AddFileModal() {
                     { borderColor: themeColors.primary },
                   ],
                 ]}
-                activeOpacity={0.7}
                 onPress={handleDocumentPress}
               >
                 <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
@@ -283,7 +280,7 @@ export default function AddFileModal() {
                 <Text style={[styles.attachmentLabel, { color: themeColors.text }]}>
                   {t('files.addFile.pdfs')}
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           </View>
           {/* Selected file display */}

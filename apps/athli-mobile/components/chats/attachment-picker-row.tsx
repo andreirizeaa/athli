@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View, Alert } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Image, Video, FileText, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
@@ -33,7 +34,7 @@ export const AttachmentPickerRow = ({
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const slideAnim = useRef(new Animated.Value(0)).current;
-  
+
   // Create translucent background color - more transparent since parent already has BlurView
   const translucentBg = backgroundColor ? hexToRgba(backgroundColor, 0.3) : hexToRgba(themeColors.headerBackground, 0.3);
 
@@ -146,7 +147,7 @@ export const AttachmentPickerRow = ({
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        
+
         // Navigate to document preview screen
         router.push({
           pathname: '/chats/document-preview',
@@ -194,83 +195,71 @@ export const AttachmentPickerRow = ({
       <View
         style={[styles.container, { backgroundColor: translucentBg }]}
       >
-      <View style={styles.content}>
-        <TouchableOpacity
-          style={styles.attachmentButton}
-          activeOpacity={0.7}
-          onPress={handlePhotoPress}
-          accessibilityLabel="Select photo"
-          accessibilityRole="button"
-        >
-          <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
-            <PlatformIcon
-              sf="photo.on.rectangle"
-              IconComponent={Image}
-              size={iconSizes.tabBarIcons}
-              color={themeColors.primary}
-            />
-          </View>
-          <Text style={[styles.subtitle, { color: themeColors.text }]}>Photos</Text>
-        </TouchableOpacity>
-
-        {!hideVideos && (
-          <TouchableOpacity
+        <View style={styles.content}>
+          <PressableOpacity
             style={styles.attachmentButton}
-            activeOpacity={0.7}
-            onPress={handleVideoPress}
-            accessibilityLabel="Select video"
-            accessibilityRole="button"
+            onPress={handlePhotoPress}
           >
             <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
               <PlatformIcon
-                sf="video"
-                IconComponent={Video}
+                sf="photo.on.rectangle"
+                IconComponent={Image}
                 size={iconSizes.tabBarIcons}
                 color={themeColors.primary}
               />
             </View>
-            <Text style={[styles.subtitle, { color: themeColors.text }]}>Videos</Text>
-          </TouchableOpacity>
-        )}
+            <Text style={[styles.subtitle, { color: themeColors.text }]}>Photos</Text>
+          </PressableOpacity>
 
-        <TouchableOpacity
-          style={styles.attachmentButton}
-          activeOpacity={0.7}
-          onPress={handleDocumentPress}
-          accessibilityLabel="Select PDF"
-          accessibilityRole="button"
-        >
-          <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
-            <PlatformIcon
-              sf="doc.text"
-              IconComponent={FileText}
-              size={iconSizes.tabBarIcons}
-              color={themeColors.primary}
-            />
-          </View>
-          <Text style={[styles.subtitle, { color: themeColors.text }]}>PDFs</Text>
-        </TouchableOpacity>
+          {!hideVideos && (
+            <PressableOpacity
+              style={styles.attachmentButton}
+              onPress={handleVideoPress}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+                <PlatformIcon
+                  sf="video"
+                  IconComponent={Video}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.primary}
+                />
+              </View>
+              <Text style={[styles.subtitle, { color: themeColors.text }]}>Videos</Text>
+            </PressableOpacity>
+          )}
 
-        {!hideCamera && (
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.attachmentButton}
-            activeOpacity={0.7}
-            onPress={handleCameraPress}
-            accessibilityLabel="Take photo"
-            accessibilityRole="button"
+            onPress={handleDocumentPress}
           >
             <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
               <PlatformIcon
-                sf="camera"
-                IconComponent={Camera}
+                sf="doc.text"
+                IconComponent={FileText}
                 size={iconSizes.tabBarIcons}
                 color={themeColors.primary}
               />
             </View>
-            <Text style={[styles.subtitle, { color: themeColors.text }]}>Camera</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+            <Text style={[styles.subtitle, { color: themeColors.text }]}>PDFs</Text>
+          </PressableOpacity>
+
+          {!hideCamera && (
+            <PressableOpacity
+              style={styles.attachmentButton}
+              onPress={handleCameraPress}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: themeColors.primary + '20' }]}>
+                <PlatformIcon
+                  sf="camera"
+                  IconComponent={Camera}
+                  size={iconSizes.tabBarIcons}
+                  color={themeColors.primary}
+                />
+              </View>
+              <Text style={[styles.subtitle, { color: themeColors.text }]}>Camera</Text>
+            </PressableOpacity>
+          )}
+        </View>
       </View>
     </Animated.View>
   );

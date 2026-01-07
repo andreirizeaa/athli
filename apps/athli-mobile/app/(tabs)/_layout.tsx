@@ -2,7 +2,8 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, Pressable, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -37,7 +38,7 @@ type NativeTabsCoachViewProps = {
 // Pure layout component with overlay button
 const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
   const insets = useSafeAreaInsets();
-  
+
   return (
     <View style={{ flex: 1 }}>
       <NativeTabs tintColor={primaryColor}>
@@ -67,11 +68,10 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
           <Label>Add</Label>
         </NativeTabs.Trigger>
       </NativeTabs>
-      
+
       {/* Transparent overlay button on top of search pill */}
-      <TouchableOpacity
+      <Pressable
         style={[styles.addButtonOverlay, { bottom: insets.bottom - 16 }]}
-        activeOpacity={1}
         onPress={onAddPress}
       />
     </View>
@@ -137,7 +137,7 @@ export default function TabLayout() {
     if (!isInitialMount.current) {
       return;
     }
-    
+
     isInitialMount.current = false;
     previousAppView.current = appView;
     // On initial mount with NativeTabs, ensure we navigate to the correct initial route
@@ -347,17 +347,16 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       );
 
     return (
-      <TouchableOpacity
+      <PressableOpacity
         key={tab.name}
         style={[styles.tab, { width: tab.width }]}
         onPress={() => handleTabPress(tab.name)}
-        activeOpacity={0.7}
       >
         {iconNode}
         <Text style={[styles.tabText, { color }]} numberOfLines={1}>
           {tab.label}
         </Text>
-      </TouchableOpacity>
+      </PressableOpacity>
     );
   };
 
@@ -466,36 +465,35 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
         <View style={styles.tabsContainer}>
           {appView === 'coach' ? (
             <>
-          {/* Section 1: First tab */}
-          <View style={styles.tabSection}>
-            {renderTab(tabs[0])}
-          </View>
+              {/* Section 1: First tab */}
+              <View style={styles.tabSection}>
+                {renderTab(tabs[0])}
+              </View>
 
-          {/* Section 2: Second tab */}
-          <View style={styles.tabSection}>
-            {renderTab(tabs[1])}
-          </View>
+              {/* Section 2: Second tab */}
+              <View style={styles.tabSection}>
+                {renderTab(tabs[1])}
+              </View>
 
-          {/* Section 3: Add button */}
-          <View style={[styles.tabSection, styles.addButtonSection]}>
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: primaryColor }]}
-              onPress={handleAddPress}
-              activeOpacity={0.7}
-            >
-              {renderAddIcon()}
-            </TouchableOpacity>
-          </View>
+              {/* Section 3: Add button */}
+              <View style={[styles.tabSection, styles.addButtonSection]}>
+                <PressableOpacity
+                  style={[styles.addButton, { backgroundColor: primaryColor }]}
+                  onPress={handleAddPress}
+                >
+                  {renderAddIcon()}
+                </PressableOpacity>
+              </View>
 
-          {/* Section 4: Third tab */}
-          <View style={styles.tabSection}>
-            {renderTab(tabs[2])}
-          </View>
+              {/* Section 4: Third tab */}
+              <View style={styles.tabSection}>
+                {renderTab(tabs[2])}
+              </View>
 
-          {/* Section 5: Fourth tab */}
-          <View style={styles.tabSection}>
-            {renderTab(tabs[3])}
-          </View>
+              {/* Section 5: Fourth tab */}
+              <View style={styles.tabSection}>
+                {renderTab(tabs[3])}
+              </View>
             </>
           ) : (
             <>

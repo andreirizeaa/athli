@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Platform, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Platform, ScrollView, Dimensions } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X, ChevronRight, ChevronDown } from 'lucide-react-native';
@@ -45,7 +46,7 @@ export default function RepeatOptionsModal() {
   const screenWidth = Dimensions.get('window').width;
   // Content has 16px padding on each side, card has 16px padding, so full width needs to account for both
   const fullWidth = screenWidth - 32; // Subtract content padding (16px each side)
-  
+
   // Initialize with existing repeat data if available
   const existingRepeatData = getRepeatData();
   const [selectedOption, setSelectedOption] = useState<RepeatOption>(
@@ -64,8 +65,8 @@ export default function RepeatOptionsModal() {
     existingRepeatData?.weekdays ? new Set(existingRepeatData.weekdays as Weekday[]) : new Set()
   );
   const [selectedMonthDays, setSelectedMonthDays] = useState<Set<number>>(
-    existingRepeatData?.type === 'monthly' && existingRepeatData?.monthDays 
-      ? new Set(existingRepeatData.monthDays) 
+    existingRepeatData?.type === 'monthly' && existingRepeatData?.monthDays
+      ? new Set(existingRepeatData.monthDays)
       : new Set([new Date().getDate()]) // Default to today's date
   );
   const [everyDropdownVisible, setEveryDropdownVisible] = useState(false);
@@ -208,7 +209,7 @@ export default function RepeatOptionsModal() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Button Group */}
         <View style={[styles.buttonGroup, { backgroundColor: themeColors.surfaceSecondary }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[
               styles.buttonGroupButton,
               selectedOption === 'weekly' && [
@@ -217,7 +218,6 @@ export default function RepeatOptionsModal() {
               ],
             ]}
             onPress={() => setSelectedOption('weekly')}
-            activeOpacity={0.7}
           >
             <Text
               style={[
@@ -228,8 +228,8 @@ export default function RepeatOptionsModal() {
             >
               {t('calendar.newSession.repeatOptions.weekly')}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableOpacity>
+          <PressableOpacity
             style={[
               styles.buttonGroupButton,
               selectedOption === 'monthly' && [
@@ -238,7 +238,6 @@ export default function RepeatOptionsModal() {
               ],
             ]}
             onPress={() => setSelectedOption('monthly')}
-            activeOpacity={0.7}
           >
             <Text
               style={[
@@ -249,56 +248,56 @@ export default function RepeatOptionsModal() {
             >
               {t('calendar.newSession.repeatOptions.monthly')}
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         {selectedOption === 'weekly' && (
           <>
             {/* Every/For Card */}
             <Card style={styles.optionsCard}>
-              <TouchableOpacity
-                ref={everyRowRef}
-                style={styles.optionRow}
-                activeOpacity={0.7}
-                onPress={handleOpenEveryDropdown}
-              >
-                <Text style={[styles.optionLabel, { color: themeColors.text }]}>
-                  {t('calendar.newSession.repeatOptions.every')}
-                </Text>
-                <View style={styles.optionValueContainer}>
-                  <Text style={[styles.optionValue, { color: themeColors.primary }]}>
-                    {formatEveryText(everyWeeks)}
+              <View ref={everyRowRef}>
+                <PressableOpacity
+                  style={styles.optionRow}
+                  onPress={handleOpenEveryDropdown}
+                >
+                  <Text style={[styles.optionLabel, { color: themeColors.text }]}>
+                    {t('calendar.newSession.repeatOptions.every')}
                   </Text>
-                  <PlatformIcon
-                    sf="chevron.down"
-                    IconComponent={ChevronDown}
-                    size={iconSizes.smallIcons}
-                    color={themeColors.mutedText}
-                  />
-                </View>
-              </TouchableOpacity>
+                  <View style={styles.optionValueContainer}>
+                    <Text style={[styles.optionValue, { color: themeColors.primary }]}>
+                      {formatEveryText(everyWeeks)}
+                    </Text>
+                    <PlatformIcon
+                      sf="chevron.down"
+                      IconComponent={ChevronDown}
+                      size={iconSizes.smallIcons}
+                      color={themeColors.mutedText}
+                    />
+                  </View>
+                </PressableOpacity>
+              </View>
               <Separator />
-              <TouchableOpacity
-                ref={forRowRef}
-                style={styles.optionRow}
-                activeOpacity={0.7}
-                onPress={handleOpenForDropdown}
-              >
-                <Text style={[styles.optionLabel, { color: themeColors.text }]}>
-                  {t('calendar.newSession.repeatOptions.for')}
-                </Text>
-                <View style={styles.optionValueContainer}>
-                  <Text style={[styles.optionValue, { color: themeColors.primary }]}>
-                    {formatForText(forWeeks)}
+              <View ref={forRowRef}>
+                <PressableOpacity
+                  style={styles.optionRow}
+                  onPress={handleOpenForDropdown}
+                >
+                  <Text style={[styles.optionLabel, { color: themeColors.text }]}>
+                    {t('calendar.newSession.repeatOptions.for')}
                   </Text>
-                  <PlatformIcon
-                    sf="chevron.down"
-                    IconComponent={ChevronDown}
-                    size={iconSizes.smallIcons}
-                    color={themeColors.mutedText}
-                  />
-                </View>
-              </TouchableOpacity>
+                  <View style={styles.optionValueContainer}>
+                    <Text style={[styles.optionValue, { color: themeColors.primary }]}>
+                      {formatForText(forWeeks)}
+                    </Text>
+                    <PlatformIcon
+                      sf="chevron.down"
+                      IconComponent={ChevronDown}
+                      size={iconSizes.smallIcons}
+                      color={themeColors.mutedText}
+                    />
+                  </View>
+                </PressableOpacity>
+              </View>
             </Card>
 
             <DropdownMenu
@@ -332,9 +331,8 @@ export default function RepeatOptionsModal() {
 
                 return (
                   <View key={weekday.key}>
-                    <TouchableOpacity
+                    <PressableOpacity
                       style={styles.weekdayRow}
-                      activeOpacity={0.7}
                       onPress={() => toggleWeekday(weekday.key)}
                     >
                       <Text style={[styles.weekdayLabel, { color: themeColors.text }]}>
@@ -348,7 +346,7 @@ export default function RepeatOptionsModal() {
                           color={themeColors.primary}
                         />
                       )}
-                    </TouchableOpacity>
+                    </PressableOpacity>
                     {!isLast && <Separator />}
                   </View>
                 );
@@ -361,27 +359,27 @@ export default function RepeatOptionsModal() {
           <>
             {/* Every Month Card */}
             <Card style={styles.optionsCard}>
-              <TouchableOpacity
-                ref={everyMonthRowRef}
-                style={styles.optionRow}
-                activeOpacity={0.7}
-                onPress={handleOpenEveryMonthDropdown}
-              >
-                <Text style={[styles.optionLabel, { color: themeColors.text }]}>
-                  {t('calendar.newSession.repeatOptions.every')}
-                </Text>
-                <View style={styles.optionValueContainer}>
-                  <Text style={[styles.optionValue, { color: themeColors.primary }]}>
-                    {formatEveryMonthText(everyMonths)}
+              <View ref={everyMonthRowRef}>
+                <PressableOpacity
+                  style={styles.optionRow}
+                  onPress={handleOpenEveryMonthDropdown}
+                >
+                  <Text style={[styles.optionLabel, { color: themeColors.text }]}>
+                    {t('calendar.newSession.repeatOptions.every')}
                   </Text>
-                  <PlatformIcon
-                    sf="chevron.down"
-                    IconComponent={ChevronDown}
-                    size={iconSizes.smallIcons}
-                    color={themeColors.mutedText}
-                  />
-                </View>
-              </TouchableOpacity>
+                  <View style={styles.optionValueContainer}>
+                    <Text style={[styles.optionValue, { color: themeColors.primary }]}>
+                      {formatEveryMonthText(everyMonths)}
+                    </Text>
+                    <PlatformIcon
+                      sf="chevron.down"
+                      IconComponent={ChevronDown}
+                      size={iconSizes.smallIcons}
+                      color={themeColors.mutedText}
+                    />
+                  </View>
+                </PressableOpacity>
+              </View>
             </Card>
 
             <DropdownMenu
@@ -395,10 +393,9 @@ export default function RepeatOptionsModal() {
 
             {/* Each Card */}
             <Card style={styles.eachCard}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={styles.eachRow}
-                activeOpacity={0.7}
-                disabled
+                enabled={false}
               >
                 <Text style={[styles.eachLabel, { color: themeColors.text }]}>
                   {t('calendar.newSession.repeatOptions.each')}
@@ -409,40 +406,39 @@ export default function RepeatOptionsModal() {
                   size={iconSizes.modalIcons}
                   color={themeColors.primary}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
               <View style={[styles.fullWidthDivider, { backgroundColor: themeColors.border, marginLeft: -16, marginRight: -16, width: fullWidth }]} />
               <View style={[styles.calendarGrid, { marginLeft: -16, marginRight: -16, width: fullWidth }]}>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                    const isSelected = selectedMonthDays.has(day);
-                    const isLastInRow = day % 7 === 0;
-                    const isLastRow = day > 28;
-                    return (
-                      <TouchableOpacity
-                        key={day}
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                  const isSelected = selectedMonthDays.has(day);
+                  const isLastInRow = day % 7 === 0;
+                  const isLastRow = day > 28;
+                  return (
+                    <PressableOpacity
+                      key={day}
+                      style={[
+                        styles.calendarDay,
+                        {
+                          borderRightWidth: isLastInRow ? 0 : 1,
+                          borderBottomWidth: isLastRow ? 0 : 1,
+                          borderColor: themeColors.border,
+                        },
+                        isSelected && { backgroundColor: themeColors.primary },
+                      ]}
+                      onPress={() => toggleMonthDay(day)}
+                    >
+                      <Text
                         style={[
-                          styles.calendarDay,
-                          {
-                            borderRightWidth: isLastInRow ? 0 : 1,
-                            borderBottomWidth: isLastRow ? 0 : 1,
-                            borderColor: themeColors.border,
-                          },
-                          isSelected && { backgroundColor: themeColors.primary },
+                          styles.calendarDayText,
+                          { color: isSelected ? themeColors.primaryForeground : themeColors.text },
                         ]}
-                        activeOpacity={0.7}
-                        onPress={() => toggleMonthDay(day)}
                       >
-                        <Text
-                          style={[
-                            styles.calendarDayText,
-                            { color: isSelected ? themeColors.primaryForeground : themeColors.text },
-                          ]}
-                        >
-                          {day}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                        {day}
+                      </Text>
+                    </PressableOpacity>
+                  );
+                })}
+              </View>
             </Card>
           </>
         )}

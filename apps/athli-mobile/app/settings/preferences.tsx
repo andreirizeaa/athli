@@ -4,9 +4,9 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -121,7 +121,7 @@ export default function PreferencesScreen() {
           </Text>
 
           <View style={[styles.buttonGroup, { backgroundColor: mutedSurfaceColor }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={[
                 styles.buttonGroupButton,
                 preference === 'light' && [
@@ -130,7 +130,6 @@ export default function PreferencesScreen() {
                 ],
               ]}
               onPress={() => handleAppearanceModePress('light')}
-              activeOpacity={0.7}
             >
               <Text
                 style={[
@@ -141,8 +140,8 @@ export default function PreferencesScreen() {
               >
                 {t('preferences.light')}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableOpacity>
+            <PressableOpacity
               style={[
                 styles.buttonGroupButton,
                 preference === 'dark' && [
@@ -151,7 +150,6 @@ export default function PreferencesScreen() {
                 ],
               ]}
               onPress={() => handleAppearanceModePress('dark')}
-              activeOpacity={0.7}
             >
               <Text
                 style={[
@@ -162,8 +160,8 @@ export default function PreferencesScreen() {
               >
                 {t('preferences.dark')}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableOpacity>
+            <PressableOpacity
               style={[
                 styles.buttonGroupButton,
                 preference === 'system' && [
@@ -172,7 +170,6 @@ export default function PreferencesScreen() {
                 ],
               ]}
               onPress={() => handleAppearanceModePress('system')}
-              activeOpacity={0.7}
             >
               <Text
                 style={[
@@ -183,7 +180,7 @@ export default function PreferencesScreen() {
               >
                 {t('preferences.system')}
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </Card>
 

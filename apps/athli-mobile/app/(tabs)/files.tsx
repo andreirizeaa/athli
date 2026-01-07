@@ -15,26 +15,14 @@ export default function FilesScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
-      <View
-        style={[
-          styles.safeArea,
-          {
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-          },
-        ]}
-      >
-        <View style={styles.container}>
-          <Text style={[styles.title, { color: themeColors.text }]}>{t('files.title')}</Text>
-          <View style={styles.searchContainer}>
-            <SearchBar
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={t('files.searchPlaceholder')}
-            />
-          </View>
+      <View style={[styles.container, { paddingTop: insets.top + 16, paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }]}>
+        <Text style={[styles.title, { color: themeColors.text }]}>{t('files.title')}</Text>
+        <View style={styles.searchContainer}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder={t('files.searchPlaceholder')}
+          />
         </View>
       </View>
     </View>
@@ -45,13 +33,8 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
   },
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
   title: {
     ...typography.h1,
