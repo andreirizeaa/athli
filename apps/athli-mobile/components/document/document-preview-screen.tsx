@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, Alert, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, View, Text, Keyboard, TouchableWithoutFeedback, Image as RNImage, Alert, ActivityIndicator, Platform } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, Download } from 'lucide-react-native';
@@ -48,12 +49,12 @@ const DocumentPreviewScreen = () => {
 
   const isImage = mimeType.startsWith('image/');
   const isPdf = mimeType === 'application/pdf' || documentName.toLowerCase().endsWith('.pdf');
-  const isOfficeDoc = mimeType.includes('wordprocessingml') || 
-                      mimeType.includes('spreadsheetml') || 
-                      mimeType.includes('presentationml') ||
-                      mimeType.includes('msword') ||
-                      mimeType.includes('ms-excel') ||
-                      mimeType.includes('ms-powerpoint');
+  const isOfficeDoc = mimeType.includes('wordprocessingml') ||
+    mimeType.includes('spreadsheetml') ||
+    mimeType.includes('presentationml') ||
+    mimeType.includes('msword') ||
+    mimeType.includes('ms-excel') ||
+    mimeType.includes('ms-powerpoint');
 
   // Load PDF: For iOS, write base64 to cache directory and use file:// URI
   // For Android, can use base64 data URI directly
@@ -95,7 +96,7 @@ const DocumentPreviewScreen = () => {
           }
 
           const pdfPath = `${cacheDir}preview_${Date.now()}.pdf`;
-          
+
           // Copy the file to cache directory
           await FileSystem.copyAsync({
             from: documentUri,
@@ -194,7 +195,7 @@ const DocumentPreviewScreen = () => {
       // Pass document message data back to chat screen via navigation params
       // The chat screen will add it to the message list
       router.back();
-      
+
       // Set params to add document message to list and close attachment picker
       setTimeout(() => {
         if (params.chatId) {
@@ -217,7 +218,7 @@ const DocumentPreviewScreen = () => {
 
   const renderDocumentContent = () => {
     const headerHeight = insets.top + 60; // Safe area + header content
-    
+
     if (isImage) {
       return (
         <RNImage
@@ -251,9 +252,8 @@ const DocumentPreviewScreen = () => {
             {!fromMessage && 'You can download the document to view it in another app'}
           </Text>
           {fromMessage && (
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.downloadButtonLarge, { backgroundColor: themeColors.primary }]}
-              activeOpacity={0.7}
               onPress={handleDownload}
             >
               <PlatformIcon
@@ -265,7 +265,7 @@ const DocumentPreviewScreen = () => {
               <Text style={[styles.downloadButtonText, { color: themeColors.primaryForeground }]}>
                 Download PDF
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           )}
         </View>
       );
@@ -369,9 +369,8 @@ const DocumentPreviewScreen = () => {
 
             {/* Download button (only when opened from message) or spacer */}
             {fromMessage ? (
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.downloadButton, { backgroundColor: mutedSurfaceColor }]}
-                activeOpacity={0.7}
                 onPress={handleDownload}
               >
                 <PlatformIcon
@@ -380,7 +379,7 @@ const DocumentPreviewScreen = () => {
                   size={iconSizes.navigationChevrons + 2}
                   color={iconColor}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
             ) : (
               <View style={styles.spacer} />
             )}

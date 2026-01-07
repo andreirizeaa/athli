@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ellipsis } from 'lucide-react-native';
 import { Image as ExpoImage } from 'expo-image';

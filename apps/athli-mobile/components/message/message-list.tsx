@@ -11,9 +11,9 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
@@ -421,11 +421,11 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
         onPanResponderRelease: () => {
           const distance = currentDistanceRef.current;
           const shouldReply = distance >= THRESHOLD && onReply;
-          
+
           if (shouldReply) {
             onReply(message);
           }
-          
+
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
@@ -433,7 +433,7 @@ const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
             friction: 8,
             velocity: 0,
           }).start();
-          
+
           currentDistanceRef.current = 0;
           if (isDraggingRef.current) {
             isDraggingRef.current = false;
@@ -608,7 +608,7 @@ export const MessageList = ({
     // In an inverted list, we need to scroll to the correct position
     // The list is inverted, so index 0 is at the bottom (newest)
     // We want to scroll to make the message visible
-    
+
     // Use scrollToIndex with the actual index (inverted list handles it)
     setTimeout(() => {
       listRef.current?.scrollToIndex({
@@ -783,12 +783,12 @@ export const MessageList = ({
       setSelectedMessage(message);
       setIsLastInSenderRun(isLast);
       setAnchorPosition({ x, y, width, height });
-      
+
       // Measure the container to get its position for blur
       containerRef.current?.measureInWindow((containerX, containerY, containerWidth, containerHeight) => {
         setContainerPosition({ x: containerX, y: containerY, width: containerWidth, height: containerHeight });
       });
-      
+
       setDropdownVisible(true);
     });
   };
@@ -1065,12 +1065,11 @@ export const MessageList = ({
 
           {/* Reactions container */}
           {(item.senderReaction || item.recipientReaction) && (
-            <TouchableOpacity
+            <PressableOpacity
               style={[
                 styles.reactionsContainer,
                 item.isSent ? styles.reactionsContainerRight : styles.reactionsContainerLeft,
               ]}
-              activeOpacity={0.7}
               onPress={() => handleReactionPress(item)}
             >
               <View
@@ -1103,7 +1102,7 @@ export const MessageList = ({
                   </>
                 )}
               </View>
-            </TouchableOpacity>
+            </PressableOpacity>
           )}
         </View>
       </View>

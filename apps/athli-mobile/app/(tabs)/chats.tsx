@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive, Trash2 } from 'lucide-react-native';
@@ -189,42 +190,42 @@ export default function ChatsScreen() {
 
   const dropdownOptions: DropdownMenuOption[] = isEditMode
     ? [
-        {
-          label: t('chats.archive'),
-          icon: {
-            sf: 'archivebox',
-            IconComponent: Archive,
-          },
-          onPress: handleArchivePress,
+      {
+        label: t('chats.archive'),
+        icon: {
+          sf: 'archivebox',
+          IconComponent: Archive,
         },
-        {
-          label: t('chats.delete'),
-          icon: {
-            sf: 'trash',
-            IconComponent: Trash2,
-          },
-          onPress: handleDeletePress,
+        onPress: handleArchivePress,
+      },
+      {
+        label: t('chats.delete'),
+        icon: {
+          sf: 'trash',
+          IconComponent: Trash2,
         },
-      ]
+        onPress: handleDeletePress,
+      },
+    ]
     : [
-        {
-          label: t('chats.selectChats'),
-          icon: {
-            sf: 'checkmark.circle',
-            IconComponent: CheckCircle2,
-          },
-          onPress: handleSelectChatsPress,
+      {
+        label: t('chats.selectChats'),
+        icon: {
+          sf: 'checkmark.circle',
+          IconComponent: CheckCircle2,
         },
-        {
-          label: t('chats.readAll'),
-          icon: {
-            sf: 'checkmark.message',
-            IconComponent: MailCheck,
-          },
-          onPress: handleReadAllPress,
+        onPress: handleSelectChatsPress,
+      },
+      {
+        label: t('chats.readAll'),
+        icon: {
+          sf: 'checkmark.message',
+          IconComponent: MailCheck,
         },
-        
-      ];
+        onPress: handleReadAllPress,
+      },
+
+    ];
 
   return (
     <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
@@ -244,44 +245,43 @@ export default function ChatsScreen() {
           contentContainerStyle={styles.scrollViewContent}
           showsVerticalScrollIndicator={false}
         >
-        <View style={styles.container}>
-          <View style={styles.headerSection}>
-            <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
-              <View
-                ref={ellipsisButtonRef}
-                collapsable={false}
-                style={styles.headerButtonContainer}
-              >
-                <TouchableOpacity
-                  style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
-                  activeOpacity={0.7}
-                  onPress={handleEllipsisPress}
+          <View style={styles.container}>
+            <View style={styles.headerSection}>
+              <View style={styles.titleRow}>
+                <Text style={[styles.title, { color: themeColors.text }]}>{t('chats.title')}</Text>
+                <View
+                  ref={ellipsisButtonRef}
+                  collapsable={false}
+                  style={styles.headerButtonContainer}
                 >
-                  {isEditMode ? (
-                    <PlatformIcon
-                      sf="checkmark"
-                      IconComponent={Check}
-                      size={iconSizes.navigationChevrons}
-                      color={themeColors.text}
-                    />
-                  ) : (
-                    <PlatformIcon
-                      sf="ellipsis"
-                      IconComponent={Ellipsis}
-                      size={iconSizes.navigationChevrons}
-                      color={themeColors.text}
-                    />
-                  )}
-                </TouchableOpacity>
+                  <PressableOpacity
+                    style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
+                    onPress={handleEllipsisPress}
+                  >
+                    {isEditMode ? (
+                      <PlatformIcon
+                        sf="checkmark"
+                        IconComponent={Check}
+                        size={iconSizes.navigationChevrons}
+                        color={themeColors.text}
+                      />
+                    ) : (
+                      <PlatformIcon
+                        sf="ellipsis"
+                        IconComponent={Ellipsis}
+                        size={iconSizes.navigationChevrons}
+                        color={themeColors.text}
+                      />
+                    )}
+                  </PressableOpacity>
+                </View>
               </View>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t('chats.searchPlaceholder')}
+              />
             </View>
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder={t('chats.searchPlaceholder')}
-            />
-          </View>
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={themeColors.primary} />
@@ -314,7 +314,7 @@ export default function ChatsScreen() {
               </View>
             )}
           </View>
-          </ScrollView>
+        </ScrollView>
 
         {isEditMode && (
           <View
@@ -325,25 +325,23 @@ export default function ChatsScreen() {
               },
             ]}
           >
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-              activeOpacity={0.7}
               onPress={handleArchivePress}
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.archive')}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableOpacity>
+            <PressableOpacity
               style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-              activeOpacity={0.7}
               onPress={handleDeletePress}
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.delete')}
               </Text>
-            </TouchableOpacity>
-        </View>
+            </PressableOpacity>
+          </View>
         )}
 
         {!isEditMode && (

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Play, Square } from 'lucide-react-native';
 import { WaveformPlayer, type IWaveformRef, PlayerState } from '@/components/audio';
 import { iconSizes, typography } from '@/constants/typography';
@@ -19,13 +20,13 @@ export const stopAllWaveformPlayers = async () => {
     try {
       await current.stopAllPlayers();
       return;
-    } catch {}
+    } catch { }
   }
 
   for (const r of waveformRefs) {
     try {
       await (r.current as any)?.stopPlayer?.();
-    } catch {}
+    } catch { }
   }
 };
 
@@ -138,7 +139,7 @@ export const MessageAudioPreview = ({
   const borderColor = withAlpha(foregroundColor, 0.55);
   const baseWaveColor = withAlpha(foregroundColor, 0.28);
   const scrubWaveColor = playerState === PlayerState.playing ? foregroundColor : baseWaveColor;
-  
+
   // Convert URI to waveform path format (remove file:// if present)
   const waveformPath = audio.uri.startsWith('file://') ? audio.uri.replace('file://', '') : audio.uri;
 
@@ -149,12 +150,9 @@ export const MessageAudioPreview = ({
       onPressIn={onPressIn}
       onPressOut={onPressOut}
     >
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.playButton}
-        activeOpacity={0.7}
         onLongPress={onLongPress}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
         onPress={handleTogglePlay}
       >
         <PlatformIcon
@@ -163,7 +161,7 @@ export const MessageAudioPreview = ({
           size={iconSizes.smallIcons}
           color={foregroundColor}
         />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.waveformContainer}>
         <WaveformPlayer
@@ -183,30 +181,23 @@ export const MessageAudioPreview = ({
         />
       </View>
 
-      <TouchableOpacity
+      <PressableOpacity
         style={[styles.speedButton, { backgroundColor: withAlpha(foregroundColor, 0.14) }]}
-        activeOpacity={0.7}
         onLongPress={onLongPress}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
         onPress={handleSpeedButtonPress}
       >
         <Text style={[styles.speedButtonText, { color: foregroundColor }]}>
           {playbackSpeed}x
         </Text>
-      </TouchableOpacity>
+      </PressableOpacity>
 
-      <TouchableOpacity
+      <View
         style={styles.durationButton}
-        activeOpacity={1}
-        onLongPress={onLongPress}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
       >
         <Text style={[styles.durationText, { color: foregroundColor }]}>
           {formatDuration(audio.duration)}
         </Text>
-      </TouchableOpacity>
+      </View>
     </Pressable>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, Text, Alert, Keyboard } from 'react-native';
+import { StyleSheet, Pressable, View, Text, Alert, Keyboard } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -140,7 +141,7 @@ export const VideoPreviewScreen = () => {
 
     try {
       await sendVideoMessage(params.chatId, video.uri, caption.trim() || undefined);
-      
+
       // Navigate back after sending
       if (!params.chatId) {
         // No chat context, just close preview
@@ -153,7 +154,7 @@ export const VideoPreviewScreen = () => {
         // From attachment picker: just close preview and return to chat
         router.back();
       }
-      
+
       // Set params after a delay to ensure navigation completes
       setTimeout(() => {
         if (params.chatId) {
@@ -233,9 +234,8 @@ export const VideoPreviewScreen = () => {
 
           <View style={styles.rightHeaderContainer}>
             {fromMessage ? (
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.downloadButton, { backgroundColor: mutedSurfaceColor }]}
-                activeOpacity={0.7}
                 onPress={handleDownload}
               >
                 <PlatformIcon
@@ -244,7 +244,7 @@ export const VideoPreviewScreen = () => {
                   size={iconSizes.navigationChevrons + 2}
                   color={iconColor}
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
             ) : (
               <View style={styles.spacer} />
             )}
@@ -275,18 +275,16 @@ export const VideoPreviewScreen = () => {
 
       {/* Keyboard overlay - blocks video interaction when keyboard is open */}
       {isKeyboardVisible && (
-        <TouchableOpacity
+        <Pressable
           style={styles.keyboardOverlay}
-          activeOpacity={1}
           onPress={Keyboard.dismiss}
         />
       )}
 
       {/* Video tap area */}
       {!isKeyboardVisible && (
-        <TouchableOpacity
+        <Pressable
           style={StyleSheet.absoluteFill}
-          activeOpacity={1}
           onPress={handleVideoPress}
         />
       )}

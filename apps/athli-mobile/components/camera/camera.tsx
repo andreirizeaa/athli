@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, View, Alert, Text, Animated, LayoutChangeEvent, Dimensions, PanResponder } from 'react-native';
+import { StyleSheet, View, Alert, Text, Animated, LayoutChangeEvent, Dimensions, PanResponder } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -59,7 +60,7 @@ export default function Camera() {
       }
     }
   }, [params.selectedImages]);
-  
+
   const device = cameraPosition === 'back' ? backDevice : frontDevice;
 
   const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
@@ -76,7 +77,7 @@ export default function Camera() {
 
   const [isRecording, setIsRecording] = useState(false);
   const [isVideoMode, setIsVideoMode] = useState(false);
-  
+
   // When adding more, force photo mode and hide video option
   useEffect(() => {
     if (isAddingMore) {
@@ -90,7 +91,7 @@ export default function Camera() {
   const [zoom, setZoom] = useState(1);
   const zoomRef = useRef(zoom);
   const recordingIntervalRef = useRef<number | null>(null);
-  
+
   // Keep zoomRef in sync with zoom state
   useEffect(() => {
     zoomRef.current = zoom;
@@ -117,8 +118,8 @@ export default function Camera() {
     // z is "display zoom" (0.5..10)
     const rounded =
       z < 1 ? Math.round(z * 10) / 10 :
-      z < 10 ? Math.round(z * 10) / 10 :
-      Math.round(z);
+        z < 10 ? Math.round(z * 10) / 10 :
+          Math.round(z);
 
     const str = Number.isInteger(rounded) ? `${rounded}` : `${rounded.toFixed(1)}`;
     return `${str}x`;
@@ -163,7 +164,7 @@ export default function Camera() {
 
   const iconColor = themeColors.text;
   const mutedSurfaceColor = themeColors.surfaceSecondary;
-  
+
   // Create translucent background color for frosted glass effect (60% opacity)
   const headerBackgroundColor = themeColors.headerBackground;
   const translucentHeaderBg = hexToRgba(headerBackgroundColor, 0.6);
@@ -203,11 +204,11 @@ export default function Camera() {
         // Send images
         const imageBytesArray = capturedPhotos.map((photo) => photo.bytes);
         await sendImageMessage(params.chatId, imageBytesArray, caption.trim() || undefined);
-        
+
         // Close camera and navigate back
         setIsActive(false);
         router.back();
-        
+
         // Set params to add image message to list and close attachment picker
         setTimeout(() => {
           if (params.chatId) {
@@ -400,7 +401,7 @@ export default function Camera() {
       setZoomLabel('1x');
       setZoom(1);
     }
-    
+
     // Animate zoom button opacity
     Animated.timing(zoomButtonOpacity, {
       toValue: newPosition === 'back' ? 1 : 0,
@@ -414,7 +415,7 @@ export default function Camera() {
     const next = zoomSteps[(idx + 1) % zoomSteps.length];
     setZoomLabel(next.label);
     setZoom(next.value);
-    
+
     // Update slider dot position but don't show HUD when manually changing zoom
     if (device) {
       const display = next.value / device.neutralZoom;
@@ -503,17 +504,17 @@ export default function Camera() {
           recordingIntervalRef.current = setInterval(() => {
             setRecordingTime((prev) => prev + 1);
           }, 1000);
-          
+
           await cameraRef.current.startRecording({
             flash: flashEnabled ? 'on' : 'off',
             onRecordingFinished: (video) => {
               const videoUri = `file://${video.path}`;
               const duration = Math.floor(video.duration / 1000); // Convert ms to seconds
-              
+
               // Determine orientation based on video dimensions
               const isPortrait = video.width < video.height;
               const orientation = isPortrait ? 'portrait' : 'landscape';
-              
+
               setIsRecording(false);
               // Navigate to video preview screen
               router.push({
@@ -571,26 +572,26 @@ export default function Camera() {
           const photo = await cameraRef.current.takePhoto({
             flash: flashEnabled ? 'on' : 'off',
           });
-          
+
           // Read the photo file as bytes using legacy API
           const fileUri = `file://${photo.path}`;
           const base64 = await FileSystem.readAsStringAsync(fileUri, {
             encoding: 'base64' as any,
           });
-          
+
           // Convert base64 to Uint8Array
           const binaryString = atob(base64);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
           }
-          
+
           const newPhoto = {
             uri: fileUri,
             bytes,
             id: `photo-${Date.now()}-${Math.random()}`,
           };
-          
+
           setCapturedPhotos((prev) => [...prev, newPhoto]);
           setSelectedImageId(newPhoto.id);
           setIsAddingMore(false);
@@ -617,7 +618,7 @@ export default function Camera() {
       return 0;
     }
     const gap = 40;
-    
+
     if (isVideo) {
       // Container is positioned at left: '50%' (screen center)
       // VIDEO's center is at videoTextWidth / 2 from container's left edge
@@ -660,7 +661,7 @@ export default function Camera() {
   useEffect(() => {
     // Get screen width
     screenWidth.current = Dimensions.get('window').width;
-    
+
     return () => {
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
@@ -748,29 +749,29 @@ export default function Camera() {
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <StatusBar hidden />
-        <VisionCamera
-          ref={cameraRef}
-          style={StyleSheet.absoluteFill}
-          device={device}
-          isActive={isActive}
-          torch={flashEnabled ? 'on' : 'off'}
-          zoom={zoom}
-          photo={true}
-          video={true}
-          pointerEvents="none"
-        />
-        <View
-          style={[
-            styles.safeArea,
-            {
-              paddingTop: insets.top,
-              paddingBottom: insets.bottom,
-              paddingLeft: 0,
-              paddingRight: 0,
-            },
-          ]}
-          {...pinchPanResponder.panHandlers}
-        >
+      <VisionCamera
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={isActive}
+        torch={flashEnabled ? 'on' : 'off'}
+        zoom={zoom}
+        photo={true}
+        video={true}
+        pointerEvents="none"
+      />
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            paddingLeft: 0,
+            paddingRight: 0,
+          },
+        ]}
+        {...pinchPanResponder.panHandlers}
+      >
         {/* Top header */}
         <View style={styles.topHeader}>
           <IconButton
@@ -836,12 +837,9 @@ export default function Camera() {
                 ]}
               />
             </Animated.View>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.recordButton, isRecording && styles.stopButton]}
               onPress={handleButtonPress}
-              onPressIn={handleButtonPressIn}
-              onPressOut={handleButtonPressOut}
-              activeOpacity={0.8}
             >
               <Animated.View
                 style={[
@@ -865,20 +863,19 @@ export default function Camera() {
                   />
                 )}
               </Animated.View>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
 
           {/* Right side: Zoom button + Rotate button */}
           <View style={styles.rightControls}>
             <Animated.View style={{ opacity: zoomButtonOpacity }}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.zoomButton, { backgroundColor: mutedSurfaceColor }]}
-                activeOpacity={0.7}
                 onPress={handleZoomPress}
-                disabled={cameraPosition === 'front'}
+                enabled={cameraPosition !== 'front'}
               >
                 <Text style={[styles.zoomText, { color: themeColors.primary }]}>{zoomLabel}</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </Animated.View>
 
             <IconButton
@@ -907,13 +904,13 @@ export default function Camera() {
                     },
                   ]}
                 >
-                  <TouchableOpacity onPress={handleVideoTextPress} style={styles.textButton} onLayout={handleVideoTextLayout}>
-                    <Text style={[styles.modeText, isVideoMode && styles.modeTextActive]}>VIDEO</Text>
-                  </TouchableOpacity>
+                  <PressableOpacity onPress={handleVideoTextPress} style={styles.textButton}>
+                    <Text style={[styles.modeText, isVideoMode && styles.modeTextActive]} onLayout={handleVideoTextLayout}>VIDEO</Text>
+                  </PressableOpacity>
                   <View style={styles.textGap} />
-                  <TouchableOpacity onPress={handlePhotoTextPress} style={styles.textButton} onLayout={handlePhotoTextLayout}>
-                    <Text style={[styles.modeText, !isVideoMode && styles.modeTextActive]}>PHOTO</Text>
-                  </TouchableOpacity>
+                  <PressableOpacity onPress={handlePhotoTextPress} style={styles.textButton}>
+                    <Text style={[styles.modeText, !isVideoMode && styles.modeTextActive]} onLayout={handlePhotoTextLayout}>PHOTO</Text>
+                  </PressableOpacity>
                 </Animated.View>
               </View>
             </BlurView>
