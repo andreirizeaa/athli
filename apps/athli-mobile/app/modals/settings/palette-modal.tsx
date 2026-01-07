@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Platform } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X } from 'lucide-react-native';
@@ -51,9 +52,8 @@ export default function PaletteModal() {
 
           return (
             <View key={theme.value}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={styles.paletteRow}
-                activeOpacity={0.7}
                 onPress={() => handleSelectPalette(theme.value)}
               >
                 <View style={styles.paletteInfo}>
@@ -83,7 +83,7 @@ export default function PaletteModal() {
                     color={themeColors.primary}
                   />
                 )}
-              </TouchableOpacity>
+              </PressableOpacity>
 
               {index !== THEMES.length - 1 && (
                 <View

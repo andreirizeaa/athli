@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -46,11 +47,10 @@ const WeekPage = React.memo(
       <View style={styles.weekPage} renderToHardwareTextureAndroid shouldRasterizeIOS>
         <View style={styles.weekContent}>
           {days.map((day, i) => (
-            <TouchableOpacity
+            <PressableOpacity
               key={`${day.date.toISOString()}-${i}`}
               style={styles.dayContainer}
               onPress={() => onPressDay(day)}
-              activeOpacity={0.7}
             >
               <View
                 style={[
@@ -91,7 +91,7 @@ const WeekPage = React.memo(
                   </Text>
                 </View>
               </View>
-            </TouchableOpacity>
+            </PressableOpacity>
           ))}
         </View>
       </View>
@@ -124,7 +124,7 @@ export const SwipeableCalendar = ({
 }: SwipeableCalendarProps) => {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  
+
   // Normalize initial date
   const normalizedInitialDate = useMemo(() => {
     if (initialSelectedDate) {
@@ -132,7 +132,7 @@ export const SwipeableCalendar = ({
     }
     return normalizeDate(new Date());
   }, [initialSelectedDate]);
-  
+
   const [selectedDate, setSelectedDate] = useState<Date>(normalizedInitialDate);
   const listRef = useRef<FlashListRef<DayData[]> | null>(null);
   const hasMounted = useRef(false);
@@ -177,7 +177,7 @@ export const SwipeableCalendar = ({
       return weekDates.map((date, i) => {
         const dateCopy = normalizeDate(date);
         const selectedNormalized = normalizeDate(selectedDate);
-        
+
         const isToday = dateCopy.getTime() === today.getTime();
         const isSelected = dateCopy.getTime() === selectedNormalized.getTime();
         const isFuture = dateCopy.getTime() > today.getTime();
@@ -205,10 +205,10 @@ export const SwipeableCalendar = ({
     if (!hasMounted.current) {
       hasMounted.current = true;
     }
-    
+
     const normalized = normalizeDate(selectedDate);
     const idx = Math.max(0, Math.min(weeks.length - 1, getWeekIndexForDate(normalized, weeks)));
-    
+
     // Update indices if they changed
     setCurrentWeekIndex((prevIdx) => {
       if (prevIdx !== idx) {

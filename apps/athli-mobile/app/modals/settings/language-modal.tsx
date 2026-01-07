@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SymbolView } from 'expo-symbols';
 import { Check, X } from 'lucide-react-native';
 import { Platform } from 'react-native';
 
@@ -54,9 +54,8 @@ export default function LanguageModal() {
 
           return (
             <View key={language.code}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={styles.languageRow}
-                activeOpacity={0.7}
                 onPress={() => handleSelectLanguage(language.code)}
               >
                 <View style={styles.languageInfo}>
@@ -81,7 +80,7 @@ export default function LanguageModal() {
                     color={themeColors.primary}
                   />
                 )}
-              </TouchableOpacity>
+              </PressableOpacity>
 
               {index !== LANGUAGES.length - 1 && (
                 <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />

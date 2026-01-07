@@ -1,5 +1,6 @@
 import React from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -81,10 +82,9 @@ export const DropdownMenu = ({
     : anchorBottom + menuOffset;
 
   const menuItems = options.map((option, index) => (
-    <TouchableOpacity
+    <PressableOpacity
       key={index}
       style={styles.menuItem}
-      activeOpacity={0.7}
       onPress={() => {
         option.onPress();
         onClose();
@@ -99,7 +99,7 @@ export const DropdownMenu = ({
         />
       )}
       <Text style={[styles.menuItemText, { color: themeColors.text, marginLeft: option.icon ? 4 : 0 }]}>{option.label}</Text>
-    </TouchableOpacity>
+    </PressableOpacity>
   ));
 
   const menuContent = (
@@ -137,8 +137,8 @@ export const DropdownMenu = ({
 
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
-      <Pressable 
-        style={styles.overlay} 
+      <Pressable
+        style={styles.overlay}
         onPress={onClose}
         onStartShouldSetResponder={() => true}
       >

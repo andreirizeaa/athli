@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { FlashList } from '@shopify/flash-list';
 import { ChevronRight } from 'lucide-react-native';
@@ -36,102 +36,104 @@ export const ClientsList = forwardRef<ClientsListRef, ClientsListProps>(
       },
     }));
 
-  const formatSubtitle = (client: Client): string => {
-    const parts: string[] = [];
+    const formatSubtitle = (client: Client): string => {
+      const parts: string[] = [];
 
-    if (client.age) {
-      parts.push(`${client.age} ${t('clients.years')}`);
-    }
+      if (client.age) {
+        parts.push(`${client.age} ${t('clients.years')}`);
+      }
 
-    if (client.gender && client.gender !== 'prefer-not-to-say') {
-      parts.push(client.gender);
-    }
+      if (client.gender && client.gender !== 'prefer-not-to-say') {
+        parts.push(client.gender);
+      }
 
-    if (client.type) {
-      const typeLabel =
-        client.type === 'in-person'
-          ? t('clients.addClientModal.inPerson')
-          : client.type === 'online'
-            ? t('clients.addClientModal.online')
-            : t('clients.addClientModal.hybrid');
-      parts.push(typeLabel);
-    }
+      if (client.type) {
+        const typeLabel =
+          client.type === 'in-person'
+            ? t('clients.addClientModal.inPerson')
+            : client.type === 'online'
+              ? t('clients.addClientModal.online')
+              : t('clients.addClientModal.hybrid');
+        parts.push(typeLabel);
+      }
 
-    return parts.join(' · ');
-  };
+      return parts.join(' · ');
+    };
 
-  const renderClientCard = ({ item, index }: { item: Client; index: number }) => {
-    const isLastItem = index === clients.length - 1;
+    const renderClientCard = ({ item, index }: { item: Client; index: number }) => {
+      const isLastItem = index === clients.length - 1;
 
-    return (
-      <View>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => onClientPress(item.id)}
-          style={styles.rowWrapper}
-        >
-          <View style={styles.rowContent}>
-            <View style={styles.avatarContainer}>
-              {item.avatar ? (
-                <Image source={{ uri: item.avatar }} style={styles.avatar} />
-              ) : (
-                <View
-                  style={[
-                    styles.avatar,
-                    styles.avatarPlaceholder,
-                    { backgroundColor: themeColors.border },
-                  ]}
-                />
-              )}
-            </View>
-            <View style={styles.clientInfo}>
-              <View style={styles.clientHeaderRow}>
-                <Text
-                  style={[styles.clientName, { color: themeColors.text }]}
-                  numberOfLines={1}
-                >
-                  {item.fullName}
-                </Text>
-                {showChevron && (
-                  <View style={styles.chevronContainer}>
-                    <PlatformIcon
-                      sf="chevron.right"
-                      IconComponent={ChevronRight}
-                      size={iconSizes.extraSmallIcons}
-                      color={themeColors.mutedText}
-                    />
-                  </View>
+      return (
+        <View>
+          <Pressable
+            onPress={() => onClientPress(item.id)}
+            style={({ pressed }) => [
+              styles.rowWrapper,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <View style={styles.rowContent}>
+              <View style={styles.avatarContainer}>
+                {item.avatar ? (
+                  <Image source={{ uri: item.avatar }} style={styles.avatar} />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatar,
+                      styles.avatarPlaceholder,
+                      { backgroundColor: themeColors.border },
+                    ]}
+                  />
                 )}
               </View>
-              <Text
-                style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
-                numberOfLines={2}
-              >
-                {formatSubtitle(item)}
-              </Text>
+              <View style={styles.clientInfo}>
+                <View style={styles.clientHeaderRow}>
+                  <Text
+                    style={[styles.clientName, { color: themeColors.text }]}
+                    numberOfLines={1}
+                  >
+                    {item.fullName}
+                  </Text>
+                  {showChevron && (
+                    <View style={styles.chevronContainer}>
+                      <PlatformIcon
+                        sf="chevron.right"
+                        IconComponent={ChevronRight}
+                        size={iconSizes.extraSmallIcons}
+                        color={themeColors.mutedText}
+                      />
+                    </View>
+                  )}
+                </View>
+                <Text
+                  style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
+                  numberOfLines={2}
+                >
+                  {formatSubtitle(item)}
+                </Text>
+              </View>
             </View>
+          </Pressable>
+          <View style={styles.separatorContainer}>
+            <View
+              style={[
+                styles.separator,
+                { backgroundColor: themeColors.mutedText, opacity: 0.3 },
+              ]}
+            />
           </View>
-        </TouchableOpacity>
-        <View style={styles.separatorContainer}>
-          <View
-            style={[
-              styles.separator,
-              { backgroundColor: themeColors.mutedText, opacity: 0.3 },
-            ]}
-          />
+          {isLastItem && <View style={{ height: 60 }} />}
         </View>
-        {isLastItem && <View style={{ height: 60 }} />}
-      </View>
-    );
-  };
+      );
+    };
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={themeColors.primary} />
-      </View>
-    );
-  }
+    if (isLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+        </View>
+      );
+    }
 
     return (
       <FlashList<Client>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Camera, Video, FileText } from 'lucide-react-native';
 import { useColorScheme } from '@/contexts/useColorScheme';
 import { type ThemeColors } from '@/constants/theme';
@@ -144,15 +145,10 @@ export const MessageReplyPreview = ({
   };
 
   return (
-    <TouchableOpacity
+    <PressableOpacity
       style={[styles.container, { backgroundColor: adjustedBackground }]}
-      activeOpacity={0.7}
       onPress={onPress}
       onLongPress={onLongPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      accessibilityLabel={`Reply to ${senderName}`}
-      accessibilityRole="button"
     >
       <View style={[styles.colorStrip, { backgroundColor: stripColor }]} />
       <View style={styles.content}>
@@ -161,7 +157,7 @@ export const MessageReplyPreview = ({
         </Text>
         {renderPreviewContent()}
       </View>
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 };
 

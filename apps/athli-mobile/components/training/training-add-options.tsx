@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Animated } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { Dumbbell, CalendarX } from 'lucide-react-native';
 
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -43,19 +44,17 @@ export function TrainingAddOptions({
 
   return (
     <Animated.View style={[styles.overlay, { opacity: fadeOpacity }]}>
-      <TouchableOpacity
+      <Pressable
         style={styles.darkOverlay}
         onPress={onClose}
-        activeOpacity={1}
       >
         <View style={styles.cardsContainer} pointerEvents="box-none">
           {/* Create a session Card */}
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.card, { backgroundColor: themeColors.surface }]}
             onPress={() => {
               onCreateSessionPress();
             }}
-            activeOpacity={0.7}
           >
             <View style={styles.cardContent}>
               <Text style={[styles.cardTitle, { color: themeColors.text }]}>
@@ -68,15 +67,14 @@ export function TrainingAddOptions({
                 color={themeColors.text}
               />
             </View>
-          </TouchableOpacity>
+          </PressableOpacity>
 
           {/* One-off session Card */}
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.card, { backgroundColor: themeColors.surface }]}
             onPress={() => {
               onOneOffSessionPress();
             }}
-            activeOpacity={0.7}
           >
             <View style={styles.cardContent}>
               <Text style={[styles.cardTitle, { color: themeColors.text }]}>
@@ -89,9 +87,9 @@ export function TrainingAddOptions({
                 color={themeColors.text}
               />
             </View>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }

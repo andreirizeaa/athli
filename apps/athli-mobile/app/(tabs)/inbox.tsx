@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check, Ellipsis, MailCheck, CheckCircle2, Archive } from 'lucide-react-native';
@@ -190,33 +191,33 @@ export default function InboxScreen() {
 
   const dropdownOptions: DropdownMenuOption[] = isEditMode
     ? [
-        {
-          label: t('chats.archive'),
-          icon: {
-            sf: 'archivebox',
-            IconComponent: Archive,
-          },
-          onPress: handleArchivePress,
+      {
+        label: t('chats.archive'),
+        icon: {
+          sf: 'archivebox',
+          IconComponent: Archive,
         },
-      ]
+        onPress: handleArchivePress,
+      },
+    ]
     : [
-        {
-          label: t('chats.selectChats'),
-          icon: {
-            sf: 'checkmark.circle',
-            IconComponent: CheckCircle2,
-          },
-          onPress: handleSelectChatsPress,
+      {
+        label: t('chats.selectChats'),
+        icon: {
+          sf: 'checkmark.circle',
+          IconComponent: CheckCircle2,
         },
-        {
-          label: t('chats.readAll'),
-          icon: {
-            sf: 'checkmark.message',
-            IconComponent: MailCheck,
-          },
-          onPress: handleReadAllPress,
+        onPress: handleSelectChatsPress,
+      },
+      {
+        label: t('chats.readAll'),
+        icon: {
+          sf: 'checkmark.message',
+          IconComponent: MailCheck,
         },
-      ];
+        onPress: handleReadAllPress,
+      },
+    ];
 
   return (
     <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
@@ -247,9 +248,8 @@ export default function InboxScreen() {
                   collapsable={false}
                   style={styles.headerButtonContainer}
                 >
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[styles.headerButton, { backgroundColor: themeColors.iconButton }]}
-                    activeOpacity={0.7}
                     onPress={handleEllipsisPress}
                   >
                     {isEditMode ? (
@@ -267,7 +267,7 @@ export default function InboxScreen() {
                         color={themeColors.text}
                       />
                     )}
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 </View>
               </View>
               <SearchBar
@@ -315,15 +315,14 @@ export default function InboxScreen() {
               },
             ]}
           >
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.actionButton, { backgroundColor: themeColors.iconButton }]}
-              activeOpacity={0.7}
               onPress={handleArchivePress}
             >
               <Text style={[styles.actionButtonText, { color: themeColors.text }]}>
                 {t('chats.archive')}
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         )}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
@@ -100,94 +100,94 @@ export default function ProfileTabScreen() {
                 {t('profile.title')}
               </Text>
             </View>
-          {/* View Switching Card */}
-          <Card>
-            <SettingsOption
-              icon={
-                <PlatformIcon
-                  sf="arrow.left.arrow.right"
-                  IconComponent={ArrowLeftRight}
-                  size={iconSize - 2}
-                  color={iconColor}
-                />
-              }
-              title={t('profile.viewCoachesArea')}
-              showChevron
-              onPress={handleToggleView}
-            />
-          </Card>
+            {/* View Switching Card */}
+            <Card>
+              <SettingsOption
+                icon={
+                  <PlatformIcon
+                    sf="arrow.left.arrow.right"
+                    IconComponent={ArrowLeftRight}
+                    size={iconSize - 2}
+                    color={iconColor}
+                  />
+                }
+                title={t('profile.viewCoachesArea')}
+                showChevron
+                onPress={handleToggleView}
+              />
+            </Card>
 
-          {/* Account */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="person.text.rectangle" IconComponent={IdCard} size={iconSize} color={iconColor} />}
-              title={t('profile.personalDetails')}
-              showChevron
-              onPress={handleOpenPersonalDetails}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="gear" IconComponent={Cog} size={iconSize} color={iconColor} />}
-              title={t('profile.preferences')}
-              showChevron
-              onPress={handleOpenPreferences}
-            />
-          </Card>
+            {/* Account */}
+            <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
+            <Card>
+              <SettingsOption
+                icon={<PlatformIcon sf="person.text.rectangle" IconComponent={IdCard} size={iconSize} color={iconColor} />}
+                title={t('profile.personalDetails')}
+                showChevron
+                onPress={handleOpenPersonalDetails}
+              />
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="gear" IconComponent={Cog} size={iconSize} color={iconColor} />}
+                title={t('profile.preferences')}
+                showChevron
+                onPress={handleOpenPreferences}
+              />
+            </Card>
 
-          {/* Support */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
-              title={t('profile.supportEmail')}
-              onPress={handleOpenSupportEmail}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
-              title={t('profile.featureRequests')}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="arrow.clockwise" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
-              title={t('profile.syncData')}
-              subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
-              subtitleRight
-            />
-          </Card>
+            {/* Support */}
+            <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
+            <Card>
+              <SettingsOption
+                icon={<PlatformIcon sf="envelope" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
+                title={t('profile.supportEmail')}
+                onPress={handleOpenSupportEmail}
+              />
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="megaphone" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
+                title={t('profile.featureRequests')}
+              />
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="arrow.clockwise" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
+                title={t('profile.syncData')}
+                subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
+                subtitleRight
+              />
+            </Card>
 
-          {/* Legal */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.legal')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="doc.text" IconComponent={FileText} size={iconSize} color={iconColor} />}
-              title={t('profile.termsAndConditions')}
-              onPress={handleOpenTermsOfService}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="checkmark.shield" IconComponent={ShieldCheck} size={iconSize} color={iconColor} />}
-              title={t('profile.privacyPolicy')}
-              onPress={handleOpenPrivacyPolicy}
-            />
-          </Card>
+            {/* Legal */}
+            <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.legal')}</Text>
+            <Card>
+              <SettingsOption
+                icon={<PlatformIcon sf="doc.text" IconComponent={FileText} size={iconSize} color={iconColor} />}
+                title={t('profile.termsAndConditions')}
+                onPress={handleOpenTermsOfService}
+              />
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="checkmark.shield" IconComponent={ShieldCheck} size={iconSize} color={iconColor} />}
+                title={t('profile.privacyPolicy')}
+                onPress={handleOpenPrivacyPolicy}
+              />
+            </Card>
 
-          {/* Account Actions */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" IconComponent={LogOut} size={iconSize} color={iconColor} />}
-              title={t('profile.logout')}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="person.badge.minus" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
-              title={t('profile.deleteAccount')}
-              onPress={handleOpenDeleteAccount}
-            />
-          </Card>
-          <View style={{ height: 60 }} />
+            {/* Account Actions */}
+            <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
+            <Card>
+              <SettingsOption
+                icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" IconComponent={LogOut} size={iconSize} color={iconColor} />}
+                title={t('profile.logout')}
+              />
+              <Separator />
+              <SettingsOption
+                icon={<PlatformIcon sf="person.badge.minus" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
+                title={t('profile.deleteAccount')}
+                onPress={handleOpenDeleteAccount}
+              />
+            </Card>
+            <View style={{ height: 60 }} />
           </View>
         </ScrollView>
       </View>

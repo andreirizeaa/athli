@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -57,7 +58,7 @@ export default function TrainingScreen() {
         // Still commit + reset, so the UI updates
         const committed = new Date(nextDate);
         committed.setHours(0, 0, 0, 0);
-        
+
         setDisplayedDate(committed);
         setIncomingDate(null);
         return;
@@ -108,7 +109,7 @@ export default function TrainingScreen() {
   const handleDateSelect = (date: Date) => {
     const newDate = new Date(date);
     newDate.setHours(0, 0, 0, 0);
-    
+
     animateCalendarForDateChange(newDate);
     setSelectedDate(newDate);
     setHasSelectedDate(true);
@@ -205,19 +206,18 @@ export default function TrainingScreen() {
           {/* Top row: Title on left, Date picker on right */}
           <View style={styles.headerTopRow}>
             <Text style={[styles.title, { color: themeColors.text }]}>{t('training.title')}</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                activeOpacity={0.7}
-                onPress={handleOpenDatePicker}
-              >
-                <Text style={[styles.dateButtonText, { color: themeColors.text }]}>{displayText}</Text>
-                <PlatformIcon
-                  sf="chevron.down"
-                  IconComponent={ChevronDown}
-                  size={iconSizes.navigationChevrons}
-                  color={themeColors.text}
-                />
-              </TouchableOpacity>
+            <PressableOpacity
+              style={styles.dateButton}
+              onPress={handleOpenDatePicker}
+            >
+              <Text style={[styles.dateButtonText, { color: themeColors.text }]}>{displayText}</Text>
+              <PlatformIcon
+                sf="chevron.down"
+                IconComponent={ChevronDown}
+                size={iconSizes.navigationChevrons}
+                color={themeColors.text}
+              />
+            </PressableOpacity>
           </View>
           {/* Bottom row: Swipeable Calendar */}
           <View style={styles.headerBottomRow}>

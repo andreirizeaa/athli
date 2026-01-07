@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Platform } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, X } from 'lucide-react-native';
@@ -55,9 +56,8 @@ export default function UnitsModal() {
 
           return (
             <View key={unitsType}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={styles.unitsRow}
-                activeOpacity={0.7}
                 onPress={() => handleSelectUnits(unitsType)}
               >
                 <View style={styles.unitsInfo}>
@@ -83,7 +83,7 @@ export default function UnitsModal() {
                     color={themeColors.primary}
                   />
                 )}
-              </TouchableOpacity>
+              </PressableOpacity>
 
               {unitsType !== 'imperial' && (
                 <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />

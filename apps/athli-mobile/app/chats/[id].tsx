@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -279,7 +278,7 @@ export default function ChatDetailScreen() {
   const stopAndDiscard = async () => {
     try {
       await audioRecorder.stop();
-    } catch {}
+    } catch { }
     setIsStopped(false);
     waveformRef.current = [];
     setWaveform([]);
@@ -353,7 +352,7 @@ export default function ChatDetailScreen() {
     if (documentSent === 'true' && sentDocument) {
       try {
         const documentData = JSON.parse(sentDocument);
-        
+
         // Create new message with document attachment
         const newMessage: ChatMessage = {
           id: `m-${Date.now()}`,
@@ -371,13 +370,13 @@ export default function ChatDetailScreen() {
 
         // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
-        
+
         // Clear draft text in input bar
         setSearchQuery('');
-        
+
         // Close attachment picker
         setShowAttachmentPicker(false);
-        
+
         // Clear the params
         router.setParams({
           documentSent: '',
@@ -400,7 +399,7 @@ export default function ChatDetailScreen() {
     if (imagesSent === 'true' && sentImages) {
       try {
         const imageAttachments = JSON.parse(sentImages);
-        
+
         // Create new message with image attachments
         const newMessage: ChatMessage = {
           id: `m-${Date.now()}`,
@@ -413,13 +412,13 @@ export default function ChatDetailScreen() {
 
         // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
-        
+
         // Clear draft text in input bar
         setSearchQuery('');
-        
+
         // Close attachment picker
         setShowAttachmentPicker(false);
-        
+
         // Clear the params
         router.setParams({
           imagesSent: '',
@@ -444,7 +443,7 @@ export default function ChatDetailScreen() {
     if (videoSent === 'true' && sentVideo) {
       try {
         const videoData = JSON.parse(sentVideo);
-        
+
         // Create new message with video attachment
         const newMessage: ChatMessage = {
           id: `m-${Date.now()}`,
@@ -461,13 +460,13 @@ export default function ChatDetailScreen() {
 
         // Add message to the list
         setMessages((prev) => [...prev, newMessage]);
-        
+
         // Clear draft text in input bar
         setSearchQuery('');
-        
+
         // Close attachment picker
         setShowAttachmentPicker(false);
-        
+
         // Clear the params
         router.setParams({
           videoSent: '',
@@ -595,7 +594,7 @@ export default function ChatDetailScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
     setIsMicrophoneMode(true);
-    
+
     // Start recording immediately (resets accumulatedMs inside startRecording)
     try {
       await startRecording();
@@ -611,7 +610,7 @@ export default function ChatDetailScreen() {
     // tear down + reset
     try {
       await audioRecorder.stop();
-    } catch {}
+    } catch { }
     previewWaveRef.current?.stopPlayer?.();
 
     setPreviewPath(null);
@@ -878,14 +877,14 @@ export default function ChatDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: 'transparent' }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
-      
+
       {/* Background image covering entire screen */}
       <Image
         source={isDark ? require('@/assets/chat/bg-dark.png') : require('@/assets/chat/bg-light.png')}
         style={styles.fullScreenBackgroundImage}
         contentFit="cover"
       />
-      
+
       {/* ROW 1: HEADER - Absolutely positioned with blur (extends into status bar area) */}
       <ChatHeader
         chat={chat}

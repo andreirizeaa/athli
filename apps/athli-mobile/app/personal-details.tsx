@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Pencil } from 'lucide-react-native';
@@ -24,11 +25,10 @@ interface PersonalDetailOptionProps {
 
 function PersonalDetailOption({ title, value, onPress, colors }: PersonalDetailOptionProps) {
   return (
-    <TouchableOpacity
+    <PressableOpacity
       style={styles.optionRow}
       onPress={onPress}
-      activeOpacity={0.7}
-      disabled={!onPress}
+      enabled={!!onPress}
     >
       <View style={styles.textContainer}>
         <Text style={[styles.optionTitle, { color: colors.text }]}>{title}</Text>
@@ -44,7 +44,7 @@ function PersonalDetailOption({ title, value, onPress, colors }: PersonalDetailO
           />
         </View>
       )}
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 }
 

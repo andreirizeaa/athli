@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View, Linking } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
@@ -102,32 +103,31 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
-    <View
-      style={[
-        styles.safeArea,
-        {
-          paddingTop: insets.top,
-          paddingBottom: 0,
-          paddingLeft: insets.left,
-          paddingRight: insets.right,
-        },
-      ]}
-    >
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="never"
+      <View
+        style={[
+          styles.safeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: 0,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
       >
-        <View style={styles.content}>
-          <View style={styles.titleRow}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.headerSection}>
             <Text style={[styles.title, { color: themeColors.text }]}>
               {isAthleteView ? t('profile.title') : t('settings.title')}
             </Text>
           </View>
 
-          {/* View Switching Card */}
-          <Card>
+          <View style={styles.contentContainer}>
+            {/* View Switching Card */}
+            <Card>
             <SettingsOption
               icon={
                 <PlatformIcon
@@ -147,7 +147,7 @@ export default function SettingsScreen() {
           {/* Profile Card - Only shown in athlete view */}
           {isAthleteView && (
             <Card>
-              <TouchableOpacity style={styles.profileRow} activeOpacity={0.7}>
+              <PressableOpacity style={styles.profileRow}>
                 <View style={styles.profileAvatar}>
                   <View style={styles.fallbackAvatar}>
                     <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
@@ -170,7 +170,7 @@ export default function SettingsScreen() {
                     {t('profile.memberSince')} 2024
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </PressableOpacity>
             </Card>
           )}
 
@@ -244,9 +244,9 @@ export default function SettingsScreen() {
               onPress={handleOpenDeleteAccount}
             />
           </Card>
-        </View>
-      </ScrollView>
-    </View>
+          </View>
+        </ScrollView>
+      </View>
     </View>
   );
 }
@@ -258,24 +258,23 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  container: {
+  scrollView: {
     flex: 1,
-    paddingTop: 20,
-    marginBottom: 44,
   },
-  content: {
-    flex: 1,
+  scrollContent: {
+    paddingTop: 16,
+    paddingBottom: 60,
+  },
+  headerSection: {
     paddingHorizontal: 16,
+    marginBottom: 16,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
+  contentContainer: {
+    paddingHorizontal: 16,
   },
   title: {
     ...typography.h1,
     textAlign: 'left',
-    flex: 1,
   },
   sectionTitle: {
     ...typography.p1,

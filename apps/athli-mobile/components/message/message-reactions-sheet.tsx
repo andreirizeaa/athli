@@ -8,9 +8,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 
@@ -162,9 +162,8 @@ export const MessageReactionsSheet = ({
           <ScrollView style={styles.reactionsList} showsVerticalScrollIndicator={false}>
             {reactions.map((reaction, index) => (
               <View key={index}>
-                <TouchableOpacity
+                <PressableOpacity
                   style={styles.reactionRow}
-                  activeOpacity={0.7}
                   onPress={() => handleRemoveReaction(reaction.isSender)}
                 >
                   {/* Profile picture placeholder */}
@@ -193,7 +192,7 @@ export const MessageReactionsSheet = ({
                   <View style={styles.emojiContainer}>
                     <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
                   </View>
-                </TouchableOpacity>
+                </PressableOpacity>
 
                 {index < reactions.length - 1 && (
                   <View style={[styles.modalDivider, { backgroundColor: dividerColor }]} />

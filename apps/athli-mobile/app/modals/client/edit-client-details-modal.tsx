@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { View, StyleSheet, Text, TouchableOpacity, Platform, ScrollView, TextInput } from 'react-native';
+import { View, StyleSheet, Text, Platform, ScrollView, TextInput } from 'react-native';
+import { PressableOpacity } from 'pressto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Check } from 'lucide-react-native';
 
@@ -136,7 +137,6 @@ export default function EditClientDetailsModal() {
           size="md"
           color={canComplete ? themeColors.primary : themeColors.mutedText}
           disabled={!canComplete}
-          activeOpacity={canComplete ? 0.7 : 1}
           style={!canComplete ? { opacity: 0.5 } : undefined}
         />
       </View>
@@ -206,7 +206,7 @@ export default function EditClientDetailsModal() {
             {(['online', 'in-person', 'hybrid'] as const).map((type) => {
               const isSelected = category === type;
               return (
-                <TouchableOpacity
+                <PressableOpacity
                   key={type}
                   style={[
                     styles.buttonGroupButton,
@@ -216,7 +216,6 @@ export default function EditClientDetailsModal() {
                     ],
                   ]}
                   onPress={() => setCategory(type)}
-                  activeOpacity={0.7}
                 >
                   <Text
                     style={[
@@ -227,7 +226,7 @@ export default function EditClientDetailsModal() {
                   >
                     {getCategoryLabel(type)}
                   </Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               );
             })}
           </View>
