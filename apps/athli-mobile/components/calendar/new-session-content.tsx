@@ -21,7 +21,7 @@ import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import type { Client } from '@/services/client-service';
 import { scheduleSession } from '@/services/calendar-service';
 
@@ -93,9 +93,6 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
       monthDays?: number[];
     } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [repeatDropdownVisible, setRepeatDropdownVisible] = useState(false);
-    const repeatRowRef = useRef<View>(null);
-    const [repeatButtonPosition, setRepeatButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
     const [showAndroidDatePicker, setShowAndroidDatePicker] = useState(false);
     const [showAndroidFromTimePicker, setShowAndroidFromTimePicker] = useState(false);
     const [showAndroidToTimePicker, setShowAndroidToTimePicker] = useState(false);
@@ -143,15 +140,8 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
       });
     }, [setClientSelectCallback, setRepeatSelectCallback]);
 
-    const handleOpenRepeatDropdown = () => {
-      repeatRowRef.current?.measure((x, y, width, height, pageX, pageY) => {
-        setRepeatButtonPosition({ x: pageX, y: pageY, width, height });
-        setRepeatDropdownVisible(true);
-      });
-    };
 
     const handleRepeatOptionSelect = (option: 'never' | 'custom') => {
-      setRepeatDropdownVisible(false);
       if (option === 'custom') {
         // Navigate to repeat options modal
         // The mode will only change to 'custom' if they click the tick in the modal
@@ -516,43 +506,24 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
               <Text style={[styles.pickerLabel, { color: themeColors.text }]}>
                 {t('calendar.newSession.labels.repeat')}
               </Text>
-              {repeatData ? (
-                // Custom repeat is set - show "Custom" with down chevron for dropdown
-                <View ref={repeatRowRef}>
-                  <PressableOpacity
-                    onPress={handleOpenRepeatDropdown}
-                    style={styles.repeatValueContainer}
-                  >
-                    <Text style={[styles.repeatValueText, { color: themeColors.text }]}>
-                      {t('calendar.newSession.repeatOptions.custom')}
-                    </Text>
-                    <PlatformIcon
-                      sf="chevron.down"
-                      IconComponent={ChevronDown}
-                      size={iconSizes.smallIcons}
-                      color={themeColors.mutedText}
-                    />
-                  </PressableOpacity>
-                </View>
-              ) : (
-                // No custom repeat - show "Never" with down chevron for dropdown
-                <View ref={repeatRowRef}>
-                  <PressableOpacity
-                    onPress={handleOpenRepeatDropdown}
-                    style={styles.repeatValueContainer}
-                  >
-                    <Text style={[styles.repeatValueText, { color: themeColors.text }]}>
-                      {t('calendar.newSession.repeatOptions.never')}
-                    </Text>
-                    <PlatformIcon
-                      sf="chevron.down"
-                      IconComponent={ChevronDown}
-                      size={iconSizes.smallIcons}
-                      color={themeColors.mutedText}
-                    />
-                  </PressableOpacity>
-                </View>
-              )}
+              <DropdownMenuWrapper options={repeatDropdownOptions}>
+                <PressableOpacity
+                  onPress={() => { }}
+                  style={styles.repeatValueContainer}
+                >
+                  <Text style={[styles.repeatValueText, { color: themeColors.text }]}>
+                    {repeatData
+                      ? t('calendar.newSession.repeatOptions.custom')
+                      : t('calendar.newSession.repeatOptions.never')}
+                  </Text>
+                  <PlatformIcon
+                    sf="chevron.down"
+                    IconComponent={ChevronDown}
+                    size={iconSizes.smallIcons}
+                    color={themeColors.mutedText}
+                  />
+                </PressableOpacity>
+              </DropdownMenuWrapper>
             </View>
             {repeatData && (
               <>
@@ -573,15 +544,6 @@ export const NewSessionContent = forwardRef<NewSessionContentRef, NewSessionCont
                 </PressableOpacity>
               </>
             )}
-
-            <DropdownMenu
-              visible={repeatDropdownVisible}
-              onClose={() => setRepeatDropdownVisible(false)}
-              options={repeatDropdownOptions}
-              anchorPosition={repeatButtonPosition}
-              alignRight={true}
-              disableModal={false}
-            />
           </Card>
 
           {/* Meeting Information Card */}

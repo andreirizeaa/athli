@@ -26,8 +26,7 @@ export const MessageInputBar = forwardRef<TextInput, MessageInputBarProps>(
         style={[
           styles.inputContainer,
           {
-            backgroundColor: themeColors.searchBarBackground,
-            borderColor: themeColors.border,
+            backgroundColor: themeColors.iconButton,
           },
           style,
         ]}
@@ -76,7 +75,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 28,
-    borderWidth: 1,
     paddingHorizontal: 12,
     minHeight: 30,
     height: 30,

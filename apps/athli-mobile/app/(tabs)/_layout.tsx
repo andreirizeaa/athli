@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { ComponentType } from 'react';
 
@@ -39,6 +40,11 @@ type NativeTabsCoachViewProps = {
 const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewProps & { onAddPress: () => void }) => {
   const insets = useSafeAreaInsets();
 
+  const handleAddPressWithHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onAddPress();
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <NativeTabs tintColor={primaryColor}>
@@ -47,14 +53,14 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
           <Label>Clients</Label>
         </NativeTabs.Trigger>
 
+        <NativeTabs.Trigger name="library">
+          <Icon sf="folder.fill" />
+          <Label>Library</Label>
+        </NativeTabs.Trigger>
+
         <NativeTabs.Trigger name="chats">
           <Icon sf="bubble.left.and.text.bubble.right.fill" />
           <Label>Chats</Label>
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="files">
-          <Icon sf="folder.fill" />
-          <Label>Files</Label>
         </NativeTabs.Trigger>
 
         <NativeTabs.Trigger name="settings">
@@ -72,7 +78,7 @@ const NativeTabsCoachView = ({ primaryColor, onAddPress }: NativeTabsCoachViewPr
       {/* Transparent overlay button on top of search pill */}
       <Pressable
         style={[styles.addButtonOverlay, { bottom: insets.bottom - 16 }]}
-        onPress={onAddPress}
+        onPress={handleAddPressWithHaptic}
       />
     </View>
   );
@@ -148,7 +154,7 @@ export default function TabLayout() {
       if (
         pathname === '/' ||
         pathname === '/(tabs)' ||
-        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/files') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
+        (pathname !== initialRoute && !pathname.startsWith('/clients') && !pathname.startsWith('/chats') && !pathname.startsWith('/library') && !pathname.startsWith('/settings') && !pathname.startsWith('/home') && !pathname.startsWith('/training') && !pathname.startsWith('/progress') && !pathname.startsWith('/inbox') && !pathname.startsWith('/profile') && !pathname.startsWith('/add-modal'))
       ) {
         router.replace(initialRoute);
       }
@@ -172,8 +178,8 @@ export default function TabLayout() {
 
   const handleNativeTabsAddPress = () => {
     if (appView === 'coach') {
-      // Check for files first, then clients/chats
-      if (pathname.includes('/files')) {
+      // Check for library first, then clients/chats
+      if (pathname.includes('/library')) {
         router.push('/modals/files/add-file-modal');
       } else if (pathname.includes('/clients')) {
         router.push({
@@ -235,10 +241,10 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="files"
+          name="library"
           options={{
-            title: t('files.title'),
-            href: appView === 'coach' ? '/files' : null,
+            title: t('library.title'),
+            href: appView === 'coach' ? '/library' : null,
           }}
         />
         <Tabs.Screen
@@ -307,10 +313,12 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       return;
     }
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate(name as never);
   };
 
   const handleAddPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (appView === 'coach') {
       // Navigate to appropriate modal based on route
       if (activeRouteName === 'clients') {
@@ -323,7 +331,7 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
           pathname: '/add-modal-content',
           params: { route: 'chats' },
         });
-      } else if (activeRouteName === 'files') {
+      } else if (activeRouteName === 'library') {
         router.push('/modals/files/add-file-modal');
       }
     } else if (appView === 'athlete') {
@@ -371,19 +379,19 @@ function FallbackTabBar({ state, navigation }: FallbackTabBarProps) {
       width: 70,
     },
     {
+      name: 'library',
+      label: t('library.title'),
+      sf: 'folder.fill',
+      mdi: 'folder',
+      IconComponent: FileText,
+      width: 60,
+    },
+    {
       name: 'chats',
       label: t('chats.title'),
       sf: 'bubble.left.and.text.bubble.right.fill',
       mdi: 'forum',
       IconComponent: MessagesSquare,
-      width: 60,
-    },
-    {
-      name: 'files',
-      label: t('files.title'),
-      sf: 'folder.fill',
-      mdi: 'folder',
-      IconComponent: FileText,
       width: 60,
     },
     {

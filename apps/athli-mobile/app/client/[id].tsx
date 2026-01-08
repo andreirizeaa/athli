@@ -15,12 +15,12 @@ import {
   getChatMessages,
   type Chat,
 } from '@/services/chats-service';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { SettingsOption } from '@/components/settings-option';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton, DoubleIconButton } from '@/components/icon-button';
+import { IconButton } from '@/components/icon-button';
 import { MessageInputBar } from '@/components/message/message-input-bar';
 import { KeyboardAwareToolbar } from '@/components/keyboard-aware-toolbar';
 import { AttachmentPickerRow } from '@/components/chats/attachment-picker-row';
@@ -33,11 +33,8 @@ export default function ClientDetailScreen() {
   const [client, setClient] = useState<Client | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'assistant' | 'overview' | 'more'>('assistant');
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [showAttachmentPicker, setShowAttachmentPicker] = useState(false);
-  const actionButtonRef = useRef<View>(null);
   const inputRef = useRef<TextInput>(null);
 
   const iconColor = themeColors.text;
@@ -104,12 +101,6 @@ export default function ClientDetailScreen() {
     }
   };
 
-  const handleEllipsisPress = () => {
-    actionButtonRef.current?.measureInWindow((x, y, width, height) => {
-      setButtonPosition({ x, y, width, height });
-      setDropdownVisible(true);
-    });
-  };
 
   const handleEditDetails = () => {
     router.push({
@@ -186,15 +177,22 @@ export default function ClientDetailScreen() {
             />
           </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Loading...</Text>
-          <DoubleIconButton
-            ref={actionButtonRef}
-            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
-            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
-            onLeftPress={handleChatPress}
-            onRightPress={handleEllipsisPress}
-            size="md"
-            color={iconColor}
-          />
+          <View style={styles.headerActions}>
+            <IconButton
+              icon={{ sf: 'message', IconComponent: MessageCircle }}
+              onPress={handleChatPress}
+              size="md"
+              color={iconColor}
+            />
+            <DropdownMenuWrapper options={dropdownOptions}>
+              <IconButton
+                icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+                onPress={() => { }}
+                size="md"
+                color={iconColor}
+              />
+            </DropdownMenuWrapper>
+          </View>
         </View>
       </View>
     );
@@ -232,15 +230,22 @@ export default function ClientDetailScreen() {
             />
           </View>
           <Text style={[styles.headerTitle, { color: themeColors.text }]}>Client Not Found</Text>
-          <DoubleIconButton
-            ref={actionButtonRef}
-            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
-            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
-            onLeftPress={handleChatPress}
-            onRightPress={handleEllipsisPress}
-            size="md"
-            color={iconColor}
-          />
+          <View style={styles.headerActions}>
+            <IconButton
+              icon={{ sf: 'message', IconComponent: MessageCircle }}
+              onPress={handleChatPress}
+              size="md"
+              color={iconColor}
+            />
+            <DropdownMenuWrapper options={dropdownOptions}>
+              <IconButton
+                icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+                onPress={() => { }}
+                size="md"
+                color={iconColor}
+              />
+            </DropdownMenuWrapper>
+          </View>
         </View>
       </View>
     );
@@ -286,24 +291,25 @@ export default function ClientDetailScreen() {
           <Text style={[styles.headerTitle, { color: themeColors.text }]} numberOfLines={1}>
             {client.fullName}
           </Text>
-          <DoubleIconButton
-            ref={actionButtonRef}
-            leftIcon={{ sf: 'message', IconComponent: MessageCircle }}
-            rightIcon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
-            onLeftPress={handleChatPress}
-            onRightPress={handleEllipsisPress}
-            size="md"
-            color={iconColor}
-          />
+          <View style={styles.headerActions}>
+            <IconButton
+              icon={{ sf: 'message', IconComponent: MessageCircle }}
+              onPress={handleChatPress}
+              size="md"
+              color={iconColor}
+            />
+            <DropdownMenuWrapper options={dropdownOptions}>
+              <IconButton
+                icon={{ sf: 'ellipsis', IconComponent: MoreVertical }}
+                onPress={() => { }}
+                size="md"
+                color={iconColor}
+              />
+            </DropdownMenuWrapper>
+          </View>
         </View>
       </View>
 
-      <DropdownMenu
-        visible={dropdownVisible}
-        onClose={() => setDropdownVisible(false)}
-        options={dropdownOptions}
-        anchorPosition={buttonPosition}
-      />
 
       {/* Tabs */}
       <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
@@ -549,6 +555,11 @@ const styles = StyleSheet.create({
     ...typography.h5,
     flex: 1,
     marginRight: 12,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   actionButtonContainer: {
     flexDirection: 'row',

@@ -20,6 +20,7 @@ export const en = {
     add: 'Add',
     done: 'Done',
     reply: 'Reply',
+    react: 'React',
     copy: 'Copy',
     today: 'Today',
     yesterday: 'Yesterday',
@@ -52,8 +53,13 @@ export const en = {
     title: 'Library',
     tabs: {
       workouts: 'Workouts',
+      sections: 'Sections',
       programs: 'Programs',
       exercises: 'Exercises',
+      forms: 'Forms',
+      metrics: 'Metrics',
+      habits: 'Habits',
+      files: 'Files',
     },
     create: {
       workout: 'Create a workout',

@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronDown } from 'lucide-react-native';
@@ -15,6 +14,7 @@ import { SwipeableCalendar } from '@/components/calendar/swipeable-calendar';
 import { formatDateDDMMYYYY } from '@/lib/utils/date-formatters';
 import { TrainingAddOptions } from '@/components/training/training-add-options';
 import { TrainingContent } from '@/components/training/training-content';
+import { ScreenWrapper } from '@/components/screen-wrapper';
 
 const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
 
@@ -23,7 +23,6 @@ export default function TrainingScreen() {
   const { primaryColor, colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const { isVisible: isOverlayVisible, hideOverlay } = useTrainingOverlay();
-  const insets = useSafeAreaInsets();
   // Track which dates have one-off sessions (stored as ISO date strings for comparison)
   const [oneOffSessionDates, setOneOffSessionDates] = useState<Set<string>>(new Set());
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
@@ -190,82 +189,65 @@ export default function TrainingScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
-      <View
-        style={[
-          styles.safeArea,
-          {
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-          },
-        ]}
-      >
-        <View style={styles.container}>
-          {/* Top row: Title on left, Date picker on right */}
-          <View style={styles.headerTopRow}>
-            <Text style={[styles.title, { color: themeColors.text }]}>{t('training.title')}</Text>
-            <PressableOpacity
-              style={styles.dateButton}
-              onPress={handleOpenDatePicker}
-            >
-              <Text style={[styles.dateButtonText, { color: themeColors.text }]}>{displayText}</Text>
-              <PlatformIcon
-                sf="chevron.down"
-                IconComponent={ChevronDown}
-                size={iconSizes.navigationChevrons}
-                color={themeColors.text}
-              />
-            </PressableOpacity>
-          </View>
-          {/* Bottom row: Swipeable Calendar */}
-          <View style={styles.headerBottomRow}>
-            <SwipeableCalendar
-              key={calendarKey}
-              initialSelectedDate={selectedDate || undefined}
-              onDateSelect={handleDateSelect}
-              onSwipe={handleCalendarSwipe}
+    <ScreenWrapper
+      scrollable={false}
+      overlay={
+        <TrainingAddOptions
+          isVisible={isOverlayVisible}
+          onCreateSessionPress={handleCreateSession}
+          onOneOffSessionPress={handleOneOffSession}
+          onClose={hideOverlay}
+        />
+      }
+    >
+      <View style={styles.container}>
+        {/* Top row: Title on left, Date picker on right */}
+        <View style={styles.headerTopRow}>
+          <Text style={[styles.title, { color: themeColors.text }]}>{t('training.title')}</Text>
+          <PressableOpacity
+            style={styles.dateButton}
+            onPress={handleOpenDatePicker}
+          >
+            <Text style={[styles.dateButtonText, { color: themeColors.text }]}>{displayText}</Text>
+            <PlatformIcon
+              sf="chevron.down"
+              IconComponent={ChevronDown}
+              size={iconSizes.navigationChevrons}
+              color={themeColors.text}
             />
-          </View>
-
-          <View style={styles.staticHeader}>
-            <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
-          </View>
-
-          {/* Training Content - appears under calendar divider only when current date has one-off session */}
-          {hasOneOffSessionForCurrentDate && selectedDate && (
-            <TrainingContent date={selectedDate} />
-          )}
+          </PressableOpacity>
         </View>
-      </View>
+        {/* Bottom row: Swipeable Calendar */}
+        <View style={styles.headerBottomRow}>
+          <SwipeableCalendar
+            key={calendarKey}
+            initialSelectedDate={selectedDate || undefined}
+            onDateSelect={handleDateSelect}
+            onSwipe={handleCalendarSwipe}
+          />
+        </View>
 
-      <TrainingAddOptions
-        isVisible={isOverlayVisible}
-        onCreateSessionPress={handleCreateSession}
-        onOneOffSessionPress={handleOneOffSession}
-        onClose={hideOverlay}
-      />
-    </View>
+        <View style={styles.staticHeader}>
+          <View style={[styles.divider, { backgroundColor: themeColors.mutedText, opacity: 0.3 }]} />
+        </View>
+
+        {/* Training Content - appears under calendar divider only when current date has one-off session */}
+        {hasOneOffSessionForCurrentDate && selectedDate && (
+          <TrainingContent date={selectedDate} />
+        )}
+      </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    paddingTop: 16,
   },
   headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
     marginBottom: 0,
     width: '100%',
   },

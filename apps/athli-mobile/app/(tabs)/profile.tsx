@@ -1,6 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View, Linking } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, Text, View, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeftRight,
@@ -24,13 +23,13 @@ import { Card } from '@/components/card';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
+import { ScreenWrapper } from '@/components/screen-wrapper';
 
 export default function ProfileTabScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
 
@@ -76,25 +75,8 @@ export default function ProfileTabScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
-      <View
-        style={[
-          styles.safeArea,
-          {
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-          },
-        ]}
-      >
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={{ paddingBottom: 60 }}
-          showsVerticalScrollIndicator={false}
-          contentInsetAdjustmentBehavior="never"
-        >
-          <View style={styles.content}>
+    <ScreenWrapper contentContainerStyle={{ paddingBottom: 60 }}>
+      <View style={styles.content}>
             <View style={styles.titleRow}>
               <Text style={[styles.title, { color: themeColors.text }]}>
                 {t('profile.title')}
@@ -187,26 +169,13 @@ export default function ProfileTabScreen() {
                 onPress={handleOpenDeleteAccount}
               />
             </Card>
-            <View style={{ height: 60 }} />
-          </View>
-        </ScrollView>
+        <View style={{ height: 60 }} />
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    paddingTop: 20,
-    marginBottom: 44,
-  },
   content: {
     flex: 1,
     paddingHorizontal: 16,

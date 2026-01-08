@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { type EmojiType } from 'rn-emoji-keyboard';
+import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 import {
   Animated,
   FlatList,
@@ -15,15 +15,17 @@ import {
 } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
+import * as ContextMenu from 'zeego/context-menu';
 import * as Clipboard from 'expo-clipboard';
 
 import { typography } from '@/constants/typography';
 import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage, reactTo } from '@/services/chats-service';
-import { type DropdownMenuOption } from '@/components/dropdown-menu';
+import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
 import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
+import { EmojiPickerContainer } from '@/components/chats/emoji-picker-container';
 import { MessageReplyPreview } from '@/components/message/message-reply-preview';
 import { MessageDocumentPreview } from '@/components/message/message-document-preview';
 import { MessageImagePreview } from '@/components/message/message-image-preview';
@@ -87,9 +89,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
   formatTime,
   softWrapText,
   registerRef,
-  onPressIn,
-  onPressOut,
-  onLongPress,
   isLastInSenderRun,
   clientName,
   onReplyPreviewPress,
@@ -104,9 +103,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
   formatTime: (d: Date) => string;
   softWrapText: (t: string) => string;
   registerRef: (ref: View | null) => void;
-  onPressIn: () => void;
-  onPressOut: () => void;
-  onLongPress?: () => void;
   isLastInSenderRun: boolean;
   clientName: string;
   onReplyPreviewPress?: (messageId: string) => void;
@@ -193,9 +189,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
           onPress={() => {
             onReplyPreviewPress?.(originalMessage.id);
           }}
-          onLongPress={onLongPress}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
         />
       )}
 
@@ -213,9 +206,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onImagePress(item.images, clientName, item.isSent, item.timestamp);
             }
           }}
-          onLongPress={onLongPress}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
         />
       )}
 
@@ -233,9 +223,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onVideoPress(item.video, clientName, item.isSent, item.timestamp);
             }
           }}
-          onLongPress={onLongPress}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
         />
       )}
 
@@ -253,9 +240,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
               onDocumentPress(item.document);
             }
           }}
-          onLongPress={onLongPress}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
         />
       )}
 
@@ -268,9 +252,6 @@ const BubbleMeta = React.memo(function BubbleMeta({
             item.isSent ? themeColors.primary : recipientBackgroundColor
           }
           isParentSent={item.isSent}
-          onLongPress={onLongPress}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
         />
       )}
 
@@ -332,14 +313,12 @@ const BubbleMeta = React.memo(function BubbleMeta({
   );
 
   return (
-    <Pressable
+    <View
       ref={registerRef}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
       style={bubbleStyle}
     >
       {bubbleContent}
-    </Pressable>
+    </View>
   );
 });
 
@@ -528,6 +507,8 @@ export const MessageList = ({
   const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [containerPosition, setContainerPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
+  const [contextMenuOpenMessage, setContextMenuOpenMessage] = useState<ChatMessage | null>(null);
+  const [contextMenuAnchor, setContextMenuAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
   const colorScheme = useColorScheme();
   const isLightMode = colorScheme === 'light';
@@ -594,6 +575,7 @@ export const MessageList = ({
 
   const handleEmojiPickerClose = () => {
     setEmojiPickerVisible(false);
+    setSelectedMessage(null);
   };
 
   const handleReactionPress = (message: ChatMessage) => {
@@ -793,10 +775,9 @@ export const MessageList = ({
     });
   };
 
-  const handlePressIn = (message: ChatMessage) => {
-    longPressTimerRef.current = setTimeout(() => {
-      handleLongPress(message);
-    }, 500);
+  const handlePressIn = (_message: ChatMessage) => {
+    // Zeego handles long press for context menu, so we don't need the timer anymore
+    // This is kept for potential future use or for other press-in effects
   };
 
   const handlePressOut = () => {
@@ -806,40 +787,48 @@ export const MessageList = ({
     }
   };
 
-  const handleReply = () => {
-    if (selectedMessage && onReply) {
-      onReply(selectedMessage);
+  const handleReply = (message?: ChatMessage) => {
+    const msg = message || selectedMessage;
+    if (msg && onReply) {
+      onReply(msg);
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
     setIsLastInSenderRun(false);
   };
 
-  const handleCopy = async () => {
-    if (selectedMessage) {
-      await Clipboard.setStringAsync(selectedMessage.text);
+  const handleCopy = async (message?: ChatMessage) => {
+    const msg = message || selectedMessage;
+    if (msg) {
+      await Clipboard.setStringAsync(msg.text);
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
     setIsLastInSenderRun(false);
   };
 
-  const handleEdit = () => {
-    if (selectedMessage && onEdit) {
-      onEdit(selectedMessage);
+  const handleEdit = (message?: ChatMessage) => {
+    const msg = message || selectedMessage;
+    if (msg && onEdit) {
+      onEdit(msg);
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
     setIsLastInSenderRun(false);
   };
 
-  const handleDelete = () => {
-    if (selectedMessage && onDelete) {
-      onDelete(selectedMessage);
+  const handleDelete = (message?: ChatMessage) => {
+    const msg = message || selectedMessage;
+    if (msg && onDelete) {
+      onDelete(msg);
     }
     setDropdownVisible(false);
     setSelectedMessage(null);
     setIsLastInSenderRun(false);
+  };
+
+  const handleOpenEmojiPicker = () => {
+    setEmojiPickerVisible(true);
   };
 
   const getDropdownOptions = (message: ChatMessage): DropdownMenuOption[] => {
@@ -847,12 +836,12 @@ export const MessageList = ({
       {
         label: t('general.reply'),
         icon: { sf: 'arrowshape.turn.up.left', IconComponent: Reply },
-        onPress: handleReply,
+        onPress: () => handleReply(message),
       },
       {
         label: t('general.copy'),
         icon: { sf: 'doc.on.doc', IconComponent: Copy },
-        onPress: handleCopy,
+        onPress: () => handleCopy(message),
       },
     ];
 
@@ -861,13 +850,14 @@ export const MessageList = ({
         options.push({
           label: t('general.edit'),
           icon: { sf: 'pencil', IconComponent: Pencil },
-          onPress: handleEdit,
+          onPress: () => handleEdit(message),
         });
       }
       options.push({
         label: t('general.delete'),
         icon: { sf: 'trash', IconComponent: Trash2 },
-        onPress: handleDelete,
+        onPress: () => handleDelete(message),
+        destructive: true,
       });
     }
 
@@ -1032,36 +1022,72 @@ export const MessageList = ({
             { marginBottom: gap },
           ]}
         >
-          <SwipeToReplyBubble
-            themeColors={themeColors}
-            onCancelLongPress={handlePressOut}
-            alignRight={item.isSent}
-            onReply={onReply}
-            message={item}
-            onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
-            onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
+          <ContextMenu.Root
+            onOpenChange={(open) => {
+              if (open) {
+                // Measure the message position when context menu opens
+                const messageRef = messageRefs.current[item.id];
+                if (messageRef) {
+                  messageRef.measureInWindow((x, y, width, height) => {
+                    setContextMenuAnchor({ x, y, width, height });
+                    setContextMenuOpenMessage(item);
+                  });
+                }
+              } else {
+                setContextMenuOpenMessage(null);
+              }
+            }}
           >
-            <BubbleMeta
-              item={item}
-              themeColors={themeColors}
-              recipientBackgroundColor={recipientBackgroundColor}
-              formatTime={formatTime}
-              softWrapText={softWrapText}
-              registerRef={(ref) => {
-                if (ref) messageRefs.current[item.id] = ref;
-              }}
-              onPressIn={() => handlePressIn(item)}
-              onPressOut={handlePressOut}
-              onLongPress={() => handleLongPress(item)}
-              isLastInSenderRun={isLastInSenderRun}
-              clientName={clientName}
-              onReplyPreviewPress={handleReplyPreviewPress}
-              onDocumentPress={onDocumentPress}
-              onImagePress={onImagePress}
-              onVideoPress={onVideoPress}
-              flashOpacity={flashAnimations.current[item.id]}
-            />
-          </SwipeToReplyBubble>
+            <ContextMenu.Trigger>
+              <Pressable style={{ alignSelf: item.isSent ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
+                <SwipeToReplyBubble
+                  themeColors={themeColors}
+                  onCancelLongPress={handlePressOut}
+                  alignRight={item.isSent}
+                  onReply={onReply}
+                  message={item}
+                  onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
+                  onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
+                >
+                  <BubbleMeta
+                    item={item}
+                    themeColors={themeColors}
+                    recipientBackgroundColor={recipientBackgroundColor}
+                    formatTime={formatTime}
+                    softWrapText={softWrapText}
+                    registerRef={(ref) => {
+                      if (ref) messageRefs.current[item.id] = ref;
+                    }}
+                    isLastInSenderRun={isLastInSenderRun}
+                    clientName={clientName}
+                    onReplyPreviewPress={handleReplyPreviewPress}
+                    onDocumentPress={onDocumentPress}
+                    onImagePress={onImagePress}
+                    onVideoPress={onVideoPress}
+                    flashOpacity={flashAnimations.current[item.id]}
+                  />
+                </SwipeToReplyBubble>
+              </Pressable>
+            </ContextMenu.Trigger>
+            <ContextMenu.Content>
+              {getDropdownOptions(item).map((option, optionIndex) => (
+                <ContextMenu.Item
+                  key={`ctx-${item.id}-${optionIndex}`}
+                  onSelect={option.onPress}
+                  destructive={option.destructive}
+                >
+                  <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
+                  {option.icon && (
+                    <ContextMenu.ItemIcon
+                      ios={{
+                        name: option.icon.sf,
+                      }}
+                    />
+                  )}
+                </ContextMenu.Item>
+              ))}
+            </ContextMenu.Content>
+          </ContextMenu.Root>
 
           {/* Reactions container */}
           {(item.senderReaction || item.recipientReaction) && (
@@ -1175,7 +1201,26 @@ export const MessageList = ({
             </View>
           </Animated.View>
         )}
-        {selectedMessage && (
+        {/* Emoji picker overlay when context menu is open */}
+        {contextMenuOpenMessage && (
+          <EmojiPickerContainer
+            visible={true}
+            onClose={() => setContextMenuOpenMessage(null)}
+            selectedMessage={contextMenuOpenMessage}
+            anchorPosition={contextMenuAnchor}
+            alignRight={contextMenuOpenMessage.isSent}
+            adjustedMessageTop={contextMenuAnchor.y}
+            onReactionUpdate={handleReactionUpdate}
+            onEmojiPickerOpenChange={(open) => {
+              if (open) {
+                setSelectedMessage(contextMenuOpenMessage);
+                setEmojiPickerVisible(true);
+              }
+            }}
+            disableModal={true}
+          />
+        )}
+        {selectedMessage && dropdownVisible && (
           <SelectedMessagePopups
             visible={dropdownVisible}
             onClose={() => {
@@ -1203,6 +1248,31 @@ export const MessageList = ({
           />
         )}
       </View>
+      {/* Standalone EmojiPicker for context menu "React" option */}
+      <EmojiPicker
+        open={emojiPickerVisible && selectedMessage !== null}
+        onClose={handleEmojiPickerClose}
+        onEmojiSelected={handleEmojiSelected}
+        enableSearchBar
+        theme={{
+          backdrop: '#00000055',
+          container: fullThemeColors.surface,
+          header: fullThemeColors.text,
+          skinTonesContainer: colorScheme === 'dark' ? '#2a2a2a' : '#e3dbcd',
+          category: {
+            icon: fullThemeColors.mutedText || fullThemeColors.text,
+            iconActive: fullThemeColors.primary,
+            container: colorScheme === 'dark' ? '#2a2a2a' : '#e3dbcd',
+            containerActive: fullThemeColors.surface,
+          },
+          search: {
+            text: fullThemeColors.text,
+            placeholder: fullThemeColors.mutedText || '#00000055',
+            icon: fullThemeColors.mutedText || '#00000055',
+            background: colorScheme === 'dark' ? '#2a2a2a' : '#00000011',
+          },
+        }}
+      />
     </>
   );
 };

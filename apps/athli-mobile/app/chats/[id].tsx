@@ -27,7 +27,7 @@ import { type IWaveformRef, PlayerState, FinishMode } from '@/components/audio';
 
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { type DropdownMenuOption } from '@/components/dropdown-menu';
 import { MessageList } from '@/components/message/message-list';
 import { MessageReactionsSheet } from '@/components/message/message-reactions-sheet';
 import { ReplyPreviewRow } from '@/components/chats/reply-preview-row';
@@ -143,9 +143,6 @@ export default function ChatDetailScreen() {
   });
 
   const [isLoading, setIsLoading] = useState(!chatParam || !messagesParam);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const actionButtonRef = useRef<View>(null);
   const [reactionsSheetVisible, setReactionsSheetVisible] = useState(false);
   const [selectedMessageForReactions, setSelectedMessageForReactions] = useState<ChatMessage | null>(null);
   const [replyingToMessage, setReplyingToMessage] = useState<ChatMessage | null>(null);
@@ -535,17 +532,10 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleEllipsisPress = () => {
-    actionButtonRef.current?.measureInWindow((x, y, width, height) => {
-      setButtonPosition({ x, y, width, height });
-      setDropdownVisible(true);
-    });
-  };
 
   const handleArchivePress = async () => {
     if (chat?.id) {
       await archiveChat(chat.id);
-      setDropdownVisible(false);
       router.back();
     }
   };
@@ -553,7 +543,6 @@ export default function ChatDetailScreen() {
   const handleDeletePress = async () => {
     if (chat?.id) {
       await deleteChat(chat.id);
-      setDropdownVisible(false);
       router.back();
     }
   };
@@ -890,16 +879,9 @@ export default function ChatDetailScreen() {
         chat={chat}
         onBackPress={handleBackPress}
         onUserProfilePress={handleUserProfilePress}
-        onEllipsisPress={handleEllipsisPress}
-        actionButtonRef={actionButtonRef}
+        dropdownOptions={dropdownOptions}
       />
 
-      <DropdownMenu
-        visible={dropdownVisible}
-        onClose={() => setDropdownVisible(false)}
-        options={dropdownOptions}
-        anchorPosition={buttonPosition}
-      />
 
       {/* ROW 2: SCROLL WINDOW - Content scrolls through header and toolbar */}
       <Animated.View
