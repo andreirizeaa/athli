@@ -1,7 +1,6 @@
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View, Linking } from 'react-native';
+import { Platform, StyleSheet, Text, View, Linking } from 'react-native';
 import { PressableOpacity } from 'pressto';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -28,6 +27,7 @@ import { useTranslations } from '@/contexts/useTranslations';
 import { Card } from '@/components/card';
 import { SettingsOption } from '@/components/settings-option';
 import { Separator } from '@/components/separator';
+import { ScreenWrapper } from '@/components/screen-wrapper';
 
 type PlatformIconProps = {
   sf: string;
@@ -53,7 +53,6 @@ export default function SettingsScreen() {
   const { colors: themeColors } = useThemePreference();
   const { appView, setAppView } = useAppView();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
   const iconSize = iconSizes.tabBarIcons;
   const iconColor = themeColors.text;
 
@@ -102,30 +101,14 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
-      <View
-        style={[
-          styles.safeArea,
-          {
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-          },
-        ]}
-      >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.headerSection}>
-            <Text style={[styles.title, { color: themeColors.text }]}>
-              {isAthleteView ? t('profile.title') : t('settings.title')}
-            </Text>
-          </View>
+    <ScreenWrapper contentContainerStyle={styles.scrollContent}>
+      <View style={styles.headerSection}>
+        <Text style={[styles.title, { color: themeColors.text }]}>
+          {isAthleteView ? t('profile.title') : t('settings.title')}
+        </Text>
+      </View>
 
-          <View style={styles.contentContainer}>
+      <View style={styles.contentContainer}>
             {/* View Switching Card */}
             <Card>
             <SettingsOption
@@ -243,26 +226,14 @@ export default function SettingsScreen() {
               title={t('profile.deleteAccount')}
               onPress={handleOpenDeleteAccount}
             />
-          </Card>
-          </View>
-        </ScrollView>
+        </Card>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
-    paddingTop: 16,
     paddingBottom: 60,
   },
   headerSection: {

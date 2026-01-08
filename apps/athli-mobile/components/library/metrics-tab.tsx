@@ -4,27 +4,27 @@ import { StyleSheet, Text, View } from 'react-native';
 import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { ScreenWrapper } from '@/components/screen-wrapper';
 
-export default function HomeScreen() {
+export const MetricsTab = () => {
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
 
   return (
-    <ScreenWrapper scrollable={false}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('home.title')}</Text>
-      </View>
-    </ScreenWrapper>
+    <View style={styles.container}>
+      <Text style={[styles.text, { color: themeColors.text }]}>
+        {t('library.tabs.metrics')}
+      </Text>
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  header: {
-    marginBottom: 16,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
-    ...typography.h1,
-    textAlign: 'left',
+  text: {
+    ...typography.h4,
   },
 });

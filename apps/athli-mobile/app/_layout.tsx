@@ -5,7 +5,7 @@ import { Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View as RNView } from 'react-native';
 import 'react-native-reanimated';
 import { PressablesConfig } from 'pressto';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +19,6 @@ import { AppViewProvider } from '@/contexts/useAppView';
 import { TranslationProvider } from '@/contexts/useTranslations';
 import { ModalCallbacksProvider } from '@/contexts/modal-callbacks';
 import { TrainingOverlayProvider } from '@/contexts/useTrainingOverlay';
-import { View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -124,20 +123,22 @@ function RootLayoutNav() {
       };
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      <StatusBar
-        style={colorScheme === 'dark' ? 'light' : 'dark'}
-        translucent
-        backgroundColor="transparent"
-        hidden={shouldHideStatusBar}
-      />
-      <Stack
-        screenOptions={{
-          contentStyle: {
-            backgroundColor: 'transparent',
-          },
-        }}
-      >
+    <RNView style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <ThemeProvider value={navigationTheme}>
+        <StatusBar
+          style={colorScheme === 'dark' ? 'light' : 'dark'}
+          translucent={true}
+          backgroundColor="transparent"
+          hidden={shouldHideStatusBar}
+        />
+        <Stack
+          screenOptions={{
+            headerTransparent: true,
+            contentStyle: {
+              backgroundColor: 'transparent',
+            },
+          }}
+        >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="settings/preferences" options={{ headerShown: false }} />
         <Stack.Screen name="client/[id]" options={{ headerShown: false }} />
@@ -328,6 +329,7 @@ function RootLayoutNav() {
         <Stack.Screen name="chats/archived" options={{ headerShown: false }} />
         <Stack.Screen name="inbox/[id]" options={{ headerShown: false }} />
       </Stack>
-    </ThemeProvider>
+      </ThemeProvider>
+    </RNView>
   );
 }

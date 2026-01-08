@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View, Platform, ScrollView, Dimensions } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
@@ -12,7 +12,7 @@ import { IconButton } from '@/components/icon-button';
 import { Card } from '@/components/card';
 import { Separator } from '@/components/separator';
 import { PlatformIcon } from '@/components/platform-icon';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useModalCallbacks } from '@/contexts/modal-callbacks';
 
 type RepeatData = {
@@ -69,15 +69,6 @@ export default function RepeatOptionsModal() {
       ? new Set(existingRepeatData.monthDays)
       : new Set([new Date().getDate()]) // Default to today's date
   );
-  const [everyDropdownVisible, setEveryDropdownVisible] = useState(false);
-  const [forDropdownVisible, setForDropdownVisible] = useState(false);
-  const [everyMonthDropdownVisible, setEveryMonthDropdownVisible] = useState(false);
-  const everyRowRef = useRef<View>(null);
-  const forRowRef = useRef<View>(null);
-  const everyMonthRowRef = useRef<View>(null);
-  const [everyButtonPosition, setEveryButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [forButtonPosition, setForButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [everyMonthButtonPosition, setEveryMonthButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   const handleClose = () => {
     router.back();
@@ -104,26 +95,6 @@ export default function RepeatOptionsModal() {
     }
   };
 
-  const handleOpenEveryDropdown = () => {
-    everyRowRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setEveryButtonPosition({ x: pageX, y: pageY, width, height });
-      setEveryDropdownVisible(true);
-    });
-  };
-
-  const handleOpenForDropdown = () => {
-    forRowRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setForButtonPosition({ x: pageX, y: pageY, width, height });
-      setForDropdownVisible(true);
-    });
-  };
-
-  const handleOpenEveryMonthDropdown = () => {
-    everyMonthRowRef.current?.measure((x, y, width, height, pageX, pageY) => {
-      setEveryMonthButtonPosition({ x: pageX, y: pageY, width, height });
-      setEveryMonthDropdownVisible(true);
-    });
-  };
 
   const everyDropdownOptions: DropdownMenuOption[] = [1, 2, 3, 4].map((num) => ({
     label: num === 1 ? t('calendar.newSession.repeatOptions.weekCapitalized') : `${num} ${t('calendar.newSession.repeatOptions.weeks')}`,
@@ -255,10 +226,10 @@ export default function RepeatOptionsModal() {
           <>
             {/* Every/For Card */}
             <Card style={styles.optionsCard}>
-              <View ref={everyRowRef}>
+              <DropdownMenuWrapper options={everyDropdownOptions}>
                 <PressableOpacity
                   style={styles.optionRow}
-                  onPress={handleOpenEveryDropdown}
+                  onPress={() => { }}
                 >
                   <Text style={[styles.optionLabel, { color: themeColors.text }]}>
                     {t('calendar.newSession.repeatOptions.every')}
@@ -275,12 +246,12 @@ export default function RepeatOptionsModal() {
                     />
                   </View>
                 </PressableOpacity>
-              </View>
+              </DropdownMenuWrapper>
               <Separator />
-              <View ref={forRowRef}>
+              <DropdownMenuWrapper options={forDropdownOptions}>
                 <PressableOpacity
                   style={styles.optionRow}
-                  onPress={handleOpenForDropdown}
+                  onPress={() => { }}
                 >
                   <Text style={[styles.optionLabel, { color: themeColors.text }]}>
                     {t('calendar.newSession.repeatOptions.for')}
@@ -297,25 +268,8 @@ export default function RepeatOptionsModal() {
                     />
                   </View>
                 </PressableOpacity>
-              </View>
+              </DropdownMenuWrapper>
             </Card>
-
-            <DropdownMenu
-              visible={everyDropdownVisible}
-              onClose={() => setEveryDropdownVisible(false)}
-              options={everyDropdownOptions}
-              anchorPosition={everyButtonPosition}
-              alignRight={true}
-              disableModal={false}
-            />
-            <DropdownMenu
-              visible={forDropdownVisible}
-              onClose={() => setForDropdownVisible(false)}
-              options={forDropdownOptions}
-              anchorPosition={forButtonPosition}
-              alignRight={true}
-              disableModal={false}
-            />
 
             {/* Weekdays Card */}
             <Card style={styles.weekdaysCard}>
@@ -359,10 +313,10 @@ export default function RepeatOptionsModal() {
           <>
             {/* Every Month Card */}
             <Card style={styles.optionsCard}>
-              <View ref={everyMonthRowRef}>
+              <DropdownMenuWrapper options={everyMonthDropdownOptions}>
                 <PressableOpacity
                   style={styles.optionRow}
-                  onPress={handleOpenEveryMonthDropdown}
+                  onPress={() => { }}
                 >
                   <Text style={[styles.optionLabel, { color: themeColors.text }]}>
                     {t('calendar.newSession.repeatOptions.every')}
@@ -379,17 +333,8 @@ export default function RepeatOptionsModal() {
                     />
                   </View>
                 </PressableOpacity>
-              </View>
+              </DropdownMenuWrapper>
             </Card>
-
-            <DropdownMenu
-              visible={everyMonthDropdownVisible}
-              onClose={() => setEveryMonthDropdownVisible(false)}
-              options={everyMonthDropdownOptions}
-              anchorPosition={everyMonthButtonPosition}
-              alignRight={true}
-              disableModal={false}
-            />
 
             {/* Each Card */}
             <Card style={styles.eachCard}>

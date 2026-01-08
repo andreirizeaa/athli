@@ -15,7 +15,7 @@ import { IconButton } from '@/components/icon-button';
 import { type ImageAttachment } from '@/components/chats/message-image-preview';
 import { AttachmentPreviewToolbar } from '@/components/camera/attachment-preview-toolbar';
 import { sendImageMessage } from '@/services/chats-service';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useDarkModeTheme } from '@/components/dark-mode-wrapper';
 import { StatusBar } from 'expo-status-bar';
 
@@ -55,9 +55,6 @@ const ImagePreviewScreen = () => {
   const [images, setImages] = useState<ImageAttachment[]>(initialImages);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(initialImages[0]?.id || null);
   const scrollViewRef = useRef<ScrollView>(null);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [ellipsisButtonPosition, setEllipsisButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const ellipsisButtonRef = useRef<View>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<Set<string>>(new Set());
 
@@ -144,18 +141,8 @@ const ImagePreviewScreen = () => {
     }
   };
 
-  const handleEllipsisPress = () => {
-    if (ellipsisButtonRef.current) {
-      ellipsisButtonRef.current.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-        setEllipsisButtonPosition({ x: pageX, y: pageY, width, height });
-        setDropdownVisible(true);
-      });
-    }
-  };
-
   const handleSelect = () => {
     setIsSelectionMode(true);
-    setDropdownVisible(false);
   };
 
   const handleExitSelectionMode = () => {
@@ -251,9 +238,6 @@ const ImagePreviewScreen = () => {
   const canShowDelete = isSent && isMessageWithinOneHour();
 
   const handleDownloadAllFromDropdown = async () => {
-    setDropdownVisible(false);
-    // Wait for dropdown to close before opening share dialog
-    await new Promise((resolve) => setTimeout(resolve, 200));
     await handleDownloadAll();
   };
 
@@ -463,10 +447,10 @@ const ImagePreviewScreen = () => {
                   )}
                   {/* Ellipsis button - show when there are multiple images */}
                   {images.length > 1 && (
-                    <View ref={ellipsisButtonRef}>
+                    <DropdownMenuWrapper options={dropdownOptions}>
                       <PressableOpacity
                         style={[styles.downloadButton, { backgroundColor: themeColors.iconButton }]}
-                        onPress={handleEllipsisPress}
+                        onPress={() => { }}
                       >
                         <PlatformIcon
                           sf="ellipsis"
@@ -475,7 +459,7 @@ const ImagePreviewScreen = () => {
                           color={iconColor}
                         />
                       </PressableOpacity>
-                    </View>
+                    </DropdownMenuWrapper>
                   )}
                 </>
               )}
@@ -582,15 +566,6 @@ const ImagePreviewScreen = () => {
             )}
           </View>
         )}
-
-        {/* Dropdown menu */}
-        <DropdownMenu
-          visible={dropdownVisible}
-          onClose={() => setDropdownVisible(false)}
-          options={dropdownOptions}
-          anchorPosition={ellipsisButtonPosition}
-          alignRight={true}
-        />
       </View>
     );
   }

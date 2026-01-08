@@ -1,0 +1,268 @@
+import React, { useState, useRef, useMemo } from 'react';
+import { StyleSheet, Text, View, ScrollView, Dimensions, LayoutChangeEvent } from 'react-native';
+import { PressableOpacity } from 'pressto';
+import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
+
+import { typography } from '@/constants/typography';
+import { useThemePreference } from '@/contexts/useColorScheme';
+import { useTranslations } from '@/contexts/useTranslations';
+import { ScreenWrapper } from '@/components/screen-wrapper';
+import {
+  WorkoutsTab,
+  SectionsTab,
+  ProgramsTab,
+  ExercisesTab,
+  FormsTab,
+  MetricsTab,
+  HabitsTab,
+  FilesTab,
+} from '@/components/library';
+
+type LibraryTab = 'workouts' | 'sections' | 'programs' | 'exercises' | 'forms' | 'metrics' | 'habits' | 'files';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+type TabComponent = {
+  key: string;
+  component: React.ComponentType;
+};
+
+export default function LibraryScreen() {
+  const { primaryColor, colors: themeColors } = useThemePreference();
+  const { t } = useTranslations();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const pagerRef = useRef<PagerView>(null);
+  const tabBarScrollRef = useRef<ScrollView>(null);
+  const underlinePosition = useSharedValue(0);
+  const underlineWidth = useSharedValue(0);
+  const tabLayoutsRef = useRef<{ [key: number]: { x: number; width: number } }>({});
+
+  const tabs: LibraryTab[] = [
+    'workouts',
+    'sections',
+    'programs',
+    'exercises',
+    'forms',
+    'metrics',
+    'habits',
+    'files',
+  ];
+
+  const tabComponents = useMemo(() => [
+    { key: 'workouts', component: WorkoutsTab },
+    { key: 'sections', component: SectionsTab },
+    { key: 'programs', component: ProgramsTab },
+    { key: 'exercises', component: ExercisesTab },
+    { key: 'forms', component: FormsTab },
+    { key: 'metrics', component: MetricsTab },
+    { key: 'habits', component: HabitsTab },
+    { key: 'files', component: FilesTab },
+  ], []);
+
+  // Extra padding for the underline to make it slightly wider than the tab text
+  const UNDERLINE_EXTRA_WIDTH = 8;
+
+  const animateUnderline = (index: number) => {
+    const layout = tabLayoutsRef.current[index];
+    if (layout) {
+      underlinePosition.value = withTiming(layout.x - UNDERLINE_EXTRA_WIDTH / 2, {
+        duration: 300,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      });
+      underlineWidth.value = withTiming(layout.width + UNDERLINE_EXTRA_WIDTH, {
+        duration: 300,
+        easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+      });
+    }
+  };
+
+  const handleTabPress = (index: number) => {
+    setSelectedIndex(index);
+    animateUnderline(index);
+
+    pagerRef.current?.setPage(index);
+
+    // Scroll tab bar to keep selected tab visible
+    const layout = tabLayoutsRef.current[index];
+    if (layout) {
+      tabBarScrollRef.current?.scrollTo({
+        x: layout.x - SCREEN_WIDTH / 2 + layout.width / 2,
+        animated: true,
+      });
+    }
+  };
+
+  const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
+    const index = event.nativeEvent.position;
+    if (index !== selectedIndex) {
+      setSelectedIndex(index);
+      animateUnderline(index);
+
+      // Scroll tab bar to keep selected tab visible
+      const layout = tabLayoutsRef.current[index];
+      if (layout) {
+        tabBarScrollRef.current?.scrollTo({
+          x: layout.x - SCREEN_WIDTH / 2 + layout.width / 2,
+          animated: true,
+        });
+      }
+    }
+  };
+
+  const handleTabLayout = (index: number, event: LayoutChangeEvent) => {
+    const { width, x } = event.nativeEvent.layout;
+    tabLayoutsRef.current[index] = { x, width };
+
+    // Initialize underline position on first layout
+    if (index === selectedIndex && underlineWidth.value === 0) {
+      underlinePosition.value = x - UNDERLINE_EXTRA_WIDTH / 2;
+      underlineWidth.value = width + UNDERLINE_EXTRA_WIDTH;
+    }
+  };
+
+  const animatedUnderlineStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: underlinePosition.value }],
+      width: underlineWidth.value,
+    };
+  });
+
+  return (
+    <ScreenWrapper scrollable={false}>
+      <View style={styles.container}>
+        {/* Title */}
+        <Text style={[styles.title, { color: themeColors.text }]}>
+          {t('library.title')}
+        </Text>
+
+        {/* Horizontal Tab Bar */}
+        <View style={styles.tabBarWrapper}>
+          <ScrollView
+            ref={tabBarScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabBarContainer}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            <View style={styles.tabsRow}>
+              {tabs.map((tab, index) => {
+                const isSelected = selectedIndex === index;
+                return (
+                  <View
+                    key={tab}
+                    onLayout={(event) => handleTabLayout(index, event)}
+                  >
+                    <PressableOpacity
+                      style={styles.tab}
+                      onPress={() => handleTabPress(index)}
+                    >
+                      <Text
+                        style={[
+                          styles.tabText,
+                          {
+                            color: isSelected ? themeColors.text : themeColors.mutedText,
+                            fontWeight: isSelected ? '700' : '600',
+                          },
+                        ]}
+                      >
+                        {t(`library.tabs.${tab}`)}
+                      </Text>
+                    </PressableOpacity>
+                  </View>
+                );
+              })}
+
+              {/* Animated underline - inside ScrollView to scroll with tabs */}
+              <Animated.View
+                style={[
+                  styles.animatedUnderline,
+                  { backgroundColor: primaryColor },
+                  animatedUnderlineStyle,
+                ]}
+              />
+            </View>
+          </ScrollView>
+
+          {/* Full-width divider - extends beyond container padding */}
+          <View style={[styles.divider, { backgroundColor: themeColors.mutedText }]} />
+        </View>
+
+        {/* Tab Content with PagerView */}
+        <PagerView
+          ref={pagerRef}
+          style={styles.contentWrapper}
+          initialPage={0}
+          onPageSelected={handlePageSelected}
+        >
+          {tabComponents.map(({ key, component: Component }) => (
+            <View key={key} style={styles.tabContentItem}>
+              <Component />
+            </View>
+          ))}
+        </PagerView>
+      </View>
+    </ScreenWrapper>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  title: {
+    ...typography.h1,
+    textAlign: 'left',
+    marginBottom: 16,
+  },
+  tabBarWrapper: {
+    position: 'relative',
+    marginLeft: -16,
+    marginRight: -16,
+  },
+  tabBarContainer: {
+    flexGrow: 0,
+  },
+  tabBarContent: {
+    paddingLeft: 16,
+    paddingRight: 16,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: 24,
+    position: 'relative',
+  },
+  tab: {
+    paddingVertical: 8,
+  },
+  tabText: {
+    ...typography.p1,
+  },
+  divider: {
+    width: '100%',
+    height: 1,
+    opacity: 0.3,
+    marginTop: 0,
+    marginBottom: 16,
+  },
+  animatedUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    height: 3,
+    borderRadius: 1.5,
+    zIndex: 10,
+  },
+  contentWrapper: {
+    flex: 1,
+  },
+  tabContentItem: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+});
