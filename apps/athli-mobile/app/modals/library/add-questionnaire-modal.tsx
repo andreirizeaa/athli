@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Platform, StyleSheet, Text, View, LayoutChangeEvent, Alert } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
@@ -90,13 +90,13 @@ export default function AddQuestionnaireModal() {
     // Form validation and change detection
     const { hasChanges, canComplete } = useMemo(() => {
         const trimmedName = name.trim();
-        
+
         // Only name is required
         const formValid = trimmedName.length > 0;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 || 
-                       description.trim().length > 0;
+        const changes = trimmedName.length > 0 ||
+            description.trim().length > 0;
 
         return {
             hasChanges: changes,
@@ -119,21 +119,29 @@ export default function AddQuestionnaireModal() {
     };
 
     const handleTabPress = (tabKey: TabKey) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setSelectedTab(tabKey);
-        animateUnderline(tabKey);
+        if (selectedTab !== tabKey) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setSelectedTab(tabKey);
+        }
     };
+
+    // Animate underline when selectedTab changes
+    useEffect(() => {
+        if (selectedTab) {
+            animateUnderline(selectedTab);
+        }
+    }, [selectedTab]);
 
     const handleSwipe = useCallback((direction: 'left' | 'right') => {
         const currentIndex = tabOrder.indexOf(selectedTab);
         let newIndex: number;
-        
+
         if (direction === 'left') {
             newIndex = Math.min(currentIndex + 1, tabOrder.length - 1);
         } else {
             newIndex = Math.max(currentIndex - 1, 0);
         }
-        
+
         if (newIndex !== currentIndex) {
             const newTab = tabOrder[newIndex];
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -163,7 +171,6 @@ export default function AddQuestionnaireModal() {
 
         // Switch to the New tab
         setSelectedTab('new');
-        animateUnderline('new');
     }, []);
 
     const handleTabLayout = (tabKey: TabKey, event: LayoutChangeEvent) => {
@@ -435,11 +442,11 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         marginHorizontal: -16,
         paddingHorizontal: 16,
-        marginBottom: 16,
         paddingTop: 16,
     },
     tabsContainer: {
         flexDirection: 'row',
+        flex: 1,
     },
     tabContainer: {
         flex: 1,
@@ -466,7 +473,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         paddingHorizontal: 16,
         paddingBottom: 32,
-        gap: 12,
+        gap: 16,
     },
     templatesContent: {
         flexGrow: 1,

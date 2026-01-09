@@ -50,7 +50,7 @@ export const TextAreaInput = forwardRef<TextAreaInputRef, TextAreaInputProps>(
               hitSlop={8}
             >
               <View style={[styles.clearButtonIcon, { backgroundColor: themeColors.mutedText }]}>
-                <X {...({ size: 12, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
+                <X {...({ size: 10, color: themeColors.surfaceSecondary, strokeWidth: 3 } as any)} />
               </View>
             </PressableOpacity>
           )}
@@ -97,9 +97,9 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   clearButtonIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },

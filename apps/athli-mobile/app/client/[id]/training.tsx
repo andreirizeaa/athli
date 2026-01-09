@@ -149,15 +149,29 @@ export default function ClientTrainingScreen() {
 
     const dropdownOptions = useMemo(() => [
         {
-            label: t('clientDetail.actions.addWorkout'),
+            label: t('clientDetail.actions.assignWorkout'),
             icon: { sf: 'figure.run', IconComponent: Dumbbell },
+            onPress: () => {
+                router.push('/modals/client/assign-workout-to-client-modal');
+            }
+        },
+        {
+            label: t('clientDetail.actions.addWorkout'),
+            icon: { sf: 'plus.circle', IconComponent: Plus },
             onPress: () => {
                 router.push('/modals/library/add-workout-modal');
             }
         },
         {
-            label: t('clientDetail.actions.addProgram'),
+            label: t('clientDetail.actions.assignProgram'),
             icon: { sf: 'list.bullet.clipboard', IconComponent: ClipboardList },
+            onPress: () => {
+                router.push('/modals/client/assign-program-to-client-modal');
+            }
+        },
+        {
+            label: t('clientDetail.actions.addProgram'),
+            icon: { sf: 'list.bullet.clipboard.fill', IconComponent: ClipboardList },
             onPress: () => { }
         }
     ], [t, router]);
