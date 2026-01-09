@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, LayoutChangeEvent } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   Easing,
+  runOnJS,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -93,6 +95,35 @@ export default function ClientDetailScreen() {
     setSelectedIndex(index);
     animateUnderline(index);
   };
+
+  const handleSwipe = useCallback((direction: 'left' | 'right') => {
+    let newIndex: number;
+    
+    if (direction === 'left') {
+      newIndex = Math.min(selectedIndex + 1, tabs.length - 1);
+    } else {
+      newIndex = Math.max(selectedIndex - 1, 0);
+    }
+    
+    if (newIndex !== selectedIndex) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedIndex(newIndex);
+      animateUnderline(newIndex);
+    }
+  }, [selectedIndex, tabs.length]);
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-10, 10])
+    .onEnd((event) => {
+      if (Math.abs(event.velocityX) > 500 || Math.abs(event.translationX) > 50) {
+        if (event.translationX < 0) {
+          runOnJS(handleSwipe)('left');
+        } else {
+          runOnJS(handleSwipe)('right');
+        }
+      }
+    });
 
   const handleTabLayout = (index: number, event: LayoutChangeEvent) => {
     const { width, x } = event.nativeEvent.layout;
@@ -317,54 +348,57 @@ export default function ClientDetailScreen() {
         </View>
       </View>
 
-      {/* Tabs */}
-      <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
-        {tabs.map((tab, index) => {
-          const isSelected = selectedIndex === index;
-          return (
-            <View
-              key={tab}
-              style={{ flex: 1 }}
-              onLayout={(event) => handleTabLayout(index, event)}
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  styles.tab,
-                  { opacity: pressed ? 0.7 : 1 },
-                ]}
-                onPress={() => handleTabPress(index)}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    {
-                      color: isSelected ? themeColors.text : themeColors.mutedText,
-                      fontWeight: isSelected ? '700' : '600',
-                    },
-                  ]}
+      {/* Swipe Gesture Wrapper */}
+      <GestureDetector gesture={swipeGesture}>
+        <View style={styles.gestureContainer}>
+          {/* Tabs */}
+          <View style={[styles.tabsContainer, { borderBottomColor: themeColors.border }]}>
+            {tabs.map((tab, index) => {
+              const isSelected = selectedIndex === index;
+              return (
+                <View
+                  key={tab}
+                  style={{ flex: 1 }}
+                  onLayout={(event) => handleTabLayout(index, event)}
                 >
-                  {tab}
-                </Text>
-              </Pressable>
-            </View>
-          );
-        })}
-        {/* Animated underline */}
-        <Animated.View
-          style={[
-            styles.animatedUnderline,
-            { backgroundColor: primaryColor },
-            animatedUnderlineStyle,
-          ]}
-        />
-      </View>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.tab,
+                      { opacity: pressed ? 0.7 : 1 },
+                    ]}
+                    onPress={() => handleTabPress(index)}
+                  >
+                    <Text
+                      style={[
+                        styles.tabText,
+                        {
+                          color: isSelected ? themeColors.text : themeColors.mutedText,
+                          fontWeight: isSelected ? '700' : '600',
+                        },
+                      ]}
+                    >
+                      {tab}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            })}
+            {/* Animated underline */}
+            <Animated.View
+              style={[
+                styles.animatedUnderline,
+                { backgroundColor: primaryColor },
+                animatedUnderlineStyle,
+              ]}
+            />
+          </View>
 
-      {/* Tab Content */}
-      {selectedIndex === 0 ? (
-        <View style={styles.contentContainer}>
-          <Text style={{ color: themeColors.mutedText }}>{t('clientDetail.overviewPlaceholder')}</Text>
-        </View>
-      ) : (
+          {/* Tab Content */}
+          {selectedIndex === 0 ? (
+            <View style={styles.contentContainer}>
+              <Text style={{ color: themeColors.mutedText }}>{t('clientDetail.overviewPlaceholder')}</Text>
+            </View>
+          ) : (
         <View style={styles.optionsContainer}>
           <ListRowItem
             style={styles.optionRow}
@@ -526,8 +560,10 @@ export default function ClientDetailScreen() {
             onPress={() => router.push(`/client/${id}/settings`)}
           />
           <Separator style={styles.separator} />
+          </View>
+          )}
         </View>
-      )}
+      </GestureDetector>
     </ScreenWrapper>
   );
 }
@@ -588,6 +624,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 44,
     height: 44,
+  },
+  gestureContainer: {
+    flex: 1,
   },
   tabsContainer: {
     flexDirection: 'row',

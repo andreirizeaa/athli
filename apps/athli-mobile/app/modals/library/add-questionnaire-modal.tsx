@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { Platform, StyleSheet, Text, View, LayoutChangeEvent, Alert, ScrollView } from 'react-native';
+import { Platform, StyleSheet, Text, View, LayoutChangeEvent, Alert } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,10 +10,11 @@ import Animated, {
     useAnimatedStyle,
     withTiming,
     Easing,
+    runOnJS,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
-import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 
 import { typography } from '@/constants/typography';
 import { formTemplates, type FormTemplate } from '@/constants/forms';
@@ -34,12 +35,11 @@ export default function AddQuestionnaireModal() {
     const insets = useSafeAreaInsets();
 
     const [selectedTab, setSelectedTab] = useState<TabKey>('templates');
-    const pagerRef = useRef<PagerView>(null);
     const underlinePosition = useSharedValue(0);
     const underlineWidth = useSharedValue(0);
     const tabLayoutsRef = useRef<{ [key: string]: { x: number; width: number } }>({});
 
-    // Tab order: templates (index 0), new (index 1)
+    // Tab order for swipe navigation
     const tabOrder: TabKey[] = ['templates', 'new'];
 
     // Form state
@@ -122,23 +122,38 @@ export default function AddQuestionnaireModal() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedTab(tabKey);
         animateUnderline(tabKey);
-        
-        // Set pager page
-        const pageIndex = tabOrder.indexOf(tabKey);
-        if (pageIndex !== -1) {
-            pagerRef.current?.setPage(pageIndex);
-        }
     };
 
-    const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
-        const index = event.nativeEvent.position;
-        const tabKey = tabOrder[index];
-        if (tabKey && tabKey !== selectedTab) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setSelectedTab(tabKey);
-            animateUnderline(tabKey);
+    const handleSwipe = useCallback((direction: 'left' | 'right') => {
+        const currentIndex = tabOrder.indexOf(selectedTab);
+        let newIndex: number;
+        
+        if (direction === 'left') {
+            newIndex = Math.min(currentIndex + 1, tabOrder.length - 1);
+        } else {
+            newIndex = Math.max(currentIndex - 1, 0);
         }
-    };
+        
+        if (newIndex !== currentIndex) {
+            const newTab = tabOrder[newIndex];
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setSelectedTab(newTab);
+            animateUnderline(newTab);
+        }
+    }, [selectedTab, tabOrder]);
+
+    const swipeGesture = Gesture.Pan()
+        .activeOffsetX([-20, 20])
+        .failOffsetY([-10, 10])
+        .onEnd((event) => {
+            if (Math.abs(event.velocityX) > 500 || Math.abs(event.translationX) > 50) {
+                if (event.translationX < 0) {
+                    runOnJS(handleSwipe)('left');
+                } else {
+                    runOnJS(handleSwipe)('right');
+                }
+            }
+        });
 
     // Handle selecting a template
     const handleSelectTemplate = useCallback((template: FormTemplate) => {
@@ -149,7 +164,6 @@ export default function AddQuestionnaireModal() {
         // Switch to the New tab
         setSelectedTab('new');
         animateUnderline('new');
-        pagerRef.current?.setPage(1); // New tab is at index 1
     }, []);
 
     const handleTabLayout = (tabKey: TabKey, event: LayoutChangeEvent) => {
@@ -254,189 +268,136 @@ export default function AddQuestionnaireModal() {
                 </View>
             </View>
 
-            {/* Swipeable Tab Content */}
-            <PagerView
-                ref={pagerRef}
-                style={styles.pagerView}
-                initialPage={0}
-                onPageSelected={handlePageSelected}
-            >
-                {/* Templates Tab (index 0) */}
-                <View key="templates" style={styles.pageContainer}>
-                    <ScrollView
-                        style={styles.scrollView}
-                        contentContainerStyle={[styles.templatesContent, { paddingTop: headerHeight + 16 }]}
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                        keyboardDismissMode="on-drag"
-                        nestedScrollEnabled={true}
-                    >
-                        {/* Tab Bar */}
-                        <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
-                            <View style={styles.tabsContainer}>
-                                {tabs.map((tab) => {
-                                    const isSelected = selectedTab === tab.key;
-                                    return (
-                                        <View
-                                            key={tab.key}
-                                            style={styles.tabContainer}
-                                            onLayout={(event) => handleTabLayout(tab.key, event)}
+            {/* Scrollable Content with Swipe Gesture */}
+            <GestureDetector gesture={swipeGesture}>
+                <KeyboardAwareScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={[
+                        selectedTab === 'templates' ? styles.templatesContent : styles.formContent,
+                        { paddingTop: headerHeight }
+                    ]}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    bottomOffset={40}
+                >
+                    {/* Tab Bar - rendered once */}
+                    <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
+                        <View style={styles.tabsContainer}>
+                            {tabs.map((tab) => {
+                                const isSelected = selectedTab === tab.key;
+                                return (
+                                    <View
+                                        key={tab.key}
+                                        style={styles.tabContainer}
+                                        onLayout={(event) => handleTabLayout(tab.key, event)}
+                                    >
+                                        <PressableOpacity
+                                            style={styles.tab}
+                                            onPress={() => handleTabPress(tab.key)}
                                         >
-                                            <PressableOpacity
-                                                style={styles.tab}
-                                                onPress={() => handleTabPress(tab.key)}
+                                            <Text
+                                                style={[
+                                                    styles.tabText,
+                                                    {
+                                                        color: isSelected ? themeColors.text : themeColors.mutedText,
+                                                        fontWeight: isSelected ? '700' : '600',
+                                                    },
+                                                ]}
                                             >
-                                                <Text
-                                                    style={[
-                                                        styles.tabText,
-                                                        {
-                                                            color: isSelected ? themeColors.text : themeColors.mutedText,
-                                                            fontWeight: isSelected ? '700' : '600',
-                                                        },
-                                                    ]}
-                                                >
-                                                    {tab.label}
-                                                </Text>
-                                            </PressableOpacity>
-                                        </View>
-                                    );
-                                })}
-
-                                {/* Animated underline */}
-                                <Animated.View
-                                    style={[
-                                        styles.animatedUnderline,
-                                        { backgroundColor: primaryColor },
-                                        animatedUnderlineStyle,
-                                    ]}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Search Bar */}
-                        <SearchBar
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            placeholder={t('library.addQuestionnaire.searchPlaceholder')}
-                        />
-
-                        {/* Template Categories */}
-                        {filteredTemplates.length === 0 ? (
-                            <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
-                                {t('library.addQuestionnaire.noTemplatesFound')}
-                            </Text>
-                        ) : (
-                            filteredTemplates.map((group, groupIndex) => (
-                                <View key={groupIndex} style={styles.categorySection}>
-                                    {group.label && (
-                                        <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
-                                            {group.label}
-                                        </Text>
-                                    )}
-                                    <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
-                                        {group.templates.map((template, index) => (
-                                            <React.Fragment key={template.name}>
-                                                {index > 0 && <Separator />}
-                                                <PressableOpacity
-                                                    style={styles.templateRow}
-                                                    onPress={() => handleSelectTemplate(template)}
-                                                >
-                                                    <View style={styles.templateInfo}>
-                                                        <Text style={[styles.templateName, { color: themeColors.text }]}>
-                                                            {template.name}
-                                                        </Text>
-                                                        {template.description && (
-                                                            <Text
-                                                                style={[styles.templateDescription, { color: themeColors.mutedText }]}
-                                                                numberOfLines={1}
-                                                            >
-                                                                {template.description}
-                                                            </Text>
-                                                        )}
-                                                    </View>
-                                                    <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
-                                                </PressableOpacity>
-                                            </React.Fragment>
-                                        ))}
+                                                {tab.label}
+                                            </Text>
+                                        </PressableOpacity>
                                     </View>
-                                </View>
-                            ))
-                        )}
-                    </ScrollView>
-                </View>
+                                );
+                            })}
 
-                {/* New Tab (index 1) */}
-                <View key="new" style={styles.pageContainer}>
-                    <KeyboardAwareScrollView
-                        style={styles.scrollView}
-                        contentContainerStyle={[styles.formContent, { paddingTop: headerHeight + 16 }]}
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                        keyboardDismissMode="on-drag"
-                        bottomOffset={40}
-                        nestedScrollEnabled={true}
-                    >
-                        {/* Tab Bar */}
-                        <View style={[styles.tabsWrapper, { borderBottomColor: themeColors.border }]}>
-                            <View style={styles.tabsContainer}>
-                                {tabs.map((tab) => {
-                                    const isSelected = selectedTab === tab.key;
-                                    return (
-                                        <View
-                                            key={tab.key}
-                                            style={styles.tabContainer}
-                                            onLayout={(event) => handleTabLayout(tab.key, event)}
-                                        >
-                                            <PressableOpacity
-                                                style={styles.tab}
-                                                onPress={() => handleTabPress(tab.key)}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.tabText,
-                                                        {
-                                                            color: isSelected ? themeColors.text : themeColors.mutedText,
-                                                            fontWeight: isSelected ? '700' : '600',
-                                                        },
-                                                    ]}
-                                                >
-                                                    {tab.label}
-                                                </Text>
-                                            </PressableOpacity>
-                                        </View>
-                                    );
-                                })}
-
-                                {/* Animated underline */}
-                                <Animated.View
-                                    style={[
-                                        styles.animatedUnderline,
-                                        { backgroundColor: primaryColor },
-                                        animatedUnderlineStyle,
-                                    ]}
-                                />
-                            </View>
+                            {/* Animated underline */}
+                            <Animated.View
+                                style={[
+                                    styles.animatedUnderline,
+                                    { backgroundColor: primaryColor },
+                                    animatedUnderlineStyle,
+                                ]}
+                            />
                         </View>
+                    </View>
 
-                        <InputBox
-                            label={t('library.addQuestionnaire.name')}
-                            value={name}
-                            onChangeText={setName}
-                            placeholder={t('library.addQuestionnaire.namePlaceholder')}
-                            required
-                        />
+                    {/* Conditional Content */}
+                    {selectedTab === 'templates' ? (
+                        <>
+                            {/* Search Bar */}
+                            <SearchBar
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                placeholder={t('library.addQuestionnaire.searchPlaceholder')}
+                            />
 
-                        <TextAreaInput
-                            label={t('library.addQuestionnaire.description')}
-                            value={description}
-                            onChangeText={setDescription}
-                            placeholder={t('library.addQuestionnaire.descriptionPlaceholder')}
-                            numberOfLines={3}
-                            minHeight={60}
-                        />
-                    </KeyboardAwareScrollView>
-                </View>
-            </PagerView>
+                            {/* Template Categories */}
+                            {filteredTemplates.length === 0 ? (
+                                <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
+                                    {t('library.addQuestionnaire.noTemplatesFound')}
+                                </Text>
+                            ) : (
+                                filteredTemplates.map((group, groupIndex) => (
+                                    <View key={groupIndex} style={styles.categorySection}>
+                                        {group.label && (
+                                            <Text style={[styles.categoryLabel, { color: themeColors.mutedText }]}>
+                                                {group.label}
+                                            </Text>
+                                        )}
+                                        <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
+                                            {group.templates.map((template, index) => (
+                                                <React.Fragment key={template.name}>
+                                                    {index > 0 && <Separator />}
+                                                    <PressableOpacity
+                                                        style={styles.templateRow}
+                                                        onPress={() => handleSelectTemplate(template)}
+                                                    >
+                                                        <View style={styles.templateInfo}>
+                                                            <Text style={[styles.templateName, { color: themeColors.text }]}>
+                                                                {template.name}
+                                                            </Text>
+                                                            {template.description && (
+                                                                <Text
+                                                                    style={[styles.templateDescription, { color: themeColors.mutedText }]}
+                                                                    numberOfLines={1}
+                                                                >
+                                                                    {template.description}
+                                                                </Text>
+                                                            )}
+                                                        </View>
+                                                        <ChevronRight {...({ size: 20, color: themeColors.mutedText } as any)} />
+                                                    </PressableOpacity>
+                                                </React.Fragment>
+                                            ))}
+                                        </View>
+                                    </View>
+                                ))
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <InputBox
+                                label={t('library.addQuestionnaire.name')}
+                                value={name}
+                                onChangeText={setName}
+                                placeholder={t('library.addQuestionnaire.namePlaceholder')}
+                                required
+                            />
+
+                            <TextAreaInput
+                                label={t('library.addQuestionnaire.description')}
+                                value={description}
+                                onChangeText={setDescription}
+                                placeholder={t('library.addQuestionnaire.descriptionPlaceholder')}
+                                numberOfLines={3}
+                                minHeight={60}
+                            />
+                        </>
+                    )}
+                </KeyboardAwareScrollView>
+            </GestureDetector>
         </View>
     );
 }
@@ -474,6 +435,8 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         marginHorizontal: -16,
         paddingHorizontal: 16,
+        marginBottom: 16,
+        paddingTop: 16,
     },
     tabsContainer: {
         flexDirection: 'row',
@@ -495,12 +458,6 @@ const styles = StyleSheet.create({
         height: 3,
         borderRadius: 1.5,
         zIndex: 10,
-    },
-    pagerView: {
-        flex: 1,
-    },
-    pageContainer: {
-        flex: 1,
     },
     scrollView: {
         flex: 1,
