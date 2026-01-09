@@ -22,6 +22,7 @@ export const en = {
     reply: 'Reply',
     react: 'React',
     copy: 'Copy',
+    more: 'More',
     today: 'Today',
     yesterday: 'Yesterday',
   },
@@ -80,6 +81,27 @@ export const en = {
     },
     reorder: {
       title: 'Reorder',
+    },
+    addWorkout: {
+      title: 'New Workout',
+    },
+    addSection: {
+      title: 'New Section',
+    },
+    addProgram: {
+      title: 'New Program',
+    },
+    addExercise: {
+      title: 'New Exercise',
+    },
+    addForm: {
+      title: 'New Form',
+    },
+    addMetric: {
+      title: 'New Metric',
+    },
+    addHabit: {
+      title: 'New Habit',
     },
   },
   inbox: {
@@ -341,6 +363,48 @@ export const en = {
     metricUnits: 'kg / m / cm',
     imperialUnits: 'lbs / ft / in',
     colorPalette: 'Color palette',
+  },
+  clientDetail: {
+    tabs: {
+      overview: 'Overview',
+      more: 'More',
+    },
+    sections: {
+      assistant: 'Assistant',
+      notes: 'Notes',
+      training: 'Training',
+      metrics: 'Metrics',
+      habits: 'Habits',
+      photos: 'Photos',
+      files: 'Files',
+      checkIns: 'Check-ins',
+      questionnaires: 'Questionnaires',
+      settings: 'Settings',
+    },
+    notFound: 'Client Not Found',
+    loading: 'Loading...',
+    overviewPlaceholder: 'Overview Content Placeholder',
+    trainingPlaceholder: 'Training content coming soon',
+    metricsPlaceholder: 'Metrics content coming soon',
+    habitsPlaceholder: 'Habits content coming soon',
+    filesPlaceholder: 'Files content coming soon',
+    actions: {
+      editDetails: 'Edit details',
+      archiveUser: 'Archive user',
+      addWorkout: 'Add Workout',
+      addProgram: 'Add Program',
+      assignMetric: 'Assign metric',
+      addMetric: 'Add metric',
+      logMetric: 'Log metric',
+      assignHabit: 'Assign habit',
+      addHabit: 'Add habit',
+      logHabit: 'Log habit',
+      assignFile: 'Assign file',
+      addFile: 'Add file',
+    },
+    assistant: {
+      title: 'Assistant',
+    },
   },
 };
 

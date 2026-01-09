@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Keyboard,
-  LayoutAnimation,
   StyleSheet,
   Text,
   TextInput,
@@ -11,8 +10,6 @@ import {
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { useKeyboardHandler } from 'react-native-keyboard-controller';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Archive, Trash2 } from 'lucide-react-native';
 import {
@@ -191,36 +188,9 @@ export default function ChatDetailScreen() {
   const lastVoiceNoteDurationMsRef = useRef(0);
   const recordingStartedAtMsRef = useRef<number | null>(null);
 
-  const keyboardHeight = useSharedValue(0);
-
-  useKeyboardHandler(
-    {
-      onMove: (event) => {
-        'worklet';
-        keyboardHeight.value = Math.max(event.height, 0);
-      },
-      onEnd: (event) => {
-        'worklet';
-        keyboardHeight.value = Math.max(event.height, 0);
-      },
-    },
-    []
-  );
-
-  const scrollWindowAnimatedStyle = useAnimatedStyle(() => {
-    'worklet';
-    return {
-      transform: [
-        {
-          translateY: -keyboardHeight.value,
-        },
-      ],
-    };
-  });
 
   useEffect(() => {
     const handleKeyboardHide = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
     };
 
@@ -548,7 +518,6 @@ export default function ChatDetailScreen() {
   };
 
   const handleMessageReply = (message: ChatMessage) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(message);
     // Focus the input to open keyboard
     setTimeout(() => {
@@ -557,7 +526,6 @@ export default function ChatDetailScreen() {
   };
 
   const handleCancelReply = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setReplyingToMessage(null);
     Keyboard.dismiss();
   };
@@ -565,13 +533,11 @@ export default function ChatDetailScreen() {
   const handlePlusPress = () => {
     if (showAttachmentPicker) {
       // Close attachment picker (keep current keyboard state)
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShowAttachmentPicker(false);
       return;
     }
 
     // Open attachment picker row without changing keyboard state
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowAttachmentPicker(true);
   };
 
@@ -580,8 +546,6 @@ export default function ChatDetailScreen() {
   };
 
   const handleMicrophonePress = async () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
     setIsMicrophoneMode(true);
 
     // Start recording immediately (resets accumulatedMs inside startRecording)
@@ -594,8 +558,6 @@ export default function ChatDetailScreen() {
   };
 
   const handleTrashPress = async () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
     // tear down + reset
     try {
       await audioRecorder.stop();
@@ -882,11 +844,8 @@ export default function ChatDetailScreen() {
         dropdownOptions={dropdownOptions}
       />
 
-
       {/* ROW 2: SCROLL WINDOW - Content scrolls through header and toolbar */}
-      <Animated.View
-        style={[{ flex: 1, backgroundColor: 'transparent' }, scrollWindowAnimatedStyle]}
-      >
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <MessageList
           messages={messages}
           backgroundColor="transparent"
@@ -900,15 +859,9 @@ export default function ChatDetailScreen() {
           onImagePress={handleImagePress}
           onVideoPress={handleVideoPress}
           headerHeight={insets.top + 60} // Safe area + header content (~60px)
-          toolbarHeight={
-            (replyingToMessage ? 54 : 0) + // Reply preview height
-            (showAttachmentPicker ? 112 : 0) + // Attachment picker height
-            (isMicrophoneMode ? 68 : 0) + // Microphone mode height
-            40 + // closedBaseHeight
-            insets.bottom // Safe area bottom
-          }
+          toolbarHeight={(isMicrophoneMode ? 108 : 40) + insets.bottom} // Base toolbar height + safe area (toolbar handles reply/attachment height changes internally)
         />
-      </Animated.View>
+      </View>
 
       {/* ROW 3: TOOLBAR — Absolutely positioned with blur */}
       <ChatToolbar

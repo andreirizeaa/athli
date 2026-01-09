@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Share } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Send } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
@@ -11,6 +11,7 @@ import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { SearchBar } from '@/components/search-bar';
 import { ScreenWrapper } from '@/components/screen-wrapper';
 
@@ -108,10 +109,29 @@ export default function ClientsScreen() {
     return parts.join(' · ');
   };
 
+  const handleShare = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: 'YOUR INVITE LINE HERE',
+      });
+    } catch (error: any) {
+      console.error(error.message);
+    }
+  };
+
   return (
     <ScreenWrapper contentContainerStyle={styles.scrollContent}>
       <View style={styles.headerSection}>
-        <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
+          <IconButton
+            icon={{ sf: 'paperplane', IconComponent: Send }}
+            onPress={handleShare}
+            size="md"
+            color={themeColors.text}
+          />
+        </View>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -187,6 +207,7 @@ export default function ClientsScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 16,
+    paddingTop: 16,
   },
   headerSection: {
     paddingHorizontal: 16,
@@ -250,6 +271,11 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
 });

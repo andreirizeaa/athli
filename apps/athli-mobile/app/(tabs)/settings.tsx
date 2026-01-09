@@ -109,123 +109,123 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.contentContainer}>
-            {/* View Switching Card */}
-            <Card>
-            <SettingsOption
-              icon={
-                <PlatformIcon
-                  sf="arrow.left.arrow.right"
-                  mdi="swap-horiz"
-                  IconComponent={ArrowLeftRight}
-                  size={iconSize - 2}
-                  color={iconColor}
-                />
-              }
-              title={isAthleteView ? t('profile.viewCoachesArea') : t('settings.viewAthletesArea')}
-              showChevron
-              onPress={handleToggleView}
-            />
-          </Card>
+        {/* View Switching Card */}
+        <Card>
+          <SettingsOption
+            icon={
+              <PlatformIcon
+                sf="arrow.left.arrow.right"
+                mdi="swap-horiz"
+                IconComponent={ArrowLeftRight}
+                size={iconSize - 2}
+                color={iconColor}
+              />
+            }
+            title={isAthleteView ? t('profile.viewCoachesArea') : t('settings.viewAthletesArea')}
+            showChevron
+            onPress={handleToggleView}
+          />
+        </Card>
 
-          {/* Profile Card - Only shown in athlete view */}
-          {isAthleteView && (
-            <Card>
-              <PressableOpacity style={styles.profileRow}>
-                <View style={styles.profileAvatar}>
-                  <View style={styles.fallbackAvatar}>
-                    <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
-                  </View>
+        {/* Profile Card - Only shown in athlete view */}
+        {isAthleteView && (
+          <Card>
+            <PressableOpacity style={styles.profileRow}>
+              <View style={styles.profileAvatar}>
+                <View style={styles.fallbackAvatar}>
+                  <PlatformIcon sf="person.fill" mdi="person" IconComponent={User} size={iconSizes.tabBarIcons} color="#ffffff" />
                 </View>
-                <View style={styles.profileTextContainer}>
-                  <View style={styles.profileNameRow}>
-                    <Text
-                      style={[styles.profileNameText, { color: themeColors.text }]}
-                      numberOfLines={1}
-                    >
-                      {t('profile.enterYourName')}
-                    </Text>
-                    <PlatformIcon sf="pencil" mdi="edit" IconComponent={Pencil} size={iconSizes.smallIcons} color={themeColors.mutedText} />
-                  </View>
+              </View>
+              <View style={styles.profileTextContainer}>
+                <View style={styles.profileNameRow}>
                   <Text
-                    style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
+                    style={[styles.profileNameText, { color: themeColors.text }]}
                     numberOfLines={1}
                   >
-                    {t('profile.memberSince')} 2024
+                    {t('profile.enterYourName')}
                   </Text>
+                  <PlatformIcon sf="pencil" mdi="edit" IconComponent={Pencil} size={iconSizes.smallIcons} color={themeColors.mutedText} />
                 </View>
-              </PressableOpacity>
-            </Card>
-          )}
-
-          {/* Account */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="person.text.rectangle" mdi="badge" IconComponent={IdCard} size={iconSize} color={iconColor} />}
-              title={t('profile.personalDetails')}
-              showChevron
-              onPress={handleOpenPersonalDetails}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />}
-              title={t('profile.preferences')}
-              showChevron
-              onPress={handleOpenPreferences}
-            />
+                <Text
+                  style={[styles.profileSubtitleText, { color: themeColors.mutedText }]}
+                  numberOfLines={1}
+                >
+                  {t('profile.memberSince')} 2024
+                </Text>
+              </View>
+            </PressableOpacity>
           </Card>
+        )}
 
-          {/* Support */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="envelope" mdi="email" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
-              title={t('profile.supportEmail')}
-              onPress={handleOpenSupportEmail}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="megaphone" mdi="campaign" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
-              title={t('profile.featureRequests')}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="arrow.clockwise" mdi="refresh" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
-              title={t('profile.syncData')}
-              subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
-              subtitleRight
-            />
-          </Card>
+        {/* Account */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.account')}</Text>
+        <Card>
+          <SettingsOption
+            icon={<PlatformIcon sf="person.text.rectangle" mdi="badge" IconComponent={IdCard} size={iconSize} color={iconColor} />}
+            title={t('profile.personalDetails')}
+            showChevron
+            onPress={handleOpenPersonalDetails}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="gear" mdi="settings" IconComponent={Cog} size={iconSize} color={iconColor} />}
+            title={t('profile.preferences')}
+            showChevron
+            onPress={handleOpenPreferences}
+          />
+        </Card>
 
-          {/* Legal */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.legal')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="doc.text" mdi="description" IconComponent={FileText} size={iconSize} color={iconColor} />}
-              title={t('profile.termsAndConditions')}
-              onPress={handleOpenTermsOfService}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="checkmark.shield" mdi="verified-user" IconComponent={ShieldCheck} size={iconSize} color={iconColor} />}
-              title={t('profile.privacyPolicy')}
-              onPress={handleOpenPrivacyPolicy}
-            />
-          </Card>
+        {/* Support */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.support')}</Text>
+        <Card>
+          <SettingsOption
+            icon={<PlatformIcon sf="envelope" mdi="email" IconComponent={MailPlus} size={iconSize} color={iconColor} />}
+            title={t('profile.supportEmail')}
+            onPress={handleOpenSupportEmail}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="megaphone" mdi="campaign" IconComponent={Megaphone} size={iconSize} color={iconColor} />}
+            title={t('profile.featureRequests')}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="arrow.clockwise" mdi="refresh" IconComponent={RefreshCw} size={iconSize} color={iconColor} />}
+            title={t('profile.syncData')}
+            subtitle={`${t('profile.lastSynced')} ${t('profile.never')}`}
+            subtitleRight
+          />
+        </Card>
 
-          {/* Account Actions */}
-          <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
-          <Card>
-            <SettingsOption
-              icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />}
-              title={t('profile.logout')}
-            />
-            <Separator />
-            <SettingsOption
-              icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
-              title={t('profile.deleteAccount')}
-              onPress={handleOpenDeleteAccount}
-            />
+        {/* Legal */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.legal')}</Text>
+        <Card>
+          <SettingsOption
+            icon={<PlatformIcon sf="doc.text" mdi="description" IconComponent={FileText} size={iconSize} color={iconColor} />}
+            title={t('profile.termsAndConditions')}
+            onPress={handleOpenTermsOfService}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="checkmark.shield" mdi="verified-user" IconComponent={ShieldCheck} size={iconSize} color={iconColor} />}
+            title={t('profile.privacyPolicy')}
+            onPress={handleOpenPrivacyPolicy}
+          />
+        </Card>
+
+        {/* Account Actions */}
+        <Text style={[styles.sectionTitle, { color: themeColors.mutedText }]}>{t('profile.accountActions')}</Text>
+        <Card>
+          <SettingsOption
+            icon={<PlatformIcon sf="rectangle.portrait.and.arrow.right" mdi="logout" IconComponent={LogOut} size={iconSize} color={iconColor} />}
+            title={t('profile.logout')}
+          />
+          <Separator />
+          <SettingsOption
+            icon={<PlatformIcon sf="person.badge.minus" mdi="person-remove" IconComponent={UserMinus} size={iconSize} color={iconColor} />}
+            title={t('profile.deleteAccount')}
+            onPress={handleOpenDeleteAccount}
+          />
         </Card>
       </View>
     </ScreenWrapper>
@@ -235,6 +235,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 60,
+    paddingTop: 16,
   },
   headerSection: {
     paddingHorizontal: 16,

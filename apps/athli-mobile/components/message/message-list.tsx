@@ -1,18 +1,50 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import EmojiPicker, { type EmojiType } from 'rn-emoji-keyboard';
 import {
   Animated,
-  FlatList,
-  Keyboard,
-  LayoutChangeEvent,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  PanResponder,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import {
+  GiftedChat,
+  Bubble,
+  Time,
+  Message,
+  IMessage,
+  MessageProps,
+} from 'react-native-gifted-chat';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
+
+// Utility functions for message grouping (replaces react-native-gifted-chat/lib/utils)
+const isSameUser = (currentMessage: IMessage | null, diffMessage: IMessage | null): boolean => {
+  return !!(
+    diffMessage &&
+    diffMessage.user &&
+    currentMessage &&
+    currentMessage.user &&
+    diffMessage.user._id === currentMessage.user._id
+  );
+};
+
+const isSameDay = (currentMessage: IMessage | null, diffMessage: IMessage | null): boolean => {
+  if (!diffMessage || !diffMessage.createdAt || !currentMessage || !currentMessage.createdAt) {
+    return false;
+  }
+  const currentCreatedAt = currentMessage.createdAt instanceof Date
+    ? currentMessage.createdAt
+    : new Date(currentMessage.createdAt);
+  const diffCreatedAt = diffMessage.createdAt instanceof Date
+    ? diffMessage.createdAt
+    : new Date(diffMessage.createdAt);
+
+  return (
+    currentCreatedAt.getFullYear() === diffCreatedAt.getFullYear() &&
+    currentCreatedAt.getMonth() === diffCreatedAt.getMonth() &&
+    currentCreatedAt.getDate() === diffCreatedAt.getDate()
+  );
+};
 import { PressableOpacity } from 'pressto';
 import { Reply, Copy, Pencil, Trash2, Send, CheckCircle } from 'lucide-react-native';
 import * as ContextMenu from 'zeego/context-menu';
@@ -21,11 +53,9 @@ import * as Clipboard from 'expo-clipboard';
 import { typography } from '@/constants/typography';
 import { type ThemeColors } from '@/constants/theme';
 import { type ChatMessage, reactTo } from '@/services/chats-service';
-import { type DropdownMenuOption, ContextMenuWrapper } from '@/components/dropdown-menu';
+import { type DropdownMenuOption } from '@/components/dropdown-menu';
 import { useTranslations } from '@/contexts/useTranslations';
 import { PlatformIcon } from '@/components/platform-icon';
-import { SelectedMessagePopups } from '@/components/chats/selected-message-popups';
-import { EmojiPickerContainer } from '@/components/chats/emoji-picker-container';
 import { MessageReplyPreview } from '@/components/message/message-reply-preview';
 import { MessageDocumentPreview } from '@/components/message/message-document-preview';
 import { MessageImagePreview } from '@/components/message/message-image-preview';
@@ -49,29 +79,41 @@ interface MessageListProps {
   onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
 }
 
-const ZWSP = '\u200B';
-const NBSP = '\u00A0';
+// Extended IMessage interface for custom fields
+// Note: We use 'videoAttachment' instead of 'video' to avoid conflict with GiftedChat's built-in video string type
+interface ExtendedMessage extends IMessage {
+  isSent: boolean;
+  isRead: boolean;
+  senderReaction?: string;
+  recipientReaction?: string;
+  replyTo?: ChatMessage;
+  document?: import('@/services/chats-service').DocumentAttachment;
+  images?: import('@/services/chats-service').ImageAttachment[];
+  videoAttachment?: import('@/services/chats-service').VideoAttachment;
+  audioAttachment?: import('@/services/chats-service').AudioAttachment;
+  originalMessage: ChatMessage;
+}
 
-// Inserts break opportunities into long "tokens" (urls/long words)
-const softWrapText = (text: string) => {
-  return text
-    .split(/(\s+)/) // keep whitespace tokens
-    .map((token) => {
-      // leave whitespace alone
-      if (/^\s+$/.test(token)) return token;
-
-      // add breaks after common URL/punctuation chars
-      let t = token.replace(/([\/._\-?=&%#:])/g, `$1${ZWSP}`);
-
-      // if still very long, insert a break every 18 chars
-      if (t.replace(/\u200B/g, '').length > 24) {
-        t = t.replace(/(.{18})/g, `$1${ZWSP}`);
-      }
-
-      return t;
-    })
-    .join('');
-};
+// Convert ChatMessage to GiftedChat's IMessage format
+const chatMessageToGiftedMessage = (msg: ChatMessage, clientName: string): ExtendedMessage => ({
+  _id: msg.id,
+  text: msg.text,
+  createdAt: msg.timestamp,
+  user: {
+    _id: msg.isSent ? 1 : 2,
+    name: msg.isSent ? 'You' : clientName,
+  },
+  isSent: msg.isSent,
+  isRead: msg.isRead,
+  senderReaction: msg.senderReaction,
+  recipientReaction: msg.recipientReaction,
+  replyTo: msg.replyTo,
+  document: msg.document,
+  images: msg.images,
+  videoAttachment: msg.video,
+  audioAttachment: msg.audio,
+  originalMessage: msg,
+});
 
 // Helper function to find the original message in a reply chain
 const findOriginalMessage = (message: ChatMessage): ChatMessage => {
@@ -81,399 +123,6 @@ const findOriginalMessage = (message: ChatMessage): ChatMessage => {
   // Traverse the reply chain to find the original message
   return findOriginalMessage(message.replyTo);
 };
-
-const BubbleMeta = React.memo(function BubbleMeta({
-  item,
-  themeColors,
-  recipientBackgroundColor,
-  formatTime,
-  softWrapText,
-  registerRef,
-  isLastInSenderRun,
-  clientName,
-  onReplyPreviewPress,
-  onDocumentPress,
-  onImagePress,
-  onVideoPress,
-  flashOpacity,
-}: {
-  item: ChatMessage;
-  themeColors: ThemeColors;
-  recipientBackgroundColor: string;
-  formatTime: (d: Date) => string;
-  softWrapText: (t: string) => string;
-  registerRef: (ref: View | null) => void;
-  isLastInSenderRun: boolean;
-  clientName: string;
-  onReplyPreviewPress?: (messageId: string) => void;
-  onDocumentPress?: (document: import('@/services/chats-service').DocumentAttachment) => void;
-  onImagePress?: (images: import('@/services/chats-service').ImageAttachment[], senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
-  onVideoPress?: (video: import('@/services/chats-service').VideoAttachment, senderName: string, isSent: boolean, messageTimestamp?: Date) => void;
-  flashOpacity?: Animated.Value;
-}) {
-  const [metaWidth, setMetaWidth] = useState(0);
-  const [spaceWidth, setSpaceWidth] = useState(0);
-
-  // Find the original message if this is a reply
-  const originalMessage = item.replyTo ? findOriginalMessage(item.replyTo) : null;
-
-  const timeLabel = useMemo(() => formatTime(item.timestamp), [item.timestamp, formatTime]);
-
-  // Measure ONE NBSP using the same typography as the timestamp
-  const onMeasureSpace = (e: any) => {
-    const w = e?.nativeEvent?.layout?.width ?? 0;
-    if (w > 0 && w !== spaceWidth) setSpaceWidth(w);
-  };
-
-  // Measure the actual meta (time + icon) width
-  const onMeasureMeta = (e: any) => {
-    const w = e?.nativeEvent?.layout?.width ?? 0;
-    if (w > 0 && w !== metaWidth) setMetaWidth(w);
-  };
-
-  // Build NBSP spacer to reserve exactly the meta overlay width (plus a tiny safety buffer)
-  const metaSpacer = useMemo(() => {
-    const effectiveMeta = Math.max(metaWidth, 44); // safe fallback until measured
-    const effectiveSpace = Math.max(spaceWidth, 3); // safe fallback until measured
-    const buffer = 4; // px for overlay padding/rounding
-    const count = Math.ceil((effectiveMeta + buffer) / effectiveSpace);
-
-    // prepend 1 extra NBSP so it never "sticks" to the last word
-    return NBSP + NBSP.repeat(Math.max(4, count));
-  }, [metaWidth, spaceWidth]);
-
-  const bubbleStyle = [
-    styles.messageBubble,
-    item.isSent
-      ? { backgroundColor: themeColors.primary }
-      : { backgroundColor: recipientBackgroundColor },
-    isLastInSenderRun && item.isSent && styles.messageBubbleTailRight,
-    isLastInSenderRun && !item.isSent && styles.messageBubbleTailLeft,
-    // Make bubble full width when it contains a document or is a reply
-    ...(item.document || item.replyTo || item.audio ? [styles.messageBubbleFullWidth] : []),
-  ];
-
-  const baseTextColor = item.isSent ? themeColors.primaryForeground : themeColors.text;
-
-  // Use a subtle flash color based on existing palette (no extra ThemeColors field)
-  const flashTextColor = item.isSent ? themeColors.surface : themeColors.primary;
-
-  const animatedTextColor =
-    flashOpacity &&
-    flashOpacity.interpolate({
-      inputRange: [0, 1],
-      outputRange: [baseTextColor, flashTextColor],
-    });
-
-  const bubbleContent = (
-    <View style={styles.bubbleInner}>
-      {/* Hidden measurer for NBSP width (timestamp typography) */}
-      <Text
-        style={[styles.timeText, styles.hiddenMeasure]}
-        onLayout={onMeasureSpace}
-        pointerEvents="none"
-      >
-        {NBSP}
-      </Text>
-
-      {/* Reply preview if this message is a reply - show original message, not nested reply */}
-      {originalMessage && (
-        <MessageReplyPreview
-          replyTo={originalMessage}
-          clientName={clientName}
-          themeColors={themeColors}
-          parentBackgroundColor={
-            item.isSent ? themeColors.primary : recipientBackgroundColor
-          }
-          isParentSent={item.isSent}
-          onPress={() => {
-            onReplyPreviewPress?.(originalMessage.id);
-          }}
-        />
-      )}
-
-      {/* Image preview if this message has images */}
-      {item.images && item.images.length > 0 && onImagePress && (
-        <MessageImagePreview
-          images={item.images}
-          themeColors={themeColors}
-          parentBackgroundColor={
-            item.isSent ? themeColors.primary : recipientBackgroundColor
-          }
-          isParentSent={item.isSent}
-          onPress={() => {
-            if (item.images) {
-              onImagePress(item.images, clientName, item.isSent, item.timestamp);
-            }
-          }}
-        />
-      )}
-
-      {/* Video preview if this message has a video */}
-      {item.video && onVideoPress && (
-        <MessageVideoPreview
-          video={item.video}
-          themeColors={themeColors}
-          parentBackgroundColor={
-            item.isSent ? themeColors.primary : recipientBackgroundColor
-          }
-          isParentSent={item.isSent}
-          onPress={() => {
-            if (item.video) {
-              onVideoPress(item.video, clientName, item.isSent, item.timestamp);
-            }
-          }}
-        />
-      )}
-
-      {/* Document preview if this message has a document */}
-      {item.document && onDocumentPress && (
-        <MessageDocumentPreview
-          document={item.document}
-          themeColors={themeColors}
-          parentBackgroundColor={
-            item.isSent ? themeColors.primary : recipientBackgroundColor
-          }
-          isParentSent={item.isSent}
-          onPress={() => {
-            if (item.document) {
-              onDocumentPress(item.document);
-            }
-          }}
-        />
-      )}
-
-      {/* Audio preview if this message has audio */}
-      {item.audio && (
-        <MessageAudioPreview
-          audio={item.audio}
-          themeColors={themeColors}
-          parentBackgroundColor={
-            item.isSent ? themeColors.primary : recipientBackgroundColor
-          }
-          isParentSent={item.isSent}
-        />
-      )}
-
-      <Animated.Text
-        style={[
-          styles.messageText,
-          { color: (animatedTextColor as any) || baseTextColor },
-        ]}
-      >
-        {softWrapText(item.text)}
-
-        {/* Reserve space at the end so meta never overlaps (single-line OR multi-line) */}
-        <Text style={styles.metaSpacer}>{metaSpacer}</Text>
-      </Animated.Text>
-
-      {/* Actual meta pinned bottom-right */}
-      <View
-        onLayout={onMeasureMeta}
-        style={[
-          styles.metaOverlay,
-          {
-            backgroundColor: item.isSent ? themeColors.primary : recipientBackgroundColor,
-          },
-        ]}
-        pointerEvents="none"
-      >
-        <Text
-          style={[
-            styles.timeText,
-            item.isSent
-              ? { color: themeColors.primaryForeground, opacity: 0.7 }
-              : { color: themeColors.mutedText },
-          ]}
-        >
-          {timeLabel}
-        </Text>
-
-        {item.isSent && (
-          <View style={[styles.readReceiptIcon, { opacity: 0.7 }]}>
-            {item.isRead ? (
-              <PlatformIcon
-                sf="checkmark.circle"
-                IconComponent={CheckCircle}
-                size={11}
-                color={themeColors.primaryForeground}
-              />
-            ) : (
-              <PlatformIcon
-                sf="paperplane"
-                IconComponent={Send}
-                size={11}
-                color={themeColors.primaryForeground}
-              />
-            )}
-          </View>
-        )}
-      </View>
-    </View>
-  );
-
-  return (
-    <View
-      ref={registerRef}
-      style={bubbleStyle}
-    >
-      {bubbleContent}
-    </View>
-  );
-});
-
-const SwipeToReplyBubble = React.memo(function SwipeToReplyBubble({
-  children,
-  themeColors,
-  onCancelLongPress,
-  alignRight,
-  onReply,
-  message,
-  onHorizontalDragStart,
-  onHorizontalDragEnd,
-}: {
-  children: React.ReactNode;
-  themeColors: ThemeColors;
-  onCancelLongPress: () => void;
-  alignRight: boolean;
-  onReply?: (message: ChatMessage) => void;
-  message: ChatMessage;
-  onHorizontalDragStart?: () => void;
-  onHorizontalDragEnd?: () => void;
-}) {
-  const MAX = 84;
-  const THRESHOLD = 50; // pixels to trigger reply
-  const translateX = useRef(new Animated.Value(0)).current;
-  const didCancelRef = useRef(false);
-  const currentDistanceRef = useRef(0);
-  const isDraggingRef = useRef(false);
-
-  const iconOpacity = useMemo(
-    () =>
-      translateX.interpolate({
-        inputRange: [0, 18, MAX],
-        outputRange: [0, 0.65, 1],
-        extrapolate: 'clamp',
-      }),
-    [translateX]
-  );
-
-  const iconScale = useMemo(
-    () =>
-      translateX.interpolate({
-        inputRange: [0, MAX],
-        outputRange: [0.9, 1],
-        extrapolate: 'clamp',
-      }),
-    [translateX]
-  );
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_evt, g) => {
-          const { dx, dy } = g;
-          if (Math.abs(dx) < 6) return false;
-          if (Math.abs(dx) < Math.abs(dy)) return false; // let vertical scroll win
-          if (dx <= 0) return false; // swipe-right only for now
-          return true;
-        },
-        onPanResponderGrant: () => {
-          translateX.stopAnimation();
-          didCancelRef.current = false;
-          currentDistanceRef.current = 0;
-          if (!isDraggingRef.current) {
-            isDraggingRef.current = true;
-            onHorizontalDragStart?.();
-          }
-        },
-        onPanResponderMove: (_evt, g) => {
-          if (!didCancelRef.current) {
-            onCancelLongPress();
-            didCancelRef.current = true;
-          }
-          const clamped = Math.min(MAX, Math.max(0, g.dx));
-          currentDistanceRef.current = clamped;
-          translateX.setValue(clamped);
-        },
-        onPanResponderRelease: () => {
-          const distance = currentDistanceRef.current;
-          const shouldReply = distance >= THRESHOLD && onReply;
-
-          if (shouldReply) {
-            onReply(message);
-          }
-
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-            velocity: 0,
-          }).start();
-
-          currentDistanceRef.current = 0;
-          if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            onHorizontalDragEnd?.();
-          }
-        },
-        onPanResponderTerminate: () => {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-            velocity: 0,
-          }).start();
-          currentDistanceRef.current = 0;
-          if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            onHorizontalDragEnd?.();
-          }
-        },
-        onPanResponderTerminationRequest: () => false,
-      }),
-    [onCancelLongPress, translateX, onReply, message, onHorizontalDragStart, onHorizontalDragEnd]
-  );
-
-  return (
-    <View
-      style={[
-        styles.swipeContainer,
-        alignRight ? styles.swipeContainerRight : styles.swipeContainerLeft,
-      ]}
-    >
-      {/* Underlay (revealed as bubble moves right) */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.replyUnderlay,
-          {
-            opacity: iconOpacity,
-            transform: [{ scale: iconScale }],
-          },
-        ]}
-      >
-        <PlatformIcon
-          sf="arrowshape.turn.up.left"
-          IconComponent={Reply}
-          size={18}
-          color={themeColors.mutedText}
-        />
-      </Animated.View>
-
-      {/* Bubble */}
-      <Animated.View
-        style={[styles.swipeBubbleHost, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
-    </View>
-  );
-});
 
 export const MessageList = ({
   messages,
@@ -491,38 +140,56 @@ export const MessageList = ({
   onVideoPress,
 }: MessageListProps) => {
   const { t } = useTranslations();
-  const listRef = useRef<FlatList<ChatMessage>>(null);
-  const offsetYRef = useRef(0);
-  const contentHeightRef = useRef(0);
-  const layoutHeightRef = useRef(0);
-  const prevMessagesLengthRef = useRef(messages.length);
-  const didInitialScroll = useRef(false);
-  const initialScrollAttemptsRef = useRef(0);
-  const pinnedToBottomRef = useRef(true);
-  const prevToolbarHeightRef = useRef<number | null>(null);
-  const [dropdownVisible, setDropdownVisible] = useState(false);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>(messages);
-  const [selectedMessage, setSelectedMessage] = useState<ChatMessage | null>(null);
-  const [isLastInSenderRun, setIsLastInSenderRun] = useState(false);
-  const [anchorPosition, setAnchorPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [containerPosition, setContainerPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
-  const [contextMenuOpenMessage, setContextMenuOpenMessage] = useState<ChatMessage | null>(null);
-  const [contextMenuAnchor, setContextMenuAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [isHorizontalDragActive, setIsHorizontalDragActive] = useState(false);
+  const [emojiPickerMessage, setEmojiPickerMessage] = useState<ChatMessage | null>(null);
+  const [replyMessage, setReplyMessage] = useState<ExtendedMessage | null>(null);
   const colorScheme = useColorScheme();
   const isLightMode = colorScheme === 'light';
   const recipientBackgroundColor = isLightMode ? '#FFFFFF' : themeColors.surfaceSecondary;
   const { colors: fullThemeColors } = useThemePreference();
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const messageRefs = useRef<Record<string, View>>({});
   const containerRef = useRef<View>(null);
   const flashAnimations = useRef<Record<string, Animated.Value>>({});
+  const allSwipeablesRef = useRef<Map<string, Swipeable>>(new Map());
+
+  // Convert messages to GiftedChat format (newest first, GiftedChat expects this order)
+  const giftedMessages = useMemo(() =>
+    [...localMessages]
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .map((msg) => chatMessageToGiftedMessage(msg, clientName)),
+    [localMessages, clientName]
+  );
 
   // Update local messages when prop changes
   useEffect(() => {
     setLocalMessages(messages);
   }, [messages]);
+
+  // Update swipeable row ref for managing swipeable instances
+  const updateRowRef = useCallback((messageId: string, ref: Swipeable | null) => {
+    if (ref) {
+      allSwipeablesRef.current.set(messageId, ref);
+    } else {
+      allSwipeablesRef.current.delete(messageId);
+    }
+  }, []);
+
+  // Handle swipe to reply
+  const handleSwipeReply = useCallback((message: ExtendedMessage, swipeableRef: Swipeable | null) => {
+    // Trigger haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Close the swipeable immediately
+    if (swipeableRef) {
+      swipeableRef.close();
+    }
+
+    // Set reply message
+    setReplyMessage(message);
+    if (onReply) {
+      onReply(message.originalMessage);
+    }
+  }, [onReply]);
 
   const handleReactionUpdate = (messageId: string, emoji: string | undefined, isSender: boolean) => {
     console.log('handleReactionUpdate called:', { messageId, emoji, isSender });
@@ -542,65 +209,51 @@ export const MessageList = ({
   };
 
   const handleEmojiSelected = async (emojiObject: EmojiType) => {
-    console.log('Emoji selected in MessageList:', emojiObject, 'selectedMessage:', selectedMessage);
-    if (!selectedMessage) return;
+    console.log('Emoji selected in MessageList:', emojiObject, 'emojiPickerMessage:', emojiPickerMessage);
+    if (!emojiPickerMessage) return;
 
     const emoji = emojiObject.emoji;
-    const isSender = selectedMessage.isSent;
+    const isSender = emojiPickerMessage.isSent;
 
     // Get current user's reaction
     const currentReaction = isSender
-      ? selectedMessage.senderReaction
-      : selectedMessage.recipientReaction;
+      ? emojiPickerMessage.senderReaction
+      : emojiPickerMessage.recipientReaction;
 
     // If clicking the same emoji, remove reaction
     const isRemoving = emoji === currentReaction;
 
     if (isRemoving) {
       // Remove reaction
-      await reactTo(selectedMessage.id, '', isSender);
-      handleReactionUpdate(selectedMessage.id, undefined, isSender);
+      await reactTo(emojiPickerMessage.id, '', isSender);
+      handleReactionUpdate(emojiPickerMessage.id, undefined, isSender);
     } else {
       // Add or update reaction
-      await reactTo(selectedMessage.id, emoji, isSender);
-      handleReactionUpdate(selectedMessage.id, emoji, isSender);
+      await reactTo(emojiPickerMessage.id, emoji, isSender);
+      handleReactionUpdate(emojiPickerMessage.id, emoji, isSender);
     }
 
     setEmojiPickerVisible(false);
-    // Close the popup after reaction
-    setDropdownVisible(false);
-    setSelectedMessage(null);
-    setIsLastInSenderRun(false);
+    setEmojiPickerMessage(null);
   };
 
-  const handleEmojiPickerClose = () => {
+  const handleEmojiPickerClose = useCallback(() => {
     setEmojiPickerVisible(false);
-    setSelectedMessage(null);
-  };
+    setEmojiPickerMessage(null);
+  }, []);
 
   const handleReactionPress = (message: ChatMessage) => {
     onReactionPress?.(message);
   };
 
   const handleReplyPreviewPress = (messageId: string) => {
-    // Find the message index in the data array
-    const messageIndex = data.findIndex((m) => m.id === messageId);
+    // Find the message index in the giftedMessages array
+    const messageIndex = giftedMessages.findIndex((m) => m._id === messageId);
     if (messageIndex === -1) return;
 
-    // In an inverted list, we need to scroll to the correct position
-    // The list is inverted, so index 0 is at the bottom (newest)
-    // We want to scroll to make the message visible
-
-    // Use scrollToIndex with the actual index (inverted list handles it)
-    setTimeout(() => {
-      listRef.current?.scrollToIndex({
-        index: messageIndex,
-        animated: true,
-        // Slightly center the message, leaving some space above
-        viewPosition: 0.5,
-        viewOffset: 40,
-      });
-    }, 100);
+    // GiftedChat uses scrollToIndex internally via its ref
+    // We'll use a flash animation to highlight the message
+    // Note: GiftedChat doesn't expose scrollToIndex directly, so we rely on the flash animation
 
     // Flash the message by briefly changing its text color
     if (!flashAnimations.current[messageId]) {
@@ -623,52 +276,7 @@ export const MessageList = ({
     ]).start();
   };
 
-  const [stickyActive, setStickyActive] = useState(false);
-  const stickyOpacity = useRef(new Animated.Value(0)).current;
-  const hideStickyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showSticky = () => {
-    if (hideStickyTimerRef.current) {
-      clearTimeout(hideStickyTimerRef.current);
-      hideStickyTimerRef.current = null;
-    }
-    setStickyActive(true);
-    Animated.timing(stickyOpacity, {
-      toValue: 1,
-      duration: 120,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const hideStickySoon = () => {
-    if (hideStickyTimerRef.current) clearTimeout(hideStickyTimerRef.current);
-
-    hideStickyTimerRef.current = setTimeout(() => {
-      Animated.timing(stickyOpacity, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) setStickyActive(false);
-      });
-    }, 600); // delay like WhatsApp
-  };
-
-  // NEWEST first for inverted list
-  const data = useMemo(() => [...localMessages].reverse(), [localMessages]);
-
-  const BASE_GAP = 6; // every message-to-message gap starts with this
-  const EXTRA_ON_SENDER_CHANGE = 10; // added when user <-> client switches
-
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
-
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-
-  const dayKey = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
   const getDatePillLabel = (d: Date) => {
     const now = new Date();
@@ -685,58 +293,6 @@ export const MessageList = ({
       .replace(',', '');
   };
 
-  const [stickyTimestamp, setStickyTimestamp] = useState<Date>(() => data[0]?.timestamp ?? new Date());
-  const [stickyDayKey, setStickyDayKey] = useState(() => {
-    const first = data[0];
-    return first ? dayKey(first.timestamp) : dayKey(new Date());
-  });
-  const stickyLabelOpacity = useRef(new Animated.Value(1)).current;
-
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 5 }).current;
-
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: Array<{ item: ChatMessage; index: number | null }> }) => {
-      if (!viewableItems?.length) return;
-
-      // In an inverted list, the item with the largest index is the one closest to the TOP of the screen.
-      let topMost = null as { item: ChatMessage; index: number | null } | null;
-
-      for (const v of viewableItems) {
-        if (!v?.item?.timestamp) continue;
-        if (!topMost || (v.index ?? -1) > (topMost.index ?? -1)) {
-          topMost = v;
-        }
-      }
-      if (!topMost) return;
-
-      const nextTs = topMost.item.timestamp;
-      const nextKey = dayKey(nextTs);
-
-      setStickyTimestamp((prevTs) => {
-        const prevKey = dayKey(prevTs);
-        if (prevKey === nextKey) return prevTs;
-
-        // animate label swap (WhatsApp-ish)
-        Animated.sequence([
-          Animated.timing(stickyLabelOpacity, { toValue: 0, duration: 80, useNativeDriver: true }),
-          Animated.timing(stickyLabelOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
-        ]).start();
-
-        return nextTs;
-      });
-
-      setStickyDayKey((prev) => (prev === nextKey ? prev : nextKey));
-    }
-  ).current;
-
-  const stickyDateForLabel = stickyTimestamp;
-
-  const formatTime = (date: Date): string => {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  };
-
   const isMessageWithinOneHour = (message: ChatMessage): boolean => {
     const now = new Date();
     const messageTime = message.timestamp;
@@ -745,91 +301,51 @@ export const MessageList = ({
     return diffInHours <= 1;
   };
 
-  const handleLongPress = (message: ChatMessage) => {
-    // Cancel the timer if it's still running to prevent double-triggering
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-
-    const messageRef = messageRefs.current[message.id];
-    if (!messageRef) return;
-
-    // Find the message index in the data array to determine if it's last in sender run
-    const messageIndex = data.findIndex((m) => m.id === message.id);
-    const newer = messageIndex > 0 ? data[messageIndex - 1] : null;
-    const sameSenderAsNewer = !!newer && newer.isSent === message.isSent;
-    const isLast = !sameSenderAsNewer;
-
-    messageRef.measureInWindow((x, y, width, height) => {
-      setSelectedMessage(message);
-      setIsLastInSenderRun(isLast);
-      setAnchorPosition({ x, y, width, height });
-
-      // Measure the container to get its position for blur
-      containerRef.current?.measureInWindow((containerX, containerY, containerWidth, containerHeight) => {
-        setContainerPosition({ x: containerX, y: containerY, width: containerWidth, height: containerHeight });
-      });
-
-      setDropdownVisible(true);
-    });
-  };
-
-  const handlePressIn = (_message: ChatMessage) => {
-    // Zeego handles long press for context menu, so we don't need the timer anymore
-    // This is kept for potential future use or for other press-in effects
-  };
-
-  const handlePressOut = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
+  const handleReply = (message: ChatMessage) => {
+    if (onReply) {
+      onReply(message);
     }
   };
 
-  const handleReply = (message?: ChatMessage) => {
-    const msg = message || selectedMessage;
-    if (msg && onReply) {
-      onReply(msg);
-    }
-    setDropdownVisible(false);
-    setSelectedMessage(null);
-    setIsLastInSenderRun(false);
+  const handleCopy = async (message: ChatMessage) => {
+    await Clipboard.setStringAsync(message.text);
   };
 
-  const handleCopy = async (message?: ChatMessage) => {
-    const msg = message || selectedMessage;
-    if (msg) {
-      await Clipboard.setStringAsync(msg.text);
+  const handleEdit = (message: ChatMessage) => {
+    if (onEdit) {
+      onEdit(message);
     }
-    setDropdownVisible(false);
-    setSelectedMessage(null);
-    setIsLastInSenderRun(false);
   };
 
-  const handleEdit = (message?: ChatMessage) => {
-    const msg = message || selectedMessage;
-    if (msg && onEdit) {
-      onEdit(msg);
+  const handleDelete = (message: ChatMessage) => {
+    if (onDelete) {
+      onDelete(message);
     }
-    setDropdownVisible(false);
-    setSelectedMessage(null);
-    setIsLastInSenderRun(false);
   };
 
-  const handleDelete = (message?: ChatMessage) => {
-    const msg = message || selectedMessage;
-    if (msg && onDelete) {
-      onDelete(msg);
-    }
-    setDropdownVisible(false);
-    setSelectedMessage(null);
-    setIsLastInSenderRun(false);
-  };
+  // Quick reaction emojis for context menu
+  const quickReactionEmojis = ['👍', '❤️', '😂', '😢', '🔥', '👏'];
 
-  const handleOpenEmojiPicker = () => {
+  // Handle quick reaction from context menu
+  const handleQuickReaction = useCallback(async (message: ChatMessage, emoji: string) => {
+    const isSender = message.isSent;
+    const currentReaction = isSender ? message.senderReaction : message.recipientReaction;
+    
+    // If clicking the same emoji, remove reaction
+    if (emoji === currentReaction) {
+      await reactTo(message.id, '', isSender);
+      handleReactionUpdate(message.id, undefined, isSender);
+    } else {
+      await reactTo(message.id, emoji, isSender);
+      handleReactionUpdate(message.id, emoji, isSender);
+    }
+  }, [handleReactionUpdate]);
+
+  // Handle opening the emoji picker for more reactions
+  const handleOpenReactionPicker = useCallback((message: ChatMessage) => {
+    setEmojiPickerMessage(message);
     setEmojiPickerVisible(true);
-  };
+  }, []);
 
   const getDropdownOptions = (message: ChatMessage): DropdownMenuOption[] => {
     const options: DropdownMenuOption[] = [
@@ -864,393 +380,405 @@ export const MessageList = ({
     return options;
   };
 
-  const tryInitialScrollToBottom = () => {
-    if (messages.length === 0) return;
-    if (contentHeightRef.current <= 0) return;
-    if (layoutHeightRef.current <= 0) return;
+  // Custom view for reply preview, documents, images, videos, audio above the message text
+  const renderCustomView = useCallback((props: any) => {
+    const { currentMessage, position } = props;
+    if (!currentMessage) return null;
 
-    const isOverflowing = contentHeightRef.current > layoutHeightRef.current + 1;
-    if (!isOverflowing) {
-      // Content fits: we want it to start at the top and NEVER run bottom logic.
-      didInitialScroll.current = true;
-      initialScrollAttemptsRef.current = 0;
-      return;
-    }
+    const extMessage = currentMessage as ExtendedMessage;
+    const item = extMessage.originalMessage;
+    const isSent = position === 'right';
+    const bubbleBgColor = isSent ? themeColors.primary : recipientBackgroundColor;
+    const replyToMessage = item.replyTo ? findOriginalMessage(item.replyTo) : null;
 
-    // Existing scroll-to-bottom logic here
-    if (!didInitialScroll.current && initialScrollAttemptsRef.current < 3) {
-      initialScrollAttemptsRef.current += 1;
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: false });
-        offsetYRef.current = 0;
-        didInitialScroll.current = true;
-      });
-    }
-  };
-
-
-  // Track content and layout dimensions
-  const handleContentSizeChange = (_width: number, height: number) => {
-    contentHeightRef.current = height;
-    tryInitialScrollToBottom();
-  };
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    layoutHeightRef.current = event.nativeEvent.layout.height;
-    tryInitialScrollToBottom();
-  };
-
-  // Update sticky day key when messages change
-  useEffect(() => {
-    if (data.length > 0) {
-      const newTimestamp = data[0].timestamp;
-      setStickyTimestamp(newTimestamp);
-      setStickyDayKey(dayKey(newTimestamp));
-    }
-  }, [data.length]);
-
-  // If user is near "bottom" (offset ~ 0), keep them pinned to bottom as new messages arrive
-  useEffect(() => {
-    if (!pinnedToBottomRef.current) return;
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-      offsetYRef.current = 0;
-    });
-  }, [messages.length]);
-
-  // When the local user sends a new message, always scroll it into view
-  useEffect(() => {
-    const previousLength = prevMessagesLengthRef.current;
-    if (messages.length > previousLength) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage?.isSent) {
-        requestAnimationFrame(() => {
-          listRef.current?.scrollToOffset({ offset: 0, animated: true });
-          offsetYRef.current = 0;
-          pinnedToBottomRef.current = true;
-        });
-      }
-    }
-    prevMessagesLengthRef.current = messages.length;
-  }, [messages]);
-
-  // When keyboard appears, make sure the latest messages are visible
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => {
-      if (!pinnedToBottomRef.current) return;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          listRef.current?.scrollToOffset({ offset: 0, animated: false });
-          offsetYRef.current = 0;
-        });
-      });
-    });
-
-    return () => {
-      showSub.remove();
-    };
-  }, []);
-
-  // Auto-scroll to bottom when toolbar height changes (if user is already pinned)
-  useEffect(() => {
-    // Skip very first run to prevent "load flicker"
-    if (prevToolbarHeightRef.current === null) {
-      prevToolbarHeightRef.current = toolbarHeight;
-      return;
-    }
-
-    prevToolbarHeightRef.current = toolbarHeight;
-    if (!pinnedToBottomRef.current) return;
-
-    // Instantly scroll to accommodate toolbar height change without extra animation
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-      offsetYRef.current = 0;
-    });
-  }, [toolbarHeight]);
-
-
-  const renderItem = ({ item, index }: { item: ChatMessage; index: number }) => {
-    // index-1 is visually "below" (newer) because data is reversed + list inverted
-    const newer = index > 0 ? data[index - 1] : null;
-    // index+1 is visually "above" (older) because data is reversed + list inverted
-    const older = index + 1 < data.length ? data[index + 1] : null;
-
-    const sameSenderAsNewer = !!newer && newer.isSent === item.isSent;
-
-    // Gap between THIS message and the one below it (newer)
-    const gap =
-      !newer
-        ? 0
-        : BASE_GAP + (sameSenderAsNewer ? 0 : EXTRA_ON_SENDER_CHANGE);
-
-    // This is the last message in its sender-run (so it gets the tail corner)
-    const isLastInSenderRun = !sameSenderAsNewer;
-
-    // Show pill above the first (oldest) message in a date run
-    const showDatePill = !older || !isSameDay(older.timestamp, item.timestamp);
-    const itemDayKey = dayKey(item.timestamp);
-    const hideInlinePill = stickyActive && itemDayKey === stickyDayKey;
+    const hasCustomContent = replyToMessage || item.images?.length || item.video || item.document || item.audio;
+    if (!hasCustomContent) return null;
 
     return (
-      <View>
-        {showDatePill && (
-          <View style={styles.datePillRow}>
-            <View
-              style={[
-                styles.datePill,
-                { backgroundColor: themeColors.surfaceSecondary },
-                hideInlinePill && styles.datePillHidden,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.datePillText,
-                  { color: themeColors.text },
-                  hideInlinePill && styles.datePillHidden,
-                ]}
-              >
-                {getDatePillLabel(item.timestamp)}
-              </Text>
-            </View>
-          </View>
+      <View style={styles.customViewContainer}>
+        {/* Reply preview */}
+        {replyToMessage && (
+          <MessageReplyPreview
+            replyTo={replyToMessage}
+            clientName={clientName}
+            themeColors={themeColors}
+            parentBackgroundColor={bubbleBgColor}
+            isParentSent={isSent}
+            onPress={() => handleReplyPreviewPress(replyToMessage.id)}
+          />
         )}
-        <View
-          style={[
-            styles.messageWrapper,
-            item.isSent ? styles.messageWrapperRight : styles.messageWrapperLeft,
-            { marginBottom: gap },
-          ]}
-        >
-          <ContextMenu.Root
-            onOpenChange={(open) => {
-              if (open) {
-                // Measure the message position when context menu opens
-                const messageRef = messageRefs.current[item.id];
-                if (messageRef) {
-                  messageRef.measureInWindow((x, y, width, height) => {
-                    setContextMenuAnchor({ x, y, width, height });
-                    setContextMenuOpenMessage(item);
-                  });
-                }
-              } else {
-                setContextMenuOpenMessage(null);
+
+        {/* Image preview */}
+        {item.images && item.images.length > 0 && onImagePress && (
+          <MessageImagePreview
+            images={item.images}
+            themeColors={themeColors}
+            parentBackgroundColor={bubbleBgColor}
+            isParentSent={isSent}
+            onPress={() => {
+              if (item.images) {
+                onImagePress(item.images, clientName, isSent, item.timestamp);
               }
             }}
-          >
-            <ContextMenu.Trigger>
-              <Pressable style={{ alignSelf: item.isSent ? 'flex-end' : 'flex-start', maxWidth: '100%' }}>
-                <SwipeToReplyBubble
-                  themeColors={themeColors}
-                  onCancelLongPress={handlePressOut}
-                  alignRight={item.isSent}
-                  onReply={onReply}
-                  message={item}
-                  onHorizontalDragStart={() => setIsHorizontalDragActive(true)}
-                  onHorizontalDragEnd={() => setIsHorizontalDragActive(false)}
-                >
-                  <BubbleMeta
-                    item={item}
-                    themeColors={themeColors}
-                    recipientBackgroundColor={recipientBackgroundColor}
-                    formatTime={formatTime}
-                    softWrapText={softWrapText}
-                    registerRef={(ref) => {
-                      if (ref) messageRefs.current[item.id] = ref;
-                    }}
-                    isLastInSenderRun={isLastInSenderRun}
-                    clientName={clientName}
-                    onReplyPreviewPress={handleReplyPreviewPress}
-                    onDocumentPress={onDocumentPress}
-                    onImagePress={onImagePress}
-                    onVideoPress={onVideoPress}
-                    flashOpacity={flashAnimations.current[item.id]}
-                  />
-                </SwipeToReplyBubble>
-              </Pressable>
-            </ContextMenu.Trigger>
-            <ContextMenu.Content>
-              {getDropdownOptions(item).map((option, optionIndex) => (
+          />
+        )}
+
+        {/* Video preview */}
+        {item.video && onVideoPress && (
+          <MessageVideoPreview
+            video={item.video}
+            themeColors={themeColors}
+            parentBackgroundColor={bubbleBgColor}
+            isParentSent={isSent}
+            onPress={() => {
+              if (item.video) {
+                onVideoPress(item.video, clientName, isSent, item.timestamp);
+              }
+            }}
+          />
+        )}
+
+        {/* Document preview */}
+        {item.document && onDocumentPress && (
+          <MessageDocumentPreview
+            document={item.document}
+            themeColors={themeColors}
+            parentBackgroundColor={bubbleBgColor}
+            isParentSent={isSent}
+            onPress={() => {
+              if (item.document) {
+                onDocumentPress(item.document);
+              }
+            }}
+          />
+        )}
+
+        {/* Audio preview */}
+        {item.audio && (
+          <MessageAudioPreview
+            audio={item.audio}
+            themeColors={themeColors}
+            parentBackgroundColor={bubbleBgColor}
+            isParentSent={isSent}
+          />
+        )}
+      </View>
+    );
+  }, [themeColors, recipientBackgroundColor, clientName, onImagePress, onVideoPress, onDocumentPress, handleReplyPreviewPress]);
+
+  // Custom time with read receipts
+  const renderTime = useCallback((props: any) => {
+    const { currentMessage, position } = props;
+    if (!currentMessage) return null;
+
+    const extMessage = currentMessage as ExtendedMessage;
+    const item = extMessage.originalMessage;
+    const isSent = position === 'right';
+
+    return (
+      <View style={styles.timeContainer}>
+        <Time
+          {...props}
+          timeTextStyle={{
+            left: { color: themeColors.mutedText, ...typography.p7 },
+            right: { color: themeColors.primaryForeground, opacity: 0.7, ...typography.p7 },
+          }}
+        />
+        {isSent && (
+          <View style={styles.readReceiptIcon}>
+            {item.isRead ? (
+              <PlatformIcon
+                sf="checkmark.circle"
+                IconComponent={CheckCircle}
+                size={11}
+                color={themeColors.primaryForeground}
+              />
+            ) : (
+              <PlatformIcon
+                sf="paperplane"
+                IconComponent={Send}
+                size={11}
+                color={themeColors.primaryForeground}
+              />
+            )}
+          </View>
+        )}
+      </View>
+    );
+  }, [themeColors]);
+
+  // Custom bubble with context menu wrapper
+  const renderBubble = useCallback((props: any) => {
+    const { currentMessage, position } = props;
+    if (!currentMessage) return null;
+
+    const extMessage = currentMessage as ExtendedMessage;
+    const item = extMessage.originalMessage;
+    const messageId = String(currentMessage._id);
+
+    return (
+      <ContextMenu.Root>
+        <ContextMenu.Trigger>
+          <View>
+            <Bubble
+              {...props}
+              renderCustomView={renderCustomView}
+              renderTime={renderTime}
+              containerStyle={{
+                left: { flex: 0, marginRight: 'auto' },
+                right: { flex: 0, marginLeft: 'auto' },
+              }}
+              wrapperStyle={{
+                left: {
+                  backgroundColor: recipientBackgroundColor,
+                  borderRadius: 16,
+                  borderBottomLeftRadius: 4,
+                },
+                right: {
+                  backgroundColor: themeColors.primary,
+                  borderRadius: 16,
+                  borderBottomRightRadius: 4,
+                },
+              }}
+              textStyle={{
+                left: { color: themeColors.text, ...typography.p3 },
+                right: { color: themeColors.primaryForeground, ...typography.p3 },
+              }}
+            />
+          </View>
+        </ContextMenu.Trigger>
+        <ContextMenu.Content>
+          {/* Quick emoji reactions as submenu */}
+          <ContextMenu.Sub key={`react-sub-${messageId}`}>
+            <ContextMenu.SubTrigger key={`react-trigger-${messageId}`}>
+              <ContextMenu.ItemTitle>{t('general.react')}</ContextMenu.ItemTitle>
+              <ContextMenu.ItemIcon
+                ios={{
+                  name: 'face.smiling',
+                }}
+              />
+            </ContextMenu.SubTrigger>
+            <ContextMenu.SubContent>
+              {quickReactionEmojis.map((emoji, emojiIndex) => (
                 <ContextMenu.Item
-                  key={`ctx-${item.id}-${optionIndex}`}
-                  onSelect={option.onPress}
-                  destructive={option.destructive}
+                  key={`emoji-${messageId}-${emojiIndex}`}
+                  onSelect={() => handleQuickReaction(item, emoji)}
                 >
-                  <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
-                  {option.icon && (
-                    <ContextMenu.ItemIcon
-                      ios={{
-                        name: option.icon.sf,
-                      }}
-                    />
-                  )}
+                  <ContextMenu.ItemTitle>{emoji}</ContextMenu.ItemTitle>
                 </ContextMenu.Item>
               ))}
-            </ContextMenu.Content>
-          </ContextMenu.Root>
-
-          {/* Reactions container */}
-          {(item.senderReaction || item.recipientReaction) && (
-            <PressableOpacity
-              style={[
-                styles.reactionsContainer,
-                item.isSent ? styles.reactionsContainerRight : styles.reactionsContainerLeft,
-              ]}
-              onPress={() => handleReactionPress(item)}
-            >
-              <View
-                style={[
-                  styles.reactionsInner,
-                  {
-                    backgroundColor: themeColors.surface,
-                    shadowColor: themeColors.shadowColor,
-                    ...(item.isSent ? { marginRight: 6 } : { marginLeft: 6 }),
-                  },
-                ]}
+              <ContextMenu.Item
+                key={`emoji-more-${messageId}`}
+                onSelect={() => handleOpenReactionPicker(item)}
               >
-                {item.senderReaction && item.recipientReaction && item.senderReaction === item.recipientReaction ? (
-                  <>
-                    <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
-                    <Text style={[styles.reactionCount, { color: themeColors.mutedText }]}>2</Text>
-                  </>
-                ) : (
-                  <>
-                    {item.senderReaction && (
-                      <View style={styles.reactionItem}>
-                        <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
-                      </View>
-                    )}
-                    {item.recipientReaction && (
-                      <View style={styles.reactionItem}>
-                        <Text style={styles.reactionEmoji}>{item.recipientReaction}</Text>
-                      </View>
-                    )}
-                  </>
-                )}
-              </View>
-            </PressableOpacity>
-          )}
+                <ContextMenu.ItemTitle>{t('general.more')}</ContextMenu.ItemTitle>
+                <ContextMenu.ItemIcon
+                  ios={{
+                    name: 'ellipsis.circle',
+                  }}
+                />
+              </ContextMenu.Item>
+            </ContextMenu.SubContent>
+          </ContextMenu.Sub>
+          {/* Regular menu options */}
+          {getDropdownOptions(item).map((option, optionIndex) => (
+            <ContextMenu.Item
+              key={`ctx-${messageId}-${optionIndex}`}
+              onSelect={option.onPress}
+              destructive={option.destructive}
+            >
+              <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
+              {option.icon && (
+                <ContextMenu.ItemIcon
+                  ios={{
+                    name: option.icon.sf,
+                  }}
+                />
+              )}
+            </ContextMenu.Item>
+          ))}
+        </ContextMenu.Content>
+      </ContextMenu.Root>
+    );
+  }, [themeColors, recipientBackgroundColor, renderCustomView, renderTime, getDropdownOptions, quickReactionEmojis, handleQuickReaction, handleOpenReactionPicker, t]);
+
+  // Render left action (swipe reply indicator)
+  const renderLeftAction = useCallback((
+    progressAnimatedValue: Animated.AnimatedInterpolation<number>,
+    isNextMyMessage: boolean,
+    position: 'left' | 'right'
+  ) => {
+    const size = progressAnimatedValue.interpolate({
+      inputRange: [0, 1, 100],
+      outputRange: [0, 1, 1],
+    });
+    const trans = progressAnimatedValue.interpolate({
+      inputRange: [0, 1, 2],
+      outputRange: [0, 12, 20],
+    });
+
+    return (
+      <Animated.View
+        style={[
+          styles.swipeActionContainer,
+          { transform: [{ scale: size }, { translateX: trans }] },
+          isNextMyMessage ? styles.defaultBottomOffset : styles.bottomOffsetNext,
+          position === 'right' && styles.leftOffsetValue,
+        ]}
+      >
+        <View style={styles.replyImageWrapper}>
+          <PlatformIcon
+            sf="arrowshape.turn.up.left.circle"
+            IconComponent={Reply}
+            size={26}
+            color={themeColors.mutedText}
+          />
+        </View>
+      </Animated.View>
+    );
+  }, [themeColors]);
+
+  // Custom message with swipe-to-reply and reactions
+  const renderMessage = useCallback((props: MessageProps<ExtendedMessage>) => {
+    const { currentMessage, nextMessage, position } = props;
+    if (!currentMessage) return <View />;
+
+    const extMessage = currentMessage as ExtendedMessage;
+    const item = extMessage.originalMessage;
+    const isSent = position === 'right';
+    const messageId = String(currentMessage._id);
+
+    const isNextMyMessage =
+      currentMessage &&
+      nextMessage &&
+      isSameUser(currentMessage, nextMessage) &&
+      isSameDay(currentMessage, nextMessage);
+
+    let swipeableInstance: Swipeable | null = null;
+
+    const handleSwipeOpen = () => {
+      handleSwipeReply(extMessage, swipeableInstance);
+    };
+
+    return (
+      <GestureHandlerRootView>
+        <Swipeable
+          ref={(ref) => {
+            swipeableInstance = ref;
+            updateRowRef(messageId, ref);
+          }}
+          friction={2}
+          rightThreshold={40}
+          renderLeftActions={(progress) => renderLeftAction(progress, !!isNextMyMessage, position || 'left')}
+          onSwipeableWillOpen={handleSwipeOpen}
+        >
+          <View style={isSent ? styles.messageContainerRight : styles.messageContainerLeft}>
+            <Message
+              {...props}
+              renderBubble={renderBubble}
+              containerStyle={{
+                left: { justifyContent: 'flex-start', marginRight: 'auto', marginLeft: 0, paddingLeft: 0 },
+                right: { justifyContent: 'flex-end', marginLeft: 'auto', marginRight: 0 },
+              }}
+            />
+            {/* Reactions container */}
+            {(item.senderReaction || item.recipientReaction) && (
+              <PressableOpacity
+                style={[
+                  styles.reactionsContainer,
+                  item.isSent ? styles.reactionsContainerRight : styles.reactionsContainerLeft,
+                ]}
+                onPress={() => handleReactionPress(item)}
+              >
+                <View
+                  style={[
+                    styles.reactionsInner,
+                    {
+                      backgroundColor: themeColors.surface,
+                      shadowColor: themeColors.shadowColor,
+                      ...(item.isSent ? { marginRight: 6 } : { marginLeft: 6 }),
+                    },
+                  ]}
+                >
+                  {item.senderReaction && item.recipientReaction && item.senderReaction === item.recipientReaction ? (
+                    <>
+                      <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                      <Text style={[styles.reactionCount, { color: themeColors.mutedText }]}>2</Text>
+                    </>
+                  ) : (
+                    <>
+                      {item.senderReaction && (
+                        <View style={styles.reactionItem}>
+                          <Text style={styles.reactionEmoji}>{item.senderReaction}</Text>
+                        </View>
+                      )}
+                      {item.recipientReaction && (
+                        <View style={styles.reactionItem}>
+                          <Text style={styles.reactionEmoji}>{item.recipientReaction}</Text>
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+              </PressableOpacity>
+            )}
+          </View>
+        </Swipeable>
+      </GestureHandlerRootView>
+    );
+  }, [renderBubble, renderLeftAction, themeColors, handleReactionPress, handleSwipeReply, updateRowRef]);
+
+  // Custom day renderer
+  const renderDay = useCallback((props: any) => {
+    const { currentMessage } = props;
+    if (!currentMessage) return null;
+
+    const date = new Date(currentMessage.createdAt);
+
+    return (
+      <View style={styles.datePillRow}>
+        <View style={[styles.datePill, { backgroundColor: themeColors.surfaceSecondary }]}>
+          <Text style={[styles.datePillText, { color: themeColors.text }]}>
+            {getDatePillLabel(date)}
+          </Text>
         </View>
       </View>
     );
-  };
-
-  useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
-      if (hideStickyTimerRef.current) {
-        clearTimeout(hideStickyTimerRef.current);
-      }
-    };
-  }, []);
+  }, [themeColors, getDatePillLabel]);
 
   return (
     <>
-      <View ref={containerRef} style={[styles.fill, { backgroundColor }]} onLayout={handleLayout}>
-        <FlatList
-          ref={listRef}
-          data={data}
-          keyExtractor={(m) => m.id}
-          renderItem={renderItem}
-          inverted
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          scrollEnabled={!isHorizontalDragActive}
-          contentContainerStyle={[
-            styles.contentContainer,
-            {
-              // In inverted FlatList: paddingTop = visual bottom (newest messages), paddingBottom = visual top (under header)
+      <View ref={containerRef} style={[styles.fill, { backgroundColor }]}>
+        <GiftedChat
+          messages={giftedMessages as IMessage[]}
+          user={{ _id: 1 }}
+          renderMessage={renderMessage}
+          renderDay={renderDay}
+          renderInputToolbar={() => null}
+          renderComposer={() => null}
+          renderSend={() => null}
+          renderActions={() => null}
+          renderAccessory={() => null}
+          renderFooter={() => null}
+          renderAvatar={null}
+          minInputToolbarHeight={0}
+          isInverted={true}
+          listProps={{
+            showsVerticalScrollIndicator: false,
+            keyboardShouldPersistTaps: 'handled' as const,
+            contentContainerStyle: {
+              paddingHorizontal: 8,
               // VISUAL BOTTOM (newest message) — reserve space for toolbar
-              paddingTop: toolbarHeight + 16,
-              // VISUAL TOP — reserve space for header + sticky pill room
-              paddingBottom: headerHeight + 16 + STICKY_EXTRA,
+              paddingTop: (toolbarHeight ?? 0) + 16,
+              // VISUAL TOP — reserve space for header
+              paddingBottom: (headerHeight ?? 0) + 16,
             },
-          ]}
-          onContentSizeChange={handleContentSizeChange}
-          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const y = e.nativeEvent.contentOffset.y;
-            offsetYRef.current = y;
-            pinnedToBottomRef.current = y <= 40; // same threshold for "pinned to bottom"
-          }}
-          scrollEventThrottle={16}
-          onScrollBeginDrag={() => showSticky()}
-          onScrollEndDrag={() => hideStickySoon()}
-          onMomentumScrollBegin={() => showSticky()}
-          onMomentumScrollEnd={() => hideStickySoon()}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
-          // This helps when new items are inserted at the "bottom" (index 0 in inverted list)
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
           }}
         />
-        {stickyActive && (
-          <Animated.View
-            style={[
-              styles.stickyHeaderRow,
-              { opacity: Animated.multiply(stickyOpacity, stickyLabelOpacity) },
-            ]}
-            pointerEvents="none"
-          >
-            <View style={[styles.datePill, { backgroundColor: themeColors.surfaceSecondary }]}>
-              <Text style={[styles.datePillText, { color: themeColors.text }]}>
-                {getDatePillLabel(stickyDateForLabel)}
-              </Text>
-            </View>
-          </Animated.View>
-        )}
-        {/* Emoji picker overlay when context menu is open */}
-        {contextMenuOpenMessage && (
-          <EmojiPickerContainer
-            visible={true}
-            onClose={() => setContextMenuOpenMessage(null)}
-            selectedMessage={contextMenuOpenMessage}
-            anchorPosition={contextMenuAnchor}
-            alignRight={contextMenuOpenMessage.isSent}
-            adjustedMessageTop={contextMenuAnchor.y}
-            onReactionUpdate={handleReactionUpdate}
-            onEmojiPickerOpenChange={(open) => {
-              if (open) {
-                setSelectedMessage(contextMenuOpenMessage);
-                setEmojiPickerVisible(true);
-              }
-            }}
-            disableModal={true}
-          />
-        )}
-        {selectedMessage && dropdownVisible && (
-          <SelectedMessagePopups
-            visible={dropdownVisible}
-            onClose={() => {
-              setDropdownVisible(false);
-              setSelectedMessage(null);
-              setIsLastInSenderRun(false);
-              setEmojiPickerVisible(false); // ensure picker closes too
-            }}
-            selectedMessage={selectedMessage}
-            options={getDropdownOptions(selectedMessage)}
-            anchorPosition={anchorPosition}
-            alignRight={selectedMessage.isSent}
-            containerPosition={containerPosition}
-            themeColors={themeColors}
-            isLastInSenderRun={isLastInSenderRun}
-            onReactionUpdate={handleReactionUpdate}
-            emojiPickerVisible={emojiPickerVisible}
-            onEmojiPickerOpenChange={setEmojiPickerVisible}
-            onEmojiSelected={handleEmojiSelected}
-            onEmojiPickerClose={handleEmojiPickerClose}
-            colorScheme={colorScheme}
-            fullThemeColors={fullThemeColors}
-            clientName={clientName}
-            recipientBackgroundColor={recipientBackgroundColor}
-          />
-        )}
       </View>
-      {/* Standalone EmojiPicker for context menu "React" option */}
+      {/* Standalone EmojiPicker for full emoji selection (opened from plus button) */}
       <EmojiPicker
-        open={emojiPickerVisible && selectedMessage !== null}
+        open={emojiPickerVisible && emojiPickerMessage !== null}
         onClose={handleEmojiPickerClose}
         onEmojiSelected={handleEmojiSelected}
         enableSearchBar
@@ -1277,72 +805,27 @@ export const MessageList = ({
   );
 };
 
-const STICKY_EXTRA = 32; // Extra space for sticky header pill height
-
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  contentContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  messageWrapper: {
-    maxWidth: '100%',
-    overflow: 'visible',
-    position: 'relative',
-  },
-  messageWrapperLeft: { alignSelf: 'flex-start' },
-  messageWrapperRight: { alignSelf: 'flex-end' },
-  messageBubble: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    minWidth: 60,
-    maxWidth: '80%',
-  },
-  messageBubbleFullWidth: {
-    width: '80%',
-  },
-  messageBubbleTailRight: { borderBottomRightRadius: 2 },
-  messageBubbleTailLeft: { borderBottomLeftRadius: 2 },
-  bubbleInner: {
-    position: 'relative',
+  messageContainerLeft: {
     width: '100%',
+    alignItems: 'flex-start',
   },
-  messageText: {
-    ...typography.p3,
-    fontSize: 16,
-    textAlign: 'left',
-    includeFontPadding: false, // Android
+  messageContainerRight: {
+    width: '100%',
+    alignItems: 'flex-end',
   },
-  metaSpacer: {
-    ...typography.p7,      // must match timestamp typography
-    color: 'transparent',  // takes space, not visible
-    fontVariant: ['tabular-nums'],
+  customViewContainer: {
+    paddingHorizontal: 8,
+    paddingTop: 8,
   },
-  metaOverlay: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
+  timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingLeft: 6,
-    paddingTop: 1,
-    borderRadius: 8,
-  },
-  timeText: {
-    ...typography.p7,
-    fontVariant: ['tabular-nums'],
-  },
-  hiddenMeasure: {
-    position: 'absolute',
-    opacity: 0,
-    left: -9999,
-    top: -9999,
   },
   readReceiptIcon: {
     marginLeft: 4,
-    marginTop: 1,
+    opacity: 0.7,
   },
   datePillRow: {
     width: '100%',
@@ -1358,38 +841,24 @@ const styles = StyleSheet.create({
     ...typography.p3,
     fontWeight: '600',
   },
-  datePillHidden: {
-    opacity: 0,
-  },
-  stickyHeaderRow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    width: '100%',
-    alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 6,
-    zIndex: 10,
-  },
   reactionsContainer: {
-    marginTop: -4,
-    marginBottom: 8,
+    marginTop: -16,
+    marginBottom: 4,
     zIndex: 15,
   },
   reactionsContainerRight: {
     alignSelf: 'flex-end',
-    marginRight: 12,
+    marginRight: 8,
   },
   reactionsContainerLeft: {
     alignSelf: 'flex-start',
-    marginLeft: 12,
+    marginLeft: 8,
   },
   reactionsInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderRadius: 16,
     shadowOffset: {
       width: 0,
@@ -1404,36 +873,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reactionEmoji: {
-    fontSize: 12,
+    fontSize: 15,
   },
   reactionCount: {
     ...typography.p7,
     fontSize: 12,
     marginLeft: 2,
   },
-  swipeContainer: {
-    position: 'relative',
-    flexShrink: 1,
-    maxWidth: '100%',
-    overflow: 'visible',
+  swipeActionContainer: {
+    width: 40,
   },
-  swipeContainerLeft: {
-    alignSelf: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  swipeContainerRight: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
-  },
-  swipeBubbleHost: {
-    alignSelf: 'flex-start',
-  },
-  replyUnderlay: {
-    position: 'absolute',
-    left: 8,
-    top: 0,
-    bottom: 0,
+  replyImageWrapper: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  defaultBottomOffset: {
+    marginBottom: 2,
+  },
+  bottomOffsetNext: {
+    marginBottom: 10,
+  },
+  leftOffsetValue: {
+    marginLeft: 16,
   },
 });

@@ -314,6 +314,7 @@ export default function InboxScreen() {
 const styles = StyleSheet.create({
   scrollViewContent: {
     paddingBottom: 40,
+    paddingTop: 16,
   },
   container: {
   },

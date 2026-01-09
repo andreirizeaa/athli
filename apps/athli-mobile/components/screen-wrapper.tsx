@@ -42,11 +42,11 @@ export const ScreenWrapper = ({
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={[
-              { paddingTop: insets.top + 16 },
               contentContainerStyle,
             ]}
             showsVerticalScrollIndicator={showsVerticalScrollIndicator}
           >
+            <View style={{ height: insets.top }} />
             {children}
           </ScrollView>
           {overlay}
@@ -63,9 +63,9 @@ export const ScreenWrapper = ({
         style={[
           styles.container,
           {
-            paddingTop: insets.top + 16,
-            paddingLeft: insets.left + 16,
-            paddingRight: insets.right + 16,
+            paddingTop: insets.top,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
           },
         ]}
       >
