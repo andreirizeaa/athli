@@ -650,9 +650,30 @@ export const en = {
       logHabit: 'Log habit',
       assignFile: 'Assign file',
       addFile: 'Add file',
+      assignCheckIn: 'Assign check-in',
+      addCheckIn: 'Add check-in',
+      assignQuestionnaire: 'Assign questionnaire',
+      addQuestionnaire: 'Add questionnaire',
+      addPhoto: 'Add photo',
     },
     assistant: {
       title: 'Assistant',
+    },
+    assignModals: {
+      assignCheckIn: 'Assign Check-in',
+      assignQuestionnaire: 'Assign Questionnaire',
+      assignFile: 'Assign File',
+      assignMetric: 'Assign Metric',
+      assignHabit: 'Assign Habit',
+      placeholder: 'Content coming soon',
+    },
+    addPhotoModal: {
+      title: 'Add Photo',
+      placeholder: 'Photo upload coming soon',
+    },
+    addNoteModal: {
+      title: 'Add Note',
+      placeholder: 'Note creation coming soon',
     },
   },
   shared: {

@@ -21,8 +21,12 @@ export default function ClientFilesScreen() {
         router.back();
     };
 
-    const handlePlusPress = () => {
-        // TODO: Handle plus press
+    const handleAssignFile = () => {
+        router.push('/modals/client/assign-file-to-client-modal');
+    };
+
+    const handleAddFile = () => {
+        router.push('/modals/files/add-file-modal');
     };
 
     return (
@@ -39,12 +43,12 @@ export default function ClientFilesScreen() {
                     {
                         label: t('clientDetail.actions.assignFile'),
                         icon: { sf: 'square.and.arrow.up', IconComponent: Share },
-                        onPress: () => { }
+                        onPress: handleAssignFile
                     },
                     {
                         label: t('clientDetail.actions.addFile'),
                         icon: { sf: 'plus', IconComponent: Plus },
-                        onPress: () => { }
+                        onPress: handleAddFile
                     }
                 ]}>
                     <IconButton
