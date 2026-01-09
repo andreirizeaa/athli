@@ -2,11 +2,14 @@ import React from 'react';
 import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as ContextMenu from 'zeego/context-menu';
 import * as DropdownMenuZeego from 'zeego/dropdown-menu';
+import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+
+const DESTRUCTIVE_COLOR = '#EF4444';
 
 export type DropdownMenuOption = {
   label: string;
@@ -107,12 +110,12 @@ export const DropdownMenu = ({
               sf={option.icon.sf}
               IconComponent={option.icon.IconComponent}
               size={iconSizes.listIcons}
-              color={option.destructive ? themeColors.destructive : themeColors.text}
+              color={option.destructive ? DESTRUCTIVE_COLOR : themeColors.text}
             />
           )}
           <Text style={[
             styles.menuItemText,
-            { color: option.destructive ? themeColors.destructive : themeColors.text }
+            { color: option.destructive ? DESTRUCTIVE_COLOR : themeColors.text }
           ]}>
             {option.label}
           </Text>
@@ -151,10 +154,16 @@ export const ContextMenuWrapper = ({
   options,
   children,
 }: ContextMenuWrapperProps) => {
+  const handleTouchStart = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger>
-        {children}
+        <Pressable onPressIn={handleTouchStart}>
+          {children}
+        </Pressable>
       </ContextMenu.Trigger>
       <ContextMenu.Content>
         {options.map((option, index) => (
@@ -190,10 +199,16 @@ export const DropdownMenuWrapper = ({
   options,
   children,
 }: DropdownMenuWrapperProps) => {
+  const handleTouchStart = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   return (
     <DropdownMenuZeego.Root>
       <DropdownMenuZeego.Trigger>
-        {children}
+        <Pressable onPressIn={handleTouchStart}>
+          {children}
+        </Pressable>
       </DropdownMenuZeego.Trigger>
       <DropdownMenuZeego.Content>
         {options.map((option, index) => (
