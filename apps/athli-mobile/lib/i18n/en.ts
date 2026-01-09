@@ -658,6 +658,7 @@ export const en = {
     },
     assistant: {
       title: 'Assistant',
+      helpTitle: 'Athli Assistant',
     },
     assignModals: {
       assignCheckIn: 'Assign Check-in',
