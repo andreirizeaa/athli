@@ -1,17 +1,19 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { StyleSheet, Text, View, Share } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { Image } from 'expo-image';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Send } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { getClients, type Client } from '@/services/client-service';
 import { PlatformIcon } from '@/components/platform-icon';
+import { IconButton } from '@/components/icon-button';
 import { SearchBar } from '@/components/search-bar';
+import { ScreenWrapper } from '@/components/screen-wrapper';
 
 // Fuzzy search function - checks if query matches name (allowing for character skipping)
 const fuzzyMatch = (text: string, query: string): boolean => {
@@ -40,10 +42,8 @@ export default function ClientsScreen() {
   const router = useRouter();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
   const [clients, setClients] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const scrollViewRef = useRef<ScrollView>(null);
 
   const loadClients = useCallback(async () => {
     try {
@@ -81,6 +81,7 @@ export default function ClientsScreen() {
   }, [clients, searchQuery]);
 
   const handleClientPress = (clientId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/client/${clientId}`);
   };
 
@@ -108,114 +109,107 @@ export default function ClientsScreen() {
     return parts.join(' · ');
   };
 
+  const handleShare = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      await Share.share({
+        message: 'YOUR INVITE LINE HERE',
+      });
+    } catch (error: any) {
+      console.error(error.message);
+    }
+  };
+
   return (
-    <View style={[styles.screen, { backgroundColor: themeColors.pageBackground }]}>
-      <View
-        style={[
-          styles.safeArea,
-          {
-            paddingTop: insets.top,
-            paddingBottom: 0,
-            paddingLeft: insets.left,
-            paddingRight: insets.right,
-          },
-        ]}
-      >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.headerSection}>
-            <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
-            <SearchBar
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={t('clients.searchPlaceholder')}
+    <ScreenWrapper contentContainerStyle={styles.scrollContent}>
+      <View style={styles.headerSection}>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { color: themeColors.text }]}>{t('clients.title')}</Text>
+          <View style={styles.headerButtonContainer}>
+            <IconButton
+              icon={{ sf: 'paperplane', IconComponent: Send }}
+              onPress={handleShare}
+              size="md"
+              color={themeColors.text}
             />
           </View>
-          <View style={styles.listContainer}>
-            {filteredClients.map((client, index) => {
-              const isLastItem = index === filteredClients.length - 1;
-              return (
-                <View key={client.id}>
-                  <PressableOpacity
-                    onPress={() => handleClientPress(client.id)}
-                    style={styles.rowWrapper}
-                  >
-                    <View style={styles.rowContent}>
-                      <View style={styles.avatarContainer}>
-                        {client.avatar ? (
-                          <Image source={{ uri: client.avatar }} style={styles.avatar} />
-                        ) : (
-                          <View
-                            style={[
-                              styles.avatar,
-                              styles.avatarPlaceholder,
-                              { backgroundColor: themeColors.border },
-                            ]}
-                          />
-                        )}
-                      </View>
-                      <View style={styles.clientInfo}>
-                        <View style={styles.clientHeaderRow}>
-                          <Text
-                            style={[styles.clientName, { color: themeColors.text }]}
-                            numberOfLines={1}
-                          >
-                            {client.fullName}
-                          </Text>
-                          <View style={styles.chevronContainer}>
-                            <PlatformIcon
-                              sf="chevron.right"
-                              IconComponent={ChevronRight}
-                              size={iconSizes.extraSmallIcons}
-                              color={themeColors.mutedText}
-                            />
-                          </View>
-                        </View>
-                        <Text
-                          style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
-                          numberOfLines={2}
-                        >
-                          {formatSubtitle(client)}
-                        </Text>
+        </View>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder={t('clients.searchPlaceholder')}
+        />
+      </View>
+      <View style={styles.listContainer}>
+        {filteredClients.map((client, index) => {
+          const isLastItem = index === filteredClients.length - 1;
+          return (
+            <View key={client.id}>
+              <PressableOpacity
+                onPress={() => handleClientPress(client.id)}
+                style={styles.rowWrapper}
+              >
+                <View style={styles.rowContent}>
+                  <View style={styles.avatarContainer}>
+                    {client.avatar ? (
+                      <Image source={{ uri: client.avatar }} style={styles.avatar} />
+                    ) : (
+                      <View
+                        style={[
+                          styles.avatar,
+                          styles.avatarPlaceholder,
+                          { backgroundColor: themeColors.border },
+                        ]}
+                      />
+                    )}
+                  </View>
+                  <View style={styles.clientInfo}>
+                    <View style={styles.clientHeaderRow}>
+                      <Text
+                        style={[styles.clientName, { color: themeColors.text }]}
+                        numberOfLines={1}
+                      >
+                        {client.fullName}
+                      </Text>
+                      <View style={styles.chevronContainer}>
+                        <PlatformIcon
+                          sf="chevron.right"
+                          IconComponent={ChevronRight}
+                          size={iconSizes.extraSmallIcons}
+                          color={themeColors.mutedText}
+                        />
                       </View>
                     </View>
-                  </PressableOpacity>
-                  <View style={styles.separatorContainer}>
-                    <View
-                      style={[
-                        styles.separator,
-                        { backgroundColor: themeColors.mutedText, opacity: 0.3 },
-                      ]}
-                    />
+                    <Text
+                      style={[styles.clientSubtitle, { color: themeColors.mutedText }]}
+                      numberOfLines={2}
+                    >
+                      {formatSubtitle(client)}
+                    </Text>
                   </View>
-                  {isLastItem && <View style={{ height: 60 }} />}
                 </View>
-              );
-            })}
-          </View>
-        </ScrollView>
+              </PressableOpacity>
+              <View style={styles.separatorContainer}>
+                <View
+                  style={[
+                    styles.separator,
+                    { backgroundColor: themeColors.mutedText, opacity: 0.3 },
+                  ]}
+                />
+              </View>
+              {isLastItem && <View style={{ height: 60 }} />}
+            </View>
+          );
+        })}
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
-    paddingTop: 16,
     paddingBottom: 16,
+    paddingTop: 16,
   },
   headerSection: {
     paddingHorizontal: 16,
@@ -279,7 +273,17 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h1,
     textAlign: 'left',
-    marginBottom: 16,
+    paddingRight: 52,
+  },
+  titleRow: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  headerButtonContainer: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    transform: [{ translateY: -22 }],
   },
 });
 

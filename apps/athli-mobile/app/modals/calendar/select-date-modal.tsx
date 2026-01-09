@@ -1,275 +1,251 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View, ScrollView, Platform } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { StyleSheet, Text, useWindowDimensions, View, InteractionManager } from 'react-native';
 import { PressableOpacity } from 'pressto';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import PagerView, { type PagerViewOnPageSelectedEvent } from 'react-native-pager-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { PlatformIcon } from '@/components/platform-icon';
-import { IconButton } from '@/components/icon-button';
 
-const SELECTED_DATE_KEY = '@select_date_modal_selected_date';
+const DEFAULT_STORAGE_KEY = '@select_date_modal_selected_date';
 
-export type MonthData = {
+const WEEKDAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+type MonthData = {
   year: number;
-  month: number; // 0-11 (0 = January)
+  month: number;
   id: string;
 };
 
-type CalendarDay = {
-  day: number | null; // null for empty cells
-  date: Date | null; // null for empty cells
-};
+const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-
-// Generate months from 5 years ago to 1 year from now (ending in December)
+// Only generate 2 years of months (1 year back, current, 1 year forward) = 36 months
 const generateMonths = (): MonthData[] => {
   const months: MonthData[] = [];
   const now = new Date();
   const currentYear = now.getFullYear();
-  const startYear = currentYear - 5;
-  const endYear = currentYear + 1;
-
-  for (let year = startYear; year <= endYear; year++) {
-    const endMonth = year === endYear ? 11 : 11; // Always end in December
-    for (let month = 0; month <= endMonth; month++) {
-      months.push({
-        year,
-        month,
-        id: `${year}-${month}`,
-      });
+  
+  for (let year = currentYear - 1; year <= currentYear + 1; year++) {
+    for (let month = 0; month <= 11; month++) {
+      months.push({ year, month, id: `${year}-${month}` });
     }
   }
-
   return months;
 };
 
-// Get the first day of week for a month (0 = Sunday, 1 = Monday, etc.)
-// We need Monday = 0, so we adjust
+const MONTHS_DATA = generateMonths();
+
+const getInitialMonthIndex = (): number => {
+  const now = new Date();
+  const index = MONTHS_DATA.findIndex(
+    (m) => m.year === now.getFullYear() && m.month === now.getMonth()
+  );
+  return index >= 0 ? index : 12;
+};
+
+const INITIAL_MONTH_INDEX = getInitialMonthIndex();
+
 const getFirstDayOfWeek = (year: number, month: number): number => {
-  const date = new Date(year, month, 1);
-  const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  // Convert to Monday = 0, Tuesday = 1, ..., Sunday = 6
+  const day = new Date(year, month, 1).getDay();
   return day === 0 ? 6 : day - 1;
 };
 
-// Get days in a month
 const getDaysInMonth = (year: number, month: number): number => {
   return new Date(year, month + 1, 0).getDate();
 };
 
-// Generate calendar grid for a month
-const generateCalendarGrid = (year: number, month: number): CalendarDay[] => {
-  const days: CalendarDay[] = [];
-  const firstDay = getFirstDayOfWeek(year, month);
-  const daysInMonth = getDaysInMonth(year, month);
-
-  // Add empty cells for days before the 1st (to align with Monday = column 0)
-  for (let i = 0; i < firstDay; i++) {
-    days.push({ day: null, date: null });
-  }
-
-  // Add days of the current month
-  for (let day = 1; day <= daysInMonth; day++) {
-    days.push({
-      day,
-      date: new Date(year, month, day),
-    });
-  }
-
-  // Add empty cells to complete the last row if needed
-  const totalCells = days.length;
-  const remainingCells = totalCells % 7;
-  if (remainingCells > 0) {
-    const cellsToAdd = 7 - remainingCells;
-    for (let i = 0; i < cellsToAdd; i++) {
-      days.push({ day: null, date: null });
-    }
-  }
-
-  return days;
-};
-
-// Normalize date to start of day for comparison
 const normalizeDate = (date: Date): Date => {
   const normalized = new Date(date);
   normalized.setHours(0, 0, 0, 0);
   return normalized;
 };
 
-// Check if a date is today
 const isToday = (date: Date | null): boolean => {
   if (!date) return false;
   const today = normalizeDate(new Date());
-  const dateToCheck = normalizeDate(date);
-  return (
-    dateToCheck.getDate() === today.getDate() &&
-    dateToCheck.getMonth() === today.getMonth() &&
-    dateToCheck.getFullYear() === today.getFullYear()
-  );
+  const d = normalizeDate(date);
+  return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
 };
 
-// Check if two dates are the same day
 const isSameDay = (date1: Date | null, date2: Date | null): boolean => {
   if (!date1 || !date2) return false;
   const d1 = normalizeDate(date1);
   const d2 = normalizeDate(date2);
-  return (
-    d1.getDate() === d2.getDate() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getFullYear() === d2.getFullYear()
-  );
+  return d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
 };
 
-type CalendarMonthItemProps = {
+type CalendarMonthPageProps = {
   monthData: MonthData;
   selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
   themeColors: any;
+  cellWidth: number;
+  gridWidth: number;
 };
 
-const CalendarMonthItem = React.memo(({ monthData, selectedDate, onDateSelect, themeColors }: CalendarMonthItemProps) => {
-  const { width } = useWindowDimensions();
-  const grid = useMemo(() => generateCalendarGrid(monthData.year, monthData.month), [monthData.year, monthData.month]);
-
-  // Calculate cell width: (container width - horizontal padding - gaps) / 7
-  // Container padding: 20 * 2 = 40, gaps between 7 cells: 4 * 6 = 24
-  const containerPadding = 40;
-  const gapSize = 4; // Reduced spacing between cells
-  const gapsBetweenCells = gapSize * 6; // 6 gaps of 4px each between 7 cells
-  const availableWidth = width - containerPadding;
-  const cellWidth = Math.floor((availableWidth - gapsBetweenCells) / 7);
-  const gridWidth = cellWidth * 7 + gapsBetweenCells; // Total width for 7 cells + 6 gaps
-
-  const isDateSelected = (date: Date | null): boolean => {
-    if (!date) return false;
-    // If no date is selected, default to today
-    const dateToCompare = selectedDate || normalizeDate(new Date());
-    return isSameDay(date, dateToCompare);
-  };
-
-  // Group cells into rows of 7
-  const rows: CalendarDay[][] = [];
-  for (let i = 0; i < grid.length; i += 7) {
-    rows.push(grid.slice(i, i + 7));
+const CalendarMonthPage = React.memo(({
+  monthData,
+  selectedDate,
+  onDateSelect,
+  themeColors,
+  cellWidth,
+  gridWidth,
+}: CalendarMonthPageProps) => {
+  const firstDay = getFirstDayOfWeek(monthData.year, monthData.month);
+  const daysInMonth = getDaysInMonth(monthData.year, monthData.month);
+  
+  const circleSize = Math.floor(cellWidth * 0.7);
+  const activeCircleSize = Math.floor(cellWidth * 0.82);
+  const rows: React.ReactNode[] = [];
+  
+  let dayCounter = 1;
+  const totalDays = firstDay + daysInMonth;
+  const numRows = Math.ceil(totalDays / 7);
+  
+  for (let rowIndex = 0; rowIndex < Math.min(numRows, 5); rowIndex++) {
+    const cells: React.ReactNode[] = [];
+    
+    for (let cellIndex = 0; cellIndex < 7; cellIndex++) {
+      const position = rowIndex * 7 + cellIndex;
+      const isLastInRow = cellIndex === 6;
+      
+      if (position < firstDay || dayCounter > daysInMonth) {
+        cells.push(
+          <View
+            key={cellIndex}
+            style={[
+              styles.dayCell,
+              { width: cellWidth, height: cellWidth },
+              isLastInRow && styles.dayCellLastInRow,
+            ]}
+          />
+        );
+      } else {
+        const day = dayCounter;
+        const date = new Date(monthData.year, monthData.month, day);
+        const isSelected = selectedDate ? isSameDay(date, selectedDate) : isToday(date);
+        const isTodayDate = isToday(date);
+        const isActive = isSelected || isTodayDate;
+        const currentCircleSize = isActive ? activeCircleSize : circleSize;
+        
+        cells.push(
+          <PressableOpacity
+            key={cellIndex}
+            style={[
+              styles.dayCell,
+              { width: cellWidth, height: cellWidth },
+              isLastInRow && styles.dayCellLastInRow,
+            ]}
+            onPress={() => onDateSelect(normalizeDate(date))}
+          >
+            <View
+              style={[
+                styles.circleIndicator,
+                { width: currentCircleSize, height: currentCircleSize, borderRadius: currentCircleSize / 2 },
+                isSelected && { backgroundColor: themeColors.primary },
+                isTodayDate && !isSelected && { borderWidth: 2, borderColor: themeColors.primary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dayText,
+                  { color: isSelected ? themeColors.primaryForeground : themeColors.text },
+                ]}
+              >
+                {day}
+              </Text>
+            </View>
+          </PressableOpacity>
+        );
+        dayCounter++;
+      }
+    }
+    
+    rows.push(
+      <View key={rowIndex} style={[styles.calendarRow, { width: gridWidth }]}>
+        {cells}
+      </View>
+    );
   }
 
   return (
-    <View style={styles.monthContainer}>
-      <View style={styles.monthTitleContainer}>
-        <Text style={[styles.monthTitle, { color: themeColors.text }]}>
-          {MONTH_NAMES[monthData.month]} {monthData.year}
-        </Text>
-      </View>
-      <View style={styles.calendarContainer}>
-        <View style={[styles.calendarGrid, { width: gridWidth }]}>
-          {rows.map((row, rowIndex) => (
-            <View key={rowIndex} style={[styles.calendarRow, { width: gridWidth }]}>
-              {row.map((cell, cellIndex) => {
-                const index = rowIndex * 7 + cellIndex;
-                const isLastInRow = cellIndex === 6;
-
-                if (cell.day === null) {
-                  return (
-                    <View
-                      key={index}
-                      style={[
-                        styles.dayCell,
-                        { width: cellWidth, height: cellWidth },
-                        isLastInRow && styles.dayCellLastInRow,
-                      ]}
-                    />
-                  );
-                }
-
-                const isSelected = isDateSelected(cell.date);
-                const isTodayDate = isToday(cell.date);
-
-                // Calculate smaller circle size (70% of cell width)
-                const circleSize = Math.floor(cellWidth * 0.7);
-
-                return (
-                  <PressableOpacity
-                    key={index}
-                    style={[
-                      styles.dayCell,
-                      { width: cellWidth, height: cellWidth },
-                      isLastInRow && styles.dayCellLastInRow,
-                    ]}
-                    onPress={() => {
-                      if (cell.date) {
-                        const normalizedDate = normalizeDate(cell.date);
-                        onDateSelect(normalizedDate);
-                      }
-                    }}
-                  >
-                    <View
-                      style={[
-                        styles.circleIndicator,
-                        {
-                          width: circleSize,
-                          height: circleSize,
-                          borderRadius: circleSize / 2,
-                        },
-                        isSelected && { backgroundColor: themeColors.primary },
-                        isTodayDate && !isSelected && {
-                          borderWidth: 2,
-                          borderColor: themeColors.primary,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.dayText,
-                          { color: isSelected ? themeColors.primaryForeground : themeColors.text },
-                        ]}
-                      >
-                        {cell.day}
-                      </Text>
-                    </View>
-                  </PressableOpacity>
-                );
-              })}
-            </View>
-          ))}
-        </View>
+    <View style={styles.monthPageContainer}>
+      <View style={[styles.calendarGrid, { width: gridWidth }]}>
+        {rows}
       </View>
     </View>
   );
 });
 
-CalendarMonthItem.displayName = 'CalendarMonthItem';
+CalendarMonthPage.displayName = 'CalendarMonthPage';
+
+type WeekdayHeaderProps = {
+  cellWidth: number;
+  gridWidth: number;
+  themeColors: any;
+};
+
+const WeekdayHeader = React.memo(({ cellWidth, gridWidth, themeColors }: WeekdayHeaderProps) => {
+  return (
+    <View style={[styles.weekdayRow, { width: gridWidth }]}>
+      {WEEKDAY_LETTERS.map((letter, index) => (
+        <View
+          key={index}
+          style={[
+            styles.weekdayCell,
+            { width: cellWidth },
+            index === 6 && styles.weekdayCellLast,
+          ]}
+        >
+          <Text style={[styles.weekdayText, { color: themeColors.mutedText }]}>
+            {letter}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+});
+
+WeekdayHeader.displayName = 'WeekdayHeader';
 
 export default function SelectDateModal() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ selectedDate?: string }>();
+  const params = useLocalSearchParams<{ selectedDate?: string; storageKey?: string }>();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const insets = useSafeAreaInsets();
-  const months = useMemo(() => generateMonths(), []);
-  const listRef = useRef<FlashListRef<MonthData> | null>(null);
+  const { width } = useWindowDimensions();
+  const pagerRef = useRef<PagerView>(null);
+  const isClosingRef = useRef(false);
+  
+  // Get storage key from params or use default
+  const storageKey = params.storageKey || DEFAULT_STORAGE_KEY; 
+  
+  const [isReady, setIsReady] = useState(false);
+  const [currentPageIndex, setCurrentPageIndex] = useState(INITIAL_MONTH_INDEX);
 
-  // Parse selected date from params
-  const selectedDate = useMemo(() => {
+  useEffect(() => {
+    const handle = InteractionManager.runAfterInteractions(() => {
+      setIsReady(true);
+    });
+    return () => handle.cancel();
+  }, []);
+
+  // Dimensions
+  const containerPadding = 40;
+  const gapSize = 4;
+  const gapsBetweenCells = gapSize * 6;
+  const availableWidth = width - containerPadding;
+  const cellWidth = Math.floor((availableWidth - gapsBetweenCells) / 7);
+  const gridWidth = cellWidth * 7 + gapsBetweenCells;
+  // Calculate pager height: 5 rows of cells + gaps between rows
+  const pagerHeight = cellWidth * 5 + gapSize * 4;
+
+  // Parse initial selected date
+  const initialSelectedDate = useMemo(() => {
     if (params.selectedDate) {
       const date = new Date(params.selectedDate);
       if (!isNaN(date.getTime())) {
@@ -279,89 +255,113 @@ export default function SelectDateModal() {
     return normalizeDate(new Date());
   }, [params.selectedDate]);
 
-  // Find current month index for initial scroll position
-  const currentMonthIndex = useMemo(() => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+  const [selectedDate, setSelectedDate] = useState<Date>(initialSelectedDate);
 
-    const index = months.findIndex(
-      (month) => month.year === currentYear && month.month === currentMonth
-    );
-    return index >= 0 ? index : Math.floor(months.length / 2);
-  }, [months]);
-
-  useEffect(() => {
-    if (listRef.current && currentMonthIndex >= 0) {
-      // Scroll to current month after modal opens
-      setTimeout(() => {
-        listRef.current?.scrollToIndex({
-          index: currentMonthIndex,
-          animated: true
-        });
-      }, 300);
+  const currentMonthTitle = useMemo(() => {
+    const monthData = MONTHS_DATA[currentPageIndex];
+    if (monthData) {
+      return `${MONTH_NAMES_SHORT[monthData.month]} ${monthData.year}`;
     }
-  }, [currentMonthIndex]);
+    return '';
+  }, [currentPageIndex]);
 
-  const handleClose = () => {
+  const handlePageSelected = useCallback((event: PagerViewOnPageSelectedEvent) => {
+    const index = event.nativeEvent.position;
+    if (index === currentPageIndex) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCurrentPageIndex(index);
+  }, [currentPageIndex]);
+
+  const handleClose = useCallback(() => {
     router.back();
-  };
+  }, [router]);
 
-  const handleSelectToday = () => {
+  const handleSelectToday = useCallback(() => {
     const today = normalizeDate(new Date());
+    const todayMonthIndex = MONTHS_DATA.findIndex(
+      (m) => m.year === today.getFullYear() && m.month === today.getMonth()
+    );
+    if (todayMonthIndex >= 0 && todayMonthIndex !== currentPageIndex) {
+      pagerRef.current?.setPage(todayMonthIndex);
+    }
     handleDateSelect(today);
-  };
+  }, [currentPageIndex]);
 
-  const handleDateSelect = async (date: Date) => {
-    const normalizedDate = normalizeDate(date);
-    // Store the selected date in AsyncStorage
-    await AsyncStorage.setItem(SELECTED_DATE_KEY, normalizedDate.toISOString());
-    // Navigate back
-    router.back();
-  };
+  const handleDateSelect = useCallback((date: Date) => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
 
-  const renderMonth = ({ item }: { item: MonthData }) => (
-    <CalendarMonthItem
-      monthData={item}
-      selectedDate={selectedDate}
-      onDateSelect={handleDateSelect}
-      themeColors={themeColors}
-    />
-  );
+    setSelectedDate(date);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    AsyncStorage.setItem(storageKey, date.toISOString());
 
-  const getItemType = () => 'month';
+    setTimeout(() => {
+      router.back();
+    }, 120);
+  }, [router, storageKey]);
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background, borderTopWidth: 0, borderTopColor: 'transparent' }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 20 + insets.top : 20, backgroundColor: themeColors.background, borderTopWidth: 0 }]}>
-        <IconButton
-          icon={{ sf: 'xmark', IconComponent: X }}
-          onPress={handleClose}
-          size="md"
-        />
-        <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">{t('calendar.selectDate')}</Text>
-        <PressableOpacity
-          style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
-          onPress={handleSelectToday}
-        >
-          <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
-        </PressableOpacity>
+    <View style={[styles.container, { backgroundColor: themeColors.background, paddingBottom: 200 }]}>
+      <View style={styles.header}>
+        <View style={styles.headerSideLeft} />
+        <Text style={[styles.title, { color: themeColors.text }]} pointerEvents="none">
+          {currentMonthTitle}
+        </Text>
+        <View style={styles.headerSideRight}>
+          <PressableOpacity
+            style={[styles.todayButton, { backgroundColor: themeColors.iconButton }]}
+            onPress={handleSelectToday}
+          >
+            <Text style={[styles.todayButtonText, { color: themeColors.text }]}>{t('calendar.today')}</Text>
+          </PressableOpacity>
+        </View>
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        <FlashList
-          ref={listRef}
-          data={months}
-          renderItem={renderMonth}
-          keyExtractor={(item) => item.id}
-          getItemType={getItemType}
-          showsVerticalScrollIndicator={false}
-          initialScrollIndex={currentMonthIndex}
-          // @ts-ignore - estimatedItemSize is valid FlashList prop
-          estimatedItemSize={320}
-        />
+      {/* Weekday header row */}
+      <View style={styles.weekdayContainer}>
+        <WeekdayHeader cellWidth={cellWidth} gridWidth={gridWidth} themeColors={themeColors} />
+      </View>
+
+      <View style={[styles.pagerContainer, { width, height: pagerHeight }]}>
+        {isReady ? (
+          <PagerView
+            ref={pagerRef}
+            style={styles.pagerView}
+            initialPage={INITIAL_MONTH_INDEX}
+            onPageSelected={handlePageSelected}
+            offscreenPageLimit={1}
+          >
+            {MONTHS_DATA.map((monthData, index) => {
+              const shouldRender = Math.abs(index - currentPageIndex) <= 2;
+              
+              return (
+                <View key={monthData.id} style={styles.pageContainer} collapsable={false}>
+                  {shouldRender ? (
+                    <CalendarMonthPage
+                      monthData={monthData}
+                      selectedDate={selectedDate}
+                      onDateSelect={handleDateSelect}
+                      themeColors={themeColors}
+                      cellWidth={cellWidth}
+                      gridWidth={gridWidth}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
+          </PagerView>
+        ) : (
+          <View style={styles.pageContainer}>
+            <CalendarMonthPage
+              monthData={MONTHS_DATA[INITIAL_MONTH_INDEX]}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+              themeColors={themeColors}
+              cellWidth={cellWidth}
+              gridWidth={gridWidth}
+            />
+          </View>
+        )}
       </View>
     </View>
   );
@@ -370,80 +370,85 @@ export default function SelectDateModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    borderTopWidth: 0,
-    borderTopColor: 'transparent',
-    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    position: 'relative',
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  headerSideLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  headerSideRight: {
+    flex: 1,
+    alignItems: 'flex-end',
   },
   title: {
     ...typography.h6,
-    position: 'absolute',
-    left: 0,
-    right: 0,
     textAlign: 'center',
-    zIndex: 0,
   },
-  closeButton: {
-    width: 44,
+  todayButton: {
     height: 44,
+    paddingHorizontal: 16,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
-  },
-  todayButton: {
-    minWidth: 34,
-    height: 34,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
   },
   todayButtonText: {
     ...typography.p3,
     fontWeight: '600',
   },
-  content: {
+  weekdayContainer: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    paddingVertical: 12,
+  },
+  weekdayCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  weekdayCellLast: {
+    marginRight: 0,
+  },
+  weekdayText: {
+    ...typography.p3,
+    fontWeight: '600',
+  },
+  pagerContainer: {
+    paddingHorizontal: 16,
+  },
+  pagerView: {
     flex: 1,
   },
-  monthContainer: {
-    marginBottom: 32,
-  },
-  monthTitleContainer: {
+  pageContainer: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 16,
   },
-  monthTitle: {
-    ...typography.h6,
-    textAlign: 'center',
-  },
-  calendarContainer: {
-    paddingHorizontal: 16,
+  monthPageContainer: {
+    flex: 1,
     alignItems: 'center',
   },
   calendarGrid: {
-    marginBottom: 8,
     alignSelf: 'center',
   },
   calendarRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   dayCell: {
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 4,
-    marginBottom: 4,
   },
   dayCellLastInRow: {
     marginRight: 0,
@@ -453,6 +458,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayText: {
-    ...typography.p3,
+    ...typography.p1,
   },
 });

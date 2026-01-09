@@ -1,13 +1,13 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Archive, MailCheck, CheckCircle } from 'lucide-react-native';
+import { Archive, MailCheck } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
-import { typography, iconSizes } from '@/constants/typography';
+import { typography } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
-import { PlatformIcon } from '@/components/platform-icon';
+import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { type Coach } from '@/services/inbox-service';
 
 type CoachListItemProps = {
@@ -60,15 +60,16 @@ export const CoachListItem = ({
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
   const colorScheme = useColorScheme();
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isPressed, setIsPressed] = useState(false);
-  const rowRef = useRef<View>(null);
 
   const handlePress = () => {
-    if (!dropdownVisible) {
-      onPress(coach.id);
-    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress(coach.id);
+  };
+
+  const handleLongPress = () => {
+    // Prevent navigation on long press
+    // The Zeego ContextMenuWrapper handles the actual menu
   };
 
   const handlePressIn = () => {
@@ -78,17 +79,7 @@ export const CoachListItem = ({
   };
 
   const handlePressOut = () => {
-    if (!dropdownVisible) {
-      setIsPressed(false);
-    }
-  };
-
-  const handleLongPress = () => {
-    if (isEditMode) return;
-    rowRef.current?.measureInWindow((x, y, width, height) => {
-      setButtonPosition({ x, y, width, height });
-      setDropdownVisible(true);
-    });
+    setIsPressed(false);
   };
 
   const checkboxBorderColor =
@@ -101,150 +92,147 @@ export const CoachListItem = ({
   const dropdownOptions: DropdownMenuOption[] = [
     ...(onMarkAsRead && (coach.unreadCount ?? 0) > 0
       ? [
-          {
-            label: t('chats.markAsRead'),
-            icon: {
-              sf: 'checkmark.message',
-              IconComponent: MailCheck,
-            },
-            onPress: () => {
-              onMarkAsRead(coach.id);
-            },
+        {
+          label: t('chats.markAsRead'),
+          icon: {
+            sf: 'checkmark.message',
+            IconComponent: MailCheck,
           },
-        ]
+          onPress: () => {
+            onMarkAsRead(coach.id);
+          },
+        },
+      ]
       : []),
     ...(onArchive
       ? [
-          {
-            label: t('chats.archive'),
-            icon: {
-              sf: 'archivebox',
-              IconComponent: Archive,
-            },
-            onPress: () => {
-              onArchive(coach.id);
-            },
+        {
+          label: t('chats.archive'),
+          icon: {
+            sf: 'archivebox',
+            IconComponent: Archive,
           },
-        ]
+          onPress: () => {
+            onArchive(coach.id);
+          },
+        },
+      ]
       : []),
   ];
 
-  return (
-    <>
-      <Pressable
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+  const content = (
+    <Pressable
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <View
+        style={[
+          styles.rowWrapper,
+          (isSelected || isPressed) && {
+            backgroundColor: themeColors.surfaceSecondary,
+          },
+        ]}
       >
-        <View
-          ref={rowRef}
-          style={[
-            styles.rowWrapper,
-            (isSelected || isPressed) && {
-              backgroundColor: themeColors.surfaceSecondary,
-            },
-          ]}
-        >
-          <View style={styles.content}>
-            {isEditMode && (
-              <View style={styles.checkboxContainer}>
-                <View
-                  style={[
-                    styles.checkbox,
-                    {
-                      borderColor: checkboxBorderColor,
-                      backgroundColor: isSelected ? themeColors.primary : 'transparent',
-                    },
-                  ]}
-                >
-                  {isSelected && (
+        <View style={styles.content}>
+          {isEditMode && (
+            <View style={styles.checkboxContainer}>
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: checkboxBorderColor,
+                    backgroundColor: isSelected ? themeColors.primary : 'transparent',
+                  },
+                ]}
+              >
+                {isSelected && (
+                  <View
+                    style={[
+                      styles.checkmark,
+                      {
+                        borderColor: themeColors.primaryForeground,
+                      },
+                    ]}
+                  />
+                )}
+              </View>
+            </View>
+          )}
+          <View style={styles.avatarContainer}>
+            {coach.avatar ? (
+              <Image source={{ uri: coach.avatar }} style={styles.avatar} />
+            ) : (
+              <View
+                style={[
+                  styles.avatar,
+                  styles.avatarPlaceholder,
+                  { backgroundColor: themeColors.border },
+                ]}
+              />
+            )}
+          </View>
+          <View style={styles.messageContainer}>
+            <View style={styles.messageHeader}>
+              <Text
+                style={[styles.coachName, { color: themeColors.text }]}
+                numberOfLines={1}
+              >
+                {coach.name}
+              </Text>
+              {coach.lastMessageTime && (
+                <View style={styles.timestampContainer}>
+                  <Text
+                    style={[
+                      styles.timestamp,
+                      {
+                        color: (coach.unreadCount ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
+                      },
+                    ]}
+                  >
+                    {formatMessageTime(coach.lastMessageTime)}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {coach.lastMessage && (
+              <View style={styles.messageFooter}>
+                <View style={styles.lastMessageContainer}>
+                  <Text
+                    style={[
+                      styles.lastMessage,
+                      { color: themeColors.mutedText },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {coach.lastMessage}
+                  </Text>
+                </View>
+                <View style={styles.rightColumn}>
+                  {(coach.unreadCount ?? 0) > 0 && (
                     <View
                       style={[
-                        styles.checkmark,
-                        {
-                          borderColor: themeColors.primaryForeground,
-                        },
+                        styles.unreadBadge,
+                        { backgroundColor: themeColors.primary },
                       ]}
-                    />
+                    >
+                      <Text
+                        style={[
+                          styles.unreadCount,
+                          { color: themeColors.primaryForeground },
+                        ]}
+                      >
+                        {coach.unreadCount! > 99 ? '99+' : coach.unreadCount}
+                      </Text>
+                    </View>
                   )}
                 </View>
               </View>
             )}
-            <View style={styles.avatarContainer}>
-              {coach.avatar ? (
-                <Image source={{ uri: coach.avatar }} style={styles.avatar} />
-              ) : (
-                <View
-                  style={[
-                    styles.avatar,
-                    styles.avatarPlaceholder,
-                    { backgroundColor: themeColors.border },
-                  ]}
-                />
-              )}
-            </View>
-            <View style={styles.messageContainer}>
-              <View style={styles.messageHeader}>
-                <Text
-                  style={[styles.coachName, { color: themeColors.text }]}
-                  numberOfLines={1}
-                >
-                  {coach.name}
-                </Text>
-                {coach.lastMessageTime && (
-                  <View style={styles.timestampContainer}>
-                    <Text
-                      style={[
-                        styles.timestamp,
-                        {
-                          color: (coach.unreadCount ?? 0) > 0 ? themeColors.primary : themeColors.mutedText,
-                        },
-                      ]}
-                    >
-                      {formatMessageTime(coach.lastMessageTime)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {coach.lastMessage && (
-                <View style={styles.messageFooter}>
-                  <View style={styles.lastMessageContainer}>
-                    <Text
-                      style={[
-                        styles.lastMessage,
-                        { color: themeColors.mutedText },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {coach.lastMessage}
-                    </Text>
-                  </View>
-                  <View style={styles.rightColumn}>
-                    {(coach.unreadCount ?? 0) > 0 && (
-                      <View
-                        style={[
-                          styles.unreadBadge,
-                          { backgroundColor: themeColors.primary },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.unreadCount,
-                            { color: themeColors.primaryForeground },
-                          ]}
-                        >
-                          {coach.unreadCount! > 99 ? '99+' : coach.unreadCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              )}
-            </View>
           </View>
         </View>
-      </Pressable>
+      </View>
       <View
         style={[
           styles.separatorContainer,
@@ -261,18 +249,18 @@ export const CoachListItem = ({
           ]}
         />
       </View>
-    {!isEditMode && dropdownOptions.length > 0 && (
-      <DropdownMenu
-        visible={dropdownVisible}
-        onClose={() => {
-          setDropdownVisible(false);
-          setIsPressed(false);
-        }}
-        options={dropdownOptions}
-        anchorPosition={buttonPosition}
-      />
-    )}
-    </>
+    </Pressable>
+  );
+
+  // In edit mode, don't wrap with context menu
+  if (isEditMode || dropdownOptions.length === 0) {
+    return content;
+  }
+
+  return (
+    <ContextMenuWrapper options={dropdownOptions}>
+      {content}
+    </ContextMenuWrapper>
   );
 };
 
@@ -388,9 +376,4 @@ const styles = StyleSheet.create({
     height: 0.75,
   },
 });
-
-
-
-
-
 

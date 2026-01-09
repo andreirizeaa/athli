@@ -113,7 +113,7 @@ export const AttachmentPreviewScreen = ({
               icon={{ sf: 'xmark', IconComponent: X }}
               onPress={onClose}
               size="md"
-              color={iconColor}
+              scheme="light"
             />
           </View>
         </View>

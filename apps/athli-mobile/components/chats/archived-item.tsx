@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Archive } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
@@ -12,24 +13,49 @@ type ArchivedItemProps = {
 
 export const ArchivedItem = ({ onPress }: ArchivedItemProps) => {
   const { colors: themeColors } = useThemePreference();
+  const [isPressed, setIsPressed] = useState(false);
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
+  const handlePressIn = () => {
+    setIsPressed(true);
+  };
+
+  const handlePressOut = () => {
+    setIsPressed(false);
+  };
 
   return (
-    <Pressable onPress={onPress}>
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <PlatformIcon
-            sf="archivebox"
-            IconComponent={Archive}
-            size={iconSizes.listIcons}
-            color={themeColors.mutedText}
-          />
-        </View>
-        <View style={styles.textContainer}>
-          <Text
-            style={[styles.archivedText, { color: themeColors.mutedText }]}
-          >
-            Archived
-          </Text>
+    <Pressable
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <View
+        style={[
+          styles.rowWrapper,
+          isPressed && { backgroundColor: themeColors.surfaceSecondary },
+        ]}
+      >
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <PlatformIcon
+              sf="archivebox"
+              IconComponent={Archive}
+              size={iconSizes.listIcons}
+              color={themeColors.mutedText}
+            />
+          </View>
+          <View style={styles.textContainer}>
+            <Text
+              style={[styles.archivedText, { color: themeColors.mutedText }]}
+            >
+              Archived
+            </Text>
+          </View>
         </View>
       </View>
       <View style={styles.separatorContainer}>
@@ -48,9 +74,13 @@ export const ArchivedItem = ({ onPress }: ArchivedItemProps) => {
 };
 
 const styles = StyleSheet.create({
+  rowWrapper: {
+    width: '100%',
+  },
   content: {
     flexDirection: 'row',
     paddingHorizontal: 16,
+    paddingTop: 2,
     marginTop: -12,
     marginBottom: -8,
   },

@@ -1,11 +1,15 @@
 import React from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { PressableOpacity } from 'pressto';
+import { Dimensions, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as ContextMenu from 'zeego/context-menu';
+import * as DropdownMenuZeego from 'zeego/dropdown-menu';
+import * as Haptics from 'expo-haptics';
 import type { LucideIcon } from 'lucide-react-native';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useThemePreference } from '@/contexts/useColorScheme';
 import { PlatformIcon } from '@/components/platform-icon';
+
+const DESTRUCTIVE_COLOR = '#EF4444';
 
 export type DropdownMenuOption = {
   label: string;
@@ -14,7 +18,13 @@ export type DropdownMenuOption = {
     IconComponent: LucideIcon;
   };
   onPress: () => void;
+  destructive?: boolean;
 };
+
+// =============================================================================
+// LEGACY DROPDOWN MENU (Modal-based, manual positioning)
+// Used by components like selected-message-popups.tsx that need custom positioning
+// =============================================================================
 
 type DropdownMenuProps = {
   visible: boolean;
@@ -26,8 +36,8 @@ type DropdownMenuProps = {
     width: number;
     height: number;
   };
-  alignRight?: boolean; // If true, aligns to right edge; if false, aligns to left edge
-  disableModal?: boolean; // When true, renders without Modal wrapper (for use inside another Modal)
+  alignRight?: boolean;
+  disableModal?: boolean;
 };
 
 export const DropdownMenu = ({
@@ -47,69 +57,37 @@ export const DropdownMenu = ({
   const screenHeight = Dimensions.get('window').height;
   const screenWidth = Dimensions.get('window').width;
   const menuWidth = 200;
-  const menuItemHeight = 44;
-  const maxMenuHeight = 300; // Max height before scrolling
-  const menuOffset = 16; // Spacing from anchor (increased to prevent overlap)
-  const edgeGap = 16; // Gap from screen edge
+  const menuItemHeight = 48;
+  const menuHeight = options.length * menuItemHeight;
+  const menuOffset = 8;
+  const edgeGap = 16;
 
-  // Calculate actual menu height (capped at max)
-  const fullMenuHeight = options.length * menuItemHeight;
-  const actualMenuHeight = Math.min(fullMenuHeight, maxMenuHeight);
-  const needsScrolling = fullMenuHeight > maxMenuHeight;
-
-  // Calculate available space below and above
-  // anchorPosition.y is the top of the element, anchorPosition.height is its height
-  const anchorBottom = anchorPosition.y + anchorPosition.height;
-  const spaceBelow = screenHeight - anchorBottom;
+  const spaceBelow = screenHeight - anchorPosition.y - anchorPosition.height;
   const spaceAbove = anchorPosition.y;
 
-  // Determine if menu should appear above or below
-  // Prefer showing below, only show above if there's not enough space below
-  const showAbove = spaceBelow < actualMenuHeight + menuOffset && spaceAbove > spaceBelow;
+  const showAbove = spaceBelow < menuHeight + menuOffset && spaceAbove > spaceBelow;
 
-  // Calculate horizontal position
-  // For alignRight: position right edge at screen edge - gap
-  // For alignLeft: align to left edge of anchor
-  const finalLeftPosition = alignRight
-    ? screenWidth - menuWidth - edgeGap
-    : Math.max(anchorPosition.x, edgeGap);
+  const leftPosition = alignRight
+    ? Math.min(
+      anchorPosition.x + anchorPosition.width - menuWidth,
+      screenWidth - menuWidth - edgeGap
+    )
+    : Math.max(
+      anchorPosition.x,
+      edgeGap
+    );
 
-  // Calculate vertical position
-  // If showing below: position starts right after the anchor bottom with offset
-  // If showing above: position ends right before the anchor top
   const topPosition = showAbove
-    ? Math.max(edgeGap, anchorPosition.y - actualMenuHeight - menuOffset)
-    : anchorBottom + menuOffset;
-
-  const menuItems = options.map((option, index) => (
-    <PressableOpacity
-      key={index}
-      style={styles.menuItem}
-      onPress={() => {
-        option.onPress();
-        onClose();
-      }}
-    >
-      {option.icon && (
-        <PlatformIcon
-          sf={option.icon.sf}
-          IconComponent={option.icon.IconComponent}
-          size={iconSizes.listIcons}
-          color={themeColors.text}
-        />
-      )}
-      <Text style={[styles.menuItemText, { color: themeColors.text, marginLeft: option.icon ? 4 : 0 }]}>{option.label}</Text>
-    </PressableOpacity>
-  ));
+    ? anchorPosition.y - menuHeight - menuOffset
+    : anchorPosition.y + anchorPosition.height + menuOffset;
 
   const menuContent = (
     <View
       style={[
         styles.menuContainer,
         {
-          left: finalLeftPosition,
+          left: leftPosition,
           top: topPosition,
-          height: actualMenuHeight,
           backgroundColor: themeColors.surface,
           borderColor: themeColors.border,
           shadowColor: themeColors.shadowColor,
@@ -117,17 +95,32 @@ export const DropdownMenu = ({
       ]}
       onStartShouldSetResponder={() => true}
     >
-      {needsScrolling ? (
-        <ScrollView
-          style={styles.menuScrollView}
-          contentContainerStyle={styles.menuScrollContent}
-          showsVerticalScrollIndicator={true}
+      {options.map((option, index) => (
+        <TouchableOpacity
+          key={index}
+          style={styles.menuItem}
+          activeOpacity={0.7}
+          onPress={() => {
+            option.onPress();
+            onClose();
+          }}
         >
-          {menuItems}
-        </ScrollView>
-      ) : (
-        menuItems
-      )}
+          {option.icon && (
+            <PlatformIcon
+              sf={option.icon.sf}
+              IconComponent={option.icon.IconComponent}
+              size={iconSizes.listIcons}
+              color={option.destructive ? DESTRUCTIVE_COLOR : themeColors.text}
+            />
+          )}
+          <Text style={[
+            styles.menuItemText,
+            { color: option.destructive ? DESTRUCTIVE_COLOR : themeColors.text }
+          ]}>
+            {option.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 
@@ -137,14 +130,105 @@ export const DropdownMenu = ({
 
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
-      <Pressable
-        style={styles.overlay}
-        onPress={onClose}
-        onStartShouldSetResponder={() => true}
-      >
+      <Pressable style={styles.overlay} onPress={onClose}>
         {menuContent}
       </Pressable>
     </Modal>
+  );
+};
+
+// =============================================================================
+// ZEEGO-BASED WRAPPERS (Native context/dropdown menus)
+// These use platform-native menus with SF Symbols support
+// =============================================================================
+
+type ContextMenuWrapperProps = {
+  options: DropdownMenuOption[];
+  children: React.ReactNode;
+};
+
+/**
+ * Context menu that appears on long press (iOS/Android native context menu)
+ */
+export const ContextMenuWrapper = ({
+  options,
+  children,
+}: ContextMenuWrapperProps) => {
+  const handleTouchStart = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  return (
+    <ContextMenu.Root>
+      <ContextMenu.Trigger>
+        <Pressable onPressIn={handleTouchStart}>
+          {children}
+        </Pressable>
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        {options.map((option, index) => (
+          <ContextMenu.Item
+            key={`item-${index}`}
+            onSelect={option.onPress}
+            destructive={option.destructive}
+          >
+            <ContextMenu.ItemTitle>{option.label}</ContextMenu.ItemTitle>
+            {option.icon && (
+              <ContextMenu.ItemIcon
+                ios={{
+                  name: option.icon.sf,
+                }}
+              />
+            )}
+          </ContextMenu.Item>
+        ))}
+      </ContextMenu.Content>
+    </ContextMenu.Root>
+  );
+};
+
+type DropdownMenuWrapperProps = {
+  options: DropdownMenuOption[];
+  children: React.ReactNode;
+};
+
+/**
+ * Dropdown menu that appears on tap/press (iOS/Android native dropdown menu)
+ */
+export const DropdownMenuWrapper = ({
+  options,
+  children,
+}: DropdownMenuWrapperProps) => {
+  const handleTouchStart = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  return (
+    <DropdownMenuZeego.Root>
+      <DropdownMenuZeego.Trigger>
+        <Pressable onPressIn={handleTouchStart}>
+          {children}
+        </Pressable>
+      </DropdownMenuZeego.Trigger>
+      <DropdownMenuZeego.Content>
+        {options.map((option, index) => (
+          <DropdownMenuZeego.Item
+            key={`item-${index}`}
+            onSelect={option.onPress}
+            destructive={option.destructive}
+          >
+            <DropdownMenuZeego.ItemTitle>{option.label}</DropdownMenuZeego.ItemTitle>
+            {option.icon && (
+              <DropdownMenuZeego.ItemIcon
+                ios={{
+                  name: option.icon.sf,
+                }}
+              />
+            )}
+          </DropdownMenuZeego.Item>
+        ))}
+      </DropdownMenuZeego.Content>
+    </DropdownMenuZeego.Root>
   );
 };
 
@@ -158,7 +242,6 @@ const styles = StyleSheet.create({
     width: 200,
     borderRadius: 20,
     borderWidth: 1,
-    overflow: 'hidden',
     zIndex: 30,
     shadowOffset: {
       width: 0,
@@ -168,22 +251,16 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     elevation: 30,
   },
-  menuScrollView: {
-    flex: 1,
-  },
-  menuScrollContent: {
-    paddingVertical: 4,
-  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 16,
-    minHeight: 44,
-    justifyContent: 'flex-start',
+    minHeight: 40,
   },
   menuItemText: {
     ...typography.p2,
+    marginLeft: 4,
     flex: 1,
   },
 });

@@ -1,12 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Archive, Trash2, MailCheck, CheckCircle } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 import { typography, iconSizes } from '@/constants/typography';
 import { useColorScheme, useThemePreference } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
-import { DropdownMenu, type DropdownMenuOption } from '@/components/dropdown-menu';
+import { ContextMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { PlatformIcon } from '@/components/platform-icon';
 import { getChatMessages, type Chat, type ChatMessage } from '@/services/chats-service';
 
@@ -62,11 +63,8 @@ export const ChatListItem = ({
   const colorScheme = useColorScheme();
   const { colors: themeColors } = useThemePreference();
   const { t } = useTranslations();
-  const [dropdownVisible, setDropdownVisible] = useState(false);
-  const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isPressed, setIsPressed] = useState(false);
   const [lastMessage, setLastMessage] = useState<ChatMessage | null>(null);
-  const rowRef = useRef<View>(null);
 
   useEffect(() => {
     const loadLastMessage = async () => {
@@ -83,9 +81,13 @@ export const ChatListItem = ({
   }, [chat.id]);
 
   const handlePress = () => {
-    if (!dropdownVisible) {
-      onPress(chat.id);
-    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress(chat.id);
+  };
+
+  const handleLongPress = () => {
+    // Prevent navigation on long press
+    // The Zeego ContextMenuWrapper handles the actual menu
   };
 
   const handlePressIn = () => {
@@ -95,19 +97,9 @@ export const ChatListItem = ({
   };
 
   const handlePressOut = () => {
-    // Keep highlight visible if dropdown is open
-    if (!dropdownVisible) {
-      setIsPressed(false);
-    }
+    setIsPressed(false);
   };
 
-  const handleLongPress = () => {
-    if (isEditMode) return; // Don't show dropdown in edit mode
-    rowRef.current?.measureInWindow((x, y, width, height) => {
-      setButtonPosition({ x, y, width, height });
-      setDropdownVisible(true);
-    });
-  };
 
   // Use the same color as dividers for checkbox border in light mode
   const checkboxBorderColor =
@@ -120,65 +112,63 @@ export const ChatListItem = ({
   const dropdownOptions: DropdownMenuOption[] = [
     ...(onMarkAsRead && chat.unreadCount > 0
       ? [
-          {
-            label: t('chats.markAsRead'),
-            icon: {
-              sf: 'checkmark.message',
-              IconComponent: MailCheck,
-            },
-            onPress: () => {
-              onMarkAsRead(chat.id);
-            },
+        {
+          label: t('chats.markAsRead'),
+          icon: {
+            sf: 'checkmark.message',
+            IconComponent: MailCheck,
           },
-        ]
+          onPress: () => {
+            onMarkAsRead(chat.id);
+          },
+        },
+      ]
       : []),
     ...(onArchive
       ? [
-          {
-            label: t('chats.archive'),
-            icon: {
-              sf: 'archivebox',
-              IconComponent: Archive,
-            },
-            onPress: () => {
-              onArchive(chat.id);
-            },
+        {
+          label: t('chats.archive'),
+          icon: {
+            sf: 'archivebox',
+            IconComponent: Archive,
           },
-        ]
+          onPress: () => {
+            onArchive(chat.id);
+          },
+        },
+      ]
       : []),
     ...(onDelete
       ? [
-          {
-            label: t('chats.delete'),
-            icon: {
-              sf: 'trash',
-              IconComponent: Trash2,
-            },
-            onPress: () => {
-              onDelete(chat.id);
-            },
+        {
+          label: t('chats.delete'),
+          icon: {
+            sf: 'trash',
+            IconComponent: Trash2,
           },
-        ]
+          onPress: () => {
+            onDelete(chat.id);
+          },
+        },
+      ]
       : []),
   ];
 
-  return (
-    <>
-      <Pressable
-        onPress={handlePress}
-        onLongPress={handleLongPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+  const content = (
+    <Pressable
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+    >
+      <View
+        style={[
+          styles.rowWrapper,
+          (isSelected || isPressed) && {
+            backgroundColor: themeColors.surfaceSecondary,
+          },
+        ]}
       >
-        <View
-          ref={rowRef}
-          style={[
-            styles.rowWrapper,
-            (isSelected || isPressed) && {
-              backgroundColor: themeColors.surfaceSecondary,
-            },
-          ]}
-        >
         <View style={styles.content}>
           {isEditMode && (
             <View style={styles.checkboxContainer}>
@@ -304,18 +294,17 @@ export const ChatListItem = ({
         />
       </View>
     </Pressable>
-    {!isEditMode && dropdownOptions.length > 0 && (
-      <DropdownMenu
-        visible={dropdownVisible}
-        onClose={() => {
-          setDropdownVisible(false);
-          setIsPressed(false);
-        }}
-        options={dropdownOptions}
-        anchorPosition={buttonPosition}
-      />
-    )}
-    </>
+  );
+
+  // In edit mode, don't wrap with context menu
+  if (isEditMode || dropdownOptions.length === 0) {
+    return content;
+  }
+
+  return (
+    <ContextMenuWrapper options={dropdownOptions}>
+      {content}
+    </ContextMenuWrapper>
   );
 };
 

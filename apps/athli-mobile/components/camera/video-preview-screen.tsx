@@ -214,7 +214,7 @@ export const VideoPreviewScreen = () => {
               icon={{ sf: 'xmark', IconComponent: X }}
               onPress={handleClose}
               size="md"
-              color={iconColor}
+              scheme="light"
             />
           </View>
 
