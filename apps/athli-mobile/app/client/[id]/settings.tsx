@@ -20,7 +20,7 @@ export default function ClientSettingsScreen() {
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
     const iconColor = themeColors.text;
-    const iconSize = iconSizes.tabBarIcons;
+    const iconSize = iconSizes.listIcons;
 
     const [client, setClient] = useState<Client | null>(null);
 
@@ -71,7 +71,7 @@ export default function ClientSettingsScreen() {
                 <IconButton
                     icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
                     onPress={handleBackPress}
-                    size="md"
+                    size="sm"
                     color={iconColor}
                 />
                 <Text style={[styles.headerTitle, { color: themeColors.text }]}>
@@ -128,13 +128,13 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     headerTitle: {
-        ...typography.h5,
+        ...typography.h6,
         flex: 1,
         textAlign: 'center',
         marginHorizontal: 8,
     },
     headerRightPlaceholder: {
-        width: 44,
+        width: 36,
     },
     contentContainer: {
         paddingHorizontal: 16,

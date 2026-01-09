@@ -30,7 +30,7 @@ export default function MetricsScreen() {
   };
 
   const handleLogMetric = () => {
-    // TODO: Handle log metric
+    router.push('/modals/client/log-metric-for-client-modal');
   };
 
   return (

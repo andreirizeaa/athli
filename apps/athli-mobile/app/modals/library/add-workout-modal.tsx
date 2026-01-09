@@ -7,8 +7,8 @@ import { X, Check } from 'lucide-react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { typography } from '@/constants/typography';
-import { 
-    WORKOUT_TYPES, 
+import {
+    WORKOUT_TYPES,
     DIFFICULTY_LEVELS,
     type WorkoutType,
     type DifficultyLevel,
@@ -17,6 +17,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/form-inputs';
+import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddWorkoutModal() {
     const router = useRouter();
@@ -36,33 +37,33 @@ export default function AddWorkoutModal() {
     };
 
     // Workout type options from constants
-    const workoutTypeOptions = useMemo(() => 
+    const workoutTypeOptions = useMemo(() =>
         WORKOUT_TYPES.map((type) => ({
             value: type.value,
             label: type.label,
         }))
-    , []);
+        , []);
 
     // Difficulty options from constants
-    const difficultyOptions = useMemo(() => 
+    const difficultyOptions = useMemo(() =>
         DIFFICULTY_LEVELS.map((level) => ({
             value: level.value,
             label: level.label,
         }))
-    , []);
+        , []);
 
     // Form validation and change detection
     const { isFormValid, hasChanges, canComplete } = useMemo(() => {
         const trimmedName = name.trim();
-        
+
         // Only name is mandatory
         const formValid = trimmedName.length > 0;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 || 
-                       description.trim().length > 0 || 
-                       workoutType !== null || 
-                       difficulty !== null;
+        const changes = trimmedName.length > 0 ||
+            description.trim().length > 0 ||
+            workoutType !== null ||
+            difficulty !== null;
 
         return {
             isFormValid: formValid,
@@ -124,11 +125,12 @@ export default function AddWorkoutModal() {
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
-                            colors={
-                                colorScheme === 'dark'
-                                    ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                                    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                            }
+                            colors={[
+                                hexToRgba(themeColors.background, 1),
+                                hexToRgba(themeColors.background, 0.85),
+                                hexToRgba(themeColors.background, 0.5),
+                                hexToRgba(themeColors.background, 0),
+                            ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
                             pointerEvents="none"

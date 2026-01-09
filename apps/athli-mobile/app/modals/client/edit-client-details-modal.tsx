@@ -24,6 +24,7 @@ import {
 } from '@/components/form-inputs';
 import { COUNTRIES } from '@/components/form-inputs/countries-data';
 import { getClients, updateClient, type Client } from '@/services/client-service';
+import { hexToRgba } from '@/utils/colorUtils';
 
 // Helper to find country by name
 const findCountryByName = (name: string): Country | null => {
@@ -34,11 +35,11 @@ const findCountryByName = (name: string): Country | null => {
 // Helper to parse phone number string into PhoneNumber type
 const parsePhoneNumber = (phoneString: string): PhoneNumber | null => {
   if (!phoneString) return null;
-  
+
   // Extract only digits from the phone string
   const digits = phoneString.replace(/\D/g, '');
   if (!digits) return null;
-  
+
   // Try to find matching country by dial code
   // Start with longer dial codes first (some countries have 4-digit codes)
   for (let len = 4; len >= 1; len--) {
@@ -51,7 +52,7 @@ const parsePhoneNumber = (phoneString: string): PhoneNumber | null => {
       };
     }
   }
-  
+
   // Default to first country if no match found
   return {
     country: COUNTRIES[0],
@@ -116,14 +117,14 @@ export default function EditClientDetailsModal() {
     // Form validation - name and email are mandatory
     const trimmedName = name.trim();
     const trimmedEmail = email.trim();
-    
+
     // Name must not be empty
     const nameValid = trimmedName.length > 0;
-    
+
     // Email must be valid format (contains @ with text before and after)
     const atIndex = trimmedEmail.indexOf('@');
     const emailValid = trimmedEmail.length > 0 && atIndex > 0 && atIndex < trimmedEmail.length - 1;
-    
+
     const formValid = nameValid && emailValid;
 
     // Change detection
@@ -179,25 +180,25 @@ export default function EditClientDetailsModal() {
         const foundClient = clients.find((c) => c.id === clientId);
         if (foundClient) {
           setClient(foundClient);
-          
+
           // Combine first and last name for display
           const fullName = [foundClient.firstName, foundClient.lastName].filter(Boolean).join(' ');
           setName(fullName || '');
           setEmail(foundClient.email || '');
           setCategory(foundClient.type || 'online');
-          
+
           // Set gender
           const mappedGender = mapClientGenderToFormGender(foundClient.gender);
           setGender(mappedGender);
-          
+
           // Set country
           const foundCountry = findCountryByName(foundClient.country);
           setCountry(foundCountry);
-          
+
           // Parse and set phone number
           const parsedPhone = parsePhoneNumber(foundClient.phone);
           setPhoneNumber(parsedPhone);
-          
+
           // Calculate and set date of birth from age (approximate)
           if (foundClient.age > 0) {
             const today = new Date();
@@ -205,12 +206,12 @@ export default function EditClientDetailsModal() {
             const dob = new Date(birthYear, 0, 1); // January 1st of birth year
             setDateOfBirth(dob);
           }
-          
+
           // Store original values for change detection
-          const calculatedDob = foundClient.age > 0 
-            ? new Date(new Date().getFullYear() - foundClient.age, 0, 1) 
+          const calculatedDob = foundClient.age > 0
+            ? new Date(new Date().getFullYear() - foundClient.age, 0, 1)
             : null;
-            
+
           setOriginalValues({
             name: fullName || '',
             email: foundClient.email || '',
@@ -295,11 +296,12 @@ export default function EditClientDetailsModal() {
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={[styles.fixedHeader, { height: headerHeight }]}>
           <LinearGradient
-            colors={
-              colorScheme === 'dark'
-                ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-            }
+            colors={[
+              hexToRgba(themeColors.background, 1),
+              hexToRgba(themeColors.background, 0.85),
+              hexToRgba(themeColors.background, 0.5),
+              hexToRgba(themeColors.background, 0),
+            ]}
             locations={[0, 0.5, 0.8, 1]}
             style={[styles.headerGradient, { height: gradientHeight }]}
             pointerEvents="none"
@@ -332,119 +334,120 @@ export default function EditClientDetailsModal() {
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <TouchableWithoutFeedback onPress={handleDismissKeyboard} accessible={false}>
         <View style={styles.container}>
-        {/* Header with blur effect */}
-        <View style={[styles.fixedHeader, { height: headerHeight }]}>
-        <LinearGradient
-          colors={
-            colorScheme === 'dark'
-              ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-              : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-          }
-          locations={[0, 0.5, 0.8, 1]}
-          style={[styles.headerGradient, { height: gradientHeight }]}
-          pointerEvents="none"
-        />
-        <View
-          style={[
-            styles.header,
-            {
-              paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
-            },
-          ]}
-        >
-          <IconButton
-            icon={{ sf: 'xmark', IconComponent: X }}
-            onPress={handleCloseWithConfirmation}
-            size="md"
-            color={themeColors.text}
-          />
-          <Text style={[styles.title, { color: themeColors.text }]}>
-            {t('clients.editClientModal.title')}
-          </Text>
-          <IconButton
-            icon={{ sf: 'checkmark', IconComponent: Check }}
-            onPress={handleSave}
-            size="md"
-            variant={canComplete ? 'primary' : 'default'}
-            disabled={!canComplete}
-          />
-        </View>
-      </View>
+          {/* Header with blur effect */}
+          <View style={[styles.fixedHeader, { height: headerHeight }]}>
+            <LinearGradient
+              colors={[
+                hexToRgba(themeColors.background, 1),
+                hexToRgba(themeColors.background, 0.85),
+                hexToRgba(themeColors.background, 0.5),
+                hexToRgba(themeColors.background, 0),
+              ]}
+              locations={[0, 0.5, 0.8, 1]}
+              style={[styles.headerGradient, { height: gradientHeight }]}
+              pointerEvents="none"
+            />
+            <View
+              style={[
+                styles.header,
+                {
+                  paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12,
+                },
+              ]}
+            >
+              <IconButton
+                icon={{ sf: 'xmark', IconComponent: X }}
+                onPress={handleCloseWithConfirmation}
+                size="md"
+                color={themeColors.text}
+              />
+              <Text style={[styles.title, { color: themeColors.text }]}>
+                {t('clients.editClientModal.title')}
+              </Text>
+              <IconButton
+                icon={{ sf: 'checkmark', IconComponent: Check }}
+                onPress={handleSave}
+                size="md"
+                variant={canComplete ? 'primary' : 'default'}
+                disabled={!canComplete}
+              />
+            </View>
+          </View>
 
-      {/* Content */}
-      <KeyboardAwareScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        bottomOffset={40}
-      >
-          <InputBox
-            label={t('clients.addClientModal.name')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('clients.addClientModal.namePlaceholder')}
-          />
+          {/* Content */}
+          <KeyboardAwareScrollView
+            style={styles.scrollView}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            bottomOffset={40}
+          >
+            <InputBox
+              label={t('clients.addClientModal.name')}
+              value={name}
+              onChangeText={setName}
+              placeholder={t('clients.addClientModal.namePlaceholder')}
+            />
 
-          <InputBox
-            label={t('clients.addClientModal.email')}
-            value={email}
-            onChangeText={setEmail}
-            placeholder={t('clients.addClientModal.emailPlaceholder')}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+            <InputBox
+              label={t('clients.addClientModal.email')}
+              value={email}
+              onChangeText={setEmail}
+              placeholder={t('clients.addClientModal.emailPlaceholder')}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
 
-          <SelectInput
-            label={t('clients.editClientModal.type')}
-            value={category}
-            onChange={setCategory}
-            options={categoryOptions}
-            placeholder={t('clients.editClientModal.typePlaceholder')}
-          />
+            <SelectInput
+              label={t('clients.editClientModal.type')}
+              value={category}
+              onChange={setCategory}
+              options={categoryOptions}
+              placeholder={t('clients.editClientModal.typePlaceholder')}
+            />
 
-          <DateOfBirthInput
-            label={t('clients.editClientModal.dateOfBirth')}
-            value={dateOfBirth}
-            onChange={setDateOfBirth}
-          />
+            <DateOfBirthInput
+              label={t('clients.editClientModal.dateOfBirth')}
+              value={dateOfBirth}
+              onChange={setDateOfBirth}
+            />
 
-          <HeightInput
-            label={t('clients.editClientModal.height')}
-            value={height}
-            onChangeText={setHeight}
-            placeholder={t('clients.editClientModal.heightPlaceholder')}
-          />
+            <HeightInput
+              label={t('clients.editClientModal.height')}
+              value={height}
+              onChangeText={setHeight}
+              placeholder={t('clients.editClientModal.heightPlaceholder')}
+            />
 
-          <GenderInput
-            label={t('clients.editClientModal.gender')}
-            value={gender}
-            onChange={setGender}
-            placeholder={t('clients.editClientModal.genderPlaceholder')}
-            options={{
-              male: t('clients.editClientModal.genderMale'),
-              female: t('clients.editClientModal.genderFemale'),
-              preferNotToSay: t('clients.editClientModal.genderPreferNotToSay'),
-            }}
-          />
+            <GenderInput
+              label={t('clients.editClientModal.gender')}
+              value={gender}
+              onChange={setGender}
+              placeholder={t('clients.editClientModal.genderPlaceholder')}
+              options={{
+                male: t('clients.editClientModal.genderMale'),
+                female: t('clients.editClientModal.genderFemale'),
+                preferNotToSay: t('clients.editClientModal.genderPreferNotToSay'),
+              }}
+            />
 
-          <CountrySelectorInput
-            label={t('clients.editClientModal.country')}
-            value={country}
-            onChange={setCountry}
-            placeholder={t('clients.editClientModal.countryPlaceholder')}
-            modalTitle={t('clients.editClientModal.countryModalTitle')}
-          />
+            <CountrySelectorInput
+              label={t('clients.editClientModal.country')}
+              value={country}
+              onChange={setCountry}
+              placeholder={t('clients.editClientModal.countryPlaceholder')}
+              modalTitle={t('clients.editClientModal.countryModalTitle')}
+            />
 
-          <PhoneNumberInput
-            codeLabel={t('clients.editClientModal.code')}
-            numberLabel={t('clients.editClientModal.phoneNumber')}
-            value={phoneNumber}
-            onChange={setPhoneNumber}
-            placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
-            modalTitle={t('clients.editClientModal.countryModalTitle')}
-          />
-        </KeyboardAwareScrollView>
+            <PhoneNumberInput
+              codeLabel={t('clients.editClientModal.code')}
+              numberLabel={t('clients.editClientModal.phoneNumber')}
+              value={phoneNumber}
+              onChange={setPhoneNumber}
+              placeholder={t('clients.editClientModal.phoneNumberPlaceholder')}
+              modalTitle={t('clients.editClientModal.countryModalTitle')}
+            />
+          </KeyboardAwareScrollView>
         </View>
       </TouchableWithoutFeedback>
     </View>

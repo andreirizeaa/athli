@@ -12,6 +12,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { InputBox, TextAreaInput, SelectInput } from '@/components/form-inputs';
+import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AddSectionModal() {
     const router = useRouter();
@@ -30,25 +31,25 @@ export default function AddSectionModal() {
     };
 
     // Section type options with descriptions as subtitles from constants
-    const sectionTypeOptions = useMemo(() => 
+    const sectionTypeOptions = useMemo(() =>
         SECTION_TYPES.map((type) => ({
             value: type.value,
             label: type.label,
             subtitle: type.description,
         }))
-    , []);
+        , []);
 
     // Form validation and change detection
     const { isFormValid, hasChanges, canComplete } = useMemo(() => {
         const trimmedName = name.trim();
-        
+
         // Name and type are mandatory
         const formValid = trimmedName.length > 0 && sectionType !== null;
 
         // Check if any field has been modified
-        const changes = trimmedName.length > 0 || 
-                       description.trim().length > 0 || 
-                       sectionType !== null;
+        const changes = trimmedName.length > 0 ||
+            description.trim().length > 0 ||
+            sectionType !== null;
 
         return {
             isFormValid: formValid,
@@ -109,11 +110,12 @@ export default function AddSectionModal() {
                     {/* Header with gradient */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
-                            colors={
-                                colorScheme === 'dark'
-                                    ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                                    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                            }
+                            colors={[
+                                hexToRgba(themeColors.background, 1),
+                                hexToRgba(themeColors.background, 0.85),
+                                hexToRgba(themeColors.background, 0.5),
+                                hexToRgba(themeColors.background, 0),
+                            ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
                             pointerEvents="none"

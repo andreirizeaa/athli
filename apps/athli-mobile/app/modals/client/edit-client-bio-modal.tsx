@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Platform, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,14 +9,19 @@ import { typography } from '@/constants/typography';
 import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
+import { TextAreaInput } from '@/components/form-inputs';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { hexToRgba } from '@/utils/colorUtils';
 
-export default function AddPhotoToClientModal() {
+export default function EditClientBioModal() {
     const router = useRouter();
     const { colors: themeColors } = useThemePreference();
     const colorScheme = useColorScheme();
     const { t } = useTranslations();
     const insets = useSafeAreaInsets();
+    const [bio, setBio] = useState('');
+
+    const isFormValid = bio.trim().length > 0;
 
     const handleClose = useCallback(() => {
         if (router.canGoBack()) {
@@ -33,7 +38,10 @@ export default function AddPhotoToClientModal() {
     const gradientHeight = headerHeight + 12;
 
     return (
-        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={[styles.container, { backgroundColor: themeColors.background }]}
+        >
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
@@ -62,24 +70,37 @@ export default function AddPhotoToClientModal() {
                         color={themeColors.text}
                     />
                     <Text style={[styles.title, { color: themeColors.text }]}>
-                        {t('clientDetail.addPhotoModal.title')}
+                        {t('clientDetail.editBioModal.title')}
                     </Text>
                     <IconButton
                         icon={{ sf: 'checkmark', IconComponent: Check }}
                         onPress={handleSave}
                         size="md"
                         color={themeColors.text}
+                        disabled={!isFormValid}
+                        variant={isFormValid ? 'primary' : 'default'}
                     />
                 </View>
             </View>
 
             {/* Content */}
-            <View style={[styles.content, { paddingTop: headerHeight }]}>
-                <Text style={{ color: themeColors.mutedText }}>
-                    {t('clientDetail.addPhotoModal.placeholder')}
-                </Text>
-            </View>
-        </View>
+            <KeyboardAwareScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight + 16 }]}
+                keyboardShouldPersistTaps="handled"
+                bottomOffset={40}
+            >
+                <TextAreaInput
+                    label={t('clientDetail.editBioModal.bio')}
+                    value={bio}
+                    onChangeText={setBio}
+                    placeholder={t('clientDetail.editBioModal.bioPlaceholder')}
+                    numberOfLines={10}
+                    minHeight={300}
+                    required
+                />
+            </KeyboardAwareScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -112,11 +133,12 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: 'center',
     },
-    content: {
+    scrollView: {
         flex: 1,
+    },
+    scrollContent: {
         paddingHorizontal: 16,
-        paddingTop: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
+        paddingBottom: 16,
+        gap: 16,
     },
 });

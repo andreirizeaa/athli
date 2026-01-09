@@ -10,6 +10,7 @@ import { useThemePreference, useColorScheme } from '@/contexts/useColorScheme';
 import { useTranslations } from '@/contexts/useTranslations';
 import { IconButton } from '@/components/icon-button';
 import { SearchBar } from '@/components/search-bar';
+import { hexToRgba } from '@/utils/colorUtils';
 
 export default function AssignCheckInToClientModal() {
     const router = useRouter();
@@ -38,11 +39,12 @@ export default function AssignCheckInToClientModal() {
             {/* Fixed Header with gradient */}
             <View style={[styles.fixedHeader, { height: headerHeight }]}>
                 <LinearGradient
-                    colors={
-                        colorScheme === 'dark'
-                            ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                            : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                    }
+                    colors={[
+                        hexToRgba(themeColors.background, 1),
+                        hexToRgba(themeColors.background, 0.85),
+                        hexToRgba(themeColors.background, 0.5),
+                        hexToRgba(themeColors.background, 0),
+                    ]}
                     locations={[0, 0.5, 0.8, 1]}
                     style={[styles.headerGradient, { height: gradientHeight }]}
                     pointerEvents="none"

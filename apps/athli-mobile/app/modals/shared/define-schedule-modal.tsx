@@ -15,6 +15,7 @@ import { useModalCallbacks, type ScheduleData, type ScheduleFrequency, type Mont
 import { IconButton } from '@/components/icon-button';
 import { DropdownMenuWrapper, type DropdownMenuOption } from '@/components/dropdown-menu';
 import { Separator } from '@/components/separator';
+import { hexToRgba } from '@/utils/colorUtils';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 type Day = typeof DAYS[number];
@@ -56,19 +57,19 @@ export default function DefineScheduleModal() {
             if (scheduleData) {
                 initFrequency = scheduleData.frequency;
                 setFrequency(scheduleData.frequency);
-                
+
                 if (scheduleData.selectedDays) {
                     initSelectedDays = scheduleData.selectedDays;
                     setSelectedDays(new Set(scheduleData.selectedDays));
                 } else {
                     setSelectedDays(new Set(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']));
                 }
-                
+
                 if (scheduleData.monthlyOption) {
                     initMonthlyOption = scheduleData.monthlyOption;
                     setMonthlyOption(scheduleData.monthlyOption);
                 }
-                
+
                 if (scheduleData.specificDay !== undefined) {
                     initSpecificDay = scheduleData.specificDay;
                     setSpecificDay(scheduleData.specificDay);
@@ -91,7 +92,7 @@ export default function DefineScheduleModal() {
 
             hasLoadedData.current = true;
         }
-        
+
         if (!isFocused) {
             hasLoadedData.current = false;
             initialStateRef.current = null;
@@ -175,12 +176,12 @@ export default function DefineScheduleModal() {
     };
 
     // Specific day options (1-28)
-    const specificDayOptions: DropdownMenuOption[] = useMemo(() => 
+    const specificDayOptions: DropdownMenuOption[] = useMemo(() =>
         Array.from({ length: 28 }, (_, i) => i + 1).map((day) => ({
             label: `${day}${getDaySuffix(day)}`,
             onPress: () => setSpecificDay(day),
         }))
-    , []);
+        , []);
 
     // Get display label for frequency
     const getFrequencyLabel = (): string => {
@@ -229,7 +230,7 @@ export default function DefineScheduleModal() {
         let changes = false;
         if (initial) {
             const initialSelectedDaysArray = initial.selectedDays.sort();
-            changes = 
+            changes =
                 frequency !== initial.frequency ||
                 JSON.stringify(currentSelectedDaysArray) !== JSON.stringify(initialSelectedDaysArray) ||
                 monthlyOption !== initial.monthlyOption ||
@@ -238,7 +239,7 @@ export default function DefineScheduleModal() {
             // No initial state means modal just opened with no saved data
             // Any change from defaults counts as a change
             const defaultDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-            changes = 
+            changes =
                 frequency !== 'daily' ||
                 JSON.stringify(currentSelectedDaysArray) !== JSON.stringify(defaultDays.sort()) ||
                 monthlyOption !== 'last' ||
@@ -321,34 +322,35 @@ export default function DefineScheduleModal() {
                     {/* Fixed Header */}
                     <View style={[styles.fixedHeader, { height: headerHeight }]}>
                         <LinearGradient
-                            colors={
-                                colorScheme === 'dark'
-                                    ? ['rgba(0, 0, 0, 1)', 'rgba(0, 0, 0, 0.85)', 'rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0)']
-                                    : ['rgba(255, 255, 255, 1)', 'rgba(255, 255, 255, 0.85)', 'rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0)']
-                            }
+                            colors={[
+                                hexToRgba(themeColors.background, 1),
+                                hexToRgba(themeColors.background, 0.85),
+                                hexToRgba(themeColors.background, 0.5),
+                                hexToRgba(themeColors.background, 0),
+                            ]}
                             locations={[0, 0.5, 0.8, 1]}
                             style={[styles.headerGradient, { height: gradientHeight }]}
                             pointerEvents="none"
                         />
                         <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? 12 + insets.top : 12 }]}>
-                <IconButton
-                    icon={{ sf: 'xmark', IconComponent: X }}
+                            <IconButton
+                                icon={{ sf: 'xmark', IconComponent: X }}
                                 onPress={handleCloseWithConfirmation}
-                    size="md"
-                    color={themeColors.text}
-                />
-                <Text style={[styles.title, { color: themeColors.text }]}>
-                    {t('shared.defineSchedule.setFrequency')}
-                </Text>
-                <IconButton
-                    icon={{ sf: 'checkmark', IconComponent: Check }}
-                    onPress={handleSave}
-                    size="md"
+                                size="md"
+                                color={themeColors.text}
+                            />
+                            <Text style={[styles.title, { color: themeColors.text }]}>
+                                {t('shared.defineSchedule.setFrequency')}
+                            </Text>
+                            <IconButton
+                                icon={{ sf: 'checkmark', IconComponent: Check }}
+                                onPress={handleSave}
+                                size="md"
                                 variant={canComplete ? 'primary' : 'default'}
                                 disabled={!canComplete}
-                />
+                            />
                         </View>
-            </View>
+                    </View>
 
                     {/* Scrollable Content */}
                     <KeyboardAwareScrollView
@@ -358,7 +360,7 @@ export default function DefineScheduleModal() {
                         keyboardShouldPersistTaps="handled"
                         bottomOffset={40}
                     >
-            <View style={styles.content}>
+                        <View style={styles.content}>
                             {/* Frequency Card */}
                             <View style={[styles.card, { backgroundColor: themeColors.surfaceSecondary }]}>
                                 {/* Frequency Row */}
@@ -371,7 +373,7 @@ export default function DefineScheduleModal() {
                                             <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
                                                 {getFrequencyLabel()}
                                             </Text>
-                                            <ChevronDown size={14} color={themeColors.mutedText} />
+                                            <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
                                         </View>
                                     </View>
                                 </DropdownMenuWrapper>
@@ -389,7 +391,7 @@ export default function DefineScheduleModal() {
                                                     <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
                                                         {getMonthlyOptionLabel()}
                                                     </Text>
-                                                    <ChevronDown size={14} color={themeColors.mutedText} />
+                                                    <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
                                                 </View>
                                             </View>
                                         </DropdownMenuWrapper>
@@ -407,7 +409,7 @@ export default function DefineScheduleModal() {
                                                             <Text style={[styles.dropdownValue, { color: themeColors.text }]}>
                                                                 {getSpecificDayLabel()}
                                                             </Text>
-                                                            <ChevronDown size={14} color={themeColors.mutedText} />
+                                                            <ChevronDown {...({ size: 14, color: themeColors.mutedText } as any)} />
                                                         </View>
                                                     </View>
                                                 </DropdownMenuWrapper>
@@ -431,10 +433,10 @@ export default function DefineScheduleModal() {
                                                 >
                                                     <Text style={[styles.dayLabel, { color: themeColors.text }]}>
                                                         {t(`calendar.newSession.repeatOptions.weekdays.${day}`)}
-                </Text>
+                                                    </Text>
                                                     <View style={styles.checkContainer}>
                                                         {isSelected && (
-                                                            <Check size={20} color={primaryColor} strokeWidth={2.5} />
+                                                            <Check {...({ size: 20, color: primaryColor, strokeWidth: 2.5 } as any)} />
                                                         )}
                                                     </View>
                                                 </PressableOpacity>
@@ -445,7 +447,7 @@ export default function DefineScheduleModal() {
                             )}
                         </View>
                     </KeyboardAwareScrollView>
-            </View>
+                </View>
             </TouchableWithoutFeedback>
         </View>
     );
