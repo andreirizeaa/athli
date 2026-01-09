@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { ChevronLeft, Check, Repeat, Plus, Dumbbell, Layers, Link as LinkIcon } from 'lucide-react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { typography } from '@/constants/typography';
@@ -15,6 +17,7 @@ import { useModalCallbacks } from '@/contexts/modal-callbacks';
 import { ExerciseBuilderCard } from '@/components/workout/exercise-builder-card';
 import { getDefaultColumns, type WorkoutExercise } from '@/components/workout/types';
 import { Exercise } from '@/app/modals/workout/add-exercise-to-builder-modal';
+import { hexToRgba } from '@/utils/colorUtils';
 
 // Mock workout data - this would come from a service in production
 const MOCK_WORKOUTS: Record<string, { id: string; name: string; description: string; type: string; difficulty: string }> = {
@@ -39,6 +42,11 @@ export default function WorkoutDetailScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const { colors: themeColors } = useThemePreference();
     const { t } = useTranslations();
+    const insets = useSafeAreaInsets();
+
+    const handleDismissKeyboard = () => {
+        Keyboard.dismiss();
+    };
 
     const [workout, setWorkout] = useState<typeof MOCK_WORKOUTS[string] | null>(null);
     const [selectedExercises, setSelectedExercises] = useState<WorkoutExercise[]>([]);
@@ -132,8 +140,6 @@ export default function WorkoutDetailScreen() {
         },
     ];
 
-    const insets = useSafeAreaInsets();
-
     const BottomBar = (
         <View style={[
             styles.bottomBarContainer,
@@ -167,38 +173,62 @@ export default function WorkoutDetailScreen() {
         </View>
     );
 
+    const headerHeight = Platform.OS === 'android' ? 56 + insets.top : 56;
+    const gradientHeight = headerHeight + 12;
+
     return (
-        <ScreenWrapper
-            scrollable={true}
-            contentContainerStyle={styles.scrollContent}
-            overlay={BottomBar}
-        >
-            {/* Header - Centered title layout that scrolls with content */}
-            <View style={styles.header}>
-                <IconButton
-                    icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
-                    onPress={handleBackPress}
-                    size="md"
-                    color={themeColors.text}
-                />
-                <Text
-                    style={[styles.title, { color: themeColors.text }]}
-                    numberOfLines={1}
-                    ellipsizeMode="tail"
-                >
-                    {workout?.name || t('library.workout.loading')}
-                </Text>
-                <IconButton
-                    icon={{ sf: 'checkmark', IconComponent: Check }}
-                    onPress={handleSave}
-                    size="md"
-                    variant={canComplete ? 'primary' : 'default'}
-                    disabled={!canComplete}
+        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+            {/* Fixed Header Gradient */}
+            <View style={[styles.fixedHeader, { height: headerHeight }]}>
+                <LinearGradient
+                    colors={[
+                        hexToRgba(themeColors.background, 1),
+                        hexToRgba(themeColors.background, 0.85),
+                        hexToRgba(themeColors.background, 0.5),
+                        hexToRgba(themeColors.background, 0),
+                    ]}
+                    locations={[0, 0.5, 0.8, 1]}
+                    style={[styles.headerGradient, { height: gradientHeight }]}
+                    pointerEvents="none"
                 />
             </View>
 
-            {/* Page Content */}
-            <View style={styles.content}>
+            <KeyboardAwareScrollView
+                style={styles.scrollView}
+                contentContainerStyle={[
+                    styles.scrollContent,
+                    { paddingTop: insets.top }
+                ]}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                bottomOffset={40}
+            >
+                {/* Header - Centered title layout that scrolls with content */}
+                <View style={styles.header}>
+                    <IconButton
+                        icon={{ sf: 'chevron.left', IconComponent: ChevronLeft }}
+                        onPress={handleBackPress}
+                        size="md"
+                        color={themeColors.text}
+                    />
+                    <Text
+                        style={[styles.title, { color: themeColors.text }]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                    >
+                        {workout?.name || t('library.workout.loading')}
+                    </Text>
+                    <IconButton
+                        icon={{ sf: 'checkmark', IconComponent: Check }}
+                        onPress={handleSave}
+                        size="md"
+                        variant={canComplete ? 'primary' : 'default'}
+                        disabled={!canComplete}
+                    />
+                </View>
+
+                {/* Page Content */}
+                {/* The original "Page Content" View is removed, and its children are directly in KeyboardAwareScrollView */}
                 {!workout && (
                     <Text style={[styles.emptyText, { color: themeColors.mutedText }]}>
                         {t('library.workout.notFound')}
@@ -258,21 +288,42 @@ export default function WorkoutDetailScreen() {
                         </React.Fragment>
                     );
                 })}
-            </View>
-        </ScreenWrapper>
+            </KeyboardAwareScrollView>
+            {BottomBar}
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    fixedHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+    },
+    headerGradient: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+    },
     scrollContent: {
+        paddingHorizontal: 16,
         paddingBottom: 32,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingTop: 12,
+        marginBottom: 16,
         height: 56,
     },
     headerActionContainer: {
